@@ -262,56 +262,60 @@ async fn run_mistral_inference(
     model: &MistralModel,
     input_tensor: &Tensor,
 ) -> Result<Tensor> {
-    // Use the model's Core ML handle for inference
-    let result = model.handle.with_handle(|_handle| -> Result<Tensor> {
-        // TODO: Implement comprehensive Core ML inference execution
-        //       Currently returns placeholder tensor; should implement comprehensive inference that calls actual Core ML inference API, processes input tokens through Core ML model, and extracts output tensor from Core ML results.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Core ML inference API is called with proper handle
-        // - Input tokens are processed through Core ML model
-        // - Output tensor is extracted from Core ML results
-        // - Inference errors and timeouts are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - Core ML inference API integration (Required)
-        // - Model handle management (Required)
-        // - Tensor extraction utilities (Required)
-        //
-        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (Core ML inference functionality)
-        // - Change Budget: ~300 LOC
-        // - Reviewer Requirements: Core ML inference and model execution expertise
-        let device = Device::Cpu;
-        let batch_size = input_tensor.dims()[0];
-        
-        // Return [B, V] shape (last token logits only) to reduce I/O and simplify sampling
-        let vocab_size = model.tokenizer.vocab_size().unwrap_or(32000) as usize;
-        Tensor::zeros(&[batch_size, vocab_size], candle_core::DType::F32, &device)
-            .map_err(|e| ANEError::InferenceFailed(format!("Failed to create tensor: {}", e)))
-    });
-
-    match result {
-        Some(logits_result) => logits_result,
-        None => Err(ANEError::InferenceFailed("Failed to access model handle".to_string())),
+    use crate::ane::compat::coreml_module::run_inference;
+    
+    // Get the model reference from SafeModelHandle
+    let model_ref = model.handle.0; // SafeModelHandle(ModelRef)
+    
+    // Convert input tensor to f32 slice
+    // Input tensor shape: [batch_size, sequence_length]
+    let input_dims = input_tensor.dims();
+    if input_dims.len() != 2 {
+        return Err(ANEError::InvalidInput(format!(
+            "Expected 2D input tensor [batch, seq_len], got shape: {:?}",
+            input_dims
+        )));
     }
+    
+    let batch_size = input_dims[0];
+    let seq_len = input_dims[1];
+    
+    // Flatten tensor to f32 slice
+    let input_data = input_tensor
+        .flatten_all()
+        .map_err(|e| ANEError::InferenceFailed(format!("Failed to flatten input tensor: {}", e)))?
+        .to_vec1::<f32>()
+        .map_err(|e| ANEError::InferenceFailed(format!("Failed to convert tensor to f32: {}", e)))?;
+    
+    // Input shape for CoreML: [batch_size, sequence_length]
+    let input_shape = vec![batch_size, seq_len];
+    
+    // Mistral models typically use "input_ids" as the input feature name
+    // This may need to be configurable based on the actual model schema
+    let input_name = "input_ids";
+    
+    // Run inference through CoreML module
+    let output_tensor = run_inference(model_ref, input_name, &input_data, &input_shape)
+        .map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
+    
+    // Output tensor shape should be [batch_size, vocab_size] for logits
+    // Verify output shape matches expectations
+    let output_dims = output_tensor.dims();
+    if output_dims.len() != 2 {
+        return Err(ANEError::Internal(format!(
+            "Expected 2D output tensor [batch, vocab], got shape: {:?}",
+            output_dims
+        )));
+    }
+    
+    if output_dims[0] != batch_size {
+        return Err(ANEError::Internal(format!(
+            "Output batch size {} doesn't match input batch size {}",
+            output_dims[0], batch_size
+        )));
+    }
+    
+    Ok(output_tensor)
 }
 
 /// Sample next token from logits

@@ -19,6 +19,8 @@ pub mod system_monitoring;
 pub mod chat_handlers;
 #[cfg(feature = "orchestration")]
 pub mod auth_handlers;
+#[cfg(feature = "orchestration")]
+pub mod query_performance;
 
 // Re-export all handlers for easy access
 #[cfg(feature = "orchestration")]

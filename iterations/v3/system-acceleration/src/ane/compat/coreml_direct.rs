@@ -1,20 +1,95 @@
 // ============================================================================
-// Core ML Direct Implementation (no Swift bridges)
+// Core ML Direct Implementation
 // ============================================================================
-// This module provides a direct Core ML implementation using coreml-rs
-// instead of the Swift bridges to avoid linking issues.
+// This module provides a direct Core ML implementation using the agentbridge
+// FFI functions for Core ML model operations.
 
 use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use std::path::Path;
+use std::ffi::CString;
+use std::collections::HashMap;
+
+// Import runtime check and FFI functions from model module
+use super::model::{coreml_runtime_available, coreml_unavailable_error};
+
+// FFI declarations for agentbridge functions
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn agentbridge_model_create(
+        model_path: *const std::ffi::c_char,
+        config_json: *const std::ffi::c_char,
+        out_model_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_model_destroy(model_ref: u64) -> i32;
+
+    fn agentbridge_model_get_info(
+        model_ref: u64,
+        out_info: *mut *mut std::ffi::c_char,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_model_run_inference(
+        model_ref: u64,
+        input_provider_ref: u64,
+        out_output_provider_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_dict_provider_create(
+        out_provider_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_dict_provider_destroy(provider_ref: u64) -> i32;
+
+    fn agentbridge_provider_destroy(provider_ref: u64) -> i32;
+
+    fn agentbridge_dict_provider_set_feature_multiarray(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        array_ref: u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_array_create_float32(
+        data: *const f32,
+        data_len: i32,
+        shape: *const i32,
+        shape_len: i32,
+        out_array_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_array_destroy(array_ref: u64) -> i32;
+
+    fn agentbridge_provider_get_feature_float32(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        out_data: *mut *mut f32,
+        out_shape: *mut *mut i32,
+        out_shape_len: *mut i32,
+        out_data_len: *mut i32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
+
+    fn agentbridge_free_array_data(data_ptr: *mut f32) -> i32;
+}
 
 // Check if we're on Apple Silicon
 const TARGET_APPLE_SILICON: bool = cfg!(target_os = "macos") && cfg!(target_arch = "aarch64");
 
-// Simple Core ML model wrapper
+/// Core ML model wrapper with real Core ML integration
 #[derive(Debug)]
 pub struct CoreMLModel {
+    /// Model path
     path: String,
+    /// Model handle (loaded on first use)
+    model_ref: Option<u64>,
 }
 
 impl CoreMLModel {
@@ -23,46 +98,381 @@ impl CoreMLModel {
             return Err(ANEError::Unavailable);
         }
 
+        if !coreml_runtime_available() {
+            return Err(coreml_unavailable_error());
+        }
+
         let path_str = path.to_str()
             .ok_or_else(|| ANEError::InvalidInput("Invalid path encoding".to_string()))?;
 
         Ok(CoreMLModel {
             path: path_str.to_string(),
+            model_ref: None,
         })
     }
 
-    pub fn prediction_from_features(&self, _features: &MLFeatureProvider) -> Result<MLFeatureProvider> {
+    /// Load the model if not already loaded
+    fn ensure_loaded(&mut self) -> Result<()> {
+        if self.model_ref.is_some() {
+            return Ok(());
+        }
+
+        if !coreml_runtime_available() {
+            return Err(coreml_unavailable_error());
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let path_cstr = CString::new(self.path.as_str())
+                .map_err(|e| ANEError::InvalidInput(format!("Invalid path string: {}", e)))?;
+
+            let mut model_ref: u64 = 0;
+            let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let result = unsafe {
+                agentbridge_model_create(
+                    path_cstr.as_ptr(),
+                    std::ptr::null(), // No config for now
+                    &mut model_ref,
+                    &mut error_ptr,
+                )
+            };
+
+            if result != 0 {
+                let error_msg = if !error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        agentbridge_free_string(error_ptr);
+                        msg
+                    }
+                } else {
+                    "Unknown error loading Core ML model".to_string()
+                };
+                return Err(ANEError::Internal(format!("Failed to load Core ML model: {}", error_msg)));
+            }
+
+            if model_ref == 0 {
+                return Err(ANEError::Internal("Failed to create model handle".to_string()));
+            }
+
+            self.model_ref = Some(model_ref);
+            Ok(())
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        }
+    }
+
+    /// Get the model reference, loading if necessary
+    fn get_model_ref(&mut self) -> Result<u64> {
+        self.ensure_loaded()?;
+        self.model_ref.ok_or_else(|| ANEError::Internal("Model not loaded".to_string()))
+    }
+
+    pub fn prediction_from_features(&mut self, features: &MLFeatureProvider) -> Result<MLFeatureProvider> {
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::NotImplemented("Core ML prediction only supported on macOS".to_string()));
         }
 
-        // TODO: Implement real Core ML API integration
-        // - [ ] Use Core ML framework to load model
-        // - [ ] Create MLFeatureProvider with actual model inputs
-        // - [ ] Convert input data to MLFeatureValue format
-        // - [ ] Handle Core ML API errors
-        // - [ ] Add unit tests with mock Core ML models
-        // - [ ] Add integration tests with real Core ML models
-        // Placeholder implementation - would use actual Core ML API
-        Ok(MLFeatureProvider {
-            features: std::collections::HashMap::new(),
-        })
+        if !coreml_runtime_available() {
+            return Err(coreml_unavailable_error());
+        }
+
+        let model_ref = self.get_model_ref()?;
+
+        #[cfg(target_os = "macos")]
+        {
+            // Create input feature provider using agentbridge
+            let mut input_provider_ref: u64 = 0;
+            let mut create_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let create_result = unsafe {
+                agentbridge_dict_provider_create(
+                    &mut input_provider_ref,
+                    &mut create_error_ptr,
+                )
+            };
+
+            if create_result != 0 {
+                let error_msg = if !create_error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(create_error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        agentbridge_free_string(create_error_ptr);
+                        msg
+                    }
+                } else {
+                    "Unknown error creating input provider".to_string()
+                };
+                return Err(ANEError::Internal(format!("Failed to create input provider: {}", error_msg)));
+            }
+
+            // Set features in the input provider
+            for (name, value) in &features.features {
+                match value {
+                    MLFeatureValue::MultiArray(array) => {
+                        let name_cstr = CString::new(name.as_str())
+                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+
+                        // Create MLMultiArray through agentbridge
+                        let mut array_ref: u64 = 0;
+                        let mut array_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+                        let array_result = unsafe {
+                            agentbridge_array_create_float32(
+                                array.data.as_ptr(),
+                                array.data.len() as i32,
+                                array.shape.as_ptr(),
+                                array.shape.len() as i32,
+                                &mut array_ref,
+                                &mut array_error_ptr,
+                            )
+                        };
+
+                        if array_result != 0 {
+                            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                            let error_msg = if !array_error_ptr.is_null() {
+                                unsafe {
+                                    let cstr = std::ffi::CStr::from_ptr(array_error_ptr);
+                                    let msg = cstr.to_string_lossy().to_string();
+                                    agentbridge_free_string(array_error_ptr);
+                                    msg
+                                }
+                            } else {
+                                "Unknown error creating array".to_string()
+                            };
+                            return Err(ANEError::Internal(format!("Failed to create array: {}", error_msg)));
+                        }
+
+                        // Set feature in provider
+                        let mut feature_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+                        let feature_result = unsafe {
+                            agentbridge_dict_provider_set_feature_multiarray(
+                                input_provider_ref,
+                                name_cstr.as_ptr(),
+                                array_ref,
+                                &mut feature_error_ptr,
+                            )
+                        };
+
+                        if feature_result != 0 {
+                            unsafe {
+                                agentbridge_array_destroy(array_ref);
+                                agentbridge_dict_provider_destroy(input_provider_ref);
+                            }
+                            let error_msg = if !feature_error_ptr.is_null() {
+                                unsafe {
+                                    let cstr = std::ffi::CStr::from_ptr(feature_error_ptr);
+                                    let msg = cstr.to_string_lossy().to_string();
+                                    agentbridge_free_string(feature_error_ptr);
+                                    msg
+                                }
+                            } else {
+                                format!("Unknown error setting feature '{}'", name)
+                            };
+                            return Err(ANEError::Internal(error_msg));
+                        }
+                    }
+                    _ => {
+                        // For now, only MultiArray is supported
+                        unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+                        return Err(ANEError::NotImplemented(format!("Feature type not yet supported for feature '{}'", name)));
+                    }
+                }
+            }
+
+            // Run inference
+            let mut output_provider_ref: u64 = 0;
+            let mut inference_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let inference_result = unsafe {
+                agentbridge_model_run_inference(
+                    model_ref,
+                    input_provider_ref,
+                    &mut output_provider_ref,
+                    &mut inference_error_ptr,
+                )
+            };
+
+            // Clean up input provider
+            unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
+
+            if inference_result != 0 {
+                let error_msg = if !inference_error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(inference_error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        agentbridge_free_string(inference_error_ptr);
+                        msg
+                    }
+                } else {
+                    "Unknown error during Core ML inference".to_string()
+                };
+                return Err(ANEError::InferenceFailed(error_msg));
+            }
+
+            if output_provider_ref == 0 {
+                return Err(ANEError::Internal("No output provider returned from inference".to_string()));
+            }
+
+            // Extract output features (simplified: assume single output feature)
+            // In a real implementation, we'd query the model metadata for output feature names
+            let output_name = "output"; // Default output name
+            let output_name_cstr = CString::new(output_name)
+                .map_err(|e| ANEError::Internal(format!("Invalid output name: {}", e)))?;
+
+            let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
+            let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
+            let mut output_shape_len: i32 = 0;
+            let mut output_data_len: i32 = 0;
+            let mut extract_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let extract_result = unsafe {
+                agentbridge_provider_get_feature_float32(
+                    output_provider_ref,
+                    output_name_cstr.as_ptr(),
+                    &mut output_data_ptr,
+                    &mut output_shape_ptr,
+                    &mut output_shape_len,
+                    &mut output_data_len,
+                    &mut extract_error_ptr,
+                )
+            };
+
+            if extract_result != 0 {
+                unsafe { agentbridge_provider_destroy(output_provider_ref) };
+                let error_msg = if !extract_error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(extract_error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        agentbridge_free_string(extract_error_ptr);
+                        msg
+                    }
+                } else {
+                    format!("Unknown error extracting output feature '{}'", output_name)
+                };
+                return Err(ANEError::Internal(error_msg));
+            }
+
+            if output_data_ptr.is_null() || output_data_len <= 0 {
+                unsafe { agentbridge_provider_destroy(output_provider_ref) };
+                return Err(ANEError::Internal("No output data returned from inference".to_string()));
+            }
+
+            // Extract output data
+            let output_data = unsafe {
+                std::slice::from_raw_parts(output_data_ptr, output_data_len as usize).to_vec()
+            };
+
+            let output_shape = if !output_shape_ptr.is_null() && output_shape_len > 0 {
+                unsafe {
+                    std::slice::from_raw_parts(output_shape_ptr, output_shape_len as usize).to_vec()
+                }
+            } else {
+                vec![output_data_len]
+            };
+
+            // Clean up FFI-allocated resources
+            unsafe {
+                agentbridge_provider_destroy(output_provider_ref);
+                agentbridge_free_array_data(output_data_ptr);
+                if !output_shape_ptr.is_null() {
+                    agentbridge_free_array_data(output_shape_ptr as *mut f32);
+                }
+            }
+
+            // Build output feature provider
+            let mut output_features = HashMap::new();
+            output_features.insert(
+                output_name.to_string(),
+                MLFeatureValue::MultiArray(MLMultiArray {
+                    data: output_data,
+                    shape: output_shape,
+                }),
+            );
+
+            Ok(MLFeatureProvider {
+                features: output_features,
+            })
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        }
     }
 
-    pub fn model_info(&self) -> Result<String> {
+    pub fn model_info(&mut self) -> Result<String> {
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::NotImplemented("Core ML model info only supported on macOS".to_string()));
         }
 
-        // TODO: Get actual Core ML model information
-        // - [ ] Load Core ML model from path
-        // - [ ] Extract model metadata (name, version, description)
-        // - [ ] Get input/output specifications
-        // - [ ] Format model info string
-        // - [ ] Add unit tests with mock models
-        // - [ ] Add integration tests with real Core ML models
-        // Placeholder implementation - would use actual Core ML API
-        Ok(format!("Core ML Model: {}", self.path))
+        if !coreml_runtime_available() {
+            return Err(coreml_unavailable_error());
+        }
+
+        let model_ref = self.get_model_ref()?;
+
+        #[cfg(target_os = "macos")]
+        {
+            let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+            let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+            let result = unsafe {
+                agentbridge_model_get_info(
+                    model_ref,
+                    &mut info_ptr,
+                    &mut error_ptr,
+                )
+            };
+
+            if result != 0 {
+                let error_msg = if !error_ptr.is_null() {
+                    unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                        let msg = cstr.to_string_lossy().to_string();
+                        agentbridge_free_string(error_ptr);
+                        msg
+                    }
+                } else {
+                    "Unknown error getting model info".to_string()
+                };
+                return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+            }
+
+            if info_ptr.is_null() {
+                return Err(ANEError::Internal("No model info returned".to_string()));
+            }
+
+            let info = unsafe {
+                let cstr = std::ffi::CStr::from_ptr(info_ptr);
+                let info_str = cstr.to_string_lossy().to_string();
+                agentbridge_free_string(info_ptr);
+                info_str
+            };
+
+            Ok(info)
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        }
+    }
+}
+
+impl Drop for CoreMLModel {
+    fn drop(&mut self) {
+        if let Some(model_ref) = self.model_ref {
+            if coreml_runtime_available() {
+                unsafe {
+                    let _ = agentbridge_model_destroy(model_ref);
+                }
+            }
+        }
     }
 }
 

@@ -54,16 +54,17 @@ use axum::{
     routing::{get, post, delete},
     Router,
     Json,
-    extract::{Path, State},
+    extract::{Path, State, Query},
     http::StatusCode,
 };
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 use tracing::{info, error, warn};
 use sha2::{Sha256, Digest};
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
-use system_quality_security::{AuthService, AuthConfig, PasswordPolicy};
+use system_quality_security::{AuthService, AuthConfig, authentication::PasswordPolicy};
 
 // Database integration
 use data_infrastructure::database_config::DatabaseConfig;
@@ -123,6 +124,11 @@ struct AppState {
     unified_orchestrator: Option<Arc<UnifiedOrchestratorAdapter>>,
     #[cfg(feature = "orchestration")]
     websocket_manager: Option<Arc<data_infrastructure::websocket::WebSocketManager>>,
+    /// Query performance monitor
+    #[cfg(feature = "orchestration")]
+    query_performance_monitor: Option<Arc<data_infrastructure::monitoring::query_performance::QueryPerformanceMonitor>>,
+    /// Authentication service for password hashing and JWT generation
+    auth_service: Arc<AuthService>,
 }
 
 #[tokio::main]
@@ -305,6 +311,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some((ApiState { 
                 api: rest_api,
                 websocket_manager: ws_manager.clone(),
+                query_performance_monitor: Arc::new(data_infrastructure::monitoring::query_performance::QueryPerformanceMonitor::with_defaults()),
             }, ws_manager))
         } else {
             None
@@ -327,12 +334,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Initialize authentication service
+    let jwt_secret = env::var("JWT_SECRET")
+        .unwrap_or_else(|_| {
+            warn!("⚠️  JWT_SECRET not set, using default (NOT SECURE FOR PRODUCTION)");
+            "default-jwt-secret-key-change-in-production-min-32-chars".to_string()
+        });
+    
+    let auth_config = AuthConfig {
+        jwt_secret,
+        token_expiry_seconds: 3600, // 1 hour
+        refresh_token_expiry_seconds: 86400 * 7, // 7 days
+        password_hash_params: argon2::Params::default(),
+        max_failed_attempts: 5,
+        lockout_duration_seconds: 900, // 15 minutes
+        password_policy: PasswordPolicy::default(),
+    };
+    
+    let auth_service = Arc::new(AuthService::new(auth_config));
+    info!("✅ Authentication service initialized");
+
     // Create application state
     #[cfg(feature = "orchestration")]
-    let (api_state_final, websocket_manager) = if let Some((s, ws)) = api_state {
-        (Some(s.api), Some(ws))
+    let (api_state_final, websocket_manager, query_perf_monitor) = if let Some((s, ws)) = api_state {
+        (Some(s.api), Some(ws), Some(s.query_performance_monitor))
     } else {
-        (None, None)
+        (None, None, None)
     };
     
     let app_state = AppState {
@@ -345,6 +372,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         unified_orchestrator,
         #[cfg(feature = "orchestration")]
         websocket_manager,
+        #[cfg(feature = "orchestration")]
+        query_performance_monitor: query_perf_monitor,
+        auth_service,
     };
 
     // Build router with all endpoints
@@ -376,11 +406,51 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     router = router
         .route("/api/v1/tasks", post(submit_task_handler))
         .route("/api/v1/tasks", get(list_tasks_handler))
+        .route("/api/v1/tasks/stats", get(get_tasks_stats_handler))
         .route("/api/v1/tasks/:task_id", get(get_task_status_handler))
+        .route("/api/v1/tasks/:task_id", axum::routing::patch(update_task_handler))
+        .route("/api/v1/tasks/:task_id", axum::routing::delete(delete_task_handler))
         .route("/api/v1/tasks/:task_id/result", get(get_task_result_handler))
         .route("/api/v1/tasks/:task_id/cancel", post(cancel_task_handler))
         .route("/api/v1/tasks/:task_id/pause", post(pause_task_handler))
-        .route("/api/v1/tasks/:task_id/resume", post(resume_task_handler));
+        .route("/api/v1/tasks/:task_id/resume", post(resume_task_handler))
+        .route("/api/v1/projects/:project_id/tasks", post(create_project_task_handler))
+        .route("/api/v1/projects/:project_id/tasks/:task_id", axum::routing::patch(update_project_task_handler))
+        .route("/api/v1/projects/:project_id/tasks/:task_id", axum::routing::delete(delete_project_task_handler));
+
+    // Worker/Agent management endpoints
+    router = router
+        .route("/api/v1/agents", get(list_agents_handler))
+        .route("/api/v1/agents/stats", get(get_agents_stats_handler))
+        .route("/api/v1/agents/:id", get(get_agent_handler))
+        .route("/api/v1/agents/:id", axum::routing::patch(update_agent_handler))
+        .route("/api/v1/agents/:id", axum::routing::delete(delete_agent_handler))
+        .route("/api/v1/agents/:id/stats", get(get_agent_stats_handler))
+        .route("/api/v1/agents/:id/health", get(get_agent_health_handler))
+        .route("/api/v1/agents/:id/metrics", get(get_agent_metrics_handler))
+        .route("/api/v1/agents/:id/logs", get(get_agent_logs_handler))
+        .route("/api/v1/agents/:id/restart", post(restart_agent_handler))
+        .route("/api/v1/agents/:id/stop", post(stop_agent_handler));
+
+    // Judge management endpoints
+    router = router
+        .route("/api/v1/judges", get(list_judges_handler))
+        .route("/api/v1/judges", post(create_judge_handler))
+        .route("/api/v1/judges/stats", get(get_judges_stats_handler))
+        .route("/api/v1/judges/:id", get(get_judge_handler))
+        .route("/api/v1/judges/:id", axum::routing::patch(update_judge_handler))
+        .route("/api/v1/judges/:id", axum::routing::delete(delete_judge_handler))
+        .route("/api/v1/judges/:id/stats", get(get_judge_stats_handler))
+        .route("/api/v1/judges/:id/evaluations", get(get_judge_evaluations_handler));
+
+    // Telemetry & Observability endpoints
+    router = router
+        .route("/api/v1/telemetry/contributions", get(get_contributions_handler))
+        .route("/api/v1/telemetry/model-contributions", get(get_model_contributions_handler))
+        .route("/api/v1/telemetry/agent-activity", get(get_agent_activity_handler))
+        .route("/api/v1/observability/efficiency", get(get_efficiency_handler))
+        .route("/api/v1/observability/system-metrics", get(get_system_metrics_handler))
+        .route("/api/v1/observability/alerts", get(get_alerts_handler));
 
     // Chain of thought and observation endpoints
     router = router
@@ -402,7 +472,14 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/projects", post(scaffold_project_handler))
         .route("/api/v1/projects", get(list_projects_handler))
         .route("/api/v1/projects/:project_id", get(get_project_handler))
-        .route("/api/v1/projects/:project_id/tasks", get(get_project_tasks_handler));
+        .route("/api/v1/projects/:project_id", axum::routing::patch(update_project_handler))
+        .route("/api/v1/projects/:project_id", axum::routing::delete(delete_project_handler))
+        .route("/api/v1/projects/:project_id/stats", get(get_project_stats_handler))
+        .route("/api/v1/projects/:project_id/tasks", get(get_project_tasks_handler))
+        .route("/api/v1/projects/:project_id/tasks/stats", get(get_project_tasks_stats_handler))
+        .route("/api/v1/projects/:project_id/milestones", get(get_project_milestones_handler))
+        .route("/api/v1/projects/:project_id/milestones", post(create_project_milestone_handler))
+        .route("/api/v1/projects/:project_id/milestones/:milestone_id", axum::routing::patch(update_project_milestone_handler));
 
     // Database inspection endpoints
     router = router
@@ -442,6 +519,14 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/queries", get(list_queries_handler))
         .route("/api/v1/queries", post(save_query_handler))
         .route("/api/v1/queries/:query_id", delete(delete_query_handler));
+
+    // Query performance monitoring endpoints
+    #[cfg(feature = "orchestration")]
+    router = router
+        .route("/api/v1/query-performance/summary", get(query_performance_summary_handler))
+        .route("/api/v1/query-performance/metrics", get(query_performance_metrics_handler))
+        .route("/api/v1/query-performance/slow", get(query_performance_slow_handler))
+        .route("/api/v1/query-performance/top-slow", get(query_performance_top_slow_handler));
 
     // Provenance endpoints
     router = router
@@ -880,6 +965,1299 @@ async fn resume_task_handler(
     }
 }
 
+async fn update_task_handler(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let update = data_infrastructure::database_operations::UpdateTask {
+        title: payload.get("title").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        description: payload.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        risk_tier: payload.get("risk_tier").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        scope: payload.get("scope").cloned(),
+        acceptance_criteria: payload.get("acceptance_criteria").cloned(),
+        context: payload.get("context").cloned(),
+        caws_spec: payload.get("caws_spec").cloned(),
+        status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
+        deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        metadata: payload.get("metadata").cloned(),
+        completed_at: payload.get("completed_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+    };
+    
+    match db.update_task(task_uuid, update).await {
+        Ok(task) => {
+            Ok(Json(serde_json::json!({
+                "task_id": task.id.to_string(),
+                "title": task.title,
+                "description": task.description,
+                "status": task.status,
+                "updated_at": task.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_task_handler(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.delete_task(task_uuid).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "deleted",
+                "task_id": task_id,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to delete task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_tasks_stats_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_tasks().await {
+        Ok(tasks) => {
+            let total = tasks.len();
+            let completed = tasks.iter().filter(|t| t.status == "completed").count();
+            let in_progress = tasks.iter().filter(|t| t.status == "in_progress").count();
+            let pending = tasks.iter().filter(|t| t.status == "pending").count();
+            let cancelled = tasks.iter().filter(|t| t.status == "cancelled").count();
+            let failed = tasks.iter().filter(|t| t.status == "failed").count();
+            
+            Ok(Json(serde_json::json!({
+                "total": total,
+                "completed": completed,
+                "in_progress": in_progress,
+                "pending": pending,
+                "cancelled": cancelled,
+                "failed": failed,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get tasks stats: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_project_task_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let title = payload.get("title")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let description = payload.get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    
+    let create = data_infrastructure::database_operations::CreateTask {
+        title: title.to_string(),
+        description: description.to_string(),
+        risk_tier: payload.get("risk_tier").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "2".to_string()),
+        scope: payload.get("scope").cloned().unwrap_or_else(|| serde_json::json!({})),
+        acceptance_criteria: payload.get("acceptance_criteria").cloned().unwrap_or_else(|| serde_json::json!([])),
+        context: payload.get("context").cloned().unwrap_or_else(|| serde_json::json!({})),
+        caws_spec: payload.get("caws_spec").cloned(),
+        status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "pending".to_string()),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
+        deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        metadata: {
+            let mut metadata = payload.get("metadata").cloned().unwrap_or_else(|| serde_json::json!({}));
+            // Add project_id to metadata for linking
+            if let Some(obj) = metadata.as_object_mut() {
+                obj.insert("project_id".to_string(), serde_json::Value::String(project_id.clone()));
+            }
+            Some(metadata)
+        },
+    };
+    
+    // Create task using CreateTask struct
+    match db.create_task_from_create(create).await {
+        Ok(task) => {
+            Ok(Json(serde_json::json!({
+                "task_id": task.id.to_string(),
+                "title": task.title,
+                "description": task.description,
+                "status": task.status,
+                "project_id": project_id,
+                "created_at": task.created_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_project_task_handler(
+    State(state): State<AppState>,
+    Path((project_id, task_id)): Path<(String, String)>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Verify task belongs to project (check metadata)
+    let task = db.get_task(&task_uuid).await
+        .map_err(|e| {
+            error!("Failed to get task: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
+        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
+            if meta_project_id != project_id {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
+    
+    // Update task (same as regular update_task_handler)
+    let update = data_infrastructure::database_operations::UpdateTask {
+        title: payload.get("title").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        description: payload.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        risk_tier: payload.get("risk_tier").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        scope: payload.get("scope").cloned(),
+        acceptance_criteria: payload.get("acceptance_criteria").cloned(),
+        context: payload.get("context").cloned(),
+        caws_spec: payload.get("caws_spec").cloned(),
+        status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
+        deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        metadata: payload.get("metadata").cloned(),
+        completed_at: payload.get("completed_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+    };
+    
+    match db.update_task(task_uuid, update).await {
+        Ok(task) => {
+            Ok(Json(serde_json::json!({
+                "task_id": task.id.to_string(),
+                "title": task.title,
+                "status": task.status,
+                "project_id": project_id,
+                "updated_at": task.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_project_task_handler(
+    State(state): State<AppState>,
+    Path((project_id, task_id)): Path<(String, String)>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Verify task belongs to project (check metadata)
+    let task = db.get_task(&task_uuid).await
+        .map_err(|e| {
+            error!("Failed to get task: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
+        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
+            if meta_project_id != project_id {
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
+    
+    match db.delete_task(task_uuid).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "deleted",
+                "task_id": task_id,
+                "project_id": project_id,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to delete task: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Worker/Agent management handlers
+async fn list_agents_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_workers().await {
+        Ok(workers) => {
+            let agents: Vec<JsonValue> = workers.into_iter().map(|worker| {
+                serde_json::json!({
+                    "id": worker.id.to_string(),
+                    "name": worker.name,
+                    "worker_type": worker.worker_type,
+                    "specialty": worker.specialty,
+                    "model_name": worker.model_name,
+                    "endpoint": worker.endpoint,
+                    "is_active": worker.is_active,
+                    "created_at": worker.created_at.to_rfc3339(),
+                    "updated_at": worker.updated_at.to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({ "agents": agents })))
+        }
+        Err(e) => {
+            error!("Failed to get workers: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_agents_stats_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_workers().await {
+        Ok(workers) => {
+            let total = workers.len();
+            let active = workers.iter().filter(|w| w.is_active).count();
+            let inactive = total - active;
+            
+            // Count by worker type
+            let mut by_type: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+            for worker in &workers {
+                *by_type.entry(worker.worker_type.clone()).or_insert(0) += 1;
+            }
+            
+            Ok(Json(serde_json::json!({
+                "total": total,
+                "active": active,
+                "inactive": inactive,
+                "by_type": by_type,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get workers stats: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_worker(agent_uuid).await {
+        Ok(Some(worker)) => {
+            Ok(Json(serde_json::json!({
+                "id": worker.id.to_string(),
+                "name": worker.name,
+                "worker_type": worker.worker_type,
+                "specialty": worker.specialty,
+                "model_name": worker.model_name,
+                "endpoint": worker.endpoint,
+                "capabilities": worker.capabilities,
+                "performance_history": worker.performance_history,
+                "is_active": worker.is_active,
+                "created_at": worker.created_at.to_rfc3339(),
+                "updated_at": worker.updated_at.to_rfc3339(),
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get worker: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let update = data_infrastructure::database_operations::UpdateWorker {
+        name: payload.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        worker_type: payload.get("worker_type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        specialty: payload.get("specialty").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        model_name: payload.get("model_name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        endpoint: payload.get("endpoint").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        capabilities: payload.get("capabilities").cloned(),
+        performance_history: payload.get("performance_history").cloned(),
+        is_active: payload.get("is_active").and_then(|v| v.as_bool()),
+    };
+    
+    match db.update_worker(agent_uuid, update).await {
+        Ok(worker) => {
+            Ok(Json(serde_json::json!({
+                "id": worker.id.to_string(),
+                "name": worker.name,
+                "worker_type": worker.worker_type,
+                "is_active": worker.is_active,
+                "updated_at": worker.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update worker: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.delete_worker(agent_uuid).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "deleted",
+                "agent_id": agent_id,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to delete worker: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_agent_stats_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get worker
+    let worker = db.get_worker(agent_uuid).await
+        .map_err(|e| {
+            error!("Failed to get worker: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Get task executions for this worker
+    match db.get_task_executions_by_worker(agent_uuid).await {
+        Ok(executions) => {
+            let total_tasks = executions.len();
+            let completed = executions.iter().filter(|e| e.status == "completed").count();
+            let failed = executions.iter().filter(|e| e.status == "failed").count();
+            let in_progress = executions.iter().filter(|e| e.status == "in_progress").count();
+            
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "name": worker.name,
+                "total_tasks": total_tasks,
+                "completed": completed,
+                "failed": failed,
+                "in_progress": in_progress,
+                "success_rate": if total_tasks > 0 { (completed as f64 / total_tasks as f64) * 100.0 } else { 0.0 },
+                "performance_history": worker.performance_history,
+            })))
+        }
+        Err(_) => {
+            // If task_executions query fails, return basic stats
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "name": worker.name,
+                "total_tasks": 0,
+                "completed": 0,
+                "failed": 0,
+                "in_progress": 0,
+                "success_rate": 0.0,
+                "performance_history": worker.performance_history,
+            })))
+        }
+    }
+}
+
+async fn get_agent_health_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_worker(agent_uuid).await {
+        Ok(Some(worker)) => {
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "status": if worker.is_active { "healthy" } else { "inactive" },
+                "is_active": worker.is_active,
+                "last_updated": worker.updated_at.to_rfc3339(),
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get worker health: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_agent_metrics_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_worker(agent_uuid).await {
+        Ok(Some(worker)) => {
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "performance_history": worker.performance_history,
+                "capabilities": worker.capabilities,
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get worker metrics: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_agent_logs_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Query audit_trail_entries for agent-specific logs
+    // Check both 'agent' and 'worker' entity types
+    let query = r#"
+        SELECT 
+            id,
+            entity_type,
+            entity_id,
+            action,
+            details,
+            user_id,
+            ip_address,
+            created_at
+        FROM audit_trail_entries
+        WHERE (entity_type = 'agent' OR entity_type = 'worker')
+          AND entity_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1000
+    "#;
+    
+    match db.query_with_params(query, &[&agent_uuid]).await {
+        Ok(rows) => {
+            let logs: Vec<serde_json::Value> = rows.iter().map(|row| {
+                serde_json::json!({
+                    "id": row.get::<Uuid, _>("id").to_string(),
+                    "entity_type": row.get::<String, _>("entity_type"),
+                    "entity_id": row.get::<Uuid, _>("entity_id").to_string(),
+                    "action": row.get::<String, _>("action"),
+                    "details": row.try_get::<serde_json::Value, _>("details").unwrap_or(serde_json::json!({})),
+                    "user_id": row.try_get::<Option<String>, _>("user_id").ok().flatten(),
+                    "ip_address": row.try_get::<Option<String>, _>("ip_address").ok().flatten(),
+                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "logs": logs,
+                "total": logs.len(),
+                "status": "success"
+            })))
+        }
+        Err(e) => {
+            error!("Failed to query agent logs: {}", e);
+            // Return empty logs instead of error for graceful degradation
+            Ok(Json(serde_json::json!({
+                "agent_id": agent_id,
+                "logs": [],
+                "total": 0,
+                "status": "success",
+                "message": "No logs found or error occurred"
+            })))
+        }
+    }
+}
+
+async fn restart_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Verify worker exists
+    let worker = db.get_worker(agent_uuid).await
+        .map_err(|e| {
+            error!("Database error during agent restart: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Restart worker by setting is_active to true
+    // This effectively restarts the worker by making it active again
+    let update = data_infrastructure::database_operations::UpdateWorker {
+        name: None,
+        worker_type: None,
+        specialty: None,
+        model_name: None,
+        endpoint: None,
+        capabilities: None,
+        performance_history: None,
+        is_active: Some(true), // Restart by activating
+    };
+    
+    match db.update_worker(agent_uuid, update).await {
+        Ok(updated_worker) => {
+            // Log restart action to audit trail
+            let _ = db.execute(
+                r#"
+                    INSERT INTO audit_trail_entries (entity_type, entity_id, action, details, created_at)
+                    VALUES ('worker', $1, 'restart', $2, NOW())
+                "#,
+                &[
+                    &agent_uuid,
+                    &serde_json::json!({
+                        "previous_status": worker.is_active,
+                        "new_status": true,
+                        "restarted_at": chrono::Utc::now().to_rfc3339()
+                    }).to_string().as_str(),
+                ],
+            ).await;
+            
+            info!("Agent restarted: {}", agent_id);
+            
+            Ok(Json(serde_json::json!({
+                "status": "success",
+                "agent_id": agent_id,
+                "message": "Agent restarted successfully",
+                "is_active": updated_worker.is_active
+            })))
+        }
+        Err(e) => {
+            error!("Failed to restart agent: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn stop_agent_handler(
+    State(state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let agent_uuid = Uuid::parse_str(&agent_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Update worker to inactive
+    let update = data_infrastructure::database_operations::UpdateWorker {
+        name: None,
+        worker_type: None,
+        specialty: None,
+        model_name: None,
+        endpoint: None,
+        capabilities: None,
+        performance_history: None,
+        is_active: Some(false),
+    };
+    
+    match db.update_worker(agent_uuid, update).await {
+        Ok(worker) => {
+            Ok(Json(serde_json::json!({
+                "status": "stopped",
+                "agent_id": agent_id,
+                "is_active": worker.is_active,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to stop worker: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Judge management handlers
+async fn list_judges_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_judges().await {
+        Ok(judges) => {
+            let judges_list: Vec<JsonValue> = judges.into_iter().map(|judge| {
+                serde_json::json!({
+                    "id": judge.id.to_string(),
+                    "name": judge.name,
+                    "model_name": judge.model_name,
+                    "endpoint": judge.endpoint,
+                    "weight": judge.weight,
+                    "timeout_ms": judge.timeout_ms,
+                    "optimization_target": judge.optimization_target,
+                    "is_active": judge.is_active,
+                    "created_at": judge.created_at.to_rfc3339(),
+                    "updated_at": judge.updated_at.to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({ "judges": judges_list })))
+        }
+        Err(e) => {
+            error!("Failed to get judges: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_judge_handler(
+    State(state): State<AppState>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let name = payload.get("name")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let model_name = payload.get("model_name")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let endpoint = payload.get("endpoint")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let create = data_infrastructure::database_operations::CreateJudge {
+        name: name.to_string(),
+        model_name: model_name.to_string(),
+        endpoint: endpoint.to_string(),
+        weight: payload.get("weight").and_then(|v| v.as_f64()).map(|f| f as f32).unwrap_or(1.0),
+        timeout_ms: payload.get("timeout_ms").and_then(|v| v.as_i64()).map(|i| i as i32).unwrap_or(5000),
+        optimization_target: payload.get("optimization_target").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "accuracy".to_string()),
+        is_active: payload.get("is_active").and_then(|v| v.as_bool()).unwrap_or(true),
+    };
+    
+    match db.create_judge(create).await {
+        Ok(judge) => {
+            Ok(Json(serde_json::json!({
+                "id": judge.id.to_string(),
+                "name": judge.name,
+                "model_name": judge.model_name,
+                "endpoint": judge.endpoint,
+                "weight": judge.weight,
+                "is_active": judge.is_active,
+                "created_at": judge.created_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create judge: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_judges_stats_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_judges().await {
+        Ok(judges) => {
+            let total = judges.len();
+            let active = judges.iter().filter(|j| j.is_active).count();
+            let inactive = total - active;
+            
+            // Calculate average weight
+            let avg_weight = if total > 0 {
+                judges.iter().map(|j| j.weight).sum::<f32>() / total as f32
+            } else {
+                0.0
+            };
+            
+            Ok(Json(serde_json::json!({
+                "total": total,
+                "active": active,
+                "inactive": inactive,
+                "average_weight": avg_weight,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get judges stats: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_judge_handler(
+    State(state): State<AppState>,
+    Path(judge_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let judge_uuid = Uuid::parse_str(&judge_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_judge(judge_uuid).await {
+        Ok(Some(judge)) => {
+            Ok(Json(serde_json::json!({
+                "id": judge.id.to_string(),
+                "name": judge.name,
+                "model_name": judge.model_name,
+                "endpoint": judge.endpoint,
+                "weight": judge.weight,
+                "timeout_ms": judge.timeout_ms,
+                "optimization_target": judge.optimization_target,
+                "is_active": judge.is_active,
+                "created_at": judge.created_at.to_rfc3339(),
+                "updated_at": judge.updated_at.to_rfc3339(),
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get judge: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_judge_handler(
+    State(state): State<AppState>,
+    Path(judge_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let judge_uuid = Uuid::parse_str(&judge_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let update = data_infrastructure::database_operations::UpdateJudge {
+        name: payload.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        model_name: payload.get("model_name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        endpoint: payload.get("endpoint").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        weight: payload.get("weight").and_then(|v| v.as_f64()).map(|f| f as f32),
+        timeout_ms: payload.get("timeout_ms").and_then(|v| v.as_i64()).map(|i| i as i32),
+        optimization_target: payload.get("optimization_target").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        is_active: payload.get("is_active").and_then(|v| v.as_bool()),
+    };
+    
+    match db.update_judge(judge_uuid, update).await {
+        Ok(judge) => {
+            Ok(Json(serde_json::json!({
+                "id": judge.id.to_string(),
+                "name": judge.name,
+                "model_name": judge.model_name,
+                "weight": judge.weight,
+                "is_active": judge.is_active,
+                "updated_at": judge.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update judge: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_judge_handler(
+    State(state): State<AppState>,
+    Path(judge_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let judge_uuid = Uuid::parse_str(&judge_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.delete_judge(judge_uuid).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "deleted",
+                "judge_id": judge_id,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to delete judge: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_judge_stats_handler(
+    State(state): State<AppState>,
+    Path(judge_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let judge_uuid = Uuid::parse_str(&judge_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get judge
+    let judge = db.get_judge(judge_uuid).await
+        .map_err(|e| {
+            error!("Failed to get judge: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Get judge evaluations for this judge
+    match db.get_judge_evaluations_by_judge(judge_uuid).await {
+        Ok(evaluations) => {
+            let total_evaluations = evaluations.len();
+            let avg_confidence = if total_evaluations > 0 {
+                evaluations.iter()
+                    .filter_map(|e| e.confidence_score.or(e.confidence))
+                    .collect::<Vec<_>>()
+                    .iter()
+                    .sum::<f32>() / total_evaluations as f32
+            } else {
+                0.0
+            };
+            
+            // Count verdict decisions
+            let mut verdict_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+            for eval in &evaluations {
+                if let Some(decision) = &eval.verdict_decision {
+                    *verdict_counts.entry(decision.clone()).or_insert(0) += 1;
+                }
+            }
+            
+            Ok(Json(serde_json::json!({
+                "judge_id": judge_id,
+                "name": judge.name,
+                "total_evaluations": total_evaluations,
+                "average_confidence": avg_confidence,
+                "weight": judge.weight,
+                "is_active": judge.is_active,
+                "verdict_counts": verdict_counts,
+            })))
+        }
+        Err(_) => {
+            // If evaluations query fails, return basic stats
+            Ok(Json(serde_json::json!({
+                "judge_id": judge_id,
+                "name": judge.name,
+                "total_evaluations": 0,
+                "average_confidence": 0.0,
+                "weight": judge.weight,
+                "is_active": judge.is_active,
+                "verdict_counts": {},
+            })))
+        }
+    }
+}
+
+async fn get_judge_evaluations_handler(
+    State(state): State<AppState>,
+    Path(judge_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let judge_uuid = Uuid::parse_str(&judge_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_judge_evaluations_by_judge(judge_uuid).await {
+        Ok(evaluations) => {
+            let evaluations_list: Vec<JsonValue> = evaluations.into_iter().map(|eval| {
+                serde_json::json!({
+                    "id": eval.id.to_string(),
+                    "verdict_id": eval.verdict_id.to_string(),
+                    "judge_id": eval.judge_id.to_string(),
+                    "judge_verdict": eval.judge_verdict,
+                    "verdict_decision": eval.verdict_decision,
+                    "confidence_score": eval.confidence_score,
+                    "confidence": eval.confidence,
+                    "evaluation_score": eval.evaluation_score,
+                    "reasoning": eval.reasoning,
+                    "evaluation_time_ms": eval.evaluation_time_ms,
+                    "tokens_used": eval.tokens_used,
+                    "created_at": eval.created_at.to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({ "evaluations": evaluations_list })))
+        }
+        Err(e) => {
+            error!("Failed to get judge evaluations: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Telemetry & Observability handlers
+async fn get_contributions_handler(
+    State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Get days parameter (default to 30)
+    let days = params.get("days")
+        .and_then(|d| d.parse::<i64>().ok())
+        .unwrap_or(30);
+    
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days);
+    
+    // Query provenance_entries for code contribution events
+    match db.query(
+        "SELECT DATE_TRUNC('day', timestamp) as day, COUNT(*) as count, COUNT(DISTINCT actor) as unique_contributors FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1 GROUP BY DATE_TRUNC('day', timestamp) ORDER BY day DESC",
+        &[&cutoff_date]
+    ).await {
+        Ok(rows) => {
+            let mut contributions: Vec<JsonValue> = Vec::new();
+            let mut total_contributions = 0;
+            let mut unique_contributors = std::collections::HashSet::new();
+            
+            for row in rows {
+                let day: chrono::DateTime<chrono::Utc> = row.try_get("day").unwrap_or_default();
+                let count: i64 = row.try_get("count").unwrap_or(0);
+                let contributors: i64 = row.try_get("unique_contributors").unwrap_or(0);
+                
+                total_contributions += count;
+                contributions.push(serde_json::json!({
+                    "day": day.to_rfc3339(),
+                    "count": count,
+                    "unique_contributors": contributors,
+                }));
+            }
+            
+            // Get unique contributors count from all rows
+            match db.query(
+                "SELECT DISTINCT actor FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1",
+                &[&cutoff_date]
+            ).await {
+                Ok(contributor_rows) => {
+                    for row in contributor_rows {
+                        if let Ok(actor) = row.try_get::<String, _>("actor") {
+                            unique_contributors.insert(actor);
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
+            
+            Ok(Json(serde_json::json!({
+                "period_days": days,
+                "total_contributions": total_contributions,
+                "unique_contributors": unique_contributors.len(),
+                "daily_contributions": contributions,
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "period_days": days,
+                "total_contributions": 0,
+                "unique_contributors": 0,
+                "daily_contributions": [],
+            })))
+        }
+    }
+}
+
+async fn get_model_contributions_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Query telemetry_data for model-related contributions
+    match db.query(
+        "SELECT source, COUNT(*) as count, MAX(timestamp) as last_used FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY source ORDER BY count DESC",
+        &[]
+    ).await {
+        Ok(rows) => {
+            let mut model_stats: Vec<JsonValue> = Vec::new();
+            let mut total_requests = 0;
+            
+            for row in rows {
+                let source: String = row.try_get("source").unwrap_or_default();
+                let count: i64 = row.try_get("count").unwrap_or(0);
+                let last_used: Option<chrono::DateTime<chrono::Utc>> = row.try_get("last_used").ok();
+                
+                total_requests += count;
+                model_stats.push(serde_json::json!({
+                    "model": source,
+                    "request_count": count,
+                    "last_used": last_used.map(|d| d.to_rfc3339()),
+                }));
+            }
+            
+            Ok(Json(serde_json::json!({
+                "total_requests": total_requests,
+                "models": model_stats,
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "total_requests": 0,
+                "models": [],
+            })))
+        }
+    }
+}
+
+async fn get_agent_activity_handler(
+    State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Get hours parameter (default to 24)
+    let hours = params.get("hours")
+        .and_then(|h| h.parse::<i64>().ok())
+        .unwrap_or(24);
+    
+    let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(hours);
+    
+    // Query telemetry_data for agent activity
+    match db.query(
+        "SELECT DATE_TRUNC('hour', timestamp) as hour, source, COUNT(*) as activity_count FROM telemetry_data WHERE (source LIKE '%agent%' OR source LIKE '%worker%' OR source LIKE '%orchestrator%') AND timestamp >= $1 GROUP BY DATE_TRUNC('hour', timestamp), source ORDER BY hour DESC",
+        &[&cutoff_time]
+    ).await {
+        Ok(rows) => {
+            let mut activity: Vec<JsonValue> = Vec::new();
+            let mut by_source: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+            
+            for row in rows {
+                let hour: chrono::DateTime<chrono::Utc> = row.try_get("hour").unwrap_or_default();
+                let source: String = row.try_get("source").unwrap_or_default();
+                let count: i64 = row.try_get("activity_count").unwrap_or(0);
+                
+                *by_source.entry(source.clone()).or_insert(0) += count;
+                
+                activity.push(serde_json::json!({
+                    "hour": hour.to_rfc3339(),
+                    "source": source,
+                    "activity_count": count,
+                }));
+            }
+            
+            let source_stats: Vec<JsonValue> = by_source.into_iter().map(|(source, count)| {
+                serde_json::json!({
+                    "source": source,
+                    "total_activity": count,
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({
+                "period_hours": hours,
+                "time_series": activity,
+                "by_source": source_stats,
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "period_hours": hours,
+                "time_series": [],
+                "by_source": [],
+            })))
+        }
+    }
+}
+
+async fn get_efficiency_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Query telemetry_data for efficiency metrics
+    match db.query(
+        "SELECT payload->>'metric_name' as metric_name, AVG((payload->>'value')::float) as avg_value, MIN((payload->>'value')::float) as min_value, MAX((payload->>'value')::float) as max_value FROM telemetry_data WHERE data_type = 'Metric' AND (payload->>'metric_name' LIKE '%efficiency%' OR payload->>'metric_name' LIKE '%throughput%' OR payload->>'metric_name' LIKE '%latency%') AND timestamp >= NOW() - INTERVAL '24 hours' GROUP BY payload->>'metric_name'",
+        &[]
+    ).await {
+        Ok(rows) => {
+            let mut metrics: Vec<JsonValue> = Vec::new();
+            
+            for row in rows {
+                let metric_name: Option<String> = row.try_get("metric_name").ok();
+                let avg_value: Option<f64> = row.try_get("avg_value").ok();
+                let min_value: Option<f64> = row.try_get("min_value").ok();
+                let max_value: Option<f64> = row.try_get("max_value").ok();
+                
+                if let Some(name) = metric_name {
+                    metrics.push(serde_json::json!({
+                        "metric": name,
+                        "average": avg_value,
+                        "min": min_value,
+                        "max": max_value,
+                    }));
+                }
+            }
+            
+            Ok(Json(serde_json::json!({
+                "metrics": metrics,
+                "period": "24 hours",
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "metrics": [],
+                "period": "24 hours",
+            })))
+        }
+    }
+}
+
+async fn get_system_metrics_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Query telemetry_data for system resource metrics
+    match db.query(
+        "SELECT payload->>'metric_name' as metric_name, AVG((payload->>'value')::float) as avg_value, MAX((payload->>'value')::float) as max_value FROM telemetry_data WHERE data_type = 'Metric' AND (payload->>'metric_name' LIKE '%cpu%' OR payload->>'metric_name' LIKE '%memory%' OR payload->>'metric_name' LIKE '%disk%' OR payload->>'metric_name' LIKE '%network%') AND timestamp >= NOW() - INTERVAL '1 hour' GROUP BY payload->>'metric_name'",
+        &[]
+    ).await {
+        Ok(rows) => {
+            let mut metrics: Vec<JsonValue> = Vec::new();
+            
+            for row in rows {
+                let metric_name: Option<String> = row.try_get("metric_name").ok();
+                let avg_value: Option<f64> = row.try_get("avg_value").ok();
+                let max_value: Option<f64> = row.try_get("max_value").ok();
+                
+                if let Some(name) = metric_name {
+                    metrics.push(serde_json::json!({
+                        "metric": name,
+                        "average": avg_value,
+                        "max": max_value,
+                    }));
+                }
+            }
+            
+            Ok(Json(serde_json::json!({
+                "metrics": metrics,
+                "period": "1 hour",
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "metrics": [],
+                "period": "1 hour",
+            })))
+        }
+    }
+}
+
+async fn get_alerts_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Query telemetry_data for alerts and errors
+    match db.query(
+        "SELECT id, timestamp, source, payload, tags FROM telemetry_data WHERE (data_type = 'Event' AND (payload->>'level' = 'error' OR payload->>'level' = 'warning' OR payload->>'alert' IS NOT NULL)) OR (data_type = 'Log' AND (payload->>'level' = 'ERROR' OR payload->>'level' = 'WARN')) ORDER BY timestamp DESC LIMIT 100",
+        &[]
+    ).await {
+        Ok(rows) => {
+            let mut alerts: Vec<JsonValue> = Vec::new();
+            
+            for row in rows {
+                let id: Uuid = row.try_get("id").unwrap_or_default();
+                let timestamp: chrono::DateTime<chrono::Utc> = row.try_get("timestamp").unwrap_or_default();
+                let source: String = row.try_get("source").unwrap_or_default();
+                let payload: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::json!({}));
+                let tags: serde_json::Value = row.try_get("tags").unwrap_or(serde_json::json!({}));
+                
+                alerts.push(serde_json::json!({
+                    "id": id.to_string(),
+                    "timestamp": timestamp.to_rfc3339(),
+                    "source": source,
+                    "level": payload.get("level").and_then(|v| v.as_str()).unwrap_or("unknown"),
+                    "message": payload.get("message").and_then(|v| v.as_str()).or_else(|| payload.get("error").and_then(|v| v.as_str())).unwrap_or(""),
+                    "tags": tags,
+                }));
+            }
+            
+            Ok(Json(serde_json::json!({
+                "alerts": alerts,
+                "count": alerts.len(),
+            })))
+        }
+        Err(_) => {
+            // If table doesn't exist or query fails, return empty result
+            Ok(Json(serde_json::json!({
+                "alerts": [],
+                "count": 0,
+            })))
+        }
+    }
+}
+
 // Chain of thought handlers
 async fn get_chain_of_thought_handler(
     State(state): State<AppState>,
@@ -1215,48 +2593,402 @@ async fn scaffold_project_handler(
 async fn list_projects_handler(
     State(state): State<AppState>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    #[cfg(feature = "orchestration")]
-    {
-        // Observe tasks that might be projects (tasks with "scaffold" or "project" in description)
-        if let Some(service) = &state.orchestrator_service {
-            let tasks = service.list_tasks().await;
-            let projects: Vec<JsonValue> = tasks.into_iter()
-                .filter(|task| {
-                    let desc_lower = task.description.to_lowercase();
-                    desc_lower.contains("scaffold") || desc_lower.contains("project")
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    match db.get_execution_plans().await {
+        Ok(plans) => {
+            let projects: Vec<JsonValue> = plans.into_iter().map(|plan| {
+                serde_json::json!({
+                    "project_id": plan.id.to_string(),
+                    "name": plan.title,
+                    "overview": plan.overview,
+                    "state": plan.state,
+                    "created_at": plan.created_at.to_rfc3339(),
+                    "updated_at": plan.updated_at.to_rfc3339(),
+                    "completed_at": plan.completed_at.map(|d| d.to_rfc3339()),
                 })
-                .map(|task| {
-                    serde_json::json!({
-                        "project_id": task.task_id.to_string(),
-                        "name": task.description.chars().take(50).collect::<String>(),
-                        "status": format!("{:?}", task.status),
-                        "created_at": task.started_at.to_rfc3339(),
-                    })
-                }).collect();
+            }).collect();
             Ok(Json(serde_json::json!({ "projects": projects })))
-        } else {
+        }
+        Err(e) => {
+            error!("Failed to list projects: {}", e);
             Ok(Json(serde_json::json!({ "projects": [] })))
         }
-    }
-
-    #[cfg(not(feature = "orchestration"))]
-    {
-        Ok(Json(serde_json::json!({ "projects": [] })))
     }
 }
 
 async fn get_project_handler(
-    State(_state): State<AppState>,
-    Path(_project_id): Path<String>,
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    Err(StatusCode::NOT_FOUND)
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_execution_plan(project_uuid).await {
+        Ok(Some(plan)) => {
+            Ok(Json(serde_json::json!({
+                "project_id": plan.id.to_string(),
+                "name": plan.title,
+                "overview": plan.overview,
+                "state": plan.state,
+                "working_spec_id": plan.working_spec_id,
+                "milestones": plan.milestones,
+                "dependency_graph": plan.dependency_graph,
+                "change_budget": plan.change_budget,
+                "quality_gates": plan.quality_gates,
+                "evidence_requirements": plan.evidence_requirements,
+                "active_waivers": plan.active_waivers,
+                "metadata": plan.metadata,
+                "created_at": plan.created_at.to_rfc3339(),
+                "updated_at": plan.updated_at.to_rfc3339(),
+                "approved_at": plan.approved_at.map(|d| d.to_rfc3339()),
+                "completed_at": plan.completed_at.map(|d| d.to_rfc3339()),
+            })))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get project: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_project_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let update = data_infrastructure::database_operations::UpdateExecutionPlan {
+        title: payload.get("name").or(payload.get("title")).and_then(|v| v.as_str()).map(|s| s.to_string()),
+        overview: payload.get("overview").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        state: payload.get("state").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        milestones: payload.get("milestones").cloned(),
+        dependency_graph: payload.get("dependency_graph").cloned(),
+        change_budget: payload.get("change_budget").cloned(),
+        quality_gates: payload.get("quality_gates").cloned(),
+        evidence_requirements: payload.get("evidence_requirements").cloned(),
+        active_waivers: payload.get("active_waivers").cloned(),
+        metadata: payload.get("metadata").cloned(),
+        approved_at: payload.get("approved_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        completed_at: payload.get("completed_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+    };
+    
+    match db.update_execution_plan(project_uuid, update).await {
+        Ok(plan) => {
+            Ok(Json(serde_json::json!({
+                "project_id": plan.id.to_string(),
+                "name": plan.title,
+                "overview": plan.overview,
+                "state": plan.state,
+                "updated_at": plan.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update project: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_project_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.delete_execution_plan(project_uuid).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "status": "deleted",
+                "project_id": project_id,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to delete project: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_project_stats_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get project
+    let plan = match db.get_execution_plan(project_uuid).await {
+        Ok(Some(p)) => p,
+        Ok(None) => return Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get project: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+    
+    // Get milestones for this project
+    let milestones = db.get_milestones(project_uuid).await.unwrap_or_default();
+    let milestone_count = milestones.len();
+    let completed_milestones = milestones.iter().filter(|m| m.state == "completed").count();
+    let in_progress_milestones = milestones.iter().filter(|m| m.state == "in_progress").count();
+    
+    // Get tasks for this project (if tasks table has project_id or plan_id field)
+    // For now, we'll use metadata to link tasks to projects
+    let task_count = 0; // TODO: Query tasks table when project_id field is added
+    
+    Ok(Json(serde_json::json!({
+        "project_id": project_id,
+        "milestone_count": milestone_count,
+        "completed_milestones": completed_milestones,
+        "in_progress_milestones": in_progress_milestones,
+        "pending_milestones": milestone_count - completed_milestones - in_progress_milestones,
+        "task_count": task_count,
+        "state": plan.state,
+        "created_at": plan.created_at.to_rfc3339(),
+        "updated_at": plan.updated_at.to_rfc3339(),
+    })))
 }
 
 async fn get_project_tasks_handler(
-    State(_state): State<AppState>,
-    Path(_project_id): Path<String>,
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    Ok(Json(serde_json::json!({ "tasks": [] })))
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get all tasks and filter by project_id in metadata
+    match db.get_tasks().await {
+        Ok(tasks) => {
+            let project_tasks: Vec<JsonValue> = tasks.into_iter()
+                .filter(|task| {
+                    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
+                        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
+                            return meta_project_id == project_id;
+                        }
+                    }
+                    false
+                })
+                .map(|task| {
+                    serde_json::json!({
+                        "task_id": task.id.to_string(),
+                        "title": task.title,
+                        "description": task.description,
+                        "status": task.status,
+                        "risk_tier": task.risk_tier,
+                        "priority": task.priority,
+                        "created_at": task.created_at.to_rfc3339(),
+                        "updated_at": task.updated_at.to_rfc3339(),
+                        "completed_at": task.completed_at.map(|d| d.to_rfc3339()),
+                    })
+                })
+                .collect();
+            
+            Ok(Json(serde_json::json!({ "tasks": project_tasks })))
+        }
+        Err(e) => {
+            error!("Failed to get project tasks: {}", e);
+            Ok(Json(serde_json::json!({ "tasks": [] })))
+        }
+    }
+}
+
+async fn get_project_tasks_stats_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get all tasks and filter by project_id in metadata
+    match db.get_tasks().await {
+        Ok(tasks) => {
+            let project_tasks: Vec<_> = tasks.into_iter()
+                .filter(|task| {
+                    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
+                        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
+                            return meta_project_id == project_id;
+                        }
+                    }
+                    false
+                })
+                .collect();
+            
+            let total = project_tasks.len();
+            let completed = project_tasks.iter().filter(|t| t.status == "completed").count();
+            let in_progress = project_tasks.iter().filter(|t| t.status == "in_progress").count();
+            let pending = project_tasks.iter().filter(|t| t.status == "pending").count();
+            let cancelled = project_tasks.iter().filter(|t| t.status == "cancelled").count();
+            let failed = project_tasks.iter().filter(|t| t.status == "failed").count();
+            
+            Ok(Json(serde_json::json!({
+                "total": total,
+                "completed": completed,
+                "in_progress": in_progress,
+                "pending": pending,
+                "cancelled": cancelled,
+                "failed": failed,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get project tasks stats: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_project_milestones_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_milestones(project_uuid).await {
+        Ok(milestones) => {
+            let milestone_list: Vec<JsonValue> = milestones.into_iter().map(|m| {
+                serde_json::json!({
+                    "id": m.id,
+                    "plan_id": m.plan_id.to_string(),
+                    "objective": m.objective,
+                    "state": m.state,
+                    "priority": m.priority,
+                    "risk_tier": m.risk_tier,
+                    "is_blocking": m.is_blocking,
+                    "estimated_effort": m.estimated_effort,
+                    "started_at": m.started_at.map(|d| d.to_rfc3339()),
+                    "completed_at": m.completed_at.map(|d| d.to_rfc3339()),
+                    "created_at": m.created_at.to_rfc3339(),
+                    "updated_at": m.updated_at.to_rfc3339(),
+                })
+            }).collect();
+            Ok(Json(serde_json::json!({ "milestones": milestone_list })))
+        }
+        Err(e) => {
+            error!("Failed to get milestones: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn create_project_milestone_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let milestone_id = payload.get("id")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let objective = payload.get("objective")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    let create = data_infrastructure::database_operations::CreateMilestone {
+        id: milestone_id.to_string(),
+        plan_id: project_uuid,
+        objective: objective.to_string(),
+        scope: Some(payload.get("scope").cloned().unwrap_or_else(|| serde_json::json!({}))),
+        interfaces: Some(payload.get("interfaces").cloned().unwrap_or_else(|| serde_json::json!([]))),
+        tests: Some(payload.get("tests").cloned().unwrap_or_else(|| serde_json::json!([]))),
+        evidence_gate: Some(payload.get("evidence_gate").cloned().unwrap_or_else(|| serde_json::json!({}))),
+        rollback_plan: payload.get("rollback_plan").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        dependencies: Some(payload.get("dependencies").cloned().unwrap_or_else(|| serde_json::json!([]))),
+        state: Some(payload.get("state").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "pending".to_string())),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        estimated_effort: payload.get("estimated_effort").and_then(|v| v.as_f64()),
+        priority: payload.get("priority").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        risk_tier: payload.get("risk_tier").and_then(|v| v.as_i64()).map(|i| i as i32),
+        is_blocking: payload.get("is_blocking").and_then(|v| v.as_bool()),
+        blocking_reason: payload.get("blocking_reason").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        metrics: payload.get("metrics").cloned(),
+    };
+    
+    match db.create_milestone(create).await {
+        Ok(milestone) => {
+            Ok(Json(serde_json::json!({
+                "id": milestone.id,
+                "plan_id": milestone.plan_id.to_string(),
+                "objective": milestone.objective,
+                "state": milestone.state,
+                "created_at": milestone.created_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to create milestone: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_project_milestone_handler(
+    State(state): State<AppState>,
+    Path((project_id, milestone_id)): Path<(String, String)>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let update = data_infrastructure::database_operations::UpdateMilestone {
+        objective: payload.get("objective").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        scope: payload.get("scope").cloned(),
+        interfaces: payload.get("interfaces").cloned(),
+        tests: payload.get("tests").cloned(),
+        evidence_gate: payload.get("evidence_gate").cloned(),
+        rollback_plan: payload.get("rollback_plan").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        dependencies: payload.get("dependencies").cloned(),
+        state: payload.get("state").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        estimated_effort: payload.get("estimated_effort").and_then(|v| v.as_f64()),
+        priority: payload.get("priority").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        risk_tier: payload.get("risk_tier").and_then(|v| v.as_i64()).map(|i| i as i32),
+        is_blocking: payload.get("is_blocking").and_then(|v| v.as_bool()),
+        blocking_reason: payload.get("blocking_reason").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        metrics: payload.get("metrics").cloned(),
+        started_at: payload.get("started_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        completed_at: payload.get("completed_at").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+    };
+    
+    match db.update_milestone(project_uuid, milestone_id.clone(), update).await {
+        Ok(milestone) => {
+            Ok(Json(serde_json::json!({
+                "id": milestone.id,
+                "plan_id": milestone.plan_id.to_string(),
+                "objective": milestone.objective,
+                "state": milestone.state,
+                "updated_at": milestone.updated_at.to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to update milestone: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 // Database inspection handlers
@@ -1696,20 +3428,132 @@ async fn get_system_health_handler(
 async fn get_resource_usage_handler(
     State(_state): State<AppState>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    // TODO: Implement resource usage monitoring
+    use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworksExt};
+    
+    let mut system = System::new_all();
+    system.refresh_all();
+    
+    // Get CPU usage
+    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
+    
+    // Get memory usage
+    let total_memory = system.total_memory();
+    let used_memory = system.used_memory();
+    let memory_usage_mb = used_memory / (1024 * 1024); // Convert to MB
+    
+    // Get disk usage
+    let mut total_disk = 0u64;
+    let mut used_disk = 0u64;
+    for disk in system.disks() {
+        total_disk += disk.total_space();
+        used_disk += disk.total_space().saturating_sub(disk.available_space());
+    }
+    let disk_usage_mb = used_disk / (1024 * 1024); // Convert to MB
+    
+    // Get network usage
+    let mut network_bytes = 0u64;
+    for (_interface_name, network) in system.networks() {
+        network_bytes += network.received() + network.transmitted();
+    }
+    let network_usage_mb = network_bytes / (1024 * 1024); // Convert to MB
+    
     Ok(Json(serde_json::json!({
-        "cpu": 0.0,
-        "memory": 0,
-        "disk": 0,
-        "network": 0
+        "cpu": cpu_usage,
+        "memory": memory_usage_mb,
+        "disk": disk_usage_mb,
+        "network": network_usage_mb,
+        "timestamp": chrono::Utc::now().to_rfc3339()
     })))
 }
 
 async fn get_system_metrics_handler(
     State(_state): State<AppState>,
 ) -> Result<Json<JsonValue>, StatusCode> {
-    // TODO: Implement system metrics
-    Ok(Json(serde_json::json!({ "metrics": {} })))
+    use sysinfo::{System, SystemExt, CpuExt, DiskExt, NetworksExt};
+    
+    let mut system = System::new_all();
+    system.refresh_all();
+    
+    // CPU metrics
+    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
+    let cpu_count = system.cpus().len();
+    let per_core_usage: Vec<f64> = system.cpus().iter().map(|cpu| cpu.cpu_usage() as f64).collect();
+    
+    // Memory metrics
+    let total_memory = system.total_memory();
+    let used_memory = system.used_memory();
+    let available_memory = system.available_memory();
+    let memory_usage_percent = if total_memory > 0 {
+        (used_memory as f64 / total_memory as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Disk metrics
+    let mut total_disk_space = 0u64;
+    let mut total_used_space = 0u64;
+    let mut total_available_space = 0u64;
+    let mut disk_count = 0usize;
+    
+    for disk in system.disks() {
+        total_disk_space += disk.total_space();
+        total_used_space += disk.total_space().saturating_sub(disk.available_space());
+        total_available_space += disk.available_space();
+        disk_count += 1;
+    }
+    
+    let disk_usage_percent = if total_disk_space > 0 {
+        (total_used_space as f64 / total_disk_space as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Network metrics
+    let mut total_received = 0u64;
+    let mut total_transmitted = 0u64;
+    let mut interface_count = 0usize;
+    
+    for (_interface_name, network) in system.networks() {
+        total_received += network.received();
+        total_transmitted += network.transmitted();
+        interface_count += 1;
+    }
+    
+    // Load average (if available)
+    let load_avg = System::load_average();
+    
+    Ok(Json(serde_json::json!({
+        "cpu": {
+            "usage_percent": cpu_usage,
+            "core_count": cpu_count,
+            "per_core_usage": per_core_usage
+        },
+        "memory": {
+            "total_bytes": total_memory,
+            "used_bytes": used_memory,
+            "available_bytes": available_memory,
+            "usage_percent": memory_usage_percent
+        },
+        "disk": {
+            "total_bytes": total_disk_space,
+            "used_bytes": total_used_space,
+            "available_bytes": total_available_space,
+            "usage_percent": disk_usage_percent,
+            "disk_count": disk_count
+        },
+        "network": {
+            "total_received_bytes": total_received,
+            "total_transmitted_bytes": total_transmitted,
+            "total_bytes": total_received + total_transmitted,
+            "interface_count": interface_count
+        },
+        "load_average": {
+            "one_minute": load_avg.one,
+            "five_minute": load_avg.five,
+            "fifteen_minute": load_avg.fifteen
+        },
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    })))
 }
 
 // Analytics handlers (observational - aggregated from task states)
@@ -2269,36 +4113,7 @@ fn hash_token(token: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Helper function to generate a simple token (for MVP)
-/// PLACEHOLDER: In production, use proper JWT library with signing
-fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
-    let timestamp = Utc::now().timestamp();
-    let roles_str = roles.join(",");
-    let token_data = format!("{}:{}:{}", user_id, roles_str, timestamp);
-    use base64::{Engine as _, engine::general_purpose};
-    general_purpose::STANDARD.encode(token_data.as_bytes())
-}
-
-/// Helper function to verify password hash
-/// PLACEHOLDER: Integrate with system-quality-security AuthService for Argon2
-fn verify_password(password: &str, hash: &str) -> bool {
-    // PLACEHOLDER: Use argon2::Argon2::default().verify_password(password.as_bytes(), &parsed_hash)
-    warn!("Using placeholder password verification - NOT SECURE");
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    let password_hash = format!("{:x}", hasher.finalize());
-    password_hash == hash // TEMPORARY - MUST REPLACE WITH ARGON2
-}
-
-/// Helper function to hash password
-/// PLACEHOLDER: Integrate with system-quality-security AuthService for Argon2
-fn hash_password(password: &str) -> String {
-    // PLACEHOLDER: Use argon2::Argon2::default().hash_password(password.as_bytes(), &salt)
-    warn!("Using placeholder password hashing - NOT SECURE");
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize()) // TEMPORARY - MUST REPLACE WITH ARGON2
-}
+// Password hashing and token generation now handled by AuthService in AppState
 
 async fn login_handler(
     State(state): State<AppState>,
@@ -2343,8 +4158,14 @@ async fn login_handler(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    // Verify password
-    if !verify_password(&login_req.password, &user.password_hash) {
+    // Verify password using AuthService
+    let password_valid = state.auth_service.verify_password(&login_req.password, &user.password_hash)
+        .map_err(|e| {
+            error!("Password verification error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !password_valid {
         // Increment failed attempts
         let failed_attempts = user.failed_attempts + 1;
         let update = data_infrastructure::database_operations::UpdateUser {
@@ -2383,9 +4204,18 @@ async fn login_handler(
     };
     let _ = db.update_user(user.id, update).await;
 
-    // Generate tokens
-    let token = generate_token(&user.id, &user.roles);
-    let refresh_token = generate_token(&user.id, &user.roles);
+    // Generate tokens using AuthService
+    let user_id_str = user.id.to_string();
+    let token = state.auth_service.generate_token(&user_id_str, &user.roles)
+        .map_err(|e| {
+            error!("Token generation error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    let refresh_token = state.auth_service.generate_token(&user_id_str, &user.roles)
+        .map_err(|e| {
+            error!("Refresh token generation error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     let token_hash = hash_token(&token);
     let refresh_token_hash = Some(hash_token(&refresh_token));
     
@@ -2604,6 +4434,93 @@ async fn request_password_reset_handler(
     })))
 }
 
+// Query performance handlers (delegate to existing handlers)
+#[cfg(feature = "orchestration")]
+async fn query_performance_summary_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+        match data_infrastructure::api::handlers::query_performance::get_query_performance_summary(
+            State(ApiState {
+                api: api.clone(),
+                websocket_manager: ws_manager.clone(),
+                query_performance_monitor: query_monitor.clone(),
+            })
+        ).await {
+            Ok(response) => Ok(Json(serde_json::to_value(response.0).unwrap_or(serde_json::json!({})))),
+            Err(status) => Err(status),
+        }
+    } else {
+        Err(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
+
+#[cfg(feature = "orchestration")]
+async fn query_performance_metrics_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+        match data_infrastructure::api::handlers::query_performance::get_all_query_metrics(
+            State(ApiState {
+                api: api.clone(),
+                websocket_manager: ws_manager.clone(),
+                query_performance_monitor: query_monitor.clone(),
+            }),
+            Query(params)
+        ).await {
+            Ok(response) => Ok(Json(serde_json::to_value(response.0).unwrap_or(serde_json::json!({})))),
+            Err(status) => Err(status),
+        }
+    } else {
+        Err(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
+
+#[cfg(feature = "orchestration")]
+async fn query_performance_slow_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+        match data_infrastructure::api::handlers::query_performance::get_slow_queries(
+            State(ApiState {
+                api: api.clone(),
+                websocket_manager: ws_manager.clone(),
+                query_performance_monitor: query_monitor.clone(),
+            }),
+            Query(params)
+        ).await {
+            Ok(response) => Ok(Json(serde_json::to_value(response.0).unwrap_or(serde_json::json!({})))),
+            Err(status) => Err(status),
+        }
+    } else {
+        Err(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
+
+#[cfg(feature = "orchestration")]
+async fn query_performance_top_slow_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    if let (Some(api), Some(ws_manager), Some(query_monitor)) = (&state.api, &state.websocket_manager, &state.query_performance_monitor) {
+        match data_infrastructure::api::handlers::query_performance::get_top_slow_queries(
+            State(ApiState {
+                api: api.clone(),
+                websocket_manager: ws_manager.clone(),
+                query_performance_monitor: query_monitor.clone(),
+            }),
+            Query(params)
+        ).await {
+            Ok(response) => Ok(Json(serde_json::to_value(response.0).unwrap_or(serde_json::json!({})))),
+            Err(status) => Err(status),
+        }
+    } else {
+        Err(StatusCode::SERVICE_UNAVAILABLE)
+    }
+}
+
 async fn confirm_password_reset_handler(
     State(state): State<AppState>,
     Json(confirm_req): Json<PasswordResetConfirmRequest>,
@@ -2628,8 +4545,12 @@ async fn confirm_password_reset_handler(
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    // Hash new password
-    let new_password_hash = hash_password(&confirm_req.new_password);
+    // Hash new password using AuthService
+    let new_password_hash = state.auth_service.hash_password(&confirm_req.new_password)
+        .map_err(|e| {
+            error!("Password hashing error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     // Update user password
     let update = data_infrastructure::database_operations::UpdateUser {

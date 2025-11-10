@@ -28,6 +28,9 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 # Orchestration for CAWS validation
 agent-orchestration = { path = "../agent-orchestration" }
 
+# Database access for verdict history queries
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+
 [dev-dependencies]
 tokio.workspace = true
 reqwest = { version = "0.11", features = ["json"] }

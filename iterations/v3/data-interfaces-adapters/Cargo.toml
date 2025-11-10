@@ -41,6 +41,10 @@ base64 = "0.21"
 
 # Security and authentication
 system-quality-security = { path = "../system-quality-security" }
+argon2 = { version = "0.5", features = ["std"] }
+
+# System monitoring
+sysinfo = "0.30"
 
 # Interface contracts
 data-interfaces = { path = "../data-interfaces" }

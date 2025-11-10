@@ -210,6 +210,7 @@ impl RestApi {
         let _state = ApiState {
             api: Arc::new(self.clone()),
             websocket_manager: Arc::new(crate::websocket::WebSocketManager::new()),
+            query_performance_monitor: Arc::new(crate::monitoring::query_performance::QueryPerformanceMonitor::with_defaults()),
         };
 
         // This router is not used in main.rs - routes are created directly there
@@ -639,4 +640,5 @@ impl RestApi {
 pub struct ApiState {
     pub api: Arc<RestApi>,
     pub websocket_manager: Arc<crate::websocket::WebSocketManager>,
+    pub query_performance_monitor: Arc<crate::monitoring::query_performance::QueryPerformanceMonitor>,
 }
