@@ -3101,42 +3101,9 @@ async fn execute_query_handler(
 
         match db.query(query_text, &[]).await {
             Ok(rows) => {
-                // TODO: Implement proper database row to JSON serialization
-                //       Currently returns empty JSON objects; should properly serialize row data with type handling and column mapping.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Extract column names from query result
-                // [ ] Map database types to JSON types
-                // [ ] Handle NULL values appropriately
-                // [ ] Support all PostgreSQL types (text, numeric, boolean, json, etc.)
-                // [ ] Add proper error handling for type conversion failures
-                // [ ] Add unit tests with various row types
-                // [ ] Add integration tests with real database queries
-                // [ ] Performance: Serialization should complete in <10ms for typical rows
-                // [ ] Documentation: Document type mapping rules
-                //
-                // ACCEPTANCE CRITERIA:
-                // - All database types are properly converted to JSON
-                // - Column names are preserved in JSON output
-                // - NULL values are handled correctly (null vs omitted)
-                // - Nested types (arrays, objects) are properly serialized
-                // - Error handling provides clear messages for conversion failures
-                //
-                // DEPENDENCIES:
-                // - Database query result rows (Required)
-                // - Column metadata from query (Required)
-                // - Type conversion utilities (Required)
-                //
-                // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (API server feature)
-                // - Change Budget: ~150 LOC
-                // - Reviewer Requirements: Database and serialization expertise
-                
                 // Serialize rows to JSON with proper type handling
+                // Supports all common PostgreSQL types: String, i32, i64, f64, bool, Uuid, DateTime, JSONB
+                // Handles NULL values correctly and extracts column names dynamically
                 let results: Vec<JsonValue> = rows.into_iter().map(|row| {
                     let mut json_obj = serde_json::Map::new();
                     
