@@ -28,6 +28,7 @@ import {
   deleteNotification,
   deleteAllNotifications,
   getUnreadCount,
+  deduplicateNotifications,
   type Notification,
   type NotificationType,
 } from "@/lib/stores/notificationStore";
@@ -126,6 +127,16 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleDeduplicate = () => {
+    const removedCount = deduplicateNotifications();
+    if (removedCount > 0) {
+      toastSuccess(`Removed ${removedCount} duplicate notification${removedCount === 1 ? '' : 's'}`);
+      loadNotifications();
+    } else {
+      toastInfo("No duplicates found");
+    }
+  };
+
   const getIcon = (type: NotificationType) => {
     switch (type) {
       case "error":
@@ -185,6 +196,17 @@ export default function NotificationsPage() {
         </div>
 
         <div className={styles.headerActions}>
+          {notifications.length > 0 && (
+            <button
+              onClick={handleDeduplicate}
+              className={styles.actionButton}
+              type="button"
+              title="Remove duplicate notifications"
+            >
+              <Filter className={styles.actionButtonIcon} />
+              Remove duplicates
+            </button>
+          )}
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}

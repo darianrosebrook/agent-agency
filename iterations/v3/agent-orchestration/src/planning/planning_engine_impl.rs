@@ -69,52 +69,133 @@ impl PlanningEngineImpl {
         execution_ctx: &ExecutionContext,
         task_descriptor: &TaskDescriptor,
     ) -> Result<PlanGenerationContext, PlanningError> {
-        // TODO: Build comprehensive plan generation context
-        //       Currently creates minimal context; should build comprehensive context based on PlanGenerator requirements and available data.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Context includes all required data for PlanGenerator
-        // - Context is built from available sources
-        // - Missing data is handled gracefully
-        // - Context is comprehensive and accurate
-        //
-        // DEPENDENCIES:
-        // - PlanGenerator requirements (Required)
-        // - Context data sources (Required)
-        // - Context building utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning context feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Planning engine expertise
-        use crate::planning::plan_types::*; // Temporary: minimal context until comprehensive context building
+        use crate::planning::plan_types::*;
+        use std::collections::HashMap;
+
+        // Build resource inventory from execution context
+        // Count workers by type from worker assignments
+        let mut worker_counts: HashMap<String, usize> = HashMap::new();
+        for assignment in execution_ctx.worker_assignments.values() {
+            // Extract worker type from assignment or use default
+            let worker_type = assignment.worker_id.to_string(); // Simplified - could be enhanced with actual worker type
+            *worker_counts.entry(worker_type).or_insert(0) += 1;
+        }
+        
+        let resource_inventory = ResourceInventory {
+            available_cpu_cores: execution_ctx.available_resources.available_cpu_cores,
+            available_memory_mb: execution_ctx.available_resources.available_memory_mb,
+            available_disk_mb: execution_ctx.available_resources.available_disk_mb,
+            available_network_mbps: execution_ctx.available_resources.available_network_mbps,
+            available_workers: worker_counts,
+        };
+
+        // Build planning constraints from task descriptor
+        let risk_tolerance = match task_descriptor.risk_tier {
+            Some(RiskTier::Tier1) => RiskTolerance::Conservative,
+            Some(RiskTier::Tier2) => RiskTolerance::Balanced,
+            Some(RiskTier::Tier3) | None => RiskTolerance::Aggressive,
+        };
+
+        // Determine quality requirements based on risk tier
+        let quality_requirements = match task_descriptor.risk_tier {
+            Some(RiskTier::Tier1) => QualityRequirements {
+                min_coverage: 0.9, // 90% for Tier 1
+                min_mutation_score: 0.7, // 70% for Tier 1
+                security_scan_required: true,
+                manual_review_required: true,
+                council_approval_required: true,
+            },
+            Some(RiskTier::Tier2) => QualityRequirements {
+                min_coverage: 0.8, // 80% for Tier 2
+                min_mutation_score: 0.5, // 50% for Tier 2
+                security_scan_required: true,
+                manual_review_required: false,
+                council_approval_required: false,
+            },
+            Some(RiskTier::Tier3) | None => QualityRequirements {
+                min_coverage: 0.7, // 70% for Tier 3
+                min_mutation_score: 0.3, // 30% for Tier 3
+                security_scan_required: false,
+                manual_review_required: false,
+                council_approval_required: false,
+            },
+        };
+
+        // Build cost limits from change budget if available
+        let cost_limits = if task_descriptor.change_budget.max_files > 0 {
+            // Estimate cost based on change budget
+            // Rough estimate: 1 cent per file changed, 0.1 cents per LOC
+            let estimated_cost_cents = (task_descriptor.change_budget.max_files as u32 * 1)
+                + ((task_descriptor.change_budget.max_loc as f64 / 10.0) as u32);
+            Some(CostLimits {
+                max_cost_cents: estimated_cost_cents,
+                cost_per_ms_budget: 0.001, // 0.001 cents per millisecond
+                optimization_priority: CostOptimizationPriority::Balanced,
+            })
+        } else {
+            None
+        };
+
+        // Determine max complexity based on change budget
+        let max_complexity = if task_descriptor.change_budget.max_files > 0 {
+            // Complexity roughly correlates with number of files and LOC
+            (task_descriptor.change_budget.max_files as usize * 10)
+                .min(1000) // Cap at 1000
+        } else {
+            100 // Default complexity
+        };
+
+        // Determine parallel preferences based on task priority and blast radius
+        let max_parallelism = if task_descriptor.blast_radius.modules.is_empty() {
+            // No blast radius restrictions - allow more parallelism
+            execution_ctx.worker_assignments.len().max(3)
+        } else {
+            // Limited blast radius - reduce parallelism
+            task_descriptor.blast_radius.modules.len().min(2)
+        };
+        
+        let prefer_parallel = matches!(
+            task_descriptor.priority,
+            agent_agency_contracts::types::planning::TaskPriority::Low
+                | agent_agency_contracts::types::planning::TaskPriority::Normal
+        );
+        
+        let parallel_preferences = ParallelPreferences {
+            max_parallelism,
+            prefer_parallel,
+            allow_resource_contention: false, // Default to no resource contention
+            load_balancing: LoadBalancingStrategy::Even, // Default to even distribution
+        };
+
+        // Build planning constraints
+        let constraints = PlanningConstraints {
+            max_planning_time_ms: 300000, // 5 minutes default
+            max_complexity,
+            risk_tolerance,
+            cost_limits,
+            quality_requirements,
+            parallel_preferences,
+        };
+
+        // Determine execution mode from task descriptor
+        let execution_mode = task_descriptor.execution_mode.clone();
+
+        // Determine planning strategy based on risk tier and priority
+        let planning_strategy = match task_descriptor.risk_tier {
+            Some(RiskTier::Tier1) => PlanGenerationStrategy::Conservative,
+            Some(RiskTier::Tier2) => PlanGenerationStrategy::AIAssisted,
+            Some(RiskTier::Tier3) | None => PlanGenerationStrategy::AIAssisted,
+        };
 
         Ok(PlanGenerationContext {
             working_spec_provider: Box::new(RealWorkingSpecProvider::new(task_descriptor.clone(), self.db_ops.clone())),
             task_descriptor: Box::new(RealTaskDescriptorProvider::new(task_descriptor.clone(), self.db_ops.clone())),
-            resource_inventory: ResourceInventory::default(),
-            constraints: PlanningConstraints::default(),
-            historical_data: None,
-            planning_constraints: PlanningConstraints::default(),
-            execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
-            planning_strategy: PlanGenerationStrategy::AIAssisted,
+            resource_inventory,
+            constraints: constraints.clone(),
+            historical_data: None, // Historical data would require database queries - can be enhanced later
+            planning_constraints: constraints,
+            execution_mode,
+            planning_strategy,
         })
     }
 

@@ -1,0 +1,302 @@
+@use "../../../styles/design-tokens.scss" as *;
+
+.projectView {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  background-color: $color-dark-bg-secondary;
+}
+
+.headerContainer {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  border-bottom: 1px solid $color-neutral-800;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+  align-items: flex-start;
+  padding: $spacing-4 $spacing-6;
+  padding-bottom: 0.0568125rem; // Specific design requirement: 0.909px
+  width: 100%;
+}
+
+.breadcrumbTitleContainer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.breadcrumbContainer {
+  height: 1.2495625rem; // Specific design requirement: 19.993px
+  width: 100%;
+}
+
+.breadcrumbLink {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  color: $color-zinc-500;
+  letter-spacing: -0.1504px;
+  cursor: pointer;
+  transition: color $transition-normal;
+
+  &:hover {
+    color: $color-white;
+  }
+}
+
+.breadcrumbSeparatorIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+  color: $color-zinc-500;
+}
+
+.breadcrumbPage {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  color: $color-white;
+  letter-spacing: -0.1504px;
+}
+
+.headingContainer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.heading {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-weight: $font-weight-semibold;
+  font-size: $font-size-2xl;
+  line-height: 2rem;
+  color: $color-white;
+  letter-spacing: -0.32px;
+}
+
+.tabsControlsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: $spacing-4;
+}
+
+.tabsContainer {
+  flex: 1;
+}
+
+.tabsList {
+  display: flex;
+  align-items: center;
+  gap: $spacing-6;
+}
+
+.tabButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity $transition-normal;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.tabLabel {
+  font-family: $font-family-sans;
+  font-weight: $font-weight-normal;
+  font-size: $font-size-sm;
+  line-height: 1.25rem;
+  letter-spacing: -0.1504px;
+  transition: color $transition-normal;
+}
+
+.tabLabelActive {
+  color: $color-white;
+}
+
+.tabLabelInactive {
+  color: $color-zinc-500;
+}
+
+.tabIndicator {
+  position: absolute;
+  bottom: -$spacing-4;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: $color-white;
+  border-radius: $border-radius-sm $border-radius-sm 0 0;
+}
+
+.controlsContainer {
+  display: flex;
+  align-items: center;
+}
+
+.controlsList {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  padding: $spacing-2 $spacing-3;
+  background-color: $color-dark-bg-primary;
+  border-radius: $border-radius-md;
+}
+
+.searchPlaceholder {
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-zinc-500;
+}
+
+.searchBorder {
+  position: absolute;
+  inset: 0;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  pointer-events: none;
+}
+
+.searchIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+  color: $color-zinc-500;
+}
+
+.svgFullSize {
+  width: 100%;
+  height: 100%;
+}
+
+.keyboardShortcut {
+  padding: $spacing-1 $spacing-2;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-sm;
+}
+
+.keyboardShortcutText {
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
+  color: $color-zinc-500;
+}
+
+.controlButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: $spacing-2 $spacing-3;
+  background-color: $color-dark-bg-primary;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+  }
+}
+
+.controlButtonBorder {
+  position: absolute;
+  inset: 0;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  pointer-events: none;
+}
+
+.controlButtonContent {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.controlButtonText {
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-white;
+}
+
+.controlButtonIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+}
+
+.gridViewButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $spacing-9;
+  height: $spacing-9;
+  padding: 0;
+  background-color: $color-dark-bg-primary;
+  border: none;
+  border-radius: $border-radius-md;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+  }
+}
+
+.gridViewIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+  color: $color-white;
+}
+
+.tabContentArea {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: $spacing-8;
+}
+
+.loadingText {
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  color: $color-gray-400;
+}
+

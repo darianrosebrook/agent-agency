@@ -9,6 +9,7 @@ import { Toaster } from "@/components/primitives/sonner";
 import { ProjectProvider } from "@/components/ProjectContext";
 import { useNotificationSync } from "@/hooks/useNotificationSync";
 import { polyfillClassNameSplit } from "@/lib/utils/className-fix";
+import { deduplicateNotifications } from "@/lib/stores/notificationStore";
 import styles from "./providers.module.scss";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -24,6 +25,17 @@ export function Providers({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn("Failed to initialize className polyfill:", error);
     }
+    
+    // Clean up duplicate notifications on app load
+    try {
+      const removedCount = deduplicateNotifications();
+      if (removedCount > 0) {
+        console.debug(`[Notifications] Removed ${removedCount} duplicate notifications`);
+      }
+    } catch (error) {
+      console.warn("Failed to deduplicate notifications:", error);
+    }
+    
     setMounted(true);
   }, []);
 

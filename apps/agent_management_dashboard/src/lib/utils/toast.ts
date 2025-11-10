@@ -8,7 +8,7 @@
  */
 
 import { toast as sonnerToast, type ExternalToast, type Action } from 'sonner';
-import { parseApiError, ErrorMessages } from '../errors';
+import { parseApiError, ErrorMessages, ErrorCode } from '../errors';
 import { addNotification, type NotificationType } from '../stores/notificationStore';
 import type React from 'react';
 
@@ -19,6 +19,79 @@ interface ToastOptions {
   duration?: number;
   action?: Action | React.ReactNode;
   cancel?: Action | React.ReactNode;
+}
+
+/**
+ * Debounce tracking for error toasts
+ * Prevents spam by tracking recent error messages and their timestamps
+ */
+interface ErrorDebounceEntry {
+  message: string;
+  code: ErrorCode;
+  timestamp: number;
+  count: number;
+}
+
+const ERROR_DEBOUNCE_WINDOW_MS = 5000; // 5 seconds
+const errorDebounceMap = new Map<string, ErrorDebounceEntry>();
+
+/**
+ * Generate a key for error debouncing based on message and code
+ */
+function getErrorKey(message: string, code: ErrorCode): string {
+  return `${code}:${message}`;
+}
+
+/**
+ * Check if error should be shown (debounced)
+ * Returns true if error should be shown, false if it should be suppressed
+ */
+function shouldShowError(message: string, code: ErrorCode): boolean {
+  const now = Date.now();
+  const key = getErrorKey(message, code);
+  const entry = errorDebounceMap.get(key);
+
+  if (!entry) {
+    // First occurrence - allow it
+    errorDebounceMap.set(key, {
+      message,
+      code,
+      timestamp: now,
+      count: 1,
+    });
+    return true;
+  }
+
+  const timeSinceLastShow = now - entry.timestamp;
+
+  if (timeSinceLastShow < ERROR_DEBOUNCE_WINDOW_MS) {
+    // Within debounce window - suppress toast but increment count
+    entry.count++;
+    entry.timestamp = now;
+    return false;
+  }
+
+  // Outside debounce window - allow it and reset count
+  entry.count = 1;
+  entry.timestamp = now;
+  return true;
+}
+
+/**
+ * Clean up old debounce entries periodically
+ */
+function cleanupDebounceMap() {
+  const now = Date.now();
+  for (const [key, entry] of errorDebounceMap.entries()) {
+    if (now - entry.timestamp > ERROR_DEBOUNCE_WINDOW_MS * 2) {
+      errorDebounceMap.delete(key);
+    }
+  }
+}
+
+// Clean up old entries every 30 seconds
+if (typeof window !== 'undefined') {
+  setInterval(cleanupDebounceMap, 30000);
 }
 
 /**
@@ -40,7 +113,7 @@ export function toastSuccess(message: string, options?: ToastOptions) {
 }
 
 /**
- * Show error toast with error parsing
+ * Show error toast with error parsing and debouncing
  */
 export function toastError(error: unknown, options?: ToastOptions) {
   try {
@@ -61,7 +134,8 @@ export function toastError(error: unknown, options?: ToastOptions) {
       displayMessage = 'An unexpected error occurred';
     }
     
-    // Persist notification
+    // Always persist notification to store (deduplication will prevent duplicates)
+    // This ensures all errors are available in the notification center
     addNotification({
       type: 'error',
       message: displayMessage,
@@ -69,19 +143,47 @@ export function toastError(error: unknown, options?: ToastOptions) {
       errorDetails: appError.details,
     });
 
+    // Check if we should show the toast (debounced)
+    const shouldShow = shouldShowError(displayMessage, appError.code);
+    
+    if (!shouldShow) {
+      // Suppress toast but log that it was suppressed
+      const key = getErrorKey(displayMessage, appError.code);
+      const entry = errorDebounceMap.get(key);
+      if (entry && entry.count > 1) {
+        // Log suppression only if count > 1 to avoid spam in console too
+        console.debug(`[Toast Debounce] Suppressed duplicate error: "${displayMessage}" (${entry.count} occurrences)`);
+      }
+      return;
+    }
+
+    // Show toast with optional count indicator if there were suppressed duplicates
+    const key = getErrorKey(displayMessage, appError.code);
+    const entry = errorDebounceMap.get(key);
+    let finalMessage = displayMessage;
+    
+    if (entry && entry.count > 1) {
+      // Add count indicator if there were suppressed duplicates
+      finalMessage = `${displayMessage} (${entry.count}x)`;
+    }
+
     const toastOptions: ExternalToast = {
       duration: options?.duration ?? 6000,
       ...(options?.action && { action: options.action }),
       ...(options?.cancel && { cancel: options.cancel }),
     };
     
-    return sonnerToast.error(displayMessage, toastOptions);
+    return sonnerToast.error(finalMessage, toastOptions);
   } catch (err) {
-    // If anything fails, show a generic error toast
+    // If anything fails, show a generic error toast (but still debounce it)
     console.error('Error in toastError:', err);
-    return sonnerToast.error('An unexpected error occurred', {
-      duration: 6000,
-    });
+    const genericMessage = 'An unexpected error occurred';
+    // Use OPERATION_FAILED as fallback since UNKNOWN_ERROR doesn't exist
+    if (shouldShowError(genericMessage, ErrorCode.OPERATION_FAILED)) {
+      return sonnerToast.error(genericMessage, {
+        duration: 6000,
+      });
+    }
   }
 }
 
