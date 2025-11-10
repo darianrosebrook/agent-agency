@@ -105,6 +105,95 @@ impl TestDatabaseManager {
         Ok(())
     }
 
+    /// Split SQL into individual statements, handling dollar-quoted strings properly
+    /// This handles PostgreSQL dollar-quoted strings (e.g., $$ ... $$, $tag$ ... $tag$)
+    fn split_sql_statements(sql: &str) -> Vec<String> {
+        let mut statements = Vec::new();
+        let mut current_statement = String::new();
+        let mut in_dollar_quote = false;
+        let mut dollar_tag: Option<String> = None;
+        let mut chars = sql.chars().peekable();
+        
+        while let Some(ch) = chars.next() {
+            current_statement.push(ch);
+            
+            // Track dollar-quoted strings (e.g., $$ ... $$ or $tag$ ... $tag$)
+            if ch == '$' {
+                if !in_dollar_quote {
+                    // Check if this starts a dollar quote
+                    let mut tag = String::new();
+                    
+                    // Peek ahead to see if this is $$ or $tag$
+                    if let Some(&next_ch) = chars.peek() {
+                        if next_ch == '$' {
+                            // Simple $$ case
+                            chars.next();
+                            current_statement.push('$');
+                            in_dollar_quote = true;
+                            dollar_tag = Some(String::new()); // Empty tag for $$
+                        } else if next_ch.is_alphanumeric() || next_ch == '_' {
+                            // Tagged case: $tag$
+                            while let Some(&peek_ch) = chars.peek() {
+                                if peek_ch == '$' {
+                                    chars.next();
+                                    current_statement.push('$');
+                                    in_dollar_quote = true;
+                                    dollar_tag = Some(tag.clone());
+                                    break;
+                                } else if peek_ch.is_alphanumeric() || peek_ch == '_' {
+                                    tag.push(chars.next().unwrap());
+                                    current_statement.push(tag.chars().last().unwrap());
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Inside dollar quote - check if this ends it
+                    let expected_tag = dollar_tag.as_deref().unwrap_or("");
+                    let mut tag = String::new();
+                    
+                    // Read tag characters
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch == '$' {
+                            chars.next();
+                            current_statement.push('$');
+                            // Compare with expected tag
+                            if tag == expected_tag {
+                                in_dollar_quote = false;
+                                dollar_tag = None;
+                            }
+                            break;
+                        } else if next_ch.is_alphanumeric() || next_ch == '_' {
+                            tag.push(chars.next().unwrap());
+                            current_statement.push(tag.chars().last().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Split on semicolons that are not inside dollar quotes
+            if ch == ';' && !in_dollar_quote {
+                let trimmed = current_statement.trim();
+                if !trimmed.is_empty() && !trimmed.starts_with("--") {
+                    statements.push(trimmed.to_string());
+                }
+                current_statement.clear();
+            }
+        }
+        
+        // Add final statement if any
+        let trimmed = current_statement.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with("--") {
+            statements.push(trimmed.to_string());
+        }
+        
+        statements
+    }
+
     /// Apply database migrations from data-infrastructure
     async fn apply_migrations(&self) -> Result<()> {
         info!("Applying migrations to test database");
@@ -145,7 +234,7 @@ impl TestDatabaseManager {
             let mut tx = self.pool.begin().await?;
             
             // Use proper SQL statement splitting (handles dollar-quoted strings, etc.)
-            let statements = split_sql_statements(&migration_sql);
+            let statements = Self::split_sql_statements(&migration_sql);
             
             let mut statements_executed = 0;
             let mut statements_failed = 0;

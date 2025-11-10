@@ -10,6 +10,7 @@ use std::ptr::NonNull;
 use std::ffi::CString;
 use std::path::Path;
 use std::collections::HashMap;
+use serde_json;
 
 // Import types from the types module
 use super::types::*;
@@ -579,49 +580,137 @@ pub struct ModelIOSpec {
 }
 
 /// Query model inputs
-pub fn query_model_inputs(_model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
+pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
     if !coreml_runtime_available() {
         return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
     }
 
-    // TODO: Query actual model input specifications
-    //       Currently returns default spec; should query actual model metadata for input specifications.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Query model metadata for input specifications
-    // [ ] Extract input feature names and types
-    // [ ] Extract input shapes and dimensions
-    // [ ] Determine batch capability from model
-    // [ ] Handle multiple input features
-    // [ ] Add unit tests for input spec query
-    // [ ] Add integration tests with various models
-    // [ ] Verify input spec accuracy
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Input specifications are queried from model metadata
-    // - Feature names and types are extracted correctly
-    // - Shapes and dimensions are accurate
-    // - Multiple input features are supported
-    //
-    // DEPENDENCIES:
-    // - Model metadata API (Required)
-    // - Input specification extraction utilities (Required)
-    // - Model query infrastructure (Required)
-    //
-    // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-    // PRIORITY: Medium
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 2 (model metadata feature)
-    // - Change Budget: ~80 LOC
-    // - Reviewer Requirements: Core ML expertise
-    Ok(vec![ModelIOSpec { // Temporary: default spec until model metadata query is implemented
-        name: "input".to_string(),
-        dtype: "F32".to_string(),
-        shape: vec![-1, -1], // [batch_size, sequence_length]
-        batch_capable: true,
-    }])
+    #[cfg(target_os = "macos")]
+    {
+        // Query model info from the FFI layer
+        let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+        let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+
+        let info_result = registry::with_model_handle(model_ref, |model_handle| {
+            unsafe {
+                agentbridge_model_get_info(
+                    model_handle.as_ptr() as u64,
+                    &mut info_ptr,
+                    &mut error_ptr,
+                )
+            }
+        }).ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+
+        if info_result != 0 {
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = cstr.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error getting model info".to_string()
+            };
+            return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+        }
+
+        if info_ptr.is_null() {
+            return Err(ANEError::Internal("No model info returned".to_string()));
+        }
+
+        // Extract and parse JSON string
+        let info_json_str = unsafe {
+            let cstr = std::ffi::CStr::from_ptr(info_ptr);
+            let info_str = cstr.to_string_lossy().to_string();
+            agentbridge_free_string(info_ptr);
+            info_str
+        };
+
+        // Parse JSON to extract input descriptions
+        let info_json: serde_json::Value = serde_json::from_str(&info_json_str)
+            .map_err(|e| ANEError::Internal(format!("Failed to parse model info JSON: {}", e)))?;
+
+        let input_descriptions = info_json["inputDescriptions"]
+            .as_array()
+            .ok_or_else(|| ANEError::Internal("inputDescriptions not found or not an array".to_string()))?;
+
+        let mut input_specs = Vec::new();
+
+        for input_desc in input_descriptions {
+            let name = input_desc["name"]
+                .as_str()
+                .ok_or_else(|| ANEError::Internal("Input description missing 'name' field".to_string()))?
+                .to_string();
+
+            let feature_type = input_desc["type"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string();
+
+            // Determine data type and shape
+            let (dtype, shape, batch_capable) = if let Some(shape_array) = input_desc["shape"].as_array() {
+                // MultiArray type
+                let shape: Vec<i32> = shape_array
+                    .iter()
+                    .filter_map(|v| v.as_i64().map(|i| i as i32))
+                    .collect();
+
+                let data_type_str = input_desc["dataType"]
+                    .as_str()
+                    .unwrap_or("float32")
+                    .to_string();
+
+                // Determine if batch-capable (first dimension is variable or -1)
+                let batch_capable = shape.is_empty() || shape[0] == -1 || shape[0] == 1;
+
+                (data_type_str, shape, batch_capable)
+            } else if input_desc["imageConstraint"].is_object() {
+                // Image type
+                let image_constraint = input_desc["imageConstraint"].as_object()
+                    .ok_or_else(|| ANEError::Internal("imageConstraint is not an object".to_string()))?;
+
+                let width = image_constraint["width"]
+                    .as_i64()
+                    .map(|w| w as i32)
+                    .unwrap_or(-1);
+                let height = image_constraint["height"]
+                    .as_i64()
+                    .map(|h| h as i32)
+                    .unwrap_or(-1);
+
+                // Image shape: [batch, channels, height, width] or [height, width, channels]
+                let shape = if width > 0 && height > 0 {
+                    vec![height, width, 3] // Default to RGB
+                } else {
+                    vec![-1, -1, 3] // Variable size
+                };
+
+                ("image".to_string(), shape, true)
+            } else {
+                // Unknown or unsupported type
+                ("unknown".to_string(), vec![-1], false)
+            };
+
+            input_specs.push(ModelIOSpec {
+                name,
+                dtype,
+                shape,
+                batch_capable,
+            });
+        }
+
+        if input_specs.is_empty() {
+            return Err(ANEError::Internal("No input descriptions found in model info".to_string()));
+        }
+
+        Ok(input_specs)
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+    }
 }
 
 /// Query model outputs
