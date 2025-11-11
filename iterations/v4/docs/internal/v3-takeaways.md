@@ -367,6 +367,10 @@ During our review of V3 documentation, we identified critical patterns that reve
 
 **E2E test suite fixing revealed additional lessons**: Cross-language integration (Rust/Swift FFI) requires automated contract verification. Build system integration is non-obvious and needs better tooling. Database parameter serialization is fragile and needs abstraction. Test infrastructure must match dependency structure. Resource lifecycle management matters, especially in tests.
 
+**Documentation quality review revealed critical patterns**: Documentation reality mismatch (docs claim implemented vs actual), massive placeholder/TODO density (2815 matches across 486 files), stale status documents creating false confidence, feature flag organization not matching dependencies, and percentage claims that become outdated quickly.
+
 The hybrid approach of staying with Rust while implementing strict architectural discipline provides the available path forward - leveraging our existing investment while fundamentally addressing the scaling and maintenance issues that crippled V3.
+
+**Key V4 Requirements**: Automated documentation verification, evidence-based status reporting, placeholder detection in CI/CD, incremental feature delivery, and capability-based test organization.
 
 This analysis gives us a clear roadmap to build V4 as a maintainable, scalable, and developer-friendly platform rather than repeating V3's architectural mistakes.
