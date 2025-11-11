@@ -211,6 +211,7 @@ impl RestApi {
             api: Arc::new(self.clone()),
             websocket_manager: Arc::new(crate::websocket::WebSocketManager::new()),
             query_performance_monitor: Arc::new(crate::monitoring::query_performance::QueryPerformanceMonitor::with_defaults()),
+            coreml_inference_callback: None,
         };
 
         // This router is not used in main.rs - routes are created directly there
@@ -641,4 +642,6 @@ pub struct ApiState {
     pub api: Arc<RestApi>,
     pub websocket_manager: Arc<crate::websocket::WebSocketManager>,
     pub query_performance_monitor: Arc<crate::monitoring::query_performance::QueryPerformanceMonitor>,
+    /// Optional callback for CoreML inference (set by wrapper when UnifiedOrchestrator is available)
+    pub coreml_inference_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>> + Send + Sync>>,
 }

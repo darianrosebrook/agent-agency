@@ -507,5 +507,11 @@ impl DatabaseOperations for StubDatabaseOperations {
     async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver> {
         Err(anyhow::anyhow!("Stub implementation"))
     }
+    async fn create_execution_result(&self, _result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult> {
+        Err(anyhow::anyhow!("Stub implementation"))
+    }
+    async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>> {
+        Ok(None)
+    }
 }
 

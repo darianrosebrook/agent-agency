@@ -227,12 +227,51 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers for updated_at
-CREATE TRIGGER update_workers_updated_at BEFORE UPDATE ON workers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_judges_updated_at BEFORE UPDATE ON judges FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_task_executions_updated_at BEFORE UPDATE ON task_executions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_council_verdicts_updated_at BEFORE UPDATE ON council_verdicts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_judge_evaluations_updated_at BEFORE UPDATE ON judge_evaluations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_workers_updated_at') THEN
+        CREATE TRIGGER update_workers_updated_at
+        BEFORE UPDATE ON workers
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_judges_updated_at') THEN
+        CREATE TRIGGER update_judges_updated_at
+        BEFORE UPDATE ON judges
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tasks_updated_at') THEN
+        CREATE TRIGGER update_tasks_updated_at
+        BEFORE UPDATE ON tasks
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_task_executions_updated_at') THEN
+        CREATE TRIGGER update_task_executions_updated_at
+        BEFORE UPDATE ON task_executions
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_council_verdicts_updated_at') THEN
+        CREATE TRIGGER update_council_verdicts_updated_at
+        BEFORE UPDATE ON council_verdicts
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_judge_evaluations_updated_at') THEN
+        CREATE TRIGGER update_judge_evaluations_updated_at
+        BEFORE UPDATE ON judge_evaluations
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END
+$$;
 
 -- ===========================================
 -- LOG MIGRATION

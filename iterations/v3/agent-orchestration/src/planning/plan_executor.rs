@@ -1856,11 +1856,11 @@ impl PlanExecutor {
                         },
                         timestamp: execution_event.timestamp,
                         milestone_id: Some(milestone.id.clone()),
-                        description: execution_event.details.get("description")
+                        description: execution_event.metadata.get("description")
                             .and_then(|v| v.as_str())
                             .unwrap_or(&milestone.objective)
                             .to_string(),
-                        metadata: execution_event.details.clone(),
+                        metadata: execution_event.metadata.clone(),
                     });
                 }
             }

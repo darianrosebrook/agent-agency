@@ -63,7 +63,7 @@ use std::process::Command;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
-use tracing::{info, error, warn};
+use tracing::{info, error, warn, debug};
 use sha2::{Sha256, Digest};
 use chrono::{DateTime, Utc, Duration as ChronoDuration};
 use system_quality_security::{AuthService, AuthConfig, authentication::PasswordPolicy};
@@ -514,6 +514,13 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/tasks/:task_id/council-decisions", get(get_council_decisions_handler))
         .route("/api/v1/tasks/:task_id/worker-actions", get(get_worker_actions_handler));
 
+    // Task comments endpoints
+    router = router
+        .route("/api/v1/tasks/:task_id/comments", get(get_task_comments_handler))
+        .route("/api/v1/tasks/:task_id/comments", post(create_task_comment_handler))
+        .route("/api/v1/tasks/:task_id/comments/:comment_id", axum::routing::patch(update_task_comment_handler))
+        .route("/api/v1/tasks/:task_id/comments/:comment_id", axum::routing::delete(delete_task_comment_handler));
+
     // Chat and context endpoints
     router = router
         .route("/api/v1/chat", post(chat_handler));
@@ -543,7 +550,11 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/projects/:project_id/tasks/stats", get(get_project_tasks_stats_handler))
         .route("/api/v1/projects/:project_id/milestones", get(get_project_milestones_handler))
         .route("/api/v1/projects/:project_id/milestones", post(create_project_milestone_handler))
-        .route("/api/v1/projects/:project_id/milestones/:milestone_id", axum::routing::patch(update_project_milestone_handler));
+        .route("/api/v1/projects/:project_id/milestones/:milestone_id", axum::routing::patch(update_project_milestone_handler))
+        .route("/api/v1/projects/:project_id/members", get(get_project_members_handler))
+        .route("/api/v1/projects/:project_id/work-history", get(get_project_work_history_handler))
+        .route("/api/v1/projects/:project_id/settings", get(get_project_settings_handler))
+        .route("/api/v1/projects/:project_id/settings", axum::routing::patch(update_project_settings_handler));
 
     // Database inspection endpoints
     router = router
@@ -577,6 +588,10 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/analytics/tasks", get(get_task_analytics_handler))
         .route("/api/v1/analytics/performance", get(get_performance_analytics_handler))
         .route("/api/v1/analytics/success-rates", get(get_success_rates_handler));
+
+    // Search endpoints
+    router = router
+        .route("/api/v1/search", get(search_handler));
 
     // Query management endpoints
     router = router
@@ -2603,10 +2618,26 @@ async fn stream_agent_response_wrapper(
         None => return (StatusCode::SERVICE_UNAVAILABLE, "Query performance monitor unavailable").into_response(),
     };
     
+    // Extract CoreMLManager from UnifiedOrchestrator if available
+    let coreml_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>> + Send + Sync>> = 
+        if let Some(ref unified_orch) = state.unified_orchestrator {
+            // Access plan_generator's coreml_manager through unsafe or via a helper
+            // Since we can't access private fields, we'll create a callback that uses the orchestrator
+            Some(Arc::new(move |message: String| {
+                let orch = unified_orch.orchestrator();
+                Box::pin(async move {
+                    generate_coreml_chat_response(orch, &message).await
+                })
+            }))
+        } else {
+            None
+        };
+    
     let api_state = ApiState {
         api: api.clone(),
         websocket_manager: websocket_manager.clone(),
         query_performance_monitor: query_performance_monitor.clone(),
+        coreml_inference_callback: coreml_callback,
     };
     
     match data_infrastructure::api::handlers::chat_handlers::stream_agent_response(
@@ -2808,6 +2839,750 @@ async fn get_chat_messages_handler(
     #[cfg(not(feature = "orchestration"))]
     {
         Ok(Json(serde_json::json!({ "messages": [] })))
+    }
+}
+
+// Search handler - unified search across all resources using vector and knowledge search
+async fn search_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Extract query parameters
+    let query = params.get("q")
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    if query.trim().is_empty() {
+        return Ok(Json(serde_json::json!({
+            "results": [],
+            "total": 0,
+            "limit": 50,
+            "offset": 0
+        })));
+    }
+    
+    let search_type = params.get("type").map(|s| s.as_str());
+    let limit = params.get("limit")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(50)
+        .min(100); // Cap at 100 results
+    let offset = params.get("offset")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+    let use_vector_search = params.get("vector_search")
+        .map(|s| s == "true")
+        .unwrap_or(true);
+    let use_knowledge_search = params.get("knowledge_search")
+        .map(|s| s == "true")
+        .unwrap_or(true);
+    let similarity_threshold = params.get("similarity_threshold")
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.7);
+    
+    let mut all_results: Vec<serde_json::Value> = Vec::new();
+    
+    // Search projects
+    if search_type.is_none() || search_type == Some("all") || search_type == Some("project") {
+        match db.get_execution_plans().await {
+            Ok(plans) => {
+                for plan in plans {
+                    // Text search in title and overview
+                    let matches = plan.title.to_lowercase().contains(&query.to_lowercase()) ||
+                        plan.overview.as_ref().map(|o| o.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
+                    
+                    if matches {
+                        all_results.push(serde_json::json!({
+                            "id": plan.id.to_string(),
+                            "type": "project",
+                            "title": plan.title,
+                            "description": plan.overview,
+                            "url": format!("/projects/{}", plan.id),
+                            "metadata": {
+                                "state": plan.state,
+                                "created_at": plan.created_at.to_rfc3339(),
+                            }
+                        }));
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to search projects: {}", e);
+            }
+        }
+    }
+    
+    // Search tasks
+    if search_type.is_none() || search_type == Some("all") || search_type == Some("task") {
+        match db.get_tasks().await {
+            Ok(tasks) => {
+                for task in tasks {
+                    // Text search in title and description
+                    let matches = task.title.to_lowercase().contains(&query.to_lowercase()) ||
+                        task.description.as_ref().map(|d| d.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
+                    
+                    if matches {
+                        // Find project for this task
+                        let project_id = task.execution_plan_id.map(|id| id.to_string()).unwrap_or_default();
+                        all_results.push(serde_json::json!({
+                            "id": task.id.to_string(),
+                            "type": "task",
+                            "title": task.title,
+                            "description": task.description,
+                            "url": if !project_id.is_empty() {
+                                format!("/projects/{}/tasks", project_id)
+                            } else {
+                                "/tasks".to_string()
+                            },
+                            "metadata": {
+                                "status": format!("{:?}", task.status),
+                                "priority": task.priority,
+                                "created_at": task.created_at.to_rfc3339(),
+                            }
+                        }));
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to search tasks: {}", e);
+            }
+        }
+    }
+    
+    // Search workers/agents
+    if search_type.is_none() || search_type == Some("all") || search_type == Some("agent") {
+        match db.get_workers().await {
+            Ok(workers) => {
+                for worker in workers {
+                    // Text search in name and description
+                    let matches = worker.name.to_lowercase().contains(&query.to_lowercase()) ||
+                        worker.description.as_ref().map(|d| d.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
+                    
+                    if matches {
+                        all_results.push(serde_json::json!({
+                            "id": worker.id.to_string(),
+                            "type": "agent",
+                            "title": worker.name,
+                            "description": worker.description,
+                            "url": format!("/settings?tab=agents"),
+                            "metadata": {
+                                "is_active": worker.is_active,
+                                "created_at": worker.created_at.to_rfc3339(),
+                            }
+                        }));
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to search agents: {}", e);
+            }
+        }
+    }
+    
+    // Search chat messages
+    if search_type.is_none() || search_type == Some("all") || search_type == Some("chat") {
+        // Search chat messages in database
+        // Join with chat_sessions to get session information
+        match db.query(
+            "SELECT cm.id, cm.content, cm.role, cm.session_id, cm.created_at, cs.title as session_title
+             FROM chat_messages cm
+             LEFT JOIN chat_sessions cs ON cm.session_id = cs.id
+             WHERE cm.content ILIKE $1
+             ORDER BY cm.created_at DESC
+             LIMIT $2",
+            &[&format!("%{}%", query), &(limit as i64)]
+        ).await {
+            Ok(rows) => {
+                for row in rows {
+                    let message_id: Uuid = row.try_get("id").unwrap_or_else(|_| Uuid::new_v4());
+                    let content: String = row.try_get("content").unwrap_or_default();
+                    let role: String = row.try_get("role").unwrap_or_else(|_| "user".to_string());
+                    let session_id: Option<Uuid> = row.try_get("session_id").ok();
+                    let session_title: Option<String> = row.try_get("session_title").ok();
+                    let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+                    
+                    // Use session title if available, otherwise truncate content
+                    let title = if let Some(ref st) = session_title {
+                        format!("{} - Chat", st)
+                    } else if content.len() > 60 {
+                        format!("{}...", &content[..60])
+                    } else {
+                        content.clone()
+                    };
+                    
+                    // Truncate description
+                    let description = if content.len() > 200 {
+                        format!("{}...", &content[..200])
+                    } else {
+                        content.clone()
+                    };
+                    
+                    let url = if let Some(sid) = session_id {
+                        format!("/chat?session={}", sid)
+                    } else {
+                        "/chat".to_string()
+                    };
+                    
+                    all_results.push(serde_json::json!({
+                        "id": message_id.to_string(),
+                        "type": "chat",
+                        "title": title,
+                        "description": description,
+                        "url": url,
+                        "metadata": {
+                            "role": role,
+                            "session_id": session_id.map(|id| id.to_string()),
+                            "session_title": session_title,
+                            "created_at": created_at.to_rfc3339(),
+                        }
+                    }));
+                }
+            }
+            Err(e) => {
+                // Chat messages table might not exist, that's okay
+                debug!("Chat messages search failed (table may not exist): {}", e);
+            }
+        }
+    }
+    
+    // Vector search (if enabled)
+    if use_vector_search {
+        // Search block_vectors table for similar content using text search
+        // Note: Full vector similarity search requires generating embeddings for the query
+        // For now, we'll use text-based search on the content field
+        match db.query(
+            "SELECT DISTINCT ON (block_id) 
+                block_id, content, modality, metadata, project_scope
+             FROM block_vectors
+             WHERE content ILIKE $1
+             ORDER BY block_id, created_at DESC
+             LIMIT $2",
+            &[&format!("%{}%", query), &(limit as i64)]
+        ).await {
+            Ok(rows) => {
+                for row in rows {
+                    let block_id: Uuid = row.try_get("block_id")
+                        .unwrap_or_else(|_| Uuid::new_v4());
+                    let content: String = row.try_get("content").unwrap_or_default();
+                    let modality: String = row.try_get("modality").unwrap_or_else(|_| "text".to_string());
+                    let metadata: serde_json::Value = row.try_get("metadata").unwrap_or_else(|_| serde_json::json!({}));
+                    let project_scope: Option<String> = row.try_get("project_scope").ok();
+                    
+                    // Determine URL based on project scope
+                    let url = if let Some(scope) = project_scope {
+                        format!("/projects/{}/workspace", scope)
+                    } else {
+                        "/workspace".to_string()
+                    };
+                    
+                    // Extract title from content or metadata
+                    let title = metadata.get("title")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| content.lines().next())
+                        .unwrap_or("Untitled")
+                        .to_string();
+                    
+                    // Truncate description
+                    let description = if content.len() > 200 {
+                        format!("{}...", &content[..200])
+                    } else {
+                        content.clone()
+                    };
+                    
+                    all_results.push(serde_json::json!({
+                        "id": block_id.to_string(),
+                        "type": "file",
+                        "title": title,
+                        "description": description,
+                        "url": url,
+                        "metadata": {
+                            "modality": modality,
+                            "project_scope": project_scope,
+                        }
+                    }));
+                }
+            }
+            Err(e) => {
+                warn!("Vector search failed: {}", e);
+            }
+        }
+    }
+    
+    // Knowledge base search (if enabled)
+    if use_knowledge_search {
+        // Search knowledge base using text search on canonical_name and properties
+        // Full semantic search requires generating embeddings - this is a text-based fallback
+        match db.query(
+            "SELECT entity_id, canonical_name, entity_type, source, properties
+             FROM external_knowledge_entities
+             WHERE canonical_name ILIKE $1 
+                OR properties::text ILIKE $1
+             ORDER BY usage_count DESC, confidence DESC
+             LIMIT $2",
+            &[&format!("%{}%", query), &(limit as i64)]
+        ).await {
+            Ok(rows) => {
+                for row in rows {
+                    let entity_id: Uuid = row.try_get("entity_id").unwrap_or_else(|_| Uuid::new_v4());
+                    let canonical_name: String = row.try_get("canonical_name").unwrap_or_default();
+                    let entity_type: String = row.try_get("entity_type").unwrap_or_default();
+                    let source: String = row.try_get("source").unwrap_or_default();
+                    let properties: serde_json::Value = row.try_get("properties").unwrap_or_else(|_| serde_json::json!({}));
+                    
+                    // Extract description from properties
+                    let description = properties.get("description")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| properties.get("definition").and_then(|v| v.as_str()))
+                        .unwrap_or(&canonical_name)
+                        .to_string();
+                    
+                    all_results.push(serde_json::json!({
+                        "id": entity_id.to_string(),
+                        "type": "file", // Knowledge entities shown as files for now
+                        "title": canonical_name,
+                        "description": description,
+                        "url": format!("/knowledge/{}", entity_id),
+                        "metadata": {
+                            "entity_type": entity_type,
+                            "source": source,
+                            "knowledge_base": true,
+                        }
+                    }));
+                }
+            }
+            Err(e) => {
+                warn!("Knowledge base search failed: {}", e);
+            }
+        }
+    }
+    
+    // Sort results by relevance (simple: exact title matches first)
+    all_results.sort_by(|a, b| {
+        let a_title = a["title"].as_str().unwrap_or("").to_lowercase();
+        let b_title = b["title"].as_str().unwrap_or("").to_lowercase();
+        let query_lower = query.to_lowercase();
+        
+        let a_exact = a_title == query_lower;
+        let b_exact = b_title == query_lower;
+        
+        match (a_exact, b_exact) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => {
+                let a_starts = a_title.starts_with(&query_lower);
+                let b_starts = b_title.starts_with(&query_lower);
+                match (a_starts, b_starts) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => std::cmp::Ordering::Equal,
+                }
+            }
+        }
+    });
+    
+    // Apply pagination
+    let total = all_results.len();
+    let paginated_results: Vec<serde_json::Value> = all_results
+        .into_iter()
+        .skip(offset as usize)
+        .take(limit as usize)
+        .collect();
+    
+    Ok(Json(serde_json::json!({
+        "results": paginated_results,
+        "total": total,
+        "limit": limit,
+        "offset": offset
+    })))
+}
+
+// Task comments handlers
+async fn get_task_comments_handler(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.query(
+        "SELECT id, task_id, content, created_by, created_at, updated_at
+         FROM task_comments
+         WHERE task_id = $1
+         ORDER BY created_at ASC",
+        &[&task_uuid]
+    ).await {
+        Ok(rows) => {
+            let comments: Vec<JsonValue> = rows.into_iter().map(|row| {
+                serde_json::json!({
+                    "comment_id": row.try_get::<Uuid, _>("id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                    "task_id": row.try_get::<Uuid, _>("task_id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                    "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                    "created_by": row.try_get::<Option<String>, _>("created_by").ok().flatten(),
+                    "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                        .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                    "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at")
+                        .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({ "comments": comments })))
+        }
+        Err(e) => {
+            // Table might not exist yet, return empty array
+            debug!("Failed to get task comments (table may not exist): {}", e);
+            Ok(Json(serde_json::json!({ "comments": [] })))
+        }
+    }
+}
+
+async fn create_task_comment_handler(
+    State(state): State<AppState>,
+    Path(task_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let content = payload.get("content")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    if content.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    let created_by = payload.get("created_by")
+        .and_then(|v| v.as_str());
+    
+    match db.query_one(
+        "INSERT INTO task_comments (task_id, content, created_by)
+         VALUES ($1, $2, $3)
+         RETURNING id, task_id, content, created_by, created_at, updated_at",
+        &[&task_uuid, &content, &created_by]
+    ).await {
+        Ok(Some(row)) => {
+            let comment = serde_json::json!({
+                "comment_id": row.try_get::<Uuid, _>("id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                "task_id": row.try_get::<Uuid, _>("task_id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                "created_by": row.try_get::<Option<String>, _>("created_by").ok().flatten(),
+                "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+            });
+            
+            Ok(Json(comment))
+        }
+        Ok(None) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            error!("Failed to create task comment: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_task_comment_handler(
+    State(state): State<AppState>,
+    Path((task_id, comment_id)): Path<(String, String)>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let comment_uuid = Uuid::parse_str(&comment_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let content = payload.get("content")
+        .and_then(|v| v.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    
+    if content.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    match db.query_one(
+        "UPDATE task_comments
+         SET content = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, task_id, content, created_by, created_at, updated_at",
+        &[&content, &comment_uuid]
+    ).await {
+        Ok(Some(row)) => {
+            let comment = serde_json::json!({
+                "comment_id": row.try_get::<Uuid, _>("id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                "task_id": row.try_get::<Uuid, _>("task_id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                "content": row.try_get::<String, _>("content").unwrap_or_default(),
+                "created_by": row.try_get::<Option<String>, _>("created_by").ok().flatten(),
+                "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at")
+                    .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+            });
+            
+            Ok(Json(comment))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to update task comment: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn delete_task_comment_handler(
+    State(state): State<AppState>,
+    Path((task_id, comment_id)): Path<(String, String)>,
+) -> Result<StatusCode, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let _task_uuid = Uuid::parse_str(&task_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let comment_uuid = Uuid::parse_str(&comment_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.execute(
+        "DELETE FROM task_comments WHERE id = $1",
+        &[&comment_uuid]
+    ).await {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                Ok(StatusCode::NO_CONTENT)
+            } else {
+                Err(StatusCode::NOT_FOUND)
+            }
+        }
+        Err(e) => {
+            error!("Failed to delete task comment: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+// Project members, work history, and settings handlers
+async fn get_project_members_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    // Get unique workers assigned to tasks in this project
+    match db.query(
+        "SELECT DISTINCT w.id, w.name, w.description, w.is_active, w.created_at
+         FROM workers w
+         INNER JOIN tasks t ON t.assigned_worker_id = w.id
+         WHERE t.project_id = $1
+         ORDER BY w.name",
+        &[&project_uuid]
+    ).await {
+        Ok(rows) => {
+            let members: Vec<JsonValue> = rows.into_iter().map(|row| {
+                let worker_id = row.try_get::<Uuid, _>("id").unwrap_or_else(|_| Uuid::new_v4());
+                serde_json::json!({
+                    "member_id": format!("{}-{}", project_id, worker_id),
+                    "project_id": project_id.clone(),
+                    "user_id": worker_id.to_string(), // Using worker_id as user_id
+                    "role": "agent", // Default role
+                    "joined_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                        .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                })
+            }).collect();
+            
+            Ok(Json(serde_json::json!({ "members": members })))
+        }
+        Err(e) => {
+            warn!("Failed to get project members: {}", e);
+            Ok(Json(serde_json::json!({ "members": [] })))
+        }
+    }
+}
+
+async fn get_project_work_history_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    let limit = params.get("limit")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(50)
+        .min(100);
+    let offset = params.get("offset")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(0);
+    
+    // Get work history from provenance entries for tasks in this project
+    match db.query(
+        "SELECT pe.id, pe.task_id, pe.action, pe.actor, pe.resource_id, pe.resource_type,
+                pe.change_summary, pe.timestamp, pe.metadata, t.title as task_title
+         FROM provenance_entries pe
+         INNER JOIN tasks t ON t.id = pe.task_id
+         WHERE t.project_id = $1
+         ORDER BY pe.timestamp DESC
+         LIMIT $2 OFFSET $3",
+        &[&project_uuid, &limit, &offset]
+    ).await {
+        Ok(rows) => {
+            let entries: Vec<JsonValue> = rows.into_iter().map(|row| {
+                serde_json::json!({
+                    "entry_id": row.try_get::<Uuid, _>("id").unwrap_or_else(|_| Uuid::new_v4()).to_string(),
+                    "project_id": project_id.clone(),
+                    "task_id": row.try_get::<Uuid, _>("task_id").map(|id| id.to_string()).ok(),
+                    "action": row.try_get::<String, _>("action").unwrap_or_default(),
+                    "description": row.try_get::<String, _>("change_summary").unwrap_or_default(),
+                    "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("timestamp")
+                        .unwrap_or_else(|_| chrono::Utc::now()).to_rfc3339(),
+                    "created_by": row.try_get::<String, _>("actor").ok(),
+                })
+            }).collect();
+            
+            // Get total count
+            let total_result = db.query_one(
+                "SELECT COUNT(*) as total
+                 FROM provenance_entries pe
+                 INNER JOIN tasks t ON t.id = pe.task_id
+                 WHERE t.project_id = $1",
+                &[&project_uuid]
+            ).await;
+            
+            let total = total_result
+                .ok()
+                .and_then(|r| r)
+                .and_then(|row| row.try_get::<i64, _>("total").ok())
+                .unwrap_or(entries.len() as i64);
+            
+            Ok(Json(serde_json::json!({
+                "entries": entries,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            })))
+        }
+        Err(e) => {
+            warn!("Failed to get project work history: {}", e);
+            Ok(Json(serde_json::json!({
+                "entries": [],
+                "total": 0,
+                "limit": limit,
+                "offset": offset
+            })))
+        }
+    }
+}
+
+async fn get_project_settings_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_execution_plan(project_uuid).await {
+        Ok(Some(plan)) => {
+            // Extract settings from plan metadata or use defaults
+            let metadata = plan.metadata.unwrap_or_else(|| serde_json::json!({}));
+            let settings = serde_json::json!({
+                "project_id": project_id.clone(),
+                "notifications": metadata.get("notifications").cloned().unwrap_or(serde_json::json!({
+                    "email": true,
+                    "in_app": true
+                })),
+                "permissions": metadata.get("permissions").cloned().unwrap_or(serde_json::json!({
+                    "public": false,
+                    "allow_comments": true
+                })),
+                "workflow": metadata.get("workflow").cloned().unwrap_or(serde_json::json!({
+                    "auto_assign": false,
+                    "require_approval": false
+                })),
+            });
+            
+            Ok(Json(settings))
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get project settings: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_project_settings_handler(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    Json(payload): Json<JsonValue>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
+    match db.get_execution_plan(project_uuid).await {
+        Ok(Some(mut plan)) => {
+            // Merge settings into metadata
+            let mut metadata = plan.metadata.unwrap_or_else(|| serde_json::json!({}));
+            
+            if let Some(notifications) = payload.get("notifications") {
+                metadata["notifications"] = notifications.clone();
+            }
+            if let Some(permissions) = payload.get("permissions") {
+                metadata["permissions"] = permissions.clone();
+            }
+            if let Some(workflow) = payload.get("workflow") {
+                metadata["workflow"] = workflow.clone();
+            }
+            
+            // Update plan with new metadata using direct SQL update
+            match db.execute(
+                "UPDATE execution_plans SET metadata = $1, updated_at = NOW() WHERE id = $2",
+                &[&metadata, &project_uuid]
+            ).await {
+                Ok(_) => {
+                    let settings = serde_json::json!({
+                        "project_id": project_id.clone(),
+                        "notifications": metadata.get("notifications").cloned().unwrap_or(serde_json::json!({
+                            "email": true,
+                            "in_app": true
+                        })),
+                        "permissions": metadata.get("permissions").cloned().unwrap_or(serde_json::json!({
+                            "public": false,
+                            "allow_comments": true
+                        })),
+                        "workflow": metadata.get("workflow").cloned().unwrap_or(serde_json::json!({
+                            "auto_assign": false,
+                            "require_approval": false
+                        })),
+                    });
+                    
+                    Ok(Json(settings))
+                }
+                Err(e) => {
+                    error!("Failed to update project settings: {}", e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        }
+        Ok(None) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("Failed to get project for settings update: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 

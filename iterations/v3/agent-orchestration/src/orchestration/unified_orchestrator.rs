@@ -315,37 +315,53 @@ impl UnifiedOrchestrator {
                 match memory.retrieve_contextual_memories(&search_context, 1).await {
                     Ok(memories) => {
                         if let Some(contextual_memory) = memories.first() {
-                            // TODO: Extract TaskContext from contextual memory and return it
-                            //       Currently, contextual memories are retrieved but TaskContext extraction is not implemented.
-                            //
-                            // COMPLETION CHECKLIST:
-                            // [ ] Parse contextual memory data structure to extract TaskContext fields
-                            // [ ] Map contextual memory fields to TaskContext struct
-                            // [ ] Handle missing or invalid fields gracefully
-                            // [ ] Add unit tests for TaskContext extraction from contextual memory
-                            // [ ] Add integration tests with real memory system data
-                            // [ ] Verify TaskContext can be used for task resumption
-                            //
-                            // ACCEPTANCE CRITERIA:
-                            // - TaskContext is successfully extracted from contextual memory when available
-                            // - Function returns Some(TaskContext) instead of None when memory exists
-                            // - Extracted TaskContext contains valid task_id, agent_id, and description
-                            // - Error handling for malformed contextual memory data
-                            //
-                            // DEPENDENCIES:
-                            // - Contextual memory data structure format (Required)
-                            // - TaskContext struct definition (Required)
-                            // - Memory system contextual memory API (Required)
-                            //
-                            // ESTIMATED EFFORT: 2-4 hours (medium confidence)
-                            // PRIORITY: Medium
-                            // BLOCKING: No
-                            //
-                            // GOVERNANCE:
-                            // - CAWS Tier: 2 (standard feature)
-                            // - Change Budget: ~50 LOC
-                            // - Reviewer Requirements: Memory system domain expertise
-                            Ok(None)
+                            // Extract TaskContext from contextual memory
+                            // ContextualMemory contains AgentExperience which has task_id, agent_id, context (with description), timestamp
+                            let agent_experience = &contextual_memory.memory;
+                            
+                            // Extract keywords and entities from metadata if available
+                            let keywords: Vec<String> = agent_experience.metadata
+                                .get("keywords")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_else(|| {
+                                    // Fallback: extract keywords from context.domain
+                                    agent_experience.context.domain.clone()
+                                });
+                            
+                            let entities: Vec<String> = agent_experience.metadata
+                                .get("entities")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+                            
+                            // Create TaskContext from AgentExperience fields
+                            let extracted_context = TaskContext {
+                                task_id: agent_experience.task_id.clone(),
+                                agent_id: agent_experience.agent_id.clone(),
+                                task_type: agent_experience.context.task_type.clone(),
+                                keywords,
+                                entities,
+                                timestamp: agent_experience.timestamp,
+                                description: agent_experience.context.description.clone(),
+                            };
+                            
+                            tracing::debug!(
+                                task_id = %extracted_context.task_id,
+                                agent_id = %extracted_context.agent_id,
+                                description = %extracted_context.description,
+                                "Extracted TaskContext from contextual memory"
+                            );
+                            
+                            Ok(Some(extracted_context))
                         } else {
                             Ok(None)
                         }

@@ -184,38 +184,59 @@ impl SessionManager {
                 // Retrieve contextual memories
                 match memory.retrieve_contextual_memories(&search_context, limit).await {
                     Ok(memories) => {
-                        // TODO: Extract actual TaskContext from contextual memories
-                        //       Currently uses search context as placeholder; should parse contextual memories to extract TaskContext.
-                        //
-                        // COMPLETION CHECKLIST:
-                        // [ ] Parse contextual memory data structure to extract TaskContext fields
-                        // [ ] Map contextual memory fields to TaskContext struct
-                        // [ ] Handle multiple memories and select most relevant
-                        // [ ] Handle missing or invalid fields gracefully
-                        // [ ] Add unit tests for TaskContext extraction from contextual memories
-                        // [ ] Add integration tests with real memory system data
-                        // [ ] Verify extracted TaskContext is valid and usable
-                        //
-                        // ACCEPTANCE CRITERIA:
-                        // - TaskContext is successfully extracted from contextual memories when available
-                        // - Extracted TaskContext contains valid task_id, agent_id, and description
-                        // - Most relevant memory is selected when multiple memories exist
-                        // - Error handling for malformed contextual memory data
-                        //
-                        // DEPENDENCIES:
-                        // - Contextual memory data structure format (Required)
-                        // - TaskContext struct definition (Required)
-                        // - Memory system contextual memory API (Required)
-                        //
-                        // ESTIMATED EFFORT: 2-4 hours (medium confidence)
-                        // PRIORITY: Medium
-                        // BLOCKING: No
-                        //
-                        // GOVERNANCE:
-                        // - CAWS Tier: 2 (standard feature)
-                        // - Change Budget: ~60 LOC
-                        // - Reviewer Requirements: Memory system domain expertise
-                        contexts.push(search_context);
+                        // Extract TaskContext from contextual memories
+                        // Process memories in order (already sorted by relevance)
+                        for contextual_memory in memories {
+                            let agent_experience = &contextual_memory.memory;
+                            
+                            // Extract keywords and entities from metadata if available
+                            let keywords: Vec<String> = agent_experience.metadata
+                                .get("keywords")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_else(|| {
+                                    // Fallback: extract keywords from context.domain
+                                    agent_experience.context.domain.clone()
+                                });
+                            
+                            let entities: Vec<String> = agent_experience.metadata
+                                .get("entities")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+                            
+                            // Create TaskContext from AgentExperience fields
+                            let extracted_context = agent_memory::memory_types::TaskContext {
+                                task_id: agent_experience.task_id.clone(),
+                                agent_id: agent_experience.agent_id.clone(),
+                                task_type: agent_experience.context.task_type.clone(),
+                                keywords,
+                                entities,
+                                timestamp: agent_experience.timestamp,
+                                description: agent_experience.context.description.clone(),
+                            };
+                            
+                            contexts.push(extracted_context);
+                            
+                            // Stop if we've reached the limit
+                            if contexts.len() >= limit {
+                                break;
+                            }
+                        }
+                        
+                        // If no contexts were extracted, use search context as fallback
+                        if contexts.is_empty() {
+                            tracing::debug!("No TaskContext extracted from contextual memories, using search context as fallback");
+                            contexts.push(search_context);
+                        }
                     }
                     Err(e) => {
                         tracing::warn!("Failed to retrieve contextual memories for task {}: {}", task_id, e);

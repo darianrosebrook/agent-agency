@@ -72,20 +72,42 @@ impl PlanningEngineImpl {
         use crate::planning::plan_types::*;
         use std::collections::HashMap;
 
-        // Build resource inventory from execution context
-        // Count workers by type from worker assignments
+        // Build resource inventory from execution context planning_metadata
+        // Extract resource information from metadata or use defaults
+        let available_cpu_cores = execution_ctx.planning_metadata
+            .get("available_cpu_cores")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(4) as usize;
+        let available_memory_mb = execution_ctx.planning_metadata
+            .get("available_memory_mb")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(8192) as usize;
+        let available_disk_mb = execution_ctx.planning_metadata
+            .get("available_disk_mb")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(102400) as usize;
+        let available_network_mbps = execution_ctx.planning_metadata
+            .get("available_network_mbps")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(100.0);
+        
+        // Count workers from worker_assignments in metadata if available
         let mut worker_counts: HashMap<String, usize> = HashMap::new();
-        for assignment in execution_ctx.worker_assignments.values() {
-            // Extract worker type from assignment or use default
-            let worker_type = assignment.worker_id.to_string(); // Simplified - could be enhanced with actual worker type
-            *worker_counts.entry(worker_type).or_insert(0) += 1;
+        if let Some(assignments_json) = execution_ctx.planning_metadata.get("worker_assignments") {
+            if let Some(assignments_array) = assignments_json.as_array() {
+                for assignment in assignments_array {
+                    if let Some(worker_id) = assignment.get("worker_id").and_then(|v| v.as_str()) {
+                        *worker_counts.entry(worker_id.to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
         }
         
         let resource_inventory = ResourceInventory {
-            available_cpu_cores: execution_ctx.available_resources.available_cpu_cores,
-            available_memory_mb: execution_ctx.available_resources.available_memory_mb,
-            available_disk_mb: execution_ctx.available_resources.available_disk_mb,
-            available_network_mbps: execution_ctx.available_resources.available_network_mbps,
+            available_cpu_cores,
+            available_memory_mb,
+            available_disk_mb,
+            available_network_mbps,
             available_workers: worker_counts,
         };
 
@@ -146,9 +168,14 @@ impl PlanningEngineImpl {
         };
 
         // Determine parallel preferences based on task priority and blast radius
+        let worker_count = execution_ctx.planning_metadata
+            .get("worker_assignments")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.len())
+            .unwrap_or(3);
         let max_parallelism = if task_descriptor.blast_radius.modules.is_empty() {
             // No blast radius restrictions - allow more parallelism
-            execution_ctx.worker_assignments.len().max(3)
+            worker_count.max(3)
         } else {
             // Limited blast radius - reduce parallelism
             task_descriptor.blast_radius.modules.len().min(2)
@@ -182,7 +209,7 @@ impl PlanningEngineImpl {
 
         // Determine planning strategy based on risk tier and priority
         let planning_strategy = match task_descriptor.risk_tier {
-            Some(RiskTier::Tier1) => PlanGenerationStrategy::Conservative,
+            Some(RiskTier::Tier1) => PlanGenerationStrategy::HumanGuided, // Most conservative for Tier1
             Some(RiskTier::Tier2) => PlanGenerationStrategy::AIAssisted,
             Some(RiskTier::Tier3) | None => PlanGenerationStrategy::AIAssisted,
         };
@@ -541,6 +568,7 @@ impl RealWorkingSpecProvider {
                         evidence_results: vec![],
                         execution_events: vec![],
                     }),
+                    metadata: std::collections::HashMap::new(),
                 },
             ],
             change_budget: self.task_descriptor.change_budget.clone(),
@@ -741,8 +769,8 @@ impl RealTaskDescriptorProvider {
         // Check if change budget is reasonable based on historical data
         if historical_avg_duration_ms > 0 {
             // Estimate if change budget is reasonable (heuristic: if historical avg is much higher than budget, warn)
-            let budget_max_files = enhanced.change_budget.max_files.unwrap_or(25);
-            let budget_max_loc = enhanced.change_budget.max_loc.unwrap_or(1000);
+            let budget_max_files = enhanced.change_budget.max_files;
+            let budget_max_loc = enhanced.change_budget.max_loc;
             
             // Simple validation: if we have historical data suggesting longer execution, adjust expectations
             // This is a heuristic - actual validation would require more sophisticated analysis
@@ -788,7 +816,7 @@ impl RealTaskDescriptorProvider {
                 agent_agency_contracts::types::planning::RiskTier::Tier3 // Low risk
             };
             
-            enhanced.risk_tier = Some(inferred_risk_tier);
+            enhanced.risk_tier = Some(inferred_risk_tier.clone());
             
             tracing::debug!(
                 task_id = %enhanced.task_id,

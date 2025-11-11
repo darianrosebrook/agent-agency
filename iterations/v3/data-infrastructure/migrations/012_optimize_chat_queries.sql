@@ -168,7 +168,7 @@ ANALYZE chat_context_links;
 CREATE OR REPLACE VIEW chat_query_stats AS
 SELECT 
     schemaname,
-    tablename,
+    relname AS table_name,
     seq_scan,
     seq_tup_read,
     idx_scan,
@@ -184,7 +184,7 @@ SELECT
     last_autoanalyze
 FROM pg_stat_user_tables
 WHERE schemaname = current_schema()
-  AND tablename IN ('chat_sessions', 'chat_messages', 'chat_context_links');
+  AND relname IN ('chat_sessions', 'chat_messages', 'chat_context_links');
 
 -- ===========================================
 -- INDEX USAGE MONITORING
@@ -194,14 +194,14 @@ WHERE schemaname = current_schema()
 CREATE OR REPLACE VIEW chat_index_usage AS
 SELECT 
     schemaname,
-    tablename,
-    indexname,
+    relname AS table_name,
+    indexrelname AS index_name,
     idx_scan,
     idx_tup_read,
     idx_tup_fetch
 FROM pg_stat_user_indexes
 WHERE schemaname = current_schema()
-  AND tablename IN ('chat_sessions', 'chat_messages', 'chat_context_links')
+  AND relname IN ('chat_sessions', 'chat_messages', 'chat_context_links')
 ORDER BY idx_scan DESC;
 
 -- ===========================================

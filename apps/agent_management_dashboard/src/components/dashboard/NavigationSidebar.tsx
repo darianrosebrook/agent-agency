@@ -18,7 +18,7 @@ import {
   Bell,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +31,7 @@ import styles from "./NavigationSidebar.module.scss";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -94,35 +95,28 @@ export function Sidebar() {
 
         {/* Search */}
         {!isCollapsed && (
-          <div className={styles.searchContainer}>
-            {/* TODO: Implement global search functionality with the following requirements:
-            // 1. Search API endpoint: Create unified search endpoint
-            //    - Data source: GET /api/search?q={query} endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-            //    - Search across projects, tasks, chat messages, and files
-            //    - Support filtering by type (projects, tasks, chats, files)
-            // 2. Search results display: Show search results in dropdown or modal
-            //    - Display matching projects, tasks, chats, and files
-            //    - Highlight search terms in results
-            //    - Show result type icons and metadata
-            // 3. Keyboard shortcuts: Support keyboard navigation
-            //    - "/" key to focus search input
-            //    - Arrow keys to navigate results
-            //    - Enter to select result
-            //    - Escape to close search
-            // 4. Search suggestions: Provide search suggestions as user types
-            //    - Autocomplete for project names, task titles, etc.
-            //    - Recent searches history
-            //    - Popular searches
-            // 5. Search result navigation: Navigate to relevant pages on result click
-            //    - Projects -> /projects/:projectId
-            //    - Tasks -> /projects/:projectId with task highlighted
-            //    - Chats -> /chat with message highlighted
-            //    - Files -> /projects/:projectId/workspace with file selected */}
+          <div 
+            className={styles.searchContainer}
+            onClick={() => router.push('/search')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                router.push('/search');
+              }
+            }}
+          >
             <Search className={styles.searchIcon} />
             <input
               type="text"
               placeholder="Search"
               className={styles.searchInput}
+              readOnly
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/search');
+              }}
             />
             <kbd className={styles.searchKeyboard}>/</kbd>
           </div>

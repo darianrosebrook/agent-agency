@@ -464,6 +464,7 @@ impl PlanGenerator {
             is_blocking: dependencies.is_blocking_criterion(&criterion.id),
             blocking_reason: dependencies.get_blocking_reason(&criterion.id),
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         })
     }
 
@@ -718,6 +719,7 @@ impl PlanGenerator {
             is_blocking: false,
             blocking_reason: None,
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         })
     }
 

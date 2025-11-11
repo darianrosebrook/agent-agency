@@ -281,54 +281,67 @@ impl WorktreeManager {
         } else {
             // Try to initialize quality gates executor if not already set
             if let Ok(executor) = CawsQualityGateExecutor::new(&self.config.main_repo_path) {
+                info!("Running CAWS quality gates before merge (waiver-aware, fallback executor)");
+                
                 match executor.execute_quality_gates("push").await {
                     Ok(gate_result) => {
+                        info!(
+                            "Pre-merge quality gates: {} violations ({} waived, {} blocking)",
+                            gate_result.total_violations,
+                            gate_result.waived_violations,
+                            gate_result.blocking_violations
+                        );
+                        
+                        // Block merge if there are non-waived violations
                         if !gate_result.passed {
                             warn!(
-                                "Merge would be blocked: {} blocking violations found",
+                                "Merge blocked: {} blocking quality gate violations found",
                                 gate_result.blocking_violations
                             );
-                            // TODO: Implement comprehensive quality gate enforcement
-                            //       Currently warns but continues; should implement comprehensive enforcement that blocks merges when quality gates fail for strict quality control.
-                            //
-                            // COMPLETION CHECKLIST:
-                            // [ ] Primary functionality implemented
-                            // [ ] API/data structures defined & stable
-                            // [ ] Error handling + validation aligned with error taxonomy
-                            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                            // [ ] Integration tests for external systems/contracts
-                            // [ ] Documentation: public API + system behavior
-                            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                            // [ ] Configurability and feature flags defined if relevant
-                            // [ ] Failure-mode cards documented (degradation paths)
-                            //
-                            // ACCEPTANCE CRITERIA:
-                            // - Merges are blocked when quality gates fail
-                            // - Blocking violations prevent merge completion
-                            // - Quality gate enforcement is configurable
-                            // - Enforcement provides clear feedback
-                            //
-                            // DEPENDENCIES:
-                            // - Quality gate enforcement system (Required)
-                            // - Merge blocking mechanism (Required)
-                            // - Configuration for strictness levels (Optional)
-                            //
-                            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-                            // PRIORITY: Medium
-                            // BLOCKING: No
-                            //
-                            // GOVERNANCE:
-                            // - CAWS Tier: 2 (quality gate enforcement functionality)
-                            // - Change Budget: ~150 LOC
-                            // - Reviewer Requirements: Quality gates and merge control expertise
+                            
+                            // Log blocking violations
+                            for violation in &gate_result.violations {
+                                if !violation.waived {
+                                    warn!(
+                                        "Blocking violation: {} - {} ({})",
+                                        violation.gate,
+                                        violation.message,
+                                        violation.file.as_deref().unwrap_or("unknown file")
+                                    );
+                                }
+                            }
+                            
+                            return Err(anyhow!(
+                                "Cannot merge worktree {}: {} blocking quality gate violations ({} waived violations allowed)",
+                                worktree_id,
+                                gate_result.blocking_violations,
+                                gate_result.waived_violations
+                            ));
+                        }
+                        
+                        // Log waived violations for audit trail
+                        if gate_result.waived_violations > 0 {
+                            info!("Allowing merge with {} waived violations", gate_result.waived_violations);
+                            for violation in &gate_result.violations {
+                                if violation.waived {
+                                    info!(
+                                        "Waived violation: {} - {} (waiver: {})",
+                                        violation.gate,
+                                        violation.message,
+                                        violation.waived_by.as_deref().unwrap_or("unknown")
+                                    );
+                                }
+                            }
                         }
                     }
                     Err(e) => {
-                        debug!("Quality gates execution failed: {}", e);
+                        warn!("Failed to execute quality gates before merge: {}", e);
+                        // Continue with merge if quality gates fail to execute (graceful degradation)
+                        // In production, you might want to make this stricter
                     }
                 }
+            } else {
+                warn!("Quality gates executor not available - proceeding with merge without quality gate checks");
             }
         }
 

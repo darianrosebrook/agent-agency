@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS wal_log_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     transaction_id UUID NOT NULL,
     sequence_number BIGSERIAL NOT NULL,
     operation_type VARCHAR(20) NOT NULL CHECK (operation_type IN ('INSERT', 'UPDATE', 'DELETE', 'DDL', 'TRUNCATE')),
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS wal_log_records (
     replayed_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_wal_timestamp ON wal_log_records(timestamp);
+CREATE INDEX idx_wal_recorded_at ON wal_log_records(recorded_at);
 CREATE INDEX idx_wal_transaction ON wal_log_records(transaction_id);
 CREATE INDEX idx_wal_sequence ON wal_log_records(sequence_number);
 CREATE INDEX idx_wal_table ON wal_log_records(schema_name, table_name);
@@ -49,7 +49,7 @@ CREATE OR REPLACE FUNCTION get_wal_records_for_replay(
 )
 RETURNS TABLE (
     id UUID,
-    timestamp TIMESTAMPTZ,
+    recorded_at TIMESTAMPTZ,
     transaction_id UUID,
     sequence_number BIGINT,
     operation_type VARCHAR,
@@ -64,7 +64,7 @@ BEGIN
     RETURN QUERY
     SELECT 
         w.id,
-        w.timestamp,
+        w.recorded_at,
         w.transaction_id,
         w.sequence_number,
         w.operation_type,
@@ -75,11 +75,11 @@ BEGIN
         w.new_data,
         w.sql_statement
     FROM wal_log_records w
-    WHERE w.timestamp >= start_time
-      AND w.timestamp <= end_time
+    WHERE w.recorded_at >= start_time
+      AND w.recorded_at <= end_time
       AND (table_filter IS NULL OR w.table_name = table_filter)
       AND w.applied = FALSE
-    ORDER BY w.sequence_number ASC, w.timestamp ASC;
+    ORDER BY w.sequence_number ASC, w.recorded_at ASC;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -90,7 +90,7 @@ DECLARE
     deleted_count BIGINT;
 BEGIN
     DELETE FROM wal_log_records
-    WHERE timestamp < NOW() - (retention_days || ' days')::INTERVAL
+    WHERE recorded_at < NOW() - (retention_days || ' days')::INTERVAL
       AND applied = TRUE;
     
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
@@ -102,16 +102,16 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE VIEW wal_statistics AS
 SELECT 
     COUNT(*) as total_records,
-    COUNT(*) FILTER (WHERE applied = FALSE) as pending_records,
-    COUNT(*) FILTER (WHERE applied = TRUE) as applied_records,
-    MIN(timestamp) as oldest_record,
-    MAX(timestamp) as newest_record,
-    COUNT(DISTINCT transaction_id) as unique_transactions,
-    COUNT(DISTINCT table_name) as affected_tables,
-    operation_type,
+    COUNT(*) FILTER (WHERE w.applied = FALSE) as pending_records,
+    COUNT(*) FILTER (WHERE w.applied = TRUE) as applied_records,
+    MIN(w.recorded_at) as oldest_record,
+    MAX(w.recorded_at) as newest_record,
+    COUNT(DISTINCT w.transaction_id) as unique_transactions,
+    COUNT(DISTINCT w.table_name) as affected_tables,
+    w.operation_type,
     COUNT(*) as operation_count
-FROM wal_log_records
-GROUP BY operation_type;
+FROM wal_log_records w
+GROUP BY w.operation_type;
 
 
 

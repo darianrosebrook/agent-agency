@@ -1717,16 +1717,255 @@ mod tests {
         assert!(success_score > 0.0 && success_score <= 1.0);
     }
 
-    // TODO: Add unit tests for arbiter metadata extraction functionality
-    // Test cases to implement:
-    // 1. test_extract_arbiter_metadata_with_valid_data - Test extraction of all arbiter metadata fields (task_type, risk_tier, worker_pool, confidence)
-    // 2. test_extract_arbiter_metadata_with_missing_data - Test graceful handling when arbiter metadata is missing (should use defaults)
-    // 3. test_extract_arbiter_metadata_with_invalid_types - Test handling of invalid metadata types (wrong JSON types)
-    // 4. test_worker_pool_filtering_with_matching_workers - Test that workers are filtered correctly by Worker.metadata["worker_pool"]
-    // 5. test_worker_pool_filtering_with_no_matches - Test fallback to all workers when filtering results in empty set
-    // 6. test_arbiter_confidence_boost_application - Test that matching workers receive confidence boost to their scores
-    // 7. test_arbiter_confidence_boost_not_applied_to_non_matching - Test that non-matching workers don't receive boost
-    // 8. test_arbiter_metadata_extraction_performance - Test that extraction and filtering adds <5ms latency for 100 workers
+    // Helper function to create a test milestone with arbiter metadata
+    fn create_test_milestone_with_arbiter_metadata(
+        metadata: std::collections::HashMap<String, serde_json::Value>,
+    ) -> agent_agency_contracts::planning_io::Milestone {
+        agent_agency_contracts::planning_io::Milestone {
+            id: "test-milestone".to_string(),
+            objective: "Test objective".to_string(),
+            scope: agent_agency_contracts::planning_io::MilestoneScope {
+                files: vec![],
+                directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
+                will_modify: false,
+                allowed_operations: vec!["read".to_string(), "write".to_string()],
+                parallelism: Some(1),
+                resource_requirements: std::collections::HashMap::new(),
+            },
+            interfaces: vec![],
+            tests: vec![],
+            evidence_gate: agent_agency_contracts::planning_io::EvidenceGate {
+                min_coverage: 0.0,
+                min_branch_coverage: 0.0,
+                min_mutation_score: 0.0,
+                security_scan_required: false,
+                performance_budget: None,
+                required_artifacts: vec![],
+                custom_validations: vec![],
+            },
+            quality_gates: vec![],
+            dependencies: vec![],
+            estimated_duration: None,
+            rollback_plan: "No rollback".to_string(),
+            state: agent_agency_contracts::planning_io::MilestoneState::Pending,
+            assigned_workers: vec![],
+            estimated_effort: 1.0,
+            priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
+            risk_tier: 2,
+            is_blocking: false,
+            blocking_reason: None,
+            metrics: None,
+            metadata,
+        }
+    }
+
+    // Helper function to create a test worker with metadata
+    fn create_test_worker_with_metadata(
+        worker_id: Uuid,
+        worker_pool: Option<&str>,
+    ) -> crate::planning::models::Worker {
+        let mut metadata = std::collections::HashMap::new();
+        if let Some(pool) = worker_pool {
+            metadata.insert("worker_pool".to_string(), serde_json::Value::String(pool.to_string()));
+        }
+
+        crate::planning::models::Worker {
+            id: worker_id,
+            name: format!("test-worker-{}", worker_id),
+            worker_type: "rust".to_string(),
+            specialty: None,
+            model_name: "test-model".to_string(),
+            endpoint: "http://localhost:3000".to_string(),
+            capabilities: serde_json::json!(["read", "write", "execute"]),
+            performance_history: serde_json::json!({"current_load": 0.3}),
+            is_active: true,
+            metadata,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_extract_arbiter_metadata_with_valid_data() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()));
+        metadata.insert("arbiter_task_type".to_string(), serde_json::Value::String("code-generation".to_string()));
+        metadata.insert("arbiter_risk_tier".to_string(), serde_json::Value::String("Tier2".to_string()));
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        let worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
+        
+        // Should have one candidate
+        assert_eq!(candidates.len(), 1);
+        // Matching worker should receive arbiter boost (0.8 * 0.2 = 0.16)
+        assert!(candidates[0].assignment_score > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_extract_arbiter_metadata_with_missing_data() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        // Milestone with no arbiter metadata
+        let milestone = create_test_milestone_with_arbiter_metadata(std::collections::HashMap::new());
+        let worker = create_test_worker_with_metadata(Uuid::new_v4(), None);
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
+        
+        // Should still evaluate workers (no filtering)
+        assert_eq!(candidates.len(), 1);
+        // No arbiter boost should be applied
+        let base_score = candidates[0].assignment_score;
+        assert!(base_score > 0.0 && base_score <= 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_extract_arbiter_metadata_with_invalid_types() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        // Invalid types: should be string but are numbers/objects
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::Number(serde_json::Number::from(123)));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::String("invalid".to_string())); // Should be number
+        metadata.insert("arbiter_task_type".to_string(), serde_json::Value::Bool(true)); // Should be string
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        let worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
+        
+        // Should handle invalid types gracefully - defaults used
+        assert_eq!(candidates.len(), 1);
+        // Invalid types should result in no filtering and default confidence (0.5)
+    }
+
+    #[tokio::test]
+    async fn test_worker_pool_filtering_with_matching_workers() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()));
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        
+        // Create workers: 2 matching, 1 non-matching
+        let matching_worker1 = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
+        let matching_worker2 = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
+        let non_matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
+
+        let candidates = strategy.evaluate_candidates(
+            &milestone,
+            &[matching_worker1, matching_worker2, non_matching_worker],
+        ).await.unwrap();
+        
+        // Should filter to only matching workers (2)
+        assert_eq!(candidates.len(), 2);
+        // Both matching workers should have arbiter boost
+        assert!(candidates[0].assignment_score > 0.0);
+        assert!(candidates[1].assignment_score > 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_worker_pool_filtering_with_no_matches() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()));
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        
+        // Create workers: none matching the recommended pool
+        let worker1 = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
+        let worker2 = create_test_worker_with_metadata(Uuid::new_v4(), Some("javascript-pool"));
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[worker1, worker2]).await.unwrap();
+        
+        // Should fall back to all workers when filtering results in empty set
+        assert_eq!(candidates.len(), 2);
+        // No arbiter boost should be applied (workers don't match)
+        for candidate in &candidates {
+            assert!(candidate.assignment_score > 0.0 && candidate.assignment_score <= 1.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_arbiter_confidence_boost_application() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap())); // Max confidence
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        let matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[matching_worker]).await.unwrap();
+        
+        assert_eq!(candidates.len(), 1);
+        // With max confidence (1.0), boost should be 1.0 * 0.2 = 0.2
+        // Base score should be increased by arbiter boost
+        let candidate = &candidates[0];
+        let base_score = (candidate.capability_score * 0.5) + (candidate.performance_score * 0.3) + ((1.0 - candidate.load_factor) * 0.2);
+        let expected_boost = 1.0 * 0.2; // arbiter_confidence * 0.2
+        assert!((candidate.assignment_score - base_score - expected_boost).abs() < 0.01); // Allow small floating point error
+    }
+
+    #[tokio::test]
+    async fn test_arbiter_confidence_boost_not_applied_to_non_matching() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()));
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        let non_matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
+
+        let candidates = strategy.evaluate_candidates(&milestone, &[non_matching_worker]).await.unwrap();
+        
+        assert_eq!(candidates.len(), 1);
+        // Non-matching worker should not receive boost
+        let candidate = &candidates[0];
+        let base_score = (candidate.capability_score * 0.5) + (candidate.performance_score * 0.3) + ((1.0 - candidate.load_factor) * 0.2);
+        // Assignment score should equal base score (no boost)
+        assert!((candidate.assignment_score - base_score).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn test_arbiter_metadata_extraction_performance() {
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
+        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()));
+
+        let milestone = create_test_milestone_with_arbiter_metadata(metadata);
+        
+        // Create 100 workers (mix of matching and non-matching)
+        let mut workers = Vec::new();
+        for i in 0..100 {
+            let pool = if i % 2 == 0 { Some("rust-pool") } else { Some("python-pool") };
+            workers.push(create_test_worker_with_metadata(Uuid::new_v4(), pool));
+        }
+
+        let start = std::time::Instant::now();
+        let candidates = strategy.evaluate_candidates(&milestone, &workers).await.unwrap();
+        let duration = start.elapsed();
+
+        // Should complete in reasonable time (<5ms as specified)
+        assert!(duration.as_millis() < 5, "Arbiter metadata extraction took {}ms, expected <5ms", duration.as_millis());
+        
+        // Should filter to matching workers (50 matching, 50 non-matching)
+        assert_eq!(candidates.len(), 50);
+    }
 
     #[test]
     fn test_capability_score_calculation() {

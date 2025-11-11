@@ -189,9 +189,15 @@ export async function updateProjectHandler(
 export async function getProjectMembers(
   projectId: string
 ): Promise<ProjectMember[]> {
-  // TODO: Implement when backend API is available
-  // return apiGet<ProjectMember[]>(`${API_BASE}/projects/${projectId}/members`);
-  return [];
+  try {
+    const response = await apiGet<{ members: ProjectMember[] }>(
+      `${API_BASE}/projects/${projectId}/members`
+    );
+    return response.members || [];
+  } catch (err) {
+    console.error("Failed to get project members:", err);
+    return [];
+  }
 }
 
 /**
@@ -416,9 +422,18 @@ export async function getProjectWorkHistory(
     offset?: number;
   }
 ): Promise<WorkHistoryEntry[]> {
-  // TODO: Implement when backend API is available
-  // return apiGet<WorkHistoryResponse>(`${API_BASE}/projects/${projectId}/work-history`, { params });
-  return [];
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+    
+    const url = `${API_BASE}/projects/${projectId}/work-history${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+    const response = await apiGet<WorkHistoryResponse>(url);
+    return response.entries || [];
+  } catch (err) {
+    console.error("Failed to get project work history:", err);
+    return [];
+  }
 }
 
 /**

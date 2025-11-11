@@ -500,8 +500,11 @@ impl PlanningStorage {
             ExecutionPlan as ContractExecutionPlan,
             PlanState, DependencyGraph, QualityGates,
             EvidenceRequirement, WaiverReference, PlanMetadata,
+            PlanCreator, BudgetEnforcement,
+            MutationRequirements, SecurityRequirements, PerformanceRequirements, DocumentationRequirements,
         };
         use agent_agency_contracts::{ChangeBudget, WorkingSpec};
+        use agent_agency_contracts::types::planning::PlanningStrategy;
         use tracing::{debug, warn};
         
         debug!("Reconstructing plan {} from database", db_plan.id);
@@ -532,6 +535,8 @@ impl PlanningStorage {
                         edges: vec![],
                         critical_path: vec![],
                         parallel_groups: vec![],
+                        has_cycles: false,
+                        cycles: vec![],
                     }
                 });
         
@@ -547,8 +552,10 @@ impl PlanningStorage {
                     ChangeBudget {
                         max_files: 25,
                         max_loc: 1000,
-                        max_days: 3,
-                        max_complexity: 10,
+                        max_migrations: 0,
+                        allow_breaking_changes: false,
+                        allow_new_dependencies: false,
+                        enforcement_mode: BudgetEnforcement::Strict,
                     }
                 });
         
@@ -562,10 +569,40 @@ impl PlanningStorage {
                 .unwrap_or_else(|_| {
                     warn!("Using default quality gates for plan {}", db_plan.id);
                     QualityGates {
-                        min_test_coverage: 0.8,
-                        min_mutation_score: 0.5,
-                        security_scan_required: true,
-                        performance_budget_required: false,
+                        coverage_requirements: {
+                            let mut map = std::collections::HashMap::new();
+                            map.insert("line".to_string(), 0.8);
+                            map.insert("branch".to_string(), 0.75);
+                            map
+                        },
+                        mutation_requirements: MutationRequirements {
+                            required: true,
+                            min_score: 0.5,
+                            operators: vec![],
+                        },
+                        security_requirements: SecurityRequirements {
+                            scan_required: true,
+                            max_issues_by_severity: std::collections::HashMap::new(),
+                            required_controls: vec![],
+                        },
+                        performance_requirements: PerformanceRequirements {
+                            max_regressions: 0,
+                            required_benchmarks: vec![],
+                            slas: vec![],
+                        },
+                        documentation_requirements: DocumentationRequirements {
+                            api_docs_required: false,
+                            code_docs_required: false,
+                            architecture_docs_required: false,
+                            required_formats: vec![],
+                            min_coverage: 0.0,
+                            quality_checks: vec![],
+                            required_types: vec![],
+                        },
+                        requires_manual_review: false,
+                        requires_council_approval: false,
+                        min_coverage: Some(0.8),
+                        min_mutation_score_percent: Some(0.5),
                     }
                 });
         
@@ -607,15 +644,20 @@ impl PlanningStorage {
                         updated_at: db_plan.updated_at,
                         approved_at: db_plan.approved_at,
                         completed_at: db_plan.completed_at,
-                        created_by: "system".to_string(),
+                        created_by: PlanCreator::AI { model: "system".to_string(), version: "1.0.0".to_string() },
                         version: "1.0.0".to_string(),
                         source: "database_reconstruction".to_string(),
-                        confidence_score: 0.5,
-                        generation_time_ms: 0,
+                        confidence_score: Some(0.5),
+                        generation_time_ms: Some(0),
                         model_used: None,
                         fallback_used: false,
-                        strategy: None,
-                        confidence: None,
+                        strategy: PlanningStrategy::Hybrid,
+                        confidence: 0.5,
+                        estimated_duration_ms: 0,
+                        estimated_cost_cents: 0,
+                        adaptive: false,
+                        engine_version: "1.0.0".to_string(),
+                        additional_metadata: std::collections::HashMap::new(),
                     }
                 });
         
@@ -638,35 +680,54 @@ impl PlanningStorage {
         // Reconstruct working spec from metadata or create minimal default
         // The working spec is stored in the contract_plan field, but we need to reconstruct it
         // For now, create a minimal working spec from available data
+        use chrono::Utc;
         let working_spec = WorkingSpec {
             version: "1.0.0".to_string(),
             id: db_plan.working_spec_id.clone(),
             title: db_plan.title.clone(),
             description: db_plan.overview.clone().unwrap_or_else(|| "Reconstructed from database".to_string()),
+            goals: vec![],
             risk_tier: 2, // Default risk tier
-            mode: agent_agency_contracts::types::planning::ExecutionMode::Feature,
-            change_budget: change_budget.clone(),
-            blast_radius: agent_agency_contracts::types::planning::BlastRadius {
-                modules: vec![],
-                data_migration: false,
-                external_apis: false,
+            constraints: agent_agency_contracts::WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: None,
+                scope_restrictions: None,
             },
-            scope: agent_agency_contracts::types::planning::Scope {
-                files_affected: vec![],
-                directories: vec![],
-                included_paths: vec![],
-                excluded_paths: vec![],
-                allowed_operations: vec![],
-                resource_requirements: std::collections::HashMap::new(),
-            },
-            invariants: vec![],
             acceptance_criteria: vec![],
-            non_functional: agent_agency_contracts::types::planning::NonFunctionalRequirements {
-                a11y: vec![],
-                perf: None,
-                security: vec![],
+            test_plan: agent_agency_contracts::TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
             },
-            contracts: vec![],
+            rollback_plan: agent_agency_contracts::RollbackPlan {
+                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+                automated_steps: vec![],
+                manual_steps: vec![],
+                data_impact: agent_agency_contracts::DataImpact::None,
+                downtime_required: None,
+                rollback_window_minutes: None,
+            },
+            context: agent_agency_contracts::WorkingSpecContext {
+                workspace_root: "/tmp".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: agent_agency_contracts::task_request::Environment::Development,
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![],
+            metadata: None,
+            milestones: vec![],
+            change_budget: change_budget.clone(),
+            file_changes: vec![],
+            coverage_targets: None,
+            overview: db_plan.overview.clone().unwrap_or_else(|| "Reconstructed from database".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
         
         // Reconstruct contract execution plan
@@ -685,6 +746,11 @@ impl PlanningStorage {
             evidence_requirements,
             active_waivers,
             metadata: plan_metadata,
+            execution_context: None,
+            created_at: db_plan.created_at,
+            updated_at: db_plan.updated_at,
+            approved_at: db_plan.approved_at,
+            completed_at: db_plan.completed_at,
         };
         
         // Create execution plan with default orchestration metadata and execution context
@@ -900,13 +966,325 @@ mod tests {
         assert_eq!(session.id, session_id);
     }
 
-    // TODO: Add unit tests for task-to-plan mapping functionality
-    // Test cases to implement:
-    // 1. test_get_plan_for_task_with_matching_working_spec_id - Test successful lookup when working_spec_id matches TASK-<UUID> format
-    // 2. test_get_plan_for_task_with_no_matching_plan - Test that None is returned when no plan matches task_id
-    // 3. test_get_plan_for_task_with_multiple_plans - Test that most recent plan is returned when multiple plans exist for same task
-    // 4. test_get_plan_for_task_with_non_task_format - Test that plans with non-TASK format working_spec_id are not matched
-    // 5. test_store_execution_plan_preserves_task_format - Test that TASK-<UUID> format is preserved when storing plans
+    // Mock database operations for task-to-plan mapping tests
+    struct TaskMappingMockDatabaseOps {
+        plans: Arc<tokio::sync::RwLock<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>>>,
+        // Track plan timestamps separately to preserve them during storage
+        plan_timestamps: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, DateTime<Utc>>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl DatabaseOperations for TaskMappingMockDatabaseOps {
+        async fn create_execution_plan(&self, plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            // Check if we have a stored timestamp for this plan
+            let created_at = self.plan_timestamps.read().await
+                .get(&plan.id)
+                .copied()
+                .unwrap_or_else(Utc::now);
+            
+            let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
+                id: plan.id,
+                session_id: Uuid::new_v4(),
+                working_spec_id: plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id)),
+                title: plan.title,
+                overview: Some(plan.overview),
+                state: "draft".to_string(),
+                milestones: serde_json::json!([]),
+                dependency_graph: serde_json::json!({}),
+                change_budget: serde_json::json!({}),
+                quality_gates: serde_json::json!({}),
+                evidence_requirements: serde_json::json!([]),
+                active_waivers: serde_json::json!([]),
+                metadata: serde_json::json!({}),
+                created_at,
+                updated_at: Utc::now(),
+                approved_at: None,
+                completed_at: None,
+            };
+            self.plans.write().await.push(db_plan.clone());
+            Ok(db_plan)
+        }
+
+        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(self.plans.read().await.clone())
+        }
+
+        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn create_audit_trail_entry(&self, _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn create_planning_session(&self, _session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn create_execution_result(&self, _result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn update_planning_session(&self, _id: Uuid, _session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+
+        async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn create_planning_audit_event(&self, _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+
+        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn delete_execution_plan(&self, _id: Uuid) -> Result<(), anyhow::Error> {
+            Ok(())
+        }
+
+        async fn create_judge(&self, _judge: crate::planning::data_infrastructure_types::CreateJudge) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn get_judges(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn create_judge_evaluation(&self, _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<crate::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
+            Ok(vec![])
+        }
+
+        async fn create_waiver(&self, _waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_plan_for_task_with_matching_working_spec_id() {
+        let db_ops = Arc::new(TaskMappingMockDatabaseOps {
+            plans: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            plan_timestamps: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        });
+        let temp_dir = std::env::temp_dir();
+        let plans_dir = temp_dir.join(format!("test_plans_{}", Uuid::new_v4()));
+        let specs_dir = temp_dir.join(format!("test_specs_{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&plans_dir).await.unwrap();
+        tokio::fs::create_dir_all(&specs_dir).await.unwrap();
+        let config = StorageConfig::default();
+        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+
+        let task_id = Uuid::new_v4();
+        let plan_id = Uuid::new_v4();
+        let mut plan = create_test_execution_plan();
+        plan.contract_plan.working_spec_id = format!("TASK-{}", task_id);
+        plan.contract_plan.id = plan_id;
+
+        // Store the plan
+        storage.store_execution_plan(&plan).await.unwrap();
+
+        // Retrieve plan for task
+        let retrieved_plan = storage.get_plan_for_task(task_id).await.unwrap();
+        assert!(retrieved_plan.is_some());
+        assert_eq!(retrieved_plan.unwrap().contract_plan.id, plan_id);
+
+        // Cleanup
+        let _ = tokio::fs::remove_dir_all(&plans_dir).await;
+        let _ = tokio::fs::remove_dir_all(&specs_dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_plan_for_task_with_no_matching_plan() {
+        let db_ops = Arc::new(TaskMappingMockDatabaseOps {
+            plans: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            plan_timestamps: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        });
+        let temp_dir = std::env::temp_dir();
+        let plans_dir = temp_dir.join(format!("test_plans_{}", Uuid::new_v4()));
+        let specs_dir = temp_dir.join(format!("test_specs_{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&plans_dir).await.unwrap();
+        tokio::fs::create_dir_all(&specs_dir).await.unwrap();
+        let config = StorageConfig::default();
+        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+
+        let task_id = Uuid::new_v4();
+        let non_matching_task_id = Uuid::new_v4();
+        let plan_id = Uuid::new_v4();
+        let mut plan = create_test_execution_plan();
+        plan.contract_plan.working_spec_id = format!("TASK-{}", task_id);
+        plan.contract_plan.id = plan_id;
+
+        // Store the plan
+        storage.store_execution_plan(&plan).await.unwrap();
+
+        // Try to retrieve plan for different task
+        let retrieved_plan = storage.get_plan_for_task(non_matching_task_id).await.unwrap();
+        assert!(retrieved_plan.is_none());
+
+        // Cleanup
+        let _ = tokio::fs::remove_dir_all(&plans_dir).await;
+        let _ = tokio::fs::remove_dir_all(&specs_dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_plan_for_task_with_multiple_plans() {
+        let db_ops = Arc::new(TaskMappingMockDatabaseOps {
+            plans: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            plan_timestamps: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        });
+        let temp_dir = std::env::temp_dir();
+        let plans_dir = temp_dir.join(format!("test_plans_{}", Uuid::new_v4()));
+        let specs_dir = temp_dir.join(format!("test_specs_{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&plans_dir).await.unwrap();
+        tokio::fs::create_dir_all(&specs_dir).await.unwrap();
+        let config = StorageConfig::default();
+        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+
+        let task_id = Uuid::new_v4();
+        let plan_id_1 = Uuid::new_v4();
+        let plan_id_2 = Uuid::new_v4();
+
+        // Create and store first plan (older)
+        let mut plan1 = create_test_execution_plan();
+        plan1.contract_plan.working_spec_id = format!("TASK-{}", task_id);
+        plan1.contract_plan.id = plan_id_1;
+        let plan1_created_at = Utc::now() - chrono::Duration::hours(2);
+        plan1.contract_plan.created_at = plan1_created_at;
+        // Store timestamp in mock before storing plan
+        db_ops.plan_timestamps.write().await.insert(plan_id_1, plan1_created_at);
+        storage.store_execution_plan(&plan1).await.unwrap();
+
+        // Create and store second plan (newer)
+        let mut plan2 = create_test_execution_plan();
+        plan2.contract_plan.working_spec_id = format!("TASK-{}", task_id);
+        plan2.contract_plan.id = plan_id_2;
+        let plan2_created_at = Utc::now() - chrono::Duration::hours(1);
+        plan2.contract_plan.created_at = plan2_created_at;
+        // Store timestamp in mock before storing plan
+        db_ops.plan_timestamps.write().await.insert(plan_id_2, plan2_created_at);
+        storage.store_execution_plan(&plan2).await.unwrap();
+
+        // Retrieve plan for task - should get most recent
+        let retrieved_plan = storage.get_plan_for_task(task_id).await.unwrap();
+        assert!(retrieved_plan.is_some());
+        assert_eq!(retrieved_plan.unwrap().contract_plan.id, plan_id_2);
+
+        // Cleanup
+        let _ = tokio::fs::remove_dir_all(&plans_dir).await;
+        let _ = tokio::fs::remove_dir_all(&specs_dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_get_plan_for_task_with_non_task_format() {
+        let db_ops = Arc::new(TaskMappingMockDatabaseOps {
+            plans: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            plan_timestamps: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        });
+        let temp_dir = std::env::temp_dir();
+        let plans_dir = temp_dir.join(format!("test_plans_{}", Uuid::new_v4()));
+        let specs_dir = temp_dir.join(format!("test_specs_{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&plans_dir).await.unwrap();
+        tokio::fs::create_dir_all(&specs_dir).await.unwrap();
+        let config = StorageConfig::default();
+        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+
+        let task_id = Uuid::new_v4();
+        let plan_id = Uuid::new_v4();
+        let mut plan = create_test_execution_plan();
+        plan.contract_plan.working_spec_id = format!("PLAN-{}", plan_id); // Non-TASK format
+        plan.contract_plan.id = plan_id;
+
+        // Store the plan
+        storage.store_execution_plan(&plan).await.unwrap();
+
+        // Try to retrieve plan for task - should not match
+        let retrieved_plan = storage.get_plan_for_task(task_id).await.unwrap();
+        assert!(retrieved_plan.is_none());
+
+        // Cleanup
+        let _ = tokio::fs::remove_dir_all(&plans_dir).await;
+        let _ = tokio::fs::remove_dir_all(&specs_dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_store_execution_plan_preserves_task_format() {
+        let db_ops = Arc::new(TaskMappingMockDatabaseOps {
+            plans: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            plan_timestamps: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        });
+        let temp_dir = std::env::temp_dir();
+        let plans_dir = temp_dir.join(format!("test_plans_{}", Uuid::new_v4()));
+        let specs_dir = temp_dir.join(format!("test_specs_{}", Uuid::new_v4()));
+        tokio::fs::create_dir_all(&plans_dir).await.unwrap();
+        tokio::fs::create_dir_all(&specs_dir).await.unwrap();
+        let config = StorageConfig::default();
+        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+
+        let task_id = Uuid::new_v4();
+        let plan_id = Uuid::new_v4();
+        let mut plan = create_test_execution_plan();
+        let expected_working_spec_id = format!("TASK-{}", task_id);
+        plan.contract_plan.working_spec_id = expected_working_spec_id.clone();
+        plan.contract_plan.id = plan_id;
+
+        // Store the plan
+        storage.store_execution_plan(&plan).await.unwrap();
+
+        // Verify the working_spec_id was preserved in database
+        let all_plans = db_ops.get_execution_plans().await.unwrap();
+        let stored_plan = all_plans.iter().find(|p| p.id == plan_id).unwrap();
+        assert_eq!(stored_plan.working_spec_id, expected_working_spec_id);
+
+        // Cleanup
+        let _ = tokio::fs::remove_dir_all(&plans_dir).await;
+        let _ = tokio::fs::remove_dir_all(&specs_dir).await;
+    }
 
     fn create_test_execution_plan() -> ExecutionPlan {
         use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory, ExecutionContext as PlanExecutionContext};
@@ -1133,7 +1511,7 @@ impl PlanningStorage {
                 "InProgress" => agent_agency_contracts::planning_io::PlanState::InProgress,
                 "Completed" => agent_agency_contracts::planning_io::PlanState::Completed,
                 "Failed" => agent_agency_contracts::planning_io::PlanState::Failed { reason: "Execution failed".to_string() },
-                "Cancelled" => agent_agency_contracts::planning_io::PlanState::Cancelled,
+                "Cancelled" => agent_agency_contracts::planning_io::PlanState::Cancelled { reason: "Plan cancelled".to_string() },
                 _ => agent_agency_contracts::planning_io::PlanState::Draft, // Default fallback
             };
             

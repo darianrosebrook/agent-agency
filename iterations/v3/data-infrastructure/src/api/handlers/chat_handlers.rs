@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 use super::super::Result as ApiResult;
 use super::super::server::ApiState;
+use std::sync::Arc;
 
 /// Request to stream agent response
 #[derive(Debug, Clone, Deserialize)]
@@ -78,9 +79,23 @@ pub async fn stream_agent_response(
         let stream_result = timeout(timeout_duration_clone, async {
             tokio::select! {
                 result = async {
-                    // TODO: Replace with actual agent service call
-                    // For now, simulate streaming response
-                    let response_text = format!("Agent response to: {}", request_clone.message);
+                    // Try to use CoreML inference if available
+                    let response_text = if let Some(ref callback) = state_clone.coreml_inference_callback {
+                        match callback(request_clone.message.clone()).await {
+                            Ok(text) => {
+                                tracing::info!("CoreML inference successful for chat message");
+                                text
+                            }
+                            Err(e) => {
+                                tracing::warn!("CoreML inference failed: {}", e);
+                                format!("I received your message: '{}'. (CoreML inference unavailable: {})", request_clone.message, e)
+                            }
+                        }
+                    } else {
+                        tracing::debug!("CoreML inference callback not available, using fallback");
+                        format!("I received your message: '{}'. CoreML orchestrator is not available.", request_clone.message)
+                    };
+                    
                     let words: Vec<&str> = response_text.split_whitespace().collect();
 
                     for (i, word) in words.iter().enumerate() {
@@ -101,7 +116,7 @@ pub async fn stream_agent_response(
                         }
 
                         // Small delay to simulate streaming
-                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        tokio::time::sleep(Duration::from_millis(30)).await;
                     }
 
                     // Send done event

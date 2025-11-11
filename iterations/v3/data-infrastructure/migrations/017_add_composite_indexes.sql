@@ -12,11 +12,11 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id_is_active
 ON sessions(user_id, is_active) 
 WHERE is_active = true;
 
--- Composite index for: WHERE token_hash = $1 AND expires_at > NOW() AND is_active = true
+-- Composite index for: WHERE token_hash = $1 AND is_active = true
 -- Used by: session validation in auth middleware
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash_expires_active 
 ON sessions(token_hash, expires_at, is_active) 
-WHERE is_active = true AND expires_at > NOW();
+WHERE is_active = true;
 
 -- Composite index for: WHERE expires_at < NOW() AND is_active = true
 -- Used by: cleanup_expired_sessions
@@ -28,11 +28,11 @@ WHERE is_active = true;
 -- PASSWORD RESET TOKENS OPTIMIZATIONS
 -- ===========================================
 
--- Composite index for: WHERE token_hash = $1 AND expires_at > NOW() AND used_at IS NULL
+-- Composite index for: WHERE token_hash = $1 AND used_at IS NULL
 -- Used by: validate_password_reset_token
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_expires_used 
 ON password_reset_tokens(token_hash, expires_at, used_at) 
-WHERE expires_at > NOW() AND used_at IS NULL;
+WHERE used_at IS NULL;
 
 -- ===========================================
 -- TASKS TABLE OPTIMIZATIONS
@@ -177,22 +177,40 @@ ON chat_messages(session_id, created_at ASC);
 
 -- Composite index for: WHERE entity_type = $1 AND entity_id = $2 ORDER BY recorded_at DESC
 -- Used by: get_metrics_by_entity
-CREATE INDEX IF NOT EXISTS idx_performance_metrics_entity_recorded 
-ON performance_metrics(entity_type, entity_id, recorded_at DESC);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables 
+        WHERE table_schema = current_schema()
+          AND table_name = 'performance_metrics'
+    ) THEN
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_performance_metrics_entity_recorded
+                 ON performance_metrics(entity_type, entity_id, recorded_at DESC)';
+    END IF;
+END
+$$;
 
 -- ===========================================
 -- CAWS COMPLIANCE OPTIMIZATIONS
 -- ===========================================
 
--- Composite index for: WHERE task_id = $1 ORDER BY recorded_at DESC
--- Used by: get_compliance_by_task
-CREATE INDEX IF NOT EXISTS idx_caws_compliance_task_recorded 
-ON caws_compliance(task_id, recorded_at DESC);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables 
+        WHERE table_schema = current_schema()
+          AND table_name = 'caws_compliance'
+    ) THEN
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_caws_compliance_task_recorded
+                 ON caws_compliance(task_id, recorded_at DESC)';
 
--- Composite index for: WHERE recorded_at >= $1 GROUP BY compliance_status
--- Used by: get_compliance_stats
-CREATE INDEX IF NOT EXISTS idx_caws_compliance_recorded_status 
-ON caws_compliance(recorded_at, compliance_status);
+        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_caws_compliance_recorded_status
+                 ON caws_compliance(recorded_at, compliance_status)';
+    END IF;
+END
+$$;
 
 -- ===========================================
 -- LOG MIGRATION

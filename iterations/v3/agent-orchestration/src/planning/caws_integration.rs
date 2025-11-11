@@ -302,6 +302,7 @@ impl CawsPlanBridge {
             is_blocking: self.is_blocking_criterion(criterion),
             blocking_reason: self.get_blocking_reason(criterion),
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         })
     }
 
@@ -447,6 +448,7 @@ impl CawsPlanBridge {
             is_blocking: true,
             blocking_reason: Some("Infrastructure required for all milestones".to_string()),
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         }
     }
 

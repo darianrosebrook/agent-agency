@@ -56,8 +56,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER task_execution_states_updated_at
-    BEFORE UPDATE ON task_execution_states
-    FOR EACH ROW
-    EXECUTE FUNCTION update_task_execution_state_updated_at();
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'task_execution_states_updated_at') THEN
+        CREATE TRIGGER task_execution_states_updated_at
+            BEFORE UPDATE ON task_execution_states
+            FOR EACH ROW
+            EXECUTE FUNCTION update_task_execution_state_updated_at();
+    END IF;
+END
+$$;
 

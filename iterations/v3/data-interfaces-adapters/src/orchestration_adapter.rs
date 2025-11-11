@@ -251,6 +251,12 @@ impl UnifiedOrchestratorAdapter {
             async fn update_waiver(&self, _id: Uuid, _update: agent_orchestration::planning::data_infrastructure_types::UpdateWaiver) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
                 Err(anyhow::anyhow!("Stub implementation"))
             }
+            async fn create_execution_result(&self, _result: agent_orchestration::planning::data_infrastructure_types::CreateExecutionResult) -> Result<agent_orchestration::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+                Err(anyhow::anyhow!("Stub implementation"))
+            }
+            async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+                Ok(None)
+            }
         }
 
 

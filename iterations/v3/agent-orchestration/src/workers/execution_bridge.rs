@@ -942,6 +942,7 @@ impl WorkerExecutionBridge {
             is_blocking: false,
             blocking_reason: None,
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         })
     }
 }

@@ -290,6 +290,7 @@ impl ToolChainBridge {
             is_blocking: false,
             blocking_reason: None,
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         })
     }
 
@@ -901,7 +902,15 @@ impl ToolChainBridge {
             "to_string" => Ok(serde_json::Value::String(value.to_string())),
             "to_number" => {
                 if let Some(num) = value.as_f64() {
-                    Ok(serde_json::Value::Number(num.into()))
+                    // serde_json::Number doesn't implement From<f64>, so we need to convert
+                    // Try to convert to i64 first if it's a whole number, otherwise use f64 representation
+                    if num.fract() == 0.0 && num >= (i64::MIN as f64) && num <= (i64::MAX as f64) {
+                        Ok(serde_json::Value::Number(serde_json::Number::from(num as i64)))
+                    } else {
+                        // For non-integer f64, serde_json doesn't support it directly
+                        // Return as string representation instead
+                        Ok(serde_json::Value::String(num.to_string()))
+                    }
                 } else {
                     Ok(value.clone())
                 }
