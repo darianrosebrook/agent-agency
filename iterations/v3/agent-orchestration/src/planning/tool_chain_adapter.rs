@@ -78,54 +78,203 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
     }
 
     async fn validate_tool_chain(&self, plan: &ToolChainPlan) -> ToolChainResult<ValidationResult> {
-        // TODO: Implement comprehensive tool chain validation
-        //       Currently returns basic validation; should validate tool chain structure, compatibility, and dependencies comprehensively.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tool chain structure is validated correctly
-        // - Compatibility between steps is checked
-        // - Dependencies are validated
-        // - Validation provides meaningful feedback
-        //
-        // DEPENDENCIES:
-        // - Tool chain structure (Required)
-        // - Compatibility checking utilities (Required)
-        // - Dependency validation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (validation feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Tool chain validation expertise
-        let validation_result = ValidationResult { // Temporary: basic validation until comprehensive implementation
-            is_valid: plan.tool_sequence.len() > 0,
-            score: 0.8, // Basic score
-            issues: if plan.tool_sequence.is_empty() {
-                vec!["Tool chain is empty".to_string()]
-            } else {
-                vec![]
-            },
-            warnings: vec![],
-            recommendations: vec!["Consider adding error handling steps".to_string()],
-        };
+        use std::collections::{HashMap, HashSet};
+        use tracing::debug;
 
-        Ok(validation_result)
+        let mut issues = Vec::new();
+        let mut warnings = Vec::new();
+        let mut suggestions = Vec::new();
+        let mut score = 1.0;
+
+        // 1. Validate tool chain structure
+        debug!("Validating tool chain structure for plan {}", plan.id);
+
+        // Check if tool sequence is empty
+        if plan.tool_sequence.is_empty() {
+            issues.push("Tool chain is empty - no tools to execute".to_string());
+            score -= 0.5;
+        }
+
+        // Check for duplicate tool IDs in sequence
+        let mut seen_tools = HashSet::new();
+        for (idx, tool_id) in plan.tool_sequence.iter().enumerate() {
+            if seen_tools.contains(tool_id) {
+                issues.push(format!("Duplicate tool '{}' found at position {}", tool_id, idx));
+                score -= 0.1;
+            } else {
+                seen_tools.insert(tool_id.clone());
+            }
+        }
+
+        // 2. Validate dependencies
+        debug!("Validating dependencies for {} tools", plan.tool_sequence.len());
+
+        // Check that all dependencies reference existing tools
+        let tool_set: HashSet<String> = plan.tool_sequence.iter().cloned().collect();
+        for (tool_id, deps) in &plan.dependencies {
+            // Check if the tool itself exists in the sequence
+            if !tool_set.contains(tool_id) {
+                warnings.push(format!("Dependency map references tool '{}' that is not in tool sequence", tool_id));
+                score -= 0.05;
+            }
+
+            // Check if all dependencies exist
+            for dep in deps {
+                if !tool_set.contains(dep) {
+                    issues.push(format!("Tool '{}' depends on '{}' which is not in tool sequence", tool_id, dep));
+                    score -= 0.15;
+                }
+            }
+        }
+
+        // 3. Detect cycles in dependency graph
+        debug!("Detecting cycles in dependency graph");
+        if let Some(cycle) = self.detect_dependency_cycle(&plan.tool_sequence, &plan.dependencies) {
+            issues.push(format!("Circular dependency detected: {}", cycle));
+            score -= 0.3;
+        }
+
+        // 4. Validate dependency consistency with tool sequence order
+        debug!("Validating dependency order consistency");
+        let mut order_violations = 0;
+        let tool_positions: HashMap<String, usize> = plan.tool_sequence.iter()
+            .enumerate()
+            .map(|(idx, tool_id)| (tool_id.clone(), idx))
+            .collect();
+
+        for (tool_id, deps) in &plan.dependencies {
+            if let Some(&tool_pos) = tool_positions.get(tool_id) {
+                for dep in deps {
+                    if let Some(&dep_pos) = tool_positions.get(dep) {
+                        if dep_pos >= tool_pos {
+                            order_violations += 1;
+                            warnings.push(format!(
+                                "Tool '{}' (position {}) depends on '{}' (position {}), but dependency appears later in sequence",
+                                tool_id, tool_pos, dep, dep_pos
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        if order_violations > 0 {
+            score -= (order_violations as f64 * 0.05).min(0.2);
+            suggestions.push("Reorder tool sequence to satisfy dependency order".to_string());
+        }
+
+        // 5. Validate estimated duration and cost
+        debug!("Validating estimated duration and cost");
+        if plan.estimated_duration_ms == 0 && !plan.tool_sequence.is_empty() {
+            warnings.push("Estimated duration is zero for non-empty tool chain".to_string());
+            score -= 0.05;
+        }
+
+        if plan.estimated_cost_cents == 0 && !plan.tool_sequence.is_empty() {
+            warnings.push("Estimated cost is zero for non-empty tool chain".to_string());
+            score -= 0.05;
+        }
+
+        // 6. Check for missing error handling
+        if plan.tool_sequence.len() > 3 && !plan.tool_sequence.iter().any(|t| t.contains("error") || t.contains("validate") || t.contains("check")) {
+            suggestions.push("Consider adding error handling or validation steps for longer tool chains".to_string());
+        }
+
+        // 7. Validate risk assessment consistency
+        if plan.risk_assessment.confidence_score < 0.5 && plan.tool_sequence.len() > 5 {
+            warnings.push("Low confidence score for complex tool chain - consider simplifying".to_string());
+            score -= 0.1;
+        }
+
+        // Normalize score to 0.0-1.0 range
+        score = score.max(0.0).min(1.0);
+
+        // Determine if validation passed (no critical issues)
+        let valid = issues.is_empty() && score >= 0.7;
+
+        debug!(
+            plan_id = %plan.id,
+            valid = %valid,
+            score = %score,
+            issues_count = issues.len(),
+            warnings_count = warnings.len(),
+            "Tool chain validation completed"
+        );
+
+        Ok(ValidationResult {
+            valid,
+            score,
+            issues,
+            warnings,
+            suggestions,
+            metadata: HashMap::from([
+                ("tool_count".to_string(), plan.tool_sequence.len().into()),
+                ("dependency_count".to_string(), plan.dependencies.len().into()),
+                ("estimated_duration_ms".to_string(), plan.estimated_duration_ms.into()),
+                ("estimated_cost_cents".to_string(), plan.estimated_cost_cents.into()),
+            ]),
+        })
+    }
+
+    /// Detect cycles in dependency graph using DFS
+    fn detect_dependency_cycle(
+        &self,
+        tool_sequence: &[String],
+        dependencies: &std::collections::HashMap<String, Vec<String>>,
+    ) -> Option<String> {
+        use std::collections::{HashMap, HashSet};
+
+        let mut visited = HashSet::new();
+        let mut rec_stack = HashSet::new();
+        let mut path = Vec::new();
+
+        fn dfs(
+            tool: &String,
+            dependencies: &std::collections::HashMap<String, Vec<String>>,
+            visited: &mut HashSet<String>,
+            rec_stack: &mut HashSet<String>,
+            path: &mut Vec<String>,
+        ) -> Option<Vec<String>> {
+            if rec_stack.contains(tool) {
+                // Cycle detected - find cycle start
+                if let Some(start_idx) = path.iter().position(|t| t == tool) {
+                    let mut cycle = path[start_idx..].to_vec();
+                    cycle.push(tool.clone());
+                    return Some(cycle);
+                }
+                return None;
+            }
+
+            if visited.contains(tool) {
+                return None;
+            }
+
+            visited.insert(tool.clone());
+            rec_stack.insert(tool.clone());
+            path.push(tool.clone());
+
+            if let Some(deps) = dependencies.get(tool) {
+                for dep in deps {
+                    if let Some(cycle) = dfs(dep, dependencies, visited, rec_stack, path) {
+                        return Some(cycle);
+                    }
+                }
+            }
+
+            rec_stack.remove(tool);
+            path.pop();
+            None
+        }
+
+        for tool in tool_sequence {
+            if !visited.contains(tool) {
+                if let Some(cycle) = dfs(tool, dependencies, &mut visited, &mut rec_stack, &mut path) {
+                    return Some(cycle.join(" -> "));
+                }
+            }
+        }
+
+        None
     }
 
     async fn optimize_tool_chain(
