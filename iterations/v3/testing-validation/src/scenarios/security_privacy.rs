@@ -258,9 +258,12 @@ async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceMa
     let mut access_control_checks = 0;
     let mut privacy_breaches = 0;
 
+    // Create a shared keystore instance for the test (ProductionKeystore is in-memory)
+    let keystore = ProductionKeystore::new();
+
     // Test 1: Data encryption at rest
     let plaintext = "sensitive_data_12345";
-    let encrypted = encrypt_data(plaintext).await?;
+    let encrypted = encrypt_data_with_keystore(&keystore, plaintext).await?;
     encryption_operations += 1;
 
     if encrypted == plaintext {
@@ -275,8 +278,8 @@ async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceMa
         });
     }
 
-    // Test 2: Decryption works correctly
-    let decrypted = decrypt_data(&encrypted).await?;
+    // Test 2: Decryption works correctly (using same keystore instance)
+    let decrypted = decrypt_data_with_keystore(&keystore, &encrypted).await?;
     encryption_operations += 1;
 
     if decrypted != plaintext {
@@ -351,12 +354,9 @@ async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceMa
     })
 }
 
-/// Encrypt data using system-quality-security keystore
+/// Encrypt data using a shared keystore instance
 /// Stores data as a secret in the keystore, which handles encryption internally
-async fn encrypt_data(plaintext: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-    // Create a keystore instance for encryption
-    let keystore = ProductionKeystore::new();
-    
+async fn encrypt_data_with_keystore(keystore: &ProductionKeystore, plaintext: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     // Generate a unique key ID for this data
     use uuid::Uuid;
     let data_id = Uuid::new_v4();
@@ -379,16 +379,13 @@ async fn encrypt_data(plaintext: &str) -> Result<String, Box<dyn std::error::Err
     Ok(key_id.to_string())
 }
 
-/// Decrypt data using system-quality-security keystore
+/// Decrypt data using a shared keystore instance
 /// Retrieves data from the keystore, which handles decryption internally
-async fn decrypt_data(encrypted: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn decrypt_data_with_keystore(keystore: &ProductionKeystore, encrypted: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     // Parse key_id
     use uuid::Uuid;
     let key_id = Uuid::parse_str(encrypted)
         .map_err(|e| format!("Invalid key ID format: {}", e))?;
-    
-    // Create keystore instance
-    let keystore = ProductionKeystore::new();
     
     // Retrieve the data (keystore decrypts it internally)
     let decrypted_bytes = keystore.get_key(&key_id, "test_user").await
@@ -471,26 +468,33 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         // Generate a unique ID for this test entry (simulating auto-increment)
         let test_id = 1000 + i as i32;
 
+        // Convert string slices to owned Strings for PostgreSQL parameters
+        let action_str = action.to_string();
+        let user_id_str = user_id.to_string();
+        let resource_type_str = resource_type.to_string();
+        let resource_id_str = resource_id.to_string();
+
         // Calculate cryptographic hash for integrity
         let hash = calculate_audit_entry_hash(
             test_id,
-            action,
-            Some(user_id),
-            Some(resource_type),
-            Some(resource_id),
+            &action_str,
+            Some(&user_id_str),
+            Some(&resource_type_str),
+            Some(&resource_id_str),
         );
 
         // Use real database insert with parameterized query
+        // Note: id is SERIAL and will auto-increment, so we don't insert it
+        let metadata_json: serde_json::Value = serde_json::json!({"test": true});
         postgres.execute(
-            "INSERT INTO audit_trail (id, action, user_id, resource_type, resource_id, metadata, hash)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            "INSERT INTO audit_trail (action, user_id, resource_type, resource_id, metadata, hash)
+             VALUES ($1, $2, $3, $4, $5::jsonb, $6)",
             &[
-                &test_id,
-                &action,
-                &user_id,
-                &resource_type,
-                &resource_id,
-                &serde_json::json!({"test": true}).to_string(),
+                &action_str,
+                &user_id_str,
+                &resource_type_str,
+                &resource_id_str,
+                &metadata_json.to_string(),
                 &hash,
             ],
         ).await?;
@@ -500,12 +504,14 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     _integrity_checks += 1;
 
     // Test 2: Verify audit entries can be retrieved
+    // Query by user_id since we're no longer inserting specific IDs
     let rows = postgres.execute_query(
         "SELECT id, action, user_id, resource_type, resource_id, created_at, hash
          FROM audit_trail
-         WHERE id >= 1000 AND id <= 1005
-         ORDER BY created_at DESC",
-        &[],
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 10",
+        &[&"user123"],
     ).await?;
 
     if rows.len() < 3 {

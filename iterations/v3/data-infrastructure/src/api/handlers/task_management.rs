@@ -165,6 +165,7 @@ pub async fn submit_task(
         caws_spec: None,
         status: "pending".to_string(),
         assigned_worker_id: None,
+        project_id: None,
         priority: Some(priority.parse::<i32>().unwrap_or(5)), // Convert priority to integer
         deadline: None,
         metadata: Some(task_data.clone()),

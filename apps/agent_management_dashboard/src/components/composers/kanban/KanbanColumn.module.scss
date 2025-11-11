@@ -10,6 +10,13 @@
   width: $kanban-column-width;
   height: $kanban-column-height;
   background-color: transparent;
+  
+  // Droppable styling when dragging
+  &[data-droppable="true"] {
+    background-color: rgba($color-info, 0.1);
+    border: 2px dashed $color-info;
+    border-radius: $border-radius-md;
+  }
 }
 
 .cards {
@@ -20,4 +27,5 @@
   height: $kanban-cards-container-height;
   min-height: 0;
   flex-shrink: 0;
+  overflow-y: auto;
 }

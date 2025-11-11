@@ -325,6 +325,7 @@ impl DatabaseClient {
             caws_spec: task.caws_spec,
             status: task.status,
             assigned_worker_id: task.assigned_worker_id,
+            project_id: task.project_id,
             priority: task.priority,
             deadline: task.deadline,
             metadata: task.metadata,

@@ -13,11 +13,47 @@ import { apiGet, apiPost, apiPatch, apiDelete } from "../utils/api";
  */
 export interface ProjectApiResponse {
   project_id: string;
+  id?: string; // Alias for project_id for compatibility
   name: string;
   overview?: string | null;
+  summary?: string | null; // Alias for overview
+  description?: string | null; // May come from overview or metadata
   state?: string | null;
+  working_spec_id?: string | null;
+  milestones?: Array<{
+    id?: string;
+    milestone_id?: string;
+    title: string;
+    description?: string | null;
+    completed?: boolean;
+    state?: string;
+    due_date?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  }>;
+  tasks?: Array<{
+    id?: string;
+    task_id?: string;
+    title: string;
+    description?: string | null;
+    status: string;
+    priority?: number | null;
+    assignee?: string | null;
+    assigned_worker_id?: string | null;
+    created_at: string;
+    updated_at?: string;
+    completed_at?: string | null;
+  }>;
+  dependency_graph?: unknown;
+  change_budget?: unknown;
+  quality_gates?: unknown;
+  evidence_requirements?: unknown;
+  active_waivers?: unknown;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  last_accessed?: string; // May not exist, use updated_at as fallback
+  approved_at?: string | null;
   completed_at?: string | null;
 }
 
@@ -121,6 +157,13 @@ export async function getProjectHandler(
   projectId: string
 ): Promise<ProjectApiResponse> {
   return apiGet<ProjectApiResponse>(`${API_BASE}/projects/${projectId}`);
+}
+
+/**
+ * Delete project
+ */
+export async function deleteProject(projectId: string): Promise<void> {
+  return apiDelete<void>(`${API_BASE}/projects/${projectId}`);
 }
 
 /**

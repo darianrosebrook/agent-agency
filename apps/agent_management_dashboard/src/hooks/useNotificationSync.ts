@@ -7,20 +7,27 @@
  * @author @darianrosebrook
  */
 
-import { useEffect, useRef } from 'react';
-import { addNotification } from '@/lib/stores/notificationStore';
-import { toastError, toastWarning, toastInfo, toastSuccess } from '@/lib/utils/toast';
-import { apiGet } from '@/lib/utils/api';
+import { useEffect, useRef } from "react";
+import { addNotification } from "@/lib/stores/notificationStore";
+import {
+  toastError,
+  toastWarning,
+  toastInfo,
+  toastSuccess,
+} from "@/lib/utils/toast";
+import { apiGet } from "@/lib/utils/api";
 
 interface ServerNotification {
   id: string;
-  type: 'error' | 'warning' | 'info' | 'success';
+  type: "error" | "warning" | "info" | "success";
   message: string;
   timestamp: number;
   errorCode?: string;
   errorDetails?: Record<string, unknown>;
   actionUrl?: string;
   actionLabel?: string;
+  voicemailAudioUrl?: string;
+  voicemailTranscription?: string;
 }
 
 interface PollResponse {
@@ -63,20 +70,22 @@ export function useNotificationSync(enabled: boolean = true) {
               errorDetails: notification.errorDetails,
               actionUrl: notification.actionUrl,
               actionLabel: notification.actionLabel,
+              voicemailAudioUrl: notification.voicemailAudioUrl,
+              voicemailTranscription: notification.voicemailTranscription,
             });
 
             // Trigger toast notification
             switch (notification.type) {
-              case 'error':
+              case "error":
                 toastError(notification.message);
                 break;
-              case 'warning':
+              case "warning":
                 toastWarning(notification.message);
                 break;
-              case 'info':
+              case "info":
                 toastInfo(notification.message);
                 break;
-              case 'success':
+              case "success":
                 toastSuccess(notification.message);
                 break;
             }
@@ -92,7 +101,7 @@ export function useNotificationSync(enabled: boolean = true) {
         }
       } catch (error) {
         // Silently fail - polling errors shouldn't disrupt the UI
-        console.debug('Notification sync error:', error);
+        console.debug("Notification sync error:", error);
       }
     };
 
@@ -105,4 +114,3 @@ export function useNotificationSync(enabled: boolean = true) {
     return () => clearInterval(interval);
   }, [enabled]);
 }
-

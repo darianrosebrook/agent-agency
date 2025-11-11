@@ -1,13 +1,37 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+/**
+ * Tasks Tab - Kanban Board with Full CRUD Operations
+ *
+ * Features:
+ * - Drag and drop tasks between columns
+ * - Create, Read, Update, Delete tasks
+ * - Comments on tasks (visible to agents as context)
+ *
+ * @author @darianrosebrook
+ */
+
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { KanbanBoard } from "../composers/kanban/KanbanBoard";
 import { NewTaskModal } from "./TaskModal";
-import { useProjectStore } from "../../lib/stores";
+import { EditTaskModal } from "./EditTaskModal";
+import { CommentsModal } from "./CommentsModal";
+import { DeleteTaskDialog } from "./DeleteTaskDialog";
 import { useProjectContext } from "./ProjectContext";
-import { getProjectTasks } from "../../lib/api/projects";
+import {
+  getProjectTasks,
+  createProjectTask,
+  updateProjectTask,
+  deleteProjectTask,
+} from "../../lib/api/projects";
+import { getTaskComments } from "../../lib/api/comments";
 import { getAgents, type Agent } from "../../lib/api/agents";
-import type { KanbanColumnConfig, KanbanStatusTag, KanbanMetadata } from "../composers/kanban/types";
+import type {
+  KanbanColumnConfig,
+  KanbanStatusTag,
+  KanbanMetadata,
+  KanbanStatus,
+} from "../composers/kanban/types";
 import styles from "./TasksTab.module.scss";
 
 const STATUS_CONFIG: Record<string, { title: string }> = {
@@ -22,115 +46,290 @@ const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
   medium: { bg: "#1f2d3a", text: "#54a0ff" },
 };
 
+// Map Kanban status to API status
+const mapKanbanStatusToApi = (status: KanbanStatus): string => {
+  const statusMap: Record<KanbanStatus, string> = {
+    backlog: "pending",
+    todo: "pending",
+    "in-progress": "in_progress",
+    done: "completed",
+  };
+  return statusMap[status];
+};
+
+// Map API status to Kanban status
+const mapApiStatusToKanban = (apiStatus: string): KanbanStatus => {
+  if (apiStatus === "completed") return "done";
+  if (apiStatus === "in_progress" || apiStatus === "running") return "in-progress";
+  if (apiStatus === "pending") return "todo";
+  return "backlog";
+};
+
+// Map priority string to number
+const mapPriorityToNumber = (priority?: string): number | undefined => {
+  if (!priority) return undefined;
+  if (priority === "high") return 3;
+  if (priority === "medium") return 2;
+  return 1;
+};
+
+// Map priority number to string
+const mapPriorityToString = (priority?: number | null): "low" | "medium" | "high" | undefined => {
+  if (priority === null || priority === undefined) return undefined;
+  if (priority >= 3) return "high";
+  if (priority >= 2) return "medium";
+  return "low";
+};
+
 interface Task {
   id: string;
   title: string;
   description?: string;
-  status: "backlog" | "todo" | "in-progress" | "done";
+  status: KanbanStatus;
   priority?: "low" | "medium" | "high";
   assigned_worker_id?: string | null;
+  commentCount?: number;
 }
 
 export function TasksTab() {
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<"backlog" | "todo" | "in-progress" | "done">("backlog");
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<KanbanStatus>("backlog");
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const { currentProjectId } = useProjectContext();
-  const { addTask } = useProjectStore();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    async function fetchTasks() {
-      if (!currentProjectId) {
-        setTasks([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        // Fetch tasks and agents in parallel
-        const [tasksResponse, agentsData] = await Promise.all([
-          getProjectTasks(currentProjectId),
-          getAgents().catch(() => []), // Gracefully handle agent fetch failure
-        ]);
-
-        setAgents(agentsData);
-
-        // Create a map of agent IDs to agent names
-        const agentMap = new Map<string, string>();
-        agentsData.forEach((agent) => {
-          agentMap.set(agent.id, agent.name);
-        });
-
-        // Transform API tasks to local Task format
-        const transformedTasks: Task[] = tasksResponse.tasks.map((task) => {
-          // Map API status to Kanban status
-          let status: "backlog" | "todo" | "in-progress" | "done" = "backlog";
-          if (task.status === "completed") {
-            status = "done";
-          } else if (task.status === "in_progress" || task.status === "running") {
-            status = "in-progress";
-          } else if (task.status === "pending") {
-            status = "todo";
-          }
-
-          // Map priority
-          let priority: "low" | "medium" | "high" | undefined = undefined;
-          if (task.priority !== null && task.priority !== undefined) {
-            if (task.priority >= 3) {
-              priority = "high";
-            } else if (task.priority >= 2) {
-              priority = "medium";
-            } else {
-              priority = "low";
-            }
-          }
-
-          return {
-            id: task.task_id,
-            title: task.title,
-            description: task.description ?? undefined,
-            status,
-            priority,
-            assigned_worker_id: task.assigned_worker_id ?? null,
-          };
-        });
-
-        setTasks(transformedTasks);
-      } catch (err) {
-        console.error("Failed to fetch project tasks:", err);
-        setTasks([]);
-      } finally {
-        setIsLoading(false);
-      }
+  // Fetch tasks and agents
+  const fetchTasks = useCallback(async () => {
+    if (!currentProjectId) {
+      setTasks([]);
+      return;
     }
 
-    fetchTasks();
+    setIsLoading(true);
+    try {
+      const [tasksResponse, agentsData] = await Promise.all([
+        getProjectTasks(currentProjectId),
+        getAgents().catch(() => []),
+      ]);
+
+      setAgents(agentsData);
+
+      // Fetch comment counts for each task
+      const tasksWithComments = await Promise.all(
+        tasksResponse.tasks.map(async (task) => {
+          try {
+            const commentsResponse = await getTaskComments(task.task_id);
+            return {
+              ...task,
+              commentCount: commentsResponse.comments.length,
+            };
+          } catch {
+            return { ...task, commentCount: 0 };
+          }
+        })
+      );
+
+      // Transform API tasks to local Task format
+      const transformedTasks: Task[] = tasksWithComments.map((task) => {
+        const status = mapApiStatusToKanban(task.status);
+        const priority = mapPriorityToString(task.priority);
+
+        return {
+          id: task.task_id,
+          title: task.title,
+          description: task.description ?? undefined,
+          status,
+          priority,
+          assigned_worker_id: task.assigned_worker_id ?? null,
+          commentCount: task.commentCount ?? 0,
+        };
+      });
+
+      setTasks(transformedTasks);
+    } catch (err) {
+      console.error("Failed to fetch project tasks:", err);
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentProjectId]);
 
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Handle task creation
+  const handleCreateTask = useCallback(
+    async (data: {
+      title: string;
+      description?: string;
+      status: KanbanStatus;
+      priority?: string;
+    }) => {
+      if (!currentProjectId) return;
+
+      setIsSaving(true);
+      try {
+        const apiStatus = mapKanbanStatusToApi(data.status);
+        const priorityNumber = mapPriorityToNumber(data.priority);
+
+        await createProjectTask(currentProjectId, {
+          title: data.title,
+          description: data.description,
+          status: apiStatus,
+          priority: priorityNumber,
+        });
+
+        // Refresh tasks
+        await fetchTasks();
+        setIsNewTaskModalOpen(false);
+      } catch (err) {
+        console.error("Failed to create task:", err);
+        alert(`Failed to create task: ${err instanceof Error ? err.message : "Unknown error"}`);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [currentProjectId, fetchTasks]
+  );
+
+  // Handle task update
+  const handleUpdateTask = useCallback(
+    async (data: {
+      title: string;
+      description?: string;
+      status: KanbanStatus;
+      priority?: string;
+    }) => {
+      if (!currentProjectId || !selectedTask) return;
+
+      setIsSaving(true);
+      try {
+        const apiStatus = mapKanbanStatusToApi(data.status);
+        const priorityNumber = mapPriorityToNumber(data.priority);
+
+        await updateProjectTask(currentProjectId, selectedTask.id, {
+          title: data.title,
+          description: data.description,
+          status: apiStatus,
+          priority: priorityNumber,
+        });
+
+        // Refresh tasks
+        await fetchTasks();
+        setIsEditTaskModalOpen(false);
+        setSelectedTask(null);
+      } catch (err) {
+        console.error("Failed to update task:", err);
+        alert(`Failed to update task: ${err instanceof Error ? err.message : "Unknown error"}`);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [currentProjectId, selectedTask, fetchTasks]
+  );
+
+  // Handle task deletion
+  const handleDeleteTask = useCallback(async () => {
+    if (!currentProjectId || !taskToDelete) return;
+
+    setIsSaving(true);
+    try {
+      await deleteProjectTask(currentProjectId, taskToDelete.id);
+
+      // Refresh tasks
+      await fetchTasks();
+      setIsDeleteDialogOpen(false);
+      setTaskToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      alert(`Failed to delete task: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentProjectId, taskToDelete, fetchTasks]);
+
+  // Handle task move (drag and drop)
+  const handleTaskMove = useCallback(
+    async (taskId: string, newStatus: KanbanStatus) => {
+      if (!currentProjectId) return;
+
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task || task.status === newStatus) {
+        return; // No change needed
+      }
+
+      // Optimistic update
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+      );
+
+      try {
+        const apiStatus = mapKanbanStatusToApi(newStatus);
+        await updateProjectTask(currentProjectId, taskId, {
+          status: apiStatus,
+        });
+
+        // Refresh to ensure consistency
+        await fetchTasks();
+      } catch (err) {
+        console.error("Failed to move task:", err);
+        // Revert optimistic update
+        await fetchTasks();
+        alert(`Failed to move task: ${err instanceof Error ? err.message : "Unknown error"}`);
+      }
+    },
+    [currentProjectId, tasks, fetchTasks]
+  );
+
+  // Handle edit task
+  const handleEditTask = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      setSelectedTask(task);
+      setIsEditTaskModalOpen(true);
+    }
+  }, [tasks]);
+
+  // Handle delete task
+  const handleDeleteTaskClick = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setIsDeleteDialogOpen(true);
+    }
+  }, [tasks]);
+
+  // Handle view comments
+  const handleViewComments = useCallback((taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      setSelectedTask(task);
+      setIsCommentsModalOpen(true);
+    }
+  }, [tasks]);
+
   const columns = useMemo<KanbanColumnConfig[]>(() => {
-    const statuses: Array<"backlog" | "todo" | "in-progress" | "done"> = [
-      "backlog",
-      "todo",
-      "in-progress",
-      "done",
-    ];
+    const statuses: KanbanStatus[] = ["backlog", "todo", "in-progress", "done"];
 
     return statuses.map((status) => {
       const statusTasks = tasks.filter((task) => task.status === status);
       const config = STATUS_CONFIG[status];
-      
-      const statusTags: KanbanStatusTag[] = [];
-      const metadata: KanbanMetadata[] = [];
-      
+
       return {
         status,
         title: config.title,
         cardCount: statusTasks.length,
         cards: statusTasks.map((task) => {
           const cardStatusTags: KanbanStatusTag[] = [];
-          
+
           if (task.priority) {
             const priorityColors = PRIORITY_COLORS[task.priority] || {};
             cardStatusTags.push({
@@ -139,32 +338,40 @@ export function TasksTab() {
               textColor: priorityColors.text,
             });
           }
-          
+
           const cardMetadata: KanbanMetadata[] = [];
-          
+
           // Show assigned agent or orchestrator if unassigned
           if (task.assigned_worker_id) {
             const agent = agents.find((a) => a.id === task.assigned_worker_id);
             if (agent) {
               cardMetadata.push({
-                icon: { path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z", size: 16 },
+                icon: {
+                  path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z",
+                  size: 16,
+                },
                 text: agent.name,
               });
             }
           } else {
-            // Show orchestrator for unassigned tasks (planning/coordination phase)
+            // Show orchestrator for unassigned tasks
             cardMetadata.push({
-              icon: { path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z", size: 16 },
+              icon: {
+                path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+                size: 16,
+              },
               text: "Orchestrator",
             });
           }
-          
+
           return {
+            id: task.id,
             title: task.title,
             description: task.description,
-            priority: task.priority as "low" | "medium" | "high" | undefined,
+            priority: task.priority,
             statusTags: cardStatusTags,
             metadata: cardMetadata,
+            commentCount: task.commentCount ?? 0,
           };
         }),
         onAddTask: () => {
@@ -174,17 +381,6 @@ export function TasksTab() {
       };
     });
   }, [tasks, agents]);
-
-  const handleCreateTask = (data: {
-    title: string;
-    description?: string;
-    status: "backlog" | "todo" | "in-progress" | "done";
-    priority?: string;
-  }) => {
-    if (currentProjectId) {
-      addTask(currentProjectId, data);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -205,14 +401,53 @@ export function TasksTab() {
             setSelectedStatus(status);
             setIsNewTaskModalOpen(true);
           }}
+          onTaskMove={handleTaskMove}
+          onTaskEdit={handleEditTask}
+          onTaskDelete={handleDeleteTaskClick}
+          onTaskViewComments={handleViewComments}
         />
       </div>
 
+      {/* Modals */}
       <NewTaskModal
         open={isNewTaskModalOpen}
         onOpenChange={setIsNewTaskModalOpen}
         onCreateTask={handleCreateTask}
         defaultStatus={selectedStatus}
+      />
+
+      <EditTaskModal
+        open={isEditTaskModalOpen}
+        onOpenChange={(open) => {
+          setIsEditTaskModalOpen(open);
+          if (!open) setSelectedTask(null);
+        }}
+        onUpdateTask={handleUpdateTask}
+        task={selectedTask}
+      />
+
+      <CommentsModal
+        open={isCommentsModalOpen}
+        onOpenChange={(open) => {
+          setIsCommentsModalOpen(open);
+          if (!open) {
+            setSelectedTask(null);
+            // Refresh tasks to update comment counts
+            fetchTasks();
+          }
+        }}
+        taskId={selectedTask?.id ?? null}
+        taskTitle={selectedTask?.title}
+      />
+
+      <DeleteTaskDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) setTaskToDelete(null);
+        }}
+        onConfirm={handleDeleteTask}
+        taskTitle={taskToDelete?.title}
       />
     </div>
   );

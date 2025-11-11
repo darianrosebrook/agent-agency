@@ -1,0 +1,208 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.voicemailPlayer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+  padding: $spacing-4;
+  background-color: oklch(0.15 0 0);
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-md;
+}
+
+.waveformContainer {
+  position: relative;
+  width: 100%;
+  height: calc(64 * 4px); // 128 columns * 5px spacing + padding (matches DOT_GRID_CONFIG)
+  cursor: pointer;
+  background-color: oklch(0.1 0 0);
+  border-radius: $border-radius-sm;
+  overflow: hidden;
+  user-select: none;
+  padding: 5px;
+}
+
+.isometricGrid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.isometricRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  justify-content: space-between; // Span across entire width
+  align-items: center;
+  padding-left: 2px; // Small padding from edges
+  padding-right: 2px;
+  pointer-events: none; // Allow clicks to pass through to container
+}
+
+.isometricDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transition: background-color 0.075s, transform 0.1s, width 0.1s, height 0.1s;
+  cursor: pointer;
+  flex-shrink: 0;
+  pointer-events: auto; // Re-enable pointer events for dots
+
+  &:hover {
+    transform: scale(1.5);
+  }
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: oklch(0.1 0.5 0);
+  z-index: 5;
+}
+
+.loadingSpinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid oklch(0.3 0 0);
+  border-top-color: $color-blue-600;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-4;
+}
+
+.controlButtons {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.controlButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: oklch(0.2 0 0);
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-sm;
+  color: $color-white;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: oklch(0.25 0 0);
+    border-color: oklch(0.3 0 0);
+  }
+
+  &:active:not(:disabled) {
+    background-color: oklch(0.3 0 0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.playPauseButton {
+  width: 3rem;
+  height: 3rem;
+  background-color: $color-blue-600;
+  border-color: $color-blue-600;
+
+  &:hover:not(:disabled) {
+    background-color: $color-blue-700;
+    border-color: $color-blue-700;
+  }
+
+  &:active:not(:disabled) {
+    background-color: $color-blue-800;
+  }
+}
+
+.controlIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.timestamp {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1;
+  font-size: $font-size-sm;
+  font-variant-numeric: tabular-nums;
+  color: oklch(0.7 0 0);
+  min-width: 6rem;
+  justify-content: flex-end;
+}
+
+.currentTime {
+  color: $color-white;
+  font-weight: $font-weight-medium;
+}
+
+.timeSeparator {
+  color: oklch(0.5 0 0);
+}
+
+.totalTime {
+  color: oklch(0.6 0 0);
+}
+
+.transcription {
+  margin-top: $spacing-2;
+}
+
+.transcriptionSummary {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  cursor: pointer;
+  color: oklch(0.6 0 0);
+  font-size: $font-size-sm;
+  padding: $spacing-1 0;
+  transition: color 0.2s;
+
+  &:hover {
+    color: oklch(0.8 0 0);
+  }
+}
+
+.transcriptionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.transcriptionText {
+  margin-top: $spacing-2;
+  padding: $spacing-3;
+  background-color: oklch(0.12 0 0);
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $border-radius-md;
+  font-size: $font-size-sm;
+  color: oklch(0.7 0 0);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { KanbanHeading } from "../../primitives/kanban/KanbanHeading";
@@ -26,7 +26,9 @@ export function WorkHistoryTabContent() {
         setAllTasks(tasksData.tasks);
       } catch (err) {
         console.error("Failed to fetch work history data:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load work history"));
+        setError(
+          err instanceof Error ? err : new Error("Failed to load work history")
+        );
       } finally {
         setIsLoading(false);
       }
@@ -43,7 +45,7 @@ export function WorkHistoryTabContent() {
     const now = new Date();
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     return allTasks.filter((task) => {
       if (task.status !== "completed" || !task.completed_at) return false;
       const completedDate = new Date(task.completed_at);
@@ -54,7 +56,8 @@ export function WorkHistoryTabContent() {
   // Calculate average completion time
   const averageCompletionTime = useMemo(() => {
     const completedTasks = allTasks.filter(
-      (task) => task.status === "completed" && task.completed_at && task.created_at
+      (task) =>
+        task.status === "completed" && task.completed_at && task.created_at
     );
 
     if (completedTasks.length === 0) return 0;
@@ -62,7 +65,8 @@ export function WorkHistoryTabContent() {
     const totalDays = completedTasks.reduce((sum, task) => {
       const created = new Date(task.created_at);
       const completed = new Date(task.completed_at!);
-      const days = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+      const days =
+        (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
       return sum + days;
     }, 0);
 
@@ -71,20 +75,21 @@ export function WorkHistoryTabContent() {
 
   const metrics = [
     {
-      label: 'Total Tasks',
+      label: "Total Tasks",
       value: taskStats?.total ?? 0,
       isLoading: isLoading && !taskStats,
     },
     {
-      label: 'Completed This Week',
+      label: "Completed This Week",
       value: completedThisWeek,
       isLoading: isLoading && allTasks.length === 0,
     },
     {
-      label: 'Average Completion Time',
-      value: averageCompletionTime > 0 
-        ? `${averageCompletionTime.toFixed(1)} days`
-        : 'N/A',
+      label: "Average Completion Time",
+      value:
+        averageCompletionTime > 0
+          ? `${averageCompletionTime.toFixed(1)} days`
+          : "N/A",
       isLoading: isLoading && allTasks.length === 0,
     },
   ];
@@ -111,7 +116,11 @@ export function WorkHistoryTabContent() {
                   {metric.label}
                 </KanbanText>
                 <KanbanText size="xl" className={styles.metricValue}>
-                  {metric.isLoading ? '...' : typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}
+                  {metric.isLoading
+                    ? "..."
+                    : typeof metric.value === "number"
+                    ? metric.value.toLocaleString()
+                    : metric.value}
                 </KanbanText>
               </div>
             ))}

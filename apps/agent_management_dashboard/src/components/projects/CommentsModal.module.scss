@@ -1,0 +1,297 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-4;
+}
+
+.modal {
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-lg;
+  width: 100%;
+  max-width: 32rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modalHeader {
+  padding: $spacing-4 $spacing-5;
+  border-bottom: 1px solid $color-neutral-800;
+  flex-shrink: 0;
+}
+
+.modalHeaderContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-white;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-1;
+  background: transparent;
+  border: none;
+  border-radius: $border-radius-sm;
+  color: $color-gray-400;
+  cursor: pointer;
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.closeButtonIcon {
+  width: $spacing-5;
+  height: $spacing-5;
+}
+
+.commentsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-4 $spacing-5;
+  min-height: 0;
+}
+
+.loadingMessage,
+.emptyMessage {
+  padding: $spacing-8 $spacing-4;
+  text-align: center;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-gray-500;
+}
+
+.commentItem {
+  display: flex;
+  gap: $spacing-3;
+  padding: $spacing-3 0;
+  border-bottom: 1px solid $color-neutral-800;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.commentContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.commentText {
+  margin: 0 0 $spacing-2 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  color: $color-white;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.commentMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.commentDate {
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.commentEdited {
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-600;
+  font-style: italic;
+}
+
+.commentActions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+  flex-shrink: 0;
+}
+
+.commentActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-1;
+  background: transparent;
+  border: none;
+  border-radius: $border-radius-sm;
+  color: $color-gray-500;
+  cursor: pointer;
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.commentActionIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+}
+
+.commentEdit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.commentEditTextarea {
+  width: 100%;
+  padding: $spacing-2;
+  background-color: $color-dark-bg-secondary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-white;
+  resize: vertical;
+  min-height: 4rem;
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+}
+
+.commentEditActions {
+  display: flex;
+  gap: $spacing-2;
+  justify-content: flex-end;
+}
+
+.commentEditCancel,
+.commentEditSave {
+  padding: $spacing-2 $spacing-3;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+}
+
+.commentEditCancel {
+  background: transparent;
+  border: 1px solid $color-neutral-800;
+  color: $color-gray-400;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.commentEditSave {
+  background-color: $color-info;
+  border: none;
+  color: $color-white;
+
+  &:hover:not(:disabled) {
+    background-color: $color-info-light;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.commentInput {
+  padding: $spacing-4 $spacing-5;
+  border-top: 1px solid $color-neutral-800;
+  flex-shrink: 0;
+}
+
+.commentTextarea {
+  width: 100%;
+  padding: $spacing-3;
+  background-color: $color-dark-bg-secondary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-white;
+  resize: vertical;
+  min-height: 4rem;
+  margin-bottom: $spacing-2;
+
+  &:focus {
+    outline: none;
+    border-color: $color-info;
+  }
+
+  &::placeholder {
+    color: $color-gray-500;
+  }
+}
+
+.commentInputActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.commentHint {
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.commentSubmitButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-4;
+  background-color: $color-info;
+  border: none;
+  border-radius: $border-radius-md;
+  color: $color-white;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover:not(:disabled) {
+    background-color: $color-info-light;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.commentSubmitIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+}
+

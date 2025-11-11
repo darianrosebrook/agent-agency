@@ -32,60 +32,68 @@ import {
   type Notification,
   type NotificationType,
 } from "@/lib/stores/notificationStore";
-import { toastError, toastWarning, toastInfo, toastSuccess } from "@/lib/utils/toast";
+import {
+  toastError,
+  toastWarning,
+  toastInfo,
+  toastSuccess,
+} from "@/lib/utils/toast";
 import { cn } from "@/components/primitives/utils";
+import { VoicemailPlayer } from "@/components/notifications/VoicemailPlayer";
 import styles from "./page.module.scss";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<NotificationType | "all">("all");
   const [showRead, setShowRead] = useState(true);
-  const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
+  const [lastNotificationId, setLastNotificationId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     loadNotifications();
     // Refresh every 5 seconds to catch new notifications
     const interval = setInterval(loadNotifications, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadNotifications = () => {
     const all = getNotifications();
-    
+
     // Check for new notifications and trigger toasts
     if (all.length > 0) {
-      const lastNotification = all.find(n => n.id === lastNotificationId);
+      const lastNotification = all.find((n) => n.id === lastNotificationId);
       const lastTimestamp = lastNotification?.timestamp ?? 0;
-      
-      const newNotifications = all.filter(n => 
-        !n.read && 
-        n.timestamp > lastTimestamp
+
+      const newNotifications = all.filter(
+        (n) => !n.read && n.timestamp > lastTimestamp
       );
-      
-      newNotifications.forEach(notification => {
+
+      newNotifications.forEach((notification) => {
         // Trigger toast for new unread notifications
         switch (notification.type) {
-          case 'error':
+          case "error":
             toastError(notification.message);
             break;
-          case 'warning':
+          case "warning":
             toastWarning(notification.message);
             break;
-          case 'info':
+          case "info":
             toastInfo(notification.message);
             break;
-          case 'success':
+          case "success":
             toastSuccess(notification.message);
             break;
         }
       });
-      
+
       // Update last notification ID to the most recent one
       if (all[0] && (!lastNotificationId || all[0].timestamp > lastTimestamp)) {
         setLastNotificationId(all[0].id);
       }
     }
-    
+
     setNotifications(all);
   };
 
@@ -103,7 +111,7 @@ export default function NotificationsPage() {
     return filtered;
   }, [notifications, filter, showRead]);
 
-  const unreadCount = useMemo(() => getUnreadCount(), [notifications]);
+  const unreadCount = useMemo(() => getUnreadCount(), []);
 
   const handleMarkAsRead = (id: string) => {
     markNotificationAsRead(id);
@@ -130,7 +138,11 @@ export default function NotificationsPage() {
   const handleDeduplicate = () => {
     const removedCount = deduplicateNotifications();
     if (removedCount > 0) {
-      toastSuccess(`Removed ${removedCount} duplicate notification${removedCount === 1 ? '' : 's'}`);
+      toastSuccess(
+        `Removed ${removedCount} duplicate notification${
+          removedCount === 1 ? "" : "s"
+        }`
+      );
       loadNotifications();
     } else {
       toastInfo("No duplicates found");
@@ -189,9 +201,7 @@ export default function NotificationsPage() {
             </div>
           </div>
           {unreadCount > 0 && (
-            <div className={styles.unreadBadge}>
-              {unreadCount} unread
-            </div>
+            <div className={styles.unreadBadge}>{unreadCount} unread</div>
           )}
         </div>
 
@@ -324,7 +334,12 @@ export default function NotificationsPage() {
                 className={cn(
                   styles.notificationItem,
                   !notification.read && styles.notificationItemUnread,
-                  styles[`notificationItem${notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}`]
+                  styles[
+                    `notificationItem${
+                      notification.type.charAt(0).toUpperCase() +
+                      notification.type.slice(1)
+                    }`
+                  ]
                 )}
               >
                 <div className={styles.notificationContent}>
@@ -332,29 +347,99 @@ export default function NotificationsPage() {
                     {getIcon(notification.type)}
                   </div>
                   <div className={styles.notificationText}>
-                    <p className={styles.notificationMessage}>
-                      {notification.message}
-                    </p>
-                    <div className={styles.notificationMeta}>
-                      <span className={styles.notificationTimestamp}>
-                        {formatTimestamp(notification.timestamp)}
-                      </span>
-                      {notification.errorCode && (
-                        <span className={styles.notificationErrorCode}>
-                          {notification.errorCode}
-                        </span>
-                      )}
-                    </div>
-                    {notification.errorDetails && (
-                      <details className={styles.notificationDetails}>
-                        <summary className={styles.notificationDetailsSummary}>
-                          View details
-                        </summary>
-                        <pre className={styles.notificationDetailsPre}>
-                          {JSON.stringify(notification.errorDetails, null, 2)}
-                        </pre>
-                      </details>
-                    )}
+                    {(() => {
+                      // Extract title and message
+                      const message = notification.message;
+                      const colonIndex = message.indexOf(":");
+                      const title =
+                        colonIndex > 0 && colonIndex < 50
+                          ? message.substring(0, colonIndex).trim()
+                          : message.length > 30
+                          ? message.substring(0, 30).trim() + "..."
+                          : null;
+                      const messageText = title
+                        ? message
+                            .substring(colonIndex > 0 ? colonIndex + 1 : 0)
+                            .trim()
+                        : message;
+                      const isLongMessage = message.length > 35;
+                      const titleClassName = cn(
+                        styles.notificationTitle,
+                        styles[
+                          `notificationTitle${
+                            notification.type.charAt(0).toUpperCase() +
+                            notification.type.slice(1)
+                          }`
+                        ]
+                      );
+                      const messageClassName = cn(
+                        styles.notificationMessage,
+                        isLongMessage && styles.notificationMessageLong
+                      );
+
+                      return (
+                        <>
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "baseline",
+                              gap: "0.5rem",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {title && (
+                              <span className={titleClassName}>{title}</span>
+                            )}
+                            <span className={messageClassName}>
+                              {messageText || message}
+                            </span>
+                          </div>
+                          <div className={styles.notificationMeta}>
+                            <span className={styles.notificationTimestamp}>
+                              {formatTimestamp(notification.timestamp)}
+                            </span>
+                            {notification.errorCode && (
+                              <span className={styles.notificationErrorCode}>
+                                {notification.errorCode}
+                              </span>
+                            )}
+                          </div>
+                          {notification.errorDetails && (
+                            <details className={styles.notificationDetails}>
+                              <summary
+                                className={styles.notificationDetailsSummary}
+                              >
+                                View details
+                              </summary>
+                              <pre className={styles.notificationDetailsPre}>
+                                {JSON.stringify(
+                                  notification.errorDetails,
+                                  null,
+                                  2
+                                )}
+                              </pre>
+                            </details>
+                          )}
+                          {notification.voicemailAudioUrl && (
+                            <div className={styles.voicemailContainer}>
+                              <div className={styles.voicemailPlayerRow}>
+                                <VoicemailPlayer
+                                  audioUrl={notification.voicemailAudioUrl}
+                                  transcription={undefined}
+                                />
+                              </div>
+                              {notification.voicemailTranscription && (
+                                <div className={styles.voicemailTranscriptRow}>
+                                  <p className={styles.voicemailTranscriptText}>
+                                    {notification.voicemailTranscription}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className={styles.notificationActions}>
@@ -385,4 +470,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-

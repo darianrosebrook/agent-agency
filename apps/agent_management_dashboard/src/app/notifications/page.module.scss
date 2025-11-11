@@ -198,38 +198,37 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: $spacing-4;
-  padding: $spacing-4;
-  background-color: oklch(0.2 0 0);
-  border: 1px solid oklch(0.269 0 0);
+  gap: $spacing-3;
+  padding: $spacing-3 $spacing-4;
+  background-color: oklch(0.12 0 0);
+  border: 1px solid oklch(0.2 0 0);
   border-radius: $border-radius-md;
   transition: all 0.2s;
 
   &:hover {
-    background-color: oklch(0.22 0 0);
-    border-color: oklch(0.3 0 0);
+    background-color: oklch(0.15 0 0);
+    border-color: oklch(0.25 0 0);
   }
 }
 
 .notificationItemUnread {
-  border-left: 3px solid $color-blue-600;
-  background-color: oklch(0.22 0 0);
+  background-color: oklch(0.15 0 0);
 }
 
 .notificationItemError {
-  border-left-color: $color-red-600;
+  // Error styling handled by icon/title colors
 }
 
 .notificationItemWarning {
-  border-left-color: $color-yellow-600;
+  // Warning styling handled by icon/title colors
 }
 
 .notificationItemInfo {
-  border-left-color: $color-blue-600;
+  // Info styling handled by icon/title colors
 }
 
 .notificationItemSuccess {
-  border-left-color: $color-green-600;
+  // Success styling handled by icon/title colors
 }
 
 .notificationContent {
@@ -237,18 +236,37 @@
   gap: $spacing-3;
   flex: 1;
   min-width: 0;
+  align-items: flex-start;
 }
 
 .notificationIconContainer {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
-  padding-top: $spacing-1;
+  align-items: center;
+  padding-top: $spacing-0_5;
 }
 
 .notificationIcon {
   width: 1.25rem;
   height: 1.25rem;
+  flex-shrink: 0;
+}
+
+// Icon colors by type
+.errorIcon {
+  color: $color-red-600;
+}
+
+.warningIcon {
+  color: $color-yellow-600;
+}
+
+.infoIcon {
+  color: $color-blue-600;
+}
+
+.successIcon {
+  color: $color-green-600;
 }
 
 .notificationText {
@@ -256,14 +274,57 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-2;
+  gap: $spacing-1;
+}
+
+.notificationTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  line-height: 1.4;
+  margin: 0;
+  display: inline;
+  white-space: nowrap;
+}
+
+// Title colors by type
+.notificationTitleError {
+  color: $color-red-600;
+}
+
+.notificationTitleWarning {
+  color: $color-yellow-600;
+}
+
+.notificationTitleInfo {
+  color: $color-blue-600;
+}
+
+.notificationTitleSuccess {
+  color: $color-green-600;
 }
 
 .notificationMessage {
-  color: $color-white;
+  color: oklch(0.7 0 0);
   font-size: $font-size-sm;
   line-height: 1.5;
   margin: 0;
+  display: inline;
+  word-break: break-word;
+  
+  // Allow wrapping if message is longer than 35 characters
+  max-width: 35ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  // If message exceeds 35 characters, allow wrapping
+  &.notificationMessageLong {
+    max-width: 100%;
+    display: block;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
 }
 
 .notificationMeta {
@@ -311,6 +372,35 @@
   font-size: $font-size-xs;
   font-family: monospace;
   overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.voicemailContainer {
+  margin-top: $spacing-3;
+  padding-top: $spacing-3;
+  border-top: 1px solid oklch(0.2 0 0);
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-3;
+}
+
+.voicemailPlayerRow {
+  // First row: audio wave/controls
+  flex-shrink: 0;
+}
+
+.voicemailTranscriptRow {
+  // Second row: transcript
+  padding-top: $spacing-2;
+  border-top: 1px solid oklch(0.15 0 0);
+}
+
+.voicemailTranscriptText {
+  color: oklch(0.6 0 0);
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }

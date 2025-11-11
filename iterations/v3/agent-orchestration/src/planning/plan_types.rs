@@ -1434,6 +1434,139 @@ pub enum SyncStatus {
     Disabled,
 }
 
+/// Coordination trace for a plan execution
+/// Dedicated trace structure for coordination events to improve observability
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CoordinationTrace {
+    /// Plan identifier this trace belongs to
+    #[schemars(with = "String")]
+    pub plan_id: Uuid,
+
+    /// Coordination events in chronological order
+    pub events: Vec<crate::chain_of_thought::CoordinationEvent>,
+
+    /// Trace creation timestamp
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+
+    /// Last event timestamp
+    #[schemars(with = "Option<String>")]
+    pub last_event_at: Option<DateTime<Utc>>,
+
+    /// Trace metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+impl CoordinationTrace {
+    /// Create a new coordination trace for a plan
+    pub fn new(plan_id: Uuid) -> Self {
+        Self {
+            plan_id,
+            events: Vec::new(),
+            created_at: Utc::now(),
+            last_event_at: None,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Add a coordination event to the trace
+    pub fn add_event(&mut self, event: crate::chain_of_thought::CoordinationEvent) {
+        self.events.push(event.clone());
+        self.last_event_at = Some(event.timestamp);
+    }
+
+    /// Get all events for a specific milestone
+    pub fn get_milestone_events(&self, milestone_id: &str) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events.iter()
+            .filter(|e| e.milestone_id.as_ref().map(|id| id == milestone_id).unwrap_or(false))
+            .collect()
+    }
+
+    /// Get all events for a specific worker
+    pub fn get_worker_events(&self, worker_id: Uuid) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events.iter()
+            .filter(|e| e.worker_id.map(|id| id == worker_id).unwrap_or(false))
+            .collect()
+    }
+
+    /// Get events by type
+    pub fn get_events_by_type(&self, event_type: crate::chain_of_thought::CoordinationEventType) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events.iter()
+            .filter(|e| e.event_type == event_type)
+            .collect()
+    }
+
+    /// Get events in a time range
+    pub fn get_events_in_range(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events.iter()
+            .filter(|e| e.timestamp >= start && e.timestamp <= end)
+            .collect()
+    }
+
+    /// Get trace statistics
+    pub fn get_statistics(&self) -> CoordinationTraceStatistics {
+        let mut worker_assignments = 0;
+        let mut worker_releases = 0;
+        let mut milestones_started = 0;
+        let mut milestones_completed = 0;
+        let mut tasks_failed = 0;
+        let mut parallel_executions = 0;
+
+        for event in &self.events {
+            match event.event_type {
+                crate::chain_of_thought::CoordinationEventType::WorkerAssigned => worker_assignments += 1,
+                crate::chain_of_thought::CoordinationEventType::WorkerReleased => worker_releases += 1,
+                crate::chain_of_thought::CoordinationEventType::MilestoneStarted => milestones_started += 1,
+                crate::chain_of_thought::CoordinationEventType::MilestoneCompleted => milestones_completed += 1,
+                crate::chain_of_thought::CoordinationEventType::TaskFailed => tasks_failed += 1,
+                crate::chain_of_thought::CoordinationEventType::ParallelExecutionStarted => parallel_executions += 1,
+                _ => {}
+            }
+        }
+
+        CoordinationTraceStatistics {
+            total_events: self.events.len(),
+            worker_assignments,
+            worker_releases,
+            milestones_started,
+            milestones_completed,
+            tasks_failed,
+            parallel_executions,
+            duration_ms: self.last_event_at
+                .map(|end| end.signed_duration_since(self.created_at).num_milliseconds() as u64)
+                .unwrap_or(0),
+        }
+    }
+}
+
+/// Coordination trace statistics
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CoordinationTraceStatistics {
+    /// Total number of events in trace
+    pub total_events: usize,
+
+    /// Number of worker assignments
+    pub worker_assignments: usize,
+
+    /// Number of worker releases
+    pub worker_releases: usize,
+
+    /// Number of milestones started
+    pub milestones_started: usize,
+
+    /// Number of milestones completed
+    pub milestones_completed: usize,
+
+    /// Number of failed tasks
+    pub tasks_failed: usize,
+
+    /// Number of parallel executions started
+    pub parallel_executions: usize,
+
+    /// Total trace duration in milliseconds
+    pub duration_ms: u64,
+}
+
 /// Resource utilization metrics
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {

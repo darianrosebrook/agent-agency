@@ -19,12 +19,17 @@ export function TaskProgressChart({
   projectId,
 }: TaskProgressChartProps) {
   const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
-  const [isLoading, setIsLoading] = useState(!providedCompletedTasks && !providedTotalTasks);
+  const [isLoading, setIsLoading] = useState(
+    !providedCompletedTasks && !providedTotalTasks
+  );
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     // If props are provided, use them and skip API call
-    if (providedCompletedTasks !== undefined && providedTotalTasks !== undefined) {
+    if (
+      providedCompletedTasks !== undefined &&
+      providedTotalTasks !== undefined
+    ) {
       setIsLoading(false);
       return;
     }
@@ -37,7 +42,11 @@ export function TaskProgressChart({
         setTaskStats(stats);
       } catch (err) {
         console.error("Failed to fetch task stats:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load task statistics"));
+        setError(
+          err instanceof Error
+            ? err
+            : new Error("Failed to load task statistics")
+        );
       } finally {
         setIsLoading(false);
       }
@@ -52,9 +61,10 @@ export function TaskProgressChart({
   // Use provided props or API data
   const completedTasks = providedCompletedTasks ?? taskStats?.completed ?? 0;
   const totalTasks = providedTotalTasks ?? taskStats?.total ?? 0;
-  
+
   // Extract categories from task types if available, otherwise use defaults
-  const categories = providedCategories ?? (taskStats ? ["all"] : ["dev", "design"]);
+  const categories =
+    providedCategories ?? (taskStats ? ["all"] : ["dev", "design"]);
 
   // Animate values when props change
   const animatedCompletedTasks = useAnimatedValue(completedTasks);
@@ -74,7 +84,9 @@ export function TaskProgressChart({
                   <div className={styles.categoryBadge}>
                     <div className={styles.categoryBadgeInner}>
                       <div className={styles.categoryText}>
-                        <p className={styles.categoryTextParagraph}>Loading...</p>
+                        <p className={styles.categoryTextParagraph}>
+                          Loading...
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -98,7 +110,9 @@ export function TaskProgressChart({
                   <div className={styles.categoryBadge}>
                     <div className={styles.categoryBadgeInner}>
                       <div className={styles.categoryText}>
-                        <p className={styles.categoryTextParagraph}>Error: {error.message}</p>
+                        <p className={styles.categoryTextParagraph}>
+                          Error: {error.message}
+                        </p>
                       </div>
                     </div>
                   </div>

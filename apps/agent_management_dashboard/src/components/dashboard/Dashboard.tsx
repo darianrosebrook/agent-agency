@@ -178,9 +178,7 @@ export function Dashboard() {
 
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <ServerEfficiencyChart
-              title="Server Efficiency Analysis"
-            />
+            <ServerEfficiencyChart title="Server Efficiency Analysis" />
           </Suspense>
         </div>
 

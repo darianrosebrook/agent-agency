@@ -532,14 +532,17 @@ async fn test_audit_logging(
     
     // Test that audit logs can be written and read
     let event_type = "test_api_integration";
-    let event_data = r#"{"action": "test", "resource": "integration_test"}"#;
+    let event_data_json: serde_json::Value = serde_json::json!({
+        "action": "test",
+        "resource": "integration_test"
+    });
 
     let insert_result = postgres.execute(
         r#"
         INSERT INTO audit_logs (event_type, event_data, created_at)
-        VALUES ($1, $2, NOW())
+        VALUES ($1, $2::jsonb, NOW())
         "#,
-        &[&event_type.to_string(), &event_data.to_string()],
+        &[&event_type.to_string(), &event_data_json.to_string()],
     ).await?;
 
     if insert_result == 0 {

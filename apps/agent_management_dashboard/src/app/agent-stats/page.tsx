@@ -22,23 +22,27 @@ import { AgentActivityChart } from "../../components/AgentActivityChart";
 
 /**
  * Agent Stats Page
- * 
+ *
  * Comprehensive analytics and statistics about AI agents,
  * their performance, usage patterns, and contribution metrics.
- * 
+ *
  * @author @darianrosebrook
  */
 export default function AgentStatsPage() {
   const [stats, setStats] = useState<AgentStatsType | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activity, setActivity] = useState<AgentActivityPoint[]>([]);
-  const [modelContributions, setModelContributions] = useState<ModelContribution[]>([]);
+  const [modelContributions, setModelContributions] = useState<
+    ModelContribution[]
+  >([]);
   const [contributions, setContributions] = useState<ContributionStats[]>([]);
   const [efficiency, setEfficiency] = useState<EfficiencyMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "all">("30d");
+  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "all">(
+    "30d"
+  );
 
   useEffect(() => {
     async function fetchData() {
@@ -46,7 +50,14 @@ export default function AgentStatsPage() {
       setError(null);
 
       try {
-        const [statsData, agentsData, activityData, modelData, contributionsData, efficiencyData] = await Promise.all([
+        const [
+          statsData,
+          agentsData,
+          activityData,
+          modelData,
+          contributionsData,
+          efficiencyData,
+        ] = await Promise.all([
           getAgentsStats(),
           getAgents(),
           getAgentActivity({ start_date: getStartDate(timeRange) }),
@@ -62,7 +73,11 @@ export default function AgentStatsPage() {
         setContributions(contributionsData);
         setEfficiency(efficiencyData);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error("Failed to load agent statistics"));
+        setError(
+          err instanceof Error
+            ? err
+            : new Error("Failed to load agent statistics")
+        );
       } finally {
         setIsLoading(false);
       }
@@ -73,7 +88,8 @@ export default function AgentStatsPage() {
 
   function getStartDate(range: string): string {
     const now = new Date();
-    const days = range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 365;
+    const days =
+      range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 365;
     const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - days);
     return startDate.toISOString().split("T")[0];
@@ -85,7 +101,9 @@ export default function AgentStatsPage() {
         <div className={styles.container}>
           <div className={styles.header}>
             <h1 className={styles.headerTitle}>Agent Stats</h1>
-            <p className={styles.headerDescription}>Loading agent statistics...</p>
+            <p className={styles.headerDescription}>
+              Loading agent statistics...
+            </p>
           </div>
           <div className={styles.loadingState}>
             <div className={styles.spinner}></div>
@@ -109,7 +127,14 @@ export default function AgentStatsPage() {
               setIsLoading(true);
               setError(null);
               try {
-                const [statsData, agentsData, activityData, modelData, contributionsData, efficiencyData] = await Promise.all([
+                const [
+                  statsData,
+                  agentsData,
+                  activityData,
+                  modelData,
+                  contributionsData,
+                  efficiencyData,
+                ] = await Promise.all([
                   getAgentsStats(),
                   getAgents(),
                   getAgentActivity({ start_date: getStartDate(timeRange) }),
@@ -124,7 +149,11 @@ export default function AgentStatsPage() {
                 setContributions(contributionsData);
                 setEfficiency(efficiencyData);
               } catch (err) {
-                setError(err instanceof Error ? err : new Error("Failed to load agent statistics"));
+                setError(
+                  err instanceof Error
+                    ? err
+                    : new Error("Failed to load agent statistics")
+                );
               } finally {
                 setIsLoading(false);
               }
@@ -213,7 +242,9 @@ export default function AgentStatsPage() {
 
             <BentoPanel className={styles.metricCard}>
               <div className={styles.metricLabel}>Total Lines Changed</div>
-              <div className={styles.metricValue}>{totalLinesChanged.toLocaleString()}</div>
+              <div className={styles.metricValue}>
+                {totalLinesChanged.toLocaleString()}
+              </div>
             </BentoPanel>
           </div>
         )}
@@ -242,7 +273,9 @@ export default function AgentStatsPage() {
                 <div key={model.model_name} className={styles.modelItem}>
                   <div className={styles.modelHeader}>
                     <span className={styles.modelName}>{model.model_name}</span>
-                    <span className={styles.modelTasks}>{model.task_count} tasks</span>
+                    <span className={styles.modelTasks}>
+                      {model.task_count} tasks
+                    </span>
                   </div>
                   <div className={styles.modelMetrics}>
                     <div className={styles.modelMetric}>
@@ -252,7 +285,9 @@ export default function AgentStatsPage() {
                       </span>
                     </div>
                     <div className={styles.modelMetric}>
-                      <span className={styles.metricLabel}>Avg Completion:</span>
+                      <span className={styles.metricLabel}>
+                        Avg Completion:
+                      </span>
                       <span className={styles.metricValue}>
                         {model.avg_completion_time.toFixed(1)}s
                       </span>
@@ -270,9 +305,14 @@ export default function AgentStatsPage() {
             <h2 className={styles.sectionTitle}>Code Contributions</h2>
             <div className={styles.contributionsList}>
               {filteredContributions.map((contribution) => (
-                <div key={contribution.agent_id} className={styles.contributionItem}>
+                <div
+                  key={contribution.agent_id}
+                  className={styles.contributionItem}
+                >
                   <div className={styles.contributionHeader}>
-                    <span className={styles.agentName}>{contribution.agent_name}</span>
+                    <span className={styles.agentName}>
+                      {contribution.agent_name}
+                    </span>
                   </div>
                   <div className={styles.contributionMetrics}>
                     <div className={styles.contributionMetric}>
@@ -282,7 +322,9 @@ export default function AgentStatsPage() {
                       </span>
                     </div>
                     <div className={styles.contributionMetric}>
-                      <span className={styles.metricLabel}>Lines Modified:</span>
+                      <span className={styles.metricLabel}>
+                        Lines Modified:
+                      </span>
                       <span className={styles.metricValueNeutral}>
                         {contribution.lines_modified.toLocaleString()}
                       </span>
@@ -295,11 +337,15 @@ export default function AgentStatsPage() {
                     </div>
                     <div className={styles.contributionMetric}>
                       <span className={styles.metricLabel}>Files Changed:</span>
-                      <span className={styles.metricValue}>{contribution.files_changed}</span>
+                      <span className={styles.metricValue}>
+                        {contribution.files_changed}
+                      </span>
                     </div>
                     <div className={styles.contributionMetric}>
                       <span className={styles.metricLabel}>Commits:</span>
-                      <span className={styles.metricValue}>{contribution.commits}</span>
+                      <span className={styles.metricValue}>
+                        {contribution.commits}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -324,13 +370,17 @@ export default function AgentStatsPage() {
                     </div>
                     <div className={styles.efficiencyMetrics}>
                       <div className={styles.efficiencyMetric}>
-                        <span className={styles.metricLabel}>Efficiency Score:</span>
+                        <span className={styles.metricLabel}>
+                          Efficiency Score:
+                        </span>
                         <span className={styles.metricValue}>
                           {(metric.efficiency_score * 100).toFixed(1)}%
                         </span>
                       </div>
                       <div className={styles.efficiencyMetric}>
-                        <span className={styles.metricLabel}>Resource Utilization:</span>
+                        <span className={styles.metricLabel}>
+                          Resource Utilization:
+                        </span>
                         <span className={styles.metricValue}>
                           {(metric.resource_utilization * 100).toFixed(1)}%
                         </span>
@@ -354,8 +404,24 @@ export default function AgentStatsPage() {
           <BentoPanel className={styles.section}>
             <AgentActivityChart
               title="Agent Activity Over Time"
-              subtitle={`${activity.length} data points for ${timeRange === "7d" ? "last 7 days" : timeRange === "30d" ? "last 30 days" : timeRange === "90d" ? "last 90 days" : "all time"}`}
-              days={timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : timeRange === "90d" ? 90 : 365}
+              subtitle={`${activity.length} data points for ${
+                timeRange === "7d"
+                  ? "last 7 days"
+                  : timeRange === "30d"
+                  ? "last 30 days"
+                  : timeRange === "90d"
+                  ? "last 90 days"
+                  : "all time"
+              }`}
+              days={
+                timeRange === "7d"
+                  ? 7
+                  : timeRange === "30d"
+                  ? 30
+                  : timeRange === "90d"
+                  ? 90
+                  : 365
+              }
             />
           </BentoPanel>
         )}
@@ -366,7 +432,8 @@ export default function AgentStatsPage() {
             <div className={styles.emptyState}>
               <p className={styles.emptyText}>No agent data available</p>
               <p className={styles.emptyDescription}>
-                Agent statistics will appear here once agents are registered and active.
+                Agent statistics will appear here once agents are registered and
+                active.
               </p>
             </div>
           </BentoPanel>

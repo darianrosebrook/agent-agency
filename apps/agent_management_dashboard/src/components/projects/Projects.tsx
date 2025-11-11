@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   FolderPlus,
   Plus,
@@ -41,11 +41,27 @@ export function Projects() {
   const {
     projects,
     getCurrentProject,
-    createProject,
     selectProject,
     clearCurrentProject,
     isLoading,
+    fetchProjects,
   } = useProjectStore();
+
+  // Track if we've attempted to fetch to prevent infinite loops
+  const hasAttemptedFetchRef = useRef(false);
+
+  // Fetch projects on mount if not already loaded
+  useEffect(() => {
+    if (projects.length === 0 && !isLoading && !hasAttemptedFetchRef.current) {
+      hasAttemptedFetchRef.current = true;
+      fetchProjects().catch((err) => {
+        console.error("Failed to fetch projects:", err);
+        // Reset flag on error so we can retry manually if needed
+        hasAttemptedFetchRef.current = false;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects.length, isLoading]);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllRecent, setShowAllRecent] = useState(false);
@@ -59,15 +75,23 @@ export function Projects() {
   const currentProject = getCurrentProject();
 
   const handleCreateProject = useCallback(
-    (data: {
+    async (data: {
       name: string;
       summary?: string;
       description?: string;
       milestones?: string[];
     }) => {
-      createProject(data);
+      try {
+        // Use createProjectApi for persistence
+        const { createProjectApi } = useProjectStore.getState();
+        await createProjectApi(data);
+        setIsNewProjectModalOpen(false);
+      } catch (err) {
+        console.error("Failed to create project:", err);
+        // Error is already handled in store with toast
+      }
     },
-    [createProject]
+    []
   );
 
   const handleProjectClick = useCallback(

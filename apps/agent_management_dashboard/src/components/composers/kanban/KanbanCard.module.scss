@@ -7,6 +7,11 @@
   width: 100%;
   min-height: $kanban-card-height;
   flex-shrink: 0;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
 }
 
 .border {
@@ -17,16 +22,101 @@
   pointer-events: none;
 }
 
-.statusTags {
+.cardHeader {
   position: absolute;
+  top: $kanban-card-padding-y;
   left: $kanban-card-padding-x;
-  top: $kanban-card-status-tags-top;
+  right: $kanban-card-padding-x;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.statusTags {
   display: flex;
   gap: $kanban-card-status-tags-gap;
   align-items: center;
-  height: $kanban-card-status-tags-height;
-  width: $kanban-card-content-width;
-  max-width: calc(100% - #{$kanban-card-padding-x * 2});
+  flex: 1;
+  min-width: 0;
+}
+
+.cardActions {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cardActionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-1;
+  background: transparent;
+  border: none;
+  border-radius: $border-radius-sm;
+  color: $color-gray-400;
+  cursor: pointer;
+  transition: background-color $transition-normal, color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.cardActionIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+}
+
+.cardMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: $spacing-1;
+  min-width: 10rem;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.cardMenuItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  width: 100%;
+  padding: $spacing-2 $spacing-3;
+  background: transparent;
+  border: none;
+  color: $color-white;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+  }
+
+  &:first-child {
+    border-top-left-radius: $border-radius-md;
+    border-top-right-radius: $border-radius-md;
+  }
+
+  &:last-child {
+    border-bottom-left-radius: $border-radius-md;
+    border-bottom-right-radius: $border-radius-md;
+  }
+}
+
+.cardMenuIcon {
+  width: $spacing-4;
+  height: $spacing-4;
+  flex-shrink: 0;
 }
 
 .title {
@@ -60,14 +150,52 @@
   text-overflow: ellipsis;
 }
 
-.metadata {
+.cardFooter {
   position: absolute;
   left: $kanban-card-padding-x;
-  top: $kanban-card-metadata-top;
+  right: $kanban-card-padding-x;
+  bottom: $kanban-card-padding-y;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-2;
+}
+
+.metadata {
   display: flex;
   gap: $kanban-card-metadata-gap;
   align-items: center;
   flex-wrap: wrap;
-  width: $kanban-card-content-width;
-  max-width: calc(100% - #{$kanban-card-padding-x * 2});
+  flex: 1;
+  min-width: 0;
+}
+
+.commentBadge {
+  display: flex;
+  align-items: center;
+  gap: $spacing-1;
+  padding: $spacing-1 $spacing-2;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-sm;
+  color: $color-gray-400;
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  cursor: pointer;
+  transition: background-color $transition-normal, color $transition-normal;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.commentIcon {
+  width: $spacing-3;
+  height: $spacing-3;
+}
+
+.commentCount {
+  font-weight: $font-weight-medium;
 }

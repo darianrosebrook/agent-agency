@@ -10,7 +10,7 @@
  * @author @darianrosebrook
  */
 
-import { Suspense, useEffect } from "react";
+import React, { Suspense, useEffect, useRef } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -45,7 +45,8 @@ export default function ProjectLayout({
   const params = useParams();
   const pathname = usePathname();
   const router = useRouter();
-  const { getProjectById, selectProject } = useProjectContext();
+  const { getProjectById, selectProject, isLoading, refreshProjects } =
+    useProjectContext();
 
   const projectId =
     typeof params?.projectId === "string"
@@ -54,30 +55,78 @@ export default function ProjectLayout({
       ? params.projectId[0]
       : null;
 
+  // Track if we've already attempted a refresh for the current projectId
+  const hasRefreshedRef = useRef<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Reset refresh flag when projectId changes
+  useEffect(() => {
+    hasRefreshedRef.current = null;
+  }, [projectId]);
+
   // Initialize project context when projectId changes
   useEffect(() => {
-    if (projectId) {
-      const project = getProjectById(projectId);
-      if (project) {
-        selectProject(projectId);
+    isMountedRef.current = true;
+
+    async function initializeProject() {
+      if (!projectId) return;
+
+      // Get current loading state without depending on it
+      const currentIsLoading = isLoading;
+      let project = getProjectById(projectId);
+
+      // If project not found and not loading, try refreshing projects once per projectId
+      if (
+        !project &&
+        !currentIsLoading &&
+        hasRefreshedRef.current !== projectId
+      ) {
+        hasRefreshedRef.current = projectId;
+        try {
+          await refreshProjects();
+          if (!isMountedRef.current) return;
+          project = getProjectById(projectId);
+        } catch (err) {
+          console.error("Failed to refresh projects:", err);
+          return;
+        }
+      }
+
+      if (project && isMountedRef.current) {
+        await selectProject(projectId);
+      } else if (
+        !currentIsLoading &&
+        isMountedRef.current &&
+        hasRefreshedRef.current === projectId
+      ) {
+        // Project not found after refresh - only warn once
+        console.warn(`Project ${projectId} not found in context`);
       }
     }
-  }, [projectId, getProjectById, selectProject]);
+
+    initializeProject();
+
+    return () => {
+      isMountedRef.current = false;
+    };
+    // Only depend on projectId - isLoading changes will be handled inside
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const project = projectId ? getProjectById(projectId) : null;
 
   // Determine active tab from pathname
   const getActiveTab = (): TabType => {
     if (!pathname || !projectId) return "overview";
-    
+
     // Extract tab from pathname: /projects/[projectId]/[tab]
     const pathParts = pathname.split("/").filter(Boolean);
     const projectIndex = pathParts.indexOf(projectId);
-    
+
     // If projectId is found and there's a segment after it, that's the tab
     if (projectIndex >= 0 && pathParts[projectIndex + 1]) {
       const tab = pathParts[projectIndex + 1];
-      
+
       // Map path to tab type
       const tabMap: Record<string, TabType> = {
         overview: "overview",
@@ -87,10 +136,10 @@ export default function ProjectLayout({
         manage: "manage",
         settings: "manage", // Support both "manage" and "settings"
       };
-      
+
       return tabMap[tab] ?? "overview";
     }
-    
+
     // Default to overview if at root project path
     return "overview";
   };
@@ -102,10 +151,26 @@ export default function ProjectLayout({
     router.push("/projects");
   };
 
-  if (!projectId || !project) {
+  if (!projectId) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Invalid project ID</div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingText}>Loading project...</div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Project not found</div>
       </div>
     );
   }
@@ -150,11 +215,12 @@ export default function ProjectLayout({
             <div className={styles.tabsContainer}>
               <div className={styles.tabsList}>
                 {TABS.map((tab) => {
-                  const tabPath = tab.path === "overview" 
-                    ? basePath 
-                    : `${basePath}/${tab.path}`;
+                  const tabPath =
+                    tab.path === "overview"
+                      ? basePath
+                      : `${basePath}/${tab.path}`;
                   const isActive = activeTab === tab.id;
-                  
+
                   return (
                     <Link
                       key={tab.id}
@@ -171,9 +237,7 @@ export default function ProjectLayout({
                       >
                         {tab.label}
                       </span>
-                      {isActive && (
-                        <div className={styles.tabIndicator} />
-                      )}
+                      {isActive && <div className={styles.tabIndicator} />}
                     </Link>
                   );
                 })}
@@ -226,7 +290,9 @@ export default function ProjectLayout({
                     className={styles.controlButtonBorder}
                   />
                   <div className={styles.controlButtonContent}>
-                    <span className={styles.controlButtonText}>Status: All</span>
+                    <span className={styles.controlButtonText}>
+                      Status: All
+                    </span>
                     <div className={styles.controlButtonIcon}>
                       <svg
                         className={styles.svgFullSize}
@@ -366,4 +432,3 @@ export default function ProjectLayout({
     </div>
   );
 }
-

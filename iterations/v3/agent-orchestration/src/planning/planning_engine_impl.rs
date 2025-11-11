@@ -679,44 +679,170 @@ impl RealTaskDescriptorProvider {
 
     /// Enhance the task descriptor with additional information from database or external sources
     async fn enhance_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
-        // TODO: Enhance task descriptor with database and external data
-        //       Currently returns existing descriptor; should enhance with additional context from database, validation, and historical data.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Descriptor is enhanced with database context
-        // - Task requirements are validated
-        // - Historical data enriches descriptor
-        // - Enhancement improves task quality
-        //
-        // DEPENDENCIES:
-        // - Database connection (Required)
-        // - External data sources (Optional)
-        // - Historical data infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (task enhancement feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Task management expertise
-        // Temporary: return existing until enhancement is implemented
-        // - Check for conflicts with other tasks
-        Ok(self.task_descriptor.clone())
+        let mut enhanced = self.task_descriptor.clone();
+        
+        // Query execution plans for similar tasks (by description similarity or scope overlap)
+        let all_plans = match self.db_ops.get_execution_plans().await {
+            Ok(plans) => plans,
+            Err(e) => {
+                tracing::warn!(
+                    task_id = %enhanced.task_id,
+                    error = %e,
+                    "Failed to query execution plans for enhancement, continuing without historical data"
+                );
+                return Ok(enhanced); // Return unenhanced descriptor on error
+            }
+        };
+        
+        // Find similar plans based on description keywords or scope overlap
+        let similar_plans: Vec<_> = all_plans.iter()
+            .filter(|plan| {
+                // Check if plan title or overview contains keywords from task description
+                let desc_lower = enhanced.description.to_lowercase();
+                let title_lower = plan.title.to_lowercase();
+                let overview_lower = plan.overview.as_ref().map(|o| o.to_lowercase()).unwrap_or_default();
+                
+                // Simple keyword matching (could be enhanced with more sophisticated similarity)
+                desc_lower.split_whitespace().any(|word| {
+                    word.len() > 3 && (title_lower.contains(word) || overview_lower.contains(word))
+                })
+            })
+            .take(5) // Limit to 5 most similar plans
+            .collect();
+        
+        // Query execution results for historical performance data
+        let mut historical_avg_duration_ms = 0u64;
+        let mut historical_success_rate = 0.0f64;
+        let mut similar_results_count = 0usize;
+        
+        for plan in &similar_plans {
+            if let Ok(Some(result)) = self.db_ops.get_execution_result(plan.id).await {
+                historical_avg_duration_ms += result.total_duration_ms as u64;
+                if result.success {
+                    similar_results_count += 1;
+                }
+            }
+        }
+        
+        if !similar_plans.is_empty() {
+            historical_avg_duration_ms /= similar_plans.len() as u64;
+            historical_success_rate = similar_results_count as f64 / similar_plans.len() as f64;
+            
+            tracing::debug!(
+                task_id = %enhanced.task_id,
+                similar_plans_count = similar_plans.len(),
+                historical_avg_duration_ms = historical_avg_duration_ms,
+                historical_success_rate = %historical_success_rate,
+                "Found similar historical plans for task descriptor enhancement"
+            );
+        }
+        
+        // Validate task requirements against available resources
+        // Check if change budget is reasonable based on historical data
+        if historical_avg_duration_ms > 0 {
+            // Estimate if change budget is reasonable (heuristic: if historical avg is much higher than budget, warn)
+            let budget_max_files = enhanced.change_budget.max_files.unwrap_or(25);
+            let budget_max_loc = enhanced.change_budget.max_loc.unwrap_or(1000);
+            
+            // Simple validation: if we have historical data suggesting longer execution, adjust expectations
+            // This is a heuristic - actual validation would require more sophisticated analysis
+            if historical_avg_duration_ms > 300_000 { // 5 minutes
+                tracing::debug!(
+                    task_id = %enhanced.task_id,
+                    historical_avg_duration_ms = historical_avg_duration_ms,
+                    "Historical data suggests longer execution time for similar tasks"
+                );
+            }
+        }
+        
+        // Enrich descriptor with historical metadata
+        // Note: TaskDescriptor doesn't have a metadata field, so we can't directly add metadata
+        // Instead, we can enhance the description or use the acceptance criteria field
+        
+        // Enhance acceptance criteria with historical insights if available
+        if historical_success_rate > 0.0 && !enhanced.acceptance.is_some() {
+            let mut acceptance_criteria = format!(
+                "Task completion based on historical success rate: {:.1}%",
+                historical_success_rate * 100.0
+            );
+            
+            if historical_avg_duration_ms > 0 {
+                acceptance_criteria.push_str(&format!(
+                    "\nEstimated duration based on similar tasks: {}ms",
+                    historical_avg_duration_ms
+                ));
+            }
+            
+            enhanced.acceptance = Some(acceptance_criteria);
+        }
+        
+        // Validate risk tier if not set, infer from historical data
+        if enhanced.risk_tier.is_none() {
+            // Infer risk tier from historical success rate
+            // Lower success rate suggests higher risk (Tier1 = highest risk)
+            let inferred_risk_tier = if historical_success_rate > 0.0 && historical_success_rate < 0.7 {
+                agent_agency_contracts::types::planning::RiskTier::Tier1 // High risk
+            } else if historical_success_rate >= 0.7 && historical_success_rate < 0.9 {
+                agent_agency_contracts::types::planning::RiskTier::Tier2 // Medium risk
+            } else {
+                agent_agency_contracts::types::planning::RiskTier::Tier3 // Low risk
+            };
+            
+            enhanced.risk_tier = Some(inferred_risk_tier);
+            
+            tracing::debug!(
+                task_id = %enhanced.task_id,
+                inferred_risk_tier = ?inferred_risk_tier,
+                historical_success_rate = %historical_success_rate,
+                "Inferred risk tier from historical data"
+            );
+        }
+        
+        // Check for conflicts with other tasks (tasks with overlapping scope)
+        let conflicting_plans: Vec<_> = all_plans.iter()
+            .filter(|plan| {
+                // Check if plan is in progress and has overlapping scope
+                plan.state == "InProgress" || plan.state == "Approved"
+            })
+            .filter(|plan| {
+                // Simple overlap check: if titles share significant keywords
+                let plan_title_lower = plan.title.to_lowercase();
+                let task_desc_lower = enhanced.description.to_lowercase();
+                
+                // Count shared significant words (length > 3)
+                let task_words: std::collections::HashSet<&str> = task_desc_lower
+                    .split_whitespace()
+                    .filter(|w| w.len() > 3)
+                    .collect();
+                
+                let plan_words: std::collections::HashSet<&str> = plan_title_lower
+                    .split_whitespace()
+                    .filter(|w| w.len() > 3)
+                    .collect();
+                
+                let overlap = task_words.intersection(&plan_words).count();
+                overlap >= 2 // At least 2 shared significant words suggests potential conflict
+            })
+            .collect();
+        
+        if !conflicting_plans.is_empty() {
+            tracing::warn!(
+                task_id = %enhanced.task_id,
+                conflicting_plans_count = conflicting_plans.len(),
+                "Found potentially conflicting tasks in progress"
+            );
+        }
+        
+        tracing::debug!(
+            task_id = %enhanced.task_id,
+            similar_plans_found = similar_plans.len(),
+            conflicting_plans_found = conflicting_plans.len(),
+            historical_avg_duration_ms = historical_avg_duration_ms,
+            historical_success_rate = %historical_success_rate,
+            "Enhanced task descriptor with database context and historical data"
+        );
+        
+        Ok(enhanced)
     }
 }
 

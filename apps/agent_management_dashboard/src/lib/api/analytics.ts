@@ -1,14 +1,14 @@
 /**
  * Analytics API Client
- * 
+ *
  * Provides functions for fetching analytics data from the v3 API.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { apiGet } from '../utils/api';
+import { apiGet } from "../utils/api";
 
-const API_BASE = '/api/proxy/api/v1';
+const API_BASE = "/api/proxy/api/v1";
 
 /**
  * Task analytics response
@@ -65,4 +65,3 @@ export async function getPerformanceAnalytics(): Promise<PerformanceAnalytics> {
 export async function getSuccessRates(): Promise<SuccessRates> {
   return apiGet<SuccessRates>(`${API_BASE}/analytics/success-rates`);
 }
-

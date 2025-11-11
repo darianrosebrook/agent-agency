@@ -1,0 +1,109 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: $spacing-4;
+}
+
+.dialog {
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-lg;
+  width: 100%;
+  max-width: 24rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  padding: $spacing-5;
+  border-bottom: 1px solid $color-neutral-800;
+}
+
+.warningIcon {
+  width: $spacing-6;
+  height: $spacing-6;
+  color: $color-destructive;
+  flex-shrink: 0;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-white;
+}
+
+.dialogContent {
+  padding: $spacing-5;
+}
+
+.dialogMessage {
+  margin: 0 0 $spacing-3 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  color: $color-gray-300;
+}
+
+.taskTitle {
+  color: $color-white;
+  font-weight: $font-weight-medium;
+}
+
+.dialogWarning {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+}
+
+.dialogActions {
+  display: flex;
+  gap: $spacing-3;
+  padding: $spacing-4 $spacing-5;
+  border-top: 1px solid $color-neutral-800;
+  justify-content: flex-end;
+}
+
+.cancelButton,
+.deleteButton {
+  padding: $spacing-2 $spacing-4;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: background-color $transition-normal;
+}
+
+.cancelButton {
+  background: transparent;
+  border: 1px solid $color-neutral-800;
+  color: $color-gray-400;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.deleteButton {
+  background-color: $color-destructive;
+  border: none;
+  color: $color-white;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+

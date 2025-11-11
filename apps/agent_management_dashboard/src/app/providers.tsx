@@ -56,13 +56,13 @@ export function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
     >
       <ProjectProvider>
-        <ErrorBoundary>
-          <div className={styles.providersContainer}>
-            <NavigationSidebar />
-            <main className={styles.main}>{children}</main>
-          </div>
-          <Toaster />
-        </ErrorBoundary>
+      <ErrorBoundary>
+        <div className={styles.providersContainer}>
+          <NavigationSidebar />
+          <main className={styles.main}>{children}</main>
+        </div>
+        <Toaster />
+      </ErrorBoundary>
       </ProjectProvider>
     </ThemeProvider>
   );

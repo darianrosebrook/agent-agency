@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import svgPaths from '../../../imports/svg-pj3tus7kw0';
-import { cn } from '../../primitives/utils';
-import { useProjectContext } from '../../ProjectContext';
+import { useState, useEffect } from "react";
+import svgPaths from "../../../imports/svg-pj3tus7kw0";
+import { cn } from "../../primitives/utils";
+import { useProjectContext } from "../../ProjectContext";
 import {
   getProjectHandler,
   getProjectSettings,
@@ -12,17 +12,21 @@ import {
   getProjectMembers,
   type ProjectSettings,
   type ProjectApiResponse,
-} from '../../../lib/api/projects';
-import { KanbanHeading } from '../../primitives/kanban/KanbanHeading';
-import { KanbanText } from '../../primitives/kanban/KanbanText';
-import { Separator } from '../../primitives/separator';
-import styles from './GeneralTab.module.scss';
+} from "../../../lib/api/projects";
+import { KanbanHeading } from "../../primitives/kanban/KanbanHeading";
+import { KanbanText } from "../../primitives/kanban/KanbanText";
+import { Separator } from "../../primitives/separator";
+import styles from "./GeneralTab.module.scss";
 
 export function GeneralTabContent() {
-  const { currentProjectId } = useProjectContext();
+  const { currentProjectId, deleteProject, clearCurrentProject } =
+    useProjectContext();
+  const router = useRouter();
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
-  const [members, setMembers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [members, setMembers] = useState<
+    Array<{ id: string; name: string; email: string }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -32,9 +36,11 @@ export function GeneralTabContent() {
   const [assignmentNotifs, setAssignmentNotifs] = useState(true);
   const [commentNotifs, setCommentNotifs] = useState(true);
   const [statusNotifs, setStatusNotifs] = useState(false);
-  const [projectName, setProjectName] = useState('');
-  const [description, setDescription] = useState('');
-  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
+  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     async function fetchData() {
@@ -55,8 +61,8 @@ export function GeneralTabContent() {
 
         if (projectData) {
           setProject(projectData);
-          setProjectName(projectData.name || '');
-          setDescription(projectData.description || '');
+          setProjectName(projectData.name || "");
+          setDescription(projectData.description || "");
         }
 
         if (settingsData) {
@@ -64,7 +70,10 @@ export function GeneralTabContent() {
           setDefaultAssigneeId(settingsData.default_assignee_id || null);
           setCollaboration(settingsData.auto_assign_tasks ?? true);
           if (settingsData.notification_preferences) {
-            const prefs = settingsData.notification_preferences as Record<string, boolean>;
+            const prefs = settingsData.notification_preferences as Record<
+              string,
+              boolean
+            >;
             setAssignmentNotifs(prefs.assignment ?? true);
             setCommentNotifs(prefs.comment ?? true);
             setStatusNotifs(prefs.status ?? false);
@@ -81,7 +90,9 @@ export function GeneralTabContent() {
           );
         }
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load project data'));
+        setError(
+          err instanceof Error ? err : new Error("Failed to load project data")
+        );
       } finally {
         setIsLoading(false);
       }
@@ -120,22 +131,28 @@ export function GeneralTabContent() {
       if (projectData) setProject(projectData);
       if (settingsData) setSettings(settingsData);
 
-      alert('Settings saved successfully');
+      alert("Settings saved successfully");
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to save settings'));
-      alert(`Failed to save settings: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(
+        err instanceof Error ? err : new Error("Failed to save settings")
+      );
+      alert(
+        `Failed to save settings: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   const formatDate = (dateStr: string | undefined): string => {
-    if (!dateStr) return 'N/A';
+    if (!dateStr) return "N/A";
     try {
-      return new Date(dateStr).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
     } catch {
       return dateStr;
@@ -216,7 +233,7 @@ export function GeneralTabContent() {
                 </label>
                 <div className={styles.readOnlyField}>
                   <KanbanText size="sm" className={styles.readOnlyFieldText}>
-                    {project?.id || currentProjectId || 'N/A'}
+                    {project?.id || currentProjectId || "N/A"}
                   </KanbanText>
                 </div>
               </div>
@@ -243,7 +260,7 @@ export function GeneralTabContent() {
             type="button"
           >
             <KanbanText size="sm" className={styles.saveButtonText}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? "Saving..." : "Save Changes"}
             </KanbanText>
           </button>
         </div>
@@ -262,11 +279,19 @@ export function GeneralTabContent() {
                 Default Assignee
               </KanbanText>
               <button className={styles.defaultAssigneeButton} type="button">
-                <KanbanText size="sm" className={styles.defaultAssigneeButtonText}>
+                <KanbanText
+                  size="sm"
+                  className={styles.defaultAssigneeButtonText}
+                >
                   Auto-assign
                 </KanbanText>
                 <div className={styles.defaultAssigneeIcon}>
-                  <svg className={styles.svgIcon} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                  <svg
+                    className={styles.svgIcon}
+                    fill="none"
+                    preserveAspectRatio="none"
+                    viewBox="0 0 16 16"
+                  >
                     <path
                       d={svgPaths.p10a02b40}
                       stroke="#717182"
@@ -294,14 +319,18 @@ export function GeneralTabContent() {
                 onClick={() => setCollaboration(!collaboration)}
                 className={cn(
                   styles.toggleSwitch,
-                  collaboration ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  collaboration
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
                 type="button"
               >
                 <div
                   className={cn(
                     styles.toggleThumb,
-                    collaboration ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    collaboration
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive
                   )}
                 />
               </button>
@@ -321,14 +350,18 @@ export function GeneralTabContent() {
                 onClick={() => setRequireApproval(!requireApproval)}
                 className={cn(
                   styles.toggleSwitch,
-                  requireApproval ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  requireApproval
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
                 type="button"
               >
                 <div
                   className={cn(
                     styles.toggleThumb,
-                    requireApproval ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    requireApproval
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive
                   )}
                 />
               </button>
@@ -358,14 +391,18 @@ export function GeneralTabContent() {
                 onClick={() => setAssignmentNotifs(!assignmentNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  assignmentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  assignmentNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
                 type="button"
               >
                 <div
                   className={cn(
                     styles.toggleThumb,
-                    assignmentNotifs ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    assignmentNotifs
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive
                   )}
                 />
               </button>
@@ -387,14 +424,18 @@ export function GeneralTabContent() {
                 onClick={() => setCommentNotifs(!commentNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  commentNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  commentNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
                 type="button"
               >
                 <div
                   className={cn(
                     styles.toggleThumb,
-                    commentNotifs ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    commentNotifs
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive
                   )}
                 />
               </button>
@@ -416,14 +457,18 @@ export function GeneralTabContent() {
                 onClick={() => setStatusNotifs(!statusNotifs)}
                 className={cn(
                   styles.toggleSwitch,
-                  statusNotifs ? styles.toggleSwitchActive : styles.toggleSwitchInactive
+                  statusNotifs
+                    ? styles.toggleSwitchActive
+                    : styles.toggleSwitchInactive
                 )}
                 type="button"
               >
                 <div
                   className={cn(
                     styles.toggleThumb,
-                    statusNotifs ? styles.toggleThumbActive : styles.toggleThumbInactive
+                    statusNotifs
+                      ? styles.toggleThumbActive
+                      : styles.toggleThumbInactive
                   )}
                 />
               </button>
@@ -436,7 +481,12 @@ export function GeneralTabContent() {
           <div aria-hidden="true" className={styles.dangerZoneBorder} />
           <div className={styles.dangerZoneTitle}>
             <div className={styles.dangerZoneIcon}>
-              <svg className={styles.svgIcon} fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
+              <svg
+                className={styles.svgIcon}
+                fill="none"
+                preserveAspectRatio="none"
+                viewBox="0 0 20 20"
+              >
                 <path
                   d={svgPaths.p14d24500}
                   stroke="#FF6B6B"
@@ -472,7 +522,10 @@ export function GeneralTabContent() {
                 <KanbanText size="sm" className={styles.dangerZoneItemTitle}>
                   Archive this project
                 </KanbanText>
-                <KanbanText size="xs" className={styles.dangerZoneItemDescription}>
+                <KanbanText
+                  size="xs"
+                  className={styles.dangerZoneItemDescription}
+                >
                   Make the project read-only and hide it from your dashboard
                 </KanbanText>
               </div>
@@ -484,59 +537,177 @@ export function GeneralTabContent() {
             </div>
 
             {/* Delete Project */}
-            <div className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}>
+            <div
+              className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}
+            >
               <div className={styles.dangerZoneItemContent}>
                 <KanbanText size="sm" className={styles.dangerZoneItemTitle}>
                   Delete this project
                 </KanbanText>
-                <KanbanText size="xs" className={styles.dangerZoneItemDescription}>
+                <KanbanText
+                  size="xs"
+                  className={styles.dangerZoneItemDescription}
+                >
                   Permanently delete this project and all of its data
                 </KanbanText>
               </div>
-              <button className={styles.dangerZoneButtonDelete} type="button">
-                <div className={styles.dangerZoneButtonIcon}>
-                  <svg className={styles.svgIcon} fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
-                    <path
-                      d="M6.6643 7.33073V11.3293"
-                      stroke="#FF6B6B"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.33286"
-                    />
-                    <path
-                      d="M9.33002 7.33073V11.3293"
-                      stroke="#FF6B6B"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.33286"
-                    />
-                    <path
-                      d={svgPaths.p1c811700}
-                      stroke="#FF6B6B"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.33286"
-                    />
-                    <path
-                      d="M1.99929 3.99858H13.995"
-                      stroke="#FF6B6B"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.33286"
-                    />
-                    <path
-                      d={svgPaths.p346ee160}
-                      stroke="#FF6B6B"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.33286"
-                    />
-                  </svg>
+              {showDeleteConfirm ? (
+                <div className={styles.deleteConfirmContainer}>
+                  <KanbanText size="sm" className={styles.deleteConfirmText}>
+                    Are you sure? This cannot be undone.
+                  </KanbanText>
+                  <div className={styles.deleteConfirmButtons}>
+                    <button
+                      className={styles.deleteConfirmCancel}
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className={styles.dangerZoneButtonDelete}
+                      type="button"
+                      onClick={async () => {
+                        if (!currentProjectId) return;
+                        setIsDeleting(true);
+                        setError(null);
+                        try {
+                          await deleteProject(currentProjectId);
+                          clearCurrentProject();
+                          router.push("/projects");
+                        } catch (err) {
+                          console.error("Failed to delete project:", err);
+                          setError(
+                            err instanceof Error
+                              ? err
+                              : new Error("Failed to delete project")
+                          );
+                          setIsDeleting(false);
+                        }
+                      }}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <KanbanText
+                          size="sm"
+                          className={styles.dangerZoneButtonText}
+                        >
+                          Deleting...
+                        </KanbanText>
+                      ) : (
+                        <>
+                          <div className={styles.dangerZoneButtonIcon}>
+                            <svg
+                              className={styles.svgIcon}
+                              fill="none"
+                              preserveAspectRatio="none"
+                              viewBox="0 0 16 16"
+                            >
+                              <path
+                                d="M6.6643 7.33073V11.3293"
+                                stroke="#FF6B6B"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.33286"
+                              />
+                              <path
+                                d="M9.33002 7.33073V11.3293"
+                                stroke="#FF6B6B"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.33286"
+                              />
+                              <path
+                                d={svgPaths.p1c811700}
+                                stroke="#FF6B6B"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.33286"
+                              />
+                              <path
+                                d="M1.99929 3.99858H13.995"
+                                stroke="#FF6B6B"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.33286"
+                              />
+                              <path
+                                d={svgPaths.p346ee160}
+                                stroke="#FF6B6B"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.33286"
+                              />
+                            </svg>
+                          </div>
+                          <KanbanText
+                            size="sm"
+                            className={styles.dangerZoneButtonText}
+                          >
+                            Confirm Delete
+                          </KanbanText>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <KanbanText size="sm" className={styles.dangerZoneButtonText}>
-                  Delete
-                </KanbanText>
-              </button>
+              ) : (
+                <button
+                  className={styles.dangerZoneButtonDelete}
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                >
+                  <div className={styles.dangerZoneButtonIcon}>
+                    <svg
+                      className={styles.svgIcon}
+                      fill="none"
+                      preserveAspectRatio="none"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M6.6643 7.33073V11.3293"
+                        stroke="#FF6B6B"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.33286"
+                      />
+                      <path
+                        d="M9.33002 7.33073V11.3293"
+                        stroke="#FF6B6B"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.33286"
+                      />
+                      <path
+                        d={svgPaths.p1c811700}
+                        stroke="#FF6B6B"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.33286"
+                      />
+                      <path
+                        d="M1.99929 3.99858H13.995"
+                        stroke="#FF6B6B"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.33286"
+                      />
+                      <path
+                        d={svgPaths.p346ee160}
+                        stroke="#FF6B6B"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.33286"
+                      />
+                    </svg>
+                  </div>
+                  <KanbanText size="sm" className={styles.dangerZoneButtonText}>
+                    Delete
+                  </KanbanText>
+                </button>
+              )}
             </div>
           </div>
         </div>

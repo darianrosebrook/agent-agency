@@ -47,6 +47,8 @@ pub trait DatabaseOperations: Send + Sync {
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>, anyhow::Error>;
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver, anyhow::Error>;
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver, anyhow::Error>;
+    async fn create_execution_result(&self, result: CreateExecutionResult) -> Result<models::PlanExecutionResult, anyhow::Error>;
+    async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<models::PlanExecutionResult>, anyhow::Error>;
 }
 
 /// Create execution plan request
@@ -257,6 +259,24 @@ pub mod models {
         #[schemars(with = "String")]
         pub created_at: DateTime<Utc>,
     }
+
+    /// Plan execution result model
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    pub struct PlanExecutionResult {
+        #[schemars(with = "String")]
+        pub plan_id: Uuid,
+        pub success: bool,
+        pub milestones_completed: i32,
+        pub total_duration_ms: i64,
+        pub evidence: serde_json::Value,
+        pub metrics: serde_json::Value,
+        pub final_state: String,
+        pub timeline: serde_json::Value,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+        pub updated_at: DateTime<Utc>,
+    }
 }
 
 /// Create audit trail entry
@@ -352,6 +372,20 @@ pub struct UpdateJudge {
     pub judge_type: Option<String>,
     pub configuration: Option<serde_json::Value>,
     pub is_active: Option<bool>,
+}
+
+/// Create execution result request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateExecutionResult {
+    #[schemars(with = "String")]
+    pub plan_id: Uuid,
+    pub success: bool,
+    pub milestones_completed: usize,
+    pub total_duration_ms: u64,
+    pub evidence: serde_json::Value,
+    pub metrics: serde_json::Value,
+    pub final_state: String,
+    pub timeline: serde_json::Value,
 }
 
 /// Cost limits

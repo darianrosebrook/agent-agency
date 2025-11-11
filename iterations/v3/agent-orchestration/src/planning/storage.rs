@@ -1089,19 +1089,84 @@ impl PlanningStorage {
         let result_json = serde_json::to_string_pretty(result)?;
         tokio::fs::write(&result_path, result_json).await?;
 
-        // Update plan status in database if needed
-        // TODO: Add database storage for execution results
+        // Store execution result in database
+        let create_result = crate::planning::data_infrastructure_types::CreateExecutionResult {
+            plan_id,
+            success: result.success,
+            milestones_completed: result.milestones_completed,
+            total_duration_ms: result.total_duration_ms,
+            evidence: serde_json::to_value(&result.evidence)?,
+            metrics: serde_json::to_value(&result.metrics)?,
+            final_state: format!("{:?}", result.final_state),
+            timeline: serde_json::to_value(&result.timeline)?,
+        };
+        
+        self.db_ops.create_execution_result(create_result).await?;
+        
+        tracing::debug!(
+            plan_id = %plan_id,
+            success = result.success,
+            milestones_completed = result.milestones_completed,
+            "Stored execution result to database"
+        );
 
         Ok(())
     }
 
     /// Get execution result for a plan
     pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<agent_agency_contracts::planning::PlanExecutionResult>> {
-        // Try to load execution result from file
+        // Try to load from database first (preferred source)
+        if let Some(db_result) = self.db_ops.get_execution_result(plan_id).await? {
+            // Convert database model to contract type
+            let evidence: agent_agency_contracts::planning::ExecutionEvidence = serde_json::from_value(db_result.evidence.clone())
+                .map_err(|e| anyhow!("Failed to deserialize evidence: {}", e))?;
+            let metrics: agent_agency_contracts::planning::ExecutionMetrics = serde_json::from_value(db_result.metrics.clone())
+                .map_err(|e| anyhow!("Failed to deserialize metrics: {}", e))?;
+            let timeline: Vec<agent_agency_contracts::planning::ExecutionEvent> = serde_json::from_value(db_result.timeline.clone())
+                .map_err(|e| anyhow!("Failed to deserialize timeline: {}", e))?;
+            
+            // Parse final_state string back to PlanState enum
+            let final_state = match db_result.final_state.as_str() {
+                "Draft" => agent_agency_contracts::planning_io::PlanState::Draft,
+                "UnderReview" => agent_agency_contracts::planning_io::PlanState::UnderReview,
+                "Approved" => agent_agency_contracts::planning_io::PlanState::Approved,
+                "InProgress" => agent_agency_contracts::planning_io::PlanState::InProgress,
+                "Completed" => agent_agency_contracts::planning_io::PlanState::Completed,
+                "Failed" => agent_agency_contracts::planning_io::PlanState::Failed { reason: "Execution failed".to_string() },
+                "Cancelled" => agent_agency_contracts::planning_io::PlanState::Cancelled,
+                _ => agent_agency_contracts::planning_io::PlanState::Draft, // Default fallback
+            };
+            
+            let result = agent_agency_contracts::planning::PlanExecutionResult {
+                plan_id: db_result.plan_id,
+                success: db_result.success,
+                milestones_completed: db_result.milestones_completed as usize,
+                total_duration_ms: db_result.total_duration_ms as u64,
+                evidence,
+                metrics,
+                final_state,
+                timeline,
+            };
+            
+            tracing::debug!(
+                plan_id = %plan_id,
+                "Retrieved execution result from database"
+            );
+            
+            return Ok(Some(result));
+        }
+        
+        // Fallback to file storage if not in database
         let result_path = self.file_storage.plans_dir.join(format!("{}_result.json", plan_id));
         if result_path.exists() {
             let result_json = tokio::fs::read_to_string(&result_path).await?;
             let result: agent_agency_contracts::planning::PlanExecutionResult = serde_json::from_str(&result_json)?;
+            
+            tracing::debug!(
+                plan_id = %plan_id,
+                "Retrieved execution result from file storage"
+            );
+            
             Ok(Some(result))
         } else {
             Ok(None)

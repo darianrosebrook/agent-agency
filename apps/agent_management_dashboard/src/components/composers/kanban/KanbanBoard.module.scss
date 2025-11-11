@@ -1,28 +1,54 @@
 @use "../../../styles/design-tokens.scss" as *;
 
 .board {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   width: 100%;
   height: 100%;
-  min-height: 0;
   background-color: $kanban-board-bg;
+  overflow: hidden;
 }
 
 .content {
-  height: 100%;
-  min-height: 0;
   width: 100%;
-  overflow: auto;
+  height: 100%;
+  overflow: clip;
   background-color: $kanban-board-bg;
 }
 
 .columns {
   position: relative;
   min-height: $kanban-column-height;
-  min-width: max-content;
-  width: max-content;
-  height: 100%;
-  padding: $kanban-board-padding-y $kanban-board-padding-right 0 $kanban-board-padding-x;
+  padding: $kanban-board-padding-y $kanban-board-padding-x 0 $kanban-board-padding-x;
+}
+
+.dragOverlay {
+  opacity: 0.9;
+  transform: rotate(2deg);
+}
+
+.dragCard {
+  background-color: $kanban-card-bg;
+  border: 1px solid $kanban-card-border-color;
+  border-radius: $kanban-card-border-radius;
+  padding: $spacing-3;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.dragCardTitle {
+  margin: 0 0 $spacing-1 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $kanban-text-primary;
+}
+
+.dragCardDescription {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $kanban-text-secondary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

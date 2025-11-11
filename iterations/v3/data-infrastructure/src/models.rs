@@ -104,6 +104,8 @@ pub struct Task {
     pub status: String,
     pub assigned_worker_id: Option<Uuid>,
     #[schemars(with = "String")]
+    pub project_id: Option<Uuid>,
+    #[schemars(with = "String")]
 
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
@@ -387,6 +389,7 @@ pub struct CreateTask {
     pub acceptance_criteria: serde_json::Value,
     pub context: serde_json::Value,
     pub caws_spec: Option<serde_json::Value>,
+    pub project_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -556,6 +559,7 @@ pub struct UpdateTask {
     pub caws_spec: Option<serde_json::Value>,
     pub status: Option<String>,
     pub assigned_worker_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
     pub completed_at: Option<DateTime<Utc>>,
     pub priority: Option<i32>,
     pub deadline: Option<DateTime<Utc>>,

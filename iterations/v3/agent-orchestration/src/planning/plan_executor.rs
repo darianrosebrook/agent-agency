@@ -138,6 +138,9 @@ pub struct PlanExecutor {
 
     /// Execution configuration
     config: ExecutionConfig,
+
+    /// Coordination trace for observability
+    coordination_trace: Arc<tokio::sync::RwLock<crate::planning::plan_types::CoordinationTrace>>,
 }
 
 impl std::fmt::Debug for PlanExecutor {
@@ -501,6 +504,7 @@ impl PlanExecutor {
         clock: Arc<dyn crate::evaluation::determinism::Clock>,
         rng_source: Arc<crate::evaluation::determinism::ThreadSafeRngSource>,
     ) -> Self {
+        let plan_id = plan.contract_plan.id;
         Self {
             plan,
             worker_pool,
@@ -520,6 +524,9 @@ impl PlanExecutor {
             clock,
             rng_source,
             config,
+            coordination_trace: Arc::new(tokio::sync::RwLock::new(
+                crate::planning::plan_types::CoordinationTrace::new(plan_id)
+            )),
         }
     }
 
@@ -540,6 +547,7 @@ impl PlanExecutor {
         worktree_manager: Option<Arc<WorktreeManager>>,
         config: ExecutionConfig,
     ) -> Self {
+        let plan_id = plan.contract_plan.id;
         Self {
             plan,
             worker_pool,
@@ -557,6 +565,9 @@ impl PlanExecutor {
             parallel_limit: Arc::new(Semaphore::new(config.max_parallel_milestones.max(1))),
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             config,
+            coordination_trace: Arc::new(tokio::sync::RwLock::new(
+                crate::planning::plan_types::CoordinationTrace::new(plan_id)
+            )),
         }
     }
 
@@ -640,39 +651,20 @@ impl PlanExecutor {
                 audit_manager.record_coordination_event(event.clone()).await?;
             }
 
-            // TODO: Implement dedicated coordination trace
-            //       Currently records as part of broader trace; should implement dedicated coordination trace for better observability.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Create dedicated coordination trace structure
-            // [ ] Record coordination events in dedicated trace
-            // [ ] Support coordination trace querying
-            // [ ] Add coordination trace visualization
-            // [ ] Handle trace storage and retrieval
-            // [ ] Add unit tests for coordination trace
-            // [ ] Add integration tests with coordination events
-            // [ ] Verify coordination trace accuracy
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Coordination events are recorded in dedicated trace
-            // - Trace is queryable and searchable
-            // - Trace visualization works correctly
-            // - Trace storage and retrieval are efficient
-            //
-            // DEPENDENCIES:
-            // - Trace infrastructure (Required)
-            // - Coordination event structure (Required)
-            // - Trace query utilities (Required)
-            //
-            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (observability enhancement)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Observability and tracing expertise
-            info!("Coordination event: {:?}", event.event_type); // Temporary: basic logging until dedicated trace is implemented
+            // Record coordination event in dedicated trace
+            {
+                let mut trace = self.coordination_trace.write().await;
+                trace.add_event(event.clone());
+            }
+
+            // Log coordination event for observability
+            tracing::debug!(
+                plan_id = %self.plan.contract_plan.id,
+                event_type = ?event.event_type,
+                milestone_id = ?event.milestone_id,
+                worker_id = ?event.worker_id,
+                "Recorded coordination event in dedicated trace"
+            );
         }
         Ok(())
     }
@@ -861,7 +853,7 @@ impl PlanExecutor {
             performance_metrics: self.calculate_performance_metrics(&plan, total_ms),
         };
 
-        let timeline = self.build_execution_timeline(&plan);
+        let timeline = self.build_execution_timeline(&plan).await;
 
         // Log plan completion
         self.audit(
@@ -1396,91 +1388,302 @@ impl PlanExecutor {
         seq_ms.saturating_sub(par_ms)
     }
 
-    /// Calculate resource utilization
-    async fn calculate_resource_utilization(&self, _plan: &ExecutionPlan) -> ResourceUtilization {
-        // TODO: Analyze actual resource usage from execution plan
-        //       Currently returns zero values; should analyze actual resource usage from plan execution history and metrics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Query execution history for resource metrics
-        // [ ] Calculate CPU utilization from execution data
-        // [ ] Calculate memory usage from execution data
-        // [ ] Calculate disk and network usage
-        // [ ] Support GPU utilization if applicable
-        // [ ] Add unit tests for resource calculation
-        // [ ] Add integration tests with real execution plans
-        // [ ] Verify resource calculation accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Resource utilization is calculated from actual execution data
-        // - CPU, memory, disk, and network metrics are accurate
-        // - GPU utilization is supported if applicable
-        // - Resource calculations reflect actual usage
-        //
-        // DEPENDENCIES:
-        // - Execution history storage (Required)
-        // - Resource metrics collection (Required)
-        // - Resource calculation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (monitoring feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Resource monitoring expertise
-        ResourceUtilization { // Temporary: zero values until actual resource analysis is implemented
-            cpu_percent: 0.0,
-            memory_mb: 0.0,
-            disk_mb: 0.0,
-            network_mbps: 0.0,
-            gpu_percent: None,
+    /// Calculate resource utilization from execution plan structure
+    async fn calculate_resource_utilization(&self, plan: &ExecutionPlan) -> ResourceUtilization {
+        let batches = &plan.execution_context.parallel_batches;
+        
+        // Handle edge case: no batches
+        if batches.is_empty() {
+            return ResourceUtilization {
+                cpu_percent: 0.0,
+                memory_mb: 0.0,
+                disk_mb: 0.0,
+                network_mbps: 0.0,
+                gpu_percent: None,
+                measured_at: chrono::Utc::now(),
+                associated_with: None,
+            };
+        }
+
+        // Aggregate resource requirements from all batches
+        let mut total_cpu_cores = 0usize;
+        let mut peak_memory_mb = 0usize;
+        let mut total_disk_mb = 0usize;
+        let mut peak_network_mbps = 0.0f64;
+        let mut total_execution_time_ms = 0u64;
+        let mut batches_with_timestamps = 0usize;
+
+        for batch in batches {
+            let req = &batch.resource_requirements;
+            
+            // Sum resource requirements (assuming parallel execution uses max resources)
+            total_cpu_cores = total_cpu_cores.max(req.total_cpu_cores);
+            peak_memory_mb = peak_memory_mb.max(req.peak_memory_mb);
+            total_disk_mb += req.total_disk_mb;
+            peak_network_mbps = peak_network_mbps.max(req.network_requirements.peak_bandwidth_mbps);
+            
+            // Calculate execution time if timestamps available
+            if let (Some(start), Some(end)) = (batch.started_at, batch.completed_at) {
+                let duration_ms = end.signed_duration_since(start).num_milliseconds().max(0) as u64;
+                total_execution_time_ms += duration_ms;
+                batches_with_timestamps += 1;
+            }
+        }
+
+        // Calculate average resource utilization over execution time
+        // For CPU: assume 100% utilization during execution, calculate percentage of total time
+        // For memory/disk: use peak values
+        // For network: use peak bandwidth
+        
+        // Estimate CPU utilization percentage
+        // This is a simplified model based on resource requirements
+        // In a real implementation, this would query actual CPU usage metrics
+        // For now, we estimate based on:
+        // - Number of CPU cores requested (more cores = higher utilization)
+        // - Number of parallel batches (more parallelism = higher utilization)
+        // - Execution duration (longer execution = sustained utilization)
+        let cpu_percent = if batches_with_timestamps > 0 && total_execution_time_ms > 0 {
+            // Calculate estimated CPU utilization based on parallel execution
+            // Assume each CPU core contributes ~25% utilization per batch
+            // Scale by parallel factor (more batches = higher utilization)
+            let parallel_factor = (batches.len() as f64 / 4.0).min(1.0); // Normalize to 0-1
+            let core_factor = (total_cpu_cores as f64 / 8.0).min(1.0); // Normalize to 0-1 (assume 8 cores available)
+            (core_factor * parallel_factor * 100.0).min(100.0)
+        } else {
+            // Fallback: estimate based on resource requirements
+            // Assume moderate utilization based on CPU cores requested
+            // Scale by number of batches (more batches = higher utilization)
+            let parallel_factor = (batches.len() as f64 / 4.0).min(1.0);
+            let core_factor = (total_cpu_cores as f64 / 8.0).min(1.0);
+            (core_factor * parallel_factor * 80.0).min(100.0) // Cap at 80% for estimates
+        };
+
+        // Memory utilization: use peak memory from batches
+        let memory_mb = peak_memory_mb as f64;
+
+        // Disk utilization: sum of all disk requirements
+        let disk_mb = total_disk_mb as f64;
+
+        // Network utilization: use peak bandwidth
+        let network_mbps = peak_network_mbps;
+
+        // GPU utilization: check if any batches require GPU (not currently tracked in ResourceRequirements)
+        // For now, return None - can be enhanced when GPU requirements are added
+        let gpu_percent = None;
+
+        // Log resource calculation for observability
+        tracing::debug!(
+            plan_id = %plan.contract_plan.id,
+            cpu_percent = %cpu_percent,
+            memory_mb = %memory_mb,
+            disk_mb = %disk_mb,
+            network_mbps = %network_mbps,
+            total_cpu_cores = total_cpu_cores,
+            batches_analyzed = batches.len(),
+            batches_with_timestamps = batches_with_timestamps,
+            "Calculated resource utilization from execution plan structure"
+        );
+
+        ResourceUtilization {
+            cpu_percent,
+            memory_mb,
+            disk_mb,
+            network_mbps,
+            gpu_percent,
             measured_at: chrono::Utc::now(),
-            associated_with: None,
+            associated_with: Some(format!("plan_{}", plan.contract_plan.id)),
         }
     }
 
-    /// Calculate quality metrics
+    /// Calculate quality metrics from execution evidence
     fn calculate_quality_metrics(&self, evidence: &ExecutionEvidence) -> QualityMetrics {
-        // TODO: Analyze actual evidence for quality metrics
-        //       Currently uses hardcoded values; should analyze actual execution evidence to calculate quality metrics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Extract test coverage data from evidence
-        // [ ] Calculate average coverage from evidence
-        // [ ] Extract mutation testing scores from evidence
-        // [ ] Calculate average mutation score
-        // [ ] Analyze linting results from evidence
-        // [ ] Add unit tests for quality metric calculation
-        // [ ] Add integration tests with real evidence
-        // [ ] Verify quality metric accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Quality metrics are calculated from actual evidence
-        // - Coverage and mutation scores are accurate
-        // - Linting results are analyzed correctly
-        // - Quality metrics reflect actual execution quality
-        //
-        // DEPENDENCIES:
-        // - Execution evidence structure (Required)
-        // - Quality metric extraction utilities (Required)
-        // - Evidence analysis utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (quality analysis feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Quality metrics expertise
-        QualityMetrics { // Temporary: hardcoded values until evidence analysis is implemented
-            avg_coverage: 0.8,
-            avg_mutation_score: 0.75,
-            security_issues_found: 0,
-            performance_regressions: 0,
-            code_quality_score: 0.8,
+        // Collect all evidence artifacts from plan and milestone evidence
+        let mut all_artifacts = Vec::new();
+        all_artifacts.extend(&evidence.plan_evidence);
+        for milestone_artifacts in evidence.milestone_evidence.values() {
+            all_artifacts.extend(milestone_artifacts);
+        }
+
+        // Extract coverage data from evidence artifacts
+        let mut coverage_values = Vec::new();
+        for artifact in &all_artifacts {
+            match artifact.artifact_type {
+                agent_agency_contracts::planning::ArtifactType::CoverageReport => {
+                    // Try to extract coverage from data field
+                    if let Some(coverage) = artifact.data.get("line_coverage")
+                        .or_else(|| artifact.data.get("coverage"))
+                        .and_then(|v| v.as_f64()) {
+                        coverage_values.push(coverage);
+                    }
+                    // Also check metadata
+                    if let Some(coverage_str) = artifact.metadata.get("line_coverage") {
+                        if let Ok(coverage) = coverage_str.parse::<f64>() {
+                            coverage_values.push(coverage);
+                        }
+                    }
+                }
+                agent_agency_contracts::planning::ArtifactType::TestResults => {
+                    // Test results may contain coverage in metadata
+                    if let Some(coverage_str) = artifact.metadata.get("coverage") {
+                        if let Ok(coverage) = coverage_str.parse::<f64>() {
+                            coverage_values.push(coverage);
+                        }
+                    }
+                    // Check data field for coverage
+                    if let Some(coverage) = artifact.data.get("coverage")
+                        .and_then(|v| v.as_f64()) {
+                        coverage_values.push(coverage);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Calculate average coverage (normalize to 0.0-1.0 range)
+        let avg_coverage = if !coverage_values.is_empty() {
+            let sum: f64 = coverage_values.iter().sum();
+            let avg = sum / coverage_values.len() as f64;
+            // Normalize: if values are in percentage (0-100), convert to 0-1
+            if avg > 1.0 {
+                avg / 100.0
+            } else {
+                avg
+            }
+        } else {
+            0.0
+        };
+
+        // Extract mutation testing scores from evidence artifacts
+        let mut mutation_scores = Vec::new();
+        for artifact in &all_artifacts {
+            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::MutationScore) {
+                // Try to extract mutation score from data field
+                if let Some(score) = artifact.data.get("mutation_score")
+                    .or_else(|| artifact.data.get("score"))
+                    .and_then(|v| v.as_f64()) {
+                    mutation_scores.push(score);
+                }
+                // Also check metadata
+                if let Some(score_str) = artifact.metadata.get("mutation_score")
+                    .or_else(|| artifact.metadata.get("score")) {
+                    if let Ok(score) = score_str.parse::<f64>() {
+                        mutation_scores.push(score);
+                    }
+                }
+            }
+        }
+
+        // Calculate average mutation score (normalize to 0.0-1.0 range)
+        let avg_mutation_score = if !mutation_scores.is_empty() {
+            let sum: f64 = mutation_scores.iter().sum();
+            let avg = sum / mutation_scores.len() as f64;
+            // Normalize: if values are in percentage (0-100), convert to 0-1
+            if avg > 1.0 {
+                avg / 100.0
+            } else {
+                avg
+            }
+        } else {
+            0.0
+        };
+
+        // Count security issues from security scan artifacts
+        let mut security_issues_found = 0usize;
+        for artifact in &all_artifacts {
+            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::SecurityScan) {
+                // Try to extract issue count from data field
+                if let Some(count) = artifact.data.get("issues")
+                    .or_else(|| artifact.data.get("vulnerabilities"))
+                    .or_else(|| artifact.data.get("security_issues"))
+                    .and_then(|v| v.as_u64()) {
+                    security_issues_found += count as usize;
+                }
+                // Also check metadata
+                if let Some(count_str) = artifact.metadata.get("issues")
+                    .or_else(|| artifact.metadata.get("vulnerabilities")) {
+                    if let Ok(count) = count_str.parse::<usize>() {
+                        security_issues_found += count;
+                    }
+                }
+            }
+        }
+
+        // Count performance regressions from performance test artifacts
+        let mut performance_regressions = 0usize;
+        for artifact in &all_artifacts {
+            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::PerformanceMetrics) {
+                // Try to extract regression count from data field
+                if let Some(count) = artifact.data.get("regressions")
+                    .or_else(|| artifact.data.get("performance_regressions"))
+                    .and_then(|v| v.as_u64()) {
+                    performance_regressions += count as usize;
+                }
+                // Also check metadata
+                if let Some(count_str) = artifact.metadata.get("regressions") {
+                    if let Ok(count) = count_str.parse::<usize>() {
+                        performance_regressions += count;
+                    }
+                }
+            }
+        }
+
+        // Calculate code quality score from linting results
+        // Code quality is inversely proportional to linting errors
+        let mut code_quality_score = 1.0f64;
+        let mut total_lint_issues = 0usize;
+        let mut lint_errors = 0usize;
+        
+        for artifact in &all_artifacts {
+            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::CodeQuality) {
+                // Try to extract linting issues from data field
+                if let Some(issues) = artifact.data.get("total_issues")
+                    .or_else(|| artifact.data.get("issues"))
+                    .and_then(|v| v.as_u64()) {
+                    total_lint_issues += issues as usize;
+                }
+                if let Some(errors) = artifact.data.get("errors")
+                    .and_then(|v| v.as_u64()) {
+                    lint_errors += errors as usize;
+                }
+                // Also check metadata
+                if let Some(issues_str) = artifact.metadata.get("total_issues") {
+                    if let Ok(issues) = issues_str.parse::<usize>() {
+                        total_lint_issues += issues;
+                    }
+                }
+                if let Some(errors_str) = artifact.metadata.get("errors") {
+                    if let Ok(errors) = errors_str.parse::<usize>() {
+                        lint_errors += errors;
+                    }
+                }
+            }
+        }
+
+        // Calculate code quality score: 1.0 for no issues, decreasing with more issues
+        // Penalize errors more heavily than warnings
+        if total_lint_issues > 0 {
+            let error_penalty = (lint_errors as f64 / total_lint_issues.max(1) as f64) * 0.5;
+            let issue_penalty = (total_lint_issues as f64 / 100.0).min(0.5); // Cap at 50% penalty
+            code_quality_score = (1.0 - error_penalty - issue_penalty).max(0.0);
+        }
+
+        // Log quality metrics calculation for observability
+        tracing::debug!(
+            avg_coverage = %avg_coverage,
+            avg_mutation_score = %avg_mutation_score,
+            security_issues = security_issues_found,
+            performance_regressions = performance_regressions,
+            code_quality_score = %code_quality_score,
+            artifacts_analyzed = all_artifacts.len(),
+            "Calculated quality metrics from execution evidence"
+        );
+
+        QualityMetrics {
+            avg_coverage,
+            avg_mutation_score,
+            security_issues_found,
+            performance_regressions,
+            code_quality_score,
         }
     }
 
@@ -1604,36 +1807,189 @@ impl PlanExecutor {
         }
     }
 
-    /// Build execution timeline
-    fn build_execution_timeline(&self, plan: &ExecutionPlan) -> Vec<agent_agency_contracts::planning::ExecutionEvent> {
-        plan.execution_context.parallel_batches.iter().flat_map(|b| {
-            let mut v = Vec::new();
-            if let Some(s) = b.started_at {
-                v.push(agent_agency_contracts::planning::ExecutionEvent {
+    /// Build execution timeline with batch and milestone-level events
+    async fn build_execution_timeline(&self, plan: &ExecutionPlan) -> Vec<agent_agency_contracts::planning::ExecutionEvent> {
+        let mut events = Vec::new();
+
+        // Add batch-level events
+        for batch in &plan.execution_context.parallel_batches {
+            if let Some(start) = batch.started_at {
+                events.push(agent_agency_contracts::planning::ExecutionEvent {
                     event_type: ExecutionEventType::BatchStarted,
-                    timestamp: s,
+                    timestamp: start,
                     milestone_id: None,
-                    description: format!("Batch {} started execution", b.batch_index),
+                    description: format!("Batch {} started execution", batch.batch_index),
                     metadata: HashMap::from([
-                        ("batch_index".into(), b.batch_index.into()),
-                        ("milestone_count".into(), b.milestone_ids.len().into()),
+                        ("batch_index".into(), batch.batch_index.into()),
+                        ("milestone_count".into(), batch.milestone_ids.len().into()),
                     ]),
                 });
             }
-            if let Some(e) = b.completed_at {
-                v.push(agent_agency_contracts::planning::ExecutionEvent {
-                    event_type: ExecutionEventType::MilestoneCompleted,
-                    timestamp: e,
+            if let Some(end) = batch.completed_at {
+                events.push(agent_agency_contracts::planning::ExecutionEvent {
+                    event_type: ExecutionEventType::BatchCompleted,
+                    timestamp: end,
                     milestone_id: None,
-                    description: format!("Batch {} completed execution", b.batch_index),
+                    description: format!("Batch {} completed execution", batch.batch_index),
                     metadata: HashMap::from([
-                        ("batch_index".into(), b.batch_index.into()),
-                        ("status".into(), format!("{:?}", b.status).into()),
+                        ("batch_index".into(), batch.batch_index.into()),
+                        ("status".into(), format!("{:?}", batch.status).into()),
                     ]),
                 });
             }
-            v
-        }).collect()
+        }
+
+        // Add milestone-level events from milestone metrics and state
+        for milestone in &plan.contract_plan.milestones {
+            // Extract milestone events from metrics if available
+            if let Some(ref metrics) = milestone.metrics {
+                for execution_event in &metrics.execution_events {
+                    // Convert milestone execution events to timeline events
+                    events.push(agent_agency_contracts::planning::ExecutionEvent {
+                        event_type: match execution_event.event_type.as_str() {
+                            "MilestoneStarted" => ExecutionEventType::MilestoneStarted,
+                            "MilestoneCompleted" => ExecutionEventType::MilestoneCompleted,
+                            "MilestoneFailed" => ExecutionEventType::MilestoneFailed,
+                            "WorkerAssigned" => ExecutionEventType::WorkerAssigned,
+                            "EvidenceCollected" => ExecutionEventType::EvidenceCollected,
+                            _ => ExecutionEventType::Custom(execution_event.event_type.clone()),
+                        },
+                        timestamp: execution_event.timestamp,
+                        milestone_id: Some(milestone.id.clone()),
+                        description: execution_event.details.get("description")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&milestone.objective)
+                            .to_string(),
+                        metadata: execution_event.details.clone(),
+                    });
+                }
+            }
+
+            // Add milestone state-based events if metrics don't have them
+            // Check milestone state to infer events
+            match &milestone.state {
+                agent_agency_contracts::planning_io::MilestoneState::Completed => {
+                    // Only add if we don't already have a completion event from metrics
+                    let has_completion_event = milestone.metrics.as_ref()
+                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneCompleted"))
+                        .unwrap_or(false);
+                    
+                    if !has_completion_event {
+                        // Try to infer completion timestamp from metrics execution_time_ms
+                        if let Some(ref metrics) = milestone.metrics {
+                            // Estimate completion time (simplified - would need actual start time)
+                            let estimated_completion = Utc::now(); // Fallback to now
+                            events.push(agent_agency_contracts::planning::ExecutionEvent {
+                                event_type: ExecutionEventType::MilestoneCompleted,
+                                timestamp: estimated_completion,
+                                milestone_id: Some(milestone.id.clone()),
+                                description: format!("Milestone '{}' completed", milestone.objective),
+                                metadata: HashMap::from([
+                                    ("execution_time_ms".into(), metrics.execution_time_ms.into()),
+                                    ("objective".into(), milestone.objective.clone().into()),
+                                ]),
+                            });
+                        }
+                    }
+                }
+                agent_agency_contracts::planning_io::MilestoneState::Failed { reason } => {
+                    // Only add if we don't already have a failure event from metrics
+                    let has_failure_event = milestone.metrics.as_ref()
+                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneFailed"))
+                        .unwrap_or(false);
+                    
+                    if !has_failure_event {
+                        events.push(agent_agency_contracts::planning::ExecutionEvent {
+                            event_type: ExecutionEventType::MilestoneFailed,
+                            timestamp: Utc::now(), // Fallback timestamp
+                            milestone_id: Some(milestone.id.clone()),
+                            description: format!("Milestone '{}' failed: {}", milestone.objective, reason),
+                            metadata: HashMap::from([
+                                ("reason".into(), reason.clone().into()),
+                                ("objective".into(), milestone.objective.clone().into()),
+                            ]),
+                        });
+                    }
+                }
+                agent_agency_contracts::planning_io::MilestoneState::InProgress => {
+                    // Add milestone started event if not already present
+                    let has_start_event = milestone.metrics.as_ref()
+                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneStarted"))
+                        .unwrap_or(false);
+                    
+                    if !has_start_event {
+                        events.push(agent_agency_contracts::planning::ExecutionEvent {
+                            event_type: ExecutionEventType::MilestoneStarted,
+                            timestamp: Utc::now(), // Fallback timestamp
+                            milestone_id: Some(milestone.id.clone()),
+                            description: format!("Milestone '{}' started", milestone.objective),
+                            metadata: HashMap::from([
+                                ("objective".into(), milestone.objective.clone().into()),
+                                ("priority".into(), format!("{:?}", milestone.priority).into()),
+                            ]),
+                        });
+                    }
+                }
+                _ => {} // Other states don't need timeline events
+            }
+        }
+
+        // Add coordination trace events for additional milestone-level detail
+        let coordination_trace = self.coordination_trace.read().await;
+        for coord_event in &coordination_trace.events {
+            // Convert coordination events to timeline events where appropriate
+            match coord_event.event_type {
+                crate::chain_of_thought::CoordinationEventType::MilestoneStarted => {
+                    if let Some(ref milestone_id) = coord_event.milestone_id {
+                        events.push(agent_agency_contracts::planning::ExecutionEvent {
+                            event_type: ExecutionEventType::MilestoneStarted,
+                            timestamp: coord_event.timestamp,
+                            milestone_id: Some(milestone_id.clone()),
+                            description: format!("Milestone {} coordination started", milestone_id),
+                            metadata: coord_event.details.clone(),
+                        });
+                    }
+                }
+                crate::chain_of_thought::CoordinationEventType::MilestoneCompleted => {
+                    if let Some(ref milestone_id) = coord_event.milestone_id {
+                        events.push(agent_agency_contracts::planning::ExecutionEvent {
+                            event_type: ExecutionEventType::MilestoneCompleted,
+                            timestamp: coord_event.timestamp,
+                            milestone_id: Some(milestone_id.clone()),
+                            description: format!("Milestone {} coordination completed", milestone_id),
+                            metadata: coord_event.details.clone(),
+                        });
+                    }
+                }
+                crate::chain_of_thought::CoordinationEventType::WorkerAssigned => {
+                    if let Some(ref milestone_id) = coord_event.milestone_id {
+                        events.push(agent_agency_contracts::planning::ExecutionEvent {
+                            event_type: ExecutionEventType::WorkerAssigned,
+                            timestamp: coord_event.timestamp,
+                            milestone_id: Some(milestone_id.clone()),
+                            description: format!("Worker assigned to milestone {}", milestone_id),
+                            metadata: coord_event.details.clone(),
+                        });
+                    }
+                }
+                _ => {} // Other coordination events don't map directly to timeline events
+            }
+        }
+        drop(coordination_trace);
+
+        // Sort events chronologically
+        events.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+
+        // Log timeline building for observability
+        tracing::debug!(
+            plan_id = %plan.contract_plan.id,
+            total_events = events.len(),
+            batch_events = plan.execution_context.parallel_batches.len() * 2, // start + complete per batch
+            milestone_count = plan.contract_plan.milestones.len(),
+            "Built execution timeline with batch and milestone-level events"
+        );
+
+        events
     }
 
     /// Clone executor for parallel execution
@@ -1691,7 +2047,19 @@ impl PlanExecutor {
             #[cfg(feature = "evaluation")]
             rng_source: self.rng_source.clone(),
             config: self.config.clone(),
+            coordination_trace: self.coordination_trace.clone(),
         })
+    }
+
+    /// Get coordination trace for observability
+    pub async fn get_coordination_trace(&self) -> crate::planning::plan_types::CoordinationTrace {
+        self.coordination_trace.read().await.clone()
+    }
+
+    /// Get coordination trace statistics
+    pub async fn get_coordination_trace_statistics(&self) -> crate::planning::plan_types::CoordinationTraceStatistics {
+        let trace = self.coordination_trace.read().await;
+        trace.get_statistics()
     }
 }
 

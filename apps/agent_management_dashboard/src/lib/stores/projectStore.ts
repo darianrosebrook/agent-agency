@@ -34,6 +34,7 @@ import {
   createProject as createProjectApiClient,
   listProjects as listProjectsApiClient,
   getProjectHandler,
+  deleteProject as deleteProjectApiClient,
 } from "../api/projects";
 
 interface ProjectState {
@@ -54,6 +55,7 @@ interface ProjectState {
   createProject: (data: CreateProjectRequest) => string;
   selectProject: (projectId: string) => void;
   clearCurrentProject: () => void;
+  deleteProject: (projectId: string) => Promise<void>;
   addTask: (projectId: string, task: CreateTaskRequest) => void;
   updateTask: (
     projectId: string,
@@ -187,6 +189,31 @@ export const useProjectStore = create<ProjectState>()(
 
           clearCurrentProject: () => {
             set({ currentProjectId: null });
+          },
+
+          deleteProject: async (projectId: string) => {
+            set({ isLoading: true, error: null });
+
+            try {
+              await deleteProjectApiClient(projectId);
+
+              // Remove project from state
+              set((state) => ({
+                projects: state.projects.filter((p) => p.id !== projectId),
+                currentProjectId:
+                  state.currentProjectId === projectId
+                    ? null
+                    : state.currentProjectId,
+                isLoading: false,
+              }));
+
+              toastSuccess("Project deleted successfully");
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              toastError(error);
+              throw appError;
+            }
           },
 
           addTask: (projectId: string, task: CreateTaskRequest) => {
@@ -651,6 +678,31 @@ export const useProjectStore = create<ProjectState>()(
 
         clearCurrentProject: () => {
           set({ currentProjectId: null });
+        },
+
+        deleteProject: async (projectId: string) => {
+          set({ isLoading: true, error: null });
+
+          try {
+            await deleteProjectApiClient(projectId);
+
+            // Remove project from state
+            set((state) => ({
+              projects: state.projects.filter((p) => p.id !== projectId),
+              currentProjectId:
+                state.currentProjectId === projectId
+                  ? null
+                  : state.currentProjectId,
+              isLoading: false,
+            }));
+
+            toastSuccess("Project deleted successfully");
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            toastError(error);
+            throw appError;
+          }
         },
 
         addTask: (projectId: string, task: CreateTaskRequest) => {

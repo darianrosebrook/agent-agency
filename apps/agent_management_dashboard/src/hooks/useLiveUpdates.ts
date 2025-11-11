@@ -29,6 +29,12 @@ export function useLiveUpdates({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastOverviewRef = useRef<string | null>(null);
 
+  // Store onUpdate in a ref to avoid recreating the effect
+  const onUpdateRef = useRef(onUpdate);
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
+
   useEffect(() => {
     if (!enabled || !projectId) {
       if (intervalRef.current) {
@@ -51,8 +57,11 @@ export function useLiveUpdates({
           setHasUpdates(true);
           setLastUpdated(new Date());
 
-          if (onUpdate && currentOverview !== lastOverviewRef.current) {
-            onUpdate(currentOverview);
+          if (
+            onUpdateRef.current &&
+            currentOverview !== lastOverviewRef.current
+          ) {
+            onUpdateRef.current(currentOverview);
           }
 
           lastOverviewRef.current = currentOverview;
@@ -75,7 +84,7 @@ export function useLiveUpdates({
       }
       setIsPolling(false);
     };
-  }, [projectId, enabled, pollInterval, onUpdate]);
+  }, [projectId, enabled, pollInterval]);
 
   /**
    * Acknowledge updates (clear the hasUpdates flag)

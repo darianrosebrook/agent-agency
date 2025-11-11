@@ -18,6 +18,7 @@ use agent_orchestration::planning::data_infrastructure_types::{
     CreateAuditTrailEntry, CreatePlanningSession, UpdatePlanningSession,
     CreatePlanningTelemetry, CreatePlanningAuditEvent,
     CreateJudge, CreateJudgeEvaluation, CreateWaiver, UpdateWaiver,
+    CreateExecutionResult,
     models,
 };
 use data_infrastructure::DatabaseClient;
@@ -1455,6 +1456,82 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             expires_at: db_waiver_expires_at,
             metadata: metadata_map,
         })
+    }
+
+    async fn create_execution_result(&self, result: CreateExecutionResult) -> Result<models::PlanExecutionResult> {
+        let pool = self.db_client.pool();
+        let now = Utc::now();
+        
+        // Insert or update execution result (using ON CONFLICT for upsert)
+        sqlx::query(
+            r#"
+            INSERT INTO plan_execution_results (
+                plan_id, success, milestones_completed, total_duration_ms,
+                evidence, metrics, final_state, timeline, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (plan_id) DO UPDATE SET
+                success = EXCLUDED.success,
+                milestones_completed = EXCLUDED.milestones_completed,
+                total_duration_ms = EXCLUDED.total_duration_ms,
+                evidence = EXCLUDED.evidence,
+                metrics = EXCLUDED.metrics,
+                final_state = EXCLUDED.final_state,
+                timeline = EXCLUDED.timeline,
+                updated_at = EXCLUDED.updated_at
+            "#
+        )
+        .bind(result.plan_id)
+        .bind(result.success)
+        .bind(result.milestones_completed as i32)
+        .bind(result.total_duration_ms as i64)
+        .bind(&result.evidence)
+        .bind(&result.metrics)
+        .bind(&result.final_state)
+        .bind(&result.timeline)
+        .bind(now)
+        .bind(now)
+        .execute(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to persist execution result: {}", e))?;
+        
+        info!("Persisted execution result for plan {} to database", result.plan_id);
+        
+        // Fetch the persisted result
+        self.get_execution_result(result.plan_id).await?
+            .ok_or_else(|| anyhow!("Failed to retrieve persisted execution result"))
+    }
+
+    async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<models::PlanExecutionResult>> {
+        let pool = self.db_client.pool();
+        
+        // Query execution result from database
+        let row = sqlx::query(
+            r#"
+            SELECT plan_id, success, milestones_completed, total_duration_ms,
+                   evidence, metrics, final_state, timeline, created_at, updated_at
+            FROM plan_execution_results
+            WHERE plan_id = $1
+            "#,
+        )
+        .bind(plan_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query execution result: {}", e))?;
+        
+        Ok(row.map(|r: sqlx::postgres::PgRow| {
+            models::PlanExecutionResult {
+                plan_id: r.get("plan_id"),
+                success: r.get("success"),
+                milestones_completed: r.get("milestones_completed"),
+                total_duration_ms: r.get("total_duration_ms"),
+                evidence: r.try_get::<serde_json::Value, _>("evidence").unwrap_or_else(|_| serde_json::json!({})),
+                metrics: r.try_get::<serde_json::Value, _>("metrics").unwrap_or_else(|_| serde_json::json!({})),
+                final_state: r.get("final_state"),
+                timeline: r.try_get::<serde_json::Value, _>("timeline").unwrap_or_else(|_| serde_json::json!([])),
+                created_at: r.get("created_at"),
+                updated_at: r.get("updated_at"),
+            }
+        }))
     }
 }
 

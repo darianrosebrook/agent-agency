@@ -497,9 +497,9 @@ impl DatabaseOperations for DatabaseClient {
             r#"
             INSERT INTO tasks (
                 id, title, description, risk_tier, scope, acceptance_criteria,
-                context, caws_spec, status, assigned_worker_id, priority, 
+                context, caws_spec, status, assigned_worker_id, project_id, priority, 
                 deadline, metadata, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             "#
         )
         .bind(id)
@@ -512,6 +512,7 @@ impl DatabaseOperations for DatabaseClient {
         .bind(&task.caws_spec)
         .bind(&task.status)
         .bind(&task.assigned_worker_id)
+        .bind(&task.project_id)
         .bind(&task.priority)
         .bind(&task.deadline)
         .bind(&task.metadata)
@@ -531,6 +532,7 @@ impl DatabaseOperations for DatabaseClient {
             caws_spec: task.caws_spec,
             status: task.status,
             assigned_worker_id: task.assigned_worker_id,
+            project_id: task.project_id,
             priority: task.priority,
             deadline: task.deadline,
             metadata: task.metadata,
@@ -544,8 +546,8 @@ impl DatabaseOperations for DatabaseClient {
         let row = sqlx::query_as::<_, Task>(
             r#"
             SELECT id, title, description, risk_tier, scope, acceptance_criteria,
-                   context, caws_spec, status, assigned_worker_id, priority,
-                   deadline, metadata, created_at, updated_at
+                   context, caws_spec, status, assigned_worker_id, project_id, priority,
+                   deadline, metadata, created_at, updated_at, completed_at
             FROM tasks
             WHERE id = $1
             "#
@@ -561,7 +563,7 @@ impl DatabaseOperations for DatabaseClient {
         let rows = sqlx::query_as::<_, Task>(
             r#"
             SELECT id, title, description, risk_tier, scope, acceptance_criteria,
-                   context, caws_spec, status, assigned_worker_id, priority,
+                   context, caws_spec, status, assigned_worker_id, project_id, priority,
                    deadline, metadata, created_at, updated_at, completed_at
             FROM tasks
             ORDER BY created_at DESC
@@ -592,14 +594,15 @@ impl DatabaseOperations for DatabaseClient {
                 caws_spec = $7,
                 status = $8,
                 assigned_worker_id = $9,
-                priority = $10,
-                deadline = $11,
-                metadata = $12,
-                completed_at = $13,
-                updated_at = $14
-            WHERE id = $15
+                project_id = $10,
+                priority = $11,
+                deadline = $12,
+                metadata = $13,
+                completed_at = $14,
+                updated_at = $15
+            WHERE id = $16
             RETURNING id, title, description, risk_tier, scope, acceptance_criteria,
-                     context, caws_spec, status, assigned_worker_id, priority,
+                     context, caws_spec, status, assigned_worker_id, project_id, priority,
                      deadline, metadata, created_at, updated_at, completed_at
             "#
         )
@@ -612,6 +615,7 @@ impl DatabaseOperations for DatabaseClient {
         .bind(update.caws_spec.as_ref().or(current.caws_spec.as_ref()))
         .bind(update.status.as_ref().unwrap_or(&current.status))
         .bind(update.assigned_worker_id.or(current.assigned_worker_id))
+        .bind(update.project_id.or(current.project_id))
         .bind(update.priority.or(current.priority))
         .bind(update.deadline.or(current.deadline))
         .bind(update.metadata.as_ref().or(current.metadata.as_ref()))
