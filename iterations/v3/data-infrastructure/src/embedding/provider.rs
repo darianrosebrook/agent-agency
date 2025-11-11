@@ -17,23 +17,68 @@ use std::sync::Arc;
 use std::ffi::CString;
 
 // External C functions for Core ML bridge
+#[cfg(target_os = "macos")]
 extern "C" {
-    fn agentbridge_run_inference(
-        model_ref: u64,
-        input_name: *const std::ffi::c_char,
-        input_data: *const f32,
-        input_shape: *const i32,
-        input_shape_len: i32,
-        out_output_data: *mut *mut f32,
-        out_output_shape: *mut *mut i32,
-        out_output_shape_len: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+    // Model management functions (matching Swift bridge API)
+    fn agentbridge_model_create(
+        model_path: *const std::ffi::c_char,
+        config_json: *const std::ffi::c_char,
+        out_model_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
+    fn agentbridge_model_destroy(model_ref: u64) -> i32;
+
+    // Provider-based inference (matching Swift bridge API)
+    fn agentbridge_model_run_inference(
+        model_ref: u64,
+        input_provider_ref: u64,
+        out_output_provider_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    // Provider management
+    fn agentbridge_dict_provider_create(
+        out_provider_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_dict_provider_destroy(provider_ref: u64) -> i32;
+
+    fn agentbridge_provider_destroy(provider_ref: u64) -> i32;
+
+    // Array management
+    fn agentbridge_array_create_float32(
+        data: *const f32,
+        data_len: i32,
+        shape: *const i32,
+        shape_len: i32,
+        out_array_ref: *mut u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_array_destroy(array_ref: u64) -> i32;
+
+    fn agentbridge_dict_provider_set_feature_multiarray(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        array_ref: u64,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    fn agentbridge_provider_get_feature_float32(
+        provider_ref: u64,
+        name: *const std::ffi::c_char,
+        out_data: *mut *mut f32,
+        out_shape: *mut *mut i32,
+        out_shape_len: *mut i32,
+        out_data_len: *mut i32,
+        out_error: *mut *mut std::ffi::c_char,
+    ) -> i32;
+
+    // Memory management
     fn agentbridge_free_string(ptr: *mut std::ffi::c_char);
     fn agentbridge_free_array_data(ptr: *mut f32);
-    fn agentbridge_load_model(model_path: *const std::ffi::c_char) -> u64;
-    fn agentbridge_unload_model(model_ref: u64);
 }
 
 // CLIP model imports - temporarily disabled due to version conflicts
@@ -123,19 +168,50 @@ impl CoreMLEmbeddingProvider {
             warn!("CoreML embeddings only available on Apple Silicon - falling back to CPU");
         }
 
-        // Load model via CoreML bridge
+        // Load model via CoreML bridge using agentbridge_model_create
         let model_path_str = model_path.to_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid model path encoding"))?;
         
         let c_path = CString::new(model_path_str)
             .map_err(|e| anyhow::anyhow!("Failed to create C string: {}", e))?;
         
-        let model_ref = unsafe {
-            agentbridge_load_model(c_path.as_ptr())
+        // Create config JSON for ANE acceleration if available
+        let config_json = if ane_available {
+            r#"{"computeUnits": "cpuAndNeuralEngine"}"#
+        } else {
+            r#"{"computeUnits": "all"}"#
+        };
+        let config_json_cstr = CString::new(config_json)
+            .map_err(|e| anyhow::anyhow!("Failed to create config JSON: {}", e))?;
+        
+        let mut model_ref: u64 = 0;
+        let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+        
+        let create_result = unsafe {
+            agentbridge_model_create(
+                c_path.as_ptr(),
+                config_json_cstr.as_ptr(),
+                &mut model_ref,
+                &mut error_ptr,
+            )
         };
 
+        if create_result != 0 {
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let cstr = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = cstr.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error creating model".to_string()
+            };
+            return Err(anyhow::anyhow!("Failed to create CoreML embedding model from {}: {}", model_path_str, error_msg));
+        }
+
         if model_ref == 0 {
-            return Err(anyhow::anyhow!("Failed to load CoreML embedding model from {}", model_path_str));
+            return Err(anyhow::anyhow!("Model creation returned null reference"));
         }
 
         info!("✅ Loaded CoreML embedding model: {} (ANE={})", model_name, ane_available);
@@ -160,7 +236,8 @@ impl CoreMLEmbeddingProvider {
         Self::new(model_path, "embeddinggemma".to_string(), 768, tokenizer, Some(512)).await
     }
 
-    /// Run CoreML inference for a single text
+    /// Run CoreML inference for a single text using provider-based API
+    #[cfg(target_os = "macos")]
     async fn run_coreml_inference(&self, text: &str) -> Result<Vec<f32>> {
         // Tokenize text
         let tokens = self.tokenizer.encode(text).await?;
@@ -176,32 +253,107 @@ impl CoreMLEmbeddingProvider {
         let input_data: Vec<f32> = tokens.iter().map(|&t| t as f32).collect();
         let input_shape = vec![1, tokens.len() as i32]; // Batch size 1, sequence length
 
-        // Prepare output buffers
-        let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
-        let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
-        let mut output_shape_len: i32 = 0;
+        // Create input provider
+        let mut input_provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+        
+        let provider_status = unsafe {
+            agentbridge_dict_provider_create(&mut input_provider_ref, &mut error_ptr)
+        };
+        
+        if provider_status != 0 {
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let c_str = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = c_str.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error creating input provider".to_string()
+            };
+            return Err(anyhow::anyhow!("Failed to create input provider: {}", error_msg));
+        }
 
-        // Create input name C string
-        let input_name = CString::new("input_ids")
-            .map_err(|e| anyhow::anyhow!("Failed to create input name: {}", e))?;
-
-        // Run inference via CoreML bridge
-        let status = unsafe {
-            agentbridge_run_inference(
-                self.model_ref,
-                input_name.as_ptr(),
+        // Create input array
+        let mut input_array_ref: u64 = 0;
+        let array_status = unsafe {
+            agentbridge_array_create_float32(
                 input_data.as_ptr(),
+                input_data.len() as i32,
                 input_shape.as_ptr(),
                 input_shape.len() as i32,
-                &mut output_data_ptr,
-                &mut output_shape_ptr,
-                &mut output_shape_len,
+                &mut input_array_ref,
                 &mut error_ptr,
             )
         };
 
-        if status != 0 {
+        if array_status != 0 {
+            unsafe {
+                agentbridge_dict_provider_destroy(input_provider_ref);
+            }
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let c_str = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = c_str.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error creating input array".to_string()
+            };
+            return Err(anyhow::anyhow!("Failed to create input array: {}", error_msg));
+        }
+
+        // Set array as feature in provider (typically "input_ids" for embedding models)
+        let input_name = CString::new("input_ids")
+            .map_err(|e| anyhow::anyhow!("Failed to create input name: {}", e))?;
+        
+        let feature_status = unsafe {
+            agentbridge_dict_provider_set_feature_multiarray(
+                input_provider_ref,
+                input_name.as_ptr(),
+                input_array_ref,
+                &mut error_ptr,
+            )
+        };
+
+        if feature_status != 0 {
+            unsafe {
+                agentbridge_array_destroy(input_array_ref);
+                agentbridge_dict_provider_destroy(input_provider_ref);
+            }
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let c_str = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = c_str.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error setting feature".to_string()
+            };
+            return Err(anyhow::anyhow!("Failed to set input feature: {}", error_msg));
+        }
+
+        // Run inference
+        let mut output_provider_ref: u64 = 0;
+        let inference_status = unsafe {
+            agentbridge_model_run_inference(
+                self.model_ref,
+                input_provider_ref,
+                &mut output_provider_ref,
+                &mut error_ptr,
+            )
+        };
+
+        // Clean up input resources
+        unsafe {
+            agentbridge_array_destroy(input_array_ref);
+            agentbridge_dict_provider_destroy(input_provider_ref);
+        }
+
+        if inference_status != 0 {
             let error_msg = if !error_ptr.is_null() {
                 unsafe {
                     let c_str = std::ffi::CStr::from_ptr(error_ptr);
@@ -215,21 +367,52 @@ impl CoreMLEmbeddingProvider {
             return Err(anyhow::anyhow!("CoreML inference failed: {}", error_msg));
         }
 
-        // Extract output data
-        if output_data_ptr.is_null() || output_shape_ptr.is_null() {
-            return Err(anyhow::anyhow!("CoreML inference returned null output"));
-        }
-
-        // Read output shape
-        let output_shape = unsafe {
-            let shape_slice = std::slice::from_raw_parts(output_shape_ptr, output_shape_len as usize);
-            shape_slice.to_vec()
+        // Extract output from provider (typically "output" or "embeddings" for embedding models)
+        let output_name = CString::new("output")
+            .map_err(|e| anyhow::anyhow!("Failed to create output name: {}", e))?;
+        
+        let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
+        let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
+        let mut output_shape_len: i32 = 0;
+        let mut output_data_len: i32 = 0;
+        
+        let get_status = unsafe {
+            agentbridge_provider_get_feature_float32(
+                output_provider_ref,
+                output_name.as_ptr(),
+                &mut output_data_ptr,
+                &mut output_shape_ptr,
+                &mut output_shape_len,
+                &mut output_data_len,
+                &mut error_ptr,
+            )
         };
 
-        // Calculate expected output size
-        let output_size: usize = output_shape.iter().map(|&dim| dim as usize).product();
-        
+        // Clean up output provider
+        unsafe {
+            agentbridge_provider_destroy(output_provider_ref);
+        }
+
+        if get_status != 0 {
+            let error_msg = if !error_ptr.is_null() {
+                unsafe {
+                    let c_str = std::ffi::CStr::from_ptr(error_ptr);
+                    let msg = c_str.to_string_lossy().to_string();
+                    agentbridge_free_string(error_ptr);
+                    msg
+                }
+            } else {
+                "Unknown error getting output".to_string()
+            };
+            return Err(anyhow::anyhow!("Failed to get output from provider: {}", error_msg));
+        }
+
+        if output_data_ptr.is_null() {
+            return Err(anyhow::anyhow!("Output provider returned null data"));
+        }
+
         // Read output data
+        let output_size = output_data_len as usize;
         let embedding = unsafe {
             let data_slice = std::slice::from_raw_parts(output_data_ptr, output_size);
             data_slice.to_vec()
@@ -266,6 +449,12 @@ impl CoreMLEmbeddingProvider {
         } else {
             Ok(embedding)
         }
+    }
+
+    /// Run CoreML inference for a single text (non-macOS stub)
+    #[cfg(not(target_os = "macos"))]
+    async fn run_coreml_inference(&self, _text: &str) -> Result<Vec<f32>> {
+        Err(anyhow::anyhow!("CoreML inference not available on this platform"))
     }
 }
 
@@ -320,9 +509,12 @@ impl EmbeddingProvider for CoreMLEmbeddingProvider {
 
 impl Drop for CoreMLEmbeddingProvider {
     fn drop(&mut self) {
-        if self.model_ref != 0 {
-            unsafe {
-                agentbridge_unload_model(self.model_ref);
+        #[cfg(target_os = "macos")]
+        {
+            if self.model_ref != 0 {
+                unsafe {
+                    let _ = agentbridge_model_destroy(self.model_ref);
+                }
             }
         }
     }
