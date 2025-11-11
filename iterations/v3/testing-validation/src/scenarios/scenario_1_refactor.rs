@@ -94,6 +94,8 @@ pub async fn run_test(
         enable_git_snapshots: true,
         execution_mode: AutonomousMode::Auto,
         safety_mode: SafetyMode::Sandbox,
+        enable_learning: false,
+        enable_rl: false,
     };
 
     let agent = match agent_research::self_prompting_agent::SelfPromptingAgent::new(

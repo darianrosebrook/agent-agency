@@ -17,7 +17,6 @@ use uuid::Uuid;
 
 use super::super::Result as ApiResult;
 use super::super::server::ApiState;
-use std::sync::Arc;
 
 /// Request to stream agent response
 #[derive(Debug, Clone, Deserialize)]

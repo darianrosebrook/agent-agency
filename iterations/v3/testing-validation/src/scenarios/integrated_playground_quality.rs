@@ -93,7 +93,7 @@ pub async fn run_integrated_test(
     // Step 2: Quality Evaluation - Only if playground test passed
     let quality_result = if playground_result.fixed {
         info!("Playground test passed, running quality evaluation...");
-        Some(run_quality_evaluation(env, &playground_result, playground_result.fixed_file_path.clone(), agent.as_ref()).await)
+        Some(run_quality_evaluation(env, &playground_result, playground_result.fixed_file_path.clone(), agent.as_ref().map(|a| a.as_ref())).await)
     } else {
         warn!("Playground test failed, skipping quality evaluation");
         None

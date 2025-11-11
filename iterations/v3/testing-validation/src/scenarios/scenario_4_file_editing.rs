@@ -12,8 +12,8 @@
 
 use std::time::Instant;
 use std::path::PathBuf;
-use tokio::fs;
 use tokio::process::Command;
+use tokio::fs;
 use tracing::{error, info};
 use tempfile::TempDir;
 

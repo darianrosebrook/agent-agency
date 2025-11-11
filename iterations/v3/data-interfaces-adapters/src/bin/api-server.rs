@@ -2621,12 +2621,12 @@ async fn stream_agent_response_wrapper(
     // Extract CoreMLManager from UnifiedOrchestrator if available
     let coreml_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>> + Send + Sync>> = 
         if let Some(ref unified_orch) = state.unified_orchestrator {
-            // Access plan_generator's coreml_manager through unsafe or via a helper
-            // Since we can't access private fields, we'll create a callback that uses the orchestrator
+            let orch_clone = unified_orch.orchestrator();
             Some(Arc::new(move |message: String| {
-                let orch = unified_orch.orchestrator();
+                let orch = Arc::clone(&orch_clone);
+                let msg = message.clone();
                 Box::pin(async move {
-                    generate_coreml_chat_response(orch, &message).await
+                    generate_coreml_chat_response(orch, &msg).await
                 })
             }))
         } else {
@@ -2652,6 +2652,64 @@ async fn stream_agent_response_wrapper(
     }
 }
 
+/// Generate chat response using CoreML via UnifiedOrchestrator
+#[cfg(feature = "orchestration")]
+async fn generate_coreml_chat_response(
+    orchestrator: Arc<agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator>,
+    message: &str,
+) -> Result<String, String> {
+    use agent_orchestration::coreml::CoreMLManager;
+    use system_acceleration::ane::infer::MistralInferenceOptions;
+    use std::sync::Arc;
+    use std::path::PathBuf;
+    
+    // Access plan_generator's coreml_manager
+    // Since plan_generator is private, we create a new CoreMLManager instance
+    // In the future, we should add a method to UnifiedOrchestrator to access CoreMLManager
+    let model_path = std::env::var("COREML_MODELS_PATH")
+        .map(|p| PathBuf::from(p))
+        .unwrap_or_else(|_| {
+            PathBuf::from("/Users/darianrosebrook/Desktop/Projects/agent-agency/models/coreml")
+        });
+    
+    let manager = Arc::new(CoreMLManager::new(model_path));
+    
+    // Try to load models
+    if let Err(e) = manager.load_available_models().await {
+        return Err(format!("Failed to load CoreML models: {}", e));
+    }
+    
+    // Build chat prompt
+    let prompt = format!(
+        "You are a helpful AI assistant. The user asked: {}\n\nPlease provide a helpful response.",
+        message
+    );
+    
+    // Configure inference options
+    let options = MistralInferenceOptions {
+        max_tokens: 512,
+        temperature: Some(0.7),
+        top_p: Some(0.9),
+        timeout_ms: 30000,
+        use_kv_cache: true,
+    };
+    
+    // Generate response using Mistral model
+    match manager.generate_text("mistral-7b-instruct", &prompt, &options).await {
+        Ok(text) => Ok(text),
+        Err(e) => {
+            // Try to find any available language model
+            let language_models = manager.get_models_by_type(agent_orchestration::coreml::CoreMLModelType::Language).await;
+            if let Some(model) = language_models.first() {
+                manager.generate_text(&model.metadata.name, &prompt, &options).await
+                    .map_err(|e| format!("CoreML inference failed: {}", e))
+            } else {
+                Err(format!("No language models available. Error: {}", e))
+            }
+        }
+    }
+}
+
 #[cfg(feature = "orchestration")]
 async fn cancel_stream_wrapper(
     State(state): State<AppState>,
@@ -2665,6 +2723,7 @@ async fn cancel_stream_wrapper(
         api: api.clone(),
         websocket_manager: websocket_manager.clone(),
         query_performance_monitor: query_performance_monitor.clone(),
+        coreml_inference_callback: None,
     };
     
     match data_infrastructure::api::handlers::chat_handlers::cancel_stream(

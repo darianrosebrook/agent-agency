@@ -643,5 +643,5 @@ pub struct ApiState {
     pub websocket_manager: Arc<crate::websocket::WebSocketManager>,
     pub query_performance_monitor: Arc<crate::monitoring::query_performance::QueryPerformanceMonitor>,
     /// Optional callback for CoreML inference (set by wrapper when UnifiedOrchestrator is available)
-    pub coreml_inference_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>> + Send + Sync>>,
+    pub coreml_inference_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, String>> + Send>> + Send + Sync>>,
 }

@@ -7,7 +7,7 @@
 //! - Performance requirements
 //! - Scope compliance
 
-use tracing::{info, error, warn};
+use tracing::{info, error};
 use regex::Regex;
 #[cfg(feature = "full")]
 use futures::future::join_all;
