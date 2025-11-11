@@ -1,0 +1,267 @@
+@use '../../styles/variables' as *;
+
+.searchPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $color-background;
+}
+
+.searchContainer {
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+  gap: 2rem;
+}
+
+.searchHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.searchInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: $color-primary;
+  }
+}
+
+.searchIcon {
+  width: 20px;
+  height: 20px;
+  color: $color-text-secondary;
+  margin-right: 0.75rem;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: $color-text;
+  font-size: 1rem;
+  outline: none;
+
+  &::placeholder {
+    color: $color-text-secondary;
+  }
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: $color-text-secondary;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $color-text;
+  }
+}
+
+.clearIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.typeFilter {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.typeButton {
+  padding: 0.5rem 1rem;
+  border: 1px solid $color-border;
+  background: $color-surface;
+  color: $color-text-secondary;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-surface-hover;
+    color: $color-text;
+  }
+}
+
+.typeButtonActive {
+  background: $color-primary;
+  color: white;
+  border-color: $color-primary;
+
+  &:hover {
+    background: $color-primary-hover;
+  }
+}
+
+.resultsContainer {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.loadingState,
+.errorState,
+.emptyState,
+.initialState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.loadingIcon {
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+  color: $color-primary;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorMessage {
+  color: $color-destructive;
+}
+
+.initialIcon {
+  width: 64px;
+  height: 64px;
+  color: $color-text-secondary;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.initialState {
+  h2 {
+    margin: 0.5rem 0;
+    color: $color-text;
+  }
+
+  p {
+    max-width: 500px;
+    line-height: 1.6;
+  }
+}
+
+.resultsHeader {
+  margin-bottom: 1rem;
+}
+
+.resultsCount {
+  color: $color-text-secondary;
+  font-size: 0.875rem;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.resultItem {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: $color-surface-hover;
+    border-color: $color-primary;
+  }
+}
+
+.resultIconContainer {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.25rem;
+}
+
+.resultIcon {
+  width: 20px;
+  height: 20px;
+  color: $color-text-secondary;
+}
+
+.resultContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resultTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: $color-text;
+}
+
+.resultDescription {
+  margin: 0;
+  font-size: 0.875rem;
+  color: $color-text-secondary;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.resultMetadata {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: $color-text-secondary;
+}
+
+.resultType {
+  text-transform: capitalize;
+  padding: 0.25rem 0.5rem;
+  background: $color-surface-hover;
+  border-radius: 4px;
+}
+
+.resultMeta {
+  opacity: 0.7;
+}
+
+.highlight {
+  background: $color-primary-light;
+  color: $color-primary;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+

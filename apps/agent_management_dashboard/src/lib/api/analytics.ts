@@ -65,3 +65,4 @@ export async function getPerformanceAnalytics(): Promise<PerformanceAnalytics> {
 export async function getSuccessRates(): Promise<SuccessRates> {
   return apiGet<SuccessRates>(`${API_BASE}/analytics/success-rates`);
 }
+

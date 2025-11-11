@@ -485,19 +485,28 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
 
         // Use real database insert with parameterized query
         // Note: id is SERIAL and will auto-increment, so we don't insert it
+        // Use Option<&str> for nullable fields
         let metadata_json: serde_json::Value = serde_json::json!({"test": true});
-        postgres.execute(
+        let metadata_str = metadata_json.to_string();
+        
+        // Get the connection directly to avoid wrapper issues
+        let conn = postgres.get_connection().await?;
+        let insert_result = conn.execute(
             "INSERT INTO audit_trail (action, user_id, resource_type, resource_id, metadata, hash)
              VALUES ($1, $2, $3, $4, $5::jsonb, $6)",
             &[
-                &action_str,
-                &user_id_str,
-                &resource_type_str,
-                &resource_id_str,
-                &metadata_json.to_string(),
-                &hash,
+                &action_str as &(dyn tokio_postgres::types::ToSql + Sync),
+                &user_id_str as &(dyn tokio_postgres::types::ToSql + Sync),
+                &resource_type_str as &(dyn tokio_postgres::types::ToSql + Sync),
+                &resource_id_str as &(dyn tokio_postgres::types::ToSql + Sync),
+                &metadata_str as &(dyn tokio_postgres::types::ToSql + Sync),
+                &hash as &(dyn tokio_postgres::types::ToSql + Sync),
             ],
         ).await?;
+        
+        if insert_result == 0 {
+            return Err("Audit trail insertion failed".into());
+        }
         audit_log_entries += 1;
     }
 

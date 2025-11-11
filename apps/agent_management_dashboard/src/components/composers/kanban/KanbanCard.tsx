@@ -140,9 +140,7 @@ export function KanbanCard({
 
       <h3 className={styles.title}>{title}</h3>
 
-      {description && (
-        <p className={styles.description}>{description}</p>
-      )}
+      {description && <p className={styles.description}>{description}</p>}
 
       {/* Footer with Metadata and Comment Count */}
       <div className={styles.cardFooter}>

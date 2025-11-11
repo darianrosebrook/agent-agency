@@ -80,4 +80,3 @@ export interface KanbanColumnHeaderProps {
   onAddTask?: () => void;
   className?: string;
 }
-

@@ -69,7 +69,7 @@ export function KanbanBoard({
 
     // Check if dropped on a column (status) or another card
     let newStatus: KanbanStatus | null = null;
-    
+
     // If dropped on a column status (droppable)
     if (columns.some((col) => col.status === overId)) {
       newStatus = overId as KanbanStatus;
@@ -104,9 +104,7 @@ export function KanbanBoard({
 
   // Find the active card for drag overlay
   const activeCard = activeId
-    ? columns
-        .flatMap((col) => col.cards)
-        .find((card) => card.id === activeId)
+    ? columns.flatMap((col) => col.cards).find((card) => card.id === activeId)
     : null;
 
   return (
@@ -116,7 +114,10 @@ export function KanbanBoard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={`${styles.board} ${className || ""}`} data-name="KanbanBoard">
+      <div
+        className={`${styles.board} ${className || ""}`}
+        data-name="KanbanBoard"
+      >
         <div className={styles.content}>
           <div className={styles.columns}>
             {columns.map((column, index) => {

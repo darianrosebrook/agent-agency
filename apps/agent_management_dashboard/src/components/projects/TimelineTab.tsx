@@ -65,48 +65,76 @@ export function TimelineTab() {
         });
         
         // Transform API tasks to TimelineTask format
-        const timelineTasks: TimelineTask[] = tasksResponse.tasks.map((task) => {
-          const startDate = new Date(task.created_at);
-          const endDate = task.completed_at 
-            ? new Date(task.completed_at)
-            : new Date(task.updated_at);
-          
-          // Map status to TimelineTask status
-          let status: "completed" | "in-progress" | "pending" = "pending";
-          if (task.status === "completed") {
-            status = "completed";
-          } else if (task.status === "in_progress" || task.status === "running") {
-            status = "in-progress";
-          }
+        const timelineTasks: TimelineTask[] = tasksResponse.tasks
+          .map((task) => {
+            // Parse dates with validation
+            const startDate = new Date(task.created_at);
+            let endDate: Date;
+            
+            if (task.completed_at) {
+              endDate = new Date(task.completed_at);
+            } else if (task.updated_at) {
+              endDate = new Date(task.updated_at);
+            } else {
+              // Fallback: use start date + 1 day if no end date available
+              endDate = new Date(startDate);
+              endDate.setDate(endDate.getDate() + 1);
+            }
+            
+            // Ensure end date is not before start date
+            if (endDate < startDate) {
+              endDate = new Date(startDate);
+              endDate.setDate(endDate.getDate() + 1);
+            }
+            
+            // Validate dates are not invalid
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+              console.warn(`Invalid dates for task ${task.task_id}:`, {
+                created_at: task.created_at,
+                updated_at: task.updated_at,
+                completed_at: task.completed_at,
+              });
+              // Skip invalid dates
+              return null;
+            }
+            
+            // Map status to TimelineTask status
+            let status: "completed" | "in-progress" | "pending" = "pending";
+            if (task.status === "completed") {
+              status = "completed";
+            } else if (task.status === "in_progress" || task.status === "running") {
+              status = "in-progress";
+            }
 
-          // Extract tags from risk_tier or metadata if available
-          const tags: string[] = [];
-          if (task.risk_tier) {
-            tags.push(task.risk_tier);
-          }
-          if (task.priority !== null && task.priority !== undefined) {
-            tags.push(`Priority ${task.priority}`);
-          }
+            // Extract tags from risk_tier or metadata if available
+            const tags: string[] = [];
+            if (task.risk_tier) {
+              tags.push(task.risk_tier);
+            }
+            if (task.priority !== null && task.priority !== undefined) {
+              tags.push(`Priority ${task.priority}`);
+            }
 
-          // Get agent name from assignment
-          // If unassigned, treat as orchestrator-managed (planning/coordination phase)
-          const workerId = task.assigned_worker_id ?? null;
-          const workerName = workerId && agentMap.has(workerId) 
-            ? agentMap.get(workerId)! 
-            : "Orchestrator";
+            // Get agent name from assignment
+            // If unassigned, treat as orchestrator-managed (planning/coordination phase)
+            const workerId = task.assigned_worker_id ?? null;
+            const workerName = workerId && agentMap.has(workerId) 
+              ? agentMap.get(workerId)! 
+              : "Orchestrator";
 
-          return {
-            id: task.task_id,
-            title: task.title,
-            worker: workerName,
-            workerId: workerId ?? "orchestrator",
-            startDate,
-            endDate,
-            status,
-            tags,
-            description: task.description ?? undefined,
-          };
-        });
+            return {
+              id: task.task_id,
+              title: task.title,
+              worker: workerName,
+              workerId: workerId ?? "orchestrator",
+              startDate,
+              endDate,
+              status,
+              tags,
+              description: task.description ?? undefined,
+            };
+          })
+          .filter((task): task is TimelineTask => task !== null);
 
         setTasks(timelineTasks);
       } catch (err) {

@@ -790,12 +790,11 @@ impl ToolRegistry {
         let dashboard_url = tool.metadata
             .get("dashboard_url")
             .and_then(|v| v.as_str())
+            .map(String::from)
             .unwrap_or_else(|| {
                 std::env::var("DASHBOARD_URL")
                     .unwrap_or_else(|_| "http://localhost:3000".to_string())
-                    .as_str()
-            })
-            .to_string();
+            });
 
         let config = NotificationToolConfig {
             dashboard_url,

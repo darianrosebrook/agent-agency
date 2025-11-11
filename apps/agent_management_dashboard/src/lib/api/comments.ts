@@ -48,7 +48,9 @@ export interface UpdateCommentRequest {
 /**
  * Get task comments
  */
-export async function getTaskComments(taskId: string): Promise<TaskCommentsResponse> {
+export async function getTaskComments(
+  taskId: string
+): Promise<TaskCommentsResponse> {
   // TODO: Implement when backend API is available
   // Expected endpoint: GET /api/v1/tasks/:task_id/comments
   // For now, check localStorage as fallback
@@ -61,7 +63,7 @@ export async function getTaskComments(taskId: string): Promise<TaskCommentsRespo
   } catch (err) {
     console.error("Failed to load comments from localStorage:", err);
   }
-  
+
   return { comments: [] };
 }
 
@@ -83,7 +85,7 @@ export async function createTaskComment(
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  
+
   // Store in localStorage as fallback
   try {
     const stored = localStorage.getItem(`task-comments-${taskId}`);
@@ -93,7 +95,7 @@ export async function createTaskComment(
   } catch (err) {
     console.error("Failed to store comment in localStorage:", err);
   }
-  
+
   return mockComment;
 }
 
@@ -113,23 +115,23 @@ export async function updateTaskComment(
     if (!stored) {
       throw new Error("Comment not found");
     }
-    
+
     const comments = JSON.parse(stored) as TaskComment[];
     const commentIndex = comments.findIndex((c) => c.comment_id === commentId);
-    
+
     if (commentIndex === -1) {
       throw new Error("Comment not found");
     }
-    
+
     const updatedComment: TaskComment = {
       ...comments[commentIndex],
       content: updates.content,
       updated_at: new Date().toISOString(),
     };
-    
+
     comments[commentIndex] = updatedComment;
     localStorage.setItem(`task-comments-${taskId}`, JSON.stringify(comments));
-    
+
     return updatedComment;
   } catch (err) {
     console.error("Failed to update comment:", err);
@@ -152,7 +154,7 @@ export async function deleteTaskComment(
     if (!stored) {
       return;
     }
-    
+
     const comments = JSON.parse(stored) as TaskComment[];
     const filtered = comments.filter((c) => c.comment_id !== commentId);
     localStorage.setItem(`task-comments-${taskId}`, JSON.stringify(filtered));
@@ -161,4 +163,3 @@ export async function deleteTaskComment(
     throw err;
   }
 }
-

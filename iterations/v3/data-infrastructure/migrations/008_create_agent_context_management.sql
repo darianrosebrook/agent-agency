@@ -91,14 +91,14 @@ CREATE INDEX IF NOT EXISTS idx_context_access_history_workspace_id ON context_ac
 CREATE OR REPLACE VIEW context_statistics AS
 SELECT
     COUNT(*) as total_contexts,
-    COALESCE(SUM(size_bytes), 0) as total_storage_size,
-    COUNT(*) FILTER (WHERE folded_at IS NULL) as working_memory_contexts,
-    COUNT(*) FILTER (WHERE folded_at IS NOT NULL) as folded_contexts,
-    COALESCE(AVG(size_bytes), 0) as average_context_size,
-    COUNT(*) FILTER (WHERE last_accessed_at > NOW() - INTERVAL '1 hour') as recent_accesses,
-    COUNT(*) FILTER (WHERE fold_type = 'compressed') as compressed_count,
-    COUNT(*) FILTER (WHERE fold_type = 'summarized') as summarized_count,
-    COUNT(*) FILTER (WHERE fold_type = 'archived') as archived_count
+    COALESCE(SUM(ac.size_bytes), 0) as total_storage_size,
+    COUNT(*) FILTER (WHERE ac.folded_at IS NULL) as working_memory_contexts,
+    COUNT(*) FILTER (WHERE ac.folded_at IS NOT NULL) as folded_contexts,
+    COALESCE(AVG(ac.size_bytes), 0) as average_context_size,
+    COUNT(*) FILTER (WHERE ac.last_accessed_at > NOW() - INTERVAL '1 hour') as recent_accesses,
+    COUNT(*) FILTER (WHERE fc.fold_type = 'compressed') as compressed_count,
+    COUNT(*) FILTER (WHERE fc.fold_type = 'summarized') as summarized_count,
+    COUNT(*) FILTER (WHERE fc.fold_type = 'archived') as archived_count
 FROM agent_contexts ac
 LEFT JOIN folded_contexts fc ON ac.id = fc.context_id;
 

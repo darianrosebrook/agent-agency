@@ -47,9 +47,7 @@ export function DeleteTaskDialog({
               </>
             )}
           </p>
-          <p className={styles.dialogWarning}>
-            This action cannot be undone.
-          </p>
+          <p className={styles.dialogWarning}>This action cannot be undone.</p>
         </div>
 
         <div className={styles.dialogActions}>

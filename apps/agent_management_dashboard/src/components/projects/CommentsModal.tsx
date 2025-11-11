@@ -293,9 +293,7 @@ export function CommentsModal({
             }}
           />
           <div className={styles.commentInputActions}>
-            <span className={styles.commentHint}>
-              Press ⌘+Enter to submit
-            </span>
+            <span className={styles.commentHint}>Press ⌘+Enter to submit</span>
             <button
               onClick={handleSubmitComment}
               disabled={!newComment.trim() || isSubmitting}

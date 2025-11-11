@@ -167,7 +167,12 @@ export function EditTaskModal({
                   onClick={() => setShowPriorityMenu(!showPriorityMenu)}
                 />
                 {showPriorityMenu && (
-                  <div className={cn(styles.dropdownMenu, styles.dropdownMenuPriority)}>
+                  <div
+                    className={cn(
+                      styles.dropdownMenu,
+                      styles.dropdownMenuPriority
+                    )}
+                  >
                     {(Object.keys(priorityConfig) as Priority[]).map((key) => (
                       <button
                         key={key}
@@ -175,7 +180,10 @@ export function EditTaskModal({
                           setPriority(key);
                           setShowPriorityMenu(false);
                         }}
-                        className={cn(styles.dropdownMenuItem, styles.dropdownMenuItemPriority)}
+                        className={cn(
+                          styles.dropdownMenuItem,
+                          styles.dropdownMenuItemPriority
+                        )}
                       >
                         <PriorityIndicator
                           priority={key}

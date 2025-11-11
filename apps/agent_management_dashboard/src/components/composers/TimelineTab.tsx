@@ -218,7 +218,7 @@ export function TimelineTab() {
             <p>No tasks available for timeline</p>
           </div>
         ) : (
-          <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+        <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
         )}
       </div>
     </div>

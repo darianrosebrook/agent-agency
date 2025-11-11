@@ -33,7 +33,7 @@ export interface SearchResponse {
 const API_BASE = '/api/proxy/api/v1';
 
 /**
- * Unified search across all resources
+ * Unified search across all resources using vector and knowledge search
  */
 export async function search(
   query: string,
@@ -41,6 +41,9 @@ export async function search(
     type?: 'project' | 'task' | 'chat' | 'file' | 'agent' | 'all';
     limit?: number;
     offset?: number;
+    useVectorSearch?: boolean;
+    useKnowledgeSearch?: boolean;
+    similarityThreshold?: number;
   }
 ): Promise<SearchResponse> {
   const queryParams = new URLSearchParams();
@@ -48,10 +51,14 @@ export async function search(
   if (params?.type && params.type !== 'all') queryParams.append('type', params.type);
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
+  if (params?.useVectorSearch !== false) queryParams.append('vector_search', 'true');
+  if (params?.useKnowledgeSearch !== false) queryParams.append('knowledge_search', 'true');
+  if (params?.similarityThreshold) queryParams.append('similarity_threshold', params.similarityThreshold.toString());
   
   const url = `${API_BASE}/search?${queryParams.toString()}`;
   return apiGet<SearchResponse>(url);
 }
+
 
 
 

@@ -302,6 +302,7 @@ impl DatabaseClient {
             caws_spec: task.caws_spec.clone(),
             status: task.status.clone(),
             assigned_worker_id: task.assigned_worker_id,
+            project_id: task.project_id,
             priority: task.priority,
             deadline: task.deadline,
             metadata: task.metadata.clone(),
@@ -349,6 +350,7 @@ impl DatabaseClient {
             caws_spec: t.caws_spec,
             status: t.status,
             assigned_worker_id: t.assigned_worker_id,
+            project_id: t.project_id,
             priority: t.priority,
             deadline: t.deadline,
             metadata: t.metadata,
@@ -372,6 +374,7 @@ impl DatabaseClient {
             caws_spec: task.caws_spec,
             status: task.status,
             assigned_worker_id: task.assigned_worker_id,
+            project_id: task.project_id,
             priority: task.priority,
             deadline: task.deadline,
             metadata: task.metadata,
@@ -400,6 +403,7 @@ impl DatabaseClient {
             caws_spec: t.caws_spec,
             status: t.status,
             assigned_worker_id: t.assigned_worker_id,
+            project_id: t.project_id,
             priority: t.priority,
             deadline: t.deadline,
             metadata: t.metadata,
@@ -721,7 +725,7 @@ impl DatabaseClient {
     /// List tasks
     pub async fn list_tasks(&self) -> Result<Vec<crate::models::Task>> {
         let rows = self.query(
-            "SELECT id, title, description, risk_tier, scope, acceptance_criteria, context, caws_spec, status, assigned_worker_id, priority, deadline, metadata, created_at, updated_at, completed_at FROM tasks ORDER BY created_at DESC",
+            "SELECT id, title, description, risk_tier, scope, acceptance_criteria, context, caws_spec, status, assigned_worker_id, project_id, priority, deadline, metadata, created_at, updated_at, completed_at FROM tasks ORDER BY created_at DESC",
             &[]
         ).await?;
 
@@ -738,6 +742,7 @@ impl DatabaseClient {
                 caws_spec: row.try_get("caws_spec")?,
                 status: row.try_get("status")?,
                 assigned_worker_id: row.try_get("assigned_worker_id")?,
+                project_id: row.try_get("project_id")?,
                 priority: row.try_get("priority")?,
                 deadline: row.try_get("deadline")?,
                 metadata: row.try_get("metadata")?,

@@ -1291,6 +1291,9 @@ async fn create_project_task_handler(
         .and_then(|v| v.as_str())
         .unwrap_or("");
     
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
     let create = data_infrastructure::database_operations::CreateTask {
         title: title.to_string(),
         description: description.to_string(),
@@ -1299,18 +1302,7 @@ async fn create_project_task_handler(
         acceptance_criteria: payload.get("acceptance_criteria").cloned().unwrap_or_else(|| serde_json::json!([])),
         context: payload.get("context").cloned().unwrap_or_else(|| serde_json::json!({})),
         caws_spec: payload.get("caws_spec").cloned(),
-        status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "pending".to_string()),
-        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
-        priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
-        deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
-        metadata: {
-            let mut metadata = payload.get("metadata").cloned().unwrap_or_else(|| serde_json::json!({}));
-            // Add project_id to metadata for linking
-            if let Some(obj) = metadata.as_object_mut() {
-                obj.insert("project_id".to_string(), serde_json::Value::String(project_id.clone()));
-            }
-            Some(metadata)
-        },
+        project_id: Some(project_uuid),
     };
     
     // Create task using CreateTask struct
@@ -1345,7 +1337,7 @@ async fn update_project_task_handler(
     let task_uuid = Uuid::parse_str(&task_id)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
-    // Verify task belongs to project (check metadata)
+    // Verify task belongs to project (check project_id)
     let task = db.get_task(&task_uuid).await
         .map_err(|e| {
             error!("Failed to get task: {}", e);
@@ -1353,12 +1345,12 @@ async fn update_project_task_handler(
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
     
-    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
-        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
-            if meta_project_id != project_id {
-                return Err(StatusCode::BAD_REQUEST);
-            }
+    if let Some(task_project_id) = task.project_id {
+        if task_project_id.to_string() != project_id {
+            return Err(StatusCode::BAD_REQUEST);
         }
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
     }
     
     // Update task (same as regular update_task_handler)
@@ -1372,6 +1364,7 @@ async fn update_project_task_handler(
         caws_spec: payload.get("caws_spec").cloned(),
         status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
         assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        project_id: task.project_id,
         priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
         deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
         metadata: payload.get("metadata").cloned(),
@@ -1407,7 +1400,7 @@ async fn delete_project_task_handler(
     let task_uuid = Uuid::parse_str(&task_id)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
-    // Verify task belongs to project (check metadata)
+    // Verify task belongs to project (check project_id)
     let task = db.get_task(&task_uuid).await
         .map_err(|e| {
             error!("Failed to get task: {}", e);
@@ -1415,12 +1408,12 @@ async fn delete_project_task_handler(
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
     
-    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
-        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
-            if meta_project_id != project_id {
-                return Err(StatusCode::BAD_REQUEST);
-            }
+    if let Some(task_project_id) = task.project_id {
+        if task_project_id.to_string() != project_id {
+            return Err(StatusCode::BAD_REQUEST);
         }
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
     }
     
     match db.delete_task(task_uuid).await {
@@ -3048,18 +3041,14 @@ async fn get_project_tasks_handler(
     let _project_uuid = Uuid::parse_str(&project_id)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
-    // Get all tasks and filter by project_id in metadata
+    // Get all tasks and filter by project_id
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
     match db.get_tasks().await {
         Ok(tasks) => {
             let project_tasks: Vec<JsonValue> = tasks.into_iter()
-                .filter(|task| {
-                    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
-                        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
-                            return meta_project_id == project_id;
-                        }
-                    }
-                    false
-                })
+                .filter(|task| task.project_id == Some(project_uuid))
                 .map(|task| {
                     serde_json::json!({
                         "task_id": task.id.to_string(),
@@ -3094,18 +3083,14 @@ async fn get_project_tasks_stats_handler(
     let _project_uuid = Uuid::parse_str(&project_id)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     
-    // Get all tasks and filter by project_id in metadata
+    // Get all tasks and filter by project_id
+    let project_uuid = Uuid::parse_str(&project_id)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    
     match db.get_tasks().await {
         Ok(tasks) => {
             let project_tasks: Vec<_> = tasks.into_iter()
-                .filter(|task| {
-                    if let Some(metadata) = task.metadata.as_ref().and_then(|m| m.as_object()) {
-                        if let Some(meta_project_id) = metadata.get("project_id").and_then(|v| v.as_str()) {
-                            return meta_project_id == project_id;
-                        }
-                    }
-                    false
-                })
+                .filter(|task| task.project_id == Some(project_uuid))
                 .collect();
             
             let total = project_tasks.len();

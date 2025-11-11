@@ -270,38 +270,38 @@ export function RadialTaskProgress({
 
               {/* Info grid */}
               {taskStats && !isLoading && !error ? (
-                <div className={styles.infoGrid}>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Status:</span>
-                    <div className={styles.infoValueGroup}>
-                      <span className={styles.infoValue}>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>Status:</span>
+                  <div className={styles.infoValueGroup}>
+                    <span className={styles.infoValue}>
                         {status}
-                      </span>
-                      <CheckCircle2 className={styles.infoIcon} />
-                    </div>
-                  </div>
-
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Progress:</span>
-                    <span className={styles.infoValue}>
-                      {animatedProgress}%
                     </span>
-                  </div>
-
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Completed:</span>
-                    <span className={styles.infoValue}>
-                      {taskStats.completed}
-                    </span>
-                  </div>
-
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>In Progress:</span>
-                    <span className={styles.infoValue}>
-                      {taskStats.in_progress}
-                    </span>
+                    <CheckCircle2 className={styles.infoIcon} />
                   </div>
                 </div>
+
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>Progress:</span>
+                  <span className={styles.infoValue}>
+                      {animatedProgress}%
+                  </span>
+                </div>
+
+                <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Completed:</span>
+                  <span className={styles.infoValue}>
+                      {taskStats.completed}
+                  </span>
+                </div>
+
+                <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>In Progress:</span>
+                  <span className={styles.infoValue}>
+                      {taskStats.in_progress}
+                  </span>
+                </div>
+              </div>
               ) : (
                 <div className={styles.infoGrid}>
                   <div className={styles.infoItem}>

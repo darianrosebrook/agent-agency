@@ -96,9 +96,9 @@ export function MultiRingProgress({
     if (milestones.length === 0) {
       // Default fallback
       return [
-        { name: "Progress 1", progress: 85, color: "#e0e7ff" },
-        { name: "Progress 2", progress: 75, color: "#818cf8" },
-        { name: "Progress 3", progress: 60, color: "#6366f1" },
+    { name: "Progress 1", progress: 85, color: "#e0e7ff" },
+    { name: "Progress 2", progress: 75, color: "#818cf8" },
+    { name: "Progress 3", progress: 60, color: "#6366f1" },
       ];
     }
 
@@ -357,17 +357,17 @@ export function MultiRingProgress({
               <p className={styles.timeline}>Error: {error.message}</p>
             ) : (
               <>
-                <div className={styles.totalProgressRow}>
-                  <span className={styles.totalProgressValue}>
-                    {totalProgress}%
-                  </span>
-                  <span className={styles.totalProgressLabel}>
-                    · Total progress
-                  </span>
-                </div>
-                <p className={styles.timeline}>
-                  Projected timeline: {projectedTimeline}
-                </p>
+            <div className={styles.totalProgressRow}>
+              <span className={styles.totalProgressValue}>
+                {totalProgress}%
+              </span>
+              <span className={styles.totalProgressLabel}>
+                · Total progress
+              </span>
+            </div>
+            <p className={styles.timeline}>
+              Projected timeline: {projectedTimeline}
+            </p>
               </>
             )}
           </div>

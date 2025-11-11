@@ -60,7 +60,8 @@ const mapKanbanStatusToApi = (status: KanbanStatus): string => {
 // Map API status to Kanban status
 const mapApiStatusToKanban = (apiStatus: string): KanbanStatus => {
   if (apiStatus === "completed") return "done";
-  if (apiStatus === "in_progress" || apiStatus === "running") return "in-progress";
+  if (apiStatus === "in_progress" || apiStatus === "running")
+    return "in-progress";
   if (apiStatus === "pending") return "todo";
   return "backlog";
 };
@@ -74,7 +75,9 @@ const mapPriorityToNumber = (priority?: string): number | undefined => {
 };
 
 // Map priority number to string
-const mapPriorityToString = (priority?: number | null): "low" | "medium" | "high" | undefined => {
+const mapPriorityToString = (
+  priority?: number | null
+): "low" | "medium" | "high" | undefined => {
   if (priority === null || priority === undefined) return undefined;
   if (priority >= 3) return "high";
   if (priority >= 2) return "medium";
@@ -192,7 +195,11 @@ export function TasksTab() {
         setIsNewTaskModalOpen(false);
       } catch (err) {
         console.error("Failed to create task:", err);
-        alert(`Failed to create task: ${err instanceof Error ? err.message : "Unknown error"}`);
+        alert(
+          `Failed to create task: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }`
+        );
       } finally {
         setIsSaving(false);
       }
@@ -228,7 +235,11 @@ export function TasksTab() {
         setSelectedTask(null);
       } catch (err) {
         console.error("Failed to update task:", err);
-        alert(`Failed to update task: ${err instanceof Error ? err.message : "Unknown error"}`);
+        alert(
+          `Failed to update task: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }`
+        );
       } finally {
         setIsSaving(false);
       }
@@ -250,7 +261,11 @@ export function TasksTab() {
       setTaskToDelete(null);
     } catch (err) {
       console.error("Failed to delete task:", err);
-      alert(`Failed to delete task: ${err instanceof Error ? err.message : "Unknown error"}`);
+      alert(
+        `Failed to delete task: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsSaving(false);
     }
@@ -283,38 +298,51 @@ export function TasksTab() {
         console.error("Failed to move task:", err);
         // Revert optimistic update
         await fetchTasks();
-        alert(`Failed to move task: ${err instanceof Error ? err.message : "Unknown error"}`);
+        alert(
+          `Failed to move task: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }`
+        );
       }
     },
     [currentProjectId, tasks, fetchTasks]
   );
 
   // Handle edit task
-  const handleEditTask = useCallback((taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      setSelectedTask(task);
-      setIsEditTaskModalOpen(true);
-    }
-  }, [tasks]);
+  const handleEditTask = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        setSelectedTask(task);
+        setIsEditTaskModalOpen(true);
+      }
+    },
+    [tasks]
+  );
 
   // Handle delete task
-  const handleDeleteTaskClick = useCallback((taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      setTaskToDelete(task);
-      setIsDeleteDialogOpen(true);
-    }
-  }, [tasks]);
+  const handleDeleteTaskClick = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        setTaskToDelete(task);
+        setIsDeleteDialogOpen(true);
+      }
+    },
+    [tasks]
+  );
 
   // Handle view comments
-  const handleViewComments = useCallback((taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task) {
-      setSelectedTask(task);
-      setIsCommentsModalOpen(true);
-    }
-  }, [tasks]);
+  const handleViewComments = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (task) {
+        setSelectedTask(task);
+        setIsCommentsModalOpen(true);
+      }
+    },
+    [tasks]
+  );
 
   const columns = useMemo<KanbanColumnConfig[]>(() => {
     const statuses: KanbanStatus[] = ["backlog", "todo", "in-progress", "done"];
@@ -333,7 +361,8 @@ export function TasksTab() {
           if (task.priority) {
             const priorityColors = PRIORITY_COLORS[task.priority] || {};
             cardStatusTags.push({
-              label: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+              label:
+                task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
               bgColor: priorityColors.bg,
               textColor: priorityColors.text,
             });

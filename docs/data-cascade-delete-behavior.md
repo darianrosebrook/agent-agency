@@ -11,7 +11,7 @@ This document describes the cascade delete behavior for projects, chats, and tas
 
 ### Projects (execution_plans)
 
-**Status**: ⚠️ **Partial Cascade**
+**Status**: ✅ **Full Cascade** (Like deleting a folder)
 
 When a project is deleted:
 
@@ -19,25 +19,28 @@ When a project is deleted:
   - Foreign key: `milestones.plan_id` → `execution_plans.id`
   - Migration: `005_create_planning_system.sql` line 28
 
-- ❌ **Tasks**: **NOT automatically deleted** (orphaned)
-  - Tasks are linked to projects via `metadata.project_id` JSONB field
-  - No foreign key constraint exists
-  - Tasks remain in database with orphaned `metadata.project_id` reference
+- ✅ **Tasks**: Automatically deleted via `ON DELETE CASCADE`
+  - Foreign key: `tasks.project_id` → `execution_plans.id`
+  - Migration: `024_add_task_project_id_foreign_key.sql` line 42
+  - Tasks are now linked via proper foreign key constraint
 
 **Current Implementation**:
 ```rust
 // From database_operations_adapter.rs:785
-// Comment says "cascade will delete related records" 
-// but this only applies to milestones, not tasks
+// Cascade delete now works for both milestones and tasks
 DELETE FROM execution_plans WHERE id = $1
+// PostgreSQL automatically deletes:
+// - All milestones via CASCADE
+// - All tasks via CASCADE
 ```
 
-**Impact**: Deleting a project leaves orphaned tasks in the database.
+**Migration**: Migration `024_add_task_project_id_foreign_key.sql`:
+- Adds `project_id` column to `tasks` table
+- Migrates existing `metadata.project_id` values to the new column
+- Adds foreign key constraint with `ON DELETE CASCADE`
+- Adds index for performance
 
-**Recommendation**: Either:
-1. Add manual task cleanup in `delete_execution_plan()` handler
-2. Add foreign key constraint (requires schema migration)
-3. Document this behavior and add cleanup job
+**Impact**: Deleting a project now automatically cleans up all related tasks, just like deleting a folder.
 
 ---
 
@@ -114,11 +117,10 @@ plan_id UUID NOT NULL REFERENCES execution_plans(id) ON DELETE CASCADE
 
 ### Projects → Tasks
 ```sql
--- No foreign key constraint exists
--- Tasks linked via metadata JSONB field:
--- metadata: { "project_id": "..." }
+-- Migration 024, line 42
+project_id UUID REFERENCES execution_plans(id) ON DELETE CASCADE
 ```
-❌ **Cascade Delete**: No (orphaned on project deletion)
+✅ **Cascade Delete**: Yes (automatic cleanup on project deletion)
 
 ### Chats → Messages
 ```sql
@@ -140,88 +142,43 @@ Multiple tables with `ON DELETE CASCADE`:
 
 ---
 
-## Current Implementation Issues
+## Implementation Status
 
-### Issue 1: Orphaned Tasks
+### ✅ Issue Resolved: Foreign Key Constraint Added
 
-**Problem**: When a project is deleted, tasks remain in the database with orphaned `metadata.project_id` references.
+**Solution Implemented**: Foreign key constraint with CASCADE DELETE (Migration 024)
 
-**Current Code**:
-```rust
-// database_operations_adapter.rs:785
-async fn delete_execution_plan(&self, id: Uuid) -> Result<()> {
-    // Comment says "cascade will delete related records"
-    // but this only applies to milestones, not tasks
-    sqlx::query("DELETE FROM execution_plans WHERE id = $1")
-        .bind(id)
-        .execute(pool)
-        .await
-}
-```
+**Migration Details**:
+- Added `project_id` column to `tasks` table
+- Migrated existing `metadata.project_id` values to the new column
+- Added foreign key constraint: `tasks.project_id` → `execution_plans.id` with `ON DELETE CASCADE`
+- Added index for performance: `idx_tasks_project_id`
 
-**Impact**:
-- Tasks remain in database after project deletion
-- `get_project_tasks()` will return empty array (filtered by metadata)
-- Tasks become orphaned and inaccessible via project API
-- Potential data accumulation over time
+**Code Changes**:
+- Updated `Task` model to include `project_id: Option<Uuid>`
+- Updated `CreateTask` and `UpdateTask` to include `project_id`
+- Updated database queries to use `project_id` column instead of `metadata.project_id`
+- Updated API handlers to use `project_id` for verification and filtering
 
-**Recommendations**:
-
-1. **Option A: Manual Cleanup** (Quick fix)
-   ```rust
-   async fn delete_execution_plan(&self, id: Uuid) -> Result<()> {
-       // Delete tasks linked via metadata
-       sqlx::query(
-           r#"
-           DELETE FROM tasks 
-           WHERE metadata->>'project_id' = $1
-           "#
-       )
-       .bind(id.to_string())
-       .execute(pool)
-       .await?;
-       
-       // Then delete project (cascades to milestones)
-       sqlx::query("DELETE FROM execution_plans WHERE id = $1")
-           .bind(id)
-           .execute(pool)
-           .await?;
-   }
-   ```
-
-2. **Option B: Foreign Key Constraint** (Schema change)
-   ```sql
-   -- Add project_id column to tasks table
-   ALTER TABLE tasks ADD COLUMN project_id UUID REFERENCES execution_plans(id) ON DELETE CASCADE;
-   
-   -- Migrate existing data from metadata
-   UPDATE tasks SET project_id = (metadata->>'project_id')::UUID 
-   WHERE metadata->>'project_id' IS NOT NULL;
-   
-   -- Add index
-   CREATE INDEX idx_tasks_project_id ON tasks(project_id);
-   ```
-
-3. **Option C: Cleanup Job** (Background process)
-   - Periodic job to find and delete orphaned tasks
-   - Less ideal but doesn't require schema changes
+**Result**: Deleting a project now automatically deletes all associated tasks via database cascade, ensuring data integrity.
 
 ---
 
 ## Recommendations
 
-### Immediate Actions
+### ✅ Completed Actions
 
-1. ✅ **Document the behavior** (this document)
-2. ⚠️ **Add warning in UI**: When deleting a project, warn that tasks will remain orphaned
-3. 🔧 **Consider manual cleanup**: Update `delete_execution_plan()` to delete tasks manually
+1. ✅ **Documented the behavior** (this document)
+2. ✅ **Added foreign key constraint**: Migration 024 implements proper cascade delete
+3. ✅ **Migrated existing data**: All `metadata.project_id` values migrated to `project_id` column
+4. ✅ **Updated code**: All queries and handlers now use `project_id` column
 
-### Long-term Improvements
+### Future Improvements
 
-1. **Schema Migration**: Add `project_id` foreign key to `tasks` table
-2. **Data Migration**: Migrate existing `metadata.project_id` to `project_id` column
-3. **Validation**: Ensure all new tasks use foreign key, not metadata
-4. **Testing**: Add integration tests for cascade delete behavior
+1. **Remove metadata.project_id**: Consider removing `project_id` from metadata JSONB after migration period
+2. **Validation**: Ensure all new tasks use `project_id` field, not metadata
+3. **Testing**: Add integration tests for cascade delete behavior
+4. **Monitoring**: Track orphaned tasks (should be zero after migration)
 
 ---
 
@@ -268,8 +225,12 @@ ROLLBACK;
   - `015_create_observation_tables.sql` - Provenance entries
   - `019_create_rules_governance_tables.sql` - CAWS rule violations
   - `020_create_task_state_persistence.sql` - Task execution states
+  - `024_add_task_project_id_foreign_key.sql` - **Task project foreign key with cascade delete**
 
 - Implementation:
   - `iterations/v3/data-interfaces-adapters/src/database_operations_adapter.rs:785` - `delete_execution_plan()`
   - `iterations/v3/data-interfaces-adapters/src/bin/api-server.rs:2977` - `delete_project_handler()`
+  - `iterations/v3/data-infrastructure/src/models.rs` - `Task`, `CreateTask`, `UpdateTask` models
+  - `iterations/v3/data-infrastructure/src/client/orchestrator.rs` - Database operations
+  - `iterations/v3/data-interfaces-adapters/src/bin/api-server.rs` - API handlers updated to use `project_id`
 
