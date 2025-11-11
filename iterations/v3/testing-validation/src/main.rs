@@ -60,40 +60,37 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
 
     #[cfg(feature = "full")]
     {
+        use testing_validation::harness::{TestEnvironment, LocalServiceManager};
+        
         // Create test environment
         let _env = TestEnvironment::new().await?;
         info!("✅ Test environment initialized");
 
         // Create services with real integrations
-        let _ollama = OllamaService::with_model("gemma3n:e2b").await?;
-        let _postgres = PostgresService::new().await?;
+        let _services = LocalServiceManager::new().await?;
+        _services.start_all().await?;
+        _services.wait_for_healthy().await?;
 
         info!("🔧 Services configured for real integrations:");
         info!("   - Ollama: HTTP calls to localhost:11434");
         info!("   - PostgreSQL: Real database connections");
 
         // Run the autonomous workflow test
-        match run_autonomous_test(&_env, &_ollama, &_postgres).await {
-            Ok(result) => {
-                if result.passed {
-                    info!("✅ Autonomous workflow test PASSED!");
-                    info!("   Duration: {}ms", result.duration_ms);
-                    info!("   Model calls: {}", result.metrics.model_calls);
-                    info!("   Iterations: {}", result.metrics.iterations);
-                    info!("   Tokens used: {}", result.metrics.tokens_used);
-                } else {
-                    error!("❌ Autonomous workflow test FAILED: {}",
-                           result.error_message.unwrap_or("Unknown error".to_string()));
-                    std::process::exit(1);
-                }
-            }
-            Err(e) => {
-                error!("❌ Test execution failed: {}", e);
-                std::process::exit(1);
-            }
+        let result = run_autonomous_test(&_env, &_services).await;
+        if result.passed {
+            info!("✅ Autonomous workflow test PASSED!");
+            info!("   Duration: {}ms", result.duration_ms);
+            info!("   Model calls: {}", result.metrics.model_calls);
+            info!("   Iterations: {}", result.metrics.iterations);
+            info!("   Tokens used: {}", result.metrics.tokens_used);
+        } else {
+            error!("❌ Autonomous workflow test FAILED: {}",
+                   result.error_message.unwrap_or("Unknown error".to_string()));
+            std::process::exit(1);
         }
 
         info!("🧹 Cleaning up test environment...");
+        _services.stop_all().await?;
         _env.cleanup().await?;
         info!("✅ Cleanup complete");
         info!("🎉 Legacy autonomous workflow E2E test completed successfully!");
