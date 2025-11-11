@@ -37,6 +37,8 @@ pub mod human_intervention;
 // Reflexive Learning tests
 #[cfg(feature = "full")]
 pub mod reflexive_learning;
+#[cfg(feature = "full")]
+pub mod worker_evolution_test;
 
 // Multi-Agent Coordination tests
 #[cfg(feature = "full")]

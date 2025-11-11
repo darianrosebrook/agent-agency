@@ -62,3 +62,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 CREATE INDEX IF NOT EXISTS idx_audit_logs_event_data ON audit_logs USING GIN(event_data);
 
 
+

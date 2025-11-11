@@ -1,11 +1,11 @@
 # Integrated Playground + Quality Evaluation Report
 
-Generated: 2025-11-10T19:44:51.390573+00:00
+Generated: 2025-11-11T03:44:12.908395+00:00
 
 ## integrated-rust
 
 **Overall Status**: FAILED
-**Duration**: 165703ms
+**Duration**: 262491ms
 
 ### Playground Test (Functional Correctness)
 
@@ -24,7 +24,7 @@ Generated: 2025-11-10T19:44:51.390573+00:00
 ## integrated-typescript
 
 **Overall Status**: PASSED
-**Duration**: 5632ms
+**Duration**: 18978ms
 
 ### Playground Test (Functional Correctness)
 
@@ -53,7 +53,7 @@ Generated: 2025-11-10T19:44:51.390573+00:00
 ## integrated-python
 
 **Overall Status**: PASSED
-**Duration**: 20661ms
+**Duration**: 18901ms
 
 ### Playground Test (Functional Correctness)
 
@@ -65,10 +65,10 @@ Generated: 2025-11-10T19:44:51.390573+00:00
 
 ### Quality Evaluation
 
-- **Overall Score**: 0.84
+- **Overall Score**: 0.79
 - **Reasoning Depth**: 0.92 (Exceptional depth - thorough analysis, multiple perspectives considered)
 - **Decision Quality**: 0.75
-- **Output Quality**: 0.90
+- **Output Quality**: 0.75
 - **Status**: PASSED
 
 #### Success Criteria Met

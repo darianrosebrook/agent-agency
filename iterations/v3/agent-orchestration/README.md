@@ -60,6 +60,20 @@ The orchestration service follows the **CAWS Adjudication Cycle** for all arbitr
 
 ## Key Features
 
+### Worker Evolution
+
+The orchestrator includes an **automatic worker evolution system** that enables agents to craft their own specialized workers based on execution patterns:
+
+- **Pattern Detection**: Analyzes learning outcomes to identify recurring task patterns requiring specialized capabilities
+- **Automatic Worker Creation**: Creates new specialized workers when patterns suggest a need (e.g., "API generation Specialist")
+- **Worker Refinement**: Identifies capability gaps and automatically adds missing capabilities to existing workers
+- **Confidence-Based Execution**: Only executes proposals that meet confidence and benefit thresholds
+- **Integration with Reflexive Learning**: Processes outcomes from `ReflexiveLearner` to drive evolution
+
+**Example:** When the system observes 15+ tasks requiring "API generation" capability with 70%+ success rate and no suitable worker exists, it automatically creates an "API endpoint generation Specialist" worker.
+
+See `docs/implementation/worker-evolution-integration.md` for detailed documentation.
+
 ### Planning & Orchestration
 - **Plan Generation**: Creates execution plans from working specifications with dependency resolution
 - **Dynamic Planning**: Real-time task planning and adaptation based on execution results
@@ -95,6 +109,7 @@ The orchestration service follows the **CAWS Adjudication Cycle** for all arbitr
 - **Knowledge Integration**: Memory system integration for context-aware decisions
 - **Reflexive Learning**: Turn-level reward assignment and credit allocation for long-horizon tasks
 - **Model Performance Tracking**: Continuous benchmarking and preference for high-performing models
+- **Worker Evolution**: Automatic worker creation and refinement based on execution patterns
 
 ### Worker Execution Bridge
 

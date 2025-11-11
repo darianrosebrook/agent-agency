@@ -40,6 +40,7 @@ pub mod caws_adjudication_cycle;
 pub mod worker_lifecycle_manager;
 pub mod caws_debate_scorer;
 pub mod reflexive_learner;
+pub mod worker_evolution;
 pub mod rubric_engineering;
 pub mod thinking_budget;
 pub mod curriculum_learning;

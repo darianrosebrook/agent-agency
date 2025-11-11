@@ -4,6 +4,7 @@
 
 pub mod unified_orchestrator;
 pub mod unified_orchestrator_factory;
+pub mod worker_scaffolding;
 pub mod session_manager;
 pub mod task_state_persistence;
 

@@ -63,10 +63,13 @@ impl QTable {
     }
 
     pub fn get_best_action(&self, state: &str) -> Option<String> {
-        self.q_values
-            .get(state)?
+        let actions = self.q_values.get(state)?;
+        if actions.is_empty() {
+            return None;
+        }
+        actions
             .iter()
-            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(action, _)| action.clone())
     }
 

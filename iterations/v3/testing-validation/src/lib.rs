@@ -27,6 +27,7 @@ pub mod scenarios;
 pub mod test_helpers;
 pub mod database_lifecycle;
 pub mod e2e_orchestration_test;
+pub mod worker_registry;
 pub mod quality_analyzers;
 
 use tracing::{error, info};
@@ -107,11 +108,27 @@ impl E2ETestRunner {
             Scenario::HumanIntervention => {
                 scenarios::human_intervention::run_human_intervention_test(&self.environment, &self.services).await
             }
-            // Reflexive Learning tests
-            #[cfg(feature = "full")]
-            Scenario::ReflexiveLearning => {
-                scenarios::reflexive_learning::run_reflexive_learning_test(&self.environment, &self.services).await
-            }
+    // Reflexive Learning tests
+    #[cfg(feature = "full")]
+    Scenario::ReflexiveLearning => {
+        scenarios::reflexive_learning::run_reflexive_learning_test(&self.environment, &self.services).await
+    }
+    // Worker Evolution tests
+    #[cfg(feature = "full")]
+    Scenario::WorkerEvolution => {
+        let result = scenarios::worker_evolution_test::run_worker_evolution_test().await;
+        TestResult {
+            scenario: Scenario::WorkerEvolution,
+            passed: result.passed,
+            duration_ms: result.duration_ms,
+            error_message: result.error_message,
+            metrics: TestMetrics {
+                learning_iterations: result.proposals_generated,
+                model_improvements: result.workers_created + result.workers_refined,
+                ..Default::default()
+            },
+        }
+    }
             #[cfg(not(feature = "full"))]
             Scenario::ReflexiveLearning => {
                 error!("Reflexive Learning test requires 'full' feature");
@@ -212,6 +229,8 @@ pub enum Scenario {
     HumanIntervention,
     // Reflexive Learning tests
     ReflexiveLearning,
+    // Worker Evolution tests
+    WorkerEvolution,
     // Multi-Agent Coordination tests
     MultiAgentCoordination,
     // Claim Extraction & Verification tests

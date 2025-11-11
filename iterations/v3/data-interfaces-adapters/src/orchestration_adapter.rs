@@ -181,6 +181,15 @@ impl UnifiedOrchestratorAdapter {
             async fn get_workers(&self) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
                 Ok(vec![])
             }
+            async fn get_worker(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+                Ok(None)
+            }
+            async fn create_worker(&self, _worker: agent_orchestration::planning::data_infrastructure_types::CreateWorker) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+                Err(anyhow::anyhow!("Stub implementation"))
+            }
+            async fn update_worker(&self, _id: Uuid, _update: agent_orchestration::planning::data_infrastructure_types::UpdateWorker) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+                Err(anyhow::anyhow!("Stub implementation"))
+            }
             // Implement other required methods with stubs
             async fn create_execution_plan(&self, _plan: agent_orchestration::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<agent_orchestration::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
                 Err(anyhow::anyhow!("Stub implementation"))

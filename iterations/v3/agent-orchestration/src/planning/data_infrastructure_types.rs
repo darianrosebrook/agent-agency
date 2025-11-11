@@ -44,6 +44,9 @@ pub trait DatabaseOperations: Send + Sync {
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<models::JudgeEvaluation, anyhow::Error>;
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<models::JudgeEvaluation>, anyhow::Error>;
     async fn get_workers(&self) -> Result<Vec<models::Worker>, anyhow::Error>;
+    async fn get_worker(&self, id: Uuid) -> Result<Option<models::Worker>, anyhow::Error>;
+    async fn create_worker(&self, worker: CreateWorker) -> Result<models::Worker, anyhow::Error>;
+    async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<models::Worker, anyhow::Error>;
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>, anyhow::Error>;
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver, anyhow::Error>;
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver, anyhow::Error>;
@@ -386,6 +389,32 @@ pub struct CreateExecutionResult {
     pub metrics: serde_json::Value,
     pub final_state: String,
     pub timeline: serde_json::Value,
+}
+
+/// Create worker request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateWorker {
+    pub name: String,
+    pub worker_type: String,
+    pub specialty: Option<String>,
+    pub model_name: String,
+    pub endpoint: String,
+    pub capabilities: serde_json::Value,
+    pub performance_history: serde_json::Value,
+    pub is_active: bool,
+}
+
+/// Update worker request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateWorker {
+    pub name: Option<String>,
+    pub worker_type: Option<String>,
+    pub specialty: Option<String>,
+    pub model_name: Option<String>,
+    pub endpoint: Option<String>,
+    pub capabilities: Option<serde_json::Value>,
+    pub performance_history: Option<serde_json::Value>,
+    pub is_active: Option<bool>,
 }
 
 /// Cost limits

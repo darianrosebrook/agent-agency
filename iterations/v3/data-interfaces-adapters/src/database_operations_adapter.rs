@@ -18,7 +18,7 @@ use agent_orchestration::planning::data_infrastructure_types::{
     CreateAuditTrailEntry, CreatePlanningSession, UpdatePlanningSession,
     CreatePlanningTelemetry, CreatePlanningAuditEvent,
     CreateJudge, CreateJudgeEvaluation, CreateWaiver, UpdateWaiver,
-    CreateExecutionResult,
+    CreateExecutionResult, CreateWorker, UpdateWorker,
     models,
 };
 use data_infrastructure::DatabaseClient;
@@ -88,6 +88,119 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         
         tracing::info!("Queried {} workers from database", workers.len());
         Ok(workers)
+    }
+
+    async fn get_worker(&self, id: Uuid) -> Result<Option<models::Worker>> {
+        use data_infrastructure::models::Worker as DbWorker;
+        
+        let pool = self.db_client.pool();
+        let row = sqlx::query_as::<_, DbWorker>(
+            r#"
+            SELECT id, name, worker_type, specialty, model_name, endpoint,
+                   capabilities, performance_history, is_active, created_at, updated_at
+            FROM workers
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query worker from database: {}", e))?;
+        
+        Ok(row.map(|db_worker| {
+            let capabilities = if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities {
+                serde_json::json!(caps_obj)
+            } else {
+                db_worker.capabilities.clone()
+            };
+            
+            let performance_history = if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
+                serde_json::json!(perf_obj)
+            } else {
+                db_worker.performance_history.clone()
+            };
+            
+            models::Worker {
+                id: db_worker.id,
+                name: db_worker.name,
+                worker_type: db_worker.worker_type,
+                specialty: db_worker.specialty,
+                model_name: db_worker.model_name,
+                endpoint: db_worker.endpoint,
+                capabilities,
+                performance_history,
+                is_active: db_worker.is_active,
+                metadata: std::collections::HashMap::new(),
+                created_at: db_worker.created_at,
+                updated_at: db_worker.updated_at,
+            }
+        }))
+    }
+
+    async fn create_worker(&self, worker: CreateWorker) -> Result<models::Worker> {
+        use data_infrastructure::database_operations::CreateWorker as DbCreateWorker;
+        
+        let db_worker = DbCreateWorker {
+            name: worker.name,
+            worker_type: worker.worker_type,
+            specialty: worker.specialty,
+            model_name: worker.model_name,
+            endpoint: worker.endpoint,
+            capabilities: worker.capabilities,
+            performance_history: worker.performance_history,
+            is_active: worker.is_active,
+        };
+        
+        let created = self.db_client.create_worker(db_worker).await
+            .map_err(|e| anyhow!("Failed to create worker: {}", e))?;
+        
+        Ok(models::Worker {
+            id: created.id,
+            name: created.name,
+            worker_type: created.worker_type,
+            specialty: created.specialty,
+            model_name: created.model_name,
+            endpoint: created.endpoint,
+            capabilities: created.capabilities,
+            performance_history: created.performance_history,
+            is_active: created.is_active,
+            metadata: std::collections::HashMap::new(),
+            created_at: created.created_at,
+            updated_at: created.updated_at,
+        })
+    }
+
+    async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<models::Worker> {
+        use data_infrastructure::database_operations::UpdateWorker as DbUpdateWorker;
+        
+        let db_update = DbUpdateWorker {
+            name: update.name,
+            worker_type: update.worker_type,
+            specialty: update.specialty,
+            model_name: update.model_name,
+            endpoint: update.endpoint,
+            capabilities: update.capabilities,
+            performance_history: update.performance_history,
+            is_active: update.is_active,
+        };
+        
+        let updated = self.db_client.update_worker(id, db_update).await
+            .map_err(|e| anyhow!("Failed to update worker: {}", e))?;
+        
+        Ok(models::Worker {
+            id: updated.id,
+            name: updated.name,
+            worker_type: updated.worker_type,
+            specialty: updated.specialty,
+            model_name: updated.model_name,
+            endpoint: updated.endpoint,
+            capabilities: updated.capabilities,
+            performance_history: updated.performance_history,
+            is_active: updated.is_active,
+            metadata: std::collections::HashMap::new(),
+            created_at: updated.created_at,
+            updated_at: updated.updated_at,
+        })
     }
 
     async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan> {

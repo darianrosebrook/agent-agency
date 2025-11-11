@@ -13,13 +13,15 @@ use uuid::Uuid;
 use tracing::{info, warn, debug, error};
 use chrono::Utc;
 use tokio::time::interval;
+use serde::{Serialize, Deserialize};
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
+use crate::planning::worker_evolution::WorkerEvolutionEngine;
 
 /// Learning outcome from task execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningOutcome {
     /// Worker ID that executed the task
     pub worker_id: Uuid,
@@ -47,7 +49,7 @@ pub struct LearningOutcome {
 }
 
 /// Task characteristics for pattern matching
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskCharacteristics {
     /// Task complexity (estimated)
     pub complexity: f64,
@@ -63,7 +65,7 @@ pub struct TaskCharacteristics {
 }
 
 /// Resource requirements for a task
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRequirements {
     /// Estimated memory in MB
     pub memory_mb: u64,
@@ -95,6 +97,9 @@ pub struct RoutingAdjustment {
 pub struct ReflexiveLearner {
     /// Worker assignment strategy to update
     worker_assignment_strategy: Arc<WorkerAssignmentStrategy>,
+    
+    /// Worker evolution engine for creating/refining workers
+    evolution_engine: Option<Arc<WorkerEvolutionEngine>>,
     
     /// Learning outcomes history (for pattern analysis)
     outcome_history: Arc<tokio::sync::RwLock<Vec<LearningOutcome>>>,
@@ -145,6 +150,22 @@ impl ReflexiveLearner {
     ) -> Self {
         Self {
             worker_assignment_strategy,
+            evolution_engine: None,
+            outcome_history: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            config,
+            learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
+        }
+    }
+    
+    /// Create a new reflexive learner with evolution engine
+    pub fn with_evolution_engine(
+        worker_assignment_strategy: Arc<WorkerAssignmentStrategy>,
+        evolution_engine: Arc<WorkerEvolutionEngine>,
+        config: LearningConfig,
+    ) -> Self {
+        Self {
+            worker_assignment_strategy,
+            evolution_engine: Some(evolution_engine),
             outcome_history: Arc::new(tokio::sync::RwLock::new(Vec::new())),
             config,
             learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
@@ -265,6 +286,27 @@ impl ReflexiveLearner {
 
         // Store outcome in history
         self.store_outcome(outcome.clone()).await?;
+
+        // Process outcomes for worker evolution if evolution engine is available
+        if let Some(ref evolution_engine) = self.evolution_engine {
+            let history = self.outcome_history.read().await;
+            let recent_outcomes: Vec<&LearningOutcome> = history.iter().collect();
+            
+            if recent_outcomes.len() >= 10 {
+                // Process outcomes and generate proposals
+                if let Err(e) = evolution_engine.process_outcomes(&recent_outcomes).await {
+                    warn!("Failed to process outcomes for worker evolution: {}", e);
+                }
+                
+                // Evaluate and execute approved proposals periodically
+                // (Only evaluate every 50 outcomes to avoid excessive worker creation)
+                if recent_outcomes.len() % 50 == 0 {
+                    if let Err(e) = evolution_engine.evaluate_and_execute().await {
+                        warn!("Failed to evaluate worker evolution proposals: {}", e);
+                    }
+                }
+            }
+        }
 
         // Analyze patterns and generate adjustments
         let adjustments = if self.config.enable_auto_adjustments {
@@ -773,9 +815,24 @@ pub struct LearningStatistics {
 impl Drop for ReflexiveLearner {
     fn drop(&mut self) {
         // Stop continuous learning loop on drop
-        let rt = tokio::runtime::Runtime::new().ok();
-        if let Some(rt) = rt {
-            rt.block_on(self.stop_continuous_learning());
+        // Use Handle::try_current() to avoid creating nested runtime
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            // If we're in an async context, spawn a task to stop the loop
+            let learner = self.learning_loop_handle.clone();
+            handle.spawn(async move {
+                if let Some(handle) = learner.read().await.as_ref() {
+                    handle.abort();
+                }
+            });
+        } else {
+            // Not in async context, try to create a runtime (but this may fail)
+            if let Ok(rt) = tokio::runtime::Runtime::new() {
+                rt.block_on(async {
+                    if let Some(handle) = self.learning_loop_handle.read().await.as_ref() {
+                        handle.abort();
+                    }
+                });
+            }
         }
     }
 }

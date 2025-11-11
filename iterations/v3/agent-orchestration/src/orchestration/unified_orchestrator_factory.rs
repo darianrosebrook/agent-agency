@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::path::PathBuf;
 use anyhow::Result;
 use uuid::Uuid;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig};
 use crate::council::{Council, CouncilConfig};
@@ -27,6 +27,7 @@ use crate::planning::{
     worker_lifecycle_manager::WorkerLifecycleManager,
     worker_assignment::WorkerAssignmentStrategy,
     reflexive_learner::{ReflexiveLearner, LearningConfig},
+    worker_evolution::{WorkerEvolutionEngine, EvolutionConfig},
     plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
     factory::PlanningSystemFactory,
 };
@@ -174,6 +175,13 @@ impl UnifiedOrchestratorFactory {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
         
+        // Scaffold standard workers if they don't exist
+        // This ensures the orchestrator has workers available for task execution
+        if let Err(e) = crate::orchestration::worker_scaffolding::scaffold_standard_workers(db_client.clone()).await {
+            warn!("Failed to scaffold standard workers: {}", e);
+            warn!("Continuing without worker scaffolding - workers may need to be registered manually");
+        }
+        
         // Clone db_client for TaskExecutor (it will be moved)
         let db_client_for_executor = db_client.clone();
         
@@ -287,9 +295,17 @@ impl UnifiedOrchestratorFactory {
         #[cfg(not(feature = "research"))]
         let worker_assignment_strategy = Arc::new(WorkerAssignmentStrategy::new(db_ops.clone()));
 
-        // Create reflexive learner
-        let reflexive_learner = Arc::new(ReflexiveLearner::new(
+        // Create worker evolution engine
+        let evolution_config = EvolutionConfig::default();
+        let evolution_engine = Arc::new(WorkerEvolutionEngine::new(
+            db_ops.clone(),
+            evolution_config,
+        ));
+        
+        // Create reflexive learner with evolution engine
+        let reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
             worker_assignment_strategy.clone(),
+            evolution_engine,
             LearningConfig::default(),
         ));
         
@@ -512,6 +528,15 @@ impl DatabaseOperations for StubDatabaseOperations {
     }
     async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>> {
         Ok(None)
+    }
+    async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>> {
+        Ok(None)
+    }
+    async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker> {
+        Err(anyhow::anyhow!("Stub implementation"))
+    }
+    async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker> {
+        Err(anyhow::anyhow!("Stub implementation"))
     }
 }
 
