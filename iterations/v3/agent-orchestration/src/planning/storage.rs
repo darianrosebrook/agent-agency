@@ -444,10 +444,21 @@ impl PlanningStorage {
 
     /// Store plan to database
     async fn store_plan_to_database(&self, plan: &ExecutionPlan) -> Result<()> {
+        // Ensure working_spec_id follows TASK-<UUID> format if it's a task-based plan
+        // Preserve the working_spec_id from the plan if it's already in the correct format
+        let working_spec_id = if plan.contract_plan.working_spec_id.starts_with("TASK-") {
+            // Already in TASK-<UUID> format, preserve it
+            Some(plan.contract_plan.working_spec_id.clone())
+        } else {
+            // Not in TASK format, use None to let adapter default to PLAN-<id>
+            None
+        };
+        
         let create_plan = CreateExecutionPlan {
             id: plan.contract_plan.id,
             title: plan.contract_plan.title.clone(),
             overview: plan.contract_plan.overview.clone(),
+            working_spec_id,
         };
 
         self.db_ops.create_execution_plan(create_plan).await?;
@@ -889,6 +900,14 @@ mod tests {
         assert_eq!(session.id, session_id);
     }
 
+    // TODO: Add unit tests for task-to-plan mapping functionality
+    // Test cases to implement:
+    // 1. test_get_plan_for_task_with_matching_working_spec_id - Test successful lookup when working_spec_id matches TASK-<UUID> format
+    // 2. test_get_plan_for_task_with_no_matching_plan - Test that None is returned when no plan matches task_id
+    // 3. test_get_plan_for_task_with_multiple_plans - Test that most recent plan is returned when multiple plans exist for same task
+    // 4. test_get_plan_for_task_with_non_task_format - Test that plans with non-TASK format working_spec_id are not matched
+    // 5. test_store_execution_plan_preserves_task_format - Test that TASK-<UUID> format is preserved when storing plans
+
     fn create_test_execution_plan() -> ExecutionPlan {
         use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory, ExecutionContext as PlanExecutionContext};
 
@@ -1095,29 +1114,44 @@ impl PlanningStorage {
     }
 
     /// Get plan for a specific task
-    pub async fn get_plan_for_task(&self, _task_id: Uuid) -> Result<Option<ExecutionPlan>> {
-        // TODO: Implement task-to-plan mapping:
-        // 1. Index creation: Create task_id to plan_id mapping index
-        //    - Store task_id -> plan_id mappings in database
-        //    - Create database index for efficient lookups
-        //    - Support multiple plans per task if needed
-        // 2. Query implementation: Implement efficient plan lookup
-        //    - Query database for plan_id by task_id
-        //    - Handle missing mappings gracefully
-        //    - Support plan versioning and selection
-        // 3. Mapping management: Manage task-plan mappings
-        //    - Create mappings when plans are created
-        //    - Update mappings when plans are modified
-        //    - Handle mapping cleanup and deletion
-        // ACCEPTANCE CRITERIA:
-        // - Task-to-plan mappings are stored and queryable
-        // - Plan lookups by task_id are efficient and accurate
-        // - Mapping management handles all lifecycle events
-        // DEPENDENCIES:
-        // - Database indexing system (Required)
-        // - Task-plan mapping storage (Required)
-        // PRIORITY: High
-        Ok(None)
+    pub async fn get_plan_for_task(&self, task_id: Uuid) -> Result<Option<ExecutionPlan>> {
+        // Extract task_id from working_spec_id format: TASK-<UUID>
+        // Query execution_plans table for plans where working_spec_id matches TASK-{task_id}
+        let expected_working_spec_id = format!("TASK-{}", task_id);
+        
+        // Get all execution plans and filter by working_spec_id
+        // Note: This could be optimized with a direct query method, but works for now
+        let all_plans = self.db_ops.get_execution_plans().await?;
+        
+        // Find plans matching the task_id (working_spec_id format: TASK-<UUID>)
+        let matching_plans: Vec<_> = all_plans
+            .into_iter()
+            .filter(|plan| plan.working_spec_id == expected_working_spec_id)
+            .collect();
+        
+        if matching_plans.is_empty() {
+            return Ok(None);
+        }
+        
+        // Return the most recent plan if multiple exist (sorted by created_at descending)
+        let most_recent_plan = matching_plans
+            .into_iter()
+            .max_by_key(|plan| plan.created_at);
+        
+        if let Some(db_plan) = most_recent_plan {
+            // Load plan spec from file if available
+            if let Some(plan_spec) = self.file_storage.load_plan_spec(db_plan.id).await? {
+                // Merge file spec with database state
+                let plan = self.merge_plan_data(plan_spec, db_plan)?;
+                Ok(Some(plan))
+            } else {
+                // Plan spec missing, reconstruct from DB
+                let plan = self.reconstruct_plan_from_db(db_plan)?;
+                Ok(Some(plan))
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     /// Get plan by ID (alias for load_execution_plan)

@@ -30,6 +30,11 @@ import {
 import { toastError, toastSuccess, toastLoading } from "../utils/toast";
 import { parseApiError } from "../errors";
 import { apiGet, apiPost, apiPatch } from "../utils/api";
+import {
+  createProject as createProjectApiClient,
+  listProjects as listProjectsApiClient,
+  getProjectHandler,
+} from "../api/projects";
 
 interface ProjectState {
   // State
@@ -112,583 +117,669 @@ export const useProjectStore = create<ProjectState>()(
   process.env.NODE_ENV === "development"
     ? devtools(
         (set, get) => ({
-      // Initial state
-      projects: [],
-      currentProjectId: null,
-      isLoading: false,
-      error: null,
+          // Initial state
+          projects: [],
+          currentProjectId: null,
+          isLoading: false,
+          error: null,
 
-      // Computed getters
-      getCurrentProject: () => {
-        const { currentProjectId, projects } = get();
-        if (!currentProjectId) return null;
-        return projects.find((p) => p.id === currentProjectId) ?? null;
-      },
+          // Computed getters
+          getCurrentProject: () => {
+            const { currentProjectId, projects } = get();
+            if (!currentProjectId) return null;
+            return projects.find((p) => p.id === currentProjectId) ?? null;
+          },
 
-      getProjectById: (projectId: string) => {
-        return get().projects.find((p) => p.id === projectId);
-      },
+          getProjectById: (projectId: string) => {
+            return get().projects.find((p) => p.id === projectId);
+          },
 
-      getTasks: (projectId: string) => {
-        const project = get().projects.find((p) => p.id === projectId);
-        return project?.tasks ?? [];
-      },
+          getTasks: (projectId: string) => {
+            const project = get().projects.find((p) => p.id === projectId);
+            return project?.tasks ?? [];
+          },
 
-      // Basic actions
-      setProjects: (projects) => set({ projects }),
-      setCurrentProjectId: (projectId) => set({ currentProjectId: projectId }),
+          // Basic actions
+          setProjects: (projects) => set({ projects }),
+          setCurrentProjectId: (projectId) =>
+            set({ currentProjectId: projectId }),
 
-      createProject: (data) => {
-        // Validate request
-        const validatedRequest = CreateProjectRequestSchema.parse(data);
+          createProject: (data) => {
+            // Validate request
+            const validatedRequest = CreateProjectRequestSchema.parse(data);
 
-        const newProjectId = `project-${Date.now()}`;
-        const newProject: Project = {
-          id: newProjectId,
-          name: validatedRequest.name,
-          summary: validatedRequest.summary,
-          description: validatedRequest.description,
-          milestones: (validatedRequest.milestones ?? []).map(
-            (title, index) => ({
-              id: `milestone-${Date.now()}-${index}`,
-              title,
-              completed: false,
-            })
-          ),
-          tasks: [],
-          createdAt: new Date(),
-          lastAccessed: new Date(),
-        };
+            const newProjectId = `project-${Date.now()}`;
+            const newProject: Project = {
+              id: newProjectId,
+              name: validatedRequest.name,
+              summary: validatedRequest.summary,
+              description: validatedRequest.description,
+              milestones: (validatedRequest.milestones ?? []).map(
+                (title, index) => ({
+                  id: `milestone-${Date.now()}-${index}`,
+                  title,
+                  completed: false,
+                })
+              ),
+              tasks: [],
+              createdAt: new Date(),
+              lastAccessed: new Date(),
+            };
 
-        set((state) => ({
-          projects: [newProject, ...state.projects],
-          currentProjectId: newProjectId,
-        }));
+            set((state) => ({
+              projects: [newProject, ...state.projects],
+              currentProjectId: newProjectId,
+            }));
 
-        return newProjectId;
-      },
+            return newProjectId;
+          },
 
-      selectProject: (projectId: string) => {
-        set({ currentProjectId: projectId });
+          selectProject: (projectId: string) => {
+            set({ currentProjectId: projectId });
 
-        // Update last accessed time optimistically
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, lastAccessed: new Date() } : p
-          ),
-        }));
-      },
+            // Update last accessed time optimistically
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId ? { ...p, lastAccessed: new Date() } : p
+              ),
+            }));
+          },
 
-      clearCurrentProject: () => {
-        set({ currentProjectId: null });
-      },
+          clearCurrentProject: () => {
+            set({ currentProjectId: null });
+          },
 
-      addTask: (projectId: string, task: CreateTaskRequest) => {
-        const validatedTask = CreateTaskRequestSchema.parse(task);
-        const newTask: ProjectTask = {
-          ...validatedTask,
-          id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date(),
-        };
+          addTask: (projectId: string, task: CreateTaskRequest) => {
+            const validatedTask = CreateTaskRequestSchema.parse(task);
+            const newTask: ProjectTask = {
+              ...validatedTask,
+              id: `task-${Date.now()}-${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+              createdAt: new Date(),
+            };
 
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p
-          ),
-        }));
-      },
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p
+              ),
+            }));
+          },
 
-      updateTask: (
-        projectId: string,
-        taskId: string,
-        updates: UpdateTaskRequest
-      ) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.map((t) =>
-                    t.id === taskId ? { ...t, ...updates } : t
-                  ),
-                }
-              : p
-          ),
-        }));
-      },
+          updateTask: (
+            projectId: string,
+            taskId: string,
+            updates: UpdateTaskRequest
+          ) => {
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? {
+                      ...p,
+                      tasks: p.tasks.map((t) =>
+                        t.id === taskId ? { ...t, ...updates } : t
+                      ),
+                    }
+                  : p
+              ),
+            }));
+          },
 
-      // API actions with Zod validation
-      fetchProjects: async () => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading projects...");
+          // API actions with Zod validation
+          fetchProjects: async () => {
+            set({ isLoading: true, error: null });
+            const loadingToast = toastLoading("Loading projects...");
 
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiGet<unknown>(`${apiUrl}/api/v1/projects`, {
-            retry: { maxAttempts: 3, initialDelay: 1000 },
-          });
+            try {
+              const response = await listProjectsApiClient();
 
-          const validatedProjects = validateApiResponse(
-            ProjectsResponseSchema,
-            data,
-            "fetchProjects"
-          );
+              // Fetch full details for each project in parallel
+              const projectPromises = response.projects.map(
+                async (projectListItem) => {
+                  try {
+                    const projectDetails = await getProjectHandler(
+                      projectListItem.project_id
+                    );
+                    const validatedProject = validateApiResponse(
+                      ProjectResponseSchema,
+                      projectDetails,
+                      "fetchProjects"
+                    );
 
-          // Transform API response to Project format
-          const projects: Project[] = validatedProjects.map((project) =>
-            ProjectSchema.parse({
-              id: project.id,
-              name: project.name,
-              summary: project.summary ?? undefined,
-              description: project.description ?? undefined,
-              milestones: project.milestones,
-              tasks: project.tasks.map((task) => ({
-                id: task.id,
-                title: task.title,
-                description: task.description ?? undefined,
-                status: task.status,
-                priority: task.priority ?? undefined,
-                assignee: task.assignee ?? undefined,
-                createdAt: task.created_at,
-              })),
-              createdAt: project.created_at,
-              lastAccessed: project.last_accessed,
-            })
-          );
-
-          set({ projects, isLoading: false });
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      createProjectApi: async (request) => {
-        // Validate request
-        const validatedRequest = CreateProjectRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/projects`,
-            validatedRequest
-          );
-
-          const validatedProject = validateApiResponse(
-            ProjectResponseSchema,
-            data,
-            "createProjectApi"
-          );
-
-          // Transform to Project format
-          const newProject: Project = ProjectSchema.parse({
-            id: validatedProject.id,
-            name: validatedProject.name,
-            summary: validatedProject.summary ?? undefined,
-            description: validatedProject.description ?? undefined,
-            milestones: validatedProject.milestones,
-            tasks: validatedProject.tasks.map((task) => ({
-              id: task.id,
-              title: task.title,
-              description: task.description ?? undefined,
-              status: task.status,
-              priority: task.priority ?? undefined,
-              assignee: task.assignee ?? undefined,
-              createdAt: task.created_at,
-            })),
-            createdAt: validatedProject.created_at,
-            lastAccessed: validatedProject.last_accessed,
-          });
-
-          set((state) => ({
-            projects: [newProject, ...state.projects],
-            currentProjectId: validatedProject.id,
-            isLoading: false,
-          }));
-
-          toastSuccess("Project created successfully");
-          return validatedProject.id;
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      updateProject: async (
-        projectId: string,
-        request: UpdateProjectRequest
-      ) => {
-        // Validate request
-        const validatedRequest = UpdateProjectRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPatch<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}`,
-            validatedRequest
-          );
-
-          const validatedProject = validateApiResponse(
-            ProjectResponseSchema,
-            data,
-            "updateProject"
-          );
-
-          // Update project in state
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? ProjectSchema.parse({
-                    ...p,
-                    ...validatedProject,
-                    id: p.id, // Preserve ID
-                    createdAt: p.createdAt, // Preserve original created date
-                    lastAccessed: validatedProject.last_accessed,
-                  })
-                : p
-            ),
-            isLoading: false,
-          }));
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      addTaskApi: async (projectId: string, task: CreateTaskRequest) => {
-        // Validate request
-        const validatedTask = CreateTaskRequestSchema.parse(task);
-
-        // Optimistic update
-        const optimisticTask: ProjectTask = {
-          ...validatedTask,
-          id: `temp-${Date.now()}`,
-          createdAt: new Date(),
-        };
-        get().optimisticAddTask(projectId, optimisticTask);
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}/tasks`,
-            validatedTask
-          );
-
-          const validatedResponse = z
-            .object({
-              id: z.string(),
-              title: z.string(),
-              description: z.string().nullable().optional(),
-              status: z.enum(["backlog", "todo", "in-progress", "done"]),
-              priority: z.string().nullable().optional(),
-              assignee: z.string().nullable().optional(),
-              created_at: z.string().transform((str) => new Date(str)),
-            })
-            .parse(data);
-
-          // Replace optimistic task with validated one
-          const finalTask: ProjectTask = {
-            id: validatedResponse.id,
-            title: validatedResponse.title,
-            description: validatedResponse.description ?? undefined,
-            status: validatedResponse.status,
-            priority: validatedResponse.priority ?? undefined,
-            assignee: validatedResponse.assignee ?? undefined,
-            createdAt: validatedResponse.created_at,
-          };
-
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? {
-                    ...p,
-                    tasks: p.tasks.map((t) =>
-                      t.id === optimisticTask.id ? finalTask : t
-                    ),
+                    // Transform API response to Project format
+                    return ProjectSchema.parse({
+                      id: validatedProject.id,
+                      name: validatedProject.name,
+                      summary: validatedProject.summary ?? undefined,
+                      description: validatedProject.description ?? undefined,
+                      milestones: validatedProject.milestones,
+                      tasks: validatedProject.tasks.map((task) => ({
+                        id: task.id,
+                        title: task.title,
+                        description: task.description ?? undefined,
+                        status: task.status,
+                        priority: task.priority ?? undefined,
+                        assignee: task.assignee ?? undefined,
+                        createdAt: task.created_at,
+                      })),
+                      createdAt: validatedProject.created_at,
+                      lastAccessed: validatedProject.last_accessed,
+                    });
+                  } catch (err) {
+                    console.error(
+                      `Failed to fetch project ${projectListItem.project_id}:`,
+                      err
+                    );
+                    return null;
                   }
-                : p
-            ),
-          }));
-        } catch (error) {
-          // Rollback optimistic update
-          get().rollbackOptimisticTask(projectId, optimisticTask.id);
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      updateTaskApi: async (
-        projectId: string,
-        taskId: string,
-        updates: UpdateTaskRequest
-      ) => {
-        // Validate request
-        const validatedUpdates = UpdateTaskRequestSchema.parse(updates);
-
-        // Store original task for rollback
-        const project = get().projects.find((p) => p.id === projectId);
-        const originalTask = project?.tasks.find((t) => t.id === taskId);
-        if (!originalTask) {
-          throw new Error(`Task ${taskId} not found`);
-        }
-
-        // Optimistic update
-        get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPatch<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
-            validatedUpdates
-          );
-
-          const validatedResponse = z
-            .object({
-              id: z.string(),
-              title: z.string(),
-              description: z.string().nullable().optional(),
-              status: z.enum(["backlog", "todo", "in-progress", "done"]),
-              priority: z.string().nullable().optional(),
-              assignee: z.string().nullable().optional(),
-              created_at: z.string().transform((str) => new Date(str)),
-            })
-            .parse(data);
-
-          // Update with validated response
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? {
-                    ...p,
-                    tasks: p.tasks.map((t) =>
-                      t.id === taskId
-                        ? {
-                            id: validatedResponse.id,
-                            title: validatedResponse.title,
-                            description:
-                              validatedResponse.description ?? undefined,
-                            status: validatedResponse.status,
-                            priority: validatedResponse.priority ?? undefined,
-                            assignee: validatedResponse.assignee ?? undefined,
-                            createdAt: validatedResponse.created_at,
-                          }
-                        : t
-                    ),
-                  }
-                : p
-            ),
-          }));
-        } catch (error) {
-          // Rollback optimistic update
-          if (originalTask) {
-            get().optimisticUpdateTask(projectId, taskId, originalTask);
-          }
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      // Optimistic updates
-      optimisticAddTask: (projectId: string, task: ProjectTask) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, tasks: [...p.tasks, task] } : p
-          ),
-        }));
-      },
-
-      optimisticUpdateTask: (
-        projectId: string,
-        taskId: string,
-        updates: Partial<ProjectTask>
-      ) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.map((t) =>
-                    t.id === taskId ? { ...t, ...updates } : t
-                  ),
                 }
-              : p
-          ),
-        }));
-      },
+              );
 
-      rollbackOptimisticTask: (projectId: string, taskId: string) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.filter((t) => t.id !== taskId),
-                }
-              : p
-          ),
-        }));
-      },
+              const projectsData = (await Promise.all(projectPromises)).filter(
+                (project): project is Project => project !== null
+              );
 
-      // Error handling
-      setError: (error) => set({ error }),
-      clearError: () => set({ error: null }),
-    }),
-    { name: "ProjectStore" }
+              set({ projects: projectsData, isLoading: false });
+              loadingToast();
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              loadingToast();
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          createProjectApi: async (request) => {
+            // Validate request
+            const validatedRequest = CreateProjectRequestSchema.parse(request);
+
+            set({ isLoading: true, error: null });
+
+            try {
+              // Use API client function
+              const apiResponse = await createProjectApiClient({
+                name: validatedRequest.name,
+                summary: validatedRequest.summary,
+                description: validatedRequest.description,
+              });
+
+              const validatedProject = validateApiResponse(
+                ProjectResponseSchema,
+                apiResponse,
+                "createProjectApi"
+              );
+
+              // Transform to Project format
+              const newProject: Project = ProjectSchema.parse({
+                id: validatedProject.id,
+                name: validatedProject.name,
+                summary: validatedProject.summary ?? undefined,
+                description: validatedProject.description ?? undefined,
+                milestones: validatedProject.milestones,
+                tasks: validatedProject.tasks.map((task) => ({
+                  id: task.id,
+                  title: task.title,
+                  description: task.description ?? undefined,
+                  status: task.status,
+                  priority: task.priority ?? undefined,
+                  assignee: task.assignee ?? undefined,
+                  createdAt: task.created_at,
+                })),
+                createdAt: validatedProject.created_at,
+                lastAccessed: validatedProject.last_accessed,
+              });
+
+              set((state) => ({
+                projects: [newProject, ...state.projects],
+                currentProjectId: validatedProject.id,
+                isLoading: false,
+              }));
+
+              toastSuccess("Project created successfully");
+              return validatedProject.id;
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          updateProject: async (
+            projectId: string,
+            request: UpdateProjectRequest
+          ) => {
+            // Validate request
+            const validatedRequest = UpdateProjectRequestSchema.parse(request);
+
+            set({ isLoading: true, error: null });
+
+            try {
+              const apiUrl =
+                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const data = await apiPatch<unknown>(
+                `${apiUrl}/api/v1/projects/${projectId}`,
+                validatedRequest
+              );
+
+              const validatedProject = validateApiResponse(
+                ProjectResponseSchema,
+                data,
+                "updateProject"
+              );
+
+              // Update project in state
+              set((state) => ({
+                projects: state.projects.map((p) =>
+                  p.id === projectId
+                    ? ProjectSchema.parse({
+                        ...p,
+                        ...validatedProject,
+                        id: p.id, // Preserve ID
+                        createdAt: p.createdAt, // Preserve original created date
+                        lastAccessed: validatedProject.last_accessed,
+                      })
+                    : p
+                ),
+                isLoading: false,
+              }));
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          addTaskApi: async (projectId: string, task: CreateTaskRequest) => {
+            // Validate request
+            const validatedTask = CreateTaskRequestSchema.parse(task);
+
+            // Optimistic update
+            const optimisticTask: ProjectTask = {
+              ...validatedTask,
+              id: `temp-${Date.now()}`,
+              createdAt: new Date(),
+            };
+            get().optimisticAddTask(projectId, optimisticTask);
+
+            try {
+              const apiUrl =
+                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const data = await apiPost<unknown>(
+                `${apiUrl}/api/v1/projects/${projectId}/tasks`,
+                validatedTask
+              );
+
+              const validatedResponse = z
+                .object({
+                  id: z.string(),
+                  title: z.string(),
+                  description: z.string().nullable().optional(),
+                  status: z.enum(["backlog", "todo", "in-progress", "done"]),
+                  priority: z.string().nullable().optional(),
+                  assignee: z.string().nullable().optional(),
+                  created_at: z.string().transform((str) => new Date(str)),
+                })
+                .parse(data);
+
+              // Replace optimistic task with validated one
+              const finalTask: ProjectTask = {
+                id: validatedResponse.id,
+                title: validatedResponse.title,
+                description: validatedResponse.description ?? undefined,
+                status: validatedResponse.status,
+                priority: validatedResponse.priority ?? undefined,
+                assignee: validatedResponse.assignee ?? undefined,
+                createdAt: validatedResponse.created_at,
+              };
+
+              set((state) => ({
+                projects: state.projects.map((p) =>
+                  p.id === projectId
+                    ? {
+                        ...p,
+                        tasks: p.tasks.map((t) =>
+                          t.id === optimisticTask.id ? finalTask : t
+                        ),
+                      }
+                    : p
+                ),
+              }));
+            } catch (error) {
+              // Rollback optimistic update
+              get().rollbackOptimisticTask(projectId, optimisticTask.id);
+              const appError = parseApiError(error);
+              set({ error: appError });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          updateTaskApi: async (
+            projectId: string,
+            taskId: string,
+            updates: UpdateTaskRequest
+          ) => {
+            // Validate request
+            const validatedUpdates = UpdateTaskRequestSchema.parse(updates);
+
+            // Store original task for rollback
+            const project = get().projects.find((p) => p.id === projectId);
+            const originalTask = project?.tasks.find((t) => t.id === taskId);
+            if (!originalTask) {
+              throw new Error(`Task ${taskId} not found`);
+            }
+
+            // Optimistic update
+            get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
+
+            try {
+              const apiUrl =
+                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const data = await apiPatch<unknown>(
+                `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
+                validatedUpdates
+              );
+
+              const validatedResponse = z
+                .object({
+                  id: z.string(),
+                  title: z.string(),
+                  description: z.string().nullable().optional(),
+                  status: z.enum(["backlog", "todo", "in-progress", "done"]),
+                  priority: z.string().nullable().optional(),
+                  assignee: z.string().nullable().optional(),
+                  created_at: z.string().transform((str) => new Date(str)),
+                })
+                .parse(data);
+
+              // Update with validated response
+              set((state) => ({
+                projects: state.projects.map((p) =>
+                  p.id === projectId
+                    ? {
+                        ...p,
+                        tasks: p.tasks.map((t) =>
+                          t.id === taskId
+                            ? {
+                                id: validatedResponse.id,
+                                title: validatedResponse.title,
+                                description:
+                                  validatedResponse.description ?? undefined,
+                                status: validatedResponse.status,
+                                priority:
+                                  validatedResponse.priority ?? undefined,
+                                assignee:
+                                  validatedResponse.assignee ?? undefined,
+                                createdAt: validatedResponse.created_at,
+                              }
+                            : t
+                        ),
+                      }
+                    : p
+                ),
+              }));
+            } catch (error) {
+              // Rollback optimistic update
+              if (originalTask) {
+                get().optimisticUpdateTask(projectId, taskId, originalTask);
+              }
+              const appError = parseApiError(error);
+              set({ error: appError });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          // Optimistic updates
+          optimisticAddTask: (projectId: string, task: ProjectTask) => {
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId ? { ...p, tasks: [...p.tasks, task] } : p
+              ),
+            }));
+          },
+
+          optimisticUpdateTask: (
+            projectId: string,
+            taskId: string,
+            updates: Partial<ProjectTask>
+          ) => {
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? {
+                      ...p,
+                      tasks: p.tasks.map((t) =>
+                        t.id === taskId ? { ...t, ...updates } : t
+                      ),
+                    }
+                  : p
+              ),
+            }));
+          },
+
+          rollbackOptimisticTask: (projectId: string, taskId: string) => {
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? {
+                      ...p,
+                      tasks: p.tasks.filter((t) => t.id !== taskId),
+                    }
+                  : p
+              ),
+            }));
+          },
+
+          // Error handling
+          setError: (error) => set({ error }),
+          clearError: () => set({ error: null }),
+        }),
+        { name: "ProjectStore" }
       )
-    : ((set, get) => ({
-      // Initial state
-      projects: [],
-      currentProjectId: null,
-      isLoading: false,
-      error: null,
+    : (set, get) => ({
+        // Initial state
+        projects: [],
+        currentProjectId: null,
+        isLoading: false,
+        error: null,
 
-      // Computed getters
-      getCurrentProject: () => {
-        const { currentProjectId, projects } = get();
-        if (!currentProjectId) return null;
-        return projects.find((p) => p.id === currentProjectId) ?? null;
-      },
+        // Computed getters
+        getCurrentProject: () => {
+          const { currentProjectId, projects } = get();
+          if (!currentProjectId) return null;
+          return projects.find((p) => p.id === currentProjectId) ?? null;
+        },
 
-      getProjectById: (projectId: string) => {
-        return get().projects.find((p) => p.id === projectId);
-      },
+        getProjectById: (projectId: string) => {
+          return get().projects.find((p) => p.id === projectId);
+        },
 
-      getTasks: (projectId: string) => {
-        const project = get().projects.find((p) => p.id === projectId);
-        return project?.tasks ?? [];
-      },
+        getTasks: (projectId: string) => {
+          const project = get().projects.find((p) => p.id === projectId);
+          return project?.tasks ?? [];
+        },
 
-      // Basic actions
-      setProjects: (projects) => set({ projects }),
-      setCurrentProjectId: (projectId) => set({ currentProjectId: projectId }),
+        // Basic actions
+        setProjects: (projects) => set({ projects }),
+        setCurrentProjectId: (projectId) =>
+          set({ currentProjectId: projectId }),
 
-      createProject: (data) => {
-        // Validate request
-        const validatedRequest = CreateProjectRequestSchema.parse(data);
+        createProject: (data) => {
+          // Validate request
+          const validatedRequest = CreateProjectRequestSchema.parse(data);
 
-        const newProjectId = `project-${Date.now()}`;
-        const newProject: Project = {
-          id: newProjectId,
-          name: validatedRequest.name,
-          summary: validatedRequest.summary,
-          description: validatedRequest.description,
-          milestones: (validatedRequest.milestones ?? []).map(
-            (title, index) => ({
-              id: `milestone-${Date.now()}-${index}`,
-              title,
-              completed: false,
-            })
-          ),
-          tasks: [],
-          createdAt: new Date(),
-          lastAccessed: new Date(),
-        };
+          const newProjectId = `project-${Date.now()}`;
+          const newProject: Project = {
+            id: newProjectId,
+            name: validatedRequest.name,
+            summary: validatedRequest.summary,
+            description: validatedRequest.description,
+            milestones: (validatedRequest.milestones ?? []).map(
+              (title, index) => ({
+                id: `milestone-${Date.now()}-${index}`,
+                title,
+                completed: false,
+              })
+            ),
+            tasks: [],
+            createdAt: new Date(),
+            lastAccessed: new Date(),
+          };
 
-        set((state) => ({
-          projects: [newProject, ...state.projects],
-          currentProjectId: newProjectId,
-        }));
+          set((state) => ({
+            projects: [newProject, ...state.projects],
+            currentProjectId: newProjectId,
+          }));
 
-        return newProjectId;
-      },
+          return newProjectId;
+        },
 
-      selectProject: (projectId: string) => {
-        set({ currentProjectId: projectId });
+        selectProject: (projectId: string) => {
+          set({ currentProjectId: projectId });
 
-        // Update last accessed time optimistically
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, lastAccessed: new Date() } : p
-          ),
-        }));
-      },
+          // Update last accessed time optimistically
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId ? { ...p, lastAccessed: new Date() } : p
+            ),
+          }));
+        },
 
-      clearCurrentProject: () => {
-        set({ currentProjectId: null });
-      },
+        clearCurrentProject: () => {
+          set({ currentProjectId: null });
+        },
 
-      addTask: (projectId: string, task: CreateTaskRequest) => {
-        const validatedTask = CreateTaskRequestSchema.parse(task);
-        const newTask: ProjectTask = {
-          ...validatedTask,
-          id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date(),
-        };
+        addTask: (projectId: string, task: CreateTaskRequest) => {
+          const validatedTask = CreateTaskRequestSchema.parse(task);
+          const newTask: ProjectTask = {
+            ...validatedTask,
+            id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            createdAt: new Date(),
+          };
 
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p
-          ),
-        }));
-      },
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId ? { ...p, tasks: [...p.tasks, newTask] } : p
+            ),
+          }));
+        },
 
-      updateTask: (
-        projectId: string,
-        taskId: string,
-        updates: UpdateTaskRequest
-      ) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.map((t) =>
-                    t.id === taskId ? { ...t, ...updates } : t
-                  ),
+        updateTask: (
+          projectId: string,
+          taskId: string,
+          updates: UpdateTaskRequest
+        ) => {
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId
+                ? {
+                    ...p,
+                    tasks: p.tasks.map((t) =>
+                      t.id === taskId ? { ...t, ...updates } : t
+                    ),
+                  }
+                : p
+            ),
+          }));
+        },
+
+        // API actions with Zod validation
+        fetchProjects: async () => {
+          set({ isLoading: true, error: null });
+          const loadingToast = toastLoading("Loading projects...");
+
+          try {
+            const response = await listProjectsApiClient();
+
+            // Fetch full details for each project in parallel
+            const projectPromises = response.projects.map(
+              async (projectListItem) => {
+                try {
+                  const projectDetails = await getProjectHandler(
+                    projectListItem.project_id
+                  );
+                  const validatedProject = validateApiResponse(
+                    ProjectResponseSchema,
+                    projectDetails,
+                    "fetchProjects"
+                  );
+
+                  // Transform API response to Project format
+                  return ProjectSchema.parse({
+                    id: validatedProject.id,
+                    name: validatedProject.name,
+                    summary: validatedProject.summary ?? undefined,
+                    description: validatedProject.description ?? undefined,
+                    milestones: validatedProject.milestones,
+                    tasks: validatedProject.tasks.map((task) => ({
+                      id: task.id,
+                      title: task.title,
+                      description: task.description ?? undefined,
+                      status: task.status,
+                      priority: task.priority ?? undefined,
+                      assignee: task.assignee ?? undefined,
+                      createdAt: task.created_at,
+                    })),
+                    createdAt: validatedProject.created_at,
+                    lastAccessed: validatedProject.last_accessed,
+                  });
+                } catch (err) {
+                  console.error(
+                    `Failed to fetch project ${projectListItem.project_id}:`,
+                    err
+                  );
+                  return null;
                 }
-              : p
-          ),
-        }));
-      },
+              }
+            );
 
-      // API actions with Zod validation
-      fetchProjects: async () => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading projects...");
+            const projectsData = (await Promise.all(projectPromises)).filter(
+              (project): project is Project => project !== null
+            );
 
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiGet<unknown>(`${apiUrl}/api/v1/projects`, {
-            retry: { maxAttempts: 3, initialDelay: 1000 },
-          });
+            set({ projects: projectsData, isLoading: false });
+            loadingToast();
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            loadingToast();
+            toastError(error);
+            throw appError;
+          }
+        },
 
-          const validatedProjects = validateApiResponse(
-            ProjectsResponseSchema,
-            data,
-            "fetchProjects"
-          );
+        createProjectApi: async (request) => {
+          // Validate request
+          const validatedRequest = CreateProjectRequestSchema.parse(request);
 
-          // Transform API response to Project format
-          const projects: Project[] = validatedProjects.map((project) =>
-            ProjectSchema.parse({
-              id: project.id,
-              name: project.name,
-              summary: project.summary ?? undefined,
-              description: project.description ?? undefined,
-              milestones: project.milestones,
-              tasks: project.tasks.map((task) => ({
+          set({ isLoading: true, error: null });
+
+          try {
+            // Use API client function
+            const apiResponse = await createProjectApiClient({
+              name: validatedRequest.name,
+              summary: validatedRequest.summary,
+              description: validatedRequest.description,
+            });
+
+            const validatedProject = validateApiResponse(
+              ProjectResponseSchema,
+              apiResponse,
+              "createProjectApi"
+            );
+
+            // Transform to Project format
+            const newProject: Project = ProjectSchema.parse({
+              id: validatedProject.id,
+              name: validatedProject.name,
+              summary: validatedProject.summary ?? undefined,
+              description: validatedProject.description ?? undefined,
+              milestones: validatedProject.milestones,
+              tasks: validatedProject.tasks.map((task) => ({
                 id: task.id,
                 title: task.title,
                 description: task.description ?? undefined,
@@ -697,306 +788,254 @@ export const useProjectStore = create<ProjectState>()(
                 assignee: task.assignee ?? undefined,
                 createdAt: task.created_at,
               })),
-              createdAt: project.created_at,
-              lastAccessed: project.last_accessed,
-            })
-          );
+              createdAt: validatedProject.created_at,
+              lastAccessed: validatedProject.last_accessed,
+            });
 
-          set({ projects, isLoading: false });
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
+            set((state) => ({
+              projects: [newProject, ...state.projects],
+              currentProjectId: validatedProject.id,
+              isLoading: false,
+            }));
 
-      createProjectApi: async (request) => {
-        // Validate request
-        const validatedRequest = CreateProjectRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/projects`,
-            validatedRequest
-          );
-
-          const validatedProject = validateApiResponse(
-            ProjectResponseSchema,
-            data,
-            "createProjectApi"
-          );
-
-          // Transform to Project format
-          const newProject: Project = ProjectSchema.parse({
-            id: validatedProject.id,
-            name: validatedProject.name,
-            summary: validatedProject.summary ?? undefined,
-            description: validatedProject.description ?? undefined,
-            milestones: validatedProject.milestones,
-            tasks: validatedProject.tasks.map((task) => ({
-              id: task.id,
-              title: task.title,
-              description: task.description ?? undefined,
-              status: task.status,
-              priority: task.priority ?? undefined,
-              assignee: task.assignee ?? undefined,
-              createdAt: task.created_at,
-            })),
-            createdAt: validatedProject.created_at,
-            lastAccessed: validatedProject.last_accessed,
-          });
-
-          set((state) => ({
-            projects: [newProject, ...state.projects],
-            currentProjectId: validatedProject.id,
-            isLoading: false,
-          }));
-
-          toastSuccess("Project created successfully");
-          return validatedProject.id;
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      updateProject: async (
-        projectId: string,
-        request: UpdateProjectRequest
-      ) => {
-        // Validate request
-        const validatedRequest = UpdateProjectRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPatch<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}`,
-            validatedRequest
-          );
-
-          const validatedProject = validateApiResponse(
-            ProjectResponseSchema,
-            data,
-            "updateProject"
-          );
-
-          // Update project in state
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? ProjectSchema.parse({
-                    ...p,
-                    ...validatedProject,
-                    id: p.id, // Preserve ID
-                    createdAt: p.createdAt, // Preserve original created date
-                    lastAccessed: validatedProject.last_accessed,
-                  })
-                : p
-            ),
-            isLoading: false,
-          }));
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      addTaskApi: async (projectId: string, task: CreateTaskRequest) => {
-        // Validate request
-        const validatedTask = CreateTaskRequestSchema.parse(task);
-
-        // Optimistic update
-        const optimisticTask: ProjectTask = {
-          ...validatedTask,
-          id: `temp-${Date.now()}`,
-          createdAt: new Date(),
-        };
-        get().optimisticAddTask(projectId, optimisticTask);
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}/tasks`,
-            validatedTask
-          );
-
-          const validatedResponse = z
-            .object({
-              id: z.string(),
-              title: z.string(),
-              description: z.string().nullable().optional(),
-              status: z.enum(["backlog", "todo", "in-progress", "done"]),
-              priority: z.string().nullable().optional(),
-              assignee: z.string().nullable().optional(),
-              created_at: z.string().transform((str) => new Date(str)),
-            })
-            .parse(data);
-
-          // Replace optimistic task with validated one
-          const finalTask: ProjectTask = {
-            id: validatedResponse.id,
-            title: validatedResponse.title,
-            description: validatedResponse.description ?? undefined,
-            status: validatedResponse.status,
-            priority: validatedResponse.priority ?? undefined,
-            assignee: validatedResponse.assignee ?? undefined,
-            createdAt: validatedResponse.created_at,
-          };
-
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? {
-                    ...p,
-                    tasks: p.tasks.map((t) =>
-                      t.id === optimisticTask.id ? finalTask : t
-                    ),
-                  }
-                : p
-            ),
-          }));
-        } catch (error) {
-          // Rollback optimistic update
-          get().rollbackOptimisticTask(projectId, optimisticTask.id);
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      updateTaskApi: async (
-        projectId: string,
-        taskId: string,
-        updates: UpdateTaskRequest
-      ) => {
-        // Validate request
-        const validatedUpdates = UpdateTaskRequestSchema.parse(updates);
-
-        // Store original task for rollback
-        const project = get().projects.find((p) => p.id === projectId);
-        const originalTask = project?.tasks.find((t) => t.id === taskId);
-        if (!originalTask) {
-          throw new Error(`Task ${taskId} not found`);
-        }
-
-        // Optimistic update
-        get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
-
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-          const data = await apiPatch<unknown>(
-            `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
-            validatedUpdates
-          );
-
-          const validatedResponse = z
-            .object({
-              id: z.string(),
-              title: z.string(),
-              description: z.string().nullable().optional(),
-              status: z.enum(["backlog", "todo", "in-progress", "done"]),
-              priority: z.string().nullable().optional(),
-              assignee: z.string().nullable().optional(),
-              created_at: z.string().transform((str) => new Date(str)),
-            })
-            .parse(data);
-
-          // Update with validated response
-          set((state) => ({
-            projects: state.projects.map((p) =>
-              p.id === projectId
-                ? {
-                    ...p,
-                    tasks: p.tasks.map((t) =>
-                      t.id === taskId
-                        ? {
-                            id: validatedResponse.id,
-                            title: validatedResponse.title,
-                            description:
-                              validatedResponse.description ?? undefined,
-                            status: validatedResponse.status,
-                            priority: validatedResponse.priority ?? undefined,
-                            assignee: validatedResponse.assignee ?? undefined,
-                            createdAt: validatedResponse.created_at,
-                          }
-                        : t
-                    ),
-                  }
-                : p
-            ),
-          }));
-        } catch (error) {
-          // Rollback optimistic update
-          if (originalTask) {
-            get().optimisticUpdateTask(projectId, taskId, originalTask);
+            toastSuccess("Project created successfully");
+            return validatedProject.id;
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            toastError(error);
+            throw appError;
           }
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
+        },
 
-      // Optimistic updates
-      optimisticAddTask: (projectId: string, task: ProjectTask) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, tasks: [...p.tasks, task] } : p
-          ),
-        }));
-      },
+        updateProject: async (
+          projectId: string,
+          request: UpdateProjectRequest
+        ) => {
+          // Validate request
+          const validatedRequest = UpdateProjectRequestSchema.parse(request);
 
-      optimisticUpdateTask: (
-        projectId: string,
-        taskId: string,
-        updates: Partial<ProjectTask>
-      ) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.map((t) =>
-                    t.id === taskId ? { ...t, ...updates } : t
-                  ),
-                }
-              : p
-          ),
-        }));
-      },
+          set({ isLoading: true, error: null });
 
-      rollbackOptimisticTask: (projectId: string, taskId: string) => {
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  tasks: p.tasks.filter((t) => t.id !== taskId),
-                }
-              : p
-          ),
-        }));
-      },
+          try {
+            const apiUrl =
+              process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+            const data = await apiPatch<unknown>(
+              `${apiUrl}/api/v1/projects/${projectId}`,
+              validatedRequest
+            );
 
-      // Error handling
-      setError: (error) => set({ error }),
-      clearError: () => set({ error: null }),
-    }))
+            const validatedProject = validateApiResponse(
+              ProjectResponseSchema,
+              data,
+              "updateProject"
+            );
+
+            // Update project in state
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? ProjectSchema.parse({
+                      ...p,
+                      ...validatedProject,
+                      id: p.id, // Preserve ID
+                      createdAt: p.createdAt, // Preserve original created date
+                      lastAccessed: validatedProject.last_accessed,
+                    })
+                  : p
+              ),
+              isLoading: false,
+            }));
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        addTaskApi: async (projectId: string, task: CreateTaskRequest) => {
+          // Validate request
+          const validatedTask = CreateTaskRequestSchema.parse(task);
+
+          // Optimistic update
+          const optimisticTask: ProjectTask = {
+            ...validatedTask,
+            id: `temp-${Date.now()}`,
+            createdAt: new Date(),
+          };
+          get().optimisticAddTask(projectId, optimisticTask);
+
+          try {
+            const apiUrl =
+              process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+            const data = await apiPost<unknown>(
+              `${apiUrl}/api/v1/projects/${projectId}/tasks`,
+              validatedTask
+            );
+
+            const validatedResponse = z
+              .object({
+                id: z.string(),
+                title: z.string(),
+                description: z.string().nullable().optional(),
+                status: z.enum(["backlog", "todo", "in-progress", "done"]),
+                priority: z.string().nullable().optional(),
+                assignee: z.string().nullable().optional(),
+                created_at: z.string().transform((str) => new Date(str)),
+              })
+              .parse(data);
+
+            // Replace optimistic task with validated one
+            const finalTask: ProjectTask = {
+              id: validatedResponse.id,
+              title: validatedResponse.title,
+              description: validatedResponse.description ?? undefined,
+              status: validatedResponse.status,
+              priority: validatedResponse.priority ?? undefined,
+              assignee: validatedResponse.assignee ?? undefined,
+              createdAt: validatedResponse.created_at,
+            };
+
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? {
+                      ...p,
+                      tasks: p.tasks.map((t) =>
+                        t.id === optimisticTask.id ? finalTask : t
+                      ),
+                    }
+                  : p
+              ),
+            }));
+          } catch (error) {
+            // Rollback optimistic update
+            get().rollbackOptimisticTask(projectId, optimisticTask.id);
+            const appError = parseApiError(error);
+            set({ error: appError });
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        updateTaskApi: async (
+          projectId: string,
+          taskId: string,
+          updates: UpdateTaskRequest
+        ) => {
+          // Validate request
+          const validatedUpdates = UpdateTaskRequestSchema.parse(updates);
+
+          // Store original task for rollback
+          const project = get().projects.find((p) => p.id === projectId);
+          const originalTask = project?.tasks.find((t) => t.id === taskId);
+          if (!originalTask) {
+            throw new Error(`Task ${taskId} not found`);
+          }
+
+          // Optimistic update
+          get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
+
+          try {
+            const apiUrl =
+              process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+            const data = await apiPatch<unknown>(
+              `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
+              validatedUpdates
+            );
+
+            const validatedResponse = z
+              .object({
+                id: z.string(),
+                title: z.string(),
+                description: z.string().nullable().optional(),
+                status: z.enum(["backlog", "todo", "in-progress", "done"]),
+                priority: z.string().nullable().optional(),
+                assignee: z.string().nullable().optional(),
+                created_at: z.string().transform((str) => new Date(str)),
+              })
+              .parse(data);
+
+            // Update with validated response
+            set((state) => ({
+              projects: state.projects.map((p) =>
+                p.id === projectId
+                  ? {
+                      ...p,
+                      tasks: p.tasks.map((t) =>
+                        t.id === taskId
+                          ? {
+                              id: validatedResponse.id,
+                              title: validatedResponse.title,
+                              description:
+                                validatedResponse.description ?? undefined,
+                              status: validatedResponse.status,
+                              priority: validatedResponse.priority ?? undefined,
+                              assignee: validatedResponse.assignee ?? undefined,
+                              createdAt: validatedResponse.created_at,
+                            }
+                          : t
+                      ),
+                    }
+                  : p
+              ),
+            }));
+          } catch (error) {
+            // Rollback optimistic update
+            if (originalTask) {
+              get().optimisticUpdateTask(projectId, taskId, originalTask);
+            }
+            const appError = parseApiError(error);
+            set({ error: appError });
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        // Optimistic updates
+        optimisticAddTask: (projectId: string, task: ProjectTask) => {
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId ? { ...p, tasks: [...p.tasks, task] } : p
+            ),
+          }));
+        },
+
+        optimisticUpdateTask: (
+          projectId: string,
+          taskId: string,
+          updates: Partial<ProjectTask>
+        ) => {
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId
+                ? {
+                    ...p,
+                    tasks: p.tasks.map((t) =>
+                      t.id === taskId ? { ...t, ...updates } : t
+                    ),
+                  }
+                : p
+            ),
+          }));
+        },
+
+        rollbackOptimisticTask: (projectId: string, taskId: string) => {
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === projectId
+                ? {
+                    ...p,
+                    tasks: p.tasks.filter((t) => t.id !== taskId),
+                  }
+                : p
+            ),
+          }));
+        },
+
+        // Error handling
+        setError: (error) => set({ error }),
+        clearError: () => set({ error: null }),
+      })
 );

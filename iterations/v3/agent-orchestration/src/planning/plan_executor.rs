@@ -13,7 +13,7 @@ use tokio::sync::Semaphore;
 use tokio::time::{timeout, Duration};
 use anyhow::{anyhow, Result};
 use uuid::Uuid;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rand::prelude::*;
 use tokio::sync::RwLock;
 use agent_agency_contracts::planning::{PlanningEngine, PlanExecutionResult, ExecutionEvidence, ExecutionEventType};
@@ -1484,49 +1484,123 @@ impl PlanExecutor {
         }
     }
 
-    /// Calculate performance metrics
+    /// Calculate performance metrics from execution plan structure
     fn calculate_performance_metrics(&self, plan: &ExecutionPlan, total_duration_ms: u64) -> agent_agency_contracts::PerformanceMetrics {
-        // TODO: Implement comprehensive performance metrics calculation
-        //       Currently uses basic calculation; should analyze actual execution plan structure to calculate dependency wait times, parallel vs sequential execution times, and efficiency ratios.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Analyze execution plan structure for dependency relationships
-        // [ ] Calculate actual dependency wait times from batch dependencies
-        // [ ] Track parallel execution time from batch execution timestamps
-        // [ ] Calculate sequential execution time as sum of batch durations
-        // [ ] Compute efficiency ratio as parallel_time / sequential_time
-        // [ ] Handle edge cases (no dependencies, single batch, etc.)
-        // [ ] Add unit tests with various plan structures
-        // [ ] Add integration tests with real execution plans
-        // [ ] Performance: Metrics calculation should complete in <1ms
-        // [ ] Documentation: Document metric calculation methodology
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Dependency wait time accurately reflects time spent waiting for dependencies
-        // - Parallel execution time reflects actual parallel batch execution duration
-        // - Sequential execution time reflects total time if executed sequentially
-        // - Efficiency ratio is between 0.0 and 1.0, with 1.0 indicating perfect parallelization
-        // - Metrics are consistent with actual execution evidence
-        //
-        // DEPENDENCIES:
-        // - ExecutionPlan structure with batch dependencies (Required)
-        // - Batch execution timestamps (started_at, completed_at) (Required)
-        // - agent_agency_contracts::PerformanceMetrics type definition (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (performance metrics feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Performance analysis expertise
+        let batches = &plan.execution_context.parallel_batches;
+        
+        // Handle edge cases: no batches or empty batches
+        if batches.is_empty() {
+            return agent_agency_contracts::PerformanceMetrics {
+                total_time_ms: total_duration_ms,
+                dependency_wait_time_ms: 0,
+                parallel_execution_time_ms: total_duration_ms,
+                sequential_execution_time_ms: total_duration_ms,
+                efficiency_ratio: 1.0,
+            };
+        }
+
+        // Filter batches with valid timestamps
+        let batches_with_timestamps: Vec<_> = batches.iter()
+            .filter_map(|b| {
+                match (b.started_at, b.completed_at) {
+                    (Some(start), Some(end)) => Some((b.batch_index, start, end, &b.milestone_ids)),
+                    _ => None,
+                }
+            })
+            .collect();
+
+        if batches_with_timestamps.is_empty() {
+            // No batches with timestamps - return defaults
+            return agent_agency_contracts::PerformanceMetrics {
+                total_time_ms: total_duration_ms,
+                dependency_wait_time_ms: 0,
+                parallel_execution_time_ms: total_duration_ms,
+                sequential_execution_time_ms: total_duration_ms,
+                efficiency_ratio: 1.0,
+            };
+        }
+
+        // Calculate sequential execution time: sum of all batch durations
+        let sequential_execution_time_ms: u64 = batches_with_timestamps.iter()
+            .map(|(_, start, end, _)| {
+                (end.signed_duration_since(*start).num_milliseconds().max(0)) as u64
+            })
+            .sum();
+
+        // Calculate parallel execution time: time from first batch start to last batch completion
+        let first_start = batches_with_timestamps.iter()
+            .map(|(_, start, _, _)| *start)
+            .min()
+            .unwrap_or_else(|| chrono::Utc::now());
+        
+        let last_completion = batches_with_timestamps.iter()
+            .map(|(_, _, end, _)| *end)
+            .max()
+            .unwrap_or_else(|| chrono::Utc::now());
+        
+        let parallel_execution_time_ms = last_completion
+            .signed_duration_since(first_start)
+            .num_milliseconds()
+            .max(0) as u64;
+
+        // Calculate dependency wait time: time batches waited for dependencies to complete
+        let mut dependency_wait_time_ms = 0u64;
+        
+        // Build a map of batch completion times by milestone IDs
+        let mut milestone_completion_times: std::collections::HashMap<String, DateTime<Utc>> = std::collections::HashMap::new();
+        for (_, start, end, milestone_ids) in &batches_with_timestamps {
+            for milestone_id in *milestone_ids {
+                milestone_completion_times.insert(milestone_id.clone(), *end);
+            }
+        }
+
+        // Check dependency graph to find wait times
+        for (_, start, _, milestone_ids) in &batches_with_timestamps {
+            // Find dependencies for milestones in this batch
+            for milestone_id in *milestone_ids {
+                // Check dependency graph edges to find dependencies
+                for edge in &plan.contract_plan.dependency_graph.edges {
+                    if edge.to == *milestone_id {
+                        // This milestone depends on edge.from
+                        if let Some(dep_completion_time) = milestone_completion_times.get(&edge.from) {
+                            // Calculate wait time: difference between dependency completion and batch start
+                            let wait_time = start.signed_duration_since(*dep_completion_time).num_milliseconds();
+                            if wait_time > 0 {
+                                dependency_wait_time_ms += wait_time as u64;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculate efficiency ratio: parallel_time / sequential_time
+        // Ratio of 1.0 indicates perfect parallelization (no overhead)
+        // Ratio < 1.0 indicates some sequential overhead or dependencies
+        let efficiency_ratio = if sequential_execution_time_ms > 0 {
+            (parallel_execution_time_ms as f64 / sequential_execution_time_ms as f64).min(1.0)
+        } else {
+            1.0 // Edge case: no sequential time means perfect efficiency
+        };
+
+        // Log metrics calculation for observability
+        tracing::debug!(
+            plan_id = %plan.contract_plan.id,
+            total_time_ms = %total_duration_ms,
+            dependency_wait_time_ms = %dependency_wait_time_ms,
+            parallel_execution_time_ms = %parallel_execution_time_ms,
+            sequential_execution_time_ms = %sequential_execution_time_ms,
+            efficiency_ratio = %efficiency_ratio,
+            batch_count = batches_with_timestamps.len(),
+            "Calculated performance metrics from execution plan structure"
+        );
+
         agent_agency_contracts::PerformanceMetrics {
             total_time_ms: total_duration_ms,
-            dependency_wait_time_ms: 0,
-            parallel_execution_time_ms: total_duration_ms,
-            sequential_execution_time_ms: total_duration_ms,
-            efficiency_ratio: 1.0,
+            dependency_wait_time_ms,
+            parallel_execution_time_ms,
+            sequential_execution_time_ms,
+            efficiency_ratio,
         }
     }
 

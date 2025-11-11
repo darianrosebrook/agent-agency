@@ -128,10 +128,16 @@ export function NotionEditor({
     },
   });
 
-  // Update content when prop changes
+  // Update content when prop changes (but avoid infinite loops)
   useEffect(() => {
-    if (editor && content !== undefined && editor.getHTML() !== content) {
-      editor.commands.setContent(content);
+    if (editor && content !== undefined) {
+      const currentContent = editor.getHTML();
+      // Only update if content actually changed and isn't just whitespace differences
+      const normalizeContent = (html: string) => html.replace(/\s+/g, ' ').trim();
+      if (normalizeContent(currentContent) !== normalizeContent(content)) {
+        // Update content without emitting update event to prevent save loop
+        editor.commands.setContent(content, false);
+      }
     }
   }, [content, editor]);
 

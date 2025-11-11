@@ -93,6 +93,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         let now = Utc::now();
         
+        // Use provided working_spec_id if available, otherwise default to PLAN-<id> format
+        let working_spec_id = plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id));
+        
         // Insert execution plan into database
         sqlx::query(
             r#"
@@ -105,7 +108,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         )
         .bind(plan.id)
         .bind(Uuid::new_v4()) // session_id - generate new session
-        .bind(format!("PLAN-{}", plan.id)) // working_spec_id - derive from plan id
+        .bind(&working_spec_id) // working_spec_id - use provided or default to PLAN-<id>
         .bind(&plan.title)
         .bind(&plan.overview)
         .bind("draft") // state
@@ -125,7 +128,6 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         info!("Persisted execution plan {} to database", plan.id);
         
         let session_id = Uuid::new_v4();
-        let working_spec_id = format!("PLAN-{}", plan.id);
         
         Ok(models::ExecutionPlan {
             id: plan.id,

@@ -1,13 +1,13 @@
 /**
  * Notification Store
- * 
+ *
  * Manages persistent storage and retrieval of toast notifications
  * for viewing in the notifications/activity log page.
- * 
+ *
  * @author @darianrosebrook
  */
 
-export type NotificationType = 'error' | 'warning' | 'info' | 'success';
+export type NotificationType = "error" | "warning" | "info" | "success";
 
 export interface Notification {
   id: string;
@@ -19,27 +19,29 @@ export interface Notification {
   errorDetails?: Record<string, unknown>;
   actionUrl?: string;
   actionLabel?: string;
+  voicemailAudioUrl?: string; // URL to voicemail audio file
+  voicemailTranscription?: string; // Transcription of the voicemail
 }
 
-const STORAGE_KEY = 'agent-agency-notifications';
+const STORAGE_KEY = "agent-agency-notifications";
 const MAX_NOTIFICATIONS = 500; // Keep last 500 notifications
 
 /**
  * Get all notifications from storage
  */
 export function getNotifications(): Notification[] {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return [];
   }
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
-    
+
     const notifications = JSON.parse(stored) as Notification[];
     return notifications.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    console.error('Failed to load notifications:', error);
+    console.error("Failed to load notifications:", error);
     return [];
   }
 }
@@ -48,7 +50,7 @@ export function getNotifications(): Notification[] {
  * Save notifications to storage
  */
 function saveNotifications(notifications: Notification[]): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
 
@@ -57,7 +59,7 @@ function saveNotifications(notifications: Notification[]): void {
     const limited = notifications.slice(0, MAX_NOTIFICATIONS);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
   } catch (error) {
-    console.error('Failed to save notifications:', error);
+    console.error("Failed to save notifications:", error);
   }
 }
 
@@ -67,57 +69,53 @@ function saveNotifications(notifications: Notification[]): void {
  * - message
  * - type
  * - errorCode (if present)
- * And was created within the last 5 seconds
+ * And was created within the last 30 seconds (longer window for better deduplication)
  */
 function isDuplicateNotification(
-  newNotification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
+  newNotification: Omit<Notification, "id" | "timestamp" | "read">,
   existingNotifications: Notification[]
 ): boolean {
   const now = Date.now();
-  const DEDUPLICATION_WINDOW_MS = 5000; // 5 seconds
+  const DEDUPLICATION_WINDOW_MS = 30000; // 30 seconds - increased from 5 seconds
 
   return existingNotifications.some((existing) => {
+    // Check if message, type, and errorCode match exactly
+    const messageMatch = existing.message === newNotification.message;
+    const typeMatch = existing.type === newNotification.type;
+    const errorCodeMatch = existing.errorCode === newNotification.errorCode;
+
+    if (!messageMatch || !typeMatch || !errorCodeMatch) {
+      return false; // Different notification
+    }
+
     // Check if within deduplication window
     const timeDiff = now - existing.timestamp;
-    if (timeDiff > DEDUPLICATION_WINDOW_MS) {
-      return false; // Too old to be a duplicate
-    }
-
-    // Check if message, type, and errorCode match
-    if (
-      existing.message === newNotification.message &&
-      existing.type === newNotification.type &&
-      existing.errorCode === newNotification.errorCode
-    ) {
-      return true; // It's a duplicate
-    }
-
-    return false;
+    return timeDiff <= DEDUPLICATION_WINDOW_MS;
   });
 }
 
 /**
  * Add a new notification with deduplication
- * Prevents storing duplicate notifications within a 5-second window
+ * Prevents storing duplicate notifications within a 30-second window
  */
-export function addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>): void {
+export function addNotification(
+  notification: Omit<Notification, "id" | "timestamp" | "read">
+): void {
   const notifications = getNotifications();
-  
+
   // Check for duplicates before adding
   if (isDuplicateNotification(notification, notifications)) {
-    // Update the count on the existing notification if it's a duplicate
     // Find the most recent matching notification
     const duplicate = notifications.find(
       (n) =>
         n.message === notification.message &&
         n.type === notification.type &&
         n.errorCode === notification.errorCode &&
-        Date.now() - n.timestamp < 5000
+        Date.now() - n.timestamp < 30000 // 30 seconds - match the deduplication window
     );
 
     if (duplicate) {
       // Update the existing notification's timestamp to keep it fresh
-      // and increment a count if we track it
       const updated = notifications.map((n) =>
         n.id === duplicate.id
           ? { ...n, timestamp: Date.now() } // Refresh timestamp
@@ -125,9 +123,9 @@ export function addNotification(notification: Omit<Notification, 'id' | 'timesta
       );
       saveNotifications(updated);
     }
-    return; // Don't add duplicate
+    return; // Don't add duplicate - return early
   }
-  
+
   const newNotification: Notification = {
     ...notification,
     id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -144,7 +142,7 @@ export function addNotification(notification: Omit<Notification, 'id' | 'timesta
  */
 export function markNotificationAsRead(id: string): void {
   const notifications = getNotifications();
-  const updated = notifications.map(n => 
+  const updated = notifications.map((n) =>
     n.id === id ? { ...n, read: true } : n
   );
   saveNotifications(updated);
@@ -155,7 +153,7 @@ export function markNotificationAsRead(id: string): void {
  */
 export function markAllAsRead(): void {
   const notifications = getNotifications();
-  const updated = notifications.map(n => ({ ...n, read: true }));
+  const updated = notifications.map((n) => ({ ...n, read: true }));
   saveNotifications(updated);
 }
 
@@ -164,7 +162,7 @@ export function markAllAsRead(): void {
  */
 export function deleteNotification(id: string): void {
   const notifications = getNotifications();
-  const filtered = notifications.filter(n => n.id !== id);
+  const filtered = notifications.filter((n) => n.id !== id);
   saveNotifications(filtered);
 }
 
@@ -172,7 +170,7 @@ export function deleteNotification(id: string): void {
  * Delete all notifications
  */
 export function deleteAllNotifications(): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
   localStorage.removeItem(STORAGE_KEY);
@@ -183,7 +181,7 @@ export function deleteAllNotifications(): void {
  */
 export function getUnreadCount(): number {
   const notifications = getNotifications();
-  return notifications.filter(n => !n.read).length;
+  return notifications.filter((n) => !n.read).length;
 }
 
 /**
@@ -191,7 +189,7 @@ export function getUnreadCount(): number {
  */
 export function getNotificationsByType(type: NotificationType): Notification[] {
   const notifications = getNotifications();
-  return notifications.filter(n => n.type === type);
+  return notifications.filter((n) => n.type === type);
 }
 
 /**
@@ -199,51 +197,64 @@ export function getNotificationsByType(type: NotificationType): Notification[] {
  */
 export function getNotificationsByReadStatus(read: boolean): Notification[] {
   const notifications = getNotifications();
-  return notifications.filter(n => n.read === read);
+  return notifications.filter((n) => n.read === read);
 }
 
 /**
  * Remove duplicate notifications from storage
  * Keeps only the most recent occurrence of each unique notification
  * (based on message, type, and errorCode)
+ * Uses a 30-second window for deduplication
  */
 export function deduplicateNotifications(): number {
   const notifications = getNotifications();
   const seen = new Map<string, Notification>();
-  const DEDUPLICATION_WINDOW_MS = 5000; // 5 seconds
-  
+  const DEDUPLICATION_WINDOW_MS = 30000; // 30 seconds
+
   // Process notifications in reverse chronological order (newest first)
   // Keep the first (newest) occurrence of each duplicate
   const deduplicated: Notification[] = [];
-  
-  for (const notification of notifications) {
-    const key = `${notification.type}:${notification.message}:${notification.errorCode || ''}`;
+
+  // Sort by timestamp descending (newest first) to process newest first
+  const sortedNotifications = [...notifications].sort(
+    (a, b) => b.timestamp - a.timestamp
+  );
+
+  for (const notification of sortedNotifications) {
+    const key = `${notification.type}:${notification.message}:${
+      notification.errorCode ?? ""
+    }`;
     const existing = seen.get(key);
-    
+
     if (!existing) {
-      // First occurrence - keep it
+      // First occurrence of this key - keep it
       seen.set(key, notification);
       deduplicated.push(notification);
     } else {
-      // Check if it's within the deduplication window
-      const timeDiff = Math.abs(notification.timestamp - existing.timestamp);
-      if (timeDiff > DEDUPLICATION_WINDOW_MS) {
-        // Outside window - treat as separate occurrence
+      // Check if timestamps are within the deduplication window of each other
+      // (not relative to "now", but relative to each other)
+      const timeDiff = Math.abs(existing.timestamp - notification.timestamp);
+
+      if (timeDiff <= DEDUPLICATION_WINDOW_MS) {
+        // They're within the window - they're duplicates
+        // Keep the existing one (which is newer since we process newest first)
+        // Skip this duplicate
+        continue;
+      } else {
+        // Outside window - treat as separate occurrence (legitimate duplicate later)
         seen.set(key, notification);
         deduplicated.push(notification);
       }
-      // Otherwise, skip this duplicate
     }
   }
-  
+
   const removedCount = notifications.length - deduplicated.length;
-  
+
   if (removedCount > 0) {
     // Sort by timestamp descending (newest first)
     deduplicated.sort((a, b) => b.timestamp - a.timestamp);
     saveNotifications(deduplicated);
   }
-  
+
   return removedCount;
 }
-

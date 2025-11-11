@@ -5,13 +5,21 @@
   height: 100%;
   width: 100%;
   background-color: $color-dark-bg-secondary;
+  display: flex;
+  flex-direction: column;
 }
 
-.toggleButton {
+.headerControls {
   position: absolute;
   top: $spacing-4;
   right: $spacing-4;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.toggleButton {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,10 +43,189 @@
   flex-shrink: 0;
 }
 
+.versionHistoryButton {
+  padding: $spacing-2;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  color: $color-gray-300;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+    color: $color-white;
+  }
+}
+
+.versionHistoryIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.versionCount {
+  margin-left: $spacing-1;
+  font-size: $font-size-xs;
+  color: $color-gray-400;
+}
+
+.saveStatus {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-3;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+}
+
+.savingIndicator {
+  color: $color-gray-400;
+}
+
+.savedIndicator {
+  color: $color-info-light; // Use info color for success
+}
+
+.saveError {
+  color: $color-destructive; // Use destructive color for errors
+  cursor: help;
+}
+
+.updateIndicator {
+  color: $color-info; // Use info color for updates
+  cursor: help;
+}
+
+.versionHistoryPanel {
+  position: absolute;
+  top: $spacing-12;
+  right: $spacing-4;
+  z-index: 20;
+  width: 20rem;
+  max-height: 24rem;
+  background-color: $color-dark-bg-primary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-md;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.versionHistoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-3 $spacing-4;
+  border-bottom: 1px solid $color-neutral-800;
+}
+
+.versionHistoryTitle {
+  margin: 0;
+  font-family: $font-family-sans;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-white;
+}
+
+.closeButton {
+  padding: $spacing-1;
+  min-width: auto;
+  width: $spacing-6;
+  height: $spacing-6;
+  font-size: $font-size-lg;
+  color: $color-gray-400;
+
+  &:hover {
+    color: $color-white;
+  }
+}
+
+.versionHistoryList {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-2;
+}
+
+.noVersions {
+  padding: $spacing-4;
+  text-align: center;
+  font-family: $font-family-sans;
+  font-size: $font-size-sm;
+  color: $color-gray-500;
+}
+
+.versionItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-2;
+  padding: $spacing-3;
+  margin-bottom: $spacing-2;
+  background-color: $color-dark-bg-secondary;
+  border: 1px solid $color-neutral-800;
+  border-radius: $border-radius-sm;
+  transition: background-color $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.versionInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.versionId {
+  font-family: $font-family-mono;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-white;
+  margin-bottom: $spacing-1;
+}
+
+.versionDate {
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-400;
+  margin-bottom: $spacing-1;
+}
+
+.versionSummary {
+  font-family: $font-family-sans;
+  font-size: $font-size-xs;
+  color: $color-gray-500;
+  margin-top: $spacing-1;
+}
+
+.restoreButton {
+  flex-shrink: 0;
+  padding: $spacing-1 $spacing-2;
+  font-size: $font-size-xs;
+  color: $color-gray-400;
+
+  &:hover {
+    color: $color-white;
+    background-color: $color-neutral-800;
+  }
+}
+
+.restoreIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-right: $spacing-1;
+}
+
 .editorContent {
-  height: 100%;
+  flex: 1;
   width: 100%;
   overflow: hidden;
+  min-height: 0;
 }
 
 .editorOnly {
@@ -48,18 +235,4 @@
   padding: $spacing-5;
   overflow-y: auto;
   position: relative;
-}
-
-.savingIndicator {
-  position: absolute;
-  top: $spacing-4;
-  right: $spacing-4;
-  padding: $spacing-2 $spacing-3;
-  background-color: $color-dark-bg-primary;
-  border: 1px solid $color-neutral-800;
-  border-radius: $border-radius-md;
-  font-family: $font-family-sans;
-  font-size: $font-size-sm;
-  color: $color-gray-400;
-  z-index: 5;
 }

@@ -200,83 +200,121 @@ impl PlanningEngineImpl {
     }
 
     /// Convert local ExecutionPlan to contract ExecutionPlan
+    ///
+    /// Comprehensive conversion that maps:
+    /// - All contract plan fields (milestones, dependencies, etc.)
+    /// - Orchestration metadata into plan metadata
+    /// - Execution context into contract execution context
+    /// - Execution state information into plan state
     fn convert_to_contract_plan(
         &self,
         local_plan: ExecutionPlan,
         ctx: &ExecutionContext,
     ) -> Result<ContractExecutionPlan, PlanningError> {
-        // TODO: Implement comprehensive plan type conversion
-        //       Currently uses basic conversion; should implement comprehensive conversion between local plan types and contract types.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Plan types are converted comprehensively
-        // - All fields are mapped correctly
-        // - Type conversions are accurate
-        // - Conversion handles edge cases
-        //
-        // DEPENDENCIES:
-        // - Local plan types (Required)
-        // - Contract types (Required)
-        // - Type conversion utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (type conversion feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Type system expertise
-        use agent_agency_contracts::*; // Temporary: basic conversion until comprehensive implementation
+        use agent_agency_contracts::planning_io::PlanMetadata;
+        use tracing::debug;
 
-        let milestones: Vec<Milestone> = local_plan.contract_plan.milestones.iter().map(|milestone| {
-            // Convert local milestone to contract milestone
-            Milestone {
-                id: milestone.id.clone(),
-                objective: milestone.objective.clone(),
-                scope: MilestoneScope {
-                    files: milestone.scope.files.clone(),
-                    directories: milestone.scope.directories.clone(),
-                    included_paths: milestone.scope.included_paths.clone(),
-                    excluded_paths: milestone.scope.excluded_paths.clone(),
-                    will_modify: milestone.scope.will_modify,
-                    allowed_operations: milestone.scope.allowed_operations.clone(),
-                    parallelism: milestone.scope.parallelism,
-                    resource_requirements: milestone.scope.resource_requirements.clone(),
-                },
-                interfaces: milestone.interfaces.clone(),
-                tests: milestone.tests.clone(),
-                evidence_gate: milestone.evidence_gate.clone(),
-                quality_gates: milestone.quality_gates.clone(),
-                dependencies: milestone.dependencies.clone(),
-                estimated_duration: milestone.estimated_duration,
-                rollback_plan: milestone.rollback_plan.clone(),
-                state: milestone.state.clone(),
-                assigned_workers: milestone.assigned_workers.clone(),
-                estimated_effort: milestone.estimated_effort,
-                priority: milestone.priority.clone(),
-                risk_tier: milestone.risk_tier,
-                is_blocking: milestone.is_blocking,
-                blocking_reason: milestone.blocking_reason.clone(),
-                metrics: milestone.metrics.clone(),
-            }
-        }).collect();
+        // Start with base contract plan
+        let mut contract_plan = local_plan.contract_plan.clone();
 
-        // Simply clone and return the contract plan from the local plan
-        Ok(local_plan.contract_plan.clone())
+        // Enhance metadata with orchestration metadata
+        contract_plan.metadata = PlanMetadata {
+            created_at: contract_plan.metadata.created_at,
+            updated_at: contract_plan.metadata.updated_at,
+            approved_at: contract_plan.metadata.approved_at,
+            completed_at: contract_plan.metadata.completed_at,
+            created_by: contract_plan.metadata.created_by.clone(),
+            version: contract_plan.metadata.version.clone(),
+            source: local_plan.orchestration_meta.planning_engine.clone(),
+            confidence_score: contract_plan.metadata.confidence_score,
+            generation_time_ms: contract_plan.metadata.generation_time_ms,
+            model_used: contract_plan.metadata.model_used.clone(),
+            fallback_used: contract_plan.metadata.fallback_used,
+            strategy: contract_plan.metadata.strategy.clone(),
+            confidence: contract_plan.metadata.confidence,
+            estimated_duration_ms: contract_plan.metadata.estimated_duration_ms,
+            estimated_cost_cents: contract_plan.metadata.estimated_cost_cents,
+            adaptive: contract_plan.metadata.adaptive,
+            engine_version: local_plan.orchestration_meta.planning_version.clone(),
+            additional_metadata: {
+                let mut additional = contract_plan.metadata.additional_metadata.clone();
+                // Add orchestration metadata to additional_metadata
+                additional.insert("orchestrator_id".to_string(), serde_json::json!(local_plan.orchestration_meta.orchestrator_id));
+                additional.insert("worker_pool_id".to_string(), serde_json::json!(local_plan.orchestration_meta.worker_pool_id));
+                if let Some(ref council_session_id) = local_plan.orchestration_meta.council_session_id {
+                    additional.insert("council_session_id".to_string(), serde_json::json!(council_session_id));
+                }
+                additional.insert("audit_correlation_id".to_string(), serde_json::json!(local_plan.orchestration_meta.audit_correlation_id.to_string()));
+                additional.insert("planning_engine".to_string(), serde_json::json!(local_plan.orchestration_meta.planning_engine));
+                additional.insert("planning_version".to_string(), serde_json::json!(local_plan.orchestration_meta.planning_version));
+                additional
+            },
+        };
+
+        // Map execution context to contract execution context
+        // Note: ContractExecutionPlan has an optional execution_context field of type ExecutionContext
+        // Convert local ExecutionContext to contract ExecutionContext format
+        contract_plan.execution_context = Some(agent_agency_contracts::types::execution::ExecutionContext {
+            session_id: contract_plan.session_id,
+            planning_engine: local_plan.orchestration_meta.planning_engine.clone(),
+            engine_version: local_plan.orchestration_meta.planning_version.clone(),
+            planning_metadata: {
+                let mut metadata = std::collections::HashMap::new();
+                metadata.insert("working_directory".to_string(), serde_json::json!(local_plan.execution_context.working_directory));
+                metadata.insert("session_start".to_string(), serde_json::json!(local_plan.execution_context.session_start.to_rfc3339()));
+                metadata.insert("available_cpu_cores".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_cpu_cores));
+                metadata.insert("available_memory_mb".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_memory_mb));
+                metadata.insert("available_disk_mb".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_disk_mb));
+                metadata.insert("available_network_mbps".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_network_mbps));
+                metadata.insert("orchestrator_id".to_string(), serde_json::json!(local_plan.orchestration_meta.orchestrator_id));
+                metadata.insert("worker_pool_id".to_string(), serde_json::json!(local_plan.orchestration_meta.worker_pool_id));
+                if let Some(ref council_session_id) = local_plan.orchestration_meta.council_session_id {
+                    metadata.insert("council_session_id".to_string(), serde_json::json!(council_session_id));
+                }
+                metadata.insert("audit_correlation_id".to_string(), serde_json::json!(local_plan.orchestration_meta.audit_correlation_id.to_string()));
+                // Add worker assignments as JSON
+                let worker_assignments_json: Vec<_> = local_plan.execution_context.worker_assignments.iter()
+                    .map(|(k, v)| serde_json::json!({
+                        "milestone_id": k,
+                        "worker_id": v.worker_id.to_string(),
+                        "assigned_at": v.assigned_at.to_rfc3339(),
+                        "status": format!("{:?}", v.status),
+                    }))
+                    .collect();
+                metadata.insert("worker_assignments".to_string(), serde_json::json!(worker_assignments_json));
+                metadata
+            },
+        });
+
+        // Update plan state based on execution state if available
+        if let Some(ref execution_state) = local_plan.execution_state {
+            // Map execution state to contract plan state
+            let has_failures = !execution_state.failed_milestones.is_empty();
+            let all_completed = execution_state.completed_milestones.len() == contract_plan.milestones.len();
+            let has_executing = !execution_state.executing_milestones.is_empty();
+
+            contract_plan.state = if has_failures {
+                agent_agency_contracts::planning_io::PlanState::Failed { reason: "One or more milestones failed".to_string() }
+            } else if all_completed {
+                agent_agency_contracts::planning_io::PlanState::Completed
+            } else if has_executing {
+                agent_agency_contracts::planning_io::PlanState::InProgress
+            } else {
+                contract_plan.state // Keep existing state if no clear mapping
+            };
+        }
+
+        // Session ID is already set correctly from contract_plan.session_id
+        // The execution context's session_id matches the plan's session_id
+
+        debug!(
+            plan_id = %contract_plan.id,
+            orchestrator_id = %local_plan.orchestration_meta.orchestrator_id,
+            planning_engine = %local_plan.orchestration_meta.planning_engine,
+            "Converted local ExecutionPlan to ContractExecutionPlan with enhanced metadata"
+        );
+
+        Ok(contract_plan)
     }
 }
 

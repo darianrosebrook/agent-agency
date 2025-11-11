@@ -215,6 +215,10 @@ pub struct Milestone {
 
     /// Execution metrics and results
     pub metrics: Option<MilestoneMetrics>,
+
+    /// Additional metadata for milestone (e.g., arbiter recommendations)
+    #[serde(default)]
+    pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Milestone execution state machine

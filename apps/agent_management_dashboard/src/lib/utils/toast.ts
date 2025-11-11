@@ -117,7 +117,7 @@ export function toastSuccess(message: string, options?: ToastOptions) {
  */
 export function toastError(error: unknown, options?: ToastOptions) {
   try {
-    const appError = parseApiError(error);
+  const appError = parseApiError(error);
     const message = appError.getUserMessage();
     
     // Ensure we always have a valid, non-empty string message
@@ -167,11 +167,11 @@ export function toastError(error: unknown, options?: ToastOptions) {
       finalMessage = `${displayMessage} (${entry.count}x)`;
     }
 
-    const toastOptions: ExternalToast = {
-      duration: options?.duration ?? 6000,
-      ...(options?.action && { action: options.action }),
-      ...(options?.cancel && { cancel: options.cancel }),
-    };
+  const toastOptions: ExternalToast = {
+    duration: options?.duration ?? 6000,
+    ...(options?.action && { action: options.action }),
+    ...(options?.cancel && { cancel: options.cancel }),
+  };
     
     return sonnerToast.error(finalMessage, toastOptions);
   } catch (err) {

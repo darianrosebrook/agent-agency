@@ -56,6 +56,8 @@ pub struct CreateExecutionPlan {
     pub id: Uuid,
     pub title: String,
     pub overview: String,
+    /// Working spec ID (e.g., "TASK-<UUID>" for task-based plans, "PLAN-<UUID>" for direct plans)
+    pub working_spec_id: Option<String>,
     // Add other fields as needed
 }
 
