@@ -225,42 +225,98 @@ impl MemorySystem for MemorySystemAdapter {
     }
 
     async fn search_experiences(&self, query: serde_json::Value) -> MemoryResult<Vec<Experience>> {
-        // TODO: Implement comprehensive experience search
-        //       Currently returns empty vector; should implement proper search using underlying memory system search capabilities.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Experiences are searched correctly
-        // - Query parsing works accurately
-        // - Search results are relevant
-        // - Error handling works for search failures
-        //
-        // DEPENDENCIES:
-        // - Memory system search API (Required)
-        // - Query parsing utilities (Required)
-        // - Experience retrieval infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (memory feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Memory search expertise
-        warn!("search_experiences not fully implemented - returning empty results");
-        Ok(Vec::new()) // Temporary: empty results until proper search implementation
+        use agent_memory::memory_manager::MemoryQuery;
+        use agent_memory::memory_types::{MemoryType, TimeRange};
+        use chrono::{DateTime, Utc};
+
+        // Parse query JSON to build MemoryQuery
+        let memory_query = MemoryQuery {
+            agent_id: query.get("agent_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            task_type: query.get("task_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            memory_type: query.get("memory_type")
+                .and_then(|v| v.as_str())
+                .and_then(|s| match s {
+                    "Episodic" => Some(MemoryType::Episodic),
+                    "Semantic" => Some(MemoryType::Semantic),
+                    "Procedural" => Some(MemoryType::Procedural),
+                    "Working" => Some(MemoryType::Working),
+                    _ => None,
+                }),
+            time_range: if query.get("start_time").is_some() || query.get("end_time").is_some() {
+                Some(TimeRange {
+                    start: query.get("start_time")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                        .map(|dt| dt.with_timezone(&Utc))
+                        .unwrap_or_else(|| Utc::now() - chrono::Duration::days(30)),
+                    end: query.get("end_time")
+                        .and_then(|v| v.as_str())
+                        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                        .map(|dt| dt.with_timezone(&Utc))
+                        .unwrap_or_else(Utc::now),
+                })
+            } else {
+                None
+            },
+            limit: query.get("limit")
+                .and_then(|v| v.as_u64())
+                .map(|u| u as usize),
+        };
+
+        // Search memories using the real memory system
+        let agent_experiences = self.memory_system.manager().search_memories(memory_query).await
+            .map_err(|e| MemoryError::OperationFailed {
+                operation: "search_experiences".to_string(),
+                reason: e.to_string(),
+            })?;
+
+        // Convert agent_memory::AgentExperience to contracts::Experience
+        let mut results = Vec::new();
+        for agent_exp in agent_experiences {
+            let experience = Experience {
+                id: agent_exp.id,
+                description: agent_exp.context.description.clone(),
+                domain: agent_exp.context.domain.clone(),
+                task_type: agent_exp.context.task_type.clone(),
+                memory_type: match agent_exp.memory_type {
+                    MemoryType::Episodic => agent_agency_contracts::types::memory::MemoryType::Episodic,
+                    MemoryType::Semantic => agent_agency_contracts::types::memory::MemoryType::Semantic,
+                    MemoryType::Procedural => agent_agency_contracts::types::memory::MemoryType::Procedural,
+                    MemoryType::Working => agent_agency_contracts::types::memory::MemoryType::Working,
+                },
+                outcome: ExperienceOutcome {
+                    success: agent_exp.outcome.success,
+                    quality_score: agent_exp.outcome.quality_score,
+                    error_message: agent_exp.outcome.error_message,
+                    metadata: agent_exp.outcome.metadata,
+                    performance_score: agent_exp.outcome.performance_score,
+                    execution_time_ms: agent_exp.outcome.execution_time_ms,
+                    learned_capabilities: agent_exp.outcome.learned_capabilities,
+                },
+                temporal_context: agent_exp.context.temporal_context.map(|tc| {
+                    TemporalContext {
+                        timestamp: tc.timestamp,
+                        duration_ms: tc.duration.map(|d| d.num_milliseconds() as u64),
+                        sequence_number: tc.sequence_number,
+                        priority: match tc.priority {
+                            agent_memory::memory_types::TaskPriority::Low => agent_agency_contracts::types::memory::TaskPriority::Low,
+                            agent_memory::memory_types::TaskPriority::Normal => agent_agency_contracts::types::memory::TaskPriority::Normal,
+                            agent_memory::memory_types::TaskPriority::Medium => agent_agency_contracts::types::memory::TaskPriority::Normal, // Map Medium to Normal
+                            agent_memory::memory_types::TaskPriority::High => agent_agency_contracts::types::memory::TaskPriority::High,
+                            agent_memory::memory_types::TaskPriority::Urgent => agent_agency_contracts::types::memory::TaskPriority::High, // Map Urgent to High
+                            agent_memory::memory_types::TaskPriority::Critical => agent_agency_contracts::types::memory::TaskPriority::Critical,
+                        },
+                    }
+                }),
+                metadata: agent_exp.metadata,
+            };
+            results.push(experience);
+        }
+
+        Ok(results)
     }
 }
