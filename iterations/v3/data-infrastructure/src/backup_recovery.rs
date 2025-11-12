@@ -659,29 +659,71 @@ impl DisasterRecoveryManager {
         }
     }
 
-    /// Estimate Recovery Time Objective
+    /// Estimate Recovery Time Objective using historical recovery performance data
     async fn estimate_rto(&self) -> u64 {
-        // TODO: Implement comprehensive Recovery Time Objective (RTO) estimation
-        // - Use historical recovery performance data for accurate predictions
-        // - Account for database size, complexity, and system resources
-        // - Implement parallel recovery estimation for multi-node systems
-        // - Support different recovery scenarios (full, incremental, PITR)
-        // - Add system resource availability and performance modeling
-        // - Implement recovery time trend analysis and forecasting
-        // - Support recovery time optimization recommendations
-        // - Add recovery time validation against SLAs and requirements
-        let last_backup = {
-            let history = self.backup_history.read().await;
-            history.last().cloned()
+        // Query historical recovery times from wal_replay_checkpoints
+        // Calculate recovery time for each completed replay (time between first and last checkpoint)
+        let historical_rto = sqlx::query(
+            r#"
+            WITH recovery_times AS (
+                SELECT 
+                    replay_id,
+                    EXTRACT(EPOCH FROM (MAX(checkpoint_time) - MIN(checkpoint_time))) as recovery_time_seconds
+                FROM wal_replay_checkpoints
+                WHERE status = 'COMPLETED'
+                AND checkpoint_time >= NOW() - INTERVAL '30 days'
+                GROUP BY replay_id
+            )
+            SELECT AVG(recovery_time_seconds) as avg_recovery_time_seconds
+            FROM recovery_times
+            "#
+        )
+        .fetch_optional(self.db_client.pool())
+        .await;
+
+        // Calculate average recovery time from historical data
+        let avg_recovery_time = match historical_rto {
+            Ok(Some(row)) => {
+                row.try_get::<Option<f64>, &str>("avg_recovery_time_seconds")
+                    .ok()
+                    .flatten()
+                    .map(|t| t as u64)
+            }
+            _ => None,
         };
 
-        if let Some(backup) = last_backup {
-            // Estimate 1MB per second recovery speed
-            let recovery_speed_mb_per_sec = 1.0;
-            let backup_size_mb = backup.size_bytes as f64 / (1024.0 * 1024.0);
-            (backup_size_mb / recovery_speed_mb_per_sec) as u64
+        // If we have historical data, use it; otherwise fall back to backup size estimation
+        if let Some(historical_rto_seconds) = avg_recovery_time {
+            // Use historical average, but add 20% buffer for safety
+            (historical_rto_seconds as f64 * 1.2) as u64
         } else {
-            300 // Default 5 minutes if no backup available
+            // Fallback: Estimate based on backup size
+            let last_backup = {
+                let history = self.backup_history.read().await;
+                history.last().cloned()
+            };
+
+            if let Some(backup) = last_backup {
+                // Estimate recovery speed based on backup size
+                // Larger backups may have slower recovery due to complexity
+                let backup_size_mb = backup.size_bytes as f64 / (1024.0 * 1024.0);
+                
+                // Adaptive recovery speed: smaller backups recover faster
+                let recovery_speed_mb_per_sec = if backup_size_mb < 100.0 {
+                    2.0 // Fast recovery for small backups (<100MB)
+                } else if backup_size_mb < 1000.0 {
+                    1.5 // Medium recovery for medium backups (100MB-1GB)
+                } else {
+                    1.0 // Slower recovery for large backups (>1GB)
+                };
+                
+                let estimated_seconds = (backup_size_mb / recovery_speed_mb_per_sec) as u64;
+                // Add overhead for database initialization and verification
+                estimated_seconds + 60 // Add 1 minute overhead
+            } else {
+                // Default 5 minutes if no backup available
+                300
+            }
         }
     }
 
