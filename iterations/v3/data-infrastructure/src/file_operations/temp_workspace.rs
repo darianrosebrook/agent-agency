@@ -735,7 +735,7 @@ impl ChangesetApplicationEngine {
         changeset: &ChangeSet,
         allowlist: &AllowList,
         budgets: &Budgets,
-        _workspace_path: &Path,
+        workspace_path: &Path,
     ) -> Result<Vec<ChangesetValidationResult>> {
         let mut results = Vec::new();
 
@@ -817,7 +817,7 @@ impl ChangesetApplicationEngine {
         // - CAWS Tier: 2 (validation feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Graph algorithms expertise
-        let dependency_valid = self.validate_changeset_dependencies(changeset).await?; // Temporary: basic validation until comprehensive validation
+        let dependency_valid = self.validate_changeset_dependencies(changeset, workspace_path).await?;
         results.push(ChangesetValidationResult {
             validation_type: ValidationType::Dependency,
             passed: dependency_valid,
@@ -1027,7 +1027,7 @@ impl ChangesetApplicationEngine {
         Ok(true)
     }
 
-    async fn validate_changeset_dependencies(&self, changeset: &ChangeSet) -> Result<bool> {
+    async fn validate_changeset_dependencies(&self, changeset: &ChangeSet, workspace_path: &Path) -> Result<bool> {
         // Validate changeset dependencies
         // Check for circular dependencies, missing prerequisites, and self-referential patches
         
@@ -1079,39 +1079,25 @@ impl ChangesetApplicationEngine {
         for (_file, deps) in &file_dependencies {
             for dep in deps {
                 if !files_modified.contains(dep) {
-                    // TODO: Check if dependency file exists in workspace
-                    //       Currently assumes missing dependencies are warnings; should check if file exists in workspace and handle appropriately.
-                    //
-                    // COMPLETION CHECKLIST:
-                    // [ ] Check if dependency file exists in workspace
-                    // [ ] Verify file path is valid
-                    // [ ] Handle missing files as errors or warnings based on context
-                    // [ ] Support relative and absolute paths
-                    // [ ] Handle symlinks and special files
-                    // [ ] Add unit tests for file existence checking
-                    // [ ] Add integration tests with various file scenarios
-                    // [ ] Verify file existence checking accuracy
-                    //
-                    // ACCEPTANCE CRITERIA:
-                    // - Dependency files are checked for existence correctly
-                    // - File paths are validated properly
-                    // - Missing files are handled appropriately
-                    // - Symlinks and special files are handled correctly
-                    //
-                    // DEPENDENCIES:
-                    // - File system utilities (Required)
-                    // - Path validation utilities (Required)
-                    // - Workspace file tracking (Required)
-                    //
-                    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-                    // PRIORITY: Medium
-                    // BLOCKING: No
-                    //
-                    // GOVERNANCE:
-                    // - CAWS Tier: 2 (validation feature)
-                    // - Change Budget: ~50 LOC
-                    // - Reviewer Requirements: File system expertise
-                    // Temporary: assume warnings until file existence checking is implemented
+                    // Check if dependency file exists in workspace
+                    let dep_path = if Path::new(dep).is_absolute() {
+                        PathBuf::from(dep)
+                    } else {
+                        workspace_path.join(dep)
+                    };
+                    
+                    // Try to normalize path (may fail if path doesn't exist, which is fine)
+                    let dep_path_normalized = dep_path.canonicalize()
+                        .unwrap_or_else(|_| dep_path.clone());
+                    
+                    // Check if file exists and is a regular file (not a directory)
+                    let file_exists = dep_path_normalized.exists() && dep_path_normalized.is_file();
+                    
+                    if !file_exists {
+                        // Dependency file doesn't exist - this is a validation failure
+                        // Return false to indicate dependency validation failed
+                        return Ok(false);
+                    }
                 }
             }
         }
