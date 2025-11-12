@@ -33,7 +33,7 @@ use super::super::database_operations::{
 };
 use super::super::database_audit::DatabaseAuditLogger;
 use super::super::models::{
-    Judge, Worker, Task, TaskExecution, CouncilVerdict, JudgeEvaluation, AuditTrailEntry,
+    Judge, Worker, Task, TaskExecution, CouncilVerdict, CouncilSession, JudgeEvaluation, AuditTrailEntry,
     PlanningTelemetry, Milestone, PlanningSession, EvidenceArtifact, PlanningAuditEvent,
     ExecutionPlan, Waiver, User, Session, PasswordResetToken, UserSetting, AppSetting,
     Integration, ApiKey, TwoFactorAuth, CawsRule, CawsViolation, CawsSpecification
@@ -879,6 +879,111 @@ impl DatabaseOperations for DatabaseClient {
         .await?;
         
         Ok(rows)
+    }
+
+    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<CouncilSession> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query_as::<_, CouncilSession>(
+            r#"
+            INSERT INTO council_sessions (
+                id, session_id, task_id, working_spec_id, review_context,
+                status, selected_judges, contributions, progress,
+                started_at, created_at, updated_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id, session_id, task_id, working_spec_id, review_context,
+                      status, selected_judges, contributions, aggregation_result,
+                      final_decision, progress, started_at, completed_at,
+                      created_at, updated_at, metadata
+            "#
+        )
+        .bind(id)
+        .bind(session.session_id)
+        .bind(session.task_id)
+        .bind(session.working_spec_id)
+        .bind(session.review_context)
+        .bind(session.status.unwrap_or_else(|| "initialized".to_string()))
+        .bind(session.selected_judges.unwrap_or_else(|| serde_json::json!([])))
+        .bind(session.contributions.unwrap_or_else(|| serde_json::json!([])))
+        .bind(session.progress.unwrap_or(0.0))
+        .bind(now)
+        .bind(now)
+        .bind(now)
+        .bind(session.metadata.unwrap_or_else(|| serde_json::json!({})))
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to create council session")
+    }
+
+    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<CouncilSession>> {
+        sqlx::query_as::<_, CouncilSession>(
+            r#"
+            SELECT id, session_id, task_id, working_spec_id, review_context,
+                   status, selected_judges, contributions, aggregation_result,
+                   final_decision, progress, started_at, completed_at,
+                   created_at, updated_at, metadata
+            FROM council_sessions
+            WHERE session_id = $1
+            "#
+        )
+        .bind(session_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to get council session")
+    }
+
+    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<CouncilSession>> {
+        sqlx::query_as::<_, CouncilSession>(
+            r#"
+            SELECT id, session_id, task_id, working_spec_id, review_context,
+                   status, selected_judges, contributions, aggregation_result,
+                   final_decision, progress, started_at, completed_at,
+                   created_at, updated_at, metadata
+            FROM council_sessions
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(task_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to get council session by task")
+    }
+
+    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<CouncilSession> {
+        sqlx::query_as::<_, CouncilSession>(
+            r#"
+            UPDATE council_sessions
+            SET status = COALESCE($1, status),
+                selected_judges = COALESCE($2, selected_judges),
+                contributions = COALESCE($3, contributions),
+                aggregation_result = COALESCE($4, aggregation_result),
+                final_decision = COALESCE($5, final_decision),
+                progress = COALESCE($6, progress),
+                completed_at = COALESCE($7, completed_at),
+                metadata = COALESCE($8, metadata),
+                updated_at = NOW()
+            WHERE session_id = $9
+            RETURNING id, session_id, task_id, working_spec_id, review_context,
+                      status, selected_judges, contributions, aggregation_result,
+                      final_decision, progress, started_at, completed_at,
+                      created_at, updated_at, metadata
+            "#
+        )
+        .bind(update.status)
+        .bind(update.selected_judges)
+        .bind(update.contributions)
+        .bind(update.aggregation_result)
+        .bind(update.final_decision)
+        .bind(update.progress)
+        .bind(update.completed_at)
+        .bind(update.metadata)
+        .bind(session_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Council session not found: {}", session_id))
     }
 
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation> {

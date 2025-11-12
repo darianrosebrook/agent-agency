@@ -52,6 +52,10 @@ pub trait DatabaseOperations: Send + Sync {
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver, anyhow::Error>;
     async fn create_execution_result(&self, result: CreateExecutionResult) -> Result<models::PlanExecutionResult, anyhow::Error>;
     async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<models::PlanExecutionResult>, anyhow::Error>;
+    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<models::CouncilSession, anyhow::Error>;
+    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>, anyhow::Error>;
+    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>, anyhow::Error>;
+    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<models::CouncilSession, anyhow::Error>;
 }
 
 /// Create execution plan request
@@ -280,6 +284,33 @@ pub mod models {
         #[schemars(with = "String")]
         pub updated_at: DateTime<Utc>,
     }
+
+    /// Council session model
+    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+    pub struct CouncilSession {
+        #[schemars(with = "String")]
+        pub id: Uuid,
+        #[schemars(with = "String")]
+        pub session_id: Uuid,
+        #[schemars(with = "String")]
+        pub task_id: Option<Uuid>,
+        pub working_spec_id: Option<String>,
+        pub review_context: serde_json::Value,
+        pub status: String,
+        pub selected_judges: serde_json::Value,
+        pub contributions: serde_json::Value,
+        pub aggregation_result: Option<serde_json::Value>,
+        pub final_decision: Option<serde_json::Value>,
+        pub progress: f64,
+        #[schemars(with = "String")]
+        pub started_at: DateTime<Utc>,
+        pub completed_at: Option<DateTime<Utc>>,
+        #[schemars(with = "String")]
+        pub created_at: DateTime<Utc>,
+        #[schemars(with = "String")]
+        pub updated_at: DateTime<Utc>,
+        pub metadata: serde_json::Value,
+    }
 }
 
 /// Create audit trail entry
@@ -415,6 +446,35 @@ pub struct UpdateWorker {
     pub capabilities: Option<serde_json::Value>,
     pub performance_history: Option<serde_json::Value>,
     pub is_active: Option<bool>,
+}
+
+/// Create council session request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCouncilSession {
+    #[schemars(with = "String")]
+    pub session_id: Uuid,
+    #[schemars(with = "String")]
+    pub task_id: Option<Uuid>,
+    pub working_spec_id: Option<String>,
+    pub review_context: serde_json::Value,
+    pub status: Option<String>,
+    pub selected_judges: Option<serde_json::Value>,
+    pub contributions: Option<serde_json::Value>,
+    pub progress: Option<f64>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Update council session request
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateCouncilSession {
+    pub status: Option<String>,
+    pub selected_judges: Option<serde_json::Value>,
+    pub contributions: Option<serde_json::Value>,
+    pub aggregation_result: Option<serde_json::Value>,
+    pub final_decision: Option<serde_json::Value>,
+    pub progress: Option<f64>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// Cost limits

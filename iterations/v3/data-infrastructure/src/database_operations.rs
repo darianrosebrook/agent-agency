@@ -53,6 +53,12 @@ pub trait DatabaseOperations {
     async fn get_council_verdict(&self, id: Uuid) -> Result<Option<CouncilVerdict>>;
     async fn get_council_verdicts(&self, task_id: Uuid) -> Result<Vec<CouncilVerdict>>;
 
+    // Council session operations
+    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<CouncilSession>;
+    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<CouncilSession>>;
+    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<CouncilSession>>;
+    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<CouncilSession>;
+
     // Judge evaluation operations
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation>;
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>>;
@@ -320,6 +326,33 @@ pub struct CreateCouncilVerdict {
     pub evaluation_time_ms: i32,
     pub contract: serde_json::Value,
     pub verdict_details: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCouncilSession {
+    #[schemars(with = "String")]
+    pub session_id: Uuid,
+    #[schemars(with = "String")]
+    pub task_id: Option<Uuid>,
+    pub working_spec_id: Option<String>,
+    pub review_context: serde_json::Value,
+    pub status: Option<String>,
+    pub selected_judges: Option<serde_json::Value>,
+    pub contributions: Option<serde_json::Value>,
+    pub progress: Option<f64>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateCouncilSession {
+    pub status: Option<String>,
+    pub selected_judges: Option<serde_json::Value>,
+    pub contributions: Option<serde_json::Value>,
+    pub aggregation_result: Option<serde_json::Value>,
+    pub final_decision: Option<serde_json::Value>,
+    pub progress: Option<f64>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

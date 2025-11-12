@@ -691,42 +691,22 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let telemetry_id = Uuid::new_v4();
         let now = Utc::now();
         
-        // TODO: Implement proper plan_id extraction from session_id
-        //       Currently uses session_id directly; should implement proper mapping or lookup to extract plan_id from session_id.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Plan ID is extracted correctly from session ID
-        // - Mapping or lookup is accurate
-        // - Error handling works for missing mappings
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Session-to-plan mapping infrastructure (Required)
-        // - Lookup utilities (Required)
-        // - Mapping cache (Optional)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (data mapping enhancement)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Data mapping expertise
-        let plan_id = telemetry.session_id; // Temporary: direct use until proper extraction
+        // Extract plan_id from session_id by querying planning_sessions table
+        let plan_id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            SELECT plan_id FROM planning_sessions WHERE id = $1 LIMIT 1
+            "#
+        )
+        .bind(telemetry.session_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to query planning session: {}", e))?
+        .unwrap_or_else(|| {
+            // Fallback: if session not found, use session_id as plan_id
+            // This maintains backward compatibility and handles edge cases
+            tracing::warn!("Planning session {} not found, using session_id as plan_id", telemetry.session_id);
+            telemetry.session_id
+        });
         
         // Insert planning telemetry into database
         sqlx::query(

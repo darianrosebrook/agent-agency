@@ -552,19 +552,40 @@ impl CawsPlanBridge {
             });
         }
 
-        // Create edges based on blocking dependencies
+        // Create edges based on milestone dependencies
         for milestone in milestones {
+            // Add edges from milestone dependencies
+            for dep in &milestone.dependencies {
+                if nodes.contains_key(dep) {
+                    edges.push(DependencyEdge {
+                        from: dep.clone(),
+                        to: milestone.id.clone(),
+                        edge_type: DependencyEdgeType::Hard,
+                        weight: nodes.get(dep)
+                            .map(|n| n.estimated_time_ms as f64)
+                            .unwrap_or(1.0),
+                        metadata: HashMap::new(),
+                    });
+                }
+            }
+            
+            // Blocking milestones are dependencies for all non-blocking milestones
             if milestone.is_blocking {
-                // Blocking milestones are dependencies for all others
                 for other in milestones {
-                    if other.id != milestone.id {
-                        edges.push(DependencyEdge {
-                            from: milestone.id.clone(),
-                            to: other.id.clone(),
-                            edge_type: DependencyEdgeType::Hard,
-                            weight: 1.0,
-                            metadata: HashMap::new(),
-                        });
+                    if !other.is_blocking && other.id != milestone.id {
+                        // Only add edge if not already present
+                        let edge_exists = edges.iter().any(|e| e.from == milestone.id && e.to == other.id);
+                        if !edge_exists {
+                            edges.push(DependencyEdge {
+                                from: milestone.id.clone(),
+                                to: other.id.clone(),
+                                edge_type: DependencyEdgeType::Hard,
+                                weight: nodes.get(&other.id)
+                                    .map(|n| n.estimated_time_ms as f64)
+                                    .unwrap_or(1.0),
+                                metadata: HashMap::new(),
+                            });
+                        }
                     }
                 }
             }

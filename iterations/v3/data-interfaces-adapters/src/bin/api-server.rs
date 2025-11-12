@@ -457,6 +457,7 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         // Health and status
         .route("/health", get(health_handler))
         .route("/api/v1/health", get(health_handler))
+        .route("/metrics", get(get_metrics_handler))
         .route("/", get(root_handler));
 
     // Task management endpoints
@@ -479,6 +480,8 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     router = router
         .route("/api/v1/agents", get(list_agents_handler))
         .route("/api/v1/agents/stats", get(get_agents_stats_handler))
+        .route("/api/v1/agents/tasks/completion", get(get_agents_tasks_completion_handler))
+        .route("/api/v1/agents/efficiency", get(get_agents_efficiency_handler))
         .route("/api/v1/agents/:id", get(get_agent_handler))
         .route("/api/v1/agents/:id", axum::routing::patch(update_agent_handler))
         .route("/api/v1/agents/:id", axum::routing::delete(delete_agent_handler))
@@ -1876,6 +1879,280 @@ async fn stop_agent_handler(
     }
 }
 
+/// Get task completion metrics for all agents
+/// 
+/// Returns aggregated task completion statistics per agent including:
+/// - Total tasks executed
+/// - Completed tasks count
+/// - Failed tasks count
+/// - Success rate
+/// - Average execution time
+/// - Completion rate over time periods
+async fn get_agents_tasks_completion_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Parse time period (default: last 24 hours)
+    let hours = params.get("hours")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(24);
+    let period_start = Utc::now() - ChronoDuration::hours(hours);
+    
+    // Query task completion metrics grouped by agent
+    let query = r#"
+        SELECT 
+            w.id as worker_id,
+            w.name as worker_name,
+            w.worker_type,
+            COUNT(te.id) as total_tasks,
+            COUNT(CASE WHEN te.status = 'completed' THEN 1 END) as completed_tasks,
+            COUNT(CASE WHEN te.status = 'failed' THEN 1 END) as failed_tasks,
+            COUNT(CASE WHEN te.status = 'cancelled' THEN 1 END) as cancelled_tasks,
+            COUNT(CASE WHEN te.status = 'running' THEN 1 END) as running_tasks,
+            AVG(CASE WHEN te.execution_time_ms IS NOT NULL THEN te.execution_time_ms ELSE NULL END) as avg_execution_time_ms,
+            MIN(CASE WHEN te.execution_time_ms IS NOT NULL THEN te.execution_time_ms ELSE NULL END) as min_execution_time_ms,
+            MAX(CASE WHEN te.execution_time_ms IS NOT NULL THEN te.execution_time_ms ELSE NULL END) as max_execution_time_ms,
+            SUM(CASE WHEN te.status = 'completed' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(te.id), 0) as success_rate
+        FROM workers w
+        LEFT JOIN task_executions te ON w.id = te.worker_id 
+            AND te.execution_started_at >= $1
+        GROUP BY w.id, w.name, w.worker_type
+        HAVING COUNT(te.id) > 0
+        ORDER BY total_tasks DESC
+    "#;
+    
+    match sqlx::query(query)
+        .bind(period_start)
+        .fetch_all(db.pool())
+        .await
+    {
+        Ok(rows) => {
+            let mut agent_metrics: Vec<serde_json::Value> = Vec::new();
+            
+            for row in rows {
+                let worker_id: Uuid = row.get("worker_id");
+                let worker_name: String = row.get("worker_name");
+                let worker_type: String = row.get("worker_type");
+                let total_tasks: i64 = row.get("total_tasks");
+                let completed_tasks: i64 = row.get("completed_tasks");
+                let failed_tasks: i64 = row.get("failed_tasks");
+                let cancelled_tasks: i64 = row.get("cancelled_tasks");
+                let running_tasks: i64 = row.get("running_tasks");
+                let avg_execution_time: Option<i64> = row.try_get("avg_execution_time_ms").ok();
+                let min_execution_time: Option<i64> = row.try_get("min_execution_time_ms").ok();
+                let max_execution_time: Option<i64> = row.try_get("max_execution_time_ms").ok();
+                let success_rate: Option<f64> = row.try_get("success_rate").ok();
+                
+                let completion_rate = if total_tasks > 0 {
+                    (completed_tasks as f64 / total_tasks as f64) * 100.0
+                } else {
+                    0.0
+                };
+                
+                agent_metrics.push(serde_json::json!({
+                    "agent_id": worker_id.to_string(),
+                    "agent_name": worker_name,
+                    "worker_type": worker_type,
+                    "total_tasks": total_tasks,
+                    "completed_tasks": completed_tasks,
+                    "failed_tasks": failed_tasks,
+                    "cancelled_tasks": cancelled_tasks,
+                    "running_tasks": running_tasks,
+                    "completion_rate_percent": completion_rate,
+                    "success_rate": success_rate.unwrap_or(0.0),
+                    "avg_execution_time_ms": avg_execution_time,
+                    "min_execution_time_ms": min_execution_time,
+                    "max_execution_time_ms": max_execution_time,
+                    "period_hours": hours,
+                    "period_start": period_start.to_rfc3339(),
+                }));
+            }
+            
+            // Calculate aggregate totals
+            let total_all_tasks: i64 = agent_metrics.iter()
+                .map(|m| m["total_tasks"].as_i64().unwrap_or(0))
+                .sum();
+            let total_completed: i64 = agent_metrics.iter()
+                .map(|m| m["completed_tasks"].as_i64().unwrap_or(0))
+                .sum();
+            let total_failed: i64 = agent_metrics.iter()
+                .map(|m| m["failed_tasks"].as_i64().unwrap_or(0))
+                .sum();
+            
+            Ok(Json(serde_json::json!({
+                "agents": agent_metrics,
+                "summary": {
+                    "total_agents": agent_metrics.len(),
+                    "total_tasks": total_all_tasks,
+                    "total_completed": total_completed,
+                    "total_failed": total_failed,
+                    "overall_completion_rate": if total_all_tasks > 0 {
+                        (total_completed as f64 / total_all_tasks as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                    "overall_success_rate": if total_all_tasks > 0 {
+                        ((total_all_tasks - total_failed) as f64 / total_all_tasks as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                },
+                "period_hours": hours,
+                "period_start": period_start.to_rfc3339(),
+                "period_end": Utc::now().to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get agent task completion metrics: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Get efficiency metrics for all agents
+/// 
+/// Returns efficiency metrics per agent including:
+/// - Tasks per hour (throughput)
+/// - Average execution time
+/// - Efficiency score (throughput / avg_time)
+/// - Resource utilization
+/// - Performance trends
+async fn get_agents_efficiency_handler(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Parse time period (default: last 24 hours)
+    let hours = params.get("hours")
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(24);
+    let period_start = Utc::now() - ChronoDuration::hours(hours);
+    
+    // Query efficiency metrics grouped by agent
+    let query = r#"
+        SELECT 
+            w.id as worker_id,
+            w.name as worker_name,
+            w.worker_type,
+            COUNT(te.id) as total_tasks,
+            COUNT(CASE WHEN te.status = 'completed' THEN 1 END) as completed_tasks,
+            AVG(CASE WHEN te.execution_time_ms IS NOT NULL THEN te.execution_time_ms ELSE NULL END) as avg_execution_time_ms,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY te.execution_time_ms) as median_execution_time_ms,
+            PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY te.execution_time_ms) as p95_execution_time_ms,
+            SUM(CASE WHEN te.status = 'completed' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(te.id), 0) as success_rate,
+            SUM(CASE WHEN te.tokens_used IS NOT NULL THEN te.tokens_used ELSE 0 END) as total_tokens_used,
+            AVG(CASE WHEN te.tokens_used IS NOT NULL THEN te.tokens_used ELSE NULL END) as avg_tokens_per_task
+        FROM workers w
+        LEFT JOIN task_executions te ON w.id = te.worker_id 
+            AND te.execution_started_at >= $1
+        GROUP BY w.id, w.name, w.worker_type
+        HAVING COUNT(te.id) > 0
+        ORDER BY completed_tasks DESC
+    "#;
+    
+    match sqlx::query(query)
+        .bind(period_start)
+        .fetch_all(db.pool())
+        .await
+    {
+        Ok(rows) => {
+            let mut agent_efficiency: Vec<serde_json::Value> = Vec::new();
+            
+            for row in rows {
+                let worker_id: Uuid = row.get("worker_id");
+                let worker_name: String = row.get("worker_name");
+                let worker_type: String = row.get("worker_type");
+                let total_tasks: i64 = row.get("total_tasks");
+                let completed_tasks: i64 = row.get("completed_tasks");
+                let avg_execution_time: Option<i64> = row.try_get("avg_execution_time_ms").ok();
+                let median_execution_time: Option<i64> = row.try_get("median_execution_time_ms").ok();
+                let p95_execution_time: Option<i64> = row.try_get("p95_execution_time_ms").ok();
+                let success_rate: Option<f64> = row.try_get("success_rate").ok();
+                let total_tokens: Option<i64> = row.try_get("total_tokens_used").ok();
+                let avg_tokens: Option<i64> = row.try_get("avg_tokens_per_task").ok();
+                
+                // Calculate tasks per hour (throughput)
+                let tasks_per_hour = if hours > 0 && completed_tasks > 0 {
+                    (completed_tasks as f64 / hours as f64)
+                } else {
+                    0.0
+                };
+                
+                // Calculate efficiency score (higher is better: more tasks completed with less time)
+                // Formula: (completed_tasks / hours) / (avg_time_ms / 1000 / 60) = tasks per hour / (avg_time in minutes)
+                let efficiency_score = if let Some(avg_time) = avg_execution_time {
+                    if avg_time > 0 {
+                        let avg_time_minutes = avg_time as f64 / 1000.0 / 60.0;
+                        tasks_per_hour / avg_time_minutes.max(0.1) // Avoid division by zero
+                    } else {
+                        0.0
+                    }
+                } else {
+                    0.0
+                };
+                
+                agent_efficiency.push(serde_json::json!({
+                    "agent_id": worker_id.to_string(),
+                    "agent_name": worker_name,
+                    "worker_type": worker_type,
+                    "total_tasks": total_tasks,
+                    "completed_tasks": completed_tasks,
+                    "tasks_per_hour": tasks_per_hour,
+                    "success_rate": success_rate.unwrap_or(0.0),
+                    "avg_execution_time_ms": avg_execution_time,
+                    "median_execution_time_ms": median_execution_time,
+                    "p95_execution_time_ms": p95_execution_time,
+                    "efficiency_score": efficiency_score,
+                    "total_tokens_used": total_tokens,
+                    "avg_tokens_per_task": avg_tokens,
+                    "period_hours": hours,
+                }));
+            }
+            
+            // Calculate aggregate efficiency metrics
+            let total_completed: i64 = agent_efficiency.iter()
+                .map(|m| m["completed_tasks"].as_i64().unwrap_or(0))
+                .sum();
+            let overall_tasks_per_hour = if hours > 0 {
+                total_completed as f64 / hours as f64
+            } else {
+                0.0
+            };
+            
+            // Calculate average efficiency score
+            let efficiency_scores: Vec<f64> = agent_efficiency.iter()
+                .filter_map(|m| m["efficiency_score"].as_f64())
+                .filter(|&s| s > 0.0)
+                .collect();
+            let avg_efficiency_score = if !efficiency_scores.is_empty() {
+                efficiency_scores.iter().sum::<f64>() / efficiency_scores.len() as f64
+            } else {
+                0.0
+            };
+            
+            Ok(Json(serde_json::json!({
+                "agents": agent_efficiency,
+                "summary": {
+                    "total_agents": agent_efficiency.len(),
+                    "total_completed_tasks": total_completed,
+                    "overall_tasks_per_hour": overall_tasks_per_hour,
+                    "avg_efficiency_score": avg_efficiency_score,
+                },
+                "period_hours": hours,
+                "period_start": period_start.to_rfc3339(),
+                "period_end": Utc::now().to_rfc3339(),
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get agent efficiency metrics: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 // Judge management handlers
 async fn list_judges_handler(
     State(state): State<AppState>,
@@ -2438,6 +2715,209 @@ async fn get_system_metrics_handler(
             })))
         }
     }
+}
+
+/// Get Prometheus-formatted metrics
+/// 
+/// Returns system and business metrics in Prometheus text format for scraping by Prometheus.
+/// This endpoint is used by Prometheus monitoring infrastructure.
+async fn get_metrics_handler(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, StatusCode> {
+    use axum::response::Response;
+    use axum::body::Body;
+    use std::fmt::Write;
+    
+    let mut metrics_output = String::new();
+    
+    // Collect system metrics using sysinfo
+    let mut system = sysinfo::System::new_all();
+    system.refresh_all();
+    
+    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
+    let total_memory = system.total_memory() as f64;
+    let used_memory = system.used_memory() as f64;
+    let memory_usage_percent = if total_memory > 0.0 {
+        (used_memory / total_memory) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Calculate disk usage
+    let mut total_disk_space = 0u64;
+    let mut total_used_space = 0u64;
+    for disk in system.disks() {
+        total_disk_space += disk.total_space();
+        total_used_space += disk.total_space() - disk.available_space();
+    }
+    let disk_usage_percent = if total_disk_space > 0 {
+        (total_used_space as f64 / total_disk_space as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Write system metrics in Prometheus format
+    // Note: writeln! returns fmt::Result but formatting errors are extremely rare for simple cases
+    writeln!(metrics_output, "# HELP system_cpu_usage_percent CPU usage percentage (0-100)").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_cpu_usage_percent gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_cpu_usage_percent {}", cpu_usage).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_memory_usage_percent Memory usage percentage (0-100)").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_memory_usage_percent gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_memory_usage_percent {}", memory_usage_percent).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_memory_total_bytes Total system memory in bytes").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_memory_total_bytes gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_memory_total_bytes {}", total_memory as u64).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_memory_used_bytes Used system memory in bytes").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_memory_used_bytes gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_memory_used_bytes {}", used_memory as u64).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_disk_usage_percent Disk usage percentage (0-100)").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_disk_usage_percent gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_disk_usage_percent {}", disk_usage_percent).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_disk_total_bytes Total disk space in bytes").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_disk_total_bytes gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_disk_total_bytes {}", total_disk_space).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    writeln!(metrics_output, "# HELP system_disk_used_bytes Used disk space in bytes").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "# TYPE system_disk_used_bytes gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    writeln!(metrics_output, "system_disk_used_bytes {}", total_used_space).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    
+    // Collect business metrics from database if available
+    if let Some(db) = state.db_client.as_ref() {
+        let now = Utc::now();
+        let one_hour_ago = now - ChronoDuration::hours(1);
+        let one_minute_ago = now - ChronoDuration::minutes(1);
+        
+        // Active users
+        if let Ok(active_users) = sqlx::query_scalar::<_, i64>(
+            r#"SELECT COUNT(DISTINCT user_id) FROM sessions WHERE is_active = true AND expires_at > $1"#
+        )
+        .bind(now)
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_active_users Number of active users").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_active_users gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_active_users {}", active_users).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        // Requests per second
+        if let Ok(requests_last_minute) = sqlx::query_scalar::<_, i64>(
+            r#"SELECT COUNT(*) FROM audit_trail_entries WHERE created_at >= $1"#
+        )
+        .bind(one_minute_ago)
+        .fetch_one(db.pool())
+        .await
+        {
+            let requests_per_second = requests_last_minute as f64 / 60.0;
+            writeln!(metrics_output, "# HELP business_requests_per_second Requests per second").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_requests_per_second gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_requests_per_second {}", requests_per_second).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        // Task throughput
+        if let Ok(tasks_last_hour) = sqlx::query_scalar::<_, i64>(
+            r#"SELECT COUNT(*) FROM task_executions WHERE execution_started_at >= $1"#
+        )
+        .bind(one_hour_ago)
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_tasks_per_hour Task throughput per hour").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_tasks_per_hour gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_tasks_per_hour {}", tasks_last_hour).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        // Task completion time
+        if let Ok(Some(avg_completion_time)) = sqlx::query_scalar::<_, Option<i64>>(
+            r#"SELECT AVG(execution_time_ms) FROM task_executions WHERE execution_completed_at IS NOT NULL AND execution_time_ms IS NOT NULL AND execution_started_at >= $1"#
+        )
+        .bind(one_hour_ago)
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_task_completion_time_ms Average task completion time in milliseconds").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_task_completion_time_ms gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_task_completion_time_ms {}", avg_completion_time).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        // Error rate
+        if let (Ok(total_tasks), Ok(failed_tasks)) = (
+            sqlx::query_scalar::<_, i64>(
+                r#"SELECT COUNT(*) FROM task_executions WHERE execution_started_at >= $1"#
+            )
+            .bind(one_hour_ago)
+            .fetch_one(db.pool())
+            .await,
+            sqlx::query_scalar::<_, i64>(
+                r#"SELECT COUNT(*) FROM task_executions WHERE status = 'failed' AND execution_started_at >= $1"#
+            )
+            .bind(one_hour_ago)
+            .fetch_one(db.pool())
+            .await,
+        ) {
+            let error_rate = if total_tasks > 0 {
+                failed_tasks as f64 / total_tasks as f64
+            } else {
+                0.0
+            };
+            writeln!(metrics_output, "# HELP business_error_rate Error rate (0.0-1.0)").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_error_rate gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_error_rate {}", error_rate).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            
+            let system_availability = (1.0 - error_rate) * 100.0;
+            writeln!(metrics_output, "# HELP business_system_availability System availability percentage (0-100)").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_system_availability gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_system_availability {}", system_availability).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        // Task counts by state from database
+        if let Ok(Some(active_count)) = sqlx::query_scalar::<_, Option<i64>>(
+            r#"SELECT COUNT(*) FROM task_executions WHERE status = 'running' AND execution_completed_at IS NULL"#
+        )
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_active_tasks Number of currently active tasks").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_active_tasks gauge").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_active_tasks {}", active_count).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        if let Ok(Some(completed_count)) = sqlx::query_scalar::<_, Option<i64>>(
+            r#"SELECT COUNT(*) FROM task_executions WHERE status = 'completed' AND execution_started_at >= $1"#
+        )
+        .bind(one_hour_ago)
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_completed_tasks Total number of completed tasks").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_completed_tasks counter").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_completed_tasks {}", completed_count).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+        
+        if let Ok(Some(failed_count)) = sqlx::query_scalar::<_, Option<i64>>(
+            r#"SELECT COUNT(*) FROM task_executions WHERE status = 'failed' AND execution_started_at >= $1"#
+        )
+        .bind(one_hour_ago)
+        .fetch_one(db.pool())
+        .await
+        {
+            writeln!(metrics_output, "# HELP business_failed_tasks Total number of failed tasks").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "# TYPE business_failed_tasks counter").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            writeln!(metrics_output, "business_failed_tasks {}", failed_count).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        }
+    }
+    
+    // Return as plain text response with Prometheus content type
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+        .body(Body::from(metrics_output))
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?)
 }
 
 async fn get_alerts_handler(
@@ -4569,6 +5049,98 @@ async fn get_system_health_handler(
     }
 
     Ok(Json(health))
+}
+
+/// Get system metrics for dashboard
+/// 
+/// Returns combined system and task metrics suitable for dashboard display
+async fn get_metrics_handler(
+    State(state): State<AppState>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    use sysinfo::{System, Disks, Networks};
+    
+    let mut system = System::new_all();
+    system.refresh_all();
+    
+    // Get CPU usage
+    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
+    
+    // Get memory usage
+    let total_memory = system.total_memory();
+    let used_memory = system.used_memory();
+    let memory_usage_mb = used_memory / (1024 * 1024); // Convert to MB
+    let memory_usage_percent = if total_memory > 0 {
+        (used_memory as f64 / total_memory as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Get disk usage
+    let mut total_disk = 0u64;
+    let mut used_disk = 0u64;
+    let disks = Disks::new_with_refreshed_list();
+    for disk in disks.list() {
+        total_disk += disk.total_space();
+        used_disk += disk.total_space().saturating_sub(disk.available_space());
+    }
+    let disk_usage_mb = used_disk / (1024 * 1024); // Convert to MB
+    let disk_usage_percent = if total_disk > 0 {
+        (used_disk as f64 / total_disk as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    // Get network usage
+    let mut network_bytes = 0u64;
+    let networks = Networks::new_with_refreshed_list();
+    for (_interface_name, network) in networks.iter() {
+        network_bytes += network.received() + network.transmitted();
+    }
+    let network_usage_mb = network_bytes / (1024 * 1024); // Convert to MB
+    
+    // Get task metrics from database
+    let task_metrics = if let Some(db) = &state.db_client {
+        match db.get_tasks().await {
+            Ok(tasks) => {
+                let total = tasks.len();
+                let active = tasks.iter().filter(|t| t.status == "in_progress" || t.status == "running").count();
+                let completed = tasks.iter().filter(|t| t.status == "completed").count();
+                let failed = tasks.iter().filter(|t| t.status == "failed").count();
+                serde_json::json!({
+                    "total": total,
+                    "active": active,
+                    "completed": completed,
+                    "failed": failed
+                })
+            }
+            Err(_) => serde_json::json!({
+                "total": 0,
+                "active": 0,
+                "completed": 0,
+                "failed": 0
+            })
+        }
+    } else {
+        serde_json::json!({
+            "total": 0,
+            "active": 0,
+            "completed": 0,
+            "failed": 0
+        })
+    };
+    
+    Ok(Json(serde_json::json!({
+        "system": {
+            "cpu_usage_percent": cpu_usage,
+            "memory_usage_mb": memory_usage_mb,
+            "memory_usage_percent": memory_usage_percent,
+            "disk_usage_mb": disk_usage_mb,
+            "disk_usage_percent": disk_usage_percent,
+            "network_usage_mb": network_usage_mb
+        },
+        "tasks": task_metrics,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    })))
 }
 
 async fn get_resource_usage_handler(

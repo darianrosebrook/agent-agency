@@ -124,6 +124,28 @@ impl std::fmt::Debug for MemoryContextManager {
 }
 
 /// Temporary stub implementation for ContextManager (fallback when no database available)
+///
+/// **Fallback Behavior:**
+/// This stub is used when no database connection is available. It provides graceful
+/// degradation by:
+/// - Accepting all context preservation requests without error
+/// - Returning empty context retrieval results (no data persisted)
+/// - Maintaining API compatibility so calling code doesn't need special handling
+///
+/// **Impact:**
+/// - Context preservation is disabled (contexts are not persisted)
+/// - Context retrieval returns empty results
+/// - System continues to function but without context persistence
+///
+/// **When Used:**
+/// - Database connection unavailable or not configured
+/// - Standalone mode without persistence requirements
+/// - Development/testing environments without database setup
+///
+/// **Acceptable Use:**
+/// This is an acceptable fallback pattern for graceful degradation. The system
+/// continues to function but without context persistence capabilities. This is
+/// preferable to failing completely when database is unavailable.
 #[derive(Debug)]
 struct StubContextManager {
     config: ContextConfig,
@@ -461,8 +483,11 @@ impl MemoryContextManager {
                 embedding_service,
             })
         } else {
-            // No database pool available - use stub
-            warn!("No database pool provided, using stub context manager. Context will not be persisted.");
+            // No database pool available - use stub fallback
+            // This provides graceful degradation: system continues to function but
+            // context persistence is disabled. Context preservation requests succeed
+            // but contexts are not persisted. Context retrieval returns empty results.
+            warn!("No database pool provided, using stub context manager fallback. Context persistence disabled - contexts will not be saved or retrieved.");
             Box::new(StubContextManager {
                 config: config.clone(),
             })

@@ -23,13 +23,29 @@ use agent_agency_contracts::{
 pub struct CouncilCoordinatorAdapter<E: agent_agency_contracts::JudgeEngine> {
     /// The underlying council coordinator implementation
     council: Arc<agent_constitutional_council::CouncilCoordinator<E>>,
+    /// Database operations for session tracking (optional - falls back to in-memory if None)
+    db_ops: Option<Arc<dyn crate::planning::DatabaseOperations>>,
 }
 
 #[cfg(feature = "council")]
 impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
     /// Create a new council coordinator adapter
     pub fn new(council: Arc<agent_constitutional_council::CouncilCoordinator<E>>) -> Self {
-        Self { council }
+        Self { 
+            council,
+            db_ops: None,
+        }
+    }
+
+    /// Create a new council coordinator adapter with database operations
+    pub fn with_db_ops(
+        council: Arc<agent_constitutional_council::CouncilCoordinator<E>>,
+        db_ops: Arc<dyn crate::planning::DatabaseOperations>,
+    ) -> Self {
+        Self {
+            council,
+            db_ops: Some(db_ops),
+        }
     }
 }
 
@@ -44,42 +60,41 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
             priority: self.map_task_priority(task.priority),
         };
 
-        // TODO: Implement council session tracking
-        //       Currently simulates session creation by generating UUID; should implement comprehensive council session tracking with session records, lifecycle state management, and proper session-context association.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Session records are created in council storage
-        // - Sessions are associated with review contexts
-        // - Session lifecycle state is properly maintained
-        // - Session management operations are atomic and consistent
-        //
-        // DEPENDENCIES:
-        // - Council storage system (Required)
-        // - Session lifecycle management (Required)
-        // - Review context association system (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (session management core functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Session management and council integration expertise
         let session_id = SessionId(uuid::Uuid::new_v4());
+
+        // Create session record in database if database operations are available
+        if let Some(ref db_ops) = self.db_ops {
+            use crate::planning::data_infrastructure_types::CreateCouncilSession;
+            use serde_json::json;
+            
+            // Extract task_id from task descriptor if available
+            let task_id = task.task_id;
+            
+            // Create session record with review context
+            let create_session = CreateCouncilSession {
+                session_id: *session_id,
+                task_id: Some(task_id),
+                working_spec_id: Some(review_context.working_spec.id.clone()),
+                review_context: json!({
+                    "priority": format!("{:?}", review_context.priority),
+                    "context": review_context.context,
+                }),
+                status: Some("initialized".to_string()),
+                selected_judges: None,
+                contributions: None,
+                progress: Some(0.0),
+                metadata: Some(json!({
+                    "task_id": task_id.to_string(),
+                    "working_spec_id": review_context.working_spec.id,
+                })),
+            };
+            
+            // Create session record (ignore errors - graceful degradation)
+            if let Err(e) = db_ops.create_council_session(create_session).await {
+                tracing::warn!("Failed to create council session record: {}", e);
+                // Continue without database persistence - session still works
+            }
+        }
 
         // The council doesn't have explicit session management, so we'll just validate
         // that the task can be reviewed by attempting a dry-run evaluation
@@ -99,11 +114,71 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
             priority: self.map_task_priority(task.priority),
         };
 
+        // Update session status to review_in_progress if database operations available
+        if let Some(ref db_ops) = self.db_ops {
+            use crate::planning::data_infrastructure_types::UpdateCouncilSession;
+            use serde_json::json;
+            
+            let update = UpdateCouncilSession {
+                status: Some("review_in_progress".to_string()),
+                progress: Some(0.5),
+                selected_judges: None,
+                contributions: None,
+                aggregation_result: None,
+                final_decision: None,
+                completed_at: None,
+                metadata: None,
+            };
+            
+            if let Err(e) = db_ops.update_council_session(*session_id, update).await {
+                tracing::warn!("Failed to update council session status: {}", e);
+                // Continue with review despite update failure
+            }
+        }
+
         // Perform the actual evaluation
         let final_decision = self.council.evaluate(&review_context).await
             .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
                 service: "council".to_string()
             })?;
+
+        // Update session with final decision if database operations available
+        if let Some(ref db_ops) = self.db_ops {
+            use crate::planning::data_infrastructure_types::UpdateCouncilSession;
+            use serde_json::json;
+            
+            let final_status = match final_decision.verdict {
+                agent_constitutional_council::CouncilVerdict::Approved
+                | agent_constitutional_council::CouncilVerdict::ConditionalApproval => "completed",
+                agent_constitutional_council::CouncilVerdict::Rejected => "failed",
+            };
+            
+            let update = UpdateCouncilSession {
+                status: Some(final_status.to_string()),
+                progress: Some(1.0),
+                selected_judges: None,
+                contributions: None,
+                aggregation_result: Some(json!({
+                    "average_score": final_decision.score,
+                    "consensus_label": format!("{:?}", final_decision.verdict),
+                })),
+                final_decision: Some(json!({
+                    "verdict": format!("{:?}", final_decision.verdict),
+                    "score": final_decision.score,
+                    "rationale": final_decision.rationale,
+                    "judge_verdicts": final_decision.judge_verdicts,
+                    "consensus_violations": final_decision.consensus_violations,
+                    "recommended_actions": final_decision.recommended_actions,
+                })),
+                completed_at: Some(chrono::Utc::now()),
+                metadata: None,
+            };
+            
+            if let Err(e) = db_ops.update_council_session(*session_id, update).await {
+                tracing::warn!("Failed to update council session with final decision: {}", e);
+                // Continue despite update failure - verdict is still returned
+            }
+        }
 
         // Convert council FinalDecision to contracts CouncilVerdict
         let verdict = match final_decision.verdict {
@@ -116,41 +191,43 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
     }
 
     async fn get_session_status(&self, session_id: &SessionId) -> CouncilResult<SessionStatus> {
-        // TODO: Implement council session status querying
-        //       Currently returns completed status; should implement comprehensive council session status querying that retrieves actual session state from council service and maps to SessionStatus enum.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Council service is queried for session information
-        // - Current session state and progress are retrieved
-        // - Session not found errors are handled gracefully
-        // - Council status is properly mapped to SessionStatus enum
-        //
-        // DEPENDENCIES:
-        // - Council service API (Required)
-        // - Session status mapping utilities (Required)
-        // - Error handling for session not found (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (session status querying core functionality)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Council integration and status mapping expertise
+        // Query session status from database if available
+        if let Some(ref db_ops) = self.db_ops {
+            match db_ops.get_council_session(*session_id).await {
+                Ok(Some(session)) => {
+                    // Map database session status to contracts SessionStatusType
+                    let status_type = match session.status.as_str() {
+                        "initialized" => SessionStatusType::Initializing,
+                        "judge_selection" => SessionStatusType::Reviewing,
+                        "review_in_progress" => SessionStatusType::Reviewing,
+                        "aggregation_in_progress" => SessionStatusType::Reviewing,
+                        "decision_making" => SessionStatusType::Reviewing,
+                        "completed" => SessionStatusType::Completed,
+                        "failed" => SessionStatusType::Failed,
+                        "timeout" => SessionStatusType::Failed,
+                        _ => SessionStatusType::Reviewing,
+                    };
+                    
+                    return Ok(SessionStatus {
+                        session_id: *session_id,
+                        status: status_type,
+                        progress: session.progress,
+                        pending_requirements: vec![], // Could be extracted from metadata if needed
+                        estimated_completion: session.completed_at,
+                    });
+                }
+                Ok(None) => {
+                    // Session not found in database - return default status
+                    tracing::warn!("Council session not found in database: {}", session_id.0);
+                }
+                Err(e) => {
+                    // Database error - graceful degradation
+                    tracing::warn!("Failed to query council session status: {}", e);
+                }
+            }
+        }
+        
+        // Fallback: Return default completed status if database unavailable or session not found
         Ok(SessionStatus {
             session_id: *session_id,
             status: SessionStatusType::Completed,

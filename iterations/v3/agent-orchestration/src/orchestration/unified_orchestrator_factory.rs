@@ -558,6 +558,7 @@ mod database_operations_adapter {
         CreatePlanningTelemetry, CreatePlanningAuditEvent,
         CreateJudge, CreateJudgeEvaluation, CreateWaiver, UpdateWaiver,
         CreateExecutionResult, CreateWorker, UpdateWorker,
+        CreateCouncilSession, UpdateCouncilSession,
         models,
     };
     use data_infrastructure::DatabaseClient;
@@ -2036,6 +2037,129 @@ mod database_operations_adapter {
                     updated_at: r.get("updated_at"),
                 }
             }))
+        }
+
+        async fn create_council_session(&self, session: CreateCouncilSession) -> Result<models::CouncilSession> {
+            use data_infrastructure::database_operations::CreateCouncilSession as DbCreateCouncilSession;
+            
+            let db_session = DbCreateCouncilSession {
+                session_id: session.session_id,
+                task_id: session.task_id,
+                working_spec_id: session.working_spec_id,
+                review_context: session.review_context,
+                status: session.status,
+                selected_judges: session.selected_judges,
+                contributions: session.contributions,
+                progress: session.progress,
+                metadata: session.metadata,
+            };
+            
+            let created = self.db_client.create_council_session(db_session).await
+                .map_err(|e| anyhow!("Failed to create council session: {}", e))?;
+            
+            Ok(models::CouncilSession {
+                id: created.id,
+                session_id: created.session_id,
+                task_id: created.task_id,
+                working_spec_id: created.working_spec_id,
+                review_context: created.review_context,
+                status: created.status,
+                selected_judges: created.selected_judges,
+                contributions: created.contributions,
+                aggregation_result: created.aggregation_result,
+                final_decision: created.final_decision,
+                progress: created.progress,
+                started_at: created.started_at,
+                completed_at: created.completed_at,
+                created_at: created.created_at,
+                updated_at: created.updated_at,
+                metadata: created.metadata,
+            })
+        }
+
+        async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>> {
+            let session = self.db_client.get_council_session(session_id).await
+                .map_err(|e| anyhow!("Failed to get council session: {}", e))?;
+            
+            Ok(session.map(|s| models::CouncilSession {
+                id: s.id,
+                session_id: s.session_id,
+                task_id: s.task_id,
+                working_spec_id: s.working_spec_id,
+                review_context: s.review_context,
+                status: s.status,
+                selected_judges: s.selected_judges,
+                contributions: s.contributions,
+                aggregation_result: s.aggregation_result,
+                final_decision: s.final_decision,
+                progress: s.progress,
+                started_at: s.started_at,
+                completed_at: s.completed_at,
+                created_at: s.created_at,
+                updated_at: s.updated_at,
+                metadata: s.metadata,
+            }))
+        }
+
+        async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>> {
+            let session = self.db_client.get_council_session_by_task(task_id).await
+                .map_err(|e| anyhow!("Failed to get council session by task: {}", e))?;
+            
+            Ok(session.map(|s| models::CouncilSession {
+                id: s.id,
+                session_id: s.session_id,
+                task_id: s.task_id,
+                working_spec_id: s.working_spec_id,
+                review_context: s.review_context,
+                status: s.status,
+                selected_judges: s.selected_judges,
+                contributions: s.contributions,
+                aggregation_result: s.aggregation_result,
+                final_decision: s.final_decision,
+                progress: s.progress,
+                started_at: s.started_at,
+                completed_at: s.completed_at,
+                created_at: s.created_at,
+                updated_at: s.updated_at,
+                metadata: s.metadata,
+            }))
+        }
+
+        async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<models::CouncilSession> {
+            use data_infrastructure::database_operations::UpdateCouncilSession as DbUpdateCouncilSession;
+            
+            let db_update = DbUpdateCouncilSession {
+                status: update.status,
+                selected_judges: update.selected_judges,
+                contributions: update.contributions,
+                aggregation_result: update.aggregation_result,
+                final_decision: update.final_decision,
+                progress: update.progress,
+                completed_at: update.completed_at,
+                metadata: update.metadata,
+            };
+            
+            let updated = self.db_client.update_council_session(session_id, db_update).await
+                .map_err(|e| anyhow!("Failed to update council session: {}", e))?;
+            
+            Ok(models::CouncilSession {
+                id: updated.id,
+                session_id: updated.session_id,
+                task_id: updated.task_id,
+                working_spec_id: updated.working_spec_id,
+                review_context: updated.review_context,
+                status: updated.status,
+                selected_judges: updated.selected_judges,
+                contributions: updated.contributions,
+                aggregation_result: updated.aggregation_result,
+                final_decision: updated.final_decision,
+                progress: updated.progress,
+                started_at: updated.started_at,
+                completed_at: updated.completed_at,
+                created_at: updated.created_at,
+                updated_at: updated.updated_at,
+                metadata: updated.metadata,
+            })
         }
     }
 }

@@ -14,36 +14,44 @@ Generated from TODO analyzer scan with confidence ≥0.7
 
 **Location**: `agent-orchestration/src/orchestration/unified_orchestrator_factory.rs:450`
 - **Type**: `StubDatabaseOperations`
-- **Status**: Returns errors or empty results
-- **Impact**: Planning, execution plans, audit trails, planning sessions all return stubs
-- **Used by**: `UnifiedOrchestratorFactory` when no real database is provided
-
-**Location**: `data-interfaces-adapters/src/orchestration_adapter.rs:178`
-- **Type**: `StubDatabaseOperations` (local struct)
-- **Status**: Similar stub implementation
+- **Status**: **NOT USED** - Marked as dead code, kept for reference only
+- **Impact**: None - Real `DatabaseOperationsAdapter` is used in production
+- **Verification**: Audit confirmed stub is never instantiated, real adapter used instead
+- **Action**: No action needed - acceptable to keep for reference
 
 ### 2. CLIP Embedding Provider Stub
 
-**Location**: `data-infrastructure/src/embedding/provider.rs:1060`
-- **Function**: `generate_embeddings_stub()`
-- **Status**: Generates deterministic hash-based embeddings (not real CLIP)
-- **Impact**: CLIP embeddings are fake - uses hash-based deterministic values
-- **Note**: Marked with TODO to replace with real CLIP model
+**Location**: `data-infrastructure/src/embedding/provider.rs:1105`
+- **Function**: `generate_embeddings_stub()` called by `generate_embeddings()`
+- **Status**: **ACTIVE STUB** - Generates deterministic hash-based embeddings (not real CLIP)
+- **Impact**: CLIP embeddings are inaccurate - uses hash-based deterministic values instead of real CLIP model
+- **Current Usage**: Stub is called in production, but visual search uses separate stub implementation
+- **Priority**: MEDIUM - Not actively blocking features, but degrades embedding quality
+- **Assessment**: See `docs-status/audit-reports/clip-embedding-impact-assessment.md`
+- **Note**: Requires dependency resolution (`candle_core/candle_transformers` version conflicts) before implementation
 
 ### 3. Context Manager Stub
 
-**Location**: `agent-memory/src/context_management.rs:128`
+**Location**: `agent-memory/src/context_management.rs:150`
 - **Type**: `StubContextManager`
-- **Status**: Returns stub results for context preservation
-- **Impact**: Context management doesn't actually preserve/manage context
-- **Note**: Comment indicates waiting for circular dependency resolution
+- **Status**: **ACCEPTABLE FALLBACK** - Used when database unavailable
+- **Impact**: Context persistence disabled when database unavailable, but system continues to function
+- **Behavior**: 
+  - Accepts context preservation requests without error
+  - Returns empty context retrieval results
+  - Maintains API compatibility for graceful degradation
+- **When Used**: Database connection unavailable, standalone mode, development/testing without database
+- **Assessment**: Acceptable fallback pattern - preferable to failing completely
+- **Documentation**: Fallback behavior now documented in code comments
 
 ### 4. Planning Operations Stubs
 
 **Location**: `data-infrastructure/src/client/orchestrator.rs:1104`
 - **Functions**: `create_milestone`, `get_milestone`, `update_milestone`, `delete_milestone`
-- **Status**: Return "Not implemented" errors or empty results
-- **Impact**: Milestone management not functional
+- **Status**: **FULLY IMPLEMENTED** - Audit verification confirms all operations are implemented
+- **Impact**: None - Operations are functional
+- **Verification**: Audit confirmed full implementation exists (STUBS_INVENTORY.md was outdated)
+- **Action**: No action needed - this entry is outdated
 
 ## Agent Research Stubs (Development Stubs)
 
@@ -99,17 +107,27 @@ Generated from TODO analyzer scan with confidence ≥0.7
 
 ### High Priority (Production Impact)
 
-1. **Database Operations Stubs** - Critical for planning/orchestration
-   - Replace `StubDatabaseOperations` with real database implementation
-   - Files: `unified_orchestrator_factory.rs`, `orchestration_adapter.rs`
-
-2. **CLIP Embedding Stub** - Affects embedding quality
-   - Replace `generate_embeddings_stub()` with real CLIP model
+1. **CLIP Embedding Stub** - Affects embedding quality (MEDIUM priority)
+   - Status: Active stub in production code
+   - Impact: Degrades embedding quality but not actively blocking features
+   - Action: Plan for future implementation when visual search becomes priority
    - File: `data-infrastructure/src/embedding/provider.rs`
+   - See: `docs-status/audit-reports/clip-embedding-impact-assessment.md`
 
-3. **Context Manager Stub** - Affects context preservation
-   - Resolve circular dependency and implement real context manager
-   - File: `agent-memory/src/context_management.rs`
+### Verified Non-Issues (Updated from Audit)
+
+1. **Database Operations Stubs** - NOT USED
+   - Status: Dead code, not instantiated in production
+   - Action: No action needed - acceptable to keep for reference
+
+2. **Context Manager Stub** - ACCEPTABLE FALLBACK
+   - Status: Graceful degradation when database unavailable
+   - Impact: Context persistence disabled but system continues to function
+   - Action: Documentation added - no implementation needed
+
+3. **Milestone Operations** - FULLY IMPLEMENTED
+   - Status: All CRUD operations implemented and functional
+   - Action: Remove from stubs inventory (this entry was outdated)
 
 ### Medium Priority (Feature Completeness)
 

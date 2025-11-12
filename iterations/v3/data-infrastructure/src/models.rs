@@ -166,6 +166,33 @@ pub struct CouncilVerdict {
     pub verdict_details: Option<serde_json::Value>,
 }
 
+/// Council session model from database
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
+pub struct CouncilSession {
+    #[schemars(with = "String")]
+    pub id: Uuid,
+    #[schemars(with = "String")]
+    pub session_id: Uuid,
+    #[schemars(with = "String")]
+    pub task_id: Option<Uuid>,
+    pub working_spec_id: Option<String>,
+    pub review_context: serde_json::Value,
+    pub status: String,
+    pub selected_judges: serde_json::Value,
+    pub contributions: serde_json::Value,
+    pub aggregation_result: Option<serde_json::Value>,
+    pub final_decision: Option<serde_json::Value>,
+    pub progress: f64,
+    #[schemars(with = "String")]
+    pub started_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+    #[schemars(with = "String")]
+    pub updated_at: DateTime<Utc>,
+    pub metadata: serde_json::Value,
+}
+
 /// Judge evaluation model from database
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, JsonSchema)]
 pub struct JudgeEvaluation {

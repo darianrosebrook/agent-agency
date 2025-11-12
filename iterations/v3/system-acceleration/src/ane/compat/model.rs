@@ -217,31 +217,22 @@ impl MLModel {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        // TODO: Pass model configuration to agentbridge_model_create:
-        // 1. Config creation: Create model configuration structure
-        //    - Define model config parameters
-        //    - Support configurable model settings
-        //    - Handle config validation and defaults
-        // 2. Config passing: Pass config to model creation
-        //    - Convert config to C-compatible format
-        //    - Pass config pointer to agentbridge function
-        //    - Handle config errors appropriately
-        // 3. Config management: Manage config lifecycle
-        //    - Support config updates and changes
-        //    - Handle config serialization if needed
-        //    - Test config passing thoroughly
-        // ACCEPTANCE CRITERIA:
-        // - Model configuration is passed to creation function
-        // - Config parameters are properly converted
-        // - Config management supports all required settings
-        // DEPENDENCIES:
-        // - Model config structure (Required)
-        // - C FFI config conversion (Required)
-        // PRIORITY: Medium
+        // Create model configuration with default settings (ANE preferred for Apple Silicon)
+        use super::types::{MLModelConfiguration, MLComputeUnits};
+        let config = MLModelConfiguration {
+            compute_units: MLComputeUnits::CpuAndNeuralEngine, // Default to ANE for Apple Silicon
+            allow_low_precision_accumulation_on_gpu: true,
+        };
+
+        let config_json = serde_json::to_string(&config)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+        let config_json_cstr = std::ffi::CString::new(config_json)
+            .map_err(|e| format!("Invalid config JSON: {}", e))?;
+
         let result = unsafe {
             agentbridge_model_create(
                 path_cstr.as_ptr(),
-                std::ptr::null(),
+                config_json_cstr.as_ptr(),
                 &mut model_ref,
                 &mut error_ptr
             )
@@ -280,11 +271,22 @@ impl MLModel {
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        // TODO: Pass model configuration to agentbridge_model_create (see line 213 for full TODO)
+        // Create model configuration with default settings (ANE preferred for Apple Silicon)
+        use super::types::{MLModelConfiguration, MLComputeUnits};
+        let config = MLModelConfiguration {
+            compute_units: MLComputeUnits::CpuAndNeuralEngine, // Default to ANE for Apple Silicon
+            allow_low_precision_accumulation_on_gpu: true,
+        };
+
+        let config_json = serde_json::to_string(&config)
+            .map_err(|e| format!("Failed to serialize config: {}", e))?;
+        let config_json_cstr = std::ffi::CString::new(config_json)
+            .map_err(|e| format!("Invalid config JSON: {}", e))?;
+
         let result = unsafe {
             agentbridge_model_create(
                 url_cstr.as_ptr(),
-                std::ptr::null(),
+                config_json_cstr.as_ptr(),
                 &mut model_ref,
                 &mut error_ptr
             )
