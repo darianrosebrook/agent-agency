@@ -101,45 +101,69 @@ impl MemorySystem for MemorySystemAdapter {
     }
 
     async fn retrieve_temporal_context(&self, query: TemporalQuery) -> MemoryResult<Vec<TemporalContext>> {
-        // TODO: Implement comprehensive temporal context retrieval
-        //       Currently returns empty vector; should implement proper temporal context retrieval using temporal engine to analyze patterns and extract contexts.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Temporal contexts are retrieved from memory system
-        // - Temporal patterns are analyzed correctly
-        // - Context extraction is accurate
-        // - Time range queries work correctly
-        //
-        // DEPENDENCIES:
-        // - Temporal engine (Required)
-        // - Pattern analysis utilities (Required)
-        // - Context extraction infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (memory feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Temporal analysis expertise
-        // Temporary: empty vector until proper implementation
-        let start = query.start_time.unwrap_or_else(|| chrono::Utc::now() - chrono::Duration::days(30));
-        let end = query.end_time.unwrap_or_else(chrono::Utc::now);
-        Ok(Vec::new())
+        use agent_memory::memory_manager::MemoryQuery;
+        use agent_memory::memory_types::{MemoryType, TimeRange};
+        use chrono::Utc;
+
+        // Build memory query from temporal query
+        let memory_query = MemoryQuery {
+            agent_id: Some("orchestrator".to_string()), // Default agent ID
+            task_type: None,
+            memory_type: query.memory_type_filter.map(|mt| match mt {
+                agent_agency_contracts::types::memory::MemoryType::Episodic => MemoryType::Episodic,
+                agent_agency_contracts::types::memory::MemoryType::Semantic => MemoryType::Semantic,
+                agent_agency_contracts::types::memory::MemoryType::Procedural => MemoryType::Procedural,
+                agent_agency_contracts::types::memory::MemoryType::Working => MemoryType::Working,
+            }),
+            time_range: if query.start_time.is_some() || query.end_time.is_some() {
+                Some(TimeRange {
+                    start: query.start_time.unwrap_or_else(|| Utc::now() - chrono::Duration::days(30)),
+                    end: query.end_time.unwrap_or_else(Utc::now),
+                })
+            } else {
+                None
+            },
+            limit: query.limit,
+        };
+
+        // Search memories using the real memory system
+        let experiences = self.memory_system.manager().search_memories(memory_query).await
+            .map_err(|e| MemoryError::OperationFailed {
+                operation: "retrieve_temporal_context".to_string(),
+                reason: e.to_string(),
+            })?;
+
+        // Convert experiences to temporal contexts
+        let mut contexts = Vec::new();
+        for (idx, exp) in experiences.iter().enumerate() {
+            // Extract temporal context from experience
+            let temporal_context = if let Some(ref tc) = exp.context.temporal_context {
+                TemporalContext {
+                    timestamp: tc.timestamp,
+                    duration_ms: tc.duration.map(|d| d.num_milliseconds() as u64),
+                    sequence_number: tc.sequence_number.or(Some(idx as u64)),
+                    priority: match tc.priority {
+                        agent_memory::memory_types::TaskPriority::Low => agent_agency_contracts::types::memory::TaskPriority::Low,
+                        agent_memory::memory_types::TaskPriority::Normal => agent_agency_contracts::types::memory::TaskPriority::Normal,
+                        agent_memory::memory_types::TaskPriority::Medium => agent_agency_contracts::types::memory::TaskPriority::Normal, // Map Medium to Normal
+                        agent_memory::memory_types::TaskPriority::High => agent_agency_contracts::types::memory::TaskPriority::High,
+                        agent_memory::memory_types::TaskPriority::Urgent => agent_agency_contracts::types::memory::TaskPriority::High, // Map Urgent to High
+                        agent_memory::memory_types::TaskPriority::Critical => agent_agency_contracts::types::memory::TaskPriority::Critical,
+                    },
+                }
+            } else {
+                // Create temporal context from experience timestamp if not available
+                TemporalContext {
+                    timestamp: exp.timestamp,
+                    duration_ms: exp.outcome.execution_time_ms,
+                    sequence_number: Some(idx as u64),
+                    priority: agent_agency_contracts::types::memory::TaskPriority::Normal,
+                }
+            };
+            contexts.push(temporal_context);
+        }
+
+        Ok(contexts)
     }
 
     async fn record_outcome(&self, memory_id: MemoryId, outcome: ExperienceOutcome) -> MemoryResult<()> {
