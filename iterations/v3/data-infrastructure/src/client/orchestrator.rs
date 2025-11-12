@@ -884,28 +884,35 @@ impl DatabaseOperations for DatabaseClient {
     async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation> {
         let id = Uuid::new_v4();
         
-        // TODO: Retrieve verdict_id from actual schema:
-        // 1. Schema integration: Integrate with actual database schema
-        //    - Query verdict table for verdict_id based on task_id
-        //    - Handle verdict lookup errors appropriately
-        //    - Support verdict creation workflow if needed
-        // 2. Verdict relationship: Establish proper verdict-task relationship
-        //    - Link verdict_id to task_id correctly
-        //    - Handle multiple verdicts per task if applicable
-        //    - Support verdict updates and modifications
-        // 3. Schema validation: Validate schema relationships
-        //    - Ensure verdict_id exists in verdict table
-        //    - Verify task_id-verdict_id relationship is valid
-        //    - Handle schema migration scenarios
-        // ACCEPTANCE CRITERIA:
-        // - Verdict_id is retrieved from actual database schema
-        // - Verdict-task relationships are correctly established
-        // - Schema validation ensures data integrity
-        // DEPENDENCIES:
-        // - Database schema with verdict table (Required)
-        // - Verdict lookup API (Required)
-        // PRIORITY: Medium
-        let verdict_id = Uuid::new_v4();
+        // Retrieve verdict_id from council_verdicts table based on task_id
+        // Query for the most recent verdict for this task (ordered by created_at DESC)
+        let verdict_row = sqlx::query(
+            r#"
+            SELECT verdict_id
+            FROM council_verdicts
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(evaluation.task_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to query council_verdicts for verdict_id")?;
+        
+        let verdict_id = match verdict_row {
+            Some(row) => {
+                row.try_get::<Uuid, &str>("verdict_id")
+                    .context("Failed to extract verdict_id from query result")?
+            }
+            None => {
+                return Err(anyhow::anyhow!(
+                    "No council verdict found for task_id: {}. \
+                    A council verdict must exist before creating judge evaluations.",
+                    evaluation.task_id
+                ));
+            }
+        };
         
         sqlx::query(
             r#"
