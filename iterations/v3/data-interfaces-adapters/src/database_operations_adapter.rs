@@ -19,6 +19,7 @@ use agent_orchestration::planning::data_infrastructure_types::{
     CreatePlanningTelemetry, CreatePlanningAuditEvent,
     CreateJudge, CreateJudgeEvaluation, CreateWaiver, UpdateWaiver,
     CreateExecutionResult, CreateWorker, UpdateWorker,
+    CreateCouncilSession, UpdateCouncilSession,
     models,
 };
 use data_infrastructure::DatabaseClient;
@@ -1625,6 +1626,227 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 updated_at: r.get("updated_at"),
             }
         }))
+    }
+
+    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<models::CouncilSession> {
+        use data_infrastructure::database_operations::CreateCouncilSession as DbCreateCouncilSession;
+        use data_infrastructure::models::CouncilSession as DbCouncilSession;
+        
+        let pool = self.db_client.pool();
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        let db_session = DbCreateCouncilSession {
+            session_id: session.session_id,
+            task_id: session.task_id,
+            working_spec_id: session.working_spec_id,
+            review_context: session.review_context,
+            status: session.status,
+            selected_judges: session.selected_judges,
+            contributions: session.contributions,
+            progress: session.progress,
+            metadata: session.metadata,
+        };
+        
+        // Insert council session into database
+        let created = sqlx::query_as::<_, DbCouncilSession>(
+            r#"
+            INSERT INTO council_sessions (
+                id, session_id, task_id, working_spec_id, review_context,
+                status, selected_judges, contributions, progress,
+                started_at, created_at, updated_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING id, session_id, task_id, working_spec_id, review_context,
+                      status, selected_judges, contributions, aggregation_result,
+                      final_decision, progress, started_at, completed_at,
+                      created_at, updated_at, metadata
+            "#
+        )
+        .bind(id)
+        .bind(db_session.session_id)
+        .bind(db_session.task_id)
+        .bind(db_session.working_spec_id)
+        .bind(db_session.review_context)
+        .bind(db_session.status.unwrap_or_else(|| "initialized".to_string()))
+        .bind(db_session.selected_judges.unwrap_or_else(|| serde_json::json!([])))
+        .bind(db_session.contributions.unwrap_or_else(|| serde_json::json!([])))
+        .bind(db_session.progress.unwrap_or(0.0))
+        .bind(now)
+        .bind(now)
+        .bind(now)
+        .bind(db_session.metadata.unwrap_or_else(|| serde_json::json!({})))
+        .fetch_one(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to create council session: {}", e))?;
+        
+        Ok(models::CouncilSession {
+            id: created.id,
+            session_id: created.session_id,
+            task_id: created.task_id,
+            working_spec_id: created.working_spec_id,
+            review_context: created.review_context,
+            status: created.status,
+            selected_judges: created.selected_judges,
+            contributions: created.contributions,
+            aggregation_result: created.aggregation_result,
+            final_decision: created.final_decision,
+            progress: created.progress,
+            started_at: created.started_at,
+            completed_at: created.completed_at,
+            created_at: created.created_at,
+            updated_at: created.updated_at,
+            metadata: created.metadata,
+        })
+    }
+
+    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>> {
+        use data_infrastructure::models::CouncilSession as DbCouncilSession;
+        
+        let pool = self.db_client.pool();
+        let session = sqlx::query_as::<_, DbCouncilSession>(
+            r#"
+            SELECT id, session_id, task_id, working_spec_id, review_context,
+                   status, selected_judges, contributions, aggregation_result,
+                   final_decision, progress, started_at, completed_at,
+                   created_at, updated_at, metadata
+            FROM council_sessions
+            WHERE session_id = $1
+            "#
+        )
+        .bind(session_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to get council session: {}", e))?;
+        
+        Ok(session.map(|s| models::CouncilSession {
+            id: s.id,
+            session_id: s.session_id,
+            task_id: s.task_id,
+            working_spec_id: s.working_spec_id,
+            review_context: s.review_context,
+            status: s.status,
+            selected_judges: s.selected_judges,
+            contributions: s.contributions,
+            aggregation_result: s.aggregation_result,
+            final_decision: s.final_decision,
+            progress: s.progress,
+            started_at: s.started_at,
+            completed_at: s.completed_at,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            metadata: s.metadata,
+        }))
+    }
+
+    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>> {
+        use data_infrastructure::models::CouncilSession as DbCouncilSession;
+        
+        let pool = self.db_client.pool();
+        let session = sqlx::query_as::<_, DbCouncilSession>(
+            r#"
+            SELECT id, session_id, task_id, working_spec_id, review_context,
+                   status, selected_judges, contributions, aggregation_result,
+                   final_decision, progress, started_at, completed_at,
+                   created_at, updated_at, metadata
+            FROM council_sessions
+            WHERE task_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(task_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to get council session by task: {}", e))?;
+        
+        Ok(session.map(|s| models::CouncilSession {
+            id: s.id,
+            session_id: s.session_id,
+            task_id: s.task_id,
+            working_spec_id: s.working_spec_id,
+            review_context: s.review_context,
+            status: s.status,
+            selected_judges: s.selected_judges,
+            contributions: s.contributions,
+            aggregation_result: s.aggregation_result,
+            final_decision: s.final_decision,
+            progress: s.progress,
+            started_at: s.started_at,
+            completed_at: s.completed_at,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            metadata: s.metadata,
+        }))
+    }
+
+    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<models::CouncilSession> {
+        use data_infrastructure::database_operations::UpdateCouncilSession as DbUpdateCouncilSession;
+        use data_infrastructure::models::CouncilSession as DbCouncilSession;
+        
+        let pool = self.db_client.pool();
+        
+        let db_update = DbUpdateCouncilSession {
+            status: update.status,
+            selected_judges: update.selected_judges,
+            contributions: update.contributions,
+            aggregation_result: update.aggregation_result,
+            final_decision: update.final_decision,
+            progress: update.progress,
+            completed_at: update.completed_at,
+            metadata: update.metadata,
+        };
+        
+        let updated = sqlx::query_as::<_, DbCouncilSession>(
+            r#"
+            UPDATE council_sessions
+            SET status = COALESCE($1, status),
+                selected_judges = COALESCE($2, selected_judges),
+                contributions = COALESCE($3, contributions),
+                aggregation_result = COALESCE($4, aggregation_result),
+                final_decision = COALESCE($5, final_decision),
+                progress = COALESCE($6, progress),
+                completed_at = COALESCE($7, completed_at),
+                metadata = COALESCE($8, metadata),
+                updated_at = $9
+            WHERE session_id = $10
+            RETURNING id, session_id, task_id, working_spec_id, review_context,
+                      status, selected_judges, contributions, aggregation_result,
+                      final_decision, progress, started_at, completed_at,
+                      created_at, updated_at, metadata
+            "#
+        )
+        .bind(db_update.status.as_deref())
+        .bind(db_update.selected_judges.as_ref())
+        .bind(db_update.contributions.as_ref())
+        .bind(db_update.aggregation_result.as_ref())
+        .bind(db_update.final_decision.as_ref())
+        .bind(db_update.progress)
+        .bind(db_update.completed_at)
+        .bind(db_update.metadata.as_ref())
+        .bind(Utc::now())
+        .bind(session_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| anyhow!("Failed to update council session: {}", e))?;
+        
+        Ok(models::CouncilSession {
+            id: updated.id,
+            session_id: updated.session_id,
+            task_id: updated.task_id,
+            working_spec_id: updated.working_spec_id,
+            review_context: updated.review_context,
+            status: updated.status,
+            selected_judges: updated.selected_judges,
+            contributions: updated.contributions,
+            aggregation_result: updated.aggregation_result,
+            final_decision: updated.final_decision,
+            progress: updated.progress,
+            started_at: updated.started_at,
+            completed_at: updated.completed_at,
+            created_at: updated.created_at,
+            updated_at: updated.updated_at,
+            metadata: updated.metadata,
+        })
     }
 }
 

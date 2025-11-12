@@ -170,7 +170,7 @@ impl ProgressTracker {
                     "paused" => 50.0,
                     _ => 0.0,
                 };
-                (status, progress, status.clone(), updated, updated)
+                (status.clone(), progress, status.clone(), updated, updated)
             }
             (None, None) => {
                 // No execution or state found - check if task exists

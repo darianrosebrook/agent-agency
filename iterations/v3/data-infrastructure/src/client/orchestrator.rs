@@ -19,7 +19,7 @@ use uuid::Uuid;
 use super::super::database_operations::{
     DatabaseOperations, CreateJudge, UpdateJudge, CreateWorker, UpdateWorker, 
     CreateTask, UpdateTask, CreateTaskExecution, UpdateTaskExecution,
-    CreateCouncilVerdict, CreateJudgeEvaluation, CreateAuditTrailEntry,
+    CreateCouncilVerdict, CreateCouncilSession, UpdateCouncilSession, CreateJudgeEvaluation, CreateAuditTrailEntry,
     CreatePlanningTelemetry, CreateMilestone, UpdateMilestone, CreatePlanningSession,
     UpdatePlanningSession, CreateEvidenceArtifact, UpdateEvidenceArtifact,
     CreatePlanningAuditEvent, CreateExecutionPlan, UpdateExecutionPlan,

@@ -83,10 +83,8 @@ extern "C" {
 
 // CLIP model imports - using candle for model loading
 use candle_core::{Device, Tensor};
-use candle_transformers::models::clip::{ClipModel, Config as ClipConfig};
+use candle_transformers::models::clip::ClipModel;
 use hf_hub::api::sync::Api;
-use std::sync::Arc;
-use std::path::PathBuf;
 
 /// CLIP model wrapper for candle
 struct ClipModelWrapper {
@@ -98,8 +96,7 @@ struct ClipModelWrapper {
 #[derive(Debug, Clone, JsonSchema)]
 pub enum ClipDevice {
     Cpu,
-    #[cfg(feature = "cuda")]
-    Cuda(usize),
+    // CUDA support removed - CoreML/ANE is the primary acceleration target
 }
 
 /// Trait for embedding providers
@@ -960,46 +957,39 @@ impl ClipEmbeddingProvider {
     pub fn with_variant(model_name: String, variant: ClipModelVariant) -> Result<Self> {
         // Determine device (CPU for now, CUDA support can be added later)
         let device = ClipDevice::Cpu;
-        let candle_device = Device::Cpu;
 
         // Get model ID and tokenizer name based on variant
-        let (model_id, tokenizer_name) = match variant {
+        let (_model_id, tokenizer_name) = match variant {
             ClipModelVariant::VitB32 => ("openai/clip-vit-base-patch32", "openai/clip-vit-base-patch32"),
             ClipModelVariant::VitB16 => ("openai/clip-vit-base-patch16", "openai/clip-vit-base-patch16"),
             ClipModelVariant::VitL14 => ("openai/clip-vit-large-patch14", "openai/clip-vit-large-patch14"),
             ClipModelVariant::VitL14336 => ("openai/clip-vit-large-patch14-336", "openai/clip-vit-large-patch14-336"),
         };
 
-        // Try to load tokenizer from HuggingFace
-        let tokenizer = match tokenizers::Tokenizer::from_pretrained(tokenizer_name, None) {
-            Ok(tok) => {
-                info!("Loaded CLIP tokenizer from HuggingFace: {}", tokenizer_name);
-                tok
-            }
-            Err(e) => {
-                warn!("Failed to load CLIP tokenizer from HuggingFace ({}): {}. Using basic tokenizer.", tokenizer_name, e);
-                // Fallback to basic tokenizer
-                use tokenizers::models::wordpiece::WordPiece;
-                use tokenizers::pre_tokenizers::whitespace::Whitespace;
-                use tokenizers::normalizers::strip::Strip;
-                use tokenizers::processors::roberta::RobertaProcessing;
-
-                let wordpiece = WordPiece::builder()
-                    .vocab(std::collections::HashMap::new())
-                    .unk_token("[UNK]".to_string())
-                    .build()
-                    .map_err(|e| anyhow::anyhow!("Failed to build WordPiece tokenizer: {:?}", e))?;
-
-                let mut tok = tokenizers::Tokenizer::new(wordpiece);
-                tok.with_pre_tokenizer(Whitespace::default());
-                tok.with_normalizer(Strip::new(true, true));
-                tok.with_post_processor(
-                    RobertaProcessing::new(
-                        ("</s>".to_string(), 2),
-                        ("</s>".to_string(), 2)
-                    )
-                );
-                tok
+        // Try to load tokenizer from HuggingFace cache or download
+        let tokenizer = {
+            let api = Api::new().ok();
+            if let Some(api) = api {
+                let repo = api.model(tokenizer_name.to_string());
+                // Try to get tokenizer.json from HuggingFace cache
+                if let Ok(tokenizer_path) = repo.get("tokenizer.json") {
+                    match tokenizers::Tokenizer::from_file(&tokenizer_path) {
+                        Ok(tok) => {
+                            info!("Loaded CLIP tokenizer from HuggingFace cache: {}", tokenizer_name);
+                            tok
+                        }
+                        Err(e) => {
+                            warn!("Failed to load CLIP tokenizer from file ({}): {}. Using basic tokenizer.", tokenizer_name, e);
+                            Self::create_basic_tokenizer()?
+                        }
+                    }
+                } else {
+                    warn!("CLIP tokenizer not found in HuggingFace cache ({}). Using basic tokenizer.", tokenizer_name);
+                    Self::create_basic_tokenizer()?
+                }
+            } else {
+                warn!("Failed to initialize HuggingFace API. Using basic tokenizer.");
+                Self::create_basic_tokenizer()?
             }
         };
 
@@ -1009,29 +999,13 @@ impl ClipEmbeddingProvider {
             ClipModelVariant::VitL14 | ClipModelVariant::VitL14336 => 768,
         };
 
-        // Try to load CLIP model (will be loaded lazily on first use if not available now)
+        // Model will be loaded lazily on first use (async loading required)
+        let model = None;
+        
+        // Try to get model path from environment or HuggingFace cache
         let model_path = std::env::var("CLIP_MODEL_PATH")
             .ok()
-            .map(PathBuf::from)
-            .or_else(|| {
-                // Try to get from HuggingFace cache
-                let api = Api::new().ok()?;
-                let repo = api.model(model_id.to_string());
-                // Model will be loaded on-demand
-                None
-            });
-
-        // Attempt to load model synchronously (will fail gracefully if model not available)
-        let model = match Self::load_clip_model(model_id, &candle_device, variant).await {
-            Ok(m) => {
-                info!("CLIP model loaded successfully: {}", model_id);
-                Some(m)
-            }
-            Err(e) => {
-                warn!("CLIP model not available ({}): {}. Model will need to be downloaded before use.", model_id, e);
-                None
-            }
-        };
+            .map(PathBuf::from);
 
         Ok(Self {
             model,
@@ -1049,19 +1023,42 @@ impl ClipEmbeddingProvider {
         self.variant
     }
 
+    /// Create a basic tokenizer fallback
+    fn create_basic_tokenizer() -> Result<tokenizers::Tokenizer> {
+        use tokenizers::models::wordpiece::WordPiece;
+        use tokenizers::pre_tokenizers::whitespace::Whitespace;
+        use tokenizers::normalizers::strip::Strip;
+        use tokenizers::processors::roberta::RobertaProcessing;
+
+        let wordpiece = WordPiece::builder()
+            .vocab(std::collections::HashMap::new())
+            .unk_token("[UNK]".to_string())
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to build WordPiece tokenizer: {:?}", e))?;
+
+        let mut tok = tokenizers::Tokenizer::new(wordpiece);
+        tok.with_pre_tokenizer(Whitespace::default());
+        tok.with_normalizer(Strip::new(true, true));
+        tok.with_post_processor(
+            RobertaProcessing::new(
+                ("</s>".to_string(), 2),
+                ("</s>".to_string(), 2)
+            )
+        );
+        Ok(tok)
+    }
+
     /// Load CLIP model from HuggingFace or local path
     async fn load_clip_model(
         model_id: &str,
         device: &Device,
-        variant: ClipModelVariant,
+        _variant: ClipModelVariant,
     ) -> Result<ClipModelWrapper> {
-        use candle_transformers::models::clip;
-
         // Try to load from local path first
         if let Ok(model_path) = std::env::var("CLIP_MODEL_PATH") {
             let path = PathBuf::from(model_path);
             if path.exists() {
-                return Self::load_clip_model_from_path(&path, device, variant).await;
+                return Self::load_clip_model_from_path(&path, device).await;
             }
         }
 
@@ -1069,48 +1066,53 @@ impl ClipEmbeddingProvider {
         let api = Api::new()?;
         let repo = api.model(model_id.to_string());
         
-        // Load config
+        // Load config - CLIP config structure varies by model, we'll construct it from JSON
         let config_filename = "config.json";
         let config_path = repo.get(config_filename)?;
-        let config: ClipConfig = serde_json::from_slice(&std::fs::read(&config_path)?)?;
-
+        let config_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&config_path)?)?;
+        
+        // Extract config values needed for ClipModel::new()
+        // Note: candle-transformers 0.9 requires constructing config manually or using defaults
+        // For now, we'll use a simplified approach - CLIP models may need model-specific config handling
+        
         // Load model weights (safetensors format)
         let model_filename = "model.safetensors";
         let model_path = repo.get(model_filename)?;
-        let weights = safetensors::SafeTensors::deserialize(&std::fs::read(&model_path)?)?;
+        let weights_bytes = std::fs::read(&model_path)?;
+        let _weights = safetensors::SafeTensors::deserialize(&weights_bytes)?;
 
-        // Create CLIP model
-        let model = ClipModel::load(&weights, &config)?;
-        
-        Ok(ClipModelWrapper {
-            model,
-            device: device.clone(),
-        })
+        // PLACEHOLDER: CLIP config construction - candle-transformers 0.9 API requires manual config
+        // This is a simplified approach - full implementation would parse config.json properly
+        // For now, return error indicating manual config needed
+        // Note: VarBuilder would be created with: VarBuilder::from_safetensors(&weights, candle_core::DType::F32, device)
+        return Err(anyhow::anyhow!(
+            "CLIP model loading requires manual config construction. Config JSON: {:?}. \
+             Please implement proper ClipConfig construction from config.json or use a different embedding provider.",
+            config_json
+        ));
     }
 
     /// Load CLIP model from local path
     async fn load_clip_model_from_path(
         path: &PathBuf,
-        device: &Device,
-        variant: ClipModelVariant,
+        _device: &Device,
     ) -> Result<ClipModelWrapper> {
-        use candle_transformers::models::clip;
-
         // Load config
         let config_path = path.join("config.json");
-        let config: ClipConfig = serde_json::from_slice(&tokio::fs::read(&config_path).await?)?;
+        let config_json: serde_json::Value = serde_json::from_slice(&tokio::fs::read(&config_path).await?)?;
 
         // Load model weights
         let model_path = path.join("model.safetensors");
-        let weights = safetensors::SafeTensors::deserialize(&tokio::fs::read(&model_path).await?)?;
+        let weights_bytes = tokio::fs::read(&model_path).await?;
+        let _weights = safetensors::SafeTensors::deserialize(&weights_bytes)?;
 
-        // Create CLIP model
-        let model = ClipModel::load(&weights, &config)?;
-        
-        Ok(ClipModelWrapper {
-            model,
-            device: device.clone(),
-        })
+        // PLACEHOLDER: CLIP config construction - same issue as above
+        // Note: VarBuilder would be created with: VarBuilder::from_safetensors(&weights, candle_core::DType::F32, device)
+        return Err(anyhow::anyhow!(
+            "CLIP model loading requires manual config construction. Config JSON: {:?}. \
+             Please implement proper ClipConfig construction from config.json or use a different embedding provider.",
+            config_json
+        ));
     }
 
     /// Generate embeddings using CLIP model
@@ -1126,10 +1128,8 @@ impl ClipEmbeddingProvider {
                     ClipModelVariant::VitL14 => "openai/clip-vit-large-patch14",
                     ClipModelVariant::VitL14336 => "openai/clip-vit-large-patch14-336",
                 };
-                let device = match self.device {
+                let _device = match self.device {
                     ClipDevice::Cpu => Device::Cpu,
-                    #[cfg(feature = "cuda")]
-                    ClipDevice::Cuda(idx) => Device::Cuda(idx),
                 };
                 return Err(anyhow::anyhow!(
                     "CLIP model not loaded. Please ensure CLIP model is available at {} or set CLIP_MODEL_PATH environment variable",
@@ -1138,35 +1138,30 @@ impl ClipEmbeddingProvider {
             }
         };
 
-        let mut embeddings = Vec::new();
+        let embeddings = Vec::new();
 
         for text in texts {
-            // Tokenize text
+            // Tokenize text - convert &String to &str
+            let text_str: &str = text.as_str();
             let encoding = self.tokenizer
-                .encode(text, true)
+                .encode(text_str, true)
                 .map_err(|e| anyhow::anyhow!("Tokenization failed: {}", e))?;
             
             let token_ids: Vec<u32> = encoding.get_ids().iter().map(|&id| id as u32).collect();
             
             // Convert to tensor
-            let tokens = Tensor::new(token_ids.as_slice(), &model_wrapper.device)?
+            let _tokens = Tensor::new(token_ids.as_slice(), &model_wrapper.device)?
                 .unsqueeze(0)?; // Add batch dimension
 
-            // Run CLIP text encoder forward pass
-            let text_features = model_wrapper.model.text_model().forward(&tokens)?;
-            
-            // Normalize embeddings (CLIP uses L2 normalization)
-            let norm = text_features.sqr()?.sum_all()?.sqrt()?;
-            let normalized = text_features.broadcast_div(&norm)?;
-            
-            // Extract embedding values
-            let embedding_values: Vec<f32> = normalized
-                .to_vec2::<f32>()?
-                .into_iter()
-                .next()
-                .ok_or_else(|| anyhow::anyhow!("Empty embedding"))?;
-
-            embeddings.push(EmbeddingVector::new(embedding_values, self.model_name.clone()));
+            // PLACEHOLDER: CLIP text model forward pass
+            // candle-transformers 0.9 ClipModel API changed - text_model() is private
+            // Need to use public API method or access through different path
+            // For now, return error indicating API migration needed
+            return Err(anyhow::anyhow!(
+                "CLIP text model forward pass requires API migration. \
+                 candle-transformers 0.9 changed ClipModel API - text_model() is now private. \
+                 Please check candle-transformers 0.9 documentation for correct text encoder access method."
+            ));
         }
 
         Ok(embeddings)

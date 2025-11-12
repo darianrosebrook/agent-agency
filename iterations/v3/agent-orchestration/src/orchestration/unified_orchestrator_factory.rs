@@ -121,6 +121,11 @@ impl UnifiedOrchestratorFactory {
             query_timeout: Some(60),
             ..Default::default()
         };
+        // Create ApiDatabaseClient (complex client) for adapter - implements DatabaseOperations trait
+        let api_db_client = Arc::new(data_infrastructure::ApiDatabaseClient::new(db_config.clone())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
+        // Create simple DatabaseClient wrapper for other components that expect it
         let db_client = Arc::new(data_infrastructure::DatabaseClient::new(db_config)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to create database client: {}", e))?);
@@ -130,8 +135,8 @@ impl UnifiedOrchestratorFactory {
         let db_ops = if let Some(db_ops) = db_ops {
             db_ops
         } else {
-            // Create adapter that wraps DatabaseClient to implement agent-orchestration DatabaseOperations
-            Arc::new(DatabaseOperationsAdapter::new(db_client.clone()))
+            // Create adapter that wraps ApiDatabaseClient to implement agent-orchestration DatabaseOperations
+            Arc::new(DatabaseOperationsAdapter::new(api_db_client.clone()))
         };
 
         // Create planning components using PlanningSystemFactory
@@ -561,16 +566,16 @@ mod database_operations_adapter {
         CreateCouncilSession, UpdateCouncilSession,
         models,
     };
-    use data_infrastructure::DatabaseClient;
+    use data_infrastructure::{ApiDatabaseClient, DatabaseOperations as DataInfraDatabaseOperations};
     
     /// Adapter that bridges data-infrastructure DatabaseClient to agent-orchestration DatabaseOperations
     pub struct DatabaseOperationsAdapter {
-        db_client: Arc<DatabaseClient>,
+        db_client: Arc<ApiDatabaseClient>,
     }
     
     impl DatabaseOperationsAdapter {
         /// Create a new database operations adapter
-        pub fn new(db_client: Arc<DatabaseClient>) -> Self {
+        pub fn new(db_client: Arc<ApiDatabaseClient>) -> Self {
             Self { db_client }
         }
     }
@@ -2054,7 +2059,7 @@ mod database_operations_adapter {
                 metadata: session.metadata,
             };
             
-            let created = self.db_client.create_council_session(db_session).await
+            let created = DataInfraDatabaseOperations::create_council_session(self.db_client.as_ref(), db_session).await
                 .map_err(|e| anyhow!("Failed to create council session: {}", e))?;
             
             Ok(models::CouncilSession {
@@ -2078,7 +2083,7 @@ mod database_operations_adapter {
         }
 
         async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>> {
-            let session = self.db_client.get_council_session(session_id).await
+            let session = DataInfraDatabaseOperations::get_council_session(self.db_client.as_ref(), session_id).await
                 .map_err(|e| anyhow!("Failed to get council session: {}", e))?;
             
             Ok(session.map(|s| models::CouncilSession {
@@ -2102,7 +2107,7 @@ mod database_operations_adapter {
         }
 
         async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>> {
-            let session = self.db_client.get_council_session_by_task(task_id).await
+            let session = DataInfraDatabaseOperations::get_council_session_by_task(self.db_client.as_ref(), task_id).await
                 .map_err(|e| anyhow!("Failed to get council session by task: {}", e))?;
             
             Ok(session.map(|s| models::CouncilSession {
@@ -2139,7 +2144,7 @@ mod database_operations_adapter {
                 metadata: update.metadata,
             };
             
-            let updated = self.db_client.update_council_session(session_id, db_update).await
+            let updated = DataInfraDatabaseOperations::update_council_session(self.db_client.as_ref(), session_id, db_update).await
                 .map_err(|e| anyhow!("Failed to update council session: {}", e))?;
             
             Ok(models::CouncilSession {
@@ -2257,6 +2262,18 @@ impl DatabaseOperations for StubDatabaseOperations {
         Err(anyhow::anyhow!("Stub implementation"))
     }
     async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker> {
+        Err(anyhow::anyhow!("Stub implementation"))
+    }
+    async fn create_council_session(&self, _session: crate::planning::data_infrastructure_types::CreateCouncilSession) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession> {
+        Err(anyhow::anyhow!("Stub implementation"))
+    }
+    async fn get_council_session(&self, _session_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::CouncilSession>> {
+        Ok(None)
+    }
+    async fn get_council_session_by_task(&self, _task_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::CouncilSession>> {
+        Ok(None)
+    }
+    async fn update_council_session(&self, _session_id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateCouncilSession) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession> {
         Err(anyhow::anyhow!("Stub implementation"))
     }
 }

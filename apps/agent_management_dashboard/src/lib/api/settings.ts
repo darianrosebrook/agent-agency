@@ -3,7 +3,7 @@
 
 import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
 
-const API_BASE = '/api/v1';
+const API_BASE = '/api/proxy/api/v1';
 
 // ============================================================================
 // Types

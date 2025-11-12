@@ -1,12 +1,12 @@
 /**
  * Agent API Client
- * 
+ *
  * Provides functions for fetching agent data and statistics from the v3 API.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { apiGet, apiPost, apiPatch } from '../utils/api';
+import { apiGet, apiPost, apiPatch } from "../utils/api";
 
 /**
  * Agent statistics response
@@ -85,12 +85,77 @@ export interface ContributionStats {
  */
 export interface EfficiencyMetrics {
   agent_id: string;
+  agent_name: string;
+  worker_type: string;
+  total_tasks: number;
+  completed_tasks: number;
+  tasks_per_hour: number;
+  success_rate: number;
+  avg_execution_time_ms: number | null;
+  median_execution_time_ms: number | null;
+  p95_execution_time_ms: number | null;
   efficiency_score: number;
-  resource_utilization: number;
-  throughput: number;
+  total_tokens_used: number | null;
+  avg_tokens_per_task: number | null;
+  period_hours: number;
 }
 
-const API_BASE = '/api/proxy/api/v1';
+/**
+ * Task completion metrics per agent
+ */
+export interface TaskCompletionMetrics {
+  agent_id: string;
+  agent_name: string;
+  worker_type: string;
+  total_tasks: number;
+  completed_tasks: number;
+  failed_tasks: number;
+  cancelled_tasks: number;
+  running_tasks: number;
+  completion_rate_percent: number;
+  success_rate: number;
+  avg_execution_time_ms: number | null;
+  min_execution_time_ms: number | null;
+  max_execution_time_ms: number | null;
+  period_hours: number;
+  period_start: string;
+}
+
+/**
+ * Task completion response with summary
+ */
+export interface TaskCompletionResponse {
+  agents: TaskCompletionMetrics[];
+  summary: {
+    total_agents: number;
+    total_tasks: number;
+    total_completed: number;
+    total_failed: number;
+    overall_completion_rate: number;
+    overall_success_rate: number;
+  };
+  period_hours: number;
+  period_start: string;
+  period_end: string;
+}
+
+/**
+ * Efficiency metrics response with summary
+ */
+export interface EfficiencyResponse {
+  agents: EfficiencyMetrics[];
+  summary: {
+    total_agents: number;
+    total_completed_tasks: number;
+    overall_tasks_per_hour: number;
+    avg_efficiency_score: number;
+  };
+  period_hours: number;
+  period_start: string;
+  period_end: string;
+}
+
+const API_BASE = "/api/proxy/api/v1";
 
 /**
  * Get overall agent statistics
@@ -109,7 +174,9 @@ export async function getAgents(): Promise<Agent[]> {
 /**
  * Get statistics for a specific agent
  */
-export async function getAgentStats(agentId: string): Promise<AgentDetailStats> {
+export async function getAgentStats(
+  agentId: string
+): Promise<AgentDetailStats> {
   return apiGet<AgentDetailStats>(`${API_BASE}/agents/${agentId}/stats`);
 }
 
@@ -129,12 +196,14 @@ export async function getAgentActivity(params?: {
   end_date?: string;
 }): Promise<AgentActivityPoint[]> {
   const queryParams = new URLSearchParams();
-  if (params?.agent_id) queryParams.append('agent_id', params.agent_id);
-  if (params?.start_date) queryParams.append('start_date', params.start_date);
-  if (params?.end_date) queryParams.append('end_date', params.end_date);
-  
+  if (params?.agent_id) queryParams.append("agent_id", params.agent_id);
+  if (params?.start_date) queryParams.append("start_date", params.start_date);
+  if (params?.end_date) queryParams.append("end_date", params.end_date);
+
   const queryString = queryParams.toString();
-  const url = `${API_BASE}/telemetry/agent-activity${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE}/telemetry/agent-activity${
+    queryString ? `?${queryString}` : ""
+  }`;
   return apiGet<AgentActivityPoint[]>(url);
 }
 
@@ -142,7 +211,9 @@ export async function getAgentActivity(params?: {
  * Get model contribution statistics
  */
 export async function getModelContributions(): Promise<ModelContribution[]> {
-  return apiGet<ModelContribution[]>(`${API_BASE}/telemetry/model-contributions`);
+  return apiGet<ModelContribution[]>(
+    `${API_BASE}/telemetry/model-contributions`
+  );
 }
 
 /**
@@ -154,23 +225,49 @@ export async function getContributions(params?: {
   end_date?: string;
 }): Promise<ContributionStats[]> {
   const queryParams = new URLSearchParams();
-  if (params?.agent_id) queryParams.append('agent_id', params.agent_id);
-  if (params?.start_date) queryParams.append('start_date', params.start_date);
-  if (params?.end_date) queryParams.append('end_date', params.end_date);
-  
+  if (params?.agent_id) queryParams.append("agent_id", params.agent_id);
+  if (params?.start_date) queryParams.append("start_date", params.start_date);
+  if (params?.end_date) queryParams.append("end_date", params.end_date);
+
   const queryString = queryParams.toString();
-  const url = `${API_BASE}/telemetry/contributions${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE}/telemetry/contributions${
+    queryString ? `?${queryString}` : ""
+  }`;
   return apiGet<ContributionStats[]>(url);
 }
 
 /**
- * Get efficiency metrics
+ * Get efficiency metrics for all agents
+ * Uses the new /agents/efficiency endpoint
  */
-export async function getEfficiencyMetrics(agentId?: string): Promise<EfficiencyMetrics[]> {
-  const url = agentId 
-    ? `${API_BASE}/observability/efficiency?agent_id=${agentId}`
-    : `${API_BASE}/observability/efficiency`;
-  return apiGet<EfficiencyMetrics[]>(url);
+export async function getEfficiencyMetrics(params?: {
+  hours?: number;
+}): Promise<EfficiencyResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.hours) queryParams.append("hours", params.hours.toString());
+
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/agents/efficiency${
+    queryString ? `?${queryString}` : ""
+  }`;
+  return apiGet<EfficiencyResponse>(url);
+}
+
+/**
+ * Get task completion metrics for all agents
+ * Uses the new /agents/tasks/completion endpoint
+ */
+export async function getAgentsTaskCompletion(params?: {
+  hours?: number;
+}): Promise<TaskCompletionResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.hours) queryParams.append("hours", params.hours.toString());
+
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/agents/tasks/completion${
+    queryString ? `?${queryString}` : ""
+  }`;
+  return apiGet<TaskCompletionResponse>(url);
 }
 
 /**
@@ -178,7 +275,7 @@ export async function getEfficiencyMetrics(agentId?: string): Promise<Efficiency
  */
 export interface AgentHealth {
   agent_id: string;
-  status: 'healthy' | 'warning' | 'critical' | 'offline';
+  status: "healthy" | "warning" | "critical" | "offline";
   uptime_seconds: number;
   last_seen: string;
   error_count: number;
@@ -207,7 +304,7 @@ export interface AgentMetrics {
 export interface AgentLog {
   id: string;
   agent_id: string;
-  level: 'error' | 'warn' | 'info' | 'debug';
+  level: "error" | "warn" | "info" | "debug";
   message: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
@@ -233,33 +330,43 @@ export async function getAgentMetrics(agentId: string): Promise<AgentMetrics> {
 export async function getAgentLogs(
   agentId: string,
   params?: {
-    level?: 'error' | 'warn' | 'info' | 'debug';
+    level?: "error" | "warn" | "info" | "debug";
     limit?: number;
     offset?: number;
   }
 ): Promise<AgentLog[]> {
   const queryParams = new URLSearchParams();
-  if (params?.level) queryParams.append('level', params.level);
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
-  if (params?.offset) queryParams.append('offset', params.offset.toString());
-  
+  if (params?.level) queryParams.append("level", params.level);
+  if (params?.limit) queryParams.append("limit", params.limit.toString());
+  if (params?.offset) queryParams.append("offset", params.offset.toString());
+
   const queryString = queryParams.toString();
-  const url = `${API_BASE}/agents/${agentId}/logs${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE}/agents/${agentId}/logs${
+    queryString ? `?${queryString}` : ""
+  }`;
   return apiGet<AgentLog[]>(url);
 }
 
 /**
  * Restart agent
  */
-export async function restartAgent(agentId: string): Promise<{ success: boolean; message: string }> {
-  return apiPost<{ success: boolean; message: string }>(`${API_BASE}/agents/${agentId}/restart`);
+export async function restartAgent(
+  agentId: string
+): Promise<{ success: boolean; message: string }> {
+  return apiPost<{ success: boolean; message: string }>(
+    `${API_BASE}/agents/${agentId}/restart`
+  );
 }
 
 /**
  * Stop agent
  */
-export async function stopAgent(agentId: string): Promise<{ success: boolean; message: string }> {
-  return apiPost<{ success: boolean; message: string }>(`${API_BASE}/agents/${agentId}/stop`);
+export async function stopAgent(
+  agentId: string
+): Promise<{ success: boolean; message: string }> {
+  return apiPost<{ success: boolean; message: string }>(
+    `${API_BASE}/agents/${agentId}/stop`
+  );
 }
 
 /**
@@ -267,8 +374,9 @@ export async function stopAgent(agentId: string): Promise<{ success: boolean; me
  */
 export async function updateAgent(
   agentId: string,
-  updates: Partial<Pick<Agent, 'name' | 'is_active' | 'specialty' | 'capabilities'>>
+  updates: Partial<
+    Pick<Agent, "name" | "is_active" | "specialty" | "capabilities">
+  >
 ): Promise<Agent> {
   return apiPatch<Agent>(`${API_BASE}/agents/${agentId}`, updates);
 }
-

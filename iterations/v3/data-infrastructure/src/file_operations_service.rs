@@ -422,36 +422,47 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
 
         Ok(())
     }
+}
 
+impl DataInfrastructureFileOperationsService {
     /// Recursively copy a directory and all its contents (helper method)
+    /// Uses iterative approach to avoid recursive async function limitations
     async fn copy_directory_recursive(&self, from: &Path, to: &Path) -> FileResult<()> {
-        // Create destination directory if it doesn't exist
-        fs::create_dir_all(to).await
-            .map_err(|e| FileOpsError::Io(e))?;
+        use std::collections::VecDeque;
+        
+        // Stack of (source_path, dest_path) pairs to process
+        let mut stack = VecDeque::new();
+        stack.push_back((from.to_path_buf(), to.to_path_buf()));
 
-        // Read source directory entries
-        let mut entries = fs::read_dir(from).await
-            .map_err(|e| FileOpsError::Io(e))?;
-
-        // Process each entry in the directory
-        while let Some(entry) = entries.next_entry().await
-            .map_err(|e| FileOpsError::Io(e))? {
-            
-            let entry_path = entry.path();
-            let entry_name = entry.file_name();
-            let dest_path = to.join(&entry_name);
-
-            // Get entry metadata to determine if it's a directory or file
-            let entry_metadata = entry.metadata().await
+        while let Some((src_path, dst_path)) = stack.pop_front() {
+            // Create destination directory if it doesn't exist
+            fs::create_dir_all(&dst_path).await
                 .map_err(|e| FileOpsError::Io(e))?;
 
-            if entry_metadata.is_dir() {
-                // Recursively copy subdirectory
-                self.copy_directory_recursive(&entry_path, &dest_path).await?;
-            } else {
-                // Copy file
-                fs::copy(&entry_path, &dest_path).await
+            // Read source directory entries
+            let mut entries = fs::read_dir(&src_path).await
+                .map_err(|e| FileOpsError::Io(e))?;
+
+            // Process each entry in the directory
+            while let Some(entry) = entries.next_entry().await
+                .map_err(|e| FileOpsError::Io(e))? {
+                
+                let entry_path = entry.path();
+                let entry_name = entry.file_name();
+                let dest_path = dst_path.join(&entry_name);
+
+                // Get entry metadata to determine if it's a directory or file
+                let entry_metadata = entry.metadata().await
                     .map_err(|e| FileOpsError::Io(e))?;
+
+                if entry_metadata.is_dir() {
+                    // Add subdirectory to stack for processing
+                    stack.push_back((entry_path, dest_path));
+                } else {
+                    // Copy file
+                    fs::copy(&entry_path, &dest_path).await
+                        .map_err(|e| FileOpsError::Io(e))?;
+                }
             }
         }
 

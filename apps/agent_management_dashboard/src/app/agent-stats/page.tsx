@@ -9,12 +9,14 @@ import {
   getModelContributions,
   getContributions,
   getEfficiencyMetrics,
+  getAgentsTaskCompletion,
   type AgentStats as AgentStatsType,
   type Agent,
   type AgentActivityPoint,
   type ModelContribution,
   type ContributionStats,
-  type EfficiencyMetrics,
+  type EfficiencyResponse,
+  type TaskCompletionResponse,
 } from "../../lib/api/agents";
 import { ErrorDisplay } from "../../components/ErrorDisplay";
 import { BentoPanel } from "../../components/compounds/BentoPanel";
@@ -36,7 +38,9 @@ export default function AgentStatsPage() {
     ModelContribution[]
   >([]);
   const [contributions, setContributions] = useState<ContributionStats[]>([]);
-  const [efficiency, setEfficiency] = useState<EfficiencyMetrics[]>([]);
+  const [efficiency, setEfficiency] = useState<EfficiencyResponse | null>(null);
+  const [taskCompletion, setTaskCompletion] =
+    useState<TaskCompletionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -50,6 +54,15 @@ export default function AgentStatsPage() {
       setError(null);
 
       try {
+        const hours =
+          timeRange === "7d"
+            ? 24 * 7
+            : timeRange === "30d"
+            ? 24 * 30
+            : timeRange === "90d"
+            ? 24 * 90
+            : 24 * 365;
+
         const [
           statsData,
           agentsData,
@@ -57,13 +70,15 @@ export default function AgentStatsPage() {
           modelData,
           contributionsData,
           efficiencyData,
+          completionData,
         ] = await Promise.all([
           getAgentsStats(),
           getAgents(),
           getAgentActivity({ start_date: getStartDate(timeRange) }),
           getModelContributions(),
           getContributions({ start_date: getStartDate(timeRange) }),
-          getEfficiencyMetrics(),
+          getEfficiencyMetrics({ hours }),
+          getAgentsTaskCompletion({ hours }),
         ]);
 
         setStats(statsData);
@@ -72,6 +87,7 @@ export default function AgentStatsPage() {
         setModelContributions(modelData);
         setContributions(contributionsData);
         setEfficiency(efficiencyData);
+        setTaskCompletion(completionData);
       } catch (err) {
         setError(
           err instanceof Error
@@ -127,6 +143,15 @@ export default function AgentStatsPage() {
               setIsLoading(true);
               setError(null);
               try {
+                const hours =
+                  timeRange === "7d"
+                    ? 24 * 7
+                    : timeRange === "30d"
+                    ? 24 * 30
+                    : timeRange === "90d"
+                    ? 24 * 90
+                    : 24 * 365;
+
                 const [
                   statsData,
                   agentsData,
@@ -134,13 +159,15 @@ export default function AgentStatsPage() {
                   modelData,
                   contributionsData,
                   efficiencyData,
+                  completionData,
                 ] = await Promise.all([
                   getAgentsStats(),
                   getAgents(),
                   getAgentActivity({ start_date: getStartDate(timeRange) }),
                   getModelContributions(),
                   getContributions({ start_date: getStartDate(timeRange) }),
-                  getEfficiencyMetrics(),
+                  getEfficiencyMetrics({ hours }),
+                  getAgentsTaskCompletion({ hours }),
                 ]);
                 setStats(statsData);
                 setAgents(agentsData);
@@ -148,6 +175,7 @@ export default function AgentStatsPage() {
                 setModelContributions(modelData);
                 setContributions(contributionsData);
                 setEfficiency(efficiencyData);
+                setTaskCompletion(completionData);
               } catch (err) {
                 setError(
                   err instanceof Error
@@ -354,47 +382,186 @@ export default function AgentStatsPage() {
           </BentoPanel>
         )}
 
-        {/* Efficiency Metrics */}
-        {efficiency.length > 0 && (
+        {/* Task Completion Metrics */}
+        {taskCompletion && taskCompletion.agents.length > 0 && (
           <BentoPanel className={styles.section}>
-            <h2 className={styles.sectionTitle}>Efficiency Metrics</h2>
-            <div className={styles.efficiencyList}>
-              {efficiency.map((metric) => {
-                const agent = agents.find((a) => a.id === metric.agent_id);
-                return (
-                  <div key={metric.agent_id} className={styles.efficiencyItem}>
-                    <div className={styles.efficiencyHeader}>
-                      <span className={styles.agentName}>
-                        {agent?.name ?? metric.agent_id}
+            <h2 className={styles.sectionTitle}>Task Completion Metrics</h2>
+            {taskCompletion.summary && (
+              <div className={styles.summaryMetrics}>
+                <div className={styles.summaryMetric}>
+                  <span className={styles.metricLabel}>
+                    Overall Completion Rate:
+                  </span>
+                  <span className={styles.metricValue}>
+                    {taskCompletion.summary.overall_completion_rate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className={styles.summaryMetric}>
+                  <span className={styles.metricLabel}>
+                    Overall Success Rate:
+                  </span>
+                  <span className={styles.metricValue}>
+                    {taskCompletion.summary.overall_success_rate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className={styles.summaryMetric}>
+                  <span className={styles.metricLabel}>Total Tasks:</span>
+                  <span className={styles.metricValue}>
+                    {taskCompletion.summary.total_tasks.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className={styles.completionList}>
+              {taskCompletion.agents.map((metric) => (
+                <div key={metric.agent_id} className={styles.completionItem}>
+                  <div className={styles.completionHeader}>
+                    <span className={styles.agentName}>
+                      {metric.agent_name}
+                    </span>
+                    <span className={styles.workerType}>
+                      {metric.worker_type}
+                    </span>
+                  </div>
+                  <div className={styles.completionMetrics}>
+                    <div className={styles.completionMetric}>
+                      <span className={styles.metricLabel}>Total Tasks:</span>
+                      <span className={styles.metricValue}>
+                        {metric.total_tasks}
                       </span>
                     </div>
-                    <div className={styles.efficiencyMetrics}>
-                      <div className={styles.efficiencyMetric}>
-                        <span className={styles.metricLabel}>
-                          Efficiency Score:
-                        </span>
-                        <span className={styles.metricValue}>
-                          {(metric.efficiency_score * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className={styles.efficiencyMetric}>
-                        <span className={styles.metricLabel}>
-                          Resource Utilization:
-                        </span>
-                        <span className={styles.metricValue}>
-                          {(metric.resource_utilization * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className={styles.efficiencyMetric}>
-                        <span className={styles.metricLabel}>Throughput:</span>
-                        <span className={styles.metricValue}>
-                          {metric.throughput.toFixed(2)} tasks/s
-                        </span>
-                      </div>
+                    <div className={styles.completionMetric}>
+                      <span className={styles.metricLabel}>Completed:</span>
+                      <span className={styles.metricValuePositive}>
+                        {metric.completed_tasks}
+                      </span>
                     </div>
+                    <div className={styles.completionMetric}>
+                      <span className={styles.metricLabel}>Failed:</span>
+                      <span className={styles.metricValueNegative}>
+                        {metric.failed_tasks}
+                      </span>
+                    </div>
+                    <div className={styles.completionMetric}>
+                      <span className={styles.metricLabel}>
+                        Completion Rate:
+                      </span>
+                      <span className={styles.metricValue}>
+                        {metric.completion_rate_percent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className={styles.completionMetric}>
+                      <span className={styles.metricLabel}>Success Rate:</span>
+                      <span className={styles.metricValue}>
+                        {(metric.success_rate * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    {metric.avg_execution_time_ms && (
+                      <div className={styles.completionMetric}>
+                        <span className={styles.metricLabel}>
+                          Avg Execution Time:
+                        </span>
+                        <span className={styles.metricValue}>
+                          {(metric.avg_execution_time_ms / 1000).toFixed(2)}s
+                        </span>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              ))}
+            </div>
+          </BentoPanel>
+        )}
+
+        {/* Efficiency Metrics */}
+        {efficiency && efficiency.agents.length > 0 && (
+          <BentoPanel className={styles.section}>
+            <h2 className={styles.sectionTitle}>Efficiency Metrics</h2>
+            {efficiency.summary && (
+              <div className={styles.summaryMetrics}>
+                <div className={styles.summaryMetric}>
+                  <span className={styles.metricLabel}>
+                    Overall Tasks/Hour:
+                  </span>
+                  <span className={styles.metricValue}>
+                    {efficiency.summary.overall_tasks_per_hour.toFixed(2)}
+                  </span>
+                </div>
+                <div className={styles.summaryMetric}>
+                  <span className={styles.metricLabel}>
+                    Avg Efficiency Score:
+                  </span>
+                  <span className={styles.metricValue}>
+                    {efficiency.summary.avg_efficiency_score.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className={styles.efficiencyList}>
+              {efficiency.agents.map((metric) => (
+                <div key={metric.agent_id} className={styles.efficiencyItem}>
+                  <div className={styles.efficiencyHeader}>
+                    <span className={styles.agentName}>
+                      {metric.agent_name}
+                    </span>
+                    <span className={styles.workerType}>
+                      {metric.worker_type}
+                    </span>
+                  </div>
+                  <div className={styles.efficiencyMetrics}>
+                    <div className={styles.efficiencyMetric}>
+                      <span className={styles.metricLabel}>Tasks/Hour:</span>
+                      <span className={styles.metricValue}>
+                        {metric.tasks_per_hour.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className={styles.efficiencyMetric}>
+                      <span className={styles.metricLabel}>
+                        Efficiency Score:
+                      </span>
+                      <span className={styles.metricValue}>
+                        {metric.efficiency_score.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className={styles.efficiencyMetric}>
+                      <span className={styles.metricLabel}>Success Rate:</span>
+                      <span className={styles.metricValue}>
+                        {(metric.success_rate * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    {metric.avg_execution_time_ms && (
+                      <div className={styles.efficiencyMetric}>
+                        <span className={styles.metricLabel}>
+                          Avg Execution Time:
+                        </span>
+                        <span className={styles.metricValue}>
+                          {(metric.avg_execution_time_ms / 1000).toFixed(2)}s
+                        </span>
+                      </div>
+                    )}
+                    {metric.p95_execution_time_ms && (
+                      <div className={styles.efficiencyMetric}>
+                        <span className={styles.metricLabel}>
+                          P95 Execution Time:
+                        </span>
+                        <span className={styles.metricValue}>
+                          {(metric.p95_execution_time_ms / 1000).toFixed(2)}s
+                        </span>
+                      </div>
+                    )}
+                    {metric.total_tokens_used && (
+                      <div className={styles.efficiencyMetric}>
+                        <span className={styles.metricLabel}>
+                          Total Tokens:
+                        </span>
+                        <span className={styles.metricValue}>
+                          {metric.total_tokens_used.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </BentoPanel>
         )}

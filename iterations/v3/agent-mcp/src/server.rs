@@ -403,8 +403,8 @@ impl Default for RateLimitConfig {
 pub struct RateLimitMiddleware {
     config: RateLimitConfig,
     endpoint_configs: Vec<RateLimitConfig>,
-    ip_tracking: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
-    burst_tracking: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
+    ip_tracking: Arc<TokioMutex<HashMap<String, (Instant, u32)>>>,
+    burst_tracking: Arc<TokioMutex<HashMap<String, (Instant, u32)>>>,
 }
 
 impl RateLimitMiddleware {
@@ -412,8 +412,8 @@ impl RateLimitMiddleware {
         Self { 
             config: global_config.unwrap_or_else(RateLimitConfig::default),
             endpoint_configs,
-            ip_tracking: Arc::new(Mutex::new(HashMap::new())),
-            burst_tracking: Arc::new(Mutex::new(HashMap::new())),
+            ip_tracking: Arc::new(TokioMutex::new(HashMap::new())),
+            burst_tracking: Arc::new(TokioMutex::new(HashMap::new())),
         }
     }
 
@@ -1101,13 +1101,13 @@ struct AuthRateLimiter {
     /// Window duration in seconds
     window_duration: u64,
     /// IP-based attempt tracking: IP -> (window_start, count, blocked_until, risk_score)
-    ip_attempts: Arc<Mutex<HashMap<String, (Instant, u32, Option<Instant>, u32)>>>,
+    ip_attempts: Arc<TokioMutex<HashMap<String, (Instant, u32, Option<Instant>, u32)>>>,
     /// Global attempt tracking
-    global_attempts: Arc<Mutex<(Instant, u32)>>,
+    global_attempts: Arc<TokioMutex<(Instant, u32)>>,
     /// Database client for persistent storage
     db_client: Option<Arc<DatabaseClient>>,
     /// Suspicious IP tracking
-    suspicious_ips: Arc<Mutex<HashMap<String, (Instant, u32)>>>,
+    suspicious_ips: Arc<TokioMutex<HashMap<String, (Instant, u32)>>>,
 }
 
 impl AuthRateLimiter {
@@ -1116,10 +1116,10 @@ impl AuthRateLimiter {
             global_limit,
             per_ip_limit,
             window_duration,
-            ip_attempts: Arc::new(Mutex::new(HashMap::new())),
-            global_attempts: Arc::new(Mutex::new((Instant::now(), 0))),
+            ip_attempts: Arc::new(TokioMutex::new(HashMap::new())),
+            global_attempts: Arc::new(TokioMutex::new((Instant::now(), 0))),
             db_client: None,
-            suspicious_ips: Arc::new(Mutex::new(HashMap::new())),
+            suspicious_ips: Arc::new(TokioMutex::new(HashMap::new())),
         }
     }
 
@@ -1129,10 +1129,10 @@ impl AuthRateLimiter {
             global_limit,
             per_ip_limit,
             window_duration,
-            ip_attempts: Arc::new(Mutex::new(HashMap::new())),
-            global_attempts: Arc::new(Mutex::new((Instant::now(), 0))),
+            ip_attempts: Arc::new(TokioMutex::new(HashMap::new())),
+            global_attempts: Arc::new(TokioMutex::new((Instant::now(), 0))),
             db_client: Some(db_client),
-            suspicious_ips: Arc::new(Mutex::new(HashMap::new())),
+            suspicious_ips: Arc::new(TokioMutex::new(HashMap::new())),
         }
     }
 
@@ -1528,7 +1528,7 @@ pub struct MCPServer {
     connections: Arc<RwLock<Vec<MCPConnection>>>,
     http_handle: Arc<RwLock<Option<HttpServerHandle>>>,
     ws_handle: Arc<RwLock<Option<HttpServerHandle>>>,
-    rate_limiter: Option<Arc<Mutex<RateLimiter>>>,
+    rate_limiter: Option<Arc<TokioMutex<RateLimiter>>>,
     auth_rate_limiter: Option<Arc<AuthRateLimiter>>,
     api_rate_limiter: Option<Arc<RateLimitMiddleware>>,
     slo_tracker: Arc<SLOTracker>,
@@ -1543,7 +1543,7 @@ impl MCPServer {
         let rate_limiter = config
             .server
             .requests_per_minute
-            .map(|limit| Arc::new(Mutex::new(RateLimiter::new(limit))));
+            .map(|limit| Arc::new(TokioMutex::new(RateLimiter::new(limit))));
 
         let auth_rate_limiter = config
             .server
@@ -1600,7 +1600,7 @@ impl MCPServer {
         let rate_limiter = config
             .server
             .requests_per_minute
-            .map(|limit| Arc::new(Mutex::new(RateLimiter::new(limit))));
+            .map(|limit| Arc::new(TokioMutex::new(RateLimiter::new(limit))));
 
         // Create auth rate limiter with stricter limits for security
         // Global limit: 100 auth attempts per minute

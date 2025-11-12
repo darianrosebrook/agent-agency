@@ -7,9 +7,10 @@
  */
 
 import { apiGet } from '../utils/api';
+import type { EfficiencyResponse, EfficiencyMetrics as AgentEfficiencyMetrics } from './agents';
 
 /**
- * Efficiency metrics
+ * Efficiency metrics for observability charts
  */
 export interface EfficiencyMetrics {
   agent_id?: string;
@@ -48,14 +49,24 @@ const API_BASE = '/api/proxy/api/v1';
 
 /**
  * Get efficiency metrics
+ * Uses the agents/efficiency endpoint which returns the correct format
  */
 export async function getEfficiencyMetrics(agentId?: string): Promise<EfficiencyMetrics[]> {
   const queryParams = new URLSearchParams();
   if (agentId) queryParams.append('agent_id', agentId);
   
   const queryString = queryParams.toString();
-  const url = `${API_BASE}/observability/efficiency${queryString ? `?${queryString}` : ''}`;
-  return apiGet<EfficiencyMetrics[]>(url);
+  const url = `${API_BASE}/agents/efficiency${queryString ? `?${queryString}` : ''}`;
+  const response = await apiGet<EfficiencyResponse>(url);
+  
+  // Transform AgentEfficiencyMetrics[] to EfficiencyMetrics[]
+  return response.agents.map((agent: AgentEfficiencyMetrics) => ({
+    agent_id: agent.agent_id,
+    efficiency_score: agent.efficiency_score,
+    resource_utilization: 0, // Not available in backend response
+    throughput: agent.tasks_per_hour,
+    timestamp: response.period_end,
+  }));
 }
 
 /**

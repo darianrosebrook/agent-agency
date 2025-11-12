@@ -449,12 +449,7 @@ impl FullTextIndexer {
         }
         
         // Calculate average document length once to avoid deadlock
-        let avg_doc_length = if documents.is_empty() {
-            100.0
-        } else {
-            let total_length: usize = documents.values().map(|doc| doc.length).sum();
-            total_length as f64 / documents.len() as f64
-        };
+        let avg_doc_length = Self::calculate_avg_document_length(&documents);
         
         // Calculate BM25 scores for each document
         for (id, doc) in documents.iter() {
@@ -530,6 +525,17 @@ impl FullTextIndexer {
         score
     }
 
+    /// Calculate average document length from a reference to locked documents
+    /// This helper avoids deadlock when documents are already locked
+    fn calculate_avg_document_length(documents: &std::sync::MutexGuard<'_, HashMap<ProcessingId, DocumentRecord>>) -> f64 {
+        if documents.is_empty() {
+            return 100.0; // Default average
+        }
+        
+        let total_length: usize = documents.values().map(|doc| doc.length).sum();
+        total_length as f64 / documents.len() as f64
+    }
+
     /// Get average document length
     // TODO: Implement comprehensive document length calculation with statistical analysis
     //       Currently uses simple arithmetic mean; should include statistical measures for better BM25 scoring.
@@ -562,14 +568,13 @@ impl FullTextIndexer {
     // - CAWS Tier: 3 (low risk optimization)
     // - Change Budget: ~80 LOC
     // - Reviewer Requirements: Search algorithm expertise
+    //
+    // NOTE: This method is kept for future use and as a public API. Internal code uses
+    // calculate_avg_document_length() to avoid deadlock when documents are already locked.
+    #[allow(dead_code)]
     fn get_average_document_length(&self) -> f64 {
         let documents = self.documents.lock().unwrap();
-        if documents.is_empty() {
-            return 100.0; // Default average
-        }
-        
-        let total_length: usize = documents.values().map(|doc| doc.length).sum();
-        total_length as f64 / documents.len() as f64
+        Self::calculate_avg_document_length(&documents)
     }
 
     /// Extract relevant snippet from document

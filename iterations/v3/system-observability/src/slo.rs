@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use sqlx::{Row, postgres::PgRow};
+use sqlx::Row;
 
 /// Trait for database operations needed by SLOTracker
 /// This allows SLOTracker to work with different database client implementations
@@ -465,7 +465,7 @@ impl SLOTracker {
     /// Check for SLO alerts and generate them using database function
     async fn check_slo_alerts(
         &self,
-        slo_name: &str,
+        _slo_name: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Use the database function to check and generate alerts
         self.db_client.execute(
@@ -485,6 +485,7 @@ impl SLOTracker {
     }
 
     /// Estimate time to SLO violation based on trend
+    #[allow(dead_code)]
     async fn estimate_time_to_violation(&self, slo_name: &str) -> Option<Duration> {
         let measurements = self.measurements.read().await;
         let slo_measurements = measurements.get(slo_name)?;

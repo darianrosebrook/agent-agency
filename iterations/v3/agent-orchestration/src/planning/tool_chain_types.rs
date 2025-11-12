@@ -125,17 +125,21 @@ impl ToolChainPlanner {
             estimated_duration_secs
         };
 
+        // Check node properties before moving nodes into ToolChain
+        let nodes_is_empty = nodes.is_empty();
+        let nodes_len = nodes.len();
+        
         Ok(ToolChain {
             id: format!("local-chain-{}", uuid::Uuid::new_v4()),
             nodes,
             estimated_duration_secs: final_duration,
-            roots: if roots.is_empty() && !nodes.is_empty() {
+            roots: if roots.is_empty() && !nodes_is_empty {
                 vec![0] // Default: first node is root
             } else {
                 roots
             },
-            sinks: if sinks.is_empty() && !nodes.is_empty() {
-                vec![nodes.len() - 1] // Default: last node is sink
+            sinks: if sinks.is_empty() && !nodes_is_empty {
+                vec![nodes_len - 1] // Default: last node is sink
             } else {
                 sinks
             },

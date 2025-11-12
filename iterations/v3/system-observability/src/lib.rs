@@ -26,13 +26,37 @@ use serde::{Deserialize, Serialize};
 // Re-export key functionality
 pub use telemetry::*;
 pub use telemetry_storage::TelemetryDatabaseStorage;
-pub use monitoring::*;
+// Explicit re-exports from monitoring to avoid conflicts with slo::AlertSeverity
+pub use monitoring::{
+    AlertSeverity as MonitoringAlertSeverity,
+    Alert,
+    AlertManager,
+    HealthMonitor,
+    ComponentHealth,
+    HealthStatus,
+    SystemHealth,
+};
+// Explicit re-exports from slo to avoid conflicts with monitoring::AlertSeverity
+pub use slo::{
+    AlertSeverity as SloAlertSeverity,
+    SLODefinition,
+    SLOTarget,
+    SLOStatus,
+    SLOMeasurement,
+    SLOAlert,
+    SLOAlertType,
+    SLODataPoint,
+    SLOTracker,
+    SloDatabaseClient,
+    SLOAlertThresholds,
+    SLOExport,
+    create_default_slos,
+};
 pub use metrics::*;
 pub use tracing::*;
 pub use learning_service::*;
 pub use health_metrics::MetricsCollector;
 pub use core::ResponseTimePercentiles;
-pub use slo::*;
 
 /// Main service struct for telemetry management
 #[derive(Debug)]

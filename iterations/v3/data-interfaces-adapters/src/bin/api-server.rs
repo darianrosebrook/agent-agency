@@ -284,15 +284,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or(300), // Default: 5 minutes
             };
 
-            // Create progress tracker
-            use data_infrastructure::api::server::ProgressTracker;
-            let progress_tracker = Arc::new(ProgressTracker { task_id: Uuid::new_v4() });
-
             // Create RestApi with orchestrator service
+            // ProgressTracker is created internally by with_orchestrator_service
             let rest_api = Arc::new(RestApi::with_orchestrator_service(
                 api_config,
                 orchestrator_service.clone(),
-                progress_tracker,
                 db.clone(),
             ));
 
@@ -2753,7 +2749,9 @@ async fn get_metrics_handler(
     // Calculate disk usage
     let mut total_disk_space = 0u64;
     let mut total_used_space = 0u64;
-    for disk in system.disks() {
+    use sysinfo::Disks;
+    let disks = Disks::new_with_refreshed_list();
+    for disk in disks.list() {
         total_disk_space += disk.total_space();
         total_used_space += disk.total_space() - disk.available_space();
     }
@@ -4365,7 +4363,7 @@ async fn create_project_overview_version_handler(
                  VALUES ($1, $2, $3, $4) 
                  RETURNING version_id, project_id, overview, change_summary, created_by, created_at";
     
-    match db.query(query, &[&project_uuid, overview, &change_summary, &created_by]).await {
+    match db.query(query, &[&project_uuid, &overview, &change_summary, &created_by]).await {
         Ok(rows) => {
             if rows.is_empty() {
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -4577,7 +4575,7 @@ async fn update_project_handler(
     let new_overview = payload.get("overview").and_then(|v| v.as_str()).map(|s| s.to_string());
     let old_overview = if new_overview.is_some() {
         match db.get_execution_plan(project_uuid).await {
-            Ok(Some(plan)) => Some(plan.overview),
+            Ok(Some(plan)) => plan.overview, // plan.overview is already Option<String>
             _ => None,
         }
     } else {
@@ -4585,6 +4583,7 @@ async fn update_project_handler(
     };
     
     // Create version if overview changed
+    // Compare Option<String> with Option<String>
     if let (Some(new_ov), Some(old_ov)) = (&new_overview, &old_overview) {
         if new_ov != old_ov {
             // Create version entry before updating
@@ -5386,97 +5385,8 @@ async fn get_system_health_handler(
     Ok(Json(health))
 }
 
-/// Get system metrics for dashboard
-/// 
-/// Returns combined system and task metrics suitable for dashboard display
-async fn get_metrics_handler(
-    State(state): State<AppState>,
-) -> Result<Json<JsonValue>, StatusCode> {
-    use sysinfo::{System, Disks, Networks};
-    
-    let mut system = System::new_all();
-    system.refresh_all();
-    
-    // Get CPU usage
-    let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
-    
-    // Get memory usage
-    let total_memory = system.total_memory();
-    let used_memory = system.used_memory();
-    let memory_usage_mb = used_memory / (1024 * 1024); // Convert to MB
-    let memory_usage_percent = if total_memory > 0 {
-        (used_memory as f64 / total_memory as f64) * 100.0
-    } else {
-        0.0
-    };
-    
-    // Get disk usage
-    let mut total_disk = 0u64;
-    let mut used_disk = 0u64;
-    let disks = Disks::new_with_refreshed_list();
-    for disk in disks.list() {
-        total_disk += disk.total_space();
-        used_disk += disk.total_space().saturating_sub(disk.available_space());
-    }
-    let disk_usage_mb = used_disk / (1024 * 1024); // Convert to MB
-    let disk_usage_percent = if total_disk > 0 {
-        (used_disk as f64 / total_disk as f64) * 100.0
-    } else {
-        0.0
-    };
-    
-    // Get network usage
-    let mut network_bytes = 0u64;
-    let networks = Networks::new_with_refreshed_list();
-    for (_interface_name, network) in networks.iter() {
-        network_bytes += network.received() + network.transmitted();
-    }
-    let network_usage_mb = network_bytes / (1024 * 1024); // Convert to MB
-    
-    // Get task metrics from database
-    let task_metrics = if let Some(db) = &state.db_client {
-        match db.get_tasks().await {
-            Ok(tasks) => {
-                let total = tasks.len();
-                let active = tasks.iter().filter(|t| t.status == "in_progress" || t.status == "running").count();
-                let completed = tasks.iter().filter(|t| t.status == "completed").count();
-                let failed = tasks.iter().filter(|t| t.status == "failed").count();
-                serde_json::json!({
-                    "total": total,
-                    "active": active,
-                    "completed": completed,
-                    "failed": failed
-                })
-            }
-            Err(_) => serde_json::json!({
-                "total": 0,
-                "active": 0,
-                "completed": 0,
-                "failed": 0
-            })
-        }
-    } else {
-        serde_json::json!({
-            "total": 0,
-            "active": 0,
-            "completed": 0,
-            "failed": 0
-        })
-    };
-    
-    Ok(Json(serde_json::json!({
-        "system": {
-            "cpu_usage_percent": cpu_usage,
-            "memory_usage_mb": memory_usage_mb,
-            "memory_usage_percent": memory_usage_percent,
-            "disk_usage_mb": disk_usage_mb,
-            "disk_usage_percent": disk_usage_percent,
-            "network_usage_mb": network_usage_mb
-        },
-        "tasks": task_metrics,
-        "timestamp": chrono::Utc::now().to_rfc3339()
-    })))
-}
+// Duplicate get_metrics_handler removed - using Prometheus format version at line 2727
+// The /metrics endpoint uses the Prometheus format handler which is standard for monitoring
 
 async fn get_resource_usage_handler(
     State(_state): State<AppState>,

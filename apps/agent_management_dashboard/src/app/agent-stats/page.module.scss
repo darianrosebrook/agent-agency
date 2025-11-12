@@ -343,6 +343,62 @@
   gap: $spacing-1;
 }
 
+// Summary metrics
+.summaryMetrics {
+  display: flex;
+  gap: $spacing-4;
+  flex-wrap: wrap;
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+  margin-bottom: $spacing-4;
+}
+
+.summaryMetric {
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+}
+
+// Completion list
+.completionList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.completionItem {
+  padding: $spacing-4;
+  background-color: #0f0f0f; // bg-[#0f0f0f]
+  border-radius: 0.5rem; // rounded-md
+  border: 1px solid oklch(0.269 0 0); // border-gray-800
+}
+
+.completionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-3;
+}
+
+.completionMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: $spacing-3;
+}
+
+.completionMetric {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+.workerType {
+  color: oklch(0.5 0 0); // text-gray-400
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
 // Efficiency list
 .efficiencyList {
   display: flex;
@@ -358,19 +414,22 @@
 }
 
 .efficiencyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: $spacing-3;
 }
 
 .efficiencyMetrics {
-  display: flex;
-  gap: $spacing-4;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: $spacing-3;
 }
 
 .efficiencyMetric {
   display: flex;
-  gap: $spacing-2;
-  align-items: center;
+  flex-direction: column;
+  gap: $spacing-1;
 }
 
 // Info text
