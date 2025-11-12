@@ -274,49 +274,6 @@ export interface ComplianceStats {
 }
 
 export async function getComplianceStats(): Promise<ComplianceStats> {
-  const [rules, violations] = await Promise.all([
-    getRules(),
-    getViolations(),
-  ]);
-
-  const activeRules = rules.filter((r) => r.is_active);
-  const openViolations = violations.filter((v) => v.status === 'open');
-  const resolvedViolations = violations.filter((v) => v.status === 'resolved');
-
-  const violationsBySeverity: Record<string, number> = {};
-  violations.forEach((v) => {
-    violationsBySeverity[v.severity] = (violationsBySeverity[v.severity] ?? 0) + 1;
-  });
-
-  const violationsByRule: Record<string, { rule_name: string; count: number }> = {};
-  violations.forEach((v) => {
-    if (!violationsByRule[v.rule_id]) {
-      const rule = rules.find((r) => r.id === v.rule_id);
-      violationsByRule[v.rule_id] = {
-        rule_name: rule?.name ?? v.rule_id,
-        count: 0,
-      };
-    }
-    violationsByRule[v.rule_id].count += 1;
-  });
-
-  const complianceScore = activeRules.length > 0
-    ? Math.max(0, 100 - (openViolations.length / activeRules.length) * 100)
-    : 100;
-
-  return {
-    total_rules: rules.length,
-    active_rules: activeRules.length,
-    total_violations: violations.length,
-    open_violations: openViolations.length,
-    resolved_violations: resolvedViolations.length,
-    compliance_score: Math.round(complianceScore * 100) / 100,
-    violations_by_severity: violationsBySeverity,
-    violations_by_rule: Object.entries(violationsByRule).map(([rule_id, data]) => ({
-      rule_id,
-      rule_name: data.rule_name,
-      violation_count: data.count,
-    })),
-  };
+  return apiGet<ComplianceStats>(`${API_BASE}/rules/compliance-stats`);
 }
 

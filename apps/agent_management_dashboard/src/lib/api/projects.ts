@@ -347,9 +347,12 @@ export async function getProjectOverviewVersions(
   projectId: string,
   limit?: number
 ): Promise<ProjectOverviewVersionsResponse> {
-  // TODO: Implement when backend API is available
-  // For now, return empty array - version history will be tracked client-side
-  return { versions: [] };
+  const queryParams = new URLSearchParams();
+  if (limit) queryParams.append('limit', limit.toString());
+  
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/projects/${projectId}/overview-versions${queryString ? `?${queryString}` : ''}`;
+  return apiGet<ProjectOverviewVersionsResponse>(url);
 }
 
 /**
@@ -359,16 +362,10 @@ export async function restoreProjectOverviewVersion(
   projectId: string,
   versionId: string
 ): Promise<ProjectApiResponse> {
-  // TODO: Implement when backend API is available
-  // For now, fetch the version and update overview
-  const versions = await getProjectOverviewVersions(projectId);
-  const version = versions.versions.find((v) => v.version_id === versionId);
-
-  if (!version) {
-    throw new Error(`Version ${versionId} not found`);
-  }
-
-  return updateProjectOverview(projectId, version.overview);
+  return apiPost<ProjectApiResponse>(
+    `${API_BASE}/projects/${projectId}/overview-versions/${versionId}/restore`,
+    {}
+  );
 }
 
 /**
@@ -466,5 +463,18 @@ export async function getProjectTaskSettings(
 ): Promise<ProjectSettings> {
   return apiGet<ProjectSettings>(
     `${API_BASE}/projects/${projectId}/task-settings`
+  );
+}
+
+/**
+ * Update project task settings
+ */
+export async function updateProjectTaskSettings(
+  projectId: string,
+  settings: Partial<Record<string, unknown>>
+): Promise<ProjectSettings> {
+  return apiPatch<ProjectSettings>(
+    `${API_BASE}/projects/${projectId}/task-settings`,
+    settings
   );
 }
