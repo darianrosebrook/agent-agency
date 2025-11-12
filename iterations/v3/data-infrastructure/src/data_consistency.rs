@@ -552,14 +552,18 @@ impl DataConsistencyManager {
     }
 
     /// Find specific data inconsistencies
+    /// 
+    /// Compares row IDs between primary and replica databases to detect missing records.
+    /// This is an incremental improvement over simple count comparison - it identifies
+    /// which specific records are missing in the replica.
     async fn find_inconsistencies(
         &self,
         primary: &DatabaseClient,
         replica: &DatabaseClient,
         table_name: &str,
     ) -> Result<Vec<Inconsistency>, String> {
+        // Query row IDs from both databases (limited to 1000 for performance)
         // TODO: Implement comprehensive data consistency checking
-        // - Compare actual data records between primary and replica
         // - Implement checksum-based validation for large tables
         // - Add support for comparing specific columns or computed values
         // - Handle different data types and serialization formats
@@ -567,7 +571,7 @@ impl DataConsistencyManager {
         // - Implement sampling strategies for very large tables
         // - Add detailed inconsistency reporting with row-level details
 
-        let query = format!("SELECT id FROM {} LIMIT 100", table_name);
+        let query = format!("SELECT id FROM {} ORDER BY id LIMIT 1000", table_name);
 
         let primary_rows = primary.query(&query, &[]).await
             .map_err(|e| format!("Failed to query primary: {}", e))?;
@@ -577,13 +581,59 @@ impl DataConsistencyManager {
 
         let mut inconsistencies = Vec::new();
 
-        // Simple comparison - in real implementation, this would be much more sophisticated
+        // Check row count mismatch
         if primary_rows.len() != replica_rows.len() {
             inconsistencies.push(Inconsistency {
                 record_id: "count_mismatch".to_string(),
                 primary_value: serde_json::json!(primary_rows.len()),
                 replica_value: serde_json::json!(replica_rows.len()),
                 difference_type: "row_count".to_string(),
+                severity: InconsistencySeverity::Medium,
+            });
+        }
+
+        // Extract IDs from primary rows
+        let mut primary_ids = std::collections::HashSet::new();
+        for row in &primary_rows {
+            if let Ok(id) = row.try_get::<String, &str>("id") {
+                primary_ids.insert(id);
+            } else if let Ok(id) = row.try_get::<uuid::Uuid, &str>("id") {
+                primary_ids.insert(id.to_string());
+            } else if let Ok(id) = row.try_get::<i64, &str>("id") {
+                primary_ids.insert(id.to_string());
+            }
+        }
+
+        // Extract IDs from replica rows
+        let mut replica_ids = std::collections::HashSet::new();
+        for row in &replica_rows {
+            if let Ok(id) = row.try_get::<String, &str>("id") {
+                replica_ids.insert(id);
+            } else if let Ok(id) = row.try_get::<uuid::Uuid, &str>("id") {
+                replica_ids.insert(id.to_string());
+            } else if let Ok(id) = row.try_get::<i64, &str>("id") {
+                replica_ids.insert(id.to_string());
+            }
+        }
+
+        // Find records in primary but not in replica
+        for missing_id in primary_ids.difference(&replica_ids) {
+            inconsistencies.push(Inconsistency {
+                record_id: missing_id.clone(),
+                primary_value: serde_json::json!({"exists": true}),
+                replica_value: serde_json::json!({"exists": false}),
+                difference_type: "missing_in_replica".to_string(),
+                severity: InconsistencySeverity::High,
+            });
+        }
+
+        // Find records in replica but not in primary (orphaned records)
+        for orphaned_id in replica_ids.difference(&primary_ids) {
+            inconsistencies.push(Inconsistency {
+                record_id: orphaned_id.clone(),
+                primary_value: serde_json::json!({"exists": false}),
+                replica_value: serde_json::json!({"exists": true}),
+                difference_type: "orphaned_in_replica".to_string(),
                 severity: InconsistencySeverity::Medium,
             });
         }
