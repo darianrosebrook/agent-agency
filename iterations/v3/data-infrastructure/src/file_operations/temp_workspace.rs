@@ -1241,53 +1241,35 @@ fn extract_file_reference(line: &str) -> Option<String> {
 impl ChangesetApplicationEngine {
     async fn apply_single_patch_atomic(&self, patch: &Patch, workspace_path: &Path) -> Result<u64> {
         let file_path = workspace_path.join(&patch.path);
-        // TODO: Count actual I/O operations during patch application
-        //       Currently uses placeholder count; should track actual I/O operations (reads, writes, seeks) during patch application.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Track file read operations
-        // [ ] Track file write operations
-        // [ ] Track directory creation operations
-        // [ ] Track file seek operations
-        // [ ] Count total I/O operations accurately
-        // [ ] Add unit tests for I/O counting
-        // [ ] Add integration tests with various patches
-        // [ ] Verify I/O operation counting accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - I/O operations are counted accurately
-        // - All operation types are tracked
-        // - Total count reflects actual I/O performed
-        // - I/O counting is efficient
-        //
-        // DEPENDENCIES:
-        // - I/O operation tracking utilities (Required)
-        // - File operation monitoring (Required)
-        // - Operation counting infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~50 LOC
-        // - Reviewer Requirements: I/O monitoring expertise
-        let io_operations = 1; // Temporary: placeholder count until actual I/O tracking
+        // Track actual I/O operations during patch application
+        let mut io_operations = 0u64;
 
-        // Ensure parent directory exists
+        // Ensure parent directory exists (directory creation I/O)
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).await.map_err(FileOpsError::Io)?;
+            // Check if directory already exists to avoid counting unnecessary operations
+            if !parent.exists() {
+                fs::create_dir_all(parent).await.map_err(FileOpsError::Io)?;
+                // Count directory creation operations (one per directory level created)
+                // create_dir_all may create multiple directories, but we count it as one operation
+                io_operations += 1;
+            }
         }
 
-        // Read current content
-        let current_content = fs::read_to_string(&file_path).await.unwrap_or_default();
+        // Read current content (file read I/O)
+        let current_content = if file_path.exists() {
+            io_operations += 1; // File read operation
+            fs::read_to_string(&file_path).await.unwrap_or_default()
+        } else {
+            // File doesn't exist yet, no read operation needed
+            String::new()
+        };
 
-        // Apply patch
+        // Apply patch (in-memory operation, no I/O)
         let new_content = self.apply_hunks_to_content(&current_content, &patch.hunks)?;
 
-        // Write new content
+        // Write new content (file write I/O)
         fs::write(&file_path, new_content).await.map_err(FileOpsError::Io)?;
+        io_operations += 1; // File write operation
 
         Ok(io_operations)
     }
