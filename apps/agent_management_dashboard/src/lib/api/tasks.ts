@@ -67,6 +67,45 @@ export async function getTasksStats(): Promise<TasksStats> {
 }
 
 /**
+ * Task stats history data point
+ */
+export interface TaskStatsHistoryPoint {
+  date: string;
+  total: number;
+  completed: number;
+  in_progress: number;
+  pending: number;
+  failed: number;
+  cancelled: number;
+  completion_rate: number;
+}
+
+/**
+ * Task stats history response
+ */
+export interface TaskStatsHistoryResponse {
+  period: string;
+  period_days: number;
+  history: TaskStatsHistoryPoint[];
+}
+
+/**
+ * Get task completion history for trend analysis
+ */
+export async function getTasksStatsHistory(params?: {
+  period?: string; // e.g., "30d", "7d", "90d"
+}): Promise<TaskStatsHistoryResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.period) queryParams.append("period", params.period);
+
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/tasks/stats/history${
+    queryString ? `?${queryString}` : ""
+  }`;
+  return apiGet<TaskStatsHistoryResponse>(url);
+}
+
+/**
  * List all tasks
  */
 export async function listTasks(): Promise<TasksListResponse> {

@@ -208,31 +208,93 @@ export async function getAgentActivity(params?: {
 }
 
 /**
- * Get model contribution statistics
+ * Monthly model contribution data point
  */
-export async function getModelContributions(): Promise<ModelContribution[]> {
-  return apiGet<ModelContribution[]>(
-    `${API_BASE}/telemetry/model-contributions`
-  );
+export interface MonthlyModelContribution {
+  month: string;
+  [model: string]: string | number;
+}
+
+/**
+ * Model contributions response with monthly breakdown
+ */
+export interface ModelContributionsResponse {
+  total_requests?: number;
+  models?: ModelContribution[];
+  monthly_contributions?: MonthlyModelContribution[];
+  models_list?: string[];
+}
+
+/**
+ * Get model contribution statistics
+ * Use group_by=month to get monthly breakdown for charts
+ */
+export async function getModelContributions(params?: {
+  group_by?: "month" | "source";
+}): Promise<ModelContribution[] | ModelContributionsResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.group_by) queryParams.append("group_by", params.group_by);
+
+  const queryString = queryParams.toString();
+  const url = `${API_BASE}/telemetry/model-contributions${
+    queryString ? `?${queryString}` : ""
+  }`;
+  
+  // If group_by=month, return the full response with monthly breakdown
+  if (params?.group_by === "month") {
+    return apiGet<ModelContributionsResponse>(url);
+  }
+  
+  // Otherwise return legacy format (for backwards compatibility)
+  return apiGet<ModelContribution[]>(url);
+}
+
+/**
+ * Daily contribution data point
+ */
+export interface DailyContribution {
+  day: string;
+  count: number;
+  unique_contributors: number;
+}
+
+/**
+ * Contributions response with daily breakdown
+ */
+export interface ContributionsResponse {
+  period_days: number;
+  total_contributions: number;
+  unique_contributors: number;
+  daily_contributions?: DailyContribution[];
 }
 
 /**
  * Get code contribution statistics
+ * Use group_by=day to get daily breakdown for charts
  */
 export async function getContributions(params?: {
   agent_id?: string;
   start_date?: string;
   end_date?: string;
-}): Promise<ContributionStats[]> {
+  group_by?: "day" | "total";
+}): Promise<ContributionStats[] | ContributionsResponse> {
   const queryParams = new URLSearchParams();
   if (params?.agent_id) queryParams.append("agent_id", params.agent_id);
   if (params?.start_date) queryParams.append("start_date", params.start_date);
   if (params?.end_date) queryParams.append("end_date", params.end_date);
+  if (params?.group_by) queryParams.append("group_by", params.group_by);
 
   const queryString = queryParams.toString();
   const url = `${API_BASE}/telemetry/contributions${
     queryString ? `?${queryString}` : ""
   }`;
+  
+  // If group_by=day, return the full response with daily breakdown
+  if (params?.group_by === "day") {
+    return apiGet<ContributionsResponse>(url);
+  }
+  
+  // Otherwise return legacy format (for backwards compatibility)
   return apiGet<ContributionStats[]>(url);
 }
 

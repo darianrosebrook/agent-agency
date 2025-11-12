@@ -461,6 +461,7 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/tasks", post(submit_task_handler))
         .route("/api/v1/tasks", get(list_tasks_handler))
         .route("/api/v1/tasks/stats", get(get_tasks_stats_handler))
+        .route("/api/v1/tasks/stats/history", get(get_tasks_stats_history_handler))
         .route("/api/v1/tasks/:task_id", get(get_task_status_handler))
         .route("/api/v1/tasks/:task_id", axum::routing::patch(update_task_handler))
         .route("/api/v1/tasks/:task_id", axum::routing::delete(delete_task_handler))
@@ -1292,6 +1293,85 @@ async fn get_tasks_stats_handler(
         Err(e) => {
             error!("Failed to get tasks stats: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_tasks_stats_history_handler(
+    State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<JsonValue>, StatusCode> {
+    let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    
+    // Parse period parameter (e.g., "30d", "7d", "90d")
+    let period = params.get("period").map(|s| s.as_str()).unwrap_or("30d");
+    let days = period
+        .strip_suffix("d")
+        .and_then(|d| d.parse::<i64>().ok())
+        .unwrap_or(30);
+    
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days);
+    
+    // Query tasks grouped by day with completion rates
+    match db.query(
+        "SELECT 
+            DATE_TRUNC('day', created_at) as day,
+            COUNT(*) as total_tasks,
+            COUNT(*) FILTER (WHERE status = 'completed') as completed_tasks,
+            COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress_tasks,
+            COUNT(*) FILTER (WHERE status = 'pending') as pending_tasks,
+            COUNT(*) FILTER (WHERE status = 'failed') as failed_tasks,
+            COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_tasks
+        FROM tasks 
+        WHERE created_at >= $1 
+        GROUP BY DATE_TRUNC('day', created_at) 
+        ORDER BY day DESC",
+        &[&cutoff_date]
+    ).await {
+        Ok(rows) => {
+            let mut history: Vec<JsonValue> = Vec::new();
+            
+            for row in rows {
+                let day: chrono::DateTime<chrono::Utc> = row.try_get("day").unwrap_or_default();
+                let total: i64 = row.try_get("total_tasks").unwrap_or(0);
+                let completed: i64 = row.try_get("completed_tasks").unwrap_or(0);
+                let in_progress: i64 = row.try_get("in_progress_tasks").unwrap_or(0);
+                let pending: i64 = row.try_get("pending_tasks").unwrap_or(0);
+                let failed: i64 = row.try_get("failed_tasks").unwrap_or(0);
+                let cancelled: i64 = row.try_get("cancelled_tasks").unwrap_or(0);
+                
+                let completion_rate = if total > 0 {
+                    (completed as f64 / total as f64) * 100.0
+                } else {
+                    0.0
+                };
+                
+                history.push(serde_json::json!({
+                    "date": day.to_rfc3339(),
+                    "total": total,
+                    "completed": completed,
+                    "in_progress": in_progress,
+                    "pending": pending,
+                    "failed": failed,
+                    "cancelled": cancelled,
+                    "completion_rate": completion_rate,
+                }));
+            }
+            
+            Ok(Json(serde_json::json!({
+                "period": period,
+                "period_days": days,
+                "history": history,
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get tasks stats history: {}", e);
+            // Return empty history on error
+            Ok(Json(serde_json::json!({
+                "period": period,
+                "period_days": days,
+                "history": [],
+            })))
         }
     }
 }
@@ -2470,106 +2550,214 @@ async fn get_contributions_handler(
     
     // Get days parameter (default to 30)
     let days = params.get("days")
-        .and_then(|d| d.parse::<i64>().ok())
+        .or_else(|| {
+            // Support start_date/end_date for backwards compatibility
+            params.get("start_date").and_then(|start| {
+                let start_date = chrono::DateTime::parse_from_rfc3339(&format!("{}T00:00:00Z", start)).ok()?;
+                let now = chrono::Utc::now();
+                let diff = now.signed_duration_since(start_date);
+                Some(diff.num_days())
+            })
+        })
+        .and_then(|d| Some(d.max(1)))
         .unwrap_or(30);
     
     let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days);
     
-    // Query provenance_entries for code contribution events
-    match db.query(
-        "SELECT DATE_TRUNC('day', timestamp) as day, COUNT(*) as count, COUNT(DISTINCT actor) as unique_contributors FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1 GROUP BY DATE_TRUNC('day', timestamp) ORDER BY day DESC",
-        &[&cutoff_date]
-    ).await {
-        Ok(rows) => {
-            let mut contributions: Vec<JsonValue> = Vec::new();
-            let mut total_contributions = 0;
-            let mut unique_contributors = std::collections::HashSet::new();
-            
-            for row in rows {
-                let day: chrono::DateTime<chrono::Utc> = row.try_get("day").unwrap_or_default();
-                let count: i64 = row.try_get("count").unwrap_or(0);
-                let contributors: i64 = row.try_get("unique_contributors").unwrap_or(0);
+    // Check if group_by parameter is set
+    let group_by = params.get("group_by").map(|s| s.as_str());
+    
+    // Default behavior: return daily breakdown
+    // If group_by is explicitly set to something other than "day", return aggregated totals
+    if group_by == Some("total") {
+        match db.query(
+            "SELECT COUNT(*) as count FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1",
+            &[&cutoff_date]
+        ).await {
+            Ok(rows) => {
+                let total_contributions: i64 = rows.first()
+                    .and_then(|row| row.try_get("count").ok())
+                    .unwrap_or(0);
                 
-                total_contributions += count;
-                contributions.push(serde_json::json!({
-                    "day": day.to_rfc3339(),
-                    "count": count,
-                    "unique_contributors": contributors,
-                }));
+                // Get unique contributors count
+                let unique_contributors = match db.query(
+                    "SELECT COUNT(DISTINCT actor) as count FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1",
+                    &[&cutoff_date]
+                ).await {
+                    Ok(contributor_rows) => {
+                        contributor_rows.first()
+                            .and_then(|row| row.try_get::<i64, _>("count").ok())
+                            .unwrap_or(0)
+                    }
+                    Err(_) => 0,
+                };
+                
+                Ok(Json(serde_json::json!({
+                    "period_days": days,
+                    "total_contributions": total_contributions,
+                    "unique_contributors": unique_contributors,
+                })))
             }
-            
-            // Get unique contributors count from all rows
-            match db.query(
-                "SELECT DISTINCT actor FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1",
-                &[&cutoff_date]
-            ).await {
-                Ok(contributor_rows) => {
-                    for row in contributor_rows {
-                        if let Ok(actor) = row.try_get::<String, _>("actor") {
-                            unique_contributors.insert(actor);
+            Err(_) => {
+                Ok(Json(serde_json::json!({
+                    "period_days": days,
+                    "total_contributions": 0,
+                    "unique_contributors": 0,
+                })))
+            }
+        }
+    } else {
+        // Return daily breakdown (default behavior)
+        match db.query(
+            "SELECT DATE_TRUNC('day', timestamp) as day, COUNT(*) as count, COUNT(DISTINCT actor) as unique_contributors FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1 GROUP BY DATE_TRUNC('day', timestamp) ORDER BY day DESC",
+            &[&cutoff_date]
+        ).await {
+            Ok(rows) => {
+                let mut contributions: Vec<JsonValue> = Vec::new();
+                let mut total_contributions = 0;
+                let mut unique_contributors = std::collections::HashSet::new();
+                
+                for row in rows {
+                    let day: chrono::DateTime<chrono::Utc> = row.try_get("day").unwrap_or_default();
+                    let count: i64 = row.try_get("count").unwrap_or(0);
+                    let contributors: i64 = row.try_get("unique_contributors").unwrap_or(0);
+                    
+                    total_contributions += count;
+                    contributions.push(serde_json::json!({
+                        "day": day.to_rfc3339(),
+                        "count": count,
+                        "unique_contributors": contributors,
+                    }));
+                }
+                
+                // Get unique contributors count from all rows
+                match db.query(
+                    "SELECT DISTINCT actor FROM provenance_entries WHERE action IN ('code_change', 'file_edit', 'commit', 'create', 'update', 'delete') AND timestamp >= $1",
+                    &[&cutoff_date]
+                ).await {
+                    Ok(contributor_rows) => {
+                        for row in contributor_rows {
+                            if let Ok(actor) = row.try_get::<String, _>("actor") {
+                                unique_contributors.insert(actor);
+                            }
                         }
                     }
+                    Err(_) => {}
                 }
-                Err(_) => {}
+                
+                Ok(Json(serde_json::json!({
+                    "period_days": days,
+                    "total_contributions": total_contributions,
+                    "unique_contributors": unique_contributors.len(),
+                    "daily_contributions": contributions,
+                })))
             }
-            
-            Ok(Json(serde_json::json!({
-                "period_days": days,
-                "total_contributions": total_contributions,
-                "unique_contributors": unique_contributors.len(),
-                "daily_contributions": contributions,
-            })))
-        }
-        Err(_) => {
-            // If table doesn't exist or query fails, return empty result
-            Ok(Json(serde_json::json!({
-                "period_days": days,
-                "total_contributions": 0,
-                "unique_contributors": 0,
-                "daily_contributions": [],
-            })))
+            Err(_) => {
+                // If table doesn't exist or query fails, return empty result
+                Ok(Json(serde_json::json!({
+                    "period_days": days,
+                    "total_contributions": 0,
+                    "unique_contributors": 0,
+                    "daily_contributions": [],
+                })))
+            }
         }
     }
 }
 
 async fn get_model_contributions_handler(
     State(state): State<AppState>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<JsonValue>, StatusCode> {
     let db = state.db_client.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
     
-    // Query telemetry_data for model-related contributions
-    match db.query(
-        "SELECT source, COUNT(*) as count, MAX(timestamp) as last_used FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY source ORDER BY count DESC",
-        &[]
-    ).await {
-        Ok(rows) => {
-            let mut model_stats: Vec<JsonValue> = Vec::new();
-            let mut total_requests = 0;
-            
-            for row in rows {
-                let source: String = row.try_get("source").unwrap_or_default();
-                let count: i64 = row.try_get("count").unwrap_or(0);
-                let last_used: Option<chrono::DateTime<chrono::Utc>> = row.try_get("last_used").ok();
+    // Check if group_by parameter is set to "month"
+    let group_by = params.get("group_by").map(|s| s.as_str());
+    
+    if group_by == Some("month") {
+        // Return monthly breakdown
+        match db.query(
+            "SELECT DATE_TRUNC('month', timestamp) as month, source, COUNT(*) as count FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY DATE_TRUNC('month', timestamp), source ORDER BY month DESC, count DESC",
+            &[]
+        ).await {
+            Ok(rows) => {
+                let mut monthly_data: std::collections::HashMap<String, std::collections::HashMap<String, i64>> = std::collections::HashMap::new();
+                let mut all_models = std::collections::HashSet::new();
                 
-                total_requests += count;
-                model_stats.push(serde_json::json!({
-                    "model": source,
-                    "request_count": count,
-                    "last_used": last_used.map(|d| d.to_rfc3339()),
-                }));
+                for row in rows {
+                    let month: chrono::DateTime<chrono::Utc> = row.try_get("month").unwrap_or_default();
+                    let source: String = row.try_get("source").unwrap_or_default();
+                    let count: i64 = row.try_get("count").unwrap_or(0);
+                    
+                    let month_key = month.format("%b").to_string();
+                    all_models.insert(source.clone());
+                    
+                    monthly_data
+                        .entry(month_key)
+                        .or_insert_with(std::collections::HashMap::new)
+                        .insert(source, count);
+                }
+                
+                // Convert to array format
+                let monthly_contributions: Vec<JsonValue> = monthly_data.into_iter().map(|(month, models)| {
+                    let mut month_data = serde_json::json!({
+                        "month": month,
+                    });
+                    
+                    for (model, count) in models {
+                        month_data[model] = serde_json::json!(count);
+                    }
+                    
+                    month_data
+                }).collect();
+                
+                Ok(Json(serde_json::json!({
+                    "monthly_contributions": monthly_contributions,
+                    "models": all_models.into_iter().collect::<Vec<_>>(),
+                })))
             }
-            
-            Ok(Json(serde_json::json!({
-                "total_requests": total_requests,
-                "models": model_stats,
-            })))
+            Err(_) => {
+                Ok(Json(serde_json::json!({
+                    "monthly_contributions": [],
+                    "models": [],
+                })))
+            }
         }
-        Err(_) => {
-            // If table doesn't exist or query fails, return empty result
-            Ok(Json(serde_json::json!({
-                "total_requests": 0,
-                "models": [],
-            })))
+    } else {
+        // Return aggregated by source (default behavior)
+        match db.query(
+            "SELECT source, COUNT(*) as count, MAX(timestamp) as last_used FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY source ORDER BY count DESC",
+            &[]
+        ).await {
+            Ok(rows) => {
+                let mut model_stats: Vec<JsonValue> = Vec::new();
+                let mut total_requests = 0;
+                
+                for row in rows {
+                    let source: String = row.try_get("source").unwrap_or_default();
+                    let count: i64 = row.try_get("count").unwrap_or(0);
+                    let last_used: Option<chrono::DateTime<chrono::Utc>> = row.try_get("last_used").ok();
+                    
+                    total_requests += count;
+                    model_stats.push(serde_json::json!({
+                        "model": source,
+                        "request_count": count,
+                        "last_used": last_used.map(|d| d.to_rfc3339()),
+                    }));
+                }
+                
+                Ok(Json(serde_json::json!({
+                    "total_requests": total_requests,
+                    "models": model_stats,
+                })))
+            }
+            Err(_) => {
+                // If table doesn't exist or query fails, return empty result
+                Ok(Json(serde_json::json!({
+                    "total_requests": 0,
+                    "models": [],
+                })))
+            }
         }
     }
 }
