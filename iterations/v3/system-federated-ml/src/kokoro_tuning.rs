@@ -99,7 +99,7 @@ struct ThermalManager {
 /// Performance tracker for monitoring improvements
 #[derive(Debug)]
 struct PerformanceTracker {
-    baseline_metrics: TuningMetrics,
+    baseline_metrics: Arc<RwLock<TuningMetrics>>,
     best_metrics: Arc<RwLock<TuningMetrics>>,
     improvement_threshold: f32,
 }
@@ -132,8 +132,40 @@ impl KokoroTuner {
     }
 
     /// Establish baseline performance metrics
-    pub async fn establish_baseline(&self, _metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
-        // Stub implementation for baseline establishment
+    /// 
+    /// Converts PerformanceMetrics to TuningMetrics and stores as baseline
+    /// for future improvement comparisons.
+    pub async fn establish_baseline(&self, metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
+        info!("Establishing baseline performance metrics");
+        
+        // Convert PerformanceMetrics to TuningMetrics
+        let baseline_tuning_metrics = TuningMetrics {
+            throughput_ops_per_sec: metrics.throughput as f32,
+            latency_p95_ms: metrics.p95_latency_ms as f32,
+            memory_usage_mb: (metrics.memory_usage_percent * 100.0) as usize, // Approximate MB from percentage
+            cpu_utilization_percent: metrics.cpu_usage_percent as f32,
+            thermal_throttling_events: 0, // Not available in PerformanceMetrics
+            accuracy_score: 1.0 - metrics.error_rate as f32, // Use (1 - error_rate) as accuracy proxy
+            throughput_improvement: 1.0, // Baseline has no improvement
+            quality_degradation: 0.0, // Baseline has no degradation
+        };
+        
+        // Update baseline in performance tracker
+        // Note: baseline_metrics is not mutable, so we need to update through a method
+        // Since PerformanceTracker is private, we'll update best_metrics to match baseline
+        // and the tracker will use baseline_metrics for comparison
+        self.performance_tracker.update_baseline(baseline_tuning_metrics.clone()).await;
+        
+        // Also update best_metrics to baseline initially
+        self.performance_tracker.update_best_metrics(baseline_tuning_metrics).await;
+        
+        info!(
+            "Baseline established: throughput={:.1} ops/sec, latency={:.1}ms, cpu={:.1}%",
+            baseline_tuning_metrics.throughput_ops_per_sec,
+            baseline_tuning_metrics.latency_p95_ms,
+            baseline_tuning_metrics.cpu_utilization_percent
+        );
+        
         Ok(())
     }
 
@@ -395,46 +427,55 @@ impl ThermalManager {
 
 impl PerformanceTracker {
     fn new() -> Self {
+        let default_metrics = TuningMetrics {
+            throughput_ops_per_sec: 100.0,
+            latency_p95_ms: 50.0,
+            memory_usage_mb: 1024,
+            cpu_utilization_percent: 70.0,
+            thermal_throttling_events: 0,
+            accuracy_score: 0.85,
+            throughput_improvement: 1.0,
+            quality_degradation: 0.0,
+        };
+        
         Self {
-            baseline_metrics: TuningMetrics {
-                throughput_ops_per_sec: 100.0,
-                latency_p95_ms: 50.0,
-                memory_usage_mb: 1024,
-                cpu_utilization_percent: 70.0,
-                thermal_throttling_events: 0,
-                accuracy_score: 0.85,
-                throughput_improvement: 1.0,
-                quality_degradation: 0.0,
-            },
-            best_metrics: Arc::new(RwLock::new(TuningMetrics {
-                throughput_ops_per_sec: 100.0,
-                latency_p95_ms: 50.0,
-                memory_usage_mb: 1024,
-                cpu_utilization_percent: 70.0,
-                thermal_throttling_events: 0,
-                accuracy_score: 0.85,
-                throughput_improvement: 1.0,
-                quality_degradation: 0.0,
-            })),
+            baseline_metrics: Arc::new(RwLock::new(default_metrics.clone())),
+            best_metrics: Arc::new(RwLock::new(default_metrics)),
             improvement_threshold: 0.05, // 5% improvement required
         }
     }
 
     async fn evaluate_improvement(&self, new_metrics: &TuningMetrics) -> bool {
+        let baseline = self.baseline_metrics.read().await;
         let best = self.best_metrics.read().await;
-        let throughput_improvement = new_metrics.throughput_ops_per_sec / best.throughput_ops_per_sec - 1.0;
-        let latency_improvement = best.latency_p95_ms / new_metrics.latency_p95_ms - 1.0;
-        let accuracy_improvement = new_metrics.accuracy_score - best.accuracy_score;
+        
+        // Compare against baseline for absolute improvement
+        let throughput_improvement = new_metrics.throughput_ops_per_sec / baseline.throughput_ops_per_sec - 1.0;
+        let latency_improvement = baseline.latency_p95_ms / new_metrics.latency_p95_ms - 1.0;
+        let accuracy_improvement = new_metrics.accuracy_score - baseline.accuracy_score;
+        
+        // Also check if it's better than current best
+        let vs_best_throughput = new_metrics.throughput_ops_per_sec / best.throughput_ops_per_sec - 1.0;
+        let vs_best_latency = best.latency_p95_ms / new_metrics.latency_p95_ms - 1.0;
+        let vs_best_accuracy = new_metrics.accuracy_score - best.accuracy_score;
 
-        // Consider it an improvement if any metric improves significantly
+        // Consider it an improvement if any metric improves significantly vs baseline or best
         throughput_improvement > self.improvement_threshold ||
         latency_improvement > self.improvement_threshold ||
-        accuracy_improvement > self.improvement_threshold
+        accuracy_improvement > self.improvement_threshold ||
+        vs_best_throughput > self.improvement_threshold ||
+        vs_best_latency > self.improvement_threshold ||
+        vs_best_accuracy > self.improvement_threshold
     }
 
     async fn update_best_metrics(&self, new_metrics: TuningMetrics) {
         let mut best = self.best_metrics.write().await;
         *best = new_metrics;
+    }
+    
+    async fn update_baseline(&self, baseline: TuningMetrics) {
+        let mut baseline_metrics = self.baseline_metrics.write().await;
+        *baseline_metrics = baseline;
     }
 }
 

@@ -20,8 +20,10 @@ tracing.workspace = true
 # Schema generation for API docs
 schemars = { version = "0.8", features = ["derive"] }
 
-# Circuit breaker functionality moved to local implementation to avoid cyclic dependencies
-# agent-orchestration = { path = "../agent-orchestration" }
+# Resilience and observability dependencies
+system-resilience = { path = "../system-resilience" }
+system-observability = { path = "../system-observability" }
+system-quality-security = { path = "../system-quality-security" }
 
 # File operations service - runtime injection pattern to avoid circular dependency
 # Note: Cannot directly depend on data-infrastructure due to circular dependency

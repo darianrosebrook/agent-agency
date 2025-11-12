@@ -19,10 +19,16 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
-use tokio::sync::{Mutex, RwLock, oneshot};
+use tokio::sync::{Mutex as TokioMutex, RwLock, oneshot};
+use std::sync::Mutex;
 use tokio::time::timeout;
 // Using council package for security functionality
-// Local circuit breaker implementation to avoid cyclic dependencies
+// Real circuit breaker implementation using system-resilience
+use system_resilience::{CircuitBreaker as ResilienceCircuitBreaker, CircuitBreakerConfig as ResilienceCircuitBreakerConfig, CircuitBreakerStats as ResilienceCircuitBreakerStats, CircuitState};
+// Real audit logger implementation using system-quality-security
+use system_quality_security::{AuditLogger, AuditLoggerConfig};
+use system_quality_security::audit::{AuditResult, AuditSeverity};
+
 #[derive(Debug, Clone, Default, JsonSchema)]
 pub struct CircuitBreakerStats {
     pub total_requests: u64,
@@ -30,6 +36,18 @@ pub struct CircuitBreakerStats {
     pub failed_requests: u64,
     pub circuit_open_count: u64,
     pub last_failure_time: Option<std::time::SystemTime>,
+}
+
+impl From<ResilienceCircuitBreakerStats> for CircuitBreakerStats {
+    fn from(stats: ResilienceCircuitBreakerStats) -> Self {
+        Self {
+            total_requests: stats.total_requests,
+            successful_requests: stats.success_count,
+            failed_requests: stats.failure_count,
+            circuit_open_count: if stats.state == CircuitState::Open { 1 } else { 0 },
+            last_failure_time: stats.last_failure,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -137,12 +155,13 @@ impl CircuitBreaker {
     }
 }
 
-fn get_circuit_breaker_registry() -> CircuitBreaker {
-    CircuitBreaker::new(CircuitBreakerConfig {
-        failure_threshold: 5,
-        recovery_timeout_ms: 30000,
-        success_threshold: 3,
-    })
+// Global circuit breaker registry (initialized on first use)
+lazy_static::lazy_static! {
+    static ref CIRCUIT_BREAKER_REGISTRY: Arc<CircuitBreakerRegistry> = init_circuit_breaker_registry();
+}
+
+fn get_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
+    CIRCUIT_BREAKER_REGISTRY.clone()
 }
 
 // use agent_agency_observability as observability; // Not available as dependency
@@ -190,7 +209,7 @@ impl Type<Postgres> for QueryParam {
 
 #[derive(Clone, Debug)]
 pub struct DatabaseClient {
-    pool: Arc<PgPool>,
+    pub(crate) pool: Arc<PgPool>,
 }
 
 impl DatabaseClient {
@@ -244,46 +263,80 @@ impl DatabaseClient {
     }
 }
 
-#[derive(Clone, Debug, JsonSchema)]
-pub struct SLOTracker ;
+/// Adapter that implements SloDatabaseClient for agent-mcp::DatabaseClient
+/// This allows SLOTracker to work with agent-mcp's local database client
+/// without creating circular dependencies
+struct McpDatabaseClientAdapter {
+    client: Arc<DatabaseClient>,
+}
 
-impl SLOTracker {
-    pub fn new(_db_client: Arc<DatabaseClient>) -> Arc<Self> {
-        Arc::new(Self)
-    }
-
-    pub async fn get_all_slo_statuses(&self) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(vec!["slo1".to_string(), "slo2".to_string()])
-    }
-
-    pub async fn register_slo(&self, _slo: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        Ok(())
-    }
-
-    pub async fn get_recent_alerts(&self, _limit: usize) -> Vec<String> {
-        vec!["alert1".to_string()]
+impl McpDatabaseClientAdapter {
+    fn new(client: Arc<DatabaseClient>) -> Self {
+        Self { client }
     }
 }
 
-pub mod slo {
-    use super::*;
-
-    pub fn create_default_slos() -> Vec<String> {
-        vec!["default_slo".to_string()]
+#[async_trait::async_trait]
+impl system_observability::slo::SloDatabaseClient for McpDatabaseClientAdapter {
+    async fn execute(
+        &self,
+        query: &str,
+        params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)],
+    ) -> Result<sqlx::postgres::PgQueryResult, Box<dyn std::error::Error + Send + Sync>> {
+        // Note: sqlx doesn't support binding trait objects directly
+        // We use a workaround: execute queries through the pool with manual parameter handling
+        // This matches the pattern used in data-infrastructure::DatabaseClient
+        
+        if params.is_empty() {
+            let result = sqlx::query(query).execute(self.client.pool.as_ref()).await?;
+            Ok(result)
+        } else {
+            // For parameterized queries, we need to use a different approach
+            // Since we can't bind trait objects, we'll use sqlx::query_scalar or similar
+            // For now, return an error indicating this needs proper implementation
+            // The real solution would require converting trait objects to concrete types
+            // or using sqlx::query! macro at compile time
+            Err(format!(
+                "Parameterized queries with trait objects not fully supported. \
+                Query: {}, Parameters: {}",
+                query.chars().take(100).collect::<String>(),
+                params.len()
+            ).into())
+        }
     }
 
-    #[derive(Debug, Clone, JsonSchema)]
+    async fn query(
+        &self,
+        query: &str,
+        params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)],
+    ) -> Result<Vec<sqlx::postgres::PgRow>, Box<dyn std::error::Error + Send + Sync>> {
+        // Note: sqlx doesn't support binding trait objects directly
+        // We use a workaround similar to data-infrastructure::DatabaseClient
+        
+        if params.is_empty() {
+            let rows = sqlx::query(query).fetch_all(self.client.pool.as_ref()).await?;
+            Ok(rows)
+        } else {
+            // For parameterized queries, return error indicating limitation
+            // The real solution would require converting trait objects to concrete types
+            Err(format!(
+                "Parameterized queries with trait objects not fully supported. \
+                Query: {}, Parameters: {}",
+                query.chars().take(100).collect::<String>(),
+                params.len()
+            ).into())
+        }
+    }
+}
+
+#[derive(Debug, Clone, JsonSchema)]
 pub enum SLOStatus {
-        Compliant,
-        AtRisk,
-        Violated,
-        Unknown,
-    }
+    Compliant,
+    AtRisk,
+    Violated,
+    Unknown,
 }
 
-pub mod observability {
-    pub use super::slo;
-}
 
 // Using CircuitBreakerConfig from council crate
 
@@ -637,49 +690,73 @@ fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
     }
 }
 
-struct CircuitBreakerRegistry;
+/// Real circuit breaker registry using system-resilience
+struct CircuitBreakerRegistry {
+    breakers: Arc<RwLock<HashMap<String, Arc<ResilienceCircuitBreaker>>>>,
+}
 
 impl CircuitBreakerRegistry {
-    fn register(&self, _service_name: &str, _config: CircuitBreakerConfig) {
-        // TODO: Implement real circuit breaker registry
-        // - [ ] Integrate circuit breaker library (e.g., resilience4rs, tower)
-        // - [ ] Register circuit breakers with service names and configurations
-        // - [ ] Track circuit breaker state (open, closed, half-open)
-        // - [ ] Handle circuit breaker lifecycle (creation, updates, deletion)
-        // - [ ] Add unit tests with mock circuit breakers
-        // - [ ] Add integration tests with real circuit breaker behavior
-        // Stub - do nothing
+    fn new() -> Self {
+        Self {
+            breakers: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
-    fn get_all_stats(&self) -> HashMap<String, CircuitBreakerStats> {
-        // TODO: Collect actual circuit breaker statistics
-        // - [ ] Query each registered circuit breaker for stats
-        // - [ ] Aggregate statistics (failure count, success count, state)
-        // - [ ] Calculate success rates and failure rates
-        // - [ ] Include timing information for circuit breaker operations
-        // - [ ] Add unit tests with mock circuit breaker stats
-        // - [ ] Add integration tests with real circuit breaker statistics
-        HashMap::new() // Stub - return empty stats
+    async fn register(&self, service_name: &str, config: CircuitBreakerConfig) {
+        let resilience_config = ResilienceCircuitBreakerConfig {
+            name: Some(service_name.to_string()),
+            failure_threshold: config.failure_threshold as u64,
+            success_threshold: config.success_threshold as u64,
+            timeout_ms: None, // Use default timeout
+            failure_window_ms: None, // Use default window
+            reset_timeout_ms: config.recovery_timeout_ms,
+        };
+        
+        let breaker = Arc::new(ResilienceCircuitBreaker::new(resilience_config));
+        
+        let mut breakers = self.breakers.write().await;
+        breakers.insert(service_name.to_string(), breaker);
+        
+        tracing::info!(
+            service_name = %service_name,
+            failure_threshold = config.failure_threshold,
+            success_threshold = config.success_threshold,
+            "Registered circuit breaker for service"
+        );
+    }
+
+    async fn get_all_stats(&self) -> HashMap<String, CircuitBreakerStats> {
+        let breakers = self.breakers.read().await;
+        let mut stats_map = HashMap::new();
+        
+        for (service_name, breaker) in breakers.iter() {
+            let resilience_stats = breaker.get_stats().await;
+            stats_map.insert(service_name.clone(), resilience_stats.into());
+        }
+        
+        stats_map
+    }
+    
+    async fn get_breaker(&self, service_name: &str) -> Option<Arc<ResilienceCircuitBreaker>> {
+        let breakers = self.breakers.read().await;
+        breakers.get(service_name).cloned()
     }
 }
 
 fn init_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
-    Arc::new(CircuitBreakerRegistry) // Stub
+    Arc::new(CircuitBreakerRegistry::new())
 }
 
+/// Adapter for AuditLogger that provides the interface expected by MCP server
 #[derive(Clone)]
-struct StubAuditLogger {
-    enabled: bool,
-    log_level: String,
-    json_format: bool,
+struct McpAuditLoggerAdapter {
+    logger: Arc<AuditLogger>,
 }
 
-impl StubAuditLogger {
-    fn new(enabled: bool, log_level: String, json_format: bool) -> Self {
+impl McpAuditLoggerAdapter {
+    fn new(logger: AuditLogger) -> Self {
         Self {
-            enabled,
-            log_level,
-            json_format,
+            logger: Arc::new(logger),
         }
     }
 
@@ -691,40 +768,26 @@ impl StubAuditLogger {
         user_agent: Option<String>,
         metadata: HashMap<String, serde_json::Value>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.enabled {
-            return Ok(());
+        let mut context = metadata;
+        if let Some(ip) = ip_address {
+            context.insert("source_ip".to_string(), serde_json::Value::String(ip));
+        }
+        if let Some(ua) = user_agent {
+            context.insert("user_agent".to_string(), serde_json::Value::String(ua));
         }
 
-        let timestamp = chrono::Utc::now().to_rfc3339();
-        let event_type = if success { "auth_success" } else { "auth_failure" };
-        
-        let log_entry = serde_json::json!({
-            "timestamp": timestamp,
-            "event_type": event_type,
-            "user_id": user_id,
-            "ip_address": ip_address,
-            "user_agent": user_agent,
-            "success": success,
-            "metadata": metadata,
-            "severity": if success { "info" } else { "warn" }
-        });
-
-        if self.json_format {
-            tracing::info!(audit_log = %log_entry, "Authentication event logged");
+        let result = if success {
+            AuditResult::Success
         } else {
-            let message = format!(
-                "Authentication {} for user '{}' from IP '{}'",
-                if success { "succeeded" } else { "failed" },
-                user_id,
-                ip_address.unwrap_or_else(|| "unknown".to_string())
-            );
-            
-            if success {
-                tracing::info!("{}", message);
-            } else {
-                tracing::warn!("{}", message);
-            }
-        }
+            AuditResult::Failure("Authentication failed".to_string())
+        };
+
+        self.logger.log_authentication(
+            &user_id,
+            "authenticate",
+            result,
+            context,
+        ).await;
 
         Ok(())
     }
@@ -737,42 +800,28 @@ impl StubAuditLogger {
         ip_address: Option<String>,
         metadata: HashMap<String, serde_json::Value>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if !self.enabled {
-            return Ok(());
+        let mut context = metadata;
+        if let Some(ip) = ip_address {
+            context.insert("source_ip".to_string(), serde_json::Value::String(ip));
         }
+        context.insert("event_type".to_string(), serde_json::Value::String(event_type.clone()));
+        context.insert("description".to_string(), serde_json::Value::String(description.clone()));
 
-        let timestamp = chrono::Utc::now().to_rfc3339();
-        
-        let log_entry = serde_json::json!({
-            "timestamp": timestamp,
-            "event_type": event_type,
-            "severity": severity,
-            "description": description,
-            "ip_address": ip_address,
-            "metadata": metadata
-        });
+        // Map string severity to AuditSeverity
+        let audit_severity = match severity.as_str() {
+            "critical" => AuditSeverity::Critical,
+            "high" => AuditSeverity::Error,
+            "medium" => AuditSeverity::Warning,
+            "low" => AuditSeverity::Info,
+            _ => AuditSeverity::Info,
+        };
 
-        if self.json_format {
-            match severity.as_str() {
-                "critical" => tracing::error!(security_log = %log_entry, "Critical security event"),
-                "high" => tracing::error!(security_log = %log_entry, "High severity security event"),
-                "medium" => tracing::warn!(security_log = %log_entry, "Medium severity security event"),
-                "low" => tracing::info!(security_log = %log_entry, "Low severity security event"),
-                _ => tracing::info!(security_log = %log_entry, "Security event"),
-            }
-        } else {
-            let message = format!("Security event [{}]: {} from IP '{}'", 
-                severity.to_uppercase(), 
-                description,
-                ip_address.unwrap_or_else(|| "unknown".to_string())
-            );
-            
-            match severity.as_str() {
-                "critical" | "high" => tracing::error!("{}", message),
-                "medium" => tracing::warn!("{}", message),
-                _ => tracing::info!("{}", message),
-            }
-        }
+        // Use log_policy_violation for security events
+        self.logger.log_policy_violation(
+            "system",
+            &description,
+            context,
+        ).await;
 
         Ok(())
     }
@@ -822,21 +871,70 @@ impl StubAuditLogger {
     }
 }
 
-fn init_audit_logger(enabled: bool, level: String, json: bool) -> Result<(), String> {
-    tracing::info!(
-        audit_logging_enabled = %enabled,
-        log_level = %level,
-        json_format = %json,
-        "Audit logger initialized"
-    );
-    Ok(())
+/// Global audit logger instance
+lazy_static! {
+    static ref AUDIT_LOGGER: Arc<Mutex<Option<Arc<McpAuditLoggerAdapter>>>> = 
+        Arc::new(Mutex::new(None));
 }
 
-fn get_audit_logger() -> Result<StubAuditLogger, String> {
-    Ok(StubAuditLogger::new(true, "info".to_string(), true))
+async fn init_audit_logger(enabled: bool, level: String, json: bool) -> Result<(), String> {
+    if !enabled {
+        tracing::info!("Audit logging disabled");
+        return Ok(());
+    }
+
+    let config = AuditLoggerConfig {
+        enabled: true,
+        log_file: None,
+        log_directory: Some("audit_logs".to_string()),
+        enable_database_logging: false,
+        database_url: None,
+        max_file_size: 100 * 1024 * 1024, // 100MB
+        max_files: 10,
+        console_logging: true,
+        min_severity: match level.as_str() {
+            "debug" => AuditSeverity::Info,
+            "info" => AuditSeverity::Info,
+            "warn" => AuditSeverity::Warning,
+            "error" => AuditSeverity::Error,
+            _ => AuditSeverity::Info,
+        },
+        structured_logging: json,
+        buffer_size: 1000,
+        flush_interval_ms: 5000,
+    };
+
+    match AuditLogger::new(config).await {
+        Ok(logger) => {
+            let adapter = Arc::new(McpAuditLoggerAdapter::new(logger));
+            *AUDIT_LOGGER.lock().unwrap() = Some(adapter.clone());
+            tracing::info!(
+                audit_logging_enabled = %enabled,
+                log_level = %level,
+                json_format = %json,
+                "Audit logger initialized with real implementation"
+            );
+            Ok(())
+        }
+        Err(e) => {
+            tracing::warn!("Failed to initialize audit logger: {}, using no-op", e);
+            Err(format!("Failed to initialize audit logger: {}", e))
+        }
+    }
 }
-// use observability::slo::{SLOTracker, create_default_slos}; // observability crate not available
-// use data_infrastructure::DatabaseClient; // database crate not available
+
+fn get_audit_logger() -> Result<Arc<McpAuditLoggerAdapter>, String> {
+    // Try to get from global
+    let guard = AUDIT_LOGGER.lock().unwrap();
+    if let Some(logger) = guard.as_ref() {
+        Ok(logger.clone())
+    } else {
+        drop(guard);
+        tracing::warn!("Audit logger not initialized, returning error");
+        Err("Audit logger not initialized. Call init_audit_logger() first.".to_string())
+    }
+}
+use system_observability::slo::{SLOTracker, SLODefinition, create_default_slos};
 use std::net::SocketAddr;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
@@ -1457,8 +1555,9 @@ impl MCPServer {
             .requests_per_minute
             .map(|limit| Arc::new(RateLimitMiddleware::new(Some(RateLimitConfig::default()), vec![])));
 
-        // SLOTracker uses the provided database client
-        let slo_tracker = SLOTracker::new(db_client.clone());
+        // Create real SLOTracker using adapter pattern to avoid circular dependency
+        let slo_db_adapter = Arc::new(McpDatabaseClientAdapter::new(db_client.clone()));
+        let slo_tracker = Arc::new(SLOTracker::new(slo_db_adapter));
 
         // Create FileOperationsService for file tools
         #[cfg(feature = "file-operations")]
@@ -1534,18 +1633,17 @@ impl MCPServer {
         ];
         let api_rate_limiter = Some(Arc::new(RateLimitMiddleware::new(None, api_rate_configs)));
 
-        // Initialize SLO tracker with database client
-        let slo_tracker = {
-            let tracker = SLOTracker::new(db_client.clone());
-            // Register default SLOs for the multimodal RAG system
-            let default_slos = slo::create_default_slos();
-            for slo in default_slos {
-                if let Err(e) = tokio::runtime::Handle::current().block_on(tracker.register_slo(slo.clone())) {
-                    warn!("Failed to register SLO: {}", e);
-                }
+        // Initialize real SLO tracker using adapter pattern to avoid circular dependency
+        let slo_db_adapter = Arc::new(McpDatabaseClientAdapter::new(db_client.clone()));
+        let slo_tracker = Arc::new(SLOTracker::new(slo_db_adapter));
+        
+        // Register default SLOs for the multimodal RAG system
+        let default_slos = create_default_slos();
+        for slo_def in default_slos {
+            if let Err(e) = slo_tracker.register_slo(slo_def.clone()).await {
+                warn!("Failed to register SLO: {}", e);
             }
-            Arc::new(tracker)
-        };
+        }
 
         // Create tool registry with memory system if provided
         // FileOperationsService will be injected via set_file_operations_service() if needed
@@ -1578,67 +1676,55 @@ impl MCPServer {
         }
     }
 
-    /// Update SLO metrics from tracker
+    /// Update SLO metrics from real tracker
     async fn update_slo_metrics(&self) -> Result<()> {
         let slo_statuses = self.slo_tracker.get_all_slo_statuses().await
             .map_err(|e| anyhow!("Failed to get SLO statuses: {}", e))?;
 
-        for status_name in slo_statuses {
-            match status_name.as_str() {
+        let mut overall_compliance = 1.0;
+        let mut slo_count = 0;
+
+        for slo_target in slo_statuses {
+            let compliance = slo_target.compliance_percentage;
+            overall_compliance = (overall_compliance * slo_count as f64 + compliance) / (slo_count + 1) as f64;
+            slo_count += 1;
+
+            match slo_target.slo_name.as_str() {
                 "api_availability" => {
-                    // TODO: Get actual API availability percentage
-                    // - [ ] Query SLO tracker for real API availability metrics
-                    // - [ ] Calculate from historical uptime data
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock SLO data
-                    // - [ ] Add integration tests with real SLO tracking
-                    SLO_API_AVAILABILITY.set(0.95); // Stub compliance percentage
+                    SLO_API_AVAILABILITY.set(compliance);
                 }
                 "task_completion" => {
-                    // TODO: Get actual task completion percentage
-                    // - [ ] Query SLO tracker for real task completion metrics
-                    // - [ ] Calculate from task execution history
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock task data
-                    // - [ ] Add integration tests with real task tracking
-                    SLO_TASK_COMPLETION.set(0.90); // Stub compliance percentage
+                    SLO_TASK_COMPLETION.set(compliance);
                 }
                 "council_decision_time" => {
-                    // TODO: Get actual council decision time
-                    // - [ ] Query SLO tracker for real council decision metrics
-                    // - [ ] Calculate average decision time from recent decisions
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock council data
-                    // - [ ] Add integration tests with real council tracking
-                    SLO_COUNCIL_DECISION_TIME.set(2500.0); // Stub current value
+                    // For time-based SLOs, use current_value (which is the actual time)
+                    SLO_COUNCIL_DECISION_TIME.set(slo_target.current_value);
                 }
                 "worker_execution_time" => {
-                    // TODO: Get actual worker execution time
-                    // - [ ] Query SLO tracker for real worker execution metrics
-                    // - [ ] Calculate average execution time from recent tasks
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock worker data
-                    // - [ ] Add integration tests with real worker tracking
-                    SLO_WORKER_EXECUTION_TIME.set(5000.0); // Stub current value
+                    SLO_WORKER_EXECUTION_TIME.set(slo_target.current_value);
                 }
                 _ => {}
             }
+        }
 
-            // TODO: Calculate actual SLO compliance status
-            // - [ ] Aggregate all SLO metrics into overall status
-            // - [ ] Compare against SLO objectives
-            // - [ ] Set gauge based on compliance percentage
-            // - [ ] Handle missing metrics gracefully
-            // - [ ] Add unit tests with mock SLO data
-            // - [ ] Add integration tests with real SLO tracking
-            // Set SLO status gauge (stub implementation)
-            SLO_STATUS.set(0.0); // Assume compliant for stub
+        // Set overall SLO status gauge based on average compliance
+        if slo_count > 0 {
+            SLO_STATUS.set(overall_compliance);
+        } else {
+            // No SLOs registered yet, assume compliant
+            SLO_STATUS.set(1.0);
         }
 
         // Update SLO alerts counter
-        let recent_alerts = self.slo_tracker.get_recent_alerts(100).await;
-        SLO_ALERTS_TOTAL.reset();
-        SLO_ALERTS_TOTAL.inc_by(recent_alerts.len() as f64);
+        match self.slo_tracker.get_recent_alerts(100).await {
+            Ok(recent_alerts) => {
+                SLO_ALERTS_TOTAL.reset();
+                SLO_ALERTS_TOTAL.inc_by(recent_alerts.len() as f64);
+            }
+            Err(e) => {
+                warn!("Failed to get recent SLO alerts: {}", e);
+            }
+        }
 
         Ok(())
     }
@@ -1654,23 +1740,23 @@ impl MCPServer {
         );
 
         // Initialize circuit breaker registry
-        let registry = init_circuit_breaker_registry();
+        let registry = get_circuit_breaker_registry();
 
         // Register circuit breakers for external services
         registry.register("caws-integration", CircuitBreakerConfig {
             failure_threshold: 3,
             success_threshold: 2,
             recovery_timeout_ms: 30000, // 30 seconds in milliseconds
-        });
+        }).await;
 
         registry.register("tool-discovery", CircuitBreakerConfig {
             failure_threshold: 5,
             success_threshold: 3,
             recovery_timeout_ms: 60000, // 60 seconds in milliseconds
-        });
+        }).await;
 
         // Initialize audit logger
-        init_audit_logger(true, "info".to_string(), false).map_err(|e| {
+        init_audit_logger(true, "info".to_string(), false).await.map_err(|e| {
             anyhow!("Failed to initialize audit logger: {}", e)
         })?;
 
@@ -2014,7 +2100,7 @@ impl MCPServer {
                     Err(e) => {
                         tracing::warn!("Failed to get SLO statuses: {}", e);
                         // Fallback to default SLO definitions
-                        Ok(serde_json::to_value(slo::create_default_slos()).unwrap())
+                        Ok(serde_json::to_value(system_observability::slo::create_default_slos()).unwrap())
                     }
                 }
             }
@@ -2025,8 +2111,14 @@ impl MCPServer {
             let tracker = slo_tracker_for_alerts.clone();
             async move {
                 // Get recent alerts (last 50)
-                let alerts = tracker.get_recent_alerts(50).await;
-                Ok(serde_json::to_value(alerts).unwrap())
+                match tracker.get_recent_alerts(50).await {
+                    Ok(alerts) => Ok(serde_json::to_value(alerts).unwrap()),
+                    Err(e) => {
+                        let mut error = JsonRpcError::internal_error();
+                        error.data = Some(serde_json::json!({"error": e.to_string(), "message": "Failed to get SLO alerts"}));
+                        Err(error)
+                    }
+                }
             }
         });
 
@@ -2269,7 +2361,7 @@ impl MCPServer {
 
     /// Get circuit breaker statistics
     pub async fn get_circuit_breaker_stats(&self) -> HashMap<String, CircuitBreakerStats> {
-        get_circuit_breaker_registry().get_all_stats()
+        get_circuit_breaker_registry().get_all_stats().await
     }
 
     /// Get API rate limiting statistics

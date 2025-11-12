@@ -1191,62 +1191,32 @@ impl ProvenanceClientAdapter {
     /// This method matches the signature expected by DatabaseClientTrait,
     /// converting anyhow::Result to Box<dyn Error + Send + Sync>.
     ///
-    /// TODO: Implement provenance entry creation
-    /// - [ ] Add create_provenance_entry method to DatabaseClient trait
-    /// - [ ] Create database migration for provenance table if missing
-    /// - [ ] Implement SQL insert with proper parameter binding
-    /// - [ ] Handle database errors and transaction rollback
-    /// - [ ] Add validation for required fields (task_id, action, actor)
-    /// - [ ] Add unit tests with mock database
-    /// - [ ] Add integration tests with real database
-    /// PLACEHOLDER: DatabaseClient doesn't have create_provenance_entry yet.
-    /// This is a stub implementation that will be replaced when provenance is implemented.
+    /// Uses the real DatabaseClient.create_provenance_entry implementation,
+    /// which performs actual database insertion with proper error handling.
     pub async fn create_provenance_entry(
         &self,
-        _task_id: Uuid,
-        _action: String,
-        _actor: String,
-        _change_summary: String,
-        _resource_id: Option<Uuid>,
-        _resource_type: Option<String>,
-        _metadata: serde_json::Value,
+        task_id: Uuid,
+        action: String,
+        actor: String,
+        change_summary: String,
+        resource_id: Option<Uuid>,
+        resource_type: Option<String>,
+        metadata: serde_json::Value,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement comprehensive provenance entry creation
-        //       Currently logs and returns success only; should implement comprehensive creation that inserts actual provenance entries into provenance table with proper resource tracking and metadata.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Provenance entries are inserted into provenance table
-        // - Resource tracking and metadata are stored correctly
-        // - Database operations are transactional and reliable
-        // - Entry creation handles errors gracefully
-        //
-        // DEPENDENCIES:
-        // - Provenance table schema (Required)
-        // - Database insertion utilities (Required)
-        // - Resource tracking system (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (provenance tracking functionality)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Provenance tracking and database expertise
-        tracing::info!("Provenance entry creation requested (stub implementation)");
+        // Use the real DatabaseClient implementation
+        self.client.create_provenance_entry(
+            task_id,
+            action,
+            actor,
+            change_summary,
+            resource_id,
+            resource_type,
+            metadata,
+        ).await
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        })?;
+        
         Ok(())
     }
 }
