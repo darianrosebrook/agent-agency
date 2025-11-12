@@ -412,15 +412,48 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             .map_err(|e| FileOpsError::Io(e))?;
 
         if metadata.is_dir() {
-            // TODO: Implement proper recursive directory copy
-            //       Currently not implemented; should use fs_extra or similar crate for production-grade recursive directory copying.
-            return Err(FileOpsError::Validation(
-                "Directory copy not yet implemented. Use workspace/changeset for complex operations.".to_string()
-            ));
+            // Implement recursive directory copy using tokio::fs
+            self.copy_directory_recursive(&from_path, &to_path).await?;
+        } else {
+            // Copy single file
+            fs::copy(&from_path, &to_path).await
+                .map_err(|e| FileOpsError::Io(e))?;
         }
 
-        fs::copy(&from_path, &to_path).await
+        Ok(())
+    }
+
+    /// Recursively copy a directory and all its contents (helper method)
+    async fn copy_directory_recursive(&self, from: &Path, to: &Path) -> FileResult<()> {
+        // Create destination directory if it doesn't exist
+        fs::create_dir_all(to).await
             .map_err(|e| FileOpsError::Io(e))?;
+
+        // Read source directory entries
+        let mut entries = fs::read_dir(from).await
+            .map_err(|e| FileOpsError::Io(e))?;
+
+        // Process each entry in the directory
+        while let Some(entry) = entries.next_entry().await
+            .map_err(|e| FileOpsError::Io(e))? {
+            
+            let entry_path = entry.path();
+            let entry_name = entry.file_name();
+            let dest_path = to.join(&entry_name);
+
+            // Get entry metadata to determine if it's a directory or file
+            let entry_metadata = entry.metadata().await
+                .map_err(|e| FileOpsError::Io(e))?;
+
+            if entry_metadata.is_dir() {
+                // Recursively copy subdirectory
+                self.copy_directory_recursive(&entry_path, &dest_path).await?;
+            } else {
+                // Copy file
+                fs::copy(&entry_path, &dest_path).await
+                    .map_err(|e| FileOpsError::Io(e))?;
+            }
+        }
 
         Ok(())
     }
