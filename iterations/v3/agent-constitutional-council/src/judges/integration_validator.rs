@@ -148,7 +148,21 @@ impl IntegrationValidator {
     pub fn new(engine: Arc<dyn JudgeEngine>) -> Self {
         Self {
             engine,
-            caws_bridge: CawsPlanBridge::new(),
+            caws_bridge: CawsPlanBridge::new().unwrap_or_else(|e| {
+                // For tests, try to create bridge with a temp directory
+                // In production, this should never fail as CAWS should be properly set up
+                if cfg!(test) {
+                    // Try to create bridge with current directory or temp path
+                    CawsPlanBridge::with_project_root(".").unwrap_or_else(|_| {
+                        // Last resort: try with a temp directory
+                        let temp_dir = std::env::temp_dir();
+                        CawsPlanBridge::with_project_root(&temp_dir)
+                            .expect("Failed to initialize CawsPlanBridge even with temp directory")
+                    })
+                } else {
+                    panic!("CawsPlanBridge::new() failed: {}. CAWS setup required.", e);
+                }
+            }),
         }
     }
 
@@ -173,16 +187,19 @@ impl IntegrationValidator {
 
 impl IntegrationValidator {
     /// Get the judge type
+    #[allow(dead_code)] // Part of trait implementation, may be called via trait
     fn judge_type(&self) -> JudgeType {
         JudgeType::Integration
     }
 
     /// Get the judge rubric
+    #[allow(dead_code)] // Part of trait implementation, may be called via trait
     fn rubric(&self) -> Vec<RubricItem> {
         self.build_rubric()
     }
 
     /// Run deterministic integration checks
+    #[allow(dead_code)] // Part of trait implementation, may be called via trait
     fn run_deterministic_checks(&self, ctx: &ReviewContext) -> Vec<Violation> {
         self.run_deterministic_checks_impl(ctx)
     }

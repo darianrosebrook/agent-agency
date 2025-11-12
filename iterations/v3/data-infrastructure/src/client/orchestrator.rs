@@ -3350,7 +3350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_audit_trail_entry_creation() {
-        let client = DatabaseClient::default();
+        let _client = DatabaseClient::default();
         
         let entry = CreateAuditTrailEntry {
             entity_type: "test_entity".to_string(),

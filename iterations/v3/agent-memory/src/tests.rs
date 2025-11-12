@@ -69,7 +69,10 @@ mod tests {
             },
             graph_config: GraphConfig::default(),
             decay_config: DecayConfig::default(),
-            context_config: ContextConfig::default(),
+            context_config: ContextConfig {
+                max_contexts: 100, // Set default value expected by tests
+                fold_threshold: 0.5,
+            },
             temporal_config: TemporalConfig::default(),
             #[cfg(feature = "embeddings")]
             embedding_config: EmbeddingConfig::default(),

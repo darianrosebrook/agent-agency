@@ -22,6 +22,8 @@ pub trait CouncilIntegration: Send + Sync {
         &self,
         execution_plan: &ExecutionPlan,
         working_spec: &WorkingSpec,
+        spec_id: Option<&str>,
+        project_root: Option<&std::path::Path>,
     ) -> Result<PlanReviewResult>;
 
     /// Present completed work to council (CAWS Pleading stage)
@@ -81,15 +83,32 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         &self,
         execution_plan: &ExecutionPlan,
         working_spec: &WorkingSpec,
+        spec_id: Option<&str>,
+        project_root: Option<&std::path::Path>,
     ) -> Result<PlanReviewResult> {
-        // Create review context for council
+        // Detect complexity mode for review context
+        let complexity_mode = if let Some(root) = project_root {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(root).ok()
+        } else {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(".")).ok()
+        };
+
+        // Create review context for council with spec and mode information
+        let mut constraints = std::collections::HashMap::new();
+        if let Some(spec_id) = spec_id {
+            constraints.insert("spec_id".to_string(), spec_id.to_string());
+        }
+        if let Some(mode) = complexity_mode {
+            constraints.insert("complexity_mode".to_string(), format!("{:?}", mode));
+        }
+
         let review_context = crate::judge_backup::types::ReviewContext {
             session_id: format!("plan_review_{}", uuid::Uuid::new_v4()),
             working_spec: serde_json::to_string(working_spec)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize working spec: {}", e))?,
             risk_tier: working_spec.risk_tier as u8,
             previous_reviews: vec![],
-            constraints: std::collections::HashMap::new(),
+            constraints,
         };
 
         // Conduct council review

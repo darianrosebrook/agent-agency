@@ -2,6 +2,7 @@
 description: Anti-fake implementation guardrails to prevent incomplete, stubbed, or fake implementations
 globs:
 alwaysApply: true
+ruleTokenCount: 4460
 ---
 
 # Implementation Completeness Guardrails

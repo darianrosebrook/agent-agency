@@ -353,7 +353,15 @@ impl DefaultKnowledgeStage {
         for entity in &content.entities {
             match entity.entity_type {
                 EntityType::Person | EntityType::Organization | EntityType::Location | EntityType::Event => {
-                    concepts.push(entity.name.trim().to_string());
+                    let entity_name = entity.name.trim().to_string();
+                    concepts.push(entity_name.clone());
+                    // Also extract individual words from entity names (e.g., "John Smith" -> "John", "Smith")
+                    for word in entity_name.split_whitespace() {
+                        let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
+                        if clean_word.len() > 1 {
+                            concepts.push(clean_word.to_string());
+                        }
+                    }
                 }
                 // TODO: Support additional entity types:
                 // 1. Entity type expansion: Support more entity types
@@ -380,7 +388,7 @@ impl DefaultKnowledgeStage {
             }
         }
 
-        // 2) Text fallback: collect TitleCase multiword spans (very light NP heuristic)
+        // 2) Text fallback: collect TitleCase words (both individual and multiword spans)
         if let Some(text) = &content.text_content {
             let mut current = Vec::new();
             for token in text.split_whitespace() {
@@ -388,6 +396,8 @@ impl DefaultKnowledgeStage {
                 let is_title = clean.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
 
                 if is_title && clean.len() > 1 {
+                    // Add individual word
+                    concepts.push(clean.to_string());
                     current.push(clean);
                 } else if !current.is_empty() {
                     // End of potential NP span

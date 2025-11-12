@@ -12,7 +12,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, Context};
-use tracing::{debug, warn, error};
+use tracing::debug;
 
 use agent_agency_contracts::WorkingSpec;
 use agent_agency_contracts::planning_io::ExecutionPlan;

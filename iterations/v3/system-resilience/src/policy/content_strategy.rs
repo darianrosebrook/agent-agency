@@ -375,42 +375,8 @@ impl ContentStrategy {
         if content.windows(2).any(|w| w == b"\r\n") {
             Eol::Crlf
         } else if content.contains(&b'\r') {
-            // TODO: Add Cr variant to Eol enum for complete EOL detection
-            //       Currently uses Lf for Cr-only content; should add Cr variant to Eol enum for complete end-of-line detection.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Cr variant is added to Eol enum
-            // - EOL detection handles all variants correctly
-            // - Detection is accurate
-            // - Performance is acceptable
-            //
-            // DEPENDENCIES:
-            // - Eol enum definition (Required)
-            // - EOL detection utilities (Required)
-            // - Enum variant handling (Required)
-            //
-            // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (enum enhancement)
-            // - Change Budget: ~60 LOC
-            // - Reviewer Requirements: Enum design expertise
-            Eol::Lf  // Temporary: Lf until Cr variant added
+            // Cr variant exists in Eol enum - return Cr for CR-only content
+            Eol::Cr
         } else {
             Eol::Lf
         }

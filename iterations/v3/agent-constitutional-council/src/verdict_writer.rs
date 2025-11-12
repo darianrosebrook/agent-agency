@@ -699,14 +699,14 @@ mod tests {
 
         // Create a mock judge verdict
         let verdict = JudgeVerdict {
-            judge_type: JudgeType::Security,
             label: VerdictLabel::Pass,
             score: 0.85,
             rationale: "Security requirements are adequately addressed".to_string(),
             violations: vec![],
+            evidence_refs: vec![],
         };
 
-        let summary = writer.summarize_judge_verdict(&verdict, JudgeType::Constitutional);
+        let summary = writer.summarize_judge_verdict(&verdict, JudgeType::Security);
 
         assert_eq!(summary.judge_type, JudgeType::Security);
         assert_eq!(summary.label, VerdictLabel::Pass);
@@ -720,18 +720,18 @@ mod tests {
 
         let verdicts = vec![
             JudgeVerdict {
-                judge_type: JudgeType::Security,
                 label: VerdictLabel::Pass,
                 score: 0.9,
                 rationale: "Secure".to_string(),
                 violations: vec![],
+                evidence_refs: vec![],
             },
             JudgeVerdict {
-                judge_type: JudgeType::Integration,
                 label: VerdictLabel::Pass,
                 score: 0.8,
                 rationale: "Compatible".to_string(),
                 violations: vec![],
+                evidence_refs: vec![],
             },
         ];
 

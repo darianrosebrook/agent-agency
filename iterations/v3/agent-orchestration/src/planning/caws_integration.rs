@@ -6,17 +6,31 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use anyhow::{anyhow, Result};
+use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use anyhow::{anyhow, Result, Context};
 use agent_agency_contracts::{
     working_spec::WorkingSpec,
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
 };
 
+use super::caws_spec_resolver::CawsSpecResolver;
+use super::caws_complexity_mode::CawsComplexityMode;
+
 /// CAWS integration bridge
 pub struct CawsPlanBridge {
     /// Validation rules for working specs
     validation_rules: ValidationRules,
+    
+    /// Project root directory
+    project_root: PathBuf,
+    
+    /// Spec resolver for multi-spec support
+    spec_resolver: CawsSpecResolver,
+    
+    /// Complexity mode (detected from config)
+    complexity_mode: CawsComplexityMode,
 }
 
 impl std::fmt::Debug for CawsPlanBridge {
@@ -29,10 +43,61 @@ impl std::fmt::Debug for CawsPlanBridge {
 
 impl CawsPlanBridge {
     /// Create new CAWS bridge
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        Self::with_project_root(".")
+    }
+
+    /// Create new CAWS bridge with project root
+    pub fn with_project_root(project_root: impl AsRef<Path>) -> Result<Self> {
+        let project_root = project_root.as_ref().to_path_buf();
+        let spec_resolver = CawsSpecResolver::new(&project_root)?;
+        let complexity_mode = CawsComplexityMode::detect(&project_root)?;
+        
+        Ok(Self {
             validation_rules: ValidationRules::default(),
-        }
+            project_root,
+            spec_resolver,
+            complexity_mode,
+        })
+    }
+
+    /// Load spec using resolver (preferred method)
+    pub fn load_spec(
+        &self,
+        spec_id: Option<&str>,
+        spec_file: Option<&Path>,
+    ) -> Result<WorkingSpec> {
+        let spec_path = self.spec_resolver.resolve_spec(spec_id, spec_file)?;
+        self.load_spec_from_path(&spec_path)
+    }
+
+    /// Load spec from explicit path
+    pub fn load_spec_from_path(&self, path: &Path) -> Result<WorkingSpec> {
+        use std::fs;
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read spec file: {}", path.display()))?;
+        
+        let spec: WorkingSpec = serde_yaml::from_str(&content)
+            .with_context(|| format!("Failed to parse spec file: {}", path.display()))?;
+        
+        Ok(spec)
+    }
+
+    /// Legacy method (deprecated) - loads from .caws/working-spec.yaml
+    #[deprecated(note = "Use load_spec with spec_id instead for multi-agent support")]
+    pub fn load_legacy_spec(&self) -> Result<WorkingSpec> {
+        let legacy_path = self.spec_resolver.caws_directory().join("working-spec.yaml");
+        self.load_spec_from_path(&legacy_path)
+    }
+
+    /// Get complexity mode
+    pub fn complexity_mode(&self) -> CawsComplexityMode {
+        self.complexity_mode
+    }
+
+    /// Get spec resolver
+    pub fn spec_resolver(&self) -> &CawsSpecResolver {
+        &self.spec_resolver
     }
 
     /// Convert working spec to execution plan
@@ -133,7 +198,7 @@ impl CawsPlanBridge {
         Ok(())
     }
 
-    /// Validate risk tier constraints
+    /// Validate risk tier constraints with complexity mode awareness
     fn validate_risk_tier_constraints(&self, working_spec: &WorkingSpec) -> Result<()> {
         let risk_tier = working_spec.risk_tier;
 
@@ -142,27 +207,48 @@ impl CawsPlanBridge {
             return Err(anyhow!("Risk tier must be 1, 2, or 3, got {}", risk_tier));
         }
 
-        // Check coverage requirements based on risk tier
+        // Get quality requirements based on mode + tier
+        let requirements = self.complexity_mode.quality_requirements(risk_tier as u8);
+
+        // Check coverage requirements based on mode + tier
         let coverage_targets = working_spec.coverage_targets.as_ref().unwrap_or(&agent_agency_contracts::CoverageTargets {
             line_coverage: None,
             branch_coverage: None,
             mutation_score: None,
         });
 
-        let min_line_coverage = match risk_tier {
-            1 => 0.90,
-            2 => 0.80,
-            3 => 0.70,
-            _ => unreachable!(),
-        };
-
         if let Some(ref line_coverage) = coverage_targets.line_coverage {
-            if *line_coverage < min_line_coverage {
+            if *line_coverage < requirements.line_coverage {
                 return Err(anyhow!(
-                    "Risk tier {} requires minimum {:.0}% line coverage, spec has {:.0}%",
+                    "Mode {:?} + Tier {} requires minimum {:.0}% line coverage, spec has {:.0}%",
+                    self.complexity_mode,
                     risk_tier,
-                    min_line_coverage * 100.0,
+                    requirements.line_coverage * 100.0,
                     line_coverage * 100.0
+                ));
+            }
+        }
+
+        if let Some(ref branch_coverage) = coverage_targets.branch_coverage {
+            if *branch_coverage < requirements.branch_coverage {
+                return Err(anyhow!(
+                    "Mode {:?} + Tier {} requires minimum {:.0}% branch coverage, spec has {:.0}%",
+                    self.complexity_mode,
+                    risk_tier,
+                    requirements.branch_coverage * 100.0,
+                    branch_coverage * 100.0
+                ));
+            }
+        }
+
+        if let Some(ref mutation_score) = coverage_targets.mutation_score {
+            if *mutation_score < requirements.mutation_score {
+                return Err(anyhow!(
+                    "Mode {:?} + Tier {} requires minimum {:.0}% mutation score, spec has {:.0}%",
+                    self.complexity_mode,
+                    risk_tier,
+                    requirements.mutation_score * 100.0,
+                    mutation_score * 100.0
                 ));
             }
         }
@@ -339,20 +425,15 @@ impl CawsPlanBridge {
         criterion_text.to_lowercase().contains(&change.file.to_lowercase())
     }
 
-    /// Create evidence gate for risk tier
+    /// Create evidence gate for risk tier with complexity mode awareness
     fn create_evidence_gate(&self, risk_tier: u8) -> Result<EvidenceGate> {
-        let (min_coverage, min_mutation) = match risk_tier {
-            1 => (0.90, 0.70),
-            2 => (0.80, 0.50),
-            3 => (0.70, 0.30),
-            _ => return Err(anyhow!("Invalid risk tier: {}", risk_tier)),
-        };
+        let requirements = self.complexity_mode.quality_requirements(risk_tier);
 
         Ok(EvidenceGate {
-            min_coverage,
-            min_branch_coverage: min_coverage * 0.9,
-            min_mutation_score: min_mutation,
-            security_scan_required: risk_tier == 1,
+            min_coverage: requirements.line_coverage,
+            min_branch_coverage: requirements.branch_coverage,
+            min_mutation_score: requirements.mutation_score,
+            security_scan_required: risk_tier == 1 || matches!(self.complexity_mode, CawsComplexityMode::Enterprise),
             performance_budget: None,
             required_artifacts: vec!["test_results".to_string(), "coverage".to_string()],
             custom_validations: vec![],
@@ -633,14 +714,14 @@ mod tests {
 
     #[test]
     fn test_caws_bridge_creation() {
-        let _bridge = CawsPlanBridge::new();
+        let _bridge = CawsPlanBridge::new().expect("Failed to create bridge");
         // Bridge created successfully
         assert!(true);
     }
 
     #[test]
     fn test_working_spec_validation() {
-        let bridge = CawsPlanBridge::new();
+        let bridge = CawsPlanBridge::new().expect("Failed to create bridge");
 
         // Valid working spec
         let valid_spec = create_test_working_spec();
@@ -654,7 +735,7 @@ mod tests {
 
     #[test]
     fn test_acceptance_criterion_validation() {
-        let bridge = CawsPlanBridge::new();
+        let bridge = CawsPlanBridge::new().expect("Failed to create bridge");
 
         // Valid criterion
         let valid_criterion = AcceptanceCriterion {
@@ -676,7 +757,7 @@ mod tests {
 
     #[test]
     fn test_risk_tier_validation() {
-        let bridge = CawsPlanBridge::new();
+        let bridge = CawsPlanBridge::new().expect("Failed to create bridge");
 
         // Valid risk tier
         let mut spec = create_test_working_spec();
@@ -699,7 +780,7 @@ mod tests {
 
     #[test]
     fn test_spec_to_plan_conversion() {
-        let bridge = CawsPlanBridge::new();
+        let bridge = CawsPlanBridge::new().expect("Failed to create bridge");
         let spec = create_test_working_spec();
 
         let plan = bridge.spec_to_plan(spec).unwrap();
@@ -712,18 +793,30 @@ mod tests {
 
     #[test]
     fn test_evidence_gate_creation() {
-        let bridge = CawsPlanBridge::new();
+        // Use temp directory to control complexity mode
+        use tempfile::TempDir;
+        use std::fs;
+        
+        let temp_dir = TempDir::new().unwrap();
+        let caws_dir = temp_dir.path().join(".caws");
+        fs::create_dir_all(&caws_dir).unwrap();
+        
+        // Test with Standard mode (default)
+        let bridge = CawsPlanBridge::with_project_root(temp_dir.path())
+            .expect("Failed to create bridge");
 
-        // Risk tier 1
+        // Risk tier 1 with Standard mode
         let gate1 = bridge.create_evidence_gate(1).unwrap();
-        assert_eq!(gate1.min_coverage, 0.90);
-        assert_eq!(gate1.min_mutation_score, 0.70);
+        // Standard mode + Tier 1 = 0.80 * 1.0 coverage, 0.50 * 1.0 mutation
+        assert_eq!(gate1.min_coverage, 0.80);
+        assert_eq!(gate1.min_mutation_score, 0.50);
         assert!(gate1.security_scan_required);
 
-        // Risk tier 2
+        // Risk tier 2 with Standard mode
         let gate2 = bridge.create_evidence_gate(2).unwrap();
-        assert_eq!(gate2.min_coverage, 0.80);
-        assert_eq!(gate2.min_mutation_score, 0.50);
+        // Standard mode + Tier 2 = 0.80 * 0.95 coverage, 0.50 * 0.95 mutation
+        assert_eq!(gate2.min_coverage, 0.80 * 0.95);
+        assert_eq!(gate2.min_mutation_score, 0.50 * 0.95);
         assert!(!gate2.security_scan_required);
     }
 

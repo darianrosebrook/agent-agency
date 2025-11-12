@@ -954,8 +954,11 @@ impl DataPipeline {
 pub fn create_custom_pipeline(
     config: PipelineConfig,
     stages: Vec<Box<dyn PipelineStage>>,
-    composite_stage: DataProcessingCompositeStage,
+    mut composite_stage: DataProcessingCompositeStage,
 ) -> DataPipeline {
+    // Use the provided stages in the composite stage
+    composite_stage.stages = stages;
+    
     // Create a simple sequential pipeline configuration
     let sequential_config = SequentialPipelineConfig {
         base: system_configuration::PipelineConfig {
@@ -982,9 +985,9 @@ pub fn create_custom_pipeline(
     DataPipeline {
         _config: config,
         _sequential_pipeline: Arc::new(sequential_pipeline),
-        domain_stages: stages, // Use the provided stages directly
+        domain_stages: vec![], // Empty since stages are in composite_stage
         stages: vec![], // Empty since we're not using this field
-        composite_stage, // Remove clone since it's moved
+        composite_stage,
     }
 }
 

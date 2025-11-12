@@ -9,8 +9,6 @@
 use async_trait::async_trait;
 #[cfg(feature = "memory")]
 use std::sync::Arc;
-#[cfg(feature = "memory")]
-use anyhow::Result;
 
 #[cfg(feature = "memory")]
 use agent_agency_contracts::{
@@ -38,7 +36,7 @@ impl MemorySystemAdapter {
 #[async_trait]
 impl MemorySystem for MemorySystemAdapter {
     async fn store_experience(&self, experience: Experience) -> MemoryResult<MemoryId> {
-        use uuid::Uuid;
+        
         
         // Extract timestamp before moving temporal_context
         let timestamp = experience.temporal_context.as_ref()

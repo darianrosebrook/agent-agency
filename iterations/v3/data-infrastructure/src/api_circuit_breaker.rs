@@ -328,9 +328,10 @@ mod tests {
         };
         let cb = CircuitBreaker::with_config(config);
 
-        // Open circuit
+        // Open circuit - need failure_threshold failures (3 in this config)
         cb.record_failure().await;
         cb.record_failure().await;
+        cb.record_failure().await; // Third failure opens the circuit
         assert!(!cb.should_allow_request().await);
 
         // Wait for recovery timeout

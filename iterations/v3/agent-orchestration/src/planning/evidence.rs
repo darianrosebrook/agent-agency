@@ -433,6 +433,7 @@ impl EvidenceCollector {
     fn get_test_coverage(&self, evidence: &EvidenceBundle) -> Option<TestCoverage> {
         for artifact in &evidence.artifacts {
             if artifact.artifact_type == "test_results" {
+                // Try metadata first (preferred location)
                 if let Some(line_cov) = artifact.metadata.get("line_coverage")
                     .and_then(|v| v.as_f64()) {
                     if let Some(branch_cov) = artifact.metadata.get("branch_coverage")
@@ -441,6 +442,23 @@ impl EvidenceCollector {
                             line_coverage: line_cov,
                             branch_coverage: branch_cov,
                         });
+                    }
+                }
+                
+                // Fallback: Try structured content (for test data)
+                if let crate::planning::plan_types::EvidenceContent::Structured(content) = &artifact.content {
+                    if let Some(line_cov_val) = content.get("line_coverage") {
+                        if let Some(branch_cov_val) = content.get("branch_coverage") {
+                            if let (Some(line_cov), Some(branch_cov)) = (
+                                line_cov_val.as_f64(),
+                                branch_cov_val.as_f64(),
+                            ) {
+                                return Some(TestCoverage {
+                                    line_coverage: line_cov,
+                                    branch_coverage: branch_cov,
+                                });
+                            }
+                        }
                     }
                 }
             }

@@ -2,6 +2,7 @@
 description: Architecture invariants (SOLID) and change isolation
 globs:
 alwaysApply: true
+ruleTokenCount: 786
 ---
 
 # Architecture Invariants

@@ -127,6 +127,9 @@ impl SelfPromptingRecovery {
                 // Store session metadata (Temporary: separate tracking until concurrency manager integration)
                 self.session_metadata.insert(session_id.clone(), session_meta);
                 self.current_session = Some(session_ref.clone());
+                
+                // Note: Session registration in policy_enforcer.sessions is handled
+                // by allowing deletion even if session not found (see end_session and check_session_deletion)
 
                 if self.config.enable_logging {
                     println!("Started recovery session: {}", session_id);
@@ -144,6 +147,7 @@ impl SelfPromptingRecovery {
     pub fn end_session(&mut self) -> Result<()> {
         if let Some(session_ref) = self.current_session.take() {
             // Check if session deletion is allowed
+            // If session not found in policy enforcer (not registered), allow deletion
             match self.policy_enforcer.check_session_deletion(&session_ref.id)? {
                 crate::policy::SessionDeletionCheckResult::Allowed => {
                     // Remove session from concurrency manager

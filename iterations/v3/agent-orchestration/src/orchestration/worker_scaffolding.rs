@@ -7,9 +7,8 @@
 
 use data_infrastructure::DatabaseClient;
 use serde_json::json;
-use sqlx::Row;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Scaffold standard workers in the database if they don't exist
 pub async fn scaffold_standard_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<()> {

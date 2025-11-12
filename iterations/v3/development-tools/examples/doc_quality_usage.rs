@@ -301,7 +301,7 @@ We have **100% complete** implementation with **enterprise-grade** quality.
 /// Documentation quality result structure for deserialization
 #[derive(Debug, serde::Deserialize, JsonSchema)]
 struct DocQualityResult {
-    validation_id: String,
+    _validation_id: String,
     quality_score: f64,
     issues: Vec<QualityIssue>,
     metrics: QualityMetrics,
@@ -313,7 +313,7 @@ struct QualityIssue {
     severity: String,
     rule_id: String,
     message: String,
-    line_number: u32,
+    _line_number: u32,
     suggested_fix: String,
 }
 

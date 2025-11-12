@@ -59,3 +59,8 @@ path = "src/bin/ensure_services.rs"
 [[bin]]
 name = "integrated_test"
 path = "src/bin/integrated_test.rs"
+
+[[bin]]
+name = "test_worker_evolution"
+path = "src/bin/test_worker_evolution.rs"
+required-features = ["full"]

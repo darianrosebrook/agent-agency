@@ -140,7 +140,18 @@ impl OrchestratorPlanningIntegration {
         let execution_plan = self.generate_execution_plan(task_descriptor).await?;
 
         // 2. Review plan with constitutional council
-        let review_result = self.council_review.review_plan(&execution_plan).await?;
+        // Extract spec_id from working spec if available
+        let spec_id = execution_plan.contract_plan.working_spec_id
+            .split('-')
+            .next()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+        
+        let review_result = self.council_review.review_plan(
+            &execution_plan,
+            spec_id.as_deref(),
+            Some(std::path::Path::new(".")),
+        ).await?;
         if !review_result.approved {
             let reason = "Plan rejected by constitutional council";
             // OPTIONAL: Add detailed reason based on council decision (deferred - UX improvement)
@@ -374,7 +385,7 @@ impl OrchestratorPlanningIntegration {
 
     /// Get planning status for a task
     pub async fn get_task_planning_status(&self, task_id: Uuid) -> Result<Option<PlanningStatus>> {
-        use tracing::debug;
+        
 
         // Check if there's an execution plan for this task
         if let Some(plan) = self.planning_storage.as_ref().load_execution_plan(task_id).await? {
@@ -404,8 +415,8 @@ impl OrchestratorPlanningIntegration {
     /// Verify quality gates comprehensively
     /// Checks coverage, mutation, security, performance, documentation, and review requirements
     async fn verify_quality_gates(&self, plan: &crate::planning::plan_types::ExecutionPlan) -> Result<bool> {
-        use tracing::{debug, warn};
-        use agent_agency_contracts::planning_io::QualityGates;
+        use tracing::debug;
+        
 
         let quality_gates = &plan.contract_plan.quality_gates;
 

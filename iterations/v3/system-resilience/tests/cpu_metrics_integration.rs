@@ -187,9 +187,10 @@ mod cpu_metrics_tests {
         // Simulate some CPU load
         let start_time = std::time::Instant::now();
         let mut hash = 0u64;
+        let _ = hash; // Suppress unused variable warning - hash is used for CPU load simulation
         while start_time.elapsed() < Duration::from_millis(500) {
             // Simple CPU load simulation
-            for i in 0..1000 {
+                for i in 0..1000 {
                 hash ^= (i as u64).wrapping_mul(0x9e3779b9);
             }
         }
@@ -256,7 +257,8 @@ mod cpu_metrics_tests {
         }
 
         // We should have either all successes or some mix (but not all failures)
-        assert!(success_count > 0 || error_count >= 0, "Should have at least some results");
+        // error_count is u64, always >= 0
+        assert!(success_count > 0 || error_count == 0, "Should have at least some results");
 
         println!("✅ CPU metrics error handling verified:");
         println!("  Successful collections: {}", success_count);
@@ -292,7 +294,7 @@ mod cpu_metrics_tests {
         let memory_stats = manager.get_memory_stats();
 
         // Verify memory stats are always available
-        assert!(memory_stats.allocated_bytes >= 0);
+        // allocated_bytes is u64, always >= 0
 
         match cpu_result {
             Ok(cpu_metrics) => {

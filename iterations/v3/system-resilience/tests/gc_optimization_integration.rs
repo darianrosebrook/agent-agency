@@ -10,9 +10,7 @@
 
 use system_resilience::memory::{
     MemoryManager, MemoryManagementConfig, MemoryLimitConfig, MemoryPressure,
-    HandleType, HandleInfo, ObjectRef, ResourceHandle,
 };
-use std::sync::Arc;
 use tokio::time::{Duration, sleep};
 
 #[cfg(test)]
@@ -50,7 +48,7 @@ mod gc_optimization_tests {
         let manager = MemoryManager::new(config);
 
         // Force garbage collection
-        manager.force_gc();
+        manager.force_gc().await;
 
         // Verify GC can be called without panicking
         // In a more sophisticated test, we'd verify actual GC behavior
@@ -58,7 +56,7 @@ mod gc_optimization_tests {
 
         // Check that basic memory stats are still available after GC
         let stats = manager.get_memory_stats();
-        assert!(stats.allocated_bytes >= 0);
+        // allocated_bytes is u64, always >= 0
         println!("✅ Memory stats available after GC: {} bytes allocated", stats.allocated_bytes);
     }
 
@@ -143,12 +141,12 @@ mod gc_optimization_tests {
         println!("✅ Cleanup stats retrieved - Orphaned objects: {}, Warnings: {}", orphaned_count, warnings.len());
 
         // Force garbage collection as a cleanup operation
-        manager.force_gc();
+        manager.force_gc().await;
         println!("✅ Garbage collection cleanup executed");
 
         // Verify memory stats are still available after cleanup
         let stats = manager.get_memory_stats();
-        assert!(stats.allocated_bytes >= 0);
+        // allocated_bytes is u64, always >= 0
         println!("✅ Memory stats available after cleanup: {} bytes allocated", stats.allocated_bytes);
     }
 
@@ -193,7 +191,7 @@ mod gc_optimization_tests {
         println!("✅ Post-initialization checks - Pressure: {:?}, Memory: {} bytes", pressure, stats.allocated_bytes);
 
         // Force GC to test it works after initialization
-        manager.force_gc();
+        manager.force_gc().await;
         println!("✅ Garbage collection works after initialization");
     }
 
@@ -235,7 +233,7 @@ mod gc_optimization_tests {
         manager.initialize().await.expect("Failed to initialize memory manager");
 
         // Force garbage collection as a basic optimization
-        manager.force_gc();
+        manager.force_gc().await;
         println!("✅ Garbage collection optimization executed");
 
         // Check final pressure after GC
@@ -284,7 +282,7 @@ mod gc_optimization_tests {
         println!("Initial cleanup stats - Orphaned: {}, Warnings: {}", initial_orphaned, initial_warnings.len());
 
         // Force garbage collection as primary cleanup
-        manager.force_gc();
+        manager.force_gc().await;
         println!("✅ Garbage collection cleanup executed");
 
         // Test memory leak analysis
@@ -386,7 +384,7 @@ mod gc_optimization_tests {
         println!("✅ Memory history retrieved - {} data points", history.len());
 
         // Force some operations to generate history
-        manager.force_gc();
+        manager.force_gc().await;
 
         // Get updated history
         let updated_history = manager.get_memory_history(Duration::from_secs(60)).await;
@@ -398,8 +396,7 @@ mod gc_optimization_tests {
         let stats2 = manager.get_memory_stats();
 
         // Memory stats should be available (exact values may vary)
-        assert!(stats1.allocated_bytes >= 0);
-        assert!(stats2.allocated_bytes >= 0);
+        // allocated_bytes is u64, always >= 0
 
         println!("✅ Memory history and trend analysis completed");
         println!("  Stats1: {} bytes allocated", stats1.allocated_bytes);
@@ -444,7 +441,7 @@ mod gc_optimization_tests {
         let pool_result = manager.get_from_pool::<String>("test_pool").await;
 
         match pool_result {
-            Some(pooled_object) => {
+            Some(_pooled_object) => {
                 println!("✅ Object retrieved from pool successfully");
                 // Object will be automatically returned when dropped
             }
@@ -498,7 +495,7 @@ mod gc_optimization_tests {
         let manager = MemoryManager::new(config);
 
         // Create a memory-managed cache
-        let cache = manager.create_cache::<String, serde_json::Value>(
+        let _cache = manager.create_cache::<String, serde_json::Value>(
             "test_cache",
             100,    // max entries
             50,     // max memory MB

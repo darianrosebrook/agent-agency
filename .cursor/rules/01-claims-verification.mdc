@@ -2,6 +2,7 @@
 description: Production readiness claims require rigorous verification - agents must prove, not assert
 globs:
 alwaysApply: true
+ruleTokenCount: 1035
 ---
 
 # Production Readiness Verification & Accountability

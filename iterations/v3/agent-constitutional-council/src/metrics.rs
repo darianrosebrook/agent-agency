@@ -251,7 +251,7 @@ mod tests {
             label: VerdictLabel::Pass,
             score: 0.85,
             rationale: "Approved".to_string(),
-            judge_verdicts: vec![verdict],
+            judge_verdicts: vec![verdict.clone()],
             consensus_violations: vec![],
             recommended_actions: vec!["Proceed".to_string()],
         };

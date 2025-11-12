@@ -46,6 +46,8 @@ pub mod thinking_budget;
 pub mod curriculum_learning;
 pub mod caws_tool_registry;
 pub mod caws_quality_gates;
+pub mod caws_spec_resolver;
+pub mod caws_complexity_mode;
 pub mod model_lifecycle;
 
 // Re-export types for convenience

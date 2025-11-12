@@ -316,6 +316,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 api: rest_api,
                 websocket_manager: ws_manager.clone(),
                 query_performance_monitor: Arc::new(data_infrastructure::monitoring::query_performance::QueryPerformanceMonitor::with_defaults()),
+                coreml_inference_callback: None,
             }, ws_manager))
         } else {
             None
@@ -1212,6 +1213,7 @@ async fn update_task_handler(
         caws_spec: payload.get("caws_spec").cloned(),
         status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()),
         assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
+        project_id: payload.get("project_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
         priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
         deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
         metadata: payload.get("metadata").cloned(),
@@ -1317,7 +1319,12 @@ async fn create_project_task_handler(
         acceptance_criteria: payload.get("acceptance_criteria").cloned().unwrap_or_else(|| serde_json::json!([])),
         context: payload.get("context").cloned().unwrap_or_else(|| serde_json::json!({})),
         caws_spec: payload.get("caws_spec").cloned(),
+        status: payload.get("status").and_then(|v| v.as_str()).map(|s| s.to_string()).unwrap_or_else(|| "pending".to_string()),
+        assigned_worker_id: payload.get("assigned_worker_id").and_then(|v| v.as_str()).and_then(|s| Uuid::parse_str(s).ok()),
         project_id: Some(project_uuid),
+        priority: payload.get("priority").and_then(|v| v.as_i64()).map(|i| i as i32),
+        deadline: payload.get("deadline").and_then(|v| v.as_str()).and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|dt| dt.with_timezone(&Utc)),
+        metadata: payload.get("metadata").cloned(),
     };
     
     // Create task using CreateTask struct
@@ -2653,7 +2660,7 @@ async fn stream_agent_response_wrapper(
 }
 
 /// Generate chat response using CoreML via UnifiedOrchestrator
-#[cfg(feature = "orchestration")]
+#[cfg(all(feature = "orchestration", feature = "system-acceleration"))]
 async fn generate_coreml_chat_response(
     orchestrator: Arc<agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator>,
     message: &str,
@@ -2708,6 +2715,14 @@ async fn generate_coreml_chat_response(
             }
         }
     }
+}
+
+#[cfg(all(feature = "orchestration", not(feature = "system-acceleration")))]
+async fn generate_coreml_chat_response(
+    _orchestrator: Arc<agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator>,
+    _message: &str,
+) -> Result<String, String> {
+    Err("CoreML chat response requires system-acceleration feature".to_string())
 }
 
 #[cfg(feature = "orchestration")]
@@ -2978,11 +2993,11 @@ async fn search_handler(
                 for task in tasks {
                     // Text search in title and description
                     let matches = task.title.to_lowercase().contains(&query.to_lowercase()) ||
-                        task.description.as_ref().map(|d| d.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
+                        task.description.to_lowercase().contains(&query.to_lowercase());
                     
                     if matches {
                         // Find project for this task
-                        let project_id = task.execution_plan_id.map(|id| id.to_string()).unwrap_or_default();
+                        let project_id = task.project_id.map(|id| id.to_string()).unwrap_or_default();
                         all_results.push(serde_json::json!({
                             "id": task.id.to_string(),
                             "type": "task",
@@ -3013,16 +3028,16 @@ async fn search_handler(
         match db.get_workers().await {
             Ok(workers) => {
                 for worker in workers {
-                    // Text search in name and description
+                    // Text search in name and specialty
                     let matches = worker.name.to_lowercase().contains(&query.to_lowercase()) ||
-                        worker.description.as_ref().map(|d| d.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
+                        worker.specialty.as_ref().map(|s| s.to_lowercase().contains(&query.to_lowercase())).unwrap_or(false);
                     
                     if matches {
                         all_results.push(serde_json::json!({
                             "id": worker.id.to_string(),
                             "type": "agent",
                             "title": worker.name,
-                            "description": worker.description,
+                            "description": worker.specialty.clone().unwrap_or_default(),
                             "url": format!("/settings?tab=agents"),
                             "metadata": {
                                 "is_active": worker.is_active,
@@ -3128,7 +3143,7 @@ async fn search_handler(
                     let project_scope: Option<String> = row.try_get("project_scope").ok();
                     
                     // Determine URL based on project scope
-                    let url = if let Some(scope) = project_scope {
+                    let url = if let Some(scope) = project_scope.as_ref() {
                         format!("/projects/{}/workspace", scope)
                     } else {
                         "/workspace".to_string()
@@ -3555,7 +3570,7 @@ async fn get_project_settings_handler(
     match db.get_execution_plan(project_uuid).await {
         Ok(Some(plan)) => {
             // Extract settings from plan metadata or use defaults
-            let metadata = plan.metadata.unwrap_or_else(|| serde_json::json!({}));
+            let metadata = if plan.metadata.is_null() { serde_json::json!({}) } else { plan.metadata.clone() };
             let settings = serde_json::json!({
                 "project_id": project_id.clone(),
                 "notifications": metadata.get("notifications").cloned().unwrap_or(serde_json::json!({
@@ -3595,7 +3610,7 @@ async fn update_project_settings_handler(
     match db.get_execution_plan(project_uuid).await {
         Ok(Some(mut plan)) => {
             // Merge settings into metadata
-            let mut metadata = plan.metadata.unwrap_or_else(|| serde_json::json!({}));
+            let mut metadata = if plan.metadata.is_null() { serde_json::json!({}) } else { plan.metadata.clone() };
             
             if let Some(notifications) = payload.get("notifications") {
                 metadata["notifications"] = notifications.clone();
@@ -4793,6 +4808,7 @@ async fn list_provenance_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => {
@@ -4830,6 +4846,7 @@ async fn link_provenance_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Json(payload)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -4860,6 +4877,7 @@ async fn verify_provenance_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(commit_hash)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -4890,6 +4908,7 @@ async fn get_provenance_by_commit_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(commit_hash)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -4920,6 +4939,7 @@ async fn get_task_provenance_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(task_id)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -4950,6 +4970,7 @@ async fn list_waivers_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => {
@@ -4987,6 +5008,7 @@ async fn create_waiver_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Json(payload)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5018,6 +5040,7 @@ async fn approve_waiver_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(waiver_id), Json(payload)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5048,6 +5071,7 @@ async fn list_slos_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5078,6 +5102,7 @@ async fn get_slo_status_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(slo_name)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5108,6 +5133,7 @@ async fn get_slo_measurements_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 }), Path(slo_name)).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5137,6 +5163,7 @@ async fn list_slo_alerts_handler(
                     api: api.clone(),
                     websocket_manager: ws_manager.clone(),
                     query_performance_monitor: query_monitor.clone(),
+                    coreml_inference_callback: None,
                 })).await {
                     Ok(response) => Ok(response),
                     Err(status) => Err(status),
@@ -5823,6 +5850,7 @@ async fn query_performance_summary_handler(
                 api: api.clone(),
                 websocket_manager: ws_manager.clone(),
                 query_performance_monitor: query_monitor.clone(),
+                coreml_inference_callback: None,
             })
         ).await {
             Ok(response) => Ok(Json(serde_json::to_value(response.0).unwrap_or(serde_json::json!({})))),
@@ -5844,6 +5872,7 @@ async fn query_performance_metrics_handler(
                 api: api.clone(),
                 websocket_manager: ws_manager.clone(),
                 query_performance_monitor: query_monitor.clone(),
+                coreml_inference_callback: None,
             }),
             Query(params)
         ).await {
@@ -5866,6 +5895,7 @@ async fn query_performance_slow_handler(
                 api: api.clone(),
                 websocket_manager: ws_manager.clone(),
                 query_performance_monitor: query_monitor.clone(),
+                coreml_inference_callback: None,
             }),
             Query(params)
         ).await {
@@ -5888,6 +5918,7 @@ async fn query_performance_top_slow_handler(
                 api: api.clone(),
                 websocket_manager: ws_manager.clone(),
                 query_performance_monitor: query_monitor.clone(),
+                coreml_inference_callback: None,
             }),
             Query(params)
         ).await {
@@ -6706,7 +6737,7 @@ async fn setup_2fa_handler(
         .ok_or(StatusCode::NOT_FOUND)?;
     
     // Create TOTP instance using the original secret bytes
-    let totp = TOTP::new(
+    let _totp = TOTP::new(
         Algorithm::SHA1,
         6, // 6-digit codes
         1, // 1 step = 30 seconds
@@ -6781,10 +6812,7 @@ async fn verify_2fa_handler(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let mut code_valid = false;
-
-    // Check if code is a recovery code first
-    if two_fa.backup_codes.contains(&req.code) {
+    let code_valid = if two_fa.backup_codes.contains(&req.code) {
         // Valid recovery code - remove it from the list
         let mut updated_backup_codes = two_fa.backup_codes.clone();
         updated_backup_codes.retain(|code| code != &req.code);
@@ -6796,7 +6824,7 @@ async fn verify_2fa_handler(
         };
         
         let _ = db.update_two_factor_auth(user_id, &req.method, update).await;
-        code_valid = true;
+        true
     } else {
         // Verify TOTP code
         // Decode the stored secret (in production, decrypt first)
@@ -6824,8 +6852,8 @@ async fn verify_2fa_handler(
 
         // Verify the code with a tolerance window of ±1 step (30 seconds)
         // This handles clock skew and user delay
-        code_valid = totp.check(&req.code, 1);
-    }
+        totp.check(&req.code, 1)
+    };
 
     if !code_valid {
         return Err(StatusCode::UNAUTHORIZED);

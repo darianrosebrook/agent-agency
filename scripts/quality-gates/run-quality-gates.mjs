@@ -665,15 +665,27 @@ class QualityGateRunner {
 
       // Gate 5: Documentation Quality
       if (!GATES_FILTER || GATES_FILTER.has("documentation")) {
-        if (!QUIET_MODE && !JSON_MODE)
-          console.log("\nChecking documentation quality...");
-        gatePromises.push(
-          this.runGateWithTimeout(
-            "documentation",
-            () => this.runDocumentationQualityGate(),
-            15000
-          )
-        );
+        // Skip documentation gate in commit context if no files are staged
+        if (this.context === 'commit' && this.filesToCheck.length === 0) {
+          if (!QUIET_MODE && !JSON_MODE) {
+            console.log("\nChecking documentation quality...");
+            console.log("   Skipping documentation gate (no files staged)");
+          }
+        } else {
+          if (!QUIET_MODE && !JSON_MODE)
+            console.log("\nChecking documentation quality...");
+          // Use longer timeout for full repo scans (push/ci) vs commit mode (staged files only)
+          // commit: 30s (staged files only, typically small)
+          // push/ci: 120s (entire repo scan, may be large)
+          const timeoutMs = (this.context === 'ci' || this.context === 'push') ? 120000 : 30000;
+          gatePromises.push(
+            this.runGateWithTimeout(
+              "documentation",
+              () => this.runDocumentationQualityGate(),
+              timeoutMs
+            )
+          );
+        }
       }
 
       // Wait for all gates to complete (with their own error handling)
@@ -1125,8 +1137,12 @@ class QualityGateRunner {
         return await this.runBasicDocumentationChecks();
       }
 
+      // File scope is correctly determined by context:
+      // - commit: staged files only
+      // - push: all tracked files (entire repo)
+      // - ci: all tracked files (entire repo)
       console.log(
-        `    File scope: ${this.filesToCheck.length} files (respecting .gitignore)`
+        `    File scope: ${this.filesToCheck.length} files (context: ${this.context})`
       );
 
       console.log("    Starting documentation quality scan...");

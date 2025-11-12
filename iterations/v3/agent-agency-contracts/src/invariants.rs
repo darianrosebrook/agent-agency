@@ -368,7 +368,7 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use schemars::JsonSchema;
+    // Removed unused import: schemars::JsonSchema
     use crate::working_spec::{
         WorkingSpec, WorkingSpecMetadata, WorkingSpecConstraints, AcceptanceCriterion,
         TestPlan, RollbackPlan, RollbackStrategy, DataImpact, WorkingSpecContext,

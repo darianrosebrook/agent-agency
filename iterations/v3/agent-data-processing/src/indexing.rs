@@ -448,9 +448,17 @@ impl FullTextIndexer {
             return Ok(results);
         }
         
+        // Calculate average document length once to avoid deadlock
+        let avg_doc_length = if documents.is_empty() {
+            100.0
+        } else {
+            let total_length: usize = documents.values().map(|doc| doc.length).sum();
+            total_length as f64 / documents.len() as f64
+        };
+        
         // Calculate BM25 scores for each document
         for (id, doc) in documents.iter() {
-            let score = self.calculate_bm25_score(&query_terms, doc, &vocabulary, total_docs);
+            let score = self.calculate_bm25_score(&query_terms, doc, &vocabulary, total_docs, avg_doc_length);
             if score > 0.0 {
                 let snippet = self.extract_snippet(&doc.text, &query_terms);
                 results.push((id.clone(), score, snippet));
@@ -489,6 +497,7 @@ impl FullTextIndexer {
         doc: &DocumentRecord,
         vocabulary: &HashMap<String, TermStats>,
         total_docs: usize,
+        avg_doc_length: f64,
     ) -> f64 {
         const K1: f64 = 1.2;
         const B: f64 = 0.75;
@@ -498,11 +507,21 @@ impl FullTextIndexer {
         for term in query_terms {
             if let Some(term_stats) = vocabulary.get(term) {
                 let tf = *doc.term_freqs.get(term).unwrap_or(&0) as f64;
+                if tf == 0.0 {
+                    continue; // Term not in document
+                }
                 let df = term_stats.document_frequency as f64;
-                let idf = ((total_docs as f64 - df + 0.5) / (df + 0.5)).ln();
+                // BM25 IDF formula: ln((N - df + 0.5) / (df + 0.5))
+                // Ensure IDF is always positive (handle edge case when df >= N)
+                let idf = if total_docs > df as usize {
+                    ((total_docs as f64 - df + 0.5) / (df + 0.5)).ln().max(0.0)
+                } else {
+                    // When all documents contain the term, use a small positive IDF
+                    0.1
+                };
                 
                 let numerator = tf * (K1 + 1.0);
-                let denominator = tf + K1 * (1.0 - B + B * (doc.length as f64 / self.get_average_document_length()));
+                let denominator = tf + K1 * (1.0 - B + B * (doc.length as f64 / avg_doc_length));
                 
                 score += idf * (numerator / denominator);
             }
@@ -620,6 +639,14 @@ impl VectorIndexer {
             vectors: std::sync::Mutex::new(HashMap::new()),
             graph: std::sync::Mutex::new(HashMap::new()),
             dimension: 384, // Default dimension
+        })
+    }
+
+    pub async fn new_with_dimension(dimension: usize) -> DataProcessingResult<Self> {
+        Ok(Self {
+            vectors: std::sync::Mutex::new(HashMap::new()),
+            graph: std::sync::Mutex::new(HashMap::new()),
+            dimension,
         })
     }
 
@@ -1923,7 +1950,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_vector_indexer() {
-        let indexer = VectorIndexer::new().await.unwrap();
+        // Create indexer with dimension 3 to match test vector
+        let indexer = VectorIndexer::new_with_dimension(3).await.unwrap();
         let id = ProcessingId::new();
         let vector = vec![1.0, 2.0, 3.0];
 
@@ -1934,7 +1962,8 @@ mod tests {
         let results = indexer.search_similar(&vector, 10).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, id);
-        assert_eq!(results[0].1, 1.0); // Perfect similarity with itself
+        // Use approximate equality for floating point comparison
+        assert!((results[0].1 - 1.0).abs() < 1e-6, "Expected similarity ≈ 1.0, got {}", results[0].1);
     }
 
     #[tokio::test]
@@ -1972,10 +2001,11 @@ mod tests {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![1.0, 2.0, 3.0];
         let similarity = SimpleHnswIndex::cosine_similarity(&a, &b);
-        assert_eq!(similarity, 1.0);
+        // Use approximate equality for floating point comparison
+        assert!((similarity - 1.0).abs() < 1e-6, "Expected similarity ≈ 1.0, got {}", similarity);
 
         let c = vec![-1.0, -2.0, -3.0];
         let similarity_opposite = SimpleHnswIndex::cosine_similarity(&a, &c);
-        assert_eq!(similarity_opposite, -1.0);
+        assert!((similarity_opposite - (-1.0)).abs() < 1e-6, "Expected similarity ≈ -1.0, got {}", similarity_opposite);
     }
 }

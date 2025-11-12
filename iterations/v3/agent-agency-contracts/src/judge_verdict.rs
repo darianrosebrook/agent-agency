@@ -76,7 +76,7 @@ pub fn validate_judge_verdict_value(value: &Value) -> Result<(), ContractError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use schemars::JsonSchema;
+    // Removed unused import: schemars::JsonSchema
 
     #[test]
     fn judge_verdict_validation() {

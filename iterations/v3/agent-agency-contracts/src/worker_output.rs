@@ -128,7 +128,7 @@ pub fn validate_worker_output_value(value: &Value) -> Result<(), ContractError> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use schemars::JsonSchema;
+    // Removed unused import: schemars::JsonSchema
 
     #[test]
     fn worker_output_round_trip() {

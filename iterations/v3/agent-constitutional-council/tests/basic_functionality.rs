@@ -38,6 +38,9 @@ impl JudgeEngine for MockJudgeEngine {
             model_id: "mistral-7b-instruct".to_string(),
             family: "mistral".to_string(),
             max_ctx: 4096,
+            max_tokens_out: 1024,
+            quant: "int4".to_string(),
+            acceleration: vec!["CPU".to_string()],
         }
     }
 }

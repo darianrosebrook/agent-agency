@@ -358,7 +358,8 @@ mod tests {
         // Test ANE utilization below target (higher is better)
         let result = validator.validate_metric(&validator.targets.ane_utilization_percent, 50.0);
         assert!(!result.passed);
-        assert_eq!(result.deviation_percent, 16.67); // 16.67% below target
+        // Use approximate comparison for floating point
+        assert!((result.deviation_percent - 16.67).abs() < 0.01); // 16.67% below target
     }
 
     #[test]

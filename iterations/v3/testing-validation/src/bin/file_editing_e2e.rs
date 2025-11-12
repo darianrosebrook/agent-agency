@@ -41,7 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 // Simple smoke test to verify our implementations compile and can be instantiated
 #[cfg(test)]
 mod smoke_tests {
-    use super::*;
 
     #[tokio::test]
     async fn test_imports_compile() {
@@ -49,21 +48,21 @@ mod smoke_tests {
         // We don't actually run the full E2E test here since it requires external dependencies
 
         // Verify we can import our test scenarios (only those available without full feature)
-        use testing_validation::scenarios::scenario_4_file_editing::run_file_editing_e2e_test;
-        use testing_validation::scenarios::security_privacy::run_security_test;
+        let _ = testing_validation::scenarios::scenario_4_file_editing::run_file_editing_e2e_test;
+        let _ = testing_validation::scenarios::security_privacy::run_security_test;
         
         #[cfg(feature = "full")]
         {
-            use testing_validation::scenarios::claim_verification::run_claim_verification_test;
-            use testing_validation::scenarios::multi_agent_coordination::run_multi_agent_test;
-            use testing_validation::scenarios::reflexive_learning::run_reflexive_learning_test;
-            use testing_validation::scenarios::self_prompting_loops::run_self_prompting_test;
+            let _ = testing_validation::scenarios::claim_verification::run_claim_verification_test;
+            let _ = testing_validation::scenarios::multi_agent_coordination::run_multi_agent_test;
+            let _ = testing_validation::scenarios::reflexive_learning::run_reflexive_learning_test;
+            let _ = testing_validation::scenarios::self_prompting_loops::run_self_prompting_test;
         }
 
         println!("✅ All E2E test scenario imports successful");
 
         // Verify we can import our services
-        use testing_validation::services::postgres::PostgresService;
+        let _: std::marker::PhantomData<testing_validation::services::postgres::PostgresService> = std::marker::PhantomData;
         
         #[cfg(feature = "full")]
         {

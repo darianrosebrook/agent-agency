@@ -467,15 +467,13 @@ pub struct IndexStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_index_creation() {
-        let temp_dir = TempDir::new().unwrap();
-        let db_path = temp_dir.path().join("test.db");
-        let database_url = format!("sqlite:{}", db_path.display());
+        // Use in-memory SQLite database for testing (no file I/O issues)
+        let database_url = "sqlite::memory:";
         
-        let index = RecoveryIndex::new(&database_url).await.unwrap();
+        let index = RecoveryIndex::new(database_url).await.unwrap();
         let stats = index.get_stats().await.unwrap();
         
         assert_eq!(stats.file_versions, 0);
@@ -485,11 +483,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_version_recording() {
-        let temp_dir = TempDir::new().unwrap();
-        let db_path = temp_dir.path().join("test.db");
-        let database_url = format!("sqlite:{}", db_path.display());
+        // Use in-memory SQLite database for testing
+        let database_url = "sqlite::memory:";
         
-        let index = RecoveryIndex::new(&database_url).await.unwrap();
+        let index = RecoveryIndex::new(database_url).await.unwrap();
         
         let path = "test.txt";
         let commit_id = Digest::from_bytes([1u8; 32]);

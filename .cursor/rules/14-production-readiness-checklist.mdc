@@ -2,6 +2,7 @@
 description: Quick reference checklist for production readiness verification
 globs:
 alwaysApply: true
+ruleTokenCount: 1717
 ---
 
 # Production Readiness Verification Checklist

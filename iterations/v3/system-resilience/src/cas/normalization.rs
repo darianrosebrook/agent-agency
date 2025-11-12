@@ -400,7 +400,13 @@ impl EolStats {
             }
         }
 
-        let total_lines = lf_lines + crlf_lines + cr_lines;
+        // Count total lines: EOLs + 1 (for content that doesn't end with EOL)
+        // If content ends with EOL, total_lines = EOLs; otherwise total_lines = EOLs + 1
+        let eol_count = lf_lines + crlf_lines + cr_lines;
+        let ends_with_eol = content.last()
+            .map(|&b| b == b'\n' || b == b'\r')
+            .unwrap_or(false);
+        let total_lines = if ends_with_eol { eol_count } else { eol_count + 1 };
         let mixed_eol = [lf_lines, crlf_lines, cr_lines]
             .iter()
             .filter(|&&count| count > 0)

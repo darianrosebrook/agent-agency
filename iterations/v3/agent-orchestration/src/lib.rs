@@ -77,29 +77,104 @@ pub mod restored_examples;
 #[cfg(test)]
 mod test_utils {
     use std::sync::Arc;
+    use std::collections::HashMap;
     use async_trait::async_trait;
     use uuid::Uuid;
     use crate::planning::DatabaseOperations;
 
-    // Mock database operations for testing
-    pub struct MockDatabaseOps;
+    // Mock database operations for testing with in-memory storage
+    pub struct MockDatabaseOps {
+        // In-memory storage
+        sessions: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::PlanningSession>>>,
+        plans: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::ExecutionPlan>>>,
+        execution_results: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::PlanExecutionResult>>>,
+        audit_trails: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::AuditTrailEntry>>>,
+    }
+
+    impl Default for MockDatabaseOps {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl MockDatabaseOps {
+        /// Create a new mock database operations instance
+        pub fn new() -> Self {
+            Self {
+                sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+                plans: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+                execution_results: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+                audit_trails: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            }
+        }
+    }
 
     #[async_trait]
     impl DatabaseOperations for MockDatabaseOps {
-        async fn create_execution_plan(&self, _plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_execution_plan(&self, plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            use chrono::Utc;
+            let now = Utc::now();
+            let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
+                id: plan.id,
+                session_id: Uuid::new_v4(),
+                working_spec_id: plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id)),
+                title: plan.title,
+                overview: Some(plan.overview),
+                state: "draft".to_string(),
+                milestones: serde_json::json!([]),
+                dependency_graph: serde_json::json!({}),
+                change_budget: serde_json::json!({}),
+                quality_gates: serde_json::json!({}),
+                evidence_requirements: serde_json::json!([]),
+                active_waivers: serde_json::json!([]),
+                metadata: serde_json::json!({}),
+                created_at: now,
+                updated_at: now,
+                approved_at: None,
+                completed_at: None,
+            };
+            
+            self.plans.write().await.insert(plan.id, db_plan.clone());
+            Ok(db_plan)
         }
-        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
-            Ok(None)
+        async fn get_execution_plan(&self, id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+            Ok(self.plans.read().await.get(&id).cloned())
         }
         async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
-            Ok(vec![])
+            Ok(self.plans.read().await.values().cloned().collect())
         }
-        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn update_execution_plan(&self, id: Uuid, update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+            use chrono::Utc;
+            let mut plans = self.plans.write().await;
+            let plan = plans.get_mut(&id)
+                .ok_or_else(|| anyhow::anyhow!("Execution plan not found: {}", id))?;
+            
+            if let Some(title) = update.title {
+                plan.title = title;
+            }
+            if let Some(overview) = update.overview {
+                plan.overview = Some(overview);
+            }
+            if let Some(status) = update.status {
+                plan.state = status;
+            }
+            plan.updated_at = Utc::now();
+            
+            Ok(plan.clone())
         }
-        async fn create_audit_trail_entry(&self, _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_audit_trail_entry(&self, entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+            use chrono::Utc;
+            let id = Uuid::new_v4();
+            let db_entry = crate::planning::data_infrastructure_types::models::AuditTrailEntry {
+                id,
+                event_type: entry.event_type,
+                description: entry.description,
+                timestamp: Utc::now(),
+                metadata: entry.metadata,
+            };
+            
+            self.audit_trails.write().await.insert(id, db_entry.clone());
+            Ok(db_entry)
         }
         async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
             Ok(vec![])
@@ -107,13 +182,53 @@ mod test_utils {
         async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
             Ok(None)
         }
-        async fn create_planning_session(&self, _session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_planning_session(&self, session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+            use chrono::Utc;
+            // Extract session_id from metadata if present (PlanningStorage generates it and stores it there)
+            // Otherwise generate a new one
+            let id = session.metadata
+                .get("session_id")
+                .and_then(|v| v.as_str())
+                .and_then(|s| Uuid::parse_str(s).ok())
+                .unwrap_or_else(Uuid::new_v4);
+            let now = Utc::now();
+            
+            // Extract status from metadata if present, otherwise default to "active"
+            let status = session.metadata
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("active")
+                .to_string();
+            
+            let db_session = crate::planning::data_infrastructure_types::models::PlanningSession {
+                id,
+                plan_id: session.plan_id,
+                status,
+                created_at: now,
+                updated_at: now,
+                metadata: session.metadata,
+            };
+            
+            self.sessions.write().await.insert(id, db_session.clone());
+            Ok(db_session)
         }
-        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
-            Ok(None)
+        async fn get_planning_session(&self, id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+            Ok(self.sessions.read().await.get(&id).cloned())
         }
-        async fn update_planning_session(&self, _id: Uuid, _session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+        async fn update_planning_session(&self, id: Uuid, session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+            use chrono::Utc;
+            let mut sessions = self.sessions.write().await;
+            let db_session = sessions.get_mut(&id)
+                .ok_or_else(|| anyhow::anyhow!("Planning session not found: {}", id))?;
+            
+            if let Some(status) = session.status {
+                db_session.status = status;
+            }
+            if let Some(metadata) = session.metadata {
+                db_session.metadata = metadata;
+            }
+            db_session.updated_at = Utc::now();
+            
             Ok(())
         }
         async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
@@ -149,11 +264,61 @@ mod test_utils {
         async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
             Ok(vec![])
         }
+        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_execution_result(&self, result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+            use chrono::Utc;
+            let now = Utc::now();
+            let db_result = crate::planning::data_infrastructure_types::models::PlanExecutionResult {
+                plan_id: result.plan_id,
+                success: result.success,
+                milestones_completed: result.milestones_completed as i32,
+                total_duration_ms: result.total_duration_ms as i64,
+                evidence: result.evidence,
+                metrics: result.metrics,
+                final_state: result.final_state,
+                timeline: result.timeline,
+                created_at: now,
+                updated_at: now,
+            };
+            
+            self.execution_results.write().await.insert(result.plan_id, db_result.clone());
+            Ok(db_result)
+        }
+        async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+            Ok(self.execution_results.read().await.get(&plan_id).cloned())
+        }
         async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
             Ok(vec![])
         }
-        async fn create_waiver(&self, _waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_waiver(&self, waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+            use chrono::Utc;
+            use std::collections::HashMap;
+            let id = Uuid::new_v4();
+            let now = Utc::now();
+            let db_waiver = crate::planning::data_infrastructure_types::models::Waiver {
+                id,
+                plan_id: waiver.plan_id,
+                waiver_type: "test".to_string(),
+                reason: waiver.reason,
+                approved_by: "test".to_string(),
+                status: "pending".to_string(),
+                gates: waiver.waived_gates,
+                impact_level: "low".to_string(),
+                mitigation_plan: None,
+                created_at: now,
+                expires_at: None,
+                metadata: HashMap::new(),
+            };
+            
+            Ok(db_waiver)
         }
         async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
             Err(anyhow::anyhow!("Not implemented"))

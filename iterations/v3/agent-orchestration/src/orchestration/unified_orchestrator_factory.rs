@@ -31,7 +31,7 @@ use crate::planning::{
     plan_executor::{WorkerPool, WorkerInfo, WorkerStatus, WorkerHealth, PlanExecutor, ExecutionConfig},
     factory::PlanningSystemFactory,
 };
-use crate::orchestration::task_state_persistence::{InMemoryTaskStatePersistence, TaskStatePersistence, DatabaseTaskStatePersistence};
+use crate::orchestration::task_state_persistence::{TaskStatePersistence, DatabaseTaskStatePersistence};
 use crate::planning::{DatabaseOperations, plan_types::ExecutionPlan};
 use crate::workers::execution_bridge::WorkerExecutionBridge;
 use agent_workers::{TaskExecutor, MCPWorkerPool, WorkerPoolConfig, WorkerSpecialty};

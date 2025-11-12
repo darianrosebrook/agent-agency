@@ -49,7 +49,7 @@ pub struct CouncilMonitor {
     council: Arc<dyn agent_agency_contracts::CouncilCoordinator>,
 
     /// Database operations for audit trail
-    db_ops: Arc<dyn DatabaseOperations>,
+    _db_ops: Arc<dyn DatabaseOperations>,
 
     /// Active plan monitoring sessions
     active_sessions: Arc<tokio::sync::RwLock<HashMap<String, PlanSession>>>,
@@ -156,7 +156,7 @@ impl CouncilMonitor {
     ) -> Self {
         Self {
             council,
-            db_ops,
+            _db_ops: db_ops,
             active_sessions: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             config,
         }

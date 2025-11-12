@@ -69,7 +69,7 @@ impl Default for TaskExecutorProvider {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::task_executor::TaskExecutor;
+    // Removed unused import: crate::task_executor::TaskExecutor
 
     /// Mock task executor for testing
     #[derive(Debug)]

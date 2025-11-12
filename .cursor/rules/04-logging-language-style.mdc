@@ -2,6 +2,7 @@
 description: Logging, language tone, emoji policy
 globs:
 alwaysApply: true
+ruleTokenCount: 132
 ---
 
 # Logging & Language

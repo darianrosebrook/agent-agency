@@ -16,7 +16,7 @@ use crate::judge_backup::{Judge, JudgeContribution};
 use crate::judge_backup::types::ReviewContext;
 use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
 use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
-use agent_agency_contracts::{MemoryType, types::planning::TaskDescriptor};
+use agent_agency_contracts::types::planning::TaskDescriptor;
 
 #[cfg(feature = "memory")]
 use agent_agency_contracts::types::memory::*;
@@ -26,7 +26,7 @@ use agent_memory::memory_types;
 
 #[cfg(not(feature = "memory"))]
 pub mod memory_types {
-    use super::*;
+    use agent_agency_contracts::types::memory::MemoryType;
     pub type AgentExperience = MemoryType;
     pub type ExperienceContext = MemoryType;
     pub type ExperienceOutcome = MemoryType;

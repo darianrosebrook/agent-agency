@@ -885,12 +885,14 @@ mod tests {
     struct MockCouncilMonitor;
     struct MockWorkerAssignment;
 
+    #[allow(dead_code)]
     impl MockPlanExecutor {
         async fn execute_milestone_impl(&self, _milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<()> {
             Ok(())
         }
     }
 
+    #[allow(dead_code)]
     impl MockScopeGuard {
         async fn acquire_locks(&self, _milestone_id: String, _scope: &agent_agency_contracts::planning_io::MilestoneScope) -> Result<()> {
             Ok(())
@@ -901,6 +903,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     impl MockCouncilMonitor {
         async fn check_execution_allowed(&self, _plan_id: &str) -> Result<bool> {
             Ok(true)
@@ -915,6 +918,7 @@ mod tests {
         }
     }
 
+    #[allow(dead_code)]
     impl MockWorkerAssignment {
         async fn assign_worker(&self, _milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<Uuid> {
             Ok(Uuid::new_v4())

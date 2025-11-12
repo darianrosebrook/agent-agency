@@ -8,8 +8,8 @@
 //! - Provides accurate reporting
 
 use system_resilience::memory::{
-    AllocationSiteTracker, AllocationSite, TaskAllocationStats,
-    AllocationRecord, MemoryManager, MemoryManagementConfig,
+    AllocationSiteTracker, AllocationSite,
+    MemoryManager, MemoryManagementConfig,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -285,9 +285,8 @@ mod memory_allocation_tracking_tests {
         // verify the manager can be created and basic stats work
 
         // Verify memory stats are available
-        let stats = manager.get_memory_stats();
-        assert!(stats.allocated_bytes >= 0);
-        assert!(stats.active_allocations >= 0);
+        let _stats = manager.get_memory_stats();
+        // allocated_bytes and active_allocations are u64, always >= 0
 
         // Verify memory pressure detection works
         let pressure = manager.get_memory_pressure();

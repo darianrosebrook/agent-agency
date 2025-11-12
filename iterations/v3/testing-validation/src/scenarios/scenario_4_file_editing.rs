@@ -13,8 +13,7 @@
 use std::time::Instant;
 use std::path::PathBuf;
 use tokio::process::Command;
-use tokio::fs;
-use tracing::{error, info};
+use tracing::error;
 use tempfile::TempDir;
 
 #[cfg(feature = "full")]

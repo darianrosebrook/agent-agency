@@ -17,32 +17,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize service registry and register core services
     let mcp_integration = worker_pool.mcp_integration();
-    let mut service_registry = crate::services::create_default_service_registry(mcp_integration).await?;
+    let mut service_registry = crate::services::create_default_service_registry(mcp_integration.clone()).await?;
     println!("✅ Registered core services: {:?}", service_registry.get_registered_services());
 
     // Register a React component specialist worker
     // This worker specializes in React but uses DYNAMICALLY REGISTERED tools
     let capabilities = WorkerCapabilities {
-        specialties: vec![WorkerSpecialty::ReactComponent],
-        available_tools: vec![
-            "code_generator".to_string(),  // Generate code from prompts (from service)
-            "file_writer".to_string(),     // Write files to disk (from service)
-            "validator".to_string(),       // Validate generated code (from service)
-        ],
-        max_concurrent_tasks: 5,
-        health_status: WorkerHealth::Healthy,
-        performance_metrics: WorkerPerformance {
-            tasks_completed: 0,
-            tasks_failed: 0,
-            average_execution_time_ms: 0.0,
-            success_rate: 1.0,
-        },
+        languages: vec!["typescript".to_string(), "javascript".to_string()],
+        frameworks: vec!["react".to_string(), "nextjs".to_string()],
+        domains: vec!["frontend".to_string(), "ui".to_string()],
+        max_context_length: 4000,
+        max_output_length: 2000,
+        supported_formats: vec!["tsx".to_string(), "jsx".to_string()],
+        caws_awareness: 0.8,
+        quality_score: 0.9,
+        speed_score: 0.7,
     };
 
     let worker_handle = worker_pool.register_worker(
         WorkerSpecialty::ReactComponent,
         capabilities
-    ).await;
+    ).await.map_err(|e| format!("Failed to register worker: {}", e))?;
     println!("✅ Registered React component worker: {}", worker_handle.id);
 
     // Demonstrate dynamic tool discovery from registered services
@@ -56,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 1: Knowledge search using dynamically registered tool
     let knowledge_task = TaskDefinition {
-        id: TaskId::new_v4(),
+        id: TaskId::new().0,
         name: "Search Knowledge Base".to_string(),
         description: "Search for information about React components".to_string(),
         priority: TaskPriority::Normal,
@@ -67,6 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             params
         },
         timeout_seconds: Some(30),
+        deadline: None,
+        metadata: HashMap::new(),
     };
 
     match worker_pool.execute_task(knowledge_task).await {
@@ -76,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 2: Web search using dynamically registered tool
     let web_search_task = TaskDefinition {
-        id: TaskId::new_v4(),
+        id: TaskId::new().0,
         name: "Web Search".to_string(),
         description: "Search web for NextJS 16 features".to_string(),
         priority: TaskPriority::Normal,
@@ -87,6 +84,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             params
         },
         timeout_seconds: Some(20),
+        deadline: None,
+        metadata: HashMap::new(),
     };
 
     match worker_pool.execute_task(web_search_task).await {
@@ -96,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Example 3: File operations using dynamically registered tools
     let file_read_task = TaskDefinition {
-        id: TaskId::new_v4(),
+        id: TaskId::new().0,
         name: "Read File".to_string(),
         description: "Read content from a source file".to_string(),
         priority: TaskPriority::Normal,
@@ -107,6 +106,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             params
         },
         timeout_seconds: Some(10),
+        deadline: None,
+        metadata: HashMap::new(),
     };
 
     match worker_pool.execute_task(file_read_task).await {
@@ -119,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📊 Worker Pool Statistics:");
     println!("==========================");
     println!("Total workers: {}", stats.total_workers);
-    println!("Tasks processed: {}", stats.total_tasks_processed);
+    println!("Tasks completed: {}", stats.total_tasks_completed);
 
     let health = worker_pool.health_check().await;
     println!("Pool health: {:?}", health);

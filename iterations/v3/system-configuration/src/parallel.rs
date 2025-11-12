@@ -260,7 +260,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::PipelineConfig;
+    // Removed unused import: crate::config::PipelineConfig
 
     // Mock stage for testing
     #[derive(Debug)]

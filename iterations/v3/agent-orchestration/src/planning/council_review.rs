@@ -380,8 +380,20 @@ impl CouncilPlanReview {
     }
 
     /// Review execution plan before approval
-    pub async fn review_plan(&self, plan: &crate::planning::plan_types::ExecutionPlan) -> Result<CouncilReviewResult> {
+    pub async fn review_plan(
+        &self, 
+        plan: &crate::planning::plan_types::ExecutionPlan,
+        spec_id: Option<&str>,
+        project_root: Option<&std::path::Path>,
+    ) -> Result<CouncilReviewResult> {
         let review_start = Utc::now();
+
+        // Detect complexity mode for review context
+        let complexity_mode = if let Some(root) = project_root {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(root).ok()
+        } else {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(".")).ok()
+        };
 
         // 1. Validate scope and boundaries
         let scope_validation = if self.config.enable_scope_validation {
@@ -407,9 +419,15 @@ impl CouncilPlanReview {
             }
         };
 
-        // 3. Assess quality requirements
+        // 3. Assess quality requirements with mode awareness
         let quality_requirements = if self.config.enable_quality_assessment {
-            self.quality_assessor.assess_quality_requirements(plan).await?
+            // Create assessor with project root if available
+            let assessor = if let Some(root) = project_root {
+                QualityRequirementsAssessor::with_project_root(root)
+            } else {
+                QualityRequirementsAssessor::new()
+            };
+            assessor.assess_quality_requirements(plan).await?
         } else {
             QualityRequirements {
                 min_test_coverage: 0.0,
@@ -437,6 +455,15 @@ impl CouncilPlanReview {
 
         let review_duration = Utc::now().signed_duration_since(review_start).num_milliseconds() as u64;
 
+        // Build metadata with spec context and complexity mode
+        let mut metadata = HashMap::new();
+        if let Some(spec_id) = spec_id {
+            metadata.insert("spec_id".to_string(), serde_json::json!(spec_id));
+        }
+        if let Some(mode) = complexity_mode {
+            metadata.insert("complexity_mode".to_string(), serde_json::json!(format!("{:?}", mode)));
+        }
+
         let result = CouncilReviewResult {
             plan_id: plan.contract_plan.id,
             approved,
@@ -447,7 +474,7 @@ impl CouncilPlanReview {
             council_decision,
             reviewed_at: Utc::now(),
             review_duration_ms: review_duration,
-            metadata: HashMap::new(),
+            metadata,
         };
 
         // 7. Store review results
@@ -1383,23 +1410,53 @@ impl EthicalAssessor {
 
 /// Quality requirements assessor
 #[derive(Debug)]
-pub struct QualityRequirementsAssessor;
+pub struct QualityRequirementsAssessor {
+    /// Project root for complexity mode detection
+    project_root: Option<std::path::PathBuf>,
+}
 
 impl QualityRequirementsAssessor {
     pub fn new() -> Self {
-        Self
+        Self {
+            project_root: None,
+        }
+    }
+
+    /// Create assessor with project root for complexity mode detection
+    pub fn with_project_root(project_root: impl AsRef<std::path::Path>) -> Self {
+        Self {
+            project_root: Some(project_root.as_ref().to_path_buf()),
+        }
     }
 
     pub async fn assess_quality_requirements(&self, plan: &ExecutionPlan) -> Result<QualityRequirements> {
         let risk_tier = self.assess_risk_tier(plan);
         let evidence_requirements = self.determine_evidence_requirements(plan);
 
+        // Detect complexity mode for mode-aware requirements
+        let complexity_mode = if let Some(ref root) = self.project_root {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(root)
+                .unwrap_or(crate::planning::caws_complexity_mode::CawsComplexityMode::Standard)
+        } else {
+            // Try to detect from current directory
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+                .unwrap_or(crate::planning::caws_complexity_mode::CawsComplexityMode::Standard)
+        };
+
+        // Get mode-aware quality requirements
+        let mode_requirements = complexity_mode.quality_requirements(risk_tier);
+
         Ok(QualityRequirements {
-            min_test_coverage: self.calculate_min_coverage(risk_tier),
-            security_scan_required: risk_tier >= 2,
+            min_test_coverage: mode_requirements.line_coverage,
+            security_scan_required: mode_requirements.manual_review_required 
+                || risk_tier == 1 
+                || matches!(complexity_mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise),
             performance_budget_required: self.has_performance_impacts(plan),
-            manual_review_required: risk_tier >= 2 || plan.contract_plan.milestones.len() > 5,
-            council_approval_required: risk_tier >= 3 || self.requires_council_approval(plan),
+            manual_review_required: mode_requirements.manual_review_required 
+                || plan.contract_plan.milestones.len() > 5,
+            council_approval_required: matches!(complexity_mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise) 
+                || risk_tier == 1 
+                || self.requires_council_approval(plan),
             evidence_requirements,
         })
     }
@@ -1427,7 +1484,10 @@ impl QualityRequirementsAssessor {
         risk_score.min(3) as u8
     }
 
+    /// Calculate minimum coverage (deprecated - use complexity mode instead)
+    #[deprecated(note = "Use complexity mode quality_requirements() instead")]
     fn calculate_min_coverage(&self, risk_tier: u8) -> f64 {
+        // Legacy hardcoded thresholds - kept for backward compatibility
         match risk_tier {
             1 => 0.7,  // 70% for low risk
             2 => 0.8,  // 80% for medium risk
@@ -1601,7 +1661,7 @@ mod tests {
             Arc::new(create_verdict_aggregator()),
             create_decision_engine(),
         ));
-        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps::new());
         let review = CouncilPlanReview::new(council, db_ops);
         // Should create successfully
         assert!(true);

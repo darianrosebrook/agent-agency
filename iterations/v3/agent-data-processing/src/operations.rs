@@ -1038,9 +1038,30 @@ impl ChangesetValidator {
                 let prefix = parts[0].trim_end_matches('/');
                 let suffix = parts[1].trim_start_matches('/');
 
-                return path.starts_with(prefix) &&
-                       (suffix.is_empty() || path.ends_with(suffix) ||
-                        path.contains(&format!("/{}", suffix)));
+                if !path.starts_with(prefix) {
+                    return false;
+                }
+
+                // Handle suffix with wildcards (e.g., "*.md")
+                if suffix.is_empty() {
+                    return true;
+                }
+
+                // If suffix contains *, match the pattern
+                if suffix.contains('*') {
+                    let suffix_parts: Vec<&str> = suffix.split('*').collect();
+                    if suffix_parts.len() == 2 {
+                        let suffix_prefix = suffix_parts[0];
+                        let suffix_suffix = suffix_parts[1];
+                        // Check if path ends with suffix_suffix and contains suffix_prefix after prefix
+                        let path_after_prefix = &path[prefix.len()..];
+                        return path_after_prefix.ends_with(suffix_suffix) &&
+                               (suffix_prefix.is_empty() || path_after_prefix.contains(suffix_prefix));
+                    }
+                }
+
+                // Simple suffix match
+                return path.ends_with(suffix) || path.contains(&format!("/{}", suffix));
             }
         }
 

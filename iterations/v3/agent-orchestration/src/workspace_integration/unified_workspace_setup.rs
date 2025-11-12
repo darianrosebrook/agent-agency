@@ -5,8 +5,7 @@
 //! @author @darianrosebrook
 
 use system_resilience::workspace_state::{
-    UnifiedWorkspaceStateManagerBuilder, UnifiedWorkspaceConfig,
-    FileWatchConfig, ContextGenerationConfig, MetricsConfig,
+    UnifiedWorkspaceStateManagerBuilder, UnifiedWorkspaceConfig, ContextGenerationConfig, MetricsConfig,
     WorkspaceConfig,
 };
 use std::path::PathBuf;
@@ -144,7 +143,7 @@ pub async fn setup_unified_workspace_embedding_only(
     system_resilience::workspace_state::UnifiedWorkspaceStateManager,
     String,
 > {
-    use system_resilience::workspace_state::WorkspaceError;
+    
     
     let context_config = ContextGenerationConfig {
         enabled: true,

@@ -938,7 +938,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_planning_storage_creation() {
-        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps::new());
         let plans_dir = PathBuf::from("/tmp/plans");
         let specs_dir = PathBuf::from("/tmp/specs");
         let config = StorageConfig::default();
@@ -950,7 +950,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_session_caching() {
-        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps);
+        let db_ops = Arc::new(crate::test_utils::MockDatabaseOps::new());
         let plans_dir = PathBuf::from("/tmp/plans");
         let specs_dir = PathBuf::from("/tmp/specs");
         let config = StorageConfig::default();
@@ -1029,8 +1029,34 @@ mod tests {
             Ok(None)
         }
 
-        async fn create_planning_session(&self, _session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_planning_session(&self, session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+            use chrono::Utc;
+            // Extract session_id from metadata if present (PlanningStorage generates it and stores it there)
+            // Otherwise generate a new one
+            let id = session.metadata
+                .get("session_id")
+                .and_then(|v| v.as_str())
+                .and_then(|s| Uuid::parse_str(s).ok())
+                .unwrap_or_else(Uuid::new_v4);
+            let now = Utc::now();
+            
+            // Extract status from metadata if present, otherwise default to "active"
+            let status = session.metadata
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("active")
+                .to_string();
+            
+            let db_session = crate::planning::data_infrastructure_types::models::PlanningSession {
+                id,
+                plan_id: session.plan_id,
+                status,
+                created_at: now,
+                updated_at: now,
+                metadata: session.metadata,
+            };
+            
+            Ok(db_session)
         }
 
         async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
@@ -1049,8 +1075,19 @@ mod tests {
             Ok(())
         }
 
-        async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
-            Err(anyhow::anyhow!("Not implemented"))
+        async fn create_planning_telemetry(&self, telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+            use chrono::Utc;
+            let id = Uuid::new_v4();
+            let db_telemetry = crate::planning::data_infrastructure_types::models::PlanningTelemetry {
+                id,
+                session_id: telemetry.session_id,
+                metric_name: telemetry.metric_name,
+                metric_value: telemetry.metric_value,
+                timestamp: Utc::now(),
+                metadata: telemetry.metadata,
+            };
+            
+            Ok(db_telemetry)
         }
 
         async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
@@ -1091,6 +1128,18 @@ mod tests {
 
         async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
             Ok(vec![])
+        }
+
+        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(None)
+        }
+
+        async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+
+        async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
         }
 
         async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {

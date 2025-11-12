@@ -76,7 +76,7 @@ async fn create_test_db_client() -> DatabaseClient {
 
 /// Legacy helper without evaluation feature
 #[cfg(not(feature = "evaluation"))]
-async fn create_test_db_client() -> DatabaseClient {
+async fn create_test_database() -> ((), DatabaseClient) {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
     
@@ -88,8 +88,17 @@ async fn create_test_db_client() -> DatabaseClient {
         ..Default::default()
     };
     
-    DatabaseClient::new(config).await
-        .expect("Failed to create test database client")
+    let client = DatabaseClient::new(config).await
+        .expect("Failed to create test database client");
+    
+    ((), client)
+}
+
+/// Legacy helper without evaluation feature
+#[cfg(not(feature = "evaluation"))]
+async fn create_test_db_client() -> DatabaseClient {
+    let (_, client) = create_test_database().await;
+    client
 }
 
 /// Helper to create a test TaskExecutionState
@@ -217,7 +226,10 @@ async fn test_database_persistence_save_and_load() {
     persistence.delete_state(task_id).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -260,7 +272,10 @@ async fn test_database_persistence_list_resumable_tasks() {
     persistence.delete_state(task_id_3).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -296,7 +311,10 @@ async fn test_database_persistence_has_resumable_state() {
     persistence.delete_state(task_id_completed).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -338,7 +356,10 @@ async fn test_database_persistence_checkpoints() {
     persistence.delete_state(task_id).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -374,7 +395,10 @@ async fn test_database_persistence_delete_state() {
     assert!(!persistence.has_resumable_state(task_id).await.unwrap());
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -410,7 +434,10 @@ async fn test_database_persistence_update_state() {
     persistence.delete_state(task_id).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -439,7 +466,10 @@ async fn test_database_persistence_crashed_state_resumable() {
     persistence.delete_state(task_id).await.unwrap();
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }
 
 #[tokio::test]
@@ -475,5 +505,8 @@ async fn test_database_persistence_multiple_tasks() {
     }
     
     // Drop test database
-    test_db.drop_database().await.unwrap();
+    #[cfg(feature = "evaluation")]
+    {
+        test_db.drop_database().await.unwrap();
+    }
 }

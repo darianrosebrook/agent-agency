@@ -2,6 +2,7 @@
 description: Scope management, change budgets, and emergency waiver procedures for critical fixes
 globs:
 alwaysApply: true
+ruleTokenCount: 1585
 ---
 
 # Scope Management & Waiver System

@@ -8,7 +8,6 @@ use agent_memory::embedding_integration::EmbeddingIntegration;
 use system_resilience::workspace_state::EmbeddingServiceTrait;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tracing::{info, warn};
 
 /// Adapter that implements EmbeddingServiceTrait for agent-memory::EmbeddingIntegration
 #[cfg(feature = "memory")]

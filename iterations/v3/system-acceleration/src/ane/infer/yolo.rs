@@ -358,11 +358,11 @@ mod tests {
         // - CAWS Tier: 3 (test infrastructure enhancement)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Test infrastructure and model mocking expertise
-        let telemetry = TelemetryCollector::new();
-        let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
+        let _telemetry = TelemetryCollector::new();
+        let _circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
 
         // Create minimal model config for testing
-        let config = YOLOConfig::default();
+        let _config = YOLOConfig::default();
 
         // Note: This test would need a proper model loading setup
         // assert!(create_yolo_executor(model).model.config.input_size == (416, 416));

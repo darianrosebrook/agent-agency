@@ -41,7 +41,7 @@
 //!     .record_command_complete(cmd_audit, exit_code, stdout, stderr, duration).await;
 //! ```
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;

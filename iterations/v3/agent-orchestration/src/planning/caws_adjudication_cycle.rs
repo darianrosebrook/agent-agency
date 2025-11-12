@@ -257,10 +257,19 @@ impl CawsAdjudicationCycle {
             execution_state: None,
         };
 
-        // Review execution plan
+        // Review execution plan with spec context
+        // Extract spec_id from working spec (format: "FEAT-001" or "user-auth")
+        let spec_id = if working_spec.id.contains('-') {
+            Some(working_spec.id.as_str())
+        } else {
+            None
+        };
+        
         let review_result = self.council_integration.review_plan(
             &planning_execution_plan,
             working_spec,
+            spec_id,
+            Some(std::path::Path::new(".")),
         ).await?;
 
         // If plan needs refinement, that's okay - it will be handled in Phase 5 refinement loop
@@ -372,13 +381,17 @@ impl CawsAdjudicationCycle {
             }
         }
 
-        // Execute CAWS quality gates with waiver recognition
+        // Execute CAWS quality gates with waiver recognition and complexity mode
         let mut quality_gate_result: Option<crate::planning::caws_quality_gates::CawsQualityGateResult> = None;
         
+        // Detect complexity mode for quality gates
+        let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+            .unwrap_or_default();
+        
         if let Some(ref executor) = self.quality_gates_executor {
-            debug!("Executing CAWS quality gates with waiver recognition");
+            debug!("Executing CAWS quality gates with waiver recognition and mode: {:?}", complexity_mode);
             
-            match executor.execute_quality_gates("ci").await {
+            match executor.execute_quality_gates_with_mode("ci", Some(complexity_mode)).await {
                 Ok(gate_result) => {
                     quality_gate_result = Some(gate_result.clone());
                     info!(
@@ -412,7 +425,7 @@ impl CawsAdjudicationCycle {
             // Try to initialize quality gates executor if not already set
             if let Ok(executor) = CawsQualityGateExecutor::new(".") {
                 debug!("Initialized quality gates executor");
-                match executor.execute_quality_gates("ci").await {
+                match executor.execute_quality_gates_with_mode("ci", Some(complexity_mode)).await {
                     Ok(gate_result) => {
                         quality_gate_result = Some(gate_result.clone());
                         info!(
@@ -612,14 +625,18 @@ impl CawsAdjudicationCycle {
                 })
                 .collect();
 
+            // Detect complexity mode for mode-aware scoring
+            let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+                .ok();
+
             // Score debate and determine winner (claim verification and quality gate results passed to scorer)
-            // Use the new method that accepts quality gate results
+            // Use the new method that accepts quality gate results and complexity mode
             let debate_result = if let Some(gate_result) = quality_gate_result {
-                // Score with quality gates (waiver-aware)
+                // Score with quality gates (waiver-aware) and complexity mode
                 let mut solution_scores = Vec::new();
                 for (artifact, worker_id) in &solutions {
-                    let score = self.debate_scorer.score_solution_with_claims_and_gates(
-                        artifact, *worker_id, working_spec, claim_results, Some(gate_result)
+                    let score = self.debate_scorer.score_solution_with_claims_gates_and_mode(
+                        artifact, *worker_id, working_spec, claim_results, Some(gate_result), complexity_mode
                     ).await?;
                     solution_scores.push(score);
                 }
@@ -673,16 +690,22 @@ impl CawsAdjudicationCycle {
                 .and_then(|w| Uuid::parse_str(w).ok())
                 .unwrap_or_else(Uuid::new_v4);
             
-            // Score with quality gates if available
+            // Detect complexity mode for mode-aware scoring
+            let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+                .ok();
+
+            // Score with quality gates if available, using mode-aware scoring
             let score = if let Some(gate_result) = quality_gate_result {
-                self.debate_scorer.score_solution_with_claims_and_gates(
+                self.debate_scorer.score_solution_with_claims_gates_and_mode(
                     &artifacts[0],
                     worker_id,
                     working_spec,
                     claim_results,
                     Some(gate_result),
+                    complexity_mode,
                 ).await?
             } else {
+                // Fallback to claims-only scoring (backward compatibility)
                 self.debate_scorer.score_solution_with_claims(
                     &artifacts[0],
                     worker_id,

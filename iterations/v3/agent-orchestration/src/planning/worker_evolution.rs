@@ -6,15 +6,12 @@
 
 use std::sync::Arc;
 use std::collections::HashMap;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use uuid::Uuid;
 use tracing::{info, warn, debug};
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use agent_agency_contracts::planning_io::Milestone;
-use crate::planning::reflexive_learner::{ReflexiveLearner, LearningOutcome};
-use crate::planning::worker_assignment::WorkerAssignmentStrategy;
+use crate::planning::reflexive_learner::LearningOutcome;
 use crate::planning::DatabaseOperations;
 use agent_workers::WorkerSpecialty;
 

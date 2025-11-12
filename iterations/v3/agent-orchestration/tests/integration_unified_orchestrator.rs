@@ -131,6 +131,7 @@ fn create_test_working_spec() -> WorkingSpec {
                 is_blocking: false,
                 blocking_reason: None,
                 metrics: None,
+                metadata: HashMap::new(),
             },
         ],
         change_budget: agent_agency_contracts::planning_io::ChangeBudget {
@@ -439,6 +440,7 @@ async fn test_worker_lifecycle_management() {
         is_blocking: false,
         blocking_reason: None,
         metrics: None,
+        metadata: HashMap::new(),
     };
     
     // Test would verify:
@@ -493,6 +495,7 @@ async fn test_worktree_isolation() {
         is_blocking: false,
         blocking_reason: None,
         metrics: None,
+        metadata: HashMap::new(),
     };
     
     let worker_id = Uuid::new_v4();

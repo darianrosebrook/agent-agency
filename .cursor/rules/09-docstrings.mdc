@@ -2,6 +2,7 @@
 description: Language-specific docstring formats and checklists
 globs:
 alwaysApply: false
+ruleTokenCount: 863
 ---
 
 # Docstrings by Language (Reference)

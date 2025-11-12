@@ -1,0 +1,15 @@
+{
+  "test_id": {
+    "id": "test_id",
+    "operations": [],
+    "allowlist": {
+      "globs": []
+    },
+    "budgets": {
+      "max_files": 0,
+      "max_loc": 0,
+      "max_file_size_bytes": 0
+    },
+    "description": "Test"
+  }
+}

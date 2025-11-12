@@ -453,7 +453,7 @@ export function getFilesToCheck(context = 'commit') {
 
   let rel;
   if (context === 'commit') rel = listStagedFiles(root);
-  else if (context === 'push') rel = listPushFiles(root, cfg.ciBaseRef);
+  else if (context === 'push') rel = listRepoFiles(root); // Scan entire repo before push
   else if (context === 'ci') rel = listRepoFiles(root);
   else rel = listStagedFiles(root);
 
@@ -479,9 +479,9 @@ export function getContextInfo(context) {
     };
   if (context === 'push')
     return {
-      description: 'files changed vs base (upstream/CI)',
+      description: 'all tracked files (validates entire repo before push)',
       scope: 'push',
-      gitCommand: 'git diff --name-only -z --diff-filter=ACMRTUXB <base>...HEAD',
+      gitCommand: 'git ls-files -z --recurse-submodules',
     };
   if (context === 'ci')
     return {

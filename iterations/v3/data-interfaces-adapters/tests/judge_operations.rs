@@ -12,9 +12,10 @@ mod tests {
     use data_infrastructure::DatabaseClient;
     use data_infrastructure::DatabaseConfig;
     use agent_orchestration::planning::data_infrastructure_types::{
-        CreateJudge, CreateJudgeEvaluation, Judge, JudgeEvaluation
+        DatabaseOperations, CreateJudge, CreateJudgeEvaluation,
+        models::{Judge, JudgeEvaluation}
     };
-    use data_interfaces_adapters::database_operations::DatabaseOperationsAdapter;
+    use data_interfaces_adapters::database_operations_adapter::DatabaseOperationsAdapter;
 
     /// Helper to create a test database client
     async fn create_test_db_client() -> Arc<DatabaseClient> {
@@ -22,11 +23,11 @@ mod tests {
             .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
         
         let config = DatabaseConfig {
-            connection_string: database_url,
-            max_connections: 5,
-            min_connections: 1,
-            acquire_timeout_secs: 30,
-            idle_timeout_secs: 600,
+            database_url: database_url.clone(),
+            pool_max: Some(5),
+            connection_timeout: Some(30),
+            query_timeout: Some(60),
+            ..Default::default()
         };
         
         Arc::new(

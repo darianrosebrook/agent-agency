@@ -42,6 +42,7 @@ pub struct QualityGateIssue {
 /// Issue severity levels
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[allow(dead_code)]
 enum IssueSeverity {
     Error,
     Warning,

@@ -678,7 +678,7 @@ impl GcScheduler {
     pub fn new(collector: GarbageCollector) -> Self {
         Self {
             collector,
-            last_gc: 0,
+            last_gc: Self::current_timestamp(), // Initialize to current time so GC doesn't run immediately
             interval: 3600, // 1 hour
         }
     }
@@ -690,6 +690,10 @@ impl GcScheduler {
         }
 
         let current_time = Self::current_timestamp();
+        // If last_gc is 0 (never run), don't run immediately
+        if self.last_gc == 0 {
+            return false;
+        }
         current_time - self.last_gc >= self.interval
     }
 
@@ -739,8 +743,7 @@ mod tests {
         ];
 
         let result = collector.run_gc_cycle(&protected_refs).unwrap();
-        assert!(result.reachable_objects >= 0);
-        assert!(result.unreachable_objects >= 0);
+        // reachable_objects and unreachable_objects are usize, always >= 0
     }
 
     #[test]
@@ -757,7 +760,7 @@ mod tests {
             size: 150,
         }];
         let result = scheduler.force_gc(&protected_refs).unwrap();
-        assert!(result.reachable_objects >= 0);
+        // reachable_objects is usize, always >= 0
     }
 
     #[test]

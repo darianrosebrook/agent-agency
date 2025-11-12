@@ -2,6 +2,7 @@
 description: Canonical naming; forbid enhanced/new/final forks; refactor rules
 globs:
 alwaysApply: true
+ruleTokenCount: 493
 ---
 
 # Canonical Naming & Refactor Rules

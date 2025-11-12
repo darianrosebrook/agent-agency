@@ -3,11 +3,10 @@
 //! Manages the Mistral CoreML model instance used for task orchestration
 //! in autonomous testing scenarios.
 
-use tracing::{info, warn};
+use tracing::info;
 #[cfg(feature = "full")]
 use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 use std::path::PathBuf;
-use std::sync::Arc;
 
 /// Service for managing Mistral CoreML orchestrator
 pub struct OrchestratorService {

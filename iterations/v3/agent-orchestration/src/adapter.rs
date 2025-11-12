@@ -294,7 +294,7 @@ impl LegacyOrchestratorAdapter {
         // Step 2: Evaluate task with council
         // Conduct full council review to get final_decision populated
         use crate::judge_backup::types::ReviewContext;
-        use crate::decision_making::FinalDecision;
+        
         use uuid::Uuid;
         
         // Convert working spec to JSON string for review context

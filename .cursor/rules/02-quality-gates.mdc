@@ -2,6 +2,7 @@
 description: Quality gates and execution discipline
 globs:
 alwaysApply: true
+ruleTokenCount: 1019
 ---
 
 # Quality Gates

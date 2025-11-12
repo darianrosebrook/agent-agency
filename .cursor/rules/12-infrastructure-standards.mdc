@@ -2,6 +2,7 @@
 description: Infrastructure, deployment, and operational standards
 globs:
 alwaysApply: true
+ruleTokenCount: 1867
 ---
 
 # Infrastructure & Deployment Standards

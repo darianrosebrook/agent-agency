@@ -7,13 +7,13 @@
 
 use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::{
-    AcceptanceCriterion, ExecutionContext, Milestone, TaskDescriptor, TaskScope
+    AcceptanceCriterion, ExecutionContext, Milestone
 };
-use schemars::JsonSchema;
+use agent_agency_contracts::types::planning::TaskScope;
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// Generate JSON schema for a type and compare with snapshot
+#[allow(unused_macros)]
 macro_rules! test_schema_snapshot {
     ($type:ty, $snapshot_name:literal) => {
         #[test]

@@ -712,6 +712,21 @@ mod tests {
         async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
             Ok(vec![])
         }
+        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+            Ok(None)
+        }
+        async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_execution_result(&self, _result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+            Ok(None)
+        }
         async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
             Ok(vec![])
         }

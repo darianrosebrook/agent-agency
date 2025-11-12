@@ -237,6 +237,7 @@ impl ConstitutionalJudge {
     }
 
     // Override review_spec to use custom implementation
+    #[allow(dead_code)] // Part of trait implementation, may be called via trait
     #[instrument(skip(self, ctx), fields(judge = "constitutional", spec_id = %ctx.working_spec.id))]
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         debug!("🧑‍⚖️  Constitutional Judge reviewing spec {}", ctx.working_spec.id);

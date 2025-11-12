@@ -120,7 +120,8 @@ fn create_test_executor() -> AutonomousExecutor {
     AutonomousExecutor::new(config)
 }
 
-fn create_test_task(description: &str) -> TaskDescriptor {
+#[allow(dead_code)]
+fn _create_test_task(description: &str) -> TaskDescriptor {
     TaskDescriptor {
         task_id: Uuid::new_v4(),
         description: description.to_string(),
@@ -262,7 +263,8 @@ async fn test_end_to_end_autonomous_execution() {
     println!("Basic autonomous execution test passed");
 }
 
-fn calculate_variance(scores: &[f64]) -> f64 {
+#[allow(dead_code)]
+fn _calculate_variance(scores: &[f64]) -> f64 {
     if scores.is_empty() {
         return 0.0;
     }

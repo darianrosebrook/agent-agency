@@ -10,6 +10,7 @@ globs: [
   "docs/**/*.csv",
 ]
 alwaysApply: true
+ruleTokenCount: 1178
 ---
 # Documentation Organization & Architectural Focus
 

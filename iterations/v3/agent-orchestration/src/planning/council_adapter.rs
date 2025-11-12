@@ -303,7 +303,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
         // Build rollback plan based on blast radius
         let rollback_plan = agent_agency_contracts::RollbackPlan {
             strategy: if task.blast_radius.data_migration {
-                agent_agency_contracts::RollbackStrategy::DatabaseRollback
+                agent_agency_contracts::RollbackStrategy::DatabaseMigration
             } else {
                 agent_agency_contracts::RollbackStrategy::GitRevert
             },
@@ -317,7 +317,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
                 vec![]
             },
             data_impact: if task.blast_radius.data_migration {
-                agent_agency_contracts::DataImpact::DataLoss
+                agent_agency_contracts::DataImpact::Destructive
             } else {
                 agent_agency_contracts::DataImpact::None
             },

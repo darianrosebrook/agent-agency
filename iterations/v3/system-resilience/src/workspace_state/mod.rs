@@ -100,7 +100,10 @@ mod tests {
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
         std::fs::write(workspace_path.join("src/main.rs"), "fn main() {}").unwrap();
 
-        let config = WorkspaceConfig::default();
+        let mut config = WorkspaceConfig::default();
+        config.track_git = false; // Disable git tracking for test (no git repo initialized)
+        config.default_capture_method = CaptureMethod::FullScan; // Use FullScan instead of Hybrid to avoid git
+        config.ignore_patterns = vec![]; // Don't ignore any files in test
         let manager = create_memory_manager(workspace_path, config);
 
         // Capture state
@@ -129,13 +132,15 @@ mod tests {
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
         std::fs::write(workspace_path.join("src/main.rs"), "fn main() {}").unwrap();
 
-        let config = WorkspaceConfig::default();
+        let mut config = WorkspaceConfig::default();
+        config.track_git = false; // Disable git tracking for test
+        config.default_capture_method = CaptureMethod::FullScan; // Use FullScan instead of Hybrid to avoid git
+        config.ignore_patterns = vec![]; // Don't ignore any files in test
         let manager = create_memory_manager(workspace_path, config);
 
         // Capture initial state
         let initial_result = manager.capture_state().await.unwrap();
         let initial_state = initial_result.data;
-
         // Modify files
         std::fs::write(workspace_path.join("README.md"), "# Updated Test Project").unwrap();
         std::fs::write(workspace_path.join("src/lib.rs"), "pub fn hello() {}").unwrap();
@@ -166,7 +171,10 @@ mod tests {
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
 
-        let config = WorkspaceConfig::default();
+        let mut config = WorkspaceConfig::default();
+        config.track_git = false; // Disable git tracking for test
+        config.default_capture_method = CaptureMethod::FullScan; // Use FullScan instead of Hybrid to avoid git
+        config.ignore_patterns = vec![]; // Don't ignore any files in test
         let manager = Arc::new(create_memory_manager(workspace_path, config));
         let view_manager = WorkspaceViewManager::new(Arc::clone(&manager), &views_dir);
 
@@ -202,7 +210,10 @@ mod tests {
         std::fs::create_dir_all(workspace_path.join("src")).unwrap();
         std::fs::write(workspace_path.join("README.md"), "# Test Project").unwrap();
 
-        let config = WorkspaceConfig::default();
+        let mut config = WorkspaceConfig::default();
+        config.track_git = false; // Disable git tracking for test
+        config.default_capture_method = CaptureMethod::FullScan; // Use FullScan instead of Hybrid to avoid git
+        config.ignore_patterns = vec![]; // Don't ignore any files in test
         let manager = Arc::new(create_memory_manager(workspace_path, config));
         let rollback_manager = RollbackManager::new(Arc::clone(&manager), &backup_dir);
 

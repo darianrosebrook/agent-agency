@@ -6,6 +6,7 @@ globs:
   - '**/*.mts'
   - '**/*.cts'
 alwaysApply: false
+ruleTokenCount: 202
 ---
 
 # TS/JS Conventions

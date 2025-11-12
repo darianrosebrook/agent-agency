@@ -403,6 +403,7 @@ struct MockValidationStage {
             }
         }
 
+        #[allow(dead_code)]
         fn failing(name: impl Into<String>) -> Self {
             Self {
                 name: name.into(),

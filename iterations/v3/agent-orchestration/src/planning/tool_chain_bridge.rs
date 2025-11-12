@@ -440,7 +440,7 @@ impl ToolChainBridge {
     /// Convert milestone to tool chain execution
     pub async fn milestone_to_tool_chain(&self, milestone: &ContractMilestone) -> Result<ToolChainExecution> {
         use std::collections::HashMap;
-        use tracing::{debug, warn};
+        use tracing::debug;
 
         debug!("Converting milestone {} to tool chain", milestone.id);
 
@@ -1075,7 +1075,7 @@ mod tests {
     #[test]
     fn test_tool_chain_bridge_creation() {
         use crate::planning::tool_chain_types::{ToolChainPlanner, SchemaRegistry, ToolRegistry};
-        let bridge = ToolChainBridge::new(
+        let _bridge = ToolChainBridge::new(
             Arc::new(ToolChainPlanner::default()),
             Arc::new(SchemaRegistry::default()),
             Arc::new(ToolRegistry::default()),

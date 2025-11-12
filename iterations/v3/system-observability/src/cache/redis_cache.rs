@@ -42,6 +42,11 @@ impl RedisCache {
         let client = Client::open(conn_info)
             .map_err(|e| RedisCacheError::ConnectionError(e.to_string()))?;
 
+        // Validate connection by attempting to connect
+        // This ensures invalid hosts/ports fail during initialization
+        client.get_async_connection().await
+            .map_err(|e| RedisCacheError::ConnectionError(format!("Failed to connect to Redis: {}", e)))?;
+
         // Pre-connect some connections
         let mut pool = Vec::new();
         for _ in 0..pool_size.min(5) { // Limit initial connections
@@ -330,21 +335,21 @@ pub type RedisCacheError = CacheError;
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn test_redis_circuit_breaker() {
+    #[tokio::test]
+    async fn test_redis_circuit_breaker() {
         let breaker = RedisCircuitBreaker::new(3, 1000);
 
         // Initially closed
         assert!(!breaker.is_open());
 
         // Record failures
-        breaker.record_failure();
+        breaker.record_failure().await;
         assert!(!breaker.is_open());
 
-        breaker.record_failure();
+        breaker.record_failure().await;
         assert!(!breaker.is_open());
 
-        breaker.record_failure();
+        breaker.record_failure().await;
         assert!(breaker.is_open());
     }
 

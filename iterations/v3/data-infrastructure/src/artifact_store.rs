@@ -1381,7 +1381,7 @@ mod tests {
             }),
         };
 
-        let mock_metadata = agent_agency_contracts::execution_artifacts::ArtifactMetadata {
+        let _mock_metadata = agent_agency_contracts::execution_artifacts::ArtifactMetadata {
             compression_applied: Some(false),
             storage_location: Some("test".to_string()),
             retention_policy: Some("standard".to_string()),

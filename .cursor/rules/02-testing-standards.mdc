@@ -2,6 +2,7 @@
 description: Comprehensive testing standards and verification requirements
 globs:
 alwaysApply: true
+ruleTokenCount: 1971
 ---
 
 # Testing Standards & Verification Requirements

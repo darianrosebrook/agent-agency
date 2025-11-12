@@ -7,7 +7,7 @@
 
 #[cfg(test)]
 mod tests {
-    use agent_workers::caws_checker::{CawsChecker, CawsCheckResult};
+    use agent_workers::caws_checker::CawsChecker;
     use serde_json::json;
 
     #[tokio::test]
@@ -31,7 +31,7 @@ mod tests {
             .expect("Compliance check should succeed");
 
         // Should return a check result
-        assert!(result.recommendations.len() >= 0);
+        // recommendations.len() is usize, always >= 0
     }
 
     #[tokio::test]
@@ -46,7 +46,8 @@ mod tests {
         match result {
             Ok(result) => {
                 // May return violations for invalid input
-                assert!(result.recommendations.len() >= 0);
+                // recommendations.len() is usize, always >= 0
+                let _ = result.recommendations.len();
             }
             Err(_) => {
                 // Or may return error for invalid input
@@ -65,7 +66,8 @@ mod tests {
         // Should handle empty input gracefully
         match result {
             Ok(result) => {
-                assert!(result.recommendations.len() >= 0);
+                // recommendations.len() is usize, always >= 0
+                let _ = result.recommendations.len();
             }
             Err(_) => {
                 // Or may return error for empty input

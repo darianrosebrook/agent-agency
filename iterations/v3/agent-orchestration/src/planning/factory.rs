@@ -179,7 +179,7 @@ impl PlanningSystemFactory {
             None, // tool_chain_bridge
             None, // legacy_adapter
             coreml_manager, // CoreML manager for AI-assisted planning
-        ));
+        )?);
 
         // Create planning storage
         let planning_storage = Arc::new(PlanningStorage::new(

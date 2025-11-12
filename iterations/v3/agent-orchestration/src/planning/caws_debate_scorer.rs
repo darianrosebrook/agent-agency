@@ -186,6 +186,28 @@ impl CawsDebateScorer {
         claim_results: &ClaimExtractionResults,
         quality_gate_result: Option<&CawsQualityGateResult>,
     ) -> Result<SolutionScore> {
+        self.score_solution_with_claims_gates_and_mode(
+            artifacts,
+            worker_id,
+            working_spec,
+            claim_results,
+            quality_gate_result,
+            None,
+        ).await
+    }
+
+    /// Score a single solution with claim verification, quality gates, and complexity mode
+    ///
+    /// Calculates the CAWS debate score with mode-aware scoring weights.
+    pub async fn score_solution_with_claims_gates_and_mode(
+        &self,
+        artifacts: &ExecutionArtifacts,
+        worker_id: Uuid,
+        working_spec: &WorkingSpec,
+        claim_results: &ClaimExtractionResults,
+        quality_gate_result: Option<&CawsQualityGateResult>,
+        complexity_mode: Option<crate::planning::caws_complexity_mode::CawsComplexityMode>,
+    ) -> Result<SolutionScore> {
         info!("Scoring solution from worker {} with claim verification and quality gates", worker_id);
 
         // Calculate individual score components
@@ -209,6 +231,27 @@ impl CawsDebateScorer {
         
         let provenance_clarity = self.calculate_provenance_clarity(artifacts);
 
+        // Determine scoring weights based on complexity mode
+        let (e_weight, b_weight, g_weight, p_weight) = if let Some(mode) = complexity_mode {
+            match mode {
+                crate::planning::caws_complexity_mode::CawsComplexityMode::Simple => {
+                    // Simple mode: More balanced weights, less emphasis on evidence
+                    (0.3, 0.3, 0.2, 0.2)
+                }
+                crate::planning::caws_complexity_mode::CawsComplexityMode::Standard => {
+                    // Standard mode: Default weights
+                    (0.4, 0.3, 0.2, 0.1)
+                }
+                crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise => {
+                    // Enterprise mode: Evidence-heavy, provenance less important
+                    (0.5, 0.25, 0.2, 0.05)
+                }
+            }
+        } else {
+            // Default weights if mode not provided
+            (0.4, 0.3, 0.2, 0.1)
+        };
+
         // Use task-surface-specific weights if rubric engine is available
         let total_score = if let Some(ref rubric_engine) = self.rubric_engine {
             // Classify task surface
@@ -225,20 +268,20 @@ impl CawsDebateScorer {
             match rubric_engine.calculate_weighted_score(&surface, &component_scores).await {
                 Ok(weighted) => weighted,
                 Err(e) => {
-                    warn!("Failed to calculate weighted score with rubric, falling back to default: {}", e);
-                    // Fallback to default weights
-                    (evidence_completeness * 0.4)
-                        + (budget_adherence * 0.3)
-                        + (gate_integrity * 0.2)
-                        + (provenance_clarity * 0.1)
+                    warn!("Failed to calculate weighted score with rubric, falling back to mode-aware weights: {}", e);
+                    // Fallback to mode-aware weights
+                    (evidence_completeness * e_weight)
+                        + (budget_adherence * b_weight)
+                        + (gate_integrity * g_weight)
+                        + (provenance_clarity * p_weight)
                 }
             }
         } else {
-            // Default weights: S = 0.4E + 0.3B + 0.2G + 0.1P
-            (evidence_completeness * 0.4)
-                + (budget_adherence * 0.3)
-                + (gate_integrity * 0.2)
-                + (provenance_clarity * 0.1)
+            // Mode-aware weights: S = e_weight*E + b_weight*B + g_weight*G + p_weight*P
+            (evidence_completeness * e_weight)
+                + (budget_adherence * b_weight)
+                + (gate_integrity * g_weight)
+                + (provenance_clarity * p_weight)
         };
 
         Ok(SolutionScore {

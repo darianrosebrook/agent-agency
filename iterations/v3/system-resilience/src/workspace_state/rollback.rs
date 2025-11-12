@@ -327,6 +327,7 @@ impl RollbackManager {
         let mut files_restored = 0;
         let mut files_removed = 0;
         let mut files_modified = 0;
+        let mut warnings = Vec::new();
         let size_delta = 0i64;
 
         // Ensure workspace root exists
@@ -364,14 +365,26 @@ impl RollbackManager {
             };
 
             if needs_restore {
-                if source_path.exists() {
-                    std::fs::copy(&source_path, &target_path).map_err(WorkspaceError::Io)?;
-
+                // Restore file content from state if available, otherwise copy from disk
+                if let Some(content) = &file_state.content {
+                    // Restore from stored content
+                    std::fs::write(&target_path, content).map_err(WorkspaceError::Io)?;
                     if target_path.exists() {
                         files_modified += 1;
                     } else {
                         files_restored += 1;
                     }
+                } else if source_path.exists() {
+                    // Fallback: copy from disk (won't restore original content if file was modified)
+                    std::fs::copy(&source_path, &target_path).map_err(WorkspaceError::Io)?;
+                    if target_path.exists() {
+                        files_modified += 1;
+                    } else {
+                        files_restored += 1;
+                    }
+                } else {
+                    // File doesn't exist and no content stored - can't restore
+                    warnings.push(format!("Cannot restore file {:?}: content not stored", relative_path));
                 }
             }
         }
@@ -400,6 +413,7 @@ impl RollbackManager {
             files_removed,
             files_modified,
             size_delta,
+            warnings,
         })
     }
 }
@@ -411,4 +425,5 @@ struct RollbackOperation {
     files_removed: usize,
     files_modified: usize,
     size_delta: i64,
+    warnings: Vec<String>,
 }

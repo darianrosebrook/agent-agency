@@ -814,6 +814,7 @@ pub struct BlockVectorRecord {
         pub vector: Vec<f32>,
         pub model_id: String,
         pub modality: String,
+        #[allow(dead_code)]
         pub created_at: chrono::DateTime<chrono::Utc>,
     }
 
@@ -928,7 +929,7 @@ pub struct SearchAuditEntry {
     async fn test_search_audit_entry_creation() {
         // Test creating SearchAuditEntry instances
         let id = Uuid::new_v4();
-        let query = "test query";
+        let _query = "test query";
         let created_at = chrono::Utc::now();
 
         let mut results = Vec::new();

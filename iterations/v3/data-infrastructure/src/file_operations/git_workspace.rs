@@ -404,6 +404,7 @@ mod tests {
     use tempfile::TempDir;
     use tokio::fs;
 
+    #[allow(dead_code)]
     async fn setup_git_repo() -> Result<(TempDir, PathBuf)> {
         let temp_dir = TempDir::new()?;
         let repo_path = temp_dir.path().to_path_buf();

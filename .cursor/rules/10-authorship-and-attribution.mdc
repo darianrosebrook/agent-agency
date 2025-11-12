@@ -2,6 +2,7 @@
 description: File headers and authorship
 globs:
 alwaysApply: false
+ruleTokenCount: 67
 ---
 
 # File Header & Attribution

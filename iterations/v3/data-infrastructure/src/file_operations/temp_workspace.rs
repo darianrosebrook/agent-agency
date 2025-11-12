@@ -1627,6 +1627,7 @@ mod tests {
     use tempfile::TempDir;
     use tokio::fs;
 
+    #[allow(dead_code)]
     async fn setup_temp_project() -> Result<(TempDir, PathBuf)> {
         let temp_dir = TempDir::new()?;
         let project_path = temp_dir.path().to_path_buf();

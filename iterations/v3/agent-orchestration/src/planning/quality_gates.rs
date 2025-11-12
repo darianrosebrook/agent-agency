@@ -49,17 +49,32 @@ pub fn default_quality_gates() -> QualityGates {
 
 /// Create quality gates based on risk tier
 pub fn quality_gates_for_risk_tier(risk_tier: u32) -> QualityGates {
+    quality_gates_for_risk_tier_and_mode(risk_tier, None)
+}
+
+/// Create quality gates based on risk tier and complexity mode
+pub fn quality_gates_for_risk_tier_and_mode(
+    risk_tier: u32,
+    complexity_mode: Option<crate::planning::caws_complexity_mode::CawsComplexityMode>,
+) -> QualityGates {
+    // Detect complexity mode if not provided
+    let mode = complexity_mode
+        .or_else(|| crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(".")).ok())
+        .unwrap_or(crate::planning::caws_complexity_mode::CawsComplexityMode::Standard);
+
+    // Get mode-aware quality requirements
+    let requirements = mode.quality_requirements(risk_tier as u8);
     let is_critical = risk_tier == 1;
     
     QualityGates {
         coverage_requirements: HashMap::new(),
         mutation_requirements: MutationRequirements {
-            required: is_critical,
-            min_score: if is_critical { 0.7 } else { 0.5 },
+            required: matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise) || is_critical,
+            min_score: requirements.mutation_score,
             operators: vec!["arithmetic".to_string(), "conditional".to_string()],
         },
         security_requirements: SecurityRequirements {
-            scan_required: is_critical,
+            scan_required: requirements.manual_review_required || is_critical || matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise),
             max_issues_by_severity: HashMap::from([
                 ("critical".to_string(), 0),
                 ("high".to_string(), if is_critical { 0 } else { 2 }),
@@ -72,18 +87,18 @@ pub fn quality_gates_for_risk_tier(risk_tier: u32) -> QualityGates {
             slas: vec![],
         },
         documentation_requirements: PlanningDocumentationRequirements {
-            api_docs_required: is_critical,
-            architecture_docs_required: is_critical,
-            code_docs_required: is_critical,
+            api_docs_required: requirements.manual_review_required || is_critical,
+            architecture_docs_required: requirements.manual_review_required || is_critical,
+            code_docs_required: requirements.manual_review_required || is_critical,
             required_types: vec!["api".to_string()],
             required_formats: vec!["markdown".to_string()],
-            min_coverage: 0.8,
+            min_coverage: requirements.line_coverage,
             quality_checks: vec![],
         },
-        requires_manual_review: is_critical,
-        requires_council_approval: is_critical,
-        min_coverage: Some(if is_critical { 0.9 } else { 0.8 }),
-        min_mutation_score_percent: Some(if is_critical { 70.0 } else { 50.0 }),
+        requires_manual_review: requirements.manual_review_required,
+        requires_council_approval: matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise) || is_critical,
+        min_coverage: Some(requirements.line_coverage),
+        min_mutation_score_percent: Some(requirements.mutation_score * 100.0),
     }
 }
 

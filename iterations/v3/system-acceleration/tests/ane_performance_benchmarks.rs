@@ -17,9 +17,8 @@
 //! ANE is working but model uses hybrid CPU/ANE execution.
 
 use system_acceleration::ane::compat::coreml::{ModelRef, coreml::{load_model, load_model_with_config, detect_coreml_capabilities, query_model_inputs, ComputeUnits}};
-use system_acceleration::ane::compat::coreml::{MLMultiArray, MLMultiArrayDataType, MLFeatureProvider, MLDictionaryFeatureProvider, MLFeatureValue};
-use system_acceleration::ane::compat::testing::{BenchmarkRunner, BenchmarkConfig, PerformanceMetrics, validation};
-use system_acceleration::ane::compat::safety::io_safety;
+use system_acceleration::ane::compat::coreml::{MLMultiArray, MLDictionaryFeatureProvider, MLFeatureValue};
+use system_acceleration::ane::compat::testing::{BenchmarkRunner, BenchmarkConfig, PerformanceMetrics};
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -35,9 +34,9 @@ struct ANEPerformanceConfig {
     /// Target ANE speedup (2.8x)
     target_ane_speedup: f64,
     /// Target dispatch rate (70%)
-    target_dispatch_rate: f64,
+    _target_dispatch_rate: f64,
     /// Test timeout
-    test_timeout: Duration,
+    _test_timeout: Duration,
 }
 
 impl Default for ANEPerformanceConfig {
@@ -47,8 +46,8 @@ impl Default for ANEPerformanceConfig {
             benchmark_iterations: 100,
             warm_up_iterations: 10,
             target_ane_speedup: 2.8,
-            target_dispatch_rate: 0.7,
-            test_timeout: Duration::from_secs(300), // 5 minutes
+            _target_dispatch_rate: 0.7,
+            _test_timeout: Duration::from_secs(300), // 5 minutes
         }
     }
 }
@@ -285,7 +284,7 @@ struct ModelInfo {
     name: String,
     path: String,
     input_shape: Vec<i32>,
-    input_dtype: String,
+    _input_dtype: String,
 }
 
 /// Find available models for testing
@@ -303,7 +302,7 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
             name: "FastViT T8 F16".to_string(),
             path: fastvit_path.to_string_lossy().to_string(),
             input_shape: vec![1, 3, 256, 256], // [batch, channels, height, width]
-            input_dtype: "image".to_string(), // Use "image" to trigger Image feature type
+            _input_dtype: "image".to_string(), // Use "image" to trigger Image feature type
         });
     }
 
@@ -351,7 +350,7 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
             // Larger sequences (512 tokens) actually slow down ANE more than CPU
             // This suggests the model may not be fully optimized for ANE
             input_shape: vec![1, 128], // Optimal size for this model's ANE performance
-            input_dtype: "I32".to_string(),
+            _input_dtype: "I32".to_string(),
         });
     }
 
@@ -905,7 +904,7 @@ async fn test_ane_stability_and_consistency() {
         let model_ref = load_model(&model_info.path)
             .expect("Failed to load model for consistency test");
 
-        let test_input = create_test_input(model_info)
+        let test_input = create_test_input(&model_info)
             .expect("Failed to create test input");
 
         // Run multiple inferences and check results are consistent

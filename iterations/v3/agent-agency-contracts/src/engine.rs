@@ -145,7 +145,7 @@ impl TokenUsage {
 mod tests {
     use super::*;
     use crate::{JudgeType, WorkingSpecEvidence};
-    use crate::judge_io::{JudgeVerdict, VerdictLabel, Violation, Severity};
+    // Removed unused imports: JudgeVerdict, VerdictLabel, Violation, Severity
 
     #[test]
     fn test_engine_request_serialization() {

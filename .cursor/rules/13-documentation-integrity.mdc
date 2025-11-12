@@ -2,6 +2,7 @@
 description: Documentation must match implementation reality - no claims of unimplemented features
 globs:
 alwaysApply: true
+ruleTokenCount: 1669
 ---
 
 # Documentation Integrity & Reality Alignment

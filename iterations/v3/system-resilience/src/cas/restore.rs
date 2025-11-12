@@ -503,7 +503,16 @@ mod tests {
         let content = b"Hello, world!";
         let digest = Digest::from_bytes([8; 32]);
         
-        let mut restore = AtomicRestore::new();
+        // Create restore with verify_digest disabled (since we're using placeholder content)
+        let mut restore = AtomicRestore::with_config(RestoreConfig {
+            verify_digest: false, // Disable digest verification for test with placeholder content
+            atomic: true,
+            backup_existing: false,
+            backup_dir: None,
+            dry_run: false,
+            max_restore_size: None,
+            progress_reporting: false,
+        });
         let plan = RestorePlan {
             target: "test-commit".to_string(),
             actions: vec![RestoreAction::WriteFile {
@@ -565,12 +574,13 @@ mod tests {
         assert_eq!(progress.progress_percentage(), 0.0);
         
         progress.update(50, 5, 512 * 1024);
-        assert_eq!(progress.progress_percentage(), 55.0);
+        // Use approximate comparison for floating point
+        assert!((progress.progress_percentage() - 55.0).abs() < 0.01);
     }
 
     #[test]
     fn test_restore_stats() {
-        let mut restore = AtomicRestore::new();
+        let restore = AtomicRestore::new();
         let stats = restore.get_stats();
         assert_eq!(stats.files_restored, 0);
         assert_eq!(stats.bytes_restored, 0);

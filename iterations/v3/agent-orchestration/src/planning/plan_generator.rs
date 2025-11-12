@@ -75,14 +75,31 @@ impl PlanGenerator {
         tool_chain_bridge: Option<ToolChainBridge>,
         legacy_adapter: Option<LegacyPlanAdapter>,
         coreml_manager: Option<Arc<CoreMLManager>>,
-    ) -> Self {
-        Self {
-            caws_bridge: CawsPlanBridge::new(),
+    ) -> Result<Self> {
+        Ok(Self {
+            caws_bridge: CawsPlanBridge::new()?,
             tool_chain_bridge,
             legacy_adapter,
             constraints,
             coreml_manager,
-        }
+        })
+    }
+
+    /// Create new plan generator with project root
+    pub fn with_project_root(
+        project_root: impl AsRef<std::path::Path>,
+        constraints: PlanningConstraints,
+        tool_chain_bridge: Option<ToolChainBridge>,
+        legacy_adapter: Option<LegacyPlanAdapter>,
+        coreml_manager: Option<Arc<CoreMLManager>>,
+    ) -> Result<Self> {
+        Ok(Self {
+            caws_bridge: CawsPlanBridge::with_project_root(project_root)?,
+            tool_chain_bridge,
+            legacy_adapter,
+            constraints,
+            coreml_manager,
+        })
     }
 
     /// Generate execution plan from context

@@ -1789,7 +1789,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_valid_data() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1810,7 +1810,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_missing_data() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         // Milestone with no arbiter metadata
         let milestone = create_test_milestone_with_arbiter_metadata(std::collections::HashMap::new());
@@ -1827,7 +1827,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_invalid_types() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         // Invalid types: should be string but are numbers/objects
@@ -1847,7 +1847,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_pool_filtering_with_matching_workers() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1874,7 +1874,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_pool_filtering_with_no_matches() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1898,7 +1898,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_arbiter_confidence_boost_application() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1920,7 +1920,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_arbiter_confidence_boost_not_applied_to_non_matching() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1941,7 +1941,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_arbiter_metadata_extraction_performance() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
@@ -1969,7 +1969,7 @@ mod tests {
 
     #[test]
     fn test_capability_score_calculation() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps));
+        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         // Create test milestone and worker
         let milestone = agent_agency_contracts::planning_io::Milestone {
@@ -2008,6 +2008,7 @@ mod tests {
             is_blocking: false,
             blocking_reason: None,
             metrics: None,
+            metadata: std::collections::HashMap::new(),
         };
 
         let worker = crate::planning::models::Worker {

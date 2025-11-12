@@ -172,7 +172,26 @@ impl DisambiguationStage {
                         // - CAWS Tier: 2 (NLP feature)
                         // - Change Budget: ~200 LOC
                         // - Reviewer Requirements: NLP expertise
-                        disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
+                        // Case-insensitive replacement for pronouns
+                        if ambiguity.ambiguity_type == AmbiguityType::Pronoun {
+                            // For pronouns, replace case-insensitively
+                            let ambiguity_lower = ambiguity.original_text.to_lowercase();
+                            let text_lower = disambiguated.to_lowercase();
+                            
+                            if let Some(start) = text_lower.find(&ambiguity_lower) {
+                                let actual_end = start + ambiguity.original_text.len();
+                                let mut result = String::with_capacity(disambiguated.len() + resolution.len());
+                                result.push_str(&disambiguated[..start]);
+                                result.push_str(&resolution);
+                                result.push_str(&disambiguated[actual_end..]);
+                                disambiguated = result;
+                            } else {
+                                // Fallback to case-sensitive replacement
+                                disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
+                            }
+                        } else {
+                            disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
+                        }
                     }
                 }
                 AmbiguityType::TechnicalTerm |

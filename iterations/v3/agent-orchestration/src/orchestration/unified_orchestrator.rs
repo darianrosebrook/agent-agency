@@ -42,7 +42,7 @@ use crate::workers::execution_bridge::WorkerExecutionBridge;
 use crate::council::Council;
 
 #[cfg(feature = "memory")]
-use agent_memory::{MemorySystem, MemoryResult};
+use agent_memory::MemorySystem;
 #[cfg(feature = "memory")]
 use agent_memory::memory_types::TaskContext;
 

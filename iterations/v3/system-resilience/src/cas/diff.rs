@@ -252,7 +252,7 @@ impl DiffGenerator {
         let base_lines: Vec<&str> = base_str.lines().collect();
         let diff_lines: Vec<&str> = diff_str.lines().collect();
 
-        let mut base_index = 0;
+        let mut base_index = 0; // Track current position in base_lines
         let mut diff_index = 0;
 
         // Skip file headers if present
@@ -271,7 +271,16 @@ impl DiffGenerator {
                 let hunk_info = self.parse_hunk_header(line)?;
                 diff_index += 1;
 
-                // Process hunk
+                // Process hunk - sync base_index to the start of this hunk
+                // Hunks use 1-based line numbers, base_lines is 0-based
+                if hunk_info.base_start > 0 {
+                    // Add base lines before this hunk (if any)
+                    while base_index < hunk_info.base_start - 1 && base_index < base_lines.len() {
+                        result_lines.push(base_lines[base_index]);
+                        base_index += 1;
+                    }
+                }
+                
                 let mut hunk_base_line = hunk_info.base_start;
                 let mut hunk_after_line = hunk_info.after_start;
 
@@ -281,14 +290,22 @@ impl DiffGenerator {
                     match diff_line.chars().next() {
                         Some(' ') => {
                             // Context line - copy from base
-                            if hunk_base_line <= base_lines.len() {
+                            if hunk_base_line > 0 && hunk_base_line <= base_lines.len() {
                                 result_lines.push(base_lines[hunk_base_line - 1]);
+                                if base_index < hunk_base_line - 1 {
+                                    base_index = hunk_base_line - 1;
+                                }
+                                base_index += 1;
                             }
                             hunk_base_line += 1;
                             hunk_after_line += 1;
                         }
                         Some('-') => {
                             // Deleted line - skip in base
+                            if base_index < hunk_base_line - 1 {
+                                base_index = hunk_base_line - 1;
+                            }
+                            base_index += 1;
                             hunk_base_line += 1;
                         }
                         Some('+') => {
@@ -304,12 +321,15 @@ impl DiffGenerator {
                     }
                     diff_index += 1;
                 }
+                
+                // Update base_index to after this hunk
+                base_index = hunk_base_line - 1;
             } else {
                 diff_index += 1;
             }
         }
 
-        // Add remaining base lines
+        // Add remaining base lines after all hunks
         while base_index < base_lines.len() {
             result_lines.push(base_lines[base_index]);
             base_index += 1;

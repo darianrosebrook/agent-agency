@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_legacy_plan_adapter_creation() {
-        let adapter = LegacyPlanAdapter::new();
+        let _adapter = LegacyPlanAdapter::new();
         // Adapter created successfully
         assert!(true);
     }

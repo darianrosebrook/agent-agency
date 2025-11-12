@@ -16,6 +16,7 @@ use chrono::Utc;
 use std::collections::HashMap;
 
 /// Helper macro to test round-trip serialization
+#[allow(unused_macros)]
 macro_rules! test_round_trip {
     ($name:ident, $value:expr) => {
         #[test]
@@ -169,6 +170,7 @@ fn test_milestone_round_trip() {
         is_blocking: false,
         blocking_reason: None,
         metrics: None,
+        metadata: HashMap::new(),
     };
 
     let json = serde_json::to_string(&milestone).expect("serialize Milestone");
@@ -291,6 +293,7 @@ fn test_partial_serde_with_optionals() {
         is_blocking: false,
         blocking_reason: None,
         metrics: None,
+        metadata: HashMap::new(),
     };
 
     let json = serde_json::to_string(&minimal_milestone).expect("serialize minimal Milestone");

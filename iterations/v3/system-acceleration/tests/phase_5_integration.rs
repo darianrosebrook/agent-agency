@@ -368,7 +368,7 @@ async fn test_phase_5_comprehensive_integration() {
             println!("   ✅ Component integration verified");
 
             // Test 2: Performance Tracking
-            let validation = system.get_performance_validation().await;
+            let _validation = system.get_performance_validation().await;
             // Performance validation may not be complete without actual measurements
             println!("   ✅ Performance tracking active");
 

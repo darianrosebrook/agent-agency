@@ -621,7 +621,7 @@ mod tests {
         std::fs::create_dir_all(&pack_dir).unwrap();
         std::fs::create_dir_all(&index_dir).unwrap();
         
-        let mut pack_manager = PackManager::new(pack_dir, index_dir);
+        let pack_manager = PackManager::new(pack_dir, index_dir);
         let stats = pack_manager.get_stats();
         
         assert_eq!(stats.active_packs, 0);

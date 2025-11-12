@@ -6,8 +6,7 @@ use data_infrastructure::DatabaseClient;
 use serde_json::json;
 use sqlx::Row;
 use std::sync::Arc;
-use tracing::{info, warn};
-use uuid::Uuid;
+use tracing::info;
 
 /// Register standard workers in the database
 pub async fn register_standard_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<()> {

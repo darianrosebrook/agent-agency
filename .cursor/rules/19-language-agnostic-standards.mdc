@@ -2,6 +2,7 @@
 description: Language-agnostic engineering standards and universal code quality metrics
 globs:
 alwaysApply: true
+ruleTokenCount: 2624
 ---
 
 # Language-Agnostic Engineering Standards

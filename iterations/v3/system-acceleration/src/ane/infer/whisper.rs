@@ -709,10 +709,7 @@ pub fn create_whisper_executor(model: LoadedWhisperModel) -> WhisperInferenceExe
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ane::models::whisper_model::{WhisperConfig, load_whisper_model};
-    use crate::telemetry::TelemetryCollector;
-    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-    use std::path::PathBuf;
+    // Removed unused imports: WhisperConfig, load_whisper_model, TelemetryCollector, CircuitBreaker, CircuitBreakerConfig, PathBuf
 
     #[tokio::test]
     async fn test_whisper_inference_executor_creation() {
