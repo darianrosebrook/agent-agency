@@ -11,7 +11,7 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
+use sqlx::{Row, postgres::PgRow};
 
 /// Shared database pool with proper reference counting
 pub struct DatabasePool {
@@ -369,18 +369,18 @@ impl VectorStore {
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows
             .into_iter()
-            .map(|row: sqlx::postgres::PgRow| {
-                let block_id: Uuid = row.get::<Uuid, &str>("block_id");
-                let similarity: f64 = row.get::<f64, &str>("similarity");
-                let embedding: Vec<f32> = row.get::<Vec<f32>, &str>("embedding");
-                let metadata: serde_json::Value = row.get::<serde_json::Value, &str>("metadata");
+            .filter_map(|row: PgRow| {
+                let block_id = row.try_get::<Uuid, &str>("block_id").ok()?;
+                let similarity = row.try_get::<f64, &str>("similarity").ok()?;
+                let embedding = row.try_get::<Vec<f32>, &str>("embedding").ok()?;
+                let metadata = row.try_get::<serde_json::Value, &str>("metadata").ok()?;
                 
-                VectorSearchResult {
+                Some(VectorSearchResult {
                     block_id,
                     score: similarity as f32,
                     vector: embedding,
                     metadata,
-                }
+                })
             })
             .collect();
         
@@ -447,18 +447,18 @@ impl VectorStore {
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows
             .into_iter()
-            .map(|row: sqlx::postgres::PgRow| {
-                let block_id: Uuid = row.get::<Uuid, &str>("block_id");
-                let similarity: f64 = row.get::<f64, &str>("similarity");
-                let embedding: Vec<f32> = row.get::<Vec<f32>, &str>("embedding");
-                let metadata: serde_json::Value = row.get::<serde_json::Value, &str>("metadata");
+            .filter_map(|row: PgRow| {
+                let block_id = row.try_get::<Uuid, &str>("block_id").ok()?;
+                let similarity = row.try_get::<f64, &str>("similarity").ok()?;
+                let embedding = row.try_get::<Vec<f32>, &str>("embedding").ok()?;
+                let metadata = row.try_get::<serde_json::Value, &str>("metadata").ok()?;
                 
-                VectorSearchResult {
+                Some(VectorSearchResult {
                     block_id,
                     score: similarity as f32,
                     vector: embedding,
                     metadata,
-                }
+                })
             })
             .collect();
         

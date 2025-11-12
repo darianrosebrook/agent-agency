@@ -469,10 +469,60 @@ impl RiskScorer {
     }
 
     /// Perform comprehensive multi-dimensional risk assessment
-    pub async fn assess_risks(&self, _working_spec: &WorkingSpec) -> CouncilResult<MultiDimensionalRiskAssessment> {
-        // TODO: Implement comprehensive risk assessment
-        // Stub implementation to allow compilation
-        Err(crate::council_errors::CouncilError::Configuration("Risk assessment not yet implemented".to_string()))
+    pub async fn assess_risks(&self, working_spec: &WorkingSpec) -> CouncilResult<MultiDimensionalRiskAssessment> {
+        // Assess all risk dimensions
+        let technical_risk = self.assess_technical_risk(working_spec).await?;
+        let ethical_risk = self.assess_ethical_risk(working_spec).await?;
+        let operational_risk = self.assess_operational_risk(working_spec).await?;
+        let business_risk = self.assess_business_risk(working_spec).await?;
+
+        // Calculate overall risk score using dimension weights
+        let overall_risk_score = self.calculate_overall_risk_score(
+            &technical_risk,
+            &ethical_risk,
+            &operational_risk,
+            &business_risk,
+        );
+
+        // Identify risk interactions and compounding effects
+        let risk_interactions = self.identify_risk_interactions(
+            &technical_risk,
+            &ethical_risk,
+            &operational_risk,
+            &business_risk,
+        );
+
+        // Generate mitigation priorities
+        let mitigation_priorities = self.generate_mitigation_priorities(
+            &technical_risk,
+            &ethical_risk,
+            &operational_risk,
+            &business_risk,
+            overall_risk_score,
+        );
+
+        // Generate risk projections
+        let risk_projections = self.project_risk_trends(
+            &technical_risk,
+            &ethical_risk,
+            &operational_risk,
+            &business_risk,
+        );
+
+        // Calculate assessment confidence based on data quality and completeness
+        let assessment_confidence = self.calculate_assessment_confidence(working_spec);
+
+        Ok(MultiDimensionalRiskAssessment {
+            overall_risk_score,
+            technical_risk,
+            ethical_risk,
+            operational_risk,
+            business_risk,
+            risk_interactions,
+            mitigation_priorities,
+            risk_projections,
+            assessment_confidence,
+        })
     }
 
     /// Assess technical risks

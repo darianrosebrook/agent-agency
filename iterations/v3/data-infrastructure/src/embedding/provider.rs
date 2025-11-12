@@ -1057,15 +1057,25 @@ impl ClipEmbeddingProvider {
     }
 
     /// Generate embeddings using CLIP (stub implementation)
+    /// 
+    /// DEPENDENCY BLOCKED: Real CLIP implementation requires resolving version conflicts with:
+    /// - candle_core/candle_transformers (CLIP model loading)
+    /// - tokenizers (CLIP tokenizer) - currently available but model loading disabled
+    /// 
+    /// Current implementation uses hash-based deterministic embeddings as placeholder.
+    /// This is NOT a real CLIP implementation and should not be used for production similarity search.
+    /// 
+    /// To implement real CLIP:
+    /// 1. Resolve candle_core/candle_transformers version conflicts
+    /// 2. Load actual CLIP model weights (ViT-B/32, ViT-B/16, ViT-L/14, etc.)
+    /// 3. Tokenize input texts using CLIP tokenizer (tokenizer already initialized)
+    /// 4. Run CLIP model forward pass to generate embeddings
+    /// 5. Handle model loading and inference errors
+    /// 6. Add unit tests with real CLIP model
+    /// 7. Add integration tests with CLIP embedding generation
     async fn generate_embeddings_stub(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
-        // TODO: Replace stub CLIP embedding generation with real implementation
-        // - [ ] Load actual CLIP model (when dependencies are available)
-        // - [ ] Tokenize input texts using CLIP tokenizer
-        // - [ ] Run CLIP model forward pass to generate embeddings
-        // - [ ] Handle model loading and inference errors
-        // - [ ] Add unit tests with real CLIP model
-        // - [ ] Add integration tests with CLIP embedding generation
-        // Placeholder implementation - generate deterministic embeddings
+        // PLACEHOLDER: Hash-based deterministic embeddings (NOT real CLIP)
+        // DO NOT USE FOR PRODUCTION - This is a stub that generates fake embeddings
         let embeddings = texts
             .iter()
             .map(|text| {

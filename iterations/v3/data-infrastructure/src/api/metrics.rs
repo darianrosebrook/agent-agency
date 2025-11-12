@@ -10,8 +10,157 @@ use axum::{
 use serde_json::json;
 use std::convert::Infallible;
 use std::time::Duration;
-use tokio_stream::{wrappers::IntervalStream, Stream, StreamExt};
+use tokio_stream::{Stream, StreamExt};
 use tokio::time;
+use anyhow::Result;
+use chrono::{Utc, Duration as ChronoDuration};
+
+/// Business metrics structure
+#[derive(Debug, Clone)]
+pub struct BusinessMetrics {
+    pub active_users: i32,
+    pub requests_per_second: f64,
+    pub throughput_tasks_per_hour: f64,
+    pub system_availability: f64,
+    pub average_task_completion_time_ms: f64,
+    pub error_rate: f64,
+}
+
+/// System metrics structure
+#[derive(Debug, Clone)]
+pub struct SystemMetrics {
+    pub cpu_usage: f64,
+    pub memory_usage: f64,
+    pub disk_usage: f64,
+    pub network_io: DiskIOMetrics,
+}
+
+/// Disk I/O metrics structure
+#[derive(Debug, Clone)]
+pub struct DiskIOMetrics {
+    pub read_bytes: u64,
+    pub write_bytes: u64,
+    pub read_iops: f64,
+    pub write_iops: f64,
+    pub read_throughput: f64,
+    pub write_throughput: f64,
+    pub avg_read_latency_ms: f64,
+    pub avg_write_latency_ms: f64,
+    pub queue_depth: u32,
+}
+
+/// Collect business metrics from database
+async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<BusinessMetrics> {
+    let pool = db_client.pool();
+    let now = Utc::now();
+    let one_hour_ago = now - ChronoDuration::hours(1);
+    let one_minute_ago = now - ChronoDuration::minutes(1);
+
+    // Count active users (sessions active in last hour)
+    let active_users: i64 = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(DISTINCT user_id) 
+        FROM sessions 
+        WHERE is_active = true 
+        AND expires_at > $1
+        "#
+    )
+    .bind(now)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to count active users: {}", e))?;
+
+    // Count requests in last minute (from audit trail entries)
+    let requests_last_minute: i64 = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(*) 
+        FROM audit_trail_entries 
+        WHERE created_at >= $1
+        "#
+    )
+    .bind(one_minute_ago)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to count requests: {}", e))?;
+
+    let requests_per_second = requests_last_minute as f64 / 60.0;
+
+    // Calculate task throughput per hour (from task_executions)
+    let tasks_last_hour: i64 = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(*) 
+        FROM task_executions 
+        WHERE execution_started_at >= $1
+        "#
+    )
+    .bind(one_hour_ago)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to count tasks: {}", e))?;
+
+    let throughput_tasks_per_hour = tasks_last_hour as f64;
+
+    // Calculate average task completion time (from completed task_executions)
+    let avg_completion_time: Option<i64> = sqlx::query_scalar::<_, Option<i64>>(
+        r#"
+        SELECT AVG(execution_time_ms) 
+        FROM task_executions 
+        WHERE execution_completed_at IS NOT NULL 
+        AND execution_time_ms IS NOT NULL
+        AND execution_started_at >= $1
+        "#
+    )
+    .bind(one_hour_ago)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to calculate average completion time: {}", e))?;
+
+    let average_task_completion_time_ms = avg_completion_time.unwrap_or(0) as f64;
+
+    // Calculate error rate (failed tasks / total tasks)
+    let total_tasks: i64 = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(*) 
+        FROM task_executions 
+        WHERE execution_started_at >= $1
+        "#
+    )
+    .bind(one_hour_ago)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to count total tasks: {}", e))?;
+
+    let failed_tasks: i64 = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(*) 
+        FROM task_executions 
+        WHERE status = 'failed' 
+        AND execution_started_at >= $1
+        "#
+    )
+    .bind(one_hour_ago)
+    .fetch_one(pool)
+    .await
+    .map_err(|e| anyhow::anyhow!("Failed to count failed tasks: {}", e))?;
+
+    let error_rate = if total_tasks > 0 {
+        failed_tasks as f64 / total_tasks as f64
+    } else {
+        0.0
+    };
+
+    // System availability (100% - error rate, simplified)
+    let system_availability = (1.0 - error_rate) * 100.0;
+
+    Ok(BusinessMetrics {
+        active_users: active_users as i32,
+        requests_per_second,
+        throughput_tasks_per_hour,
+        system_availability,
+        average_task_completion_time_ms,
+        error_rate,
+    })
+}
 
 /// Get API metrics
 pub async fn get_api_metrics() -> Json<serde_json::Value> {
@@ -38,12 +187,14 @@ pub async fn metrics_stream(
                 let timestamp = chrono::Utc::now().timestamp_millis();
 
                 // Get real system metrics
-                let system_metrics = match state.health_monitor.get_health_metrics().await {
-                    Ok(_health_metrics) => crate::SystemMetrics {
+                // Note: SystemHealthMonitor doesn't have get_health_metrics yet
+                // Using placeholder metrics for now - will be enhanced when health monitor provides metrics
+                let system_metrics = match state.health_monitor.health_check().await {
+                    Ok(_) => SystemMetrics {
                         cpu_usage: 0.0,
                         memory_usage: 0.0,
                         disk_usage: 0.0,
-                        network_io: crate::DiskIOMetrics {
+                        network_io: DiskIOMetrics {
                             read_bytes: 0,
                             write_bytes: 0,
                             read_iops: 0.0,
@@ -57,11 +208,11 @@ pub async fn metrics_stream(
                     },
                     Err(_) => {
                         // Fallback to basic metrics if health monitor fails
-                        crate::SystemMetrics {
+                        SystemMetrics {
                             cpu_usage: 0.0,
                             memory_usage: 0.0,
                             disk_usage: 0.0,
-                            network_io: crate::DiskIOMetrics {
+                            network_io: DiskIOMetrics {
                                 read_bytes: 0,
                                 write_bytes: 0,
                                 read_iops: 0.0,
@@ -87,22 +238,18 @@ pub async fn metrics_stream(
                     Err(_) => (0, 0, 0)
                 };
 
-                // TODO: Implement real business metrics collection
-                // - [ ] Integrate with actual business metrics tracking system
-                // - [ ] Collect active users from user session tracking
-                // - [ ] Calculate requests per second from request logs
-                // - [ ] Calculate throughput tasks per hour from task execution logs
-                // - [ ] Support metrics aggregation and reporting
-                // - [ ] Add unit tests with mock business metrics
-                // - [ ] Add integration tests with real metrics collection
-                let business_metrics = crate::BusinessMetrics {
-                    active_users: 0,
-                    requests_per_second: 0.0,
-                    throughput_tasks_per_hour: 0.0,
-                    system_availability: 100.0,
-                    average_task_completion_time_ms: 0.0,
-                    error_rate: 0.0,
-                };
+                // Collect real business metrics from database
+                let business_metrics = collect_business_metrics(&state.db_client).await.unwrap_or_else(|e| {
+                    tracing::warn!("Failed to collect business metrics: {}", e);
+                    BusinessMetrics {
+                        active_users: 0,
+                        requests_per_second: 0.0,
+                        throughput_tasks_per_hour: 0.0,
+                        system_availability: 100.0,
+                        average_task_completion_time_ms: 0.0,
+                        error_rate: 0.0,
+                    }
+                });
 
                 Ok(Event::default().data(serde_json::to_string(&json!({
                     "timestamp": timestamp,

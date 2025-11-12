@@ -21,8 +21,9 @@ futures = "0.3"
 rand = "0.8"
 sha2 = "0.10"
 
-# Database integration - removed to break circular dependency
-# data-infrastructure = { path = "../data-infrastructure", optional = true }
+# Database integration removed - using trait-based adapter pattern instead
+# This breaks the circular dependency: agent-mcp → system-observability → data-infrastructure → agent-mcp
+# Implementations of SloDatabaseClient trait are provided by adapters in consuming crates
 
 # Local crates
 system-configuration = { path = "../system-configuration" }

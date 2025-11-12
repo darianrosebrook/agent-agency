@@ -5,7 +5,7 @@
 
 use schemars::JsonSchema;
 use crate::simple_client::DatabaseClient;
-use anyhow::Result;
+use anyhow::{Result, Context};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -368,8 +368,8 @@ impl DatabaseIndexManager {
         let mut suggestions = Vec::new();
 
         for row in rows {
-            let index_name: String = row.get("indexname");
-            let scan_count: Option<i64> = row.get("idx_scan");
+            let index_name: String = row.get::<String, &str>("indexname");
+            let scan_count: Option<i64> = row.get::<Option<i64>, &str>("idx_scan");
 
             if scan_count.unwrap_or(0) == 0 {
                 suggestions.push(format!("Index '{}' is unused and could be removed", index_name));
@@ -595,8 +595,8 @@ impl DatabaseOptimizationManager {
     /// encoding and SQL injection protection.
     pub async fn execute_query_monitored<'a, T>(
         &self,
-        query: &str,
-        params: &[T],
+        query: &'a str,
+        params: &'a [T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
@@ -694,8 +694,8 @@ impl MonitoredQueryExecutor {
     /// encoding and SQL injection protection.
     pub async fn execute<'a, T>(
         &self,
-        query: &str,
-        params: &[T],
+        query: &'a str,
+        params: &'a [T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,

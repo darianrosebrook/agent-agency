@@ -120,16 +120,16 @@ impl InvariantResults {
 
 /// Run all CAWS invariant checks on a working specification
 pub fn run_caws_invariants(spec: &WorkingSpec) -> InvariantResults {
-    let mut checks = vec![];
-
-    checks.push(check_no_console_log(spec));
-    checks.push(check_no_placeholders(spec));
-    checks.push(check_structured_logging(spec));
-    checks.push(check_no_hardcoded_secrets(spec));
-    checks.push(check_error_handling(spec));
-    checks.push(check_semver_compliance(spec));
-    checks.push(check_api_backward_compat(spec));
-    checks.push(check_caws_compliance(spec));
+    let checks = vec![
+        check_no_console_log(spec),
+        check_no_placeholders(spec),
+        check_structured_logging(spec),
+        check_no_hardcoded_secrets(spec),
+        check_error_handling(spec),
+        check_semver_compliance(spec),
+        check_api_backward_compat(spec),
+        check_caws_compliance(spec),
+    ];
 
     InvariantResults { checks }
 }

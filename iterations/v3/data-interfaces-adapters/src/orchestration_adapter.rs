@@ -165,108 +165,70 @@ impl UnifiedOrchestratorAdapter {
         ));
 
         // Create database operations adapter
-        // If db_client is provided, create an adapter; otherwise use stub
+        // If db_client is provided, use it; otherwise create a database client from environment
         // Clone db_client before moving it (needed later in cfg block)
         let db_client_clone = db_client.as_ref().map(|db| db.clone());
-        let db_ops: Arc<dyn agent_orchestration::planning::DatabaseOperations> = if let Some(db_client) = db_client {
-            // Use DatabaseOperationsAdapter - partial implementation with placeholders
-            Arc::new(crate::database_operations_adapter::DatabaseOperationsAdapter::new(db_client))
+        
+        // Create database client if not provided
+        let db_client_for_ops = if let Some(db_client) = db_client {
+            db_client
         } else {
-            Arc::new(StubDatabaseOperations)
+            // Create database client from environment variables or defaults
+            use data_infrastructure::database_config::DatabaseConfig;
+            use data_infrastructure::simple_client::DatabaseClient;
+            use tracing::{info, warn};
+            
+            // Load database configuration from environment or use defaults
+            let database_url = std::env::var("DATABASE_URL")
+                .unwrap_or_else(|_| {
+                    warn!("DATABASE_URL not set, using default database connection");
+                    "postgresql://postgres@localhost:5432/agent_agency_v3".to_string()
+                });
+            
+            info!("Creating database client for DatabaseOperationsAdapter with URL: {}", 
+                database_url.split('@').nth(1).unwrap_or("***"));
+            
+            // Create database configuration
+            let db_config = DatabaseConfig {
+                database_url: database_url.clone(),
+                max_connections: std::env::var("DATABASE_MAX_CONNECTIONS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .or(Some(100)),
+                pool_max: std::env::var("DATABASE_POOL_MAX")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .or(Some(100)),
+                connection_timeout: std::env::var("DATABASE_CONNECTION_TIMEOUT")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .or(Some(30)),
+                query_timeout: std::env::var("DATABASE_QUERY_TIMEOUT")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .or(Some(60)),
+                ..Default::default()
+            };
+            
+            // Create database client asynchronously
+            match DatabaseClient::new(db_config).await {
+                Ok(client) => {
+                    info!("Database client created successfully for DatabaseOperationsAdapter");
+                    Arc::new(client)
+                }
+                Err(e) => {
+                    warn!("Failed to create database client for DatabaseOperationsAdapter: {}. This will cause database operations to fail.", e);
+                    return Err(ServiceError::Internal(format!(
+                        "Failed to create database client: {}. Please ensure DATABASE_URL is set correctly or provide a database client when creating UnifiedOrchestratorAdapter.",
+                        e
+                    )));
+                }
+            }
         };
-
-        struct StubDatabaseOperations;
-        #[async_trait::async_trait]
-        impl agent_orchestration::planning::DatabaseOperations for StubDatabaseOperations {
-            async fn get_workers(&self) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn get_worker(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
-                Ok(None)
-            }
-            async fn create_worker(&self, _worker: agent_orchestration::planning::data_infrastructure_types::CreateWorker) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn update_worker(&self, _id: Uuid, _update: agent_orchestration::planning::data_infrastructure_types::UpdateWorker) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            // Implement other required methods with stubs
-            async fn create_execution_plan(&self, _plan: agent_orchestration::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<agent_orchestration::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
-                Ok(None)
-            }
-            async fn get_execution_plans(&self) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn update_execution_plan(&self, _id: Uuid, _update: agent_orchestration::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<agent_orchestration::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn create_audit_trail_entry(&self, _entry: agent_orchestration::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<agent_orchestration::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
-                Ok(None)
-            }
-            async fn create_planning_session(&self, _session: agent_orchestration::planning::data_infrastructure_types::CreatePlanningSession) -> Result<agent_orchestration::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_planning_session(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
-                Ok(None)
-            }
-            async fn update_planning_session(&self, _id: Uuid, _session: agent_orchestration::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
-                Ok(())
-            }
-            async fn create_planning_telemetry(&self, _telemetry: agent_orchestration::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<agent_orchestration::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn create_planning_audit_event(&self, _event: agent_orchestration::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
-                Ok(())
-            }
-            async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn delete_execution_plan(&self, _id: Uuid) -> Result<(), anyhow::Error> {
-                Ok(())
-            }
-            async fn get_judges(&self) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn create_judge(&self, _judge: agent_orchestration::planning::data_infrastructure_types::CreateJudge) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_judge(&self, _id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
-                Ok(None)
-            }
-            async fn create_judge_evaluation(&self, _evaluation: agent_orchestration::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<agent_orchestration::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<agent_orchestration::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
-                Ok(vec![])
-            }
-            async fn create_waiver(&self, _waiver: agent_orchestration::planning::data_infrastructure_types::CreateWaiver) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn update_waiver(&self, _id: Uuid, _update: agent_orchestration::planning::data_infrastructure_types::UpdateWaiver) -> Result<agent_orchestration::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn create_execution_result(&self, _result: agent_orchestration::planning::data_infrastructure_types::CreateExecutionResult) -> Result<agent_orchestration::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
-                Err(anyhow::anyhow!("Stub implementation"))
-            }
-            async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<agent_orchestration::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
-                Ok(None)
-            }
-        }
+        
+        // Use DatabaseOperationsAdapter with real database client
+        let db_ops: Arc<dyn agent_orchestration::planning::DatabaseOperations> = 
+            Arc::new(crate::database_operations_adapter::DatabaseOperationsAdapter::new(db_client_for_ops));
 
 
         // Create planning components using PlanningSystemFactory
@@ -413,7 +375,9 @@ impl UnifiedOrchestratorAdapter {
                 }
             };
             let task_executor = Arc::new(TaskExecutor::new(db_client_for_executor));
-            let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
+            // Clone worker_pool before moving it into WorkerExecutionBridge (needed later for adapter)
+            let worker_pool_for_bridge = worker_pool.clone();
+            let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool_for_bridge, task_executor));
 
             // Extract PlanExecutor from parallel_coordinator
             // Note: ParallelCoordinator contains PlanExecutor, but UnifiedOrchestrator needs both
@@ -423,33 +387,84 @@ impl UnifiedOrchestratorAdapter {
             use agent_orchestration::audit_trail::{AuditTrailManager, AuditConfig};
             use agent_orchestration::planning::plan_types::ExecutionPlan;
             
-            // Create stub worker pool (similar to factory.rs pattern)
-            struct StubWorkerPool;
+            // Create worker pool adapter for PlanExecutor using the real MCPWorkerPool
+            use std::collections::HashMap;
+            use tokio::sync::RwLock;
+            
+            // Create adapter that wraps the real worker_pool and tracks assignments
+            struct MCPWorkerPoolAdapter {
+                pool: Arc<MCPWorkerPool>,
+                assignments: Arc<RwLock<HashMap<Uuid, String>>>, // worker_id -> milestone_id
+            }
+            
             #[async_trait::async_trait]
-            impl WorkerPool for StubWorkerPool {
+            impl WorkerPool for MCPWorkerPoolAdapter {
                 async fn available_workers(&self) -> Result<Vec<WorkerInfo>> {
-                    Ok(vec![])
+                    let workers = self.pool.list_workers().await;
+                    let assignments = self.assignments.read().await;
+                    
+                    Ok(workers.into_iter().map(|handle| {
+                        let is_assigned = assignments.contains_key(&handle.id.0);
+                        WorkerInfo {
+                            id: handle.id.0,
+                            capabilities: handle.capabilities.languages.iter()
+                                .chain(handle.capabilities.frameworks.iter())
+                                .chain(handle.capabilities.domains.iter())
+                                .map(|s| s.clone())
+                                .collect(),
+                            load: if is_assigned { 1.0 } else { 0.0 },
+                            health: WorkerHealth::Healthy,
+                        }
+                    }).collect())
                 }
-                async fn assign_worker(&self, _worker_id: Uuid, _milestone_id: String) -> Result<()> {
+                
+                async fn assign_worker(&self, worker_id: Uuid, milestone_id: String) -> Result<()> {
+                    let mut assignments = self.assignments.write().await;
+                    assignments.insert(worker_id, milestone_id);
                     Ok(())
                 }
-                async fn release_worker(&self, _worker_id: Uuid) -> Result<()> {
+                
+                async fn release_worker(&self, worker_id: Uuid) -> Result<()> {
+                    let mut assignments = self.assignments.write().await;
+                    assignments.remove(&worker_id);
                     Ok(())
                 }
-                async fn worker_status(&self, _worker_id: Uuid) -> Result<WorkerStatus> {
+                
+                async fn worker_status(&self, worker_id: Uuid) -> Result<WorkerStatus> {
+                    let workers = self.pool.list_workers().await;
+                    let assignments = self.assignments.read().await;
+                    
+                    let worker = workers.iter().find(|w| w.id.0 == worker_id);
+                    let current_assignment = assignments.get(&worker_id).cloned();
+                    
+                    let stats = self.pool.get_stats().await;
+                    
                     Ok(WorkerStatus {
-                        current_assignment: None,
-                        health: WorkerHealth::Healthy,
+                        current_assignment,
+                        health: if worker.is_some() {
+                            WorkerHealth::Healthy
+                        } else {
+                            WorkerHealth::Unavailable
+                        },
                         performance: agent_orchestration::planning::plan_executor::WorkerPerformance {
-                            tasks_completed: 0,
-                            tasks_failed: 0,
-                            avg_completion_time_ms: 0.0,
-                            success_rate: 1.0,
+                            tasks_completed: stats.total_tasks_completed as usize,
+                            tasks_failed: stats.total_tasks_failed as usize,
+                            avg_completion_time_ms: stats.average_execution_time_ms,
+                            success_rate: if stats.total_tasks_completed + stats.total_tasks_failed > 0 {
+                                stats.total_tasks_completed as f64 / 
+                                (stats.total_tasks_completed + stats.total_tasks_failed) as f64
+                            } else {
+                                1.0
+                            },
                         },
                     })
                 }
             }
-            let worker_pool = Arc::new(StubWorkerPool);
+            
+            let executor_worker_pool = Arc::new(MCPWorkerPoolAdapter {
+                pool: worker_pool.clone(),
+                assignments: Arc::new(RwLock::new(HashMap::new())),
+            }) as Arc<dyn WorkerPool>;
             
             // Create audit trail
             let audit_trail_manager = Arc::new(AuditTrailManager::new(AuditConfig::default()));
@@ -523,7 +538,7 @@ impl UnifiedOrchestratorAdapter {
             // Create PlanExecutor for UnifiedOrchestrator
             let plan_executor = Arc::new(PlanExecutor::new(
                 ExecutionPlan::default(),
-                worker_pool,
+                executor_worker_pool,
                 planning_components.evidence_collector.clone(),
                 planning_components.worker_assigner.clone(),
                 planning_components.scope_guard.clone(),

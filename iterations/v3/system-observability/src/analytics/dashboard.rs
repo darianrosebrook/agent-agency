@@ -10,7 +10,7 @@ use cadence::{StatsdClient, QueuingMetricSink, BufferedUdpMetricSink, UdpMetricS
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};
 use super::metrics::CachePerformanceMetrics;
 use crate::errors::ObservabilityError;
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 // Temporary placeholder types
 #[derive(Debug, Clone)]
 pub struct AnalyticsEngine ;

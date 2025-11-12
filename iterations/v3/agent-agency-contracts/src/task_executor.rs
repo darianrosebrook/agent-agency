@@ -81,13 +81,16 @@ pub struct TaskSpec {
     ///    - Refactor to break circular dependencies
     ///    - Use trait objects or type erasure if needed
     ///    - Support proper type relationships
+    ///
     /// ACCEPTANCE CRITERIA:
     /// - CAWS spec uses proper type instead of HashMap
     /// - Circular dependencies are resolved
     /// - Type safety is improved
+    ///
     /// DEPENDENCIES:
     /// - CAWS spec type definition (Required)
     /// - Dependency refactoring (Required)
+    ///
     /// PRIORITY: Medium
     pub caws_spec: Option<HashMap<String, serde_json::Value>>,
     /// Task execution requirements

@@ -21,25 +21,25 @@ use flate2::read::GzDecoder;
 use std::io::Read;
 // ContextConfig is defined in memory_types.rs
 
-// NOTE: Real ContextManager integration requires resolving circular dependency
-// agent-data-processing was removed from dependencies to break circular dependency
-// To enable real ContextManager:
-// 1. Resolve circular dependency between agent-memory and agent-data-processing
-// 2. Uncomment agent-data-processing dependency in Cargo.toml
-// 3. Uncomment the imports below and RealContextManagerAdapter implementation
-//
-// use agent_data_processing::context::manager::{ContextManager as RealContextManager, DatabaseClient, DatabaseConfig};
-// use agent_data_processing::context::types::{
-//     ContextPreservationRequest as RealContextPreservationRequest,
-//     ContextRetrievalRequest as RealContextRetrievalRequest,
-//     ContextPreservationResult as RealContextPreservationResult,
-//     ContextRetrievalResult as RealContextRetrievalResult,
-//     ContextStats as RealContextStats,
-//     ContextData as RealContextData,
-//     PreservationOptions,
-//     PreservationPriority,
-//     RetrievalOptions,
-// };
+// Real ContextManager integration - now enabled
+use agent_data_processing::context::manager::{ContextManager as RealContextManager, DatabaseClient, DatabaseConfig, ModelRegistry};
+use agent_data_processing::context::types::{
+    ContextPreservationRequest as RealContextPreservationRequest,
+    ContextRetrievalRequest as RealContextRetrievalRequest,
+    ContextPreservationResult as RealContextPreservationResult,
+    ContextRetrievalResult as RealContextRetrievalResult,
+    ContextStats as RealContextStats,
+    ContextData as RealContextData,
+    ContextConfig as RealContextConfig,
+    PreservationOptions,
+    PreservationPriority,
+    RetrievalOptions,
+    ContextMetadata,
+};
+#[cfg(feature = "embeddings")]
+use data_infrastructure::embedding::embedding_service::{EmbeddingService, EmbeddingServiceFactory};
+#[cfg(feature = "embeddings")]
+use data_infrastructure::embedding::embedding_types::EmbeddingConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ContextData {
@@ -123,23 +123,11 @@ impl std::fmt::Debug for MemoryContextManager {
     }
 }
 
-/// Temporary stub implementation for ContextManager
+/// Temporary stub implementation for ContextManager (fallback when no database available)
 #[derive(Debug)]
 struct StubContextManager {
     config: ContextConfig,
 }
-
-// RealContextManagerAdapter implementation - commented out until circular dependency is resolved
-// 
-// struct RealContextManagerAdapter {
-//     manager: Arc<RealContextManager>,
-// }
-//
-// #[async_trait::async_trait]
-// impl ContextManager for RealContextManagerAdapter {
-//     // Implementation converts between simple types (agent-memory) and complex types (agent-data-processing)
-//     // See commented imports above for type definitions
-// }
 
 #[async_trait::async_trait]
 impl ContextManager for StubContextManager {
@@ -171,6 +159,215 @@ impl ContextManager for StubContextManager {
     }
 }
 
+/// Wrapper to convert Box<dyn EmbeddingService> to Arc<dyn EmbeddingService>
+#[cfg(feature = "embeddings")]
+struct EmbeddingServiceWrapper {
+    inner: Box<dyn EmbeddingService>,
+}
+
+#[cfg(feature = "embeddings")]
+#[async_trait::async_trait]
+impl EmbeddingService for EmbeddingServiceWrapper {
+    async fn generate_embedding(&self, text: &str, content_type: data_infrastructure::embedding::ContentType, source: &str) -> anyhow::Result<data_infrastructure::embedding::StoredEmbedding> {
+        self.inner.generate_embedding(text, content_type, source).await
+    }
+    async fn generate_embeddings(&self, request: data_infrastructure::embedding::EmbeddingRequest) -> anyhow::Result<data_infrastructure::embedding::EmbeddingResponse> {
+        self.inner.generate_embeddings(request).await
+    }
+    async fn search_similar(&self, request: data_infrastructure::embedding::SimilarityRequest) -> anyhow::Result<Vec<data_infrastructure::embedding::SimilarityResult>> {
+        self.inner.search_similar(request).await
+    }
+    async fn store_embedding(&self, embedding: data_infrastructure::embedding::StoredEmbedding) -> anyhow::Result<()> {
+        self.inner.store_embedding(embedding).await
+    }
+    async fn get_embedding(&self, id: &str) -> anyhow::Result<Option<data_infrastructure::embedding::StoredEmbedding>> {
+        self.inner.get_embedding(id).await
+    }
+    async fn health_check(&self) -> anyhow::Result<bool> {
+        self.inner.health_check().await
+    }
+}
+
+/// Real ContextManager adapter that wraps agent-data-processing::ContextManager
+/// Integrates with embedding service for vector/knowledge graph embeddings
+struct RealContextManagerAdapter {
+    manager: Arc<RealContextManager>,
+    #[cfg(feature = "embeddings")]
+    embedding_service: Option<Arc<dyn EmbeddingService>>,
+}
+
+impl std::fmt::Debug for RealContextManagerAdapter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug = f.debug_struct("RealContextManagerAdapter");
+        debug.field("manager", &self.manager);
+        #[cfg(feature = "embeddings")]
+        {
+            debug.field("embedding_service", &self.embedding_service.as_ref().map(|_| "Some(EmbeddingService)"));
+        }
+        debug.finish()
+    }
+}
+
+#[async_trait::async_trait]
+impl ContextManager for RealContextManagerAdapter {
+    async fn manage_lifecycle(&self) -> Result<(), String> {
+        self.manager.manage_context_lifecycle().await
+            .map_err(|e| format!("Context lifecycle management failed: {}", e))
+    }
+
+    async fn preserve_context(&self, request: ContextPreservationRequest) -> Result<ContextPreservationResult, String> {
+        // Convert agent-memory ContextData to agent-data-processing ContextData
+        let real_context_data = RealContextData {
+            id: request.context_data.id,
+            context_type: request.context_data.metadata.get("context_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "task".to_string()),
+            content: serde_json::json!({
+                "task_id": request.context_data.metadata.get("task_id").and_then(|v| v.as_str()),
+                "agent_id": request.context_data.metadata.get("agent_id").and_then(|v| v.as_str()),
+                "description": request.context_data.content,
+                "keywords": request.context_data.metadata.get("keywords"),
+                "entities": request.context_data.metadata.get("entities"),
+            }),
+            metadata: ContextMetadata {
+                title: request.context_data.metadata.get("title")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                description: request.context_data.metadata.get("description")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                tags: request.context_data.metadata.get("tags")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect())
+                    .unwrap_or_default(),
+                source: request.context_data.metadata.get("source")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                importance_score: request.context_data.metadata.get("importance_score")
+                    .and_then(|v| v.as_f64()),
+                custom_fields: request.context_data.metadata.as_object()
+                    .map(|obj| obj.iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect())
+                    .unwrap_or_default(),
+            },
+            created_at: request.context_data.created_at,
+            last_accessed_at: request.context_data.created_at,
+            access_count: 0,
+            size_bytes: request.context_data.content.len() as u64,
+        };
+
+        // Generate embedding for vector/knowledge graph storage if embedding service is available
+        #[cfg(feature = "embeddings")]
+        if let Some(ref embedding_service) = self.embedding_service {
+            let context_text = format!("{} {}", 
+                real_context_data.metadata.title.as_deref().unwrap_or(""),
+                real_context_data.metadata.description.as_deref().unwrap_or("")
+            );
+            if !context_text.trim().is_empty() {
+                if let Ok(embedding) = embedding_service.generate_embedding(
+                    &context_text,
+                    data_infrastructure::embedding::ContentType::Text,
+                    "context_manager"
+                ).await {
+                    // Store embedding metadata in context metadata
+                    // The embedding itself is stored by the embedding service
+                    debug!("Generated embedding for context {}: {} dimensions", 
+                        real_context_data.id, embedding.vector.values.len());
+                }
+            }
+        }
+
+        // Create preservation request
+        let real_request = RealContextPreservationRequest {
+            context_data: real_context_data,
+            options: PreservationOptions {
+                force: request.priority > 5,
+                compress: true,
+                priority: if request.priority >= 8 {
+                    PreservationPriority::Critical
+                } else if request.priority >= 6 {
+                    PreservationPriority::High
+                } else if request.priority >= 4 {
+                    PreservationPriority::Normal
+                } else {
+                    PreservationPriority::Low
+                },
+                custom_metadata: std::collections::HashMap::new(),
+            },
+        };
+
+        // Preserve context using real manager
+        let result = self.manager.preserve_context(real_request).await
+            .map_err(|e| format!("Context preservation failed: {}", e))?;
+
+        Ok(ContextPreservationResult {
+            success: result.success,
+            context_id: result.context_id.unwrap_or_else(Uuid::new_v4),
+            folded: false, // Folding happens during lifecycle management
+        })
+    }
+
+    async fn retrieve_context(&self, request: ContextRetrievalRequest) -> Result<ContextRetrievalResult, String> {
+        // Create retrieval request
+        let real_request = RealContextRetrievalRequest {
+            context_id: request.context_id,
+            options: RetrievalOptions {
+                include_metadata: true,
+                decompress: true,
+                validate_checksum: false, // Checksum validation is optional
+            },
+        };
+
+        // Retrieve context using real manager
+        let result = self.manager.retrieve_context(real_request).await
+            .map_err(|e| format!("Context retrieval failed: {}", e))?;
+
+        // Convert agent-data-processing ContextData to agent-memory ContextData
+        let context_data = result.context_data.map(|real_data| {
+            ContextData {
+                id: real_data.id,
+                content: real_data.content.get("description")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| serde_json::to_string(&real_data.content).unwrap_or_default()),
+                metadata: serde_json::json!({
+                    "title": real_data.metadata.title,
+                    "description": real_data.metadata.description,
+                    "tags": real_data.metadata.tags,
+                    "source": real_data.metadata.source,
+                    "importance_score": real_data.metadata.importance_score,
+                    "task_id": real_data.content.get("task_id"),
+                    "agent_id": real_data.content.get("agent_id"),
+                    "keywords": real_data.content.get("keywords"),
+                    "entities": real_data.content.get("entities"),
+                    "context_type": real_data.context_type,
+                }),
+                created_at: real_data.created_at,
+            }
+        });
+
+        Ok(ContextRetrievalResult {
+            context_data,
+            folded_contexts: vec![], // Folded contexts are handled separately
+        })
+    }
+
+    async fn get_stats(&self) -> Result<ContextStats, String> {
+        let real_stats = self.manager.get_stats().await
+            .map_err(|e| format!("Failed to get context statistics: {}", e))?;
+
+        Ok(ContextStats {
+            total_contexts: real_stats.total_contexts as usize,
+            active_contexts: real_stats.working_memory_contexts as usize,
+            folded_contexts: real_stats.folded_contexts as usize,
+        })
+    }
+}
+
 impl MemoryContextManager {
     /// Create a new memory context manager
     pub async fn new(config: ContextConfig) -> MemoryResult<Self> {
@@ -179,31 +376,101 @@ impl MemoryContextManager {
     
     /// Create a new memory context manager with database pool
     pub async fn new_with_db(config: ContextConfig, db_pool: Option<PgPool>) -> MemoryResult<Self> {
-        // TODO: Replace stub context manager with real implementation
-        // BLOCKED: Requires resolving circular dependency between agent-memory and agent-data-processing
-        // 
-        // To implement:
-        // 1. Resolve circular dependency (agent-memory <-> agent-data-processing)
-        // 2. Uncomment agent-data-processing dependency in Cargo.toml
-        // 3. Uncomment RealContextManagerAdapter implementation below
-        // 4. Use real ContextManager when db_pool is available:
-        //
-        //     let context_manager: Box<dyn ContextManager> = if let Some(_pool) = db_pool {
-        //         // Create database client and real ContextManager
-        //         // ... (see commented RealContextManagerAdapter implementation)
-        //         Box::new(RealContextManagerAdapter { ... })
-        //     } else {
-        //         Box::new(StubContextManager { config: config.clone() })
-        //     };
-        //
-        // Currently using stub implementation until circular dependency is resolved
-        let context_manager = StubContextManager {
-            config: config.clone(),
+        let context_manager: Box<dyn ContextManager> = if let Some(ref _pool) = db_pool {
+            // Create database client from pool
+            let database_url = std::env::var("DATABASE_URL")
+                .unwrap_or_else(|_| "postgresql://localhost/agent_agency_v3".to_string());
+            
+            let db_config = DatabaseConfig {
+                database_url: database_url.clone(),
+                max_connections: 10,
+            };
+            
+            // Create database client (we'll use the pool directly, but need to create a DatabaseClient wrapper)
+            // For now, we'll create a new connection pool from the URL
+            // In production, we should reuse the existing pool
+            let db_client = Arc::new(DatabaseClient::new(db_config).await
+                .map_err(|e| MemoryError::Other(format!("Failed to create database client: {}", e)))?);
+            
+            // Create ModelRegistry for summarization (stub for now - will be replaced with real AI service)
+            // TODO: Integrate with real AI service for summarization
+            let model_registry = Arc::new(ModelRegistry::new(None));
+            
+            // Convert agent-memory ContextConfig to agent-data-processing ContextConfig
+            // Use defaults for fields not available in agent-memory ContextConfig
+            let max_contexts = config.max_contexts;
+            let fold_threshold = config.fold_threshold;
+            
+            let real_config = RealContextConfig {
+                storage: agent_data_processing::context::types::ContextStorageConfig {
+                    max_context_size: 50 * 1024 * 1024, // 50MB default
+                    retention_hours: 168, // 1 week default
+                    max_contexts: max_contexts as u32,
+                    enable_persistent_storage: true,
+                    enable_memory_cache: true,
+                    cache_size_limit: 100 * 1024 * 1024, // 100MB default
+                    enable_compression: true,
+                    compression_level: 6,
+                    checksum_validation: true,
+                    archive_path: None,
+                },
+                folding: agent_data_processing::context::types::ContextFoldingConfig {
+                    strategy: agent_data_processing::context::types::FoldingStrategy::Compress,
+                    age_threshold_hours: 4, // Default: 4 hours
+                    importance_threshold: fold_threshold as f64,
+                    access_frequency_threshold: 0.3, // Default: 0.3
+                    max_working_memory_contexts: (max_contexts / 10).max(50), // 10% of max_contexts, minimum 50
+                },
+                performance: agent_data_processing::context::types::PerformanceConfig::default(),
+                working_memory: agent_data_processing::context::types::WorkingMemoryConfig {
+                    max_size: (max_contexts / 20).max(50), // 5% of max_contexts, minimum 50
+                    track_access_patterns: true,
+                    cleanup_interval_minutes: 30,
+                },
+            };
+            
+            // Create real ContextManager
+            let real_manager = RealContextManager::new_with_db_client(
+                real_config,
+                model_registry,
+                db_client
+            ).map_err(|e| MemoryError::Other(format!("Failed to create ContextManager: {}", e)))?;
+            
+            // Create embedding service if embeddings feature is enabled
+            #[cfg(feature = "embeddings")]
+            let embedding_service = {
+                let embedding_config = EmbeddingConfig {
+                    model_name: "embeddinggemma".to_string(),
+                    dimension: 768,
+                    batch_size: 32,
+                    cache_size: 1000,
+                    timeout_ms: 30000,
+                };
+                let service = EmbeddingServiceFactory::create_with_auto_detect(embedding_config, Some("embeddinggemma".to_string())).await;
+                info!("Embedding service initialized for context manager");
+                // Wrap Box<dyn EmbeddingService> in Arc using wrapper struct
+                Some(Arc::new(EmbeddingServiceWrapper { inner: service }) as Arc<dyn EmbeddingService>)
+            };
+            
+            #[cfg(not(feature = "embeddings"))]
+            let embedding_service = None::<Arc<dyn std::marker::Send + std::marker::Sync>>;
+            
+            Box::new(RealContextManagerAdapter {
+                manager: Arc::new(real_manager),
+                #[cfg(feature = "embeddings")]
+                embedding_service,
+            })
+        } else {
+            // No database pool available - use stub
+            warn!("No database pool provided, using stub context manager. Context will not be persisted.");
+            Box::new(StubContextManager {
+                config: config.clone(),
+            })
         };
         
         Ok(Self { 
             config,
-            context_manager: Box::new(context_manager),
+            context_manager,
             db_pool,
             context_cache: Arc::new(RwLock::new(HashMap::new())),
         })

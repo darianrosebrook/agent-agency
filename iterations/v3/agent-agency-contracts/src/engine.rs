@@ -78,7 +78,7 @@ pub struct EngineCaps {
 }
 
 /// Token usage statistics from inference
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct TokenUsage {
     /// Tokens in the prompt
     pub prompt_tokens: u32,
@@ -88,16 +88,6 @@ pub struct TokenUsage {
 
     /// Total tokens processed
     pub total_tokens: u32,
-}
-
-impl Default for TokenUsage {
-    fn default() -> Self {
-        Self {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0,
-        }
-    }
 }
 
 /// Engine-specific errors

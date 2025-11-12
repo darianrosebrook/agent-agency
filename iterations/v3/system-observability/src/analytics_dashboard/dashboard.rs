@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use reqwest::Client as HttpClient;
 use cadence::{StatsdClient, QueuingMetricSink, BufferedUdpMetricSink, UdpMetricSink};
-use agent_agency_database::DatabaseClient;
+use data_infrastructure::DatabaseClient;
 
 use super::config::{AnalyticsDashboardConfig, AnalyticsSession};
 use super::data::{AnalyticsDashboardData, AnalyticsInsight};

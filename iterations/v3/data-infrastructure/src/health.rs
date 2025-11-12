@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, warn};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 /// Database health status summary
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -143,7 +143,8 @@ impl DatabaseHealthMonitor {
             .context("Failed to execute database connectivity check")?;
 
         // Verify we got the expected result
-        let value: i32 = result.get("health_check");
+        let value: i32 = result.try_get::<i32, &str>("health_check")
+            .map_err(|e| anyhow::anyhow!("Failed to get health_check value: {}", e))?;
         Ok(value == 1)
     }
 

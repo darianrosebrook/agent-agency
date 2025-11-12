@@ -65,7 +65,8 @@ agent-agency-contracts = { path = "../agent-agency-contracts", default-features 
 
 # Integration with existing services
 # data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
-# agent-data-processing = { path = "../agent-data-processing", optional = true, features = ["embeddings"] }  # Removed to break circular dependency - not actually used
+agent-data-processing = { path = "../agent-data-processing", features = [] }  # Re-enabled for ContextManager integration
+data-infrastructure = { path = "../data-infrastructure", optional = true }  # For embedding service integration
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -74,7 +75,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = ["graph-reasoning", "database"]
-embeddings = []  # Now uses direct sqlx, no external dependencies
+embeddings = ["data-infrastructure"]  # Enable embedding service integration
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []

@@ -192,6 +192,14 @@ impl CoreMLModel {
     }
 
     pub fn prediction_from_features(&mut self, features: &MLFeatureProvider) -> Result<MLFeatureProvider> {
+        self.prediction_from_features_with_output_names(features, None)
+    }
+
+    pub fn prediction_from_features_with_output_names(
+        &mut self,
+        features: &MLFeatureProvider,
+        output_names: Option<&[String]>,
+    ) -> Result<MLFeatureProvider> {
         if !TARGET_APPLE_SILICON {
             return Err(ANEError::NotImplemented("Core ML prediction only supported on macOS".to_string()));
         }
@@ -471,49 +479,97 @@ impl CoreMLModel {
                 return Err(ANEError::Internal("No output provider returned from inference".to_string()));
             }
 
-            // Extract output features (simplified: assume single output feature)
-            // In a real implementation, we'd query the model metadata for output feature names
-            let output_name = "output"; // Default output name
-            let output_name_cstr = CString::new(output_name)
-                .map_err(|e| ANEError::Internal(format!("Invalid output name: {}", e)))?;
-
+            // Try to extract output - use provided output names or fall back to common names
+            let default_output_names = vec!["output", "var_0", "var0", "predictions", "logits", "features", "probabilities"];
+            let output_names: Vec<&str> = if let Some(names) = output_names {
+                names.iter().map(|s| s.as_str()).collect()
+            } else {
+                default_output_names
+            };
+            
             let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
             let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
             let mut output_shape_len: i32 = 0;
             let mut output_data_len: i32 = 0;
             let mut extract_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
+            let mut successful_output_name: Option<String> = None;
 
-            let extract_result = unsafe {
-                agentbridge_provider_get_feature_float32(
-                    output_provider_ref,
-                    output_name_cstr.as_ptr(),
-                    &mut output_data_ptr,
-                    &mut output_shape_ptr,
-                    &mut output_shape_len,
-                    &mut output_data_len,
-                    &mut extract_error_ptr,
-                )
-            };
-
-            if extract_result != 0 {
-                unsafe { agentbridge_provider_destroy(output_provider_ref) };
-                let error_msg = if !extract_error_ptr.is_null() {
-                    unsafe {
-                        let cstr = std::ffi::CStr::from_ptr(extract_error_ptr);
-                        let msg = cstr.to_string_lossy().to_string();
-                        agentbridge_free_string(extract_error_ptr);
-                        msg
-                    }
-                } else {
-                    format!("Unknown error extracting output feature '{}'", output_name)
+            // Try each output name until one succeeds
+            // Prefer outputs that look like arrays/probabilities over string labels
+            let mut sorted_output_names = output_names.clone();
+            sorted_output_names.sort_by(|a, b| {
+                let a_is_array = a.contains("prob") || a.contains("logit") || a.contains("feature") || a.contains("output") || a.contains("var");
+                let b_is_array = b.contains("prob") || b.contains("logit") || b.contains("feature") || b.contains("output") || b.contains("var");
+                match (a_is_array, b_is_array) {
+                    (true, false) => std::cmp::Ordering::Less,  // a comes first
+                    (false, true) => std::cmp::Ordering::Greater, // b comes first
+                    _ => std::cmp::Ordering::Equal,
+                }
+            });
+            
+            for output_name in &sorted_output_names {
+                let output_name_cstr = match CString::new(*output_name) {
+                    Ok(cstr) => cstr,
+                    Err(_) => continue,
                 };
-                return Err(ANEError::Internal(error_msg));
+
+                // Clean up error pointer from previous attempt if set
+                if !extract_error_ptr.is_null() {
+                    unsafe {
+                        agentbridge_free_string(extract_error_ptr);
+                    }
+                }
+
+                // Reset pointers for each attempt
+                output_data_ptr = std::ptr::null_mut();
+                output_shape_ptr = std::ptr::null_mut();
+                output_shape_len = 0;
+                output_data_len = 0;
+                extract_error_ptr = std::ptr::null_mut();
+
+                let extract_result = unsafe {
+                    agentbridge_provider_get_feature_float32(
+                        output_provider_ref,
+                        output_name_cstr.as_ptr(),
+                        &mut output_data_ptr,
+                        &mut output_shape_ptr,
+                        &mut output_shape_len,
+                        &mut output_data_len,
+                        &mut extract_error_ptr,
+                    )
+                };
+
+                if extract_result == 0 && !output_data_ptr.is_null() && output_data_len > 0 {
+                    successful_output_name = Some(output_name.to_string());
+                    break;
+                }
+
+                // Log error details for debugging
+                if extract_result != 0 && !extract_error_ptr.is_null() {
+                    let error_msg = unsafe {
+                        let cstr = std::ffi::CStr::from_ptr(extract_error_ptr);
+                        cstr.to_string_lossy().to_string()
+                    };
+                    eprintln!("⚠️ Failed to extract '{}': {}", output_name, error_msg);
+                    unsafe {
+                        agentbridge_free_string(extract_error_ptr);
+                        extract_error_ptr = std::ptr::null_mut();
+                    }
+                } else if extract_result != 0 {
+                    eprintln!("⚠️ Failed to extract '{}': extract_result={}", output_name, extract_result);
+                }
             }
 
-            if output_data_ptr.is_null() || output_data_len <= 0 {
-                unsafe { agentbridge_provider_destroy(output_provider_ref) };
-                return Err(ANEError::Internal("No output data returned from inference".to_string()));
-            }
+            // If no output name worked, return error
+            let output_name = match successful_output_name {
+                Some(name) => name,
+                None => {
+                    unsafe { agentbridge_provider_destroy(output_provider_ref) };
+                    return Err(ANEError::Internal(
+                        format!("Failed to extract output from any of the attempted names: {:?}. Try querying model outputs to get the correct output name.", output_names)
+                    ));
+                }
+            };
 
             // Extract output data
             let output_data = unsafe {
@@ -540,7 +596,7 @@ impl CoreMLModel {
             // Build output feature provider
             let mut output_features = HashMap::new();
             output_features.insert(
-                output_name.to_string(),
+                output_name.clone(),
                 MLFeatureValue::MultiArray(MLMultiArray {
                     data: output_data,
                     shape: output_shape,

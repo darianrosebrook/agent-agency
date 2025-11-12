@@ -113,6 +113,8 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => {
                 *success_count += 1;
                 if *success_count >= self.config.success_threshold {
+                    drop(state); // Release state lock before calling transition
+                    drop(success_count); // Release success_count lock before calling transition
                     self.transition_to_closed();
                 }
             }
@@ -159,7 +161,30 @@ impl CircuitBreaker {
     }
 
     /// Get current circuit state
+    /// 
+    /// This method checks if the circuit breaker should transition from Open to HalfOpen
+    /// based on the timeout, ensuring the state is always up-to-date.
     pub fn state(&self) -> CircuitState {
+        // Check timeout first without holding state lock to avoid deadlock
+        let should_transition = {
+            let state_check = *self.state.lock().unwrap();
+            if matches!(state_check, CircuitState::Open) {
+                if let Some(last_failure) = *self.last_failure_time.lock().unwrap() {
+                    last_failure.elapsed() >= self.config.timeout
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+        
+        // If timeout elapsed, transition to HalfOpen
+        if should_transition {
+            self.transition_to_half_open();
+        }
+        
+        // Return current state
         *self.state.lock().unwrap()
     }
 

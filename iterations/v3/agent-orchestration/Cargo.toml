@@ -83,7 +83,7 @@ agent-evaluation = { path = "../agent-evaluation" }
 system-common-interfaces = { path = "../system-common-interfaces" }
 # data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
 data-infrastructure = { path = "../data-infrastructure", default-features = false }  # Required for main.rs database initialization
-# data-interfaces-adapters removed to break circular dependency - factory moved to agent-orchestration
+# data-interfaces-adapters removed to break circular dependency - using inline adapter instead
 system-acceleration = { path = "../system-acceleration" }
 agent-memory = { path = "../agent-memory", optional = true, features = ["database", "embeddings", "contracts"] }
 system-resilience = { path = "../system-resilience" }

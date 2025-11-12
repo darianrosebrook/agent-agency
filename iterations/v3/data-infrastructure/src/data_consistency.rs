@@ -545,7 +545,8 @@ impl DataConsistencyManager {
             .map_err(|e| format!("Failed to count rows in {}: {}", table_name, e))?;
 
         if let Some(row) = rows.into_iter().next() {
-            Ok(row.get("count"))
+            row.try_get::<i64, &str>("count")
+                .map_err(|e| format!("Failed to get count from row: {}", e))
         } else {
             Err(format!("No count returned for table {}", table_name))
         }

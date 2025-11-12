@@ -8,6 +8,25 @@ use std::sync::OnceLock;
 
 use crate::task_executor::TaskExecutor;
 
+/// Error type for TaskExecutorProvider operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskExecutorProviderError {
+    /// Factory has already been set
+    FactoryAlreadySet,
+}
+
+impl std::fmt::Display for TaskExecutorProviderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskExecutorProviderError::FactoryAlreadySet => {
+                write!(f, "Default factory has already been set")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TaskExecutorProviderError {}
+
 /// Factory function type for creating TaskExecutor instances
 pub type TaskExecutorFactory = fn() -> Arc<dyn TaskExecutor>;
 
@@ -40,8 +59,8 @@ impl TaskExecutorProvider {
     /// 
     /// TaskExecutorProvider::set_default_factory(task_executor_factory());
     /// ```
-    pub fn set_default_factory(factory: TaskExecutorFactory) -> Result<(), ()> {
-        DEFAULT_FACTORY.set(factory).map_err(|_| ())
+    pub fn set_default_factory(factory: TaskExecutorFactory) -> Result<(), TaskExecutorProviderError> {
+        DEFAULT_FACTORY.set(factory).map_err(|_| TaskExecutorProviderError::FactoryAlreadySet)
     }
 }
 

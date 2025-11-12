@@ -709,7 +709,34 @@ pub fn create_whisper_executor(model: LoadedWhisperModel) -> WhisperInferenceExe
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Removed unused imports: WhisperConfig, load_whisper_model, TelemetryCollector, CircuitBreaker, CircuitBreakerConfig, PathBuf
+    use crate::ane::models::whisper_model::{WhisperConfig, WhisperMetadata};
+    use crate::telemetry::TelemetryCollector;
+    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+    use std::path::PathBuf;
+    
+    fn create_test_whisper_model() -> LoadedWhisperModel {
+        LoadedWhisperModel {
+            model_id: "test_whisper".to_string(),
+            compiled_path: PathBuf::from("/tmp/test_whisper.mlmodelc"),
+            metadata: WhisperMetadata {
+                path: PathBuf::from("/tmp/test_whisper.mlmodelc"),
+                size_bytes: 1024 * 1024, // 1MB
+                format: "mlmodelc".to_string(),
+                model_size: "base".to_string(),
+                supported_languages: vec!["en".to_string()],
+                max_audio_length_seconds: 30,
+                sample_rate: 16000,
+                n_mels: 80,
+            },
+            config: WhisperConfig::default(),
+            loaded_at: std::time::Instant::now(),
+            last_accessed: std::time::Instant::now(),
+            telemetry: TelemetryCollector::new(),
+            #[cfg(target_os = "macos")]
+            coreml_model_handle: crate::ane::compat::coreml::ModelRef::default(),
+            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
+        }
+    }
 
     #[tokio::test]
     async fn test_whisper_inference_executor_creation() {
@@ -753,21 +780,24 @@ mod tests {
 
     #[test]
     fn test_audio_resampling() {
-        let executor = WhisperInferenceExecutor::new(
-            // Would need a real LoadedWhisperModel
-            unimplemented!()
-        );
+        let executor = WhisperInferenceExecutor::new(create_test_whisper_model());
 
-        let input_audio = vec![0.0f32; 16000]; // 1 second at 16kHz
+        // Test resampling from 44100 Hz to 16000 Hz
+        // 1 second at 44100 Hz = 44100 samples
+        // Should become ~16000 samples at 16000 Hz
+        let input_audio = vec![0.0f32; 44100]; // 1 second at 44.1kHz
         let resampled = executor.resample_audio(&input_audio, 44100, 16000).unwrap();
 
-        // Should be approximately 16000 samples
-        assert!((resampled.len() as f32 * 16000.0 / 44100.0 - input_audio.len() as f32).abs() < 100.0);
+        // Resampling from 44100 to 16000: ratio = 16000/44100 ≈ 0.363
+        // Expected length: 44100 * 0.363 ≈ 16000
+        let expected_length = (44100.0 * 16000.0 / 44100.0) as usize;
+        assert!((resampled.len() as i32 - expected_length as i32).abs() < 100);
+        assert!(resampled.len() > 15000 && resampled.len() < 17000); // Reasonable range
     }
 
     #[test]
     fn test_audio_normalization() {
-        let executor = WhisperInferenceExecutor::new(unimplemented!());
+        let executor = WhisperInferenceExecutor::new(create_test_whisper_model());
 
         let input_audio = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
         let normalized = executor.normalize_audio(&input_audio);
@@ -780,7 +810,7 @@ mod tests {
 
     #[test]
     fn test_audio_padding() {
-        let executor = WhisperInferenceExecutor::new(unimplemented!());
+        let executor = WhisperInferenceExecutor::new(create_test_whisper_model());
 
         let short_audio = vec![1.0f32; 16000]; // 1 second
         let padded = executor.pad_or_truncate_audio(&short_audio);
@@ -794,7 +824,7 @@ mod tests {
 
     #[test]
     fn test_audio_truncation() {
-        let executor = WhisperInferenceExecutor::new(unimplemented!());
+        let executor = WhisperInferenceExecutor::new(create_test_whisper_model());
 
         let long_audio = vec![1.0f32; 960000]; // 60 seconds
         let truncated = executor.pad_or_truncate_audio(&long_audio);

@@ -331,6 +331,7 @@ impl PerformancePredictor {
         let avg_recent = recent_data.iter().sum::<f64>() / recent_data.len() as f64;
 
         // Simple trend analysis
+        // Note: recent_data is reversed (most recent first), so first_half is more recent than second_half
         let trend = if recent_data.len() >= 2 {
             let first_half: Vec<f64> = recent_data.iter().take(recent_data.len() / 2).cloned().collect();
             let second_half: Vec<f64> = recent_data.iter().skip(recent_data.len() / 2).cloned().collect();
@@ -338,9 +339,10 @@ impl PerformancePredictor {
             let avg_first = first_half.iter().sum::<f64>() / first_half.len() as f64;
             let avg_second = second_half.iter().sum::<f64>() / second_half.len() as f64;
 
-            if avg_second > avg_first * 1.05 {
+            // first_half is more recent, so if it's higher, performance is degrading
+            if avg_first > avg_second * 1.05 {
                 PerformanceTrend::Degrading
-            } else if avg_second < avg_first * 0.95 {
+            } else if avg_first < avg_second * 0.95 {
                 PerformanceTrend::Improving
             } else {
                 PerformanceTrend::Stable

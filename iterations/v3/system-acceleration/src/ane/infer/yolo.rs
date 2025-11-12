@@ -319,7 +319,33 @@ mod tests {
     use super::*;
     use crate::telemetry::TelemetryCollector;
     use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-    use crate::ane::models::YOLOConfig;
+    use crate::ane::models::{YOLOConfig, YOLOMetadata};
+    use std::path::PathBuf;
+    
+    fn create_test_yolo_model() -> LoadedYOLOModel {
+        LoadedYOLOModel {
+            model_id: "test_yolo".to_string(),
+            compiled_path: PathBuf::from("/tmp/test_yolo.mlmodelc"),
+            metadata: YOLOMetadata {
+                path: PathBuf::from("/tmp/test_yolo.mlmodelc"),
+                size_bytes: 1024 * 1024, // 1MB
+                format: "mlmodelc".to_string(),
+                version: None,
+                description: None,
+                author: None,
+                license: None,
+                input_shape: vec![1, 3, 416, 416],
+                output_shapes: vec![vec![1, 85, 13, 13]],
+                num_classes: 80,
+                num_anchors: 3,
+            },
+            config: YOLOConfig::default(),
+            loaded_at: std::time::Instant::now(),
+            last_accessed: std::time::Instant::now(),
+            telemetry: TelemetryCollector::new(),
+            circuit_breaker: CircuitBreaker::new(CircuitBreakerConfig::default()),
+        }
+    }
 
     #[tokio::test]
     async fn test_yolo_executor_creation() {
@@ -370,9 +396,7 @@ mod tests {
 
     #[test]
     fn test_iou_calculation() {
-        let executor = YOLOInferenceExecutor {
-            model: unsafe { std::mem::zeroed() }, // Mock for testing
-        };
+        let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
         let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
         let bbox2 = BoundingBox { x: 5.0, y: 5.0, width: 10.0, height: 10.0 };
@@ -383,9 +407,7 @@ mod tests {
 
     #[test]
     fn test_no_overlap_iou() {
-        let executor = YOLOInferenceExecutor {
-            model: unsafe { std::mem::zeroed() }, // Mock for testing
-        };
+        let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
         let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
         let bbox2 = BoundingBox { x: 20.0, y: 20.0, width: 10.0, height: 10.0 };
@@ -396,9 +418,7 @@ mod tests {
 
     #[test]
     fn test_complete_overlap_iou() {
-        let executor = YOLOInferenceExecutor {
-            model: unsafe { std::mem::zeroed() }, // Mock for testing
-        };
+        let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
         let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
         let bbox2 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };

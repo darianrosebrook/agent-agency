@@ -304,3 +304,5 @@ tmp/
  venv venv-py39
 
 */**/true/**
+test-fixtures/
+test-fixtures/images/

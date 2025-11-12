@@ -38,7 +38,15 @@ mod mcp_module {
 // TODO: Add agent_orchestration crate when available
 // use agent_orchestration::error_handling::CircuitBreakerStats;
 
-/// Configuration for the MCP interface
+    use anyhow::Result;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::collections::HashMap;
+    use tokio::sync::RwLock;
+    use serde::{Deserialize, Serialize};
+    use crate::simple_client::DatabaseClient;
+
+    /// Configuration for the MCP interface
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg(feature = "mcp")]
 pub struct McpConfig {
@@ -124,6 +132,21 @@ pub struct McpServer {
     is_shutting_down: Arc<std::sync::atomic::AtomicBool>,
 }
 
+    /// Helper function to create agent-mcp DatabaseClient from a PgPool
+    /// This allows us to reuse the pool from data-infrastructure::DatabaseClient
+    /// Note: agent-mcp::server::DatabaseClient::new() requires a database URL string,
+    /// so we use the DATABASE_URL environment variable as a fallback.
+    /// This creates a new connection pool, which is not ideal but necessary due to API constraints.
+    async fn create_mcp_database_client_from_pool(_pool: &sqlx::postgres::PgPool) -> Result<McpDatabaseClient> {
+        // Get database URL from environment as fallback
+        // Future improvement: Modify agent-mcp::server::DatabaseClient to accept a pool directly
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://localhost/agent_agency".to_string());
+        
+        McpDatabaseClient::new(&database_url).await
+            .map_err(|e| anyhow::anyhow!("Failed to create MCP database client: {}", e))
+    }
+
 #[cfg(feature = "mcp")]
 impl McpServer {
     /// Create a new MCP server instance
@@ -135,15 +158,12 @@ impl McpServer {
             caws_integration: config.caws_integration.clone(),
         };
 
-        // TODO: Replace stub database client with real implementation
-        // - [ ] Integrate real database client from data-infrastructure
-        // - [ ] Configure database connection pooling
-        // - [ ] Handle database connection errors gracefully
-        // - [ ] Add database health checks
-        // - [ ] Add unit tests with mock database client
-        // - [ ] Add integration tests with real database
-        let stub_db_client = Arc::new(McpDatabaseClient::new());
-        let inner = InnerMCPServer::new(inner_config, stub_db_client);
+        // Create adapter to convert data-infrastructure::DatabaseClient to agent-mcp::server::DatabaseClient
+        // Note: This creates a new connection pool using DATABASE_URL, which is not ideal but necessary
+        // due to agent-mcp::server::DatabaseClient API constraints.
+        // Future improvement: Modify agent-mcp::server::DatabaseClient to accept a pool directly
+        let mcp_db_client = Arc::new(create_mcp_database_client_from_pool(db_client.pool()).await?);
+        let inner = InnerMCPServer::new(inner_config, mcp_db_client);
 
         // Create service components
         let tool_discovery = Arc::new(ToolDiscovery::new());

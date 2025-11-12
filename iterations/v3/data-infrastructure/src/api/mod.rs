@@ -21,6 +21,7 @@ pub mod types;
 pub mod transform;
 pub mod health;
 pub mod pagination;
+pub mod metrics;
 
 // Re-export public types and functions for backward compatibility
 pub use api_types::*;

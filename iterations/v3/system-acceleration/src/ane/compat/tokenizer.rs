@@ -158,11 +158,12 @@ pub fn mistral_decode(tokens: &[i32]) -> Result<String> {
 }
 
 /// Free memory allocated by agentbridge functions
-pub fn mistral_free_string(ptr: *mut std::ffi::c_char) {
+///
+/// # Safety
+/// The caller must ensure `ptr` is a valid pointer returned by agentbridge functions or is null.
+pub unsafe fn mistral_free_string(ptr: *mut std::ffi::c_char) {
     if !ptr.is_null() {
-        unsafe {
-            coreml::agentbridge_free_string(ptr);
-        }
+        coreml::agentbridge_free_string(ptr);
     }
 }
 
@@ -175,7 +176,10 @@ pub fn mistral_tokenizer_create() -> *mut std::ffi::c_void {
 }
 
 /// Encode text using legacy FFI interface
-pub fn mistral_tokenizer_encode(
+///
+/// # Safety
+/// The caller must ensure `text` is a valid null-terminated C string or is null.
+pub unsafe fn mistral_tokenizer_encode(
     _tokenizer: *mut std::ffi::c_void,
     text: *const std::ffi::c_char,
     tokens_out: &mut *mut i32,
@@ -191,7 +195,7 @@ pub fn mistral_tokenizer_encode(
         return -1;
     }
 
-    let cstr = unsafe { std::ffi::CStr::from_ptr(text) };
+    let cstr = std::ffi::CStr::from_ptr(text);
     let text_str = match cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
@@ -217,16 +221,22 @@ pub fn mistral_tokenizer_encode(
 }
 
 /// Free tokens allocated by mistral_tokenizer_encode
-pub fn mistral_tokenizer_free_tokens(tokens: *mut i32) {
+///
+/// # Safety
+/// The caller must ensure `tokens` is a valid pointer returned by `mistral_tokenizer_encode` or is null.
+pub unsafe fn mistral_tokenizer_free_tokens(tokens: *mut i32) {
     if !tokens.is_null() {
-        unsafe {
-            let _ = Box::from_raw(tokens);
-        }
+        let _ = Box::from_raw(tokens);
     }
 }
 
 /// Decode tokens using legacy FFI interface
-pub fn mistral_tokenizer_decode(
+///
+/// # Safety
+/// The caller must ensure:
+/// - `tokens` is a valid pointer to an array of at least `token_count` elements, or is null
+/// - `text_out` and `error_out` are valid pointers to mutable pointers
+pub unsafe fn mistral_tokenizer_decode(
     _tokenizer: *mut std::ffi::c_void,
     tokens: *const i32,
     token_count: i32,
@@ -238,34 +248,33 @@ pub fn mistral_tokenizer_decode(
     }
 
     if tokens.is_null() || token_count <= 0 {
-        unsafe { *error_out = std::ffi::CString::new("Invalid tokens").unwrap().into_raw(); }
+        *error_out = std::ffi::CString::new("Invalid tokens").unwrap().into_raw();
         return -1;
     }
 
-    let token_slice = unsafe { std::slice::from_raw_parts(tokens, token_count as usize) };
+    let token_slice = std::slice::from_raw_parts(tokens, token_count as usize);
 
     match mistral_decode(token_slice) {
         Ok(text) => {
-            unsafe {
-                *text_out = std::ffi::CString::new(text).unwrap().into_raw();
-                *error_out = std::ptr::null_mut();
-            }
+            *text_out = std::ffi::CString::new(text).unwrap().into_raw();
+            *error_out = std::ptr::null_mut();
             0 // Success
         }
         Err(e) => {
             let error_msg = format!("Decoding failed: {}", e);
-            unsafe { *error_out = std::ffi::CString::new(error_msg).unwrap().into_raw(); }
+            *error_out = std::ffi::CString::new(error_msg).unwrap().into_raw();
             -1 // Error
         }
     }
 }
 
 /// Free text allocated by mistral_tokenizer_decode
-pub fn mistral_tokenizer_free_text(text: *mut std::ffi::c_char) {
+///
+/// # Safety
+/// The caller must ensure `text` is a valid pointer returned by `mistral_tokenizer_decode` or is null.
+pub unsafe fn mistral_tokenizer_free_text(text: *mut std::ffi::c_char) {
     if !text.is_null() {
-        unsafe {
-            let _ = std::ffi::CString::from_raw(text);
-        }
+        let _ = std::ffi::CString::from_raw(text);
     }
 }
 

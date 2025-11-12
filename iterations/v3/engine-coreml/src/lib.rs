@@ -632,9 +632,9 @@ mod tests {
             acceleration: vec!["ANE".to_string()],
         };
 
-        // This will fail without proper model setup, but tests the interface
+        // Engine creation succeeds even without models (falls back to simulation mode)
         let result = CoreMLEngine::new(PathBuf::from("/tmp/models"), caps).await;
-        assert!(result.is_err()); // Expected to fail without models
+        assert!(result.is_ok()); // Engine should be created successfully, even in simulation mode
     }
 
     #[test]
@@ -657,7 +657,7 @@ mod tests {
                 spec_text: "test".to_string(),
                 acceptance_criteria: vec![],
                 risk_tier: "low".to_string(),
-                context: HashMap::new(),
+                context: serde_json::json!({}),
             },
             output_schema: "{}".to_string(),
         };

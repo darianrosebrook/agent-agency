@@ -62,7 +62,7 @@ impl Default for ExecutionArtifacts {
 }
 
 /// All code changes made during execution
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct CodeChanges {
     /// Unified diffs for all code changes
@@ -78,17 +78,6 @@ pub struct CodeChanges {
 
     /// Code change statistics
     pub statistics: CodeChangeStats,
-}
-
-impl Default for CodeChanges {
-    fn default() -> Self {
-        Self {
-            diffs: Vec::new(),
-            new_files: Vec::new(),
-            deleted_files: Vec::new(),
-            statistics: CodeChangeStats::default(),
-        }
-    }
 }
 
 /// Unified diff artifact
@@ -158,7 +147,7 @@ pub struct NewFileArtifact {
 }
 
 /// Code change statistics
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CodeChangeStats {
     /// Total files modified
     pub files_modified: u32,
@@ -173,19 +162,8 @@ pub struct CodeChangeStats {
     pub total_loc: u32,
 }
 
-impl Default for CodeChangeStats {
-    fn default() -> Self {
-        Self {
-            files_modified: 0,
-            lines_added: 0,
-            lines_removed: 0,
-            total_loc: 0,
-        }
-    }
-}
-
 /// All test artifacts and execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct TestArtifacts {
     /// Unit test execution results
@@ -202,19 +180,8 @@ pub struct TestArtifacts {
     pub test_files: Vec<TestFileInfo>,
 }
 
-impl Default for TestArtifacts {
-    fn default() -> Self {
-        Self {
-            unit_tests: TestSuiteResults::default(),
-            integration_tests: TestSuiteResults::default(),
-            e2e_tests: E2eTestResults::default(),
-            test_files: Vec::new(),
-        }
-    }
-}
-
 /// Test suite execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TestSuiteResults {
     /// Total tests in suite
     pub total: u32,
@@ -234,19 +201,6 @@ pub struct TestSuiteResults {
     /// Individual test results
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub results: Vec<TestResult>,
-}
-
-impl Default for TestSuiteResults {
-    fn default() -> Self {
-        Self {
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration_ms: 0,
-            results: Vec::new(),
-        }
-    }
 }
 
 /// Individual test result
@@ -287,7 +241,7 @@ pub enum TestStatus {
 }
 
 /// End-to-end test execution results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct E2eTestResults {
     /// Total E2E tests
     pub total: u32,
@@ -307,19 +261,6 @@ pub struct E2eTestResults {
     /// E2E scenario results
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub scenarios: Vec<E2eScenarioResult>,
-}
-
-impl Default for E2eTestResults {
-    fn default() -> Self {
-        Self {
-            total: 0,
-            passed: 0,
-            failed: 0,
-            skipped: 0,
-            duration_ms: 0,
-            scenarios: Vec::new(),
-        }
-    }
 }
 
 /// Individual E2E scenario result
@@ -451,7 +392,7 @@ pub struct UncoveredBranch {
 }
 
 /// Linting and static analysis results
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct LintingResults {
     /// Total number of issues found
@@ -476,20 +417,6 @@ pub struct LintingResults {
     /// Configuration used
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_used: Option<String>,
-}
-
-impl Default for LintingResults {
-    fn default() -> Self {
-        Self {
-            total_issues: 0,
-            errors: 0,
-            warnings: 0,
-            info: 0,
-            issues_by_file: std::collections::HashMap::new(),
-            linter_version: None,
-            config_used: None,
-        }
-    }
 }
 
 /// Individual linting issue
@@ -683,7 +610,7 @@ pub struct AuditEvent {
 }
 
 /// Artifact storage and management metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ArtifactMetadata {
     /// Whether artifacts were compressed for storage
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -700,17 +627,6 @@ pub struct ArtifactMetadata {
     /// Categorization tags
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub tags: Vec<String>,
-}
-
-impl Default for ArtifactMetadata {
-    fn default() -> Self {
-        Self {
-            compression_applied: None,
-            storage_location: None,
-            retention_policy: None,
-            tags: Vec::new(),
-        }
-    }
 }
 
 /// Validate an execution artifacts value against the JSON schema
