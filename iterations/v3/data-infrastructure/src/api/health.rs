@@ -38,7 +38,8 @@ pub async fn health_check(
 async fn check_database_health(db_client: &crate::DatabaseClient) -> Result<(), String> {
     // Use the DatabaseHealthMonitor if available, otherwise perform basic connectivity check
     if let Some(health_monitor) = db_client.health_monitor() {
-        match health_monitor.perform_health_check().await {
+        // Pass the pool reference for real connectivity check
+        match health_monitor.perform_health_check(Some(db_client.pool())).await {
             Ok(status) => {
                 match status.overall_health {
                     HealthStatus::Healthy => Ok(()),

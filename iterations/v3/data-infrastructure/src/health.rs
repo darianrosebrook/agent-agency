@@ -6,12 +6,13 @@
 use schemars::JsonSchema;
 use crate::database_circuit_breaker::CircuitState;
 use super::database_metrics::DatabaseMetrics;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::{debug, warn};
+use sqlx::PgPool;
 
 /// Database health status summary
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -74,21 +75,37 @@ impl DatabaseHealthMonitor {
     }
 
     /// Perform comprehensive health check
-    pub async fn perform_health_check(&self) -> Result<DatabaseHealthStatus> {
+    /// 
+    /// If a pool is provided, performs real database connectivity check.
+    /// Otherwise, uses metrics-only health assessment.
+    pub async fn perform_health_check(&self, pool: Option<&PgPool>) -> Result<DatabaseHealthStatus> {
         let start_time = std::time::Instant::now();
 
         // Update last check timestamp
         let now = Utc::now();
         *self.last_health_check.write().unwrap() = Some(now);
 
-        // TODO: Implement real database connectivity check
-        // - [ ] Execute actual database ping query
-        // - [ ] Handle connection timeout and errors
-        // - [ ] Add retry logic for transient failures
-        // - [ ] Add unit tests with mock database
-        // - [ ] Add integration tests with real database
-        // Basic connectivity check (would be implemented with actual DB connection)
-        let connectivity_ok = true; // Placeholder
+        // Perform real database connectivity check if pool is available
+        let connectivity_ok = if let Some(pool_ref) = pool {
+            self.check_database_connectivity(pool_ref).await
+                .unwrap_or_else(|e| {
+                    warn!("Database connectivity check failed: {}", e);
+                    false
+                })
+        } else {
+            // No pool available - cannot perform real connectivity check
+            warn!("No database pool provided for health check - using metrics-only assessment");
+            true // Assume connectivity is OK if we can't check
+        };
+
+        // Get pool metrics if available
+        let (pool_size, idle_connections) = if let Some(pool_ref) = pool {
+            let size = pool_ref.size();
+            let idle = pool_ref.num_idle();
+            (size as u32, idle as u32)
+        } else {
+            (0, 0) // Unknown pool metrics
+        };
 
         // Get metrics snapshot
         let metrics_snapshot = self.metrics.snapshot();
@@ -98,15 +115,9 @@ impl DatabaseHealthMonitor {
 
         let status = DatabaseHealthStatus {
             connectivity_ok,
-            // TODO: Get actual connection pool metrics
-            // - [ ] Query connection pool for actual size
-            // - [ ] Get idle connections count from pool
-            // - [ ] Get circuit breaker state from actual circuit breaker
-            // - [ ] Add unit tests with mock pool
-            // - [ ] Add integration tests with real pool
-            pool_size: 10, // Placeholder - would get from actual pool
-            idle_connections: 5, // Placeholder
-            circuit_breaker_state: CircuitState::Closed, // Placeholder
+            pool_size,
+            idle_connections,
+            circuit_breaker_state: CircuitState::Closed, // TODO: Get from actual circuit breaker if available
             total_queries: metrics_snapshot.total_queries,
             success_rate: metrics_snapshot.success_rate,
             avg_execution_time_ms: (metrics_snapshot.avg_execution_time_ns / 1_000_000) as u64,
@@ -120,6 +131,20 @@ impl DatabaseHealthMonitor {
         debug!("Health check completed in {:?}", check_duration);
 
         Ok(status)
+    }
+
+    /// Check database connectivity by executing a simple query
+    async fn check_database_connectivity(&self, pool: &PgPool) -> Result<bool> {
+        // Execute a simple SELECT 1 query to verify connectivity
+        // This is a lightweight query that doesn't require any table access
+        let result = sqlx::query("SELECT 1 as health_check")
+            .fetch_one(pool)
+            .await
+            .context("Failed to execute database connectivity check")?;
+
+        // Verify we got the expected result
+        let value: i32 = result.get("health_check");
+        Ok(value == 1)
     }
 
     /// Determine overall health status based on metrics
@@ -143,8 +168,8 @@ impl DatabaseHealthMonitor {
     }
 
     /// Get detailed health report
-    pub async fn get_health_report(&self) -> Result<HealthReport> {
-        let status = self.perform_health_check().await?;
+    pub async fn get_health_report(&self, pool: Option<&PgPool>) -> Result<HealthReport> {
+        let status = self.perform_health_check(pool).await?;
 
         let report = HealthReport {
             status: status.clone(),

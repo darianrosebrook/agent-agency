@@ -106,19 +106,53 @@ impl DatabaseClient {
     }
 
     /// Execute a parameterized query and return a single row
-    pub async fn query_one_with_params(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Option<sqlx::postgres::PgRow>> {
-        sqlx::query(query)
-            .fetch_optional(&self.pool)
-            .await
-            .context("Failed to execute query")
+    /// 
+    /// Note: This method has limitations with trait object parameters.
+    /// For proper parameterized queries, consider using sqlx::query! macro at compile time
+    /// or refactoring to use explicit types instead of trait objects.
+    pub async fn query_one_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Option<sqlx::postgres::PgRow>> {
+        if params.is_empty() {
+            sqlx::query(query)
+                .fetch_optional(&self.pool)
+                .await
+                .context("Failed to execute query")
+        } else {
+            // sqlx doesn't support binding trait objects directly
+            // Return error indicating this limitation
+            Err(anyhow::anyhow!(
+                "Parameterized queries with trait objects are not fully supported. \
+                Consider using sqlx::query! macro for compile-time query checking, \
+                or refactor to use concrete parameter types. \
+                Query: {}, Parameters: {}",
+                query.chars().take(100).collect::<String>(),
+                params.len()
+            ))
+        }
     }
 
     /// Execute a parameterized query and return rows
-    pub async fn query_with_params(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>> {
-        sqlx::query(query)
-            .fetch_all(&self.pool)
-            .await
-            .context("Failed to execute query")
+    /// 
+    /// Note: This method has limitations with trait object parameters.
+    /// For proper parameterized queries, consider using sqlx::query! macro at compile time
+    /// or refactoring to use explicit types instead of trait objects.
+    pub async fn query_with_params(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>> {
+        if params.is_empty() {
+            sqlx::query(query)
+                .fetch_all(&self.pool)
+                .await
+                .context("Failed to execute query")
+        } else {
+            // sqlx doesn't support binding trait objects directly
+            // Return error indicating this limitation
+            Err(anyhow::anyhow!(
+                "Parameterized queries with trait objects are not fully supported. \
+                Consider using sqlx::query! macro for compile-time query checking, \
+                or refactor to use concrete parameter types. \
+                Query: {}, Parameters: {}",
+                query.chars().take(100).collect::<String>(),
+                params.len()
+            ))
+        }
     }
 
     /// Execute a safe query (alias for execute with parameters)
@@ -141,42 +175,43 @@ impl DatabaseClient {
 
     /// Create an audit trail entry
     pub async fn create_audit_trail_entry(&self, audit_entry: serde_json::Value) -> Result<()> {
-        // TODO: Insert audit trail entry into database
-        //       Currently only logs; should insert audit trail entry into audit table for persistent audit logging.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Audit entries are inserted into database correctly
-        // - Entries include all required information
-        // - Database persistence works correctly
-        // - Error handling works for insertion failures
-        //
-        // DEPENDENCIES:
-        // - Database connection (Required)
-        // - Audit table schema (Required)
-        // - Database insertion utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (audit trail feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database and audit trail expertise
-        tracing::info!("Audit entry: {}", audit_entry); // Temporary: log until database insertion
+        // Parse JSON value into CreateAuditTrailEntry structure
+        let entry: CreateAuditTrailEntry = serde_json::from_value(audit_entry)
+            .context("Failed to parse audit entry JSON into CreateAuditTrailEntry")?;
+
+        // Generate ID and timestamp
+        let id = Uuid::new_v4();
+        let created_at = entry.timestamp.unwrap_or_else(|| Utc::now());
+
+        // Insert into audit_trail_entries table
+        sqlx::query(
+            r#"
+            INSERT INTO audit_trail_entries (
+                id, entity_type, entity_id, action, details,
+                user_id, ip_address, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#
+        )
+        .bind(id)
+        .bind(&entry.entity_type)
+        .bind(entry.entity_id)
+        .bind(&entry.action)
+        .bind(&entry.details)
+        .bind(&entry.user_id)
+        .bind(&entry.ip_address)
+        .bind(created_at)
+        .execute(&self.pool)
+        .await
+        .context("Failed to insert audit trail entry into database")?;
+
+        tracing::debug!(
+            audit_entry_id = %id,
+            entity_type = %entry.entity_type,
+            entity_id = %entry.entity_id,
+            action = %entry.action,
+            "Audit trail entry created successfully"
+        );
+
         Ok(())
     }
 
@@ -922,42 +957,9 @@ impl DatabaseOperations for DatabaseClient {
     }
 
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>> {
-        // TODO: Resolve schema relationship and implement proper query
-        //       Currently returns empty; should resolve schema relationship between judge_evaluations and task_id, implement proper join through council_verdicts if needed.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Schema relationship is resolved correctly
-        // - Query joins tables properly
-        // - Judge evaluations are retrieved accurately
-        // - Error handling works for query failures
-        //
-        // DEPENDENCIES:
-        // - Database schema documentation (Required)
-        // - Schema migration if needed (Required)
-        // - Query optimization utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (database query feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database schema expertise
-        let rows = sqlx::query_as::<_, JudgeEvaluation>( // Temporary: query structure until schema resolution
+        // Query judge evaluations for a task by joining through council_verdicts
+        // judge_evaluations.verdict_id references council_verdicts.verdict_id (not the primary key id)
+        let rows = sqlx::query_as::<_, JudgeEvaluation>(
             r#"
             SELECT id, verdict_id, judge_id, judge_verdict, evaluation_time_ms,
                    tokens_used, confidence, created_at, evaluation_score,
@@ -965,14 +967,21 @@ impl DatabaseOperations for DatabaseClient {
                    verdict_decision, risk_assessment, updated_at
             FROM judge_evaluations
             WHERE verdict_id IN (
-                SELECT id FROM council_verdicts WHERE task_id = $1
+                SELECT verdict_id FROM council_verdicts WHERE task_id = $1
             )
             ORDER BY created_at DESC
             "#
         )
         .bind(task_id)
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .context("Failed to query judge evaluations for task")?;
+        
+        tracing::debug!(
+            task_id = %task_id,
+            evaluation_count = rows.len(),
+            "Retrieved judge evaluations for task"
+        );
         
         Ok(rows)
     }
@@ -1101,24 +1110,256 @@ impl DatabaseOperations for DatabaseClient {
         Ok(rows)
     }
 
-    // Planning operations stubs - these need full implementation but are here for interface completeness
-    async fn create_milestone(&self, _milestone: CreateMilestone) -> Result<Milestone> {
-        Err(anyhow::anyhow!("Not implemented"))
+    // Milestone operations - full implementation
+    async fn create_milestone(&self, milestone: CreateMilestone) -> Result<Milestone> {
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO milestones (
+                id, plan_id, objective, scope, interfaces, tests, evidence_gate,
+                rollback_plan, dependencies, state, assigned_worker_id, estimated_effort,
+                priority, risk_tier, is_blocking, blocking_reason, metrics,
+                created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            "#
+        )
+        .bind(&milestone.id)
+        .bind(milestone.plan_id)
+        .bind(&milestone.objective)
+        .bind(milestone.scope.unwrap_or_else(|| serde_json::json!({})))
+        .bind(milestone.interfaces.unwrap_or_else(|| serde_json::json!([])))
+        .bind(milestone.tests.unwrap_or_else(|| serde_json::json!([])))
+        .bind(milestone.evidence_gate.unwrap_or_else(|| serde_json::json!({})))
+        .bind(&milestone.rollback_plan)
+        .bind(milestone.dependencies.unwrap_or_else(|| serde_json::json!([])))
+        .bind(milestone.state.unwrap_or_else(|| "pending".to_string()))
+        .bind(milestone.assigned_worker_id)
+        .bind(milestone.estimated_effort)
+        .bind(&milestone.priority)
+        .bind(milestone.risk_tier)
+        .bind(milestone.is_blocking)
+        .bind(&milestone.blocking_reason)
+        .bind(&milestone.metrics)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .context("Failed to create milestone")?;
+        
+        self.get_milestone(milestone.plan_id, milestone.id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to retrieve created milestone"))
     }
 
-    async fn get_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Option<Milestone>> {
-        Ok(None)
+    async fn get_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Option<Milestone>> {
+        sqlx::query_as::<_, Milestone>(
+            r#"
+            SELECT id, plan_id, objective, scope, interfaces, tests, evidence_gate,
+                   rollback_plan, dependencies, state, assigned_worker_id, estimated_effort,
+                   priority, risk_tier, is_blocking, blocking_reason, metrics,
+                   started_at, completed_at, created_at, updated_at
+            FROM milestones
+            WHERE plan_id = $1 AND id = $2
+            "#
+        )
+        .bind(plan_id)
+        .bind(&milestone_id)
+        .fetch_optional(&self.pool)
+        .await
+        .context("Failed to get milestone")
     }
 
-    async fn get_milestones(&self, _plan_id: Uuid) -> Result<Vec<Milestone>> {
-        Ok(vec![])
+    async fn get_milestones(&self, plan_id: Uuid) -> Result<Vec<Milestone>> {
+        sqlx::query_as::<_, Milestone>(
+            r#"
+            SELECT id, plan_id, objective, scope, interfaces, tests, evidence_gate,
+                   rollback_plan, dependencies, state, assigned_worker_id, estimated_effort,
+                   priority, risk_tier, is_blocking, blocking_reason, metrics,
+                   started_at, completed_at, created_at, updated_at
+            FROM milestones
+            WHERE plan_id = $1
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(plan_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get milestones")
     }
 
-    async fn update_milestone(&self, _plan_id: Uuid, _milestone_id: String, _update: UpdateMilestone) -> Result<Milestone> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn update_milestone(&self, plan_id: Uuid, milestone_id: String, update: UpdateMilestone) -> Result<Milestone> {
+        let mut updates = Vec::new();
+        let mut bind_index = 1;
+        
+        if let Some(ref _objective) = update.objective {
+            updates.push(format!("objective = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _scope) = update.scope {
+            updates.push(format!("scope = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _interfaces) = update.interfaces {
+            updates.push(format!("interfaces = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _tests) = update.tests {
+            updates.push(format!("tests = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _evidence_gate) = update.evidence_gate {
+            updates.push(format!("evidence_gate = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _rollback_plan) = update.rollback_plan {
+            updates.push(format!("rollback_plan = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _dependencies) = update.dependencies {
+            updates.push(format!("dependencies = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _state) = update.state {
+            updates.push(format!("state = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_assigned_worker_id) = update.assigned_worker_id {
+            updates.push(format!("assigned_worker_id = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_estimated_effort) = update.estimated_effort {
+            updates.push(format!("estimated_effort = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _priority) = update.priority {
+            updates.push(format!("priority = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_risk_tier) = update.risk_tier {
+            updates.push(format!("risk_tier = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_is_blocking) = update.is_blocking {
+            updates.push(format!("is_blocking = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _blocking_reason) = update.blocking_reason {
+            updates.push(format!("blocking_reason = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _metrics) = update.metrics {
+            updates.push(format!("metrics = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_started_at) = update.started_at {
+            updates.push(format!("started_at = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_completed_at) = update.completed_at {
+            updates.push(format!("completed_at = ${}", bind_index));
+            bind_index += 1;
+        }
+        
+        if updates.is_empty() {
+            let milestone_id_clone = milestone_id.clone();
+            return self.get_milestone(plan_id, milestone_id).await?
+                .ok_or_else(|| anyhow::anyhow!("Milestone not found: {} in plan {}", milestone_id_clone, plan_id));
+        }
+        
+        updates.push(format!("updated_at = ${}", bind_index));
+        bind_index += 1;
+        
+        let query = format!(
+            "UPDATE milestones SET {} WHERE plan_id = ${} AND id = ${}",
+            updates.join(", "),
+            bind_index,
+            bind_index + 1
+        );
+        
+        let mut query_builder = sqlx::query(&query);
+        if let Some(ref objective) = update.objective {
+            query_builder = query_builder.bind(objective);
+        }
+        if let Some(ref scope) = update.scope {
+            query_builder = query_builder.bind(scope);
+        }
+        if let Some(ref interfaces) = update.interfaces {
+            query_builder = query_builder.bind(interfaces);
+        }
+        if let Some(ref tests) = update.tests {
+            query_builder = query_builder.bind(tests);
+        }
+        if let Some(ref evidence_gate) = update.evidence_gate {
+            query_builder = query_builder.bind(evidence_gate);
+        }
+        if let Some(ref rollback_plan) = update.rollback_plan {
+            query_builder = query_builder.bind(rollback_plan);
+        }
+        if let Some(ref dependencies) = update.dependencies {
+            query_builder = query_builder.bind(dependencies);
+        }
+        if let Some(ref state) = update.state {
+            query_builder = query_builder.bind(state);
+        }
+        if let Some(assigned_worker_id) = update.assigned_worker_id {
+            query_builder = query_builder.bind(assigned_worker_id);
+        }
+        if let Some(estimated_effort) = update.estimated_effort {
+            query_builder = query_builder.bind(estimated_effort);
+        }
+        if let Some(ref priority) = update.priority {
+            query_builder = query_builder.bind(priority);
+        }
+        if let Some(risk_tier) = update.risk_tier {
+            query_builder = query_builder.bind(risk_tier);
+        }
+        if let Some(is_blocking) = update.is_blocking {
+            query_builder = query_builder.bind(is_blocking);
+        }
+        if let Some(ref blocking_reason) = update.blocking_reason {
+            query_builder = query_builder.bind(blocking_reason);
+        }
+        if let Some(ref metrics) = update.metrics {
+            query_builder = query_builder.bind(metrics);
+        }
+        if let Some(started_at) = update.started_at {
+            query_builder = query_builder.bind(started_at);
+        }
+        if let Some(completed_at) = update.completed_at {
+            query_builder = query_builder.bind(completed_at);
+        }
+        query_builder = query_builder.bind(Utc::now());
+        query_builder = query_builder.bind(plan_id);
+        query_builder = query_builder.bind(&milestone_id);
+        
+        query_builder.execute(&self.pool)
+            .await
+            .context("Failed to update milestone")?;
+        
+        let milestone_id_clone = milestone_id.clone();
+        self.get_milestone(plan_id, milestone_id).await?
+            .ok_or_else(|| anyhow::anyhow!("Milestone not found after update: {} in plan {}", milestone_id_clone, plan_id))
     }
 
-    async fn delete_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<()> {
+    async fn delete_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<()> {
+        let rows_affected = sqlx::query(
+            r#"
+            DELETE FROM milestones
+            WHERE plan_id = $1 AND id = $2
+            "#
+        )
+        .bind(plan_id)
+        .bind(&milestone_id)
+        .execute(&self.pool)
+        .await
+        .context("Failed to delete milestone")?
+        .rows_affected();
+        
+        if rows_affected == 0 {
+            return Err(anyhow::anyhow!("Milestone not found: {} in plan {}", milestone_id, plan_id));
+        }
+        
         Ok(())
     }
 
@@ -1203,20 +1444,158 @@ impl DatabaseOperations for DatabaseClient {
         .ok_or_else(|| anyhow::anyhow!("Planning session not found: {}", id))
     }
 
-    async fn create_evidence_artifact(&self, _artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn create_evidence_artifact(&self, artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact> {
+        let id = Uuid::new_v4();
+        let now = Utc::now();
+        
+        sqlx::query(
+            r#"
+            INSERT INTO evidence_artifacts (
+                id, milestone_id, plan_id, artifact_type, artifact_data,
+                verified, collected_at, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#
+        )
+        .bind(id)
+        .bind(&artifact.milestone_id)
+        .bind(artifact.plan_id)
+        .bind(&artifact.artifact_type)
+        .bind(&artifact.artifact_data)
+        .bind(artifact.verified.unwrap_or(false))
+        .bind(now)
+        .bind(artifact.metadata.unwrap_or_else(|| serde_json::json!({})))
+        .execute(&self.pool)
+        .await
+        .context("Failed to create evidence artifact")?;
+        
+        sqlx::query_as::<_, EvidenceArtifact>(
+            r#"
+            SELECT id, milestone_id, plan_id, artifact_type, artifact_data,
+                   verified, collected_at, verified_at, metadata
+            FROM evidence_artifacts
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to retrieve created evidence artifact")
     }
 
-    async fn get_evidence_artifacts(&self, _plan_id: Uuid) -> Result<Vec<EvidenceArtifact>> {
-        Ok(vec![])
+    async fn get_evidence_artifacts(&self, plan_id: Uuid) -> Result<Vec<EvidenceArtifact>> {
+        sqlx::query_as::<_, EvidenceArtifact>(
+            r#"
+            SELECT id, milestone_id, plan_id, artifact_type, artifact_data,
+                   verified, collected_at, verified_at, metadata
+            FROM evidence_artifacts
+            WHERE plan_id = $1
+            ORDER BY collected_at DESC
+            "#
+        )
+        .bind(plan_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get evidence artifacts")
     }
 
-    async fn get_evidence_artifacts_for_milestone(&self, _plan_id: Uuid, _milestone_id: String) -> Result<Vec<EvidenceArtifact>> {
-        Ok(vec![])
+    async fn get_evidence_artifacts_for_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Vec<EvidenceArtifact>> {
+        sqlx::query_as::<_, EvidenceArtifact>(
+            r#"
+            SELECT id, milestone_id, plan_id, artifact_type, artifact_data,
+                   verified, collected_at, verified_at, metadata
+            FROM evidence_artifacts
+            WHERE plan_id = $1 AND milestone_id = $2
+            ORDER BY collected_at DESC
+            "#
+        )
+        .bind(plan_id)
+        .bind(&milestone_id)
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get evidence artifacts for milestone")
     }
 
-    async fn update_evidence_artifact(&self, _id: Uuid, _update: UpdateEvidenceArtifact) -> Result<EvidenceArtifact> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn update_evidence_artifact(&self, id: Uuid, update: UpdateEvidenceArtifact) -> Result<EvidenceArtifact> {
+        let mut updates = Vec::new();
+        let mut bind_index = 1;
+        
+        if let Some(ref _artifact_type) = update.artifact_type {
+            updates.push(format!("artifact_type = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _artifact_data) = update.artifact_data {
+            updates.push(format!("artifact_data = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_verified) = update.verified {
+            updates.push(format!("verified = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(_verified_at) = update.verified_at {
+            updates.push(format!("verified_at = ${}", bind_index));
+            bind_index += 1;
+        }
+        if let Some(ref _metadata) = update.metadata {
+            updates.push(format!("metadata = ${}", bind_index));
+            bind_index += 1;
+        }
+        
+        if updates.is_empty() {
+            return sqlx::query_as::<_, EvidenceArtifact>(
+                r#"
+                SELECT id, milestone_id, plan_id, artifact_type, artifact_data,
+                       verified, collected_at, verified_at, metadata
+                FROM evidence_artifacts
+                WHERE id = $1
+                "#
+            )
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .context("Failed to get evidence artifact")?
+            .ok_or_else(|| anyhow::anyhow!("Evidence artifact not found: {}", id));
+        }
+        
+        let query = format!(
+            "UPDATE evidence_artifacts SET {} WHERE id = ${}",
+            updates.join(", "),
+            bind_index
+        );
+        
+        let mut query_builder = sqlx::query(&query);
+        if let Some(ref artifact_type) = update.artifact_type {
+            query_builder = query_builder.bind(artifact_type);
+        }
+        if let Some(ref artifact_data) = update.artifact_data {
+            query_builder = query_builder.bind(artifact_data);
+        }
+        if let Some(verified) = update.verified {
+            query_builder = query_builder.bind(verified);
+        }
+        if let Some(verified_at) = update.verified_at {
+            query_builder = query_builder.bind(verified_at);
+        }
+        if let Some(ref metadata) = update.metadata {
+            query_builder = query_builder.bind(metadata);
+        }
+        query_builder = query_builder.bind(id);
+        
+        query_builder.execute(&self.pool)
+            .await
+            .context("Failed to update evidence artifact")?;
+        
+        sqlx::query_as::<_, EvidenceArtifact>(
+            r#"
+            SELECT id, milestone_id, plan_id, artifact_type, artifact_data,
+                   verified, collected_at, verified_at, metadata
+            FROM evidence_artifacts
+            WHERE id = $1
+            "#
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .context("Failed to get evidence artifact after update")
     }
 
     async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent> {

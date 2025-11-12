@@ -165,7 +165,9 @@ impl SystemHealthMonitor {
     /// Perform comprehensive health check
     pub async fn health_check(&self) -> Result<(), String> {
         // Check database health
-        self.database_health.perform_health_check()
+        // Note: No pool reference available here - using metrics-only assessment
+        // For real connectivity checks, use the API health endpoint which has pool access
+        self.database_health.perform_health_check(None)
             .await
             .map_err(|e| format!("Database health check failed: {}", e))?;
 

@@ -588,62 +588,37 @@ impl DatabaseOptimizationManager {
         self.index_manager.get_table_statistics().await.unwrap_or_default()
     }
 
-    /// Execute query with performance monitoring
+    /// Execute query with performance monitoring and proper parameter binding
+    /// 
+    /// This method uses sqlx::query() with chained .bind() calls to safely bind parameters
+    /// and prevent SQL injection. Parameters are bound sequentially, ensuring proper type
+    /// encoding and SQL injection protection.
     pub async fn execute_query_monitored<'a, T>(
         &self,
         query: &str,
-        _params: &[T],
+        params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
     {
         let start_time = Instant::now();
 
-        // TODO: Implement proper SQL parameter binding
-        // - [ ] Parse query string to identify parameters
-        // - [ ] Map parameters from _params to SQL parameter placeholders
-        // - [ ] Use sqlx::query! or sqlx::QueryBuilder for parameter binding
-        // - [ ] Handle different parameter types (string, int, float, etc.)
-        // - [ ] Add SQL injection protection through parameterized queries
-        // - [ ] Add unit tests with various parameter types
-        // - [ ] Add integration tests with real database queries
-        //
-        // TODO: Implement proper parameterized query execution
-        //       Currently executes without parameters; should implement proper parameter binding using sqlx::query! or sqlx::QueryBuilder with SQL injection protection and support for different parameter types.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Queries use parameterized binding for all user inputs
-        // - SQL injection protection is enforced
-        // - Different parameter types (string, int, float) are supported
-        // - Query execution is safe and performant
-        //
-        // DEPENDENCIES:
-        // - sqlx::query! or sqlx::QueryBuilder (Required)
-        // - Parameter type handling utilities (Required)
-        // - SQL injection protection mechanisms (Required)
-        //
-        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (security critical - SQL injection prevention)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Database security and SQL injection prevention expertise
-        let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
+        // Build query with parameter binding
+        // sqlx::query() with chained .bind() calls ensures SQL injection protection
+        // Each parameter is properly encoded according to its type
+        let mut query_builder = sqlx::query(query);
+        
+        // Bind all parameters sequentially
+        // Each .bind() call returns a new query builder with the parameter bound
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        // Execute the query
+        let result = query_builder
+            .fetch_all(&*self.client.pool())
+            .await
+            .context("Failed to execute parameterized query")?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -654,7 +629,15 @@ impl DatabaseOptimizationManager {
             monitor.record_query_execution(&query_text, execution_time).await;
         });
 
-        result
+        tracing::debug!(
+            query = %query,
+            param_count = params.len(),
+            execution_time_ms = execution_time,
+            row_count = result.len(),
+            "Executed parameterized query with performance monitoring"
+        );
+
+        Ok(result)
     }
 
     /// Generate database optimization report
@@ -704,68 +687,51 @@ impl MonitoredQueryExecutor {
         Self { client, monitor }
     }
 
-    /// Execute query with automatic performance monitoring
+    /// Execute query with automatic performance monitoring and proper parameter binding
+    /// 
+    /// This method uses sqlx::query() with chained .bind() calls to safely bind parameters
+    /// and prevent SQL injection. Parameters are bound sequentially, ensuring proper type
+    /// encoding and SQL injection protection.
     pub async fn execute<'a, T>(
         &self,
         query: &str,
-        _params: &[T],
+        params: &[T],
     ) -> Result<Vec<sqlx::postgres::PgRow>>
     where
         T: sqlx::Encode<'a, sqlx::Postgres> + sqlx::Type<sqlx::Postgres> + Send + Sync,
     {
         let start_time = Instant::now();
 
-        // TODO: Implement proper SQL parameter binding
-        // - [ ] Parse query string to identify parameters
-        // - [ ] Map parameters from _params to SQL parameter placeholders
-        // - [ ] Use sqlx::query! or sqlx::QueryBuilder for parameter binding
-        // - [ ] Handle different parameter types (string, int, float, etc.)
-        // - [ ] Add SQL injection protection through parameterized queries
-        // - [ ] Add unit tests with various parameter types
-        // - [ ] Add integration tests with real database queries
-        //
-        // TODO: Implement proper parameterized query execution
-        //       Currently executes without parameters; should implement proper parameter binding using sqlx::query! or sqlx::QueryBuilder with SQL injection protection and support for different parameter types.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Queries use parameterized binding for all user inputs
-        // - SQL injection protection is enforced
-        // - Different parameter types (string, int, float) are supported
-        // - Query execution is safe and performant
-        //
-        // DEPENDENCIES:
-        // - sqlx::query! or sqlx::QueryBuilder (Required)
-        // - Parameter type handling utilities (Required)
-        // - SQL injection protection mechanisms (Required)
-        //
-        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (security critical - SQL injection prevention)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Database security and SQL injection prevention expertise
-        let result = sqlx::query(query).execute(&*self.client.pool()).await.map(|_| vec![]).map_err(anyhow::Error::from);
+        // Build query with parameter binding
+        // sqlx::query() with chained .bind() calls ensures SQL injection protection
+        // Each parameter is properly encoded according to its type
+        let mut query_builder = sqlx::query(query);
+        
+        // Bind all parameters sequentially
+        // Each .bind() call returns a new query builder with the parameter bound
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        // Execute the query
+        let result = query_builder
+            .fetch_all(&*self.client.pool())
+            .await
+            .context("Failed to execute parameterized query")?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Record metrics
         self.monitor.record_query_execution(query, execution_time).await;
 
-        result
+        tracing::debug!(
+            query = %query,
+            param_count = params.len(),
+            execution_time_ms = execution_time,
+            row_count = result.len(),
+            "Executed parameterized query with performance monitoring"
+        );
+
+        Ok(result)
     }
 }

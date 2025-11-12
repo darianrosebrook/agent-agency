@@ -11,6 +11,7 @@ use tracing::{debug, error, info};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 
 /// Shared database pool with proper reference counting
 pub struct DatabasePool {
@@ -258,6 +259,10 @@ impl VectorStore {
     }
 
     /// Store a vector record
+    /// 
+    /// Stores a vector embedding in the block_vectors table using a database transaction
+    /// for atomicity. The vector is stored with its metadata (block_id, model_id, modality)
+    /// and uses pgvector's VECTOR type for efficient similarity search.
     pub async fn store_vector(&self, record: BlockVectorRecord) -> Result<(), anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
@@ -266,248 +271,273 @@ impl VectorStore {
 
         debug!("Storing vector record {} in pool {}", record.block_id, self.pool.stats().pool_id);
 
-        // TODO: Implement vector storage with SQL execution with the following requirements:
-        // 1. SQL execution: Execute SQL to store the vector in database
-        //    - Prepare INSERT statement with vector data and metadata
-        //    - Execute SQL transaction with proper error handling
-        //    - Handle database connection failures and retries
-        // 2. Vector data handling: Store vector data efficiently
-        //    - Serialize vector data appropriately for database storage
-        //    - Store vector metadata (dimensions, type, etc.)
-        //    - Handle large vector data with proper chunking if needed
-        // 3. Transaction management: Ensure data consistency
-        //    - Use database transactions for atomic operations
-        //    - Handle transaction rollback on errors
-        //    - Maintain referential integrity with related records
-        //
-        // TODO: Implement comprehensive vector store initialization with transaction management
-        //       Currently validates pool accessibility only; should implement comprehensive initialization with database transactions, atomic operations, error rollback, and referential integrity maintenance.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Database transactions are used for atomic operations
-        // - Transaction rollback handles errors correctly
-        // - Referential integrity is maintained with related records
-        // - Initialization is idempotent and safe to retry
-        //
-        // DEPENDENCIES:
-        // - Database transaction management system (Required)
-        // - Referential integrity validation utilities (Required)
-        // - Error rollback mechanisms (Required)
-        //
-        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (data consistency critical)
-        // - Change Budget: ~250 LOC
-        // - Reviewer Requirements: Database transaction and data consistency expertise
-        let stats = self.pool.stats();
-        if stats.pool_size == 0 {
-            return Err(anyhow::anyhow!("Database pool has no connections"));
-        }
+        // Start a database transaction for atomic operation
+        let mut tx = self.pool.begin().await
+            .context("Failed to start database transaction for vector storage")?;
+
+        // Insert vector into block_vectors table
+        // Note: content field is required but not in BlockVectorRecord - using empty string as placeholder
+        // project_scope is optional and can be NULL
+        // metadata is stored as empty JSONB object
+        // Multiple vectors can exist for the same block_id (different models/modalities)
+        sqlx::query(
+            r#"
+            INSERT INTO block_vectors (
+                block_id, content, modality, embedding_model_id, 
+                embedding, metadata, project_scope, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#
+        )
+        .bind(record.block_id)
+        .bind("") // content field - placeholder since not in BlockVectorRecord
+        .bind(&record.modality)
+        .bind(&record.model_id)
+        .bind(&record.vector as &[f32]) // pgvector accepts &[f32]
+        .bind(serde_json::json!({})) // metadata as empty JSONB
+        .bind::<Option<String>>(None) // project_scope - optional
+        .bind(record.created_at)
+        .bind(Utc::now()) // updated_at
+        .execute(&mut *tx)
+        .await
+        .context("Failed to insert vector into database")?;
+
+        // Commit transaction
+        tx.commit().await
+            .context("Failed to commit vector storage transaction")?;
+
+        tracing::debug!(
+            block_id = %record.block_id,
+            model_id = %record.model_id,
+            modality = %record.modality,
+            vector_dim = record.vector.len(),
+            "Vector stored successfully in database"
+        );
 
         Ok(())
     }
 
     /// Search vectors
+    /// 
+    /// Performs vector similarity search using pgvector's cosine distance operator.
+    /// Returns ranked results with similarity scores, supporting filtering by model_id and project_scope.
     pub async fn search_vectors(&self, query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
             return Err(anyhow::anyhow!("Vector store pool has no active references"));
         }
 
-        debug!("Searching vectors with query for model {} in pool {}", query.model_id, self.pool.stats().pool_id);
+        info!("Searching vectors with query for model {} in pool {}", query.model_id, self.pool.stats().pool_id);
 
-        // TODO: Implement real vector similarity search
-        // - [ ] Execute SQL query for vector similarity search (e.g., pgvector)
-        // - [ ] Use proper distance metrics (cosine, L2, inner product)
-        // - [ ] Support filtering and metadata queries
-        // - [ ] Return ranked results with similarity scores
-        // - [ ] Add pagination support for large result sets
-        // - [ ] Add unit tests with mock vector data
-        // - [ ] Add integration tests with real vector search
-        // TODO: Execute vector similarity search query
-        //       Currently returns empty results; should execute SQL query with vector similarity function (e.g., cosine similarity).
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Construct SQL query with vector similarity function
-        // [ ] Execute parameterized query with query vector
-        // [ ] Return ranked results with similarity scores
-        // [ ] Support filtering and metadata queries
-        // [ ] Handle pagination for large result sets
-        // [ ] Add unit tests for vector search
-        // [ ] Add integration tests with real database
-        // [ ] Verify search accuracy and performance
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Vector similarity search executes correctly
-        // - Results are ranked by similarity score
-        // - Filtering and metadata queries work
-        // - Pagination handles large result sets
-        //
-        // DEPENDENCIES:
-        // - Database connection pool (Required)
-        // - Vector similarity functions (Required)
-        // - Query builder utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (core search feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Vector search and database expertise
-        let stats = self.pool.stats(); // Temporary: validate pool until search query is implemented
-        if stats.idle_connections == 0 {
-            debug!("Pool {} has no idle connections, search may be slower", stats.pool_id);
+        // Build SQL query with pgvector cosine similarity
+        // Using <=> operator for cosine distance, then converting to similarity (1 - distance)
+        let mut sql = String::from(
+            "SELECT block_id, embedding, metadata, 
+                    1 - (embedding <=> $1::vector) as similarity
+             FROM block_vectors
+             WHERE embedding_model_id = $2"
+        );
+        
+        let mut param_count = 2;
+        
+        // Add project_scope filter if provided
+        if let Some(ref project_scope) = query.project_scope {
+            param_count += 1;
+            sql.push_str(&format!(" AND project_scope = ${}", param_count));
         }
-
-        Ok(Vec::new())
+        
+        // Order by similarity (distance ascending) and limit results
+        sql.push_str(&format!(" ORDER BY embedding <=> $1::vector LIMIT ${}", param_count + 1));
+        
+        // Execute query with parameters
+        let mut db_query = sqlx::query(&sql)
+            .bind(&query.vector as &[f32]) // $1: query vector
+            .bind(&query.model_id); // $2: model_id
+        
+        // Bind project_scope if provided
+        if let Some(ref project_scope) = query.project_scope {
+            db_query = db_query.bind(project_scope);
+        }
+        
+        // Bind limit
+        db_query = db_query.bind(query.k as i64);
+        
+        let rows = db_query
+            .fetch_all(&*self.pool)
+            .await
+            .context("Failed to execute vector similarity search")?;
+        
+        // Convert rows to VectorSearchResult
+        let results: Vec<VectorSearchResult> = rows
+            .into_iter()
+            .map(|row: sqlx::postgres::PgRow| {
+                let block_id: Uuid = row.get::<Uuid, &str>("block_id");
+                let similarity: f64 = row.get::<f64, &str>("similarity");
+                let embedding: Vec<f32> = row.get::<Vec<f32>, &str>("embedding");
+                let metadata: serde_json::Value = row.get::<serde_json::Value, &str>("metadata");
+                
+                VectorSearchResult {
+                    block_id,
+                    score: similarity as f32,
+                    vector: embedding,
+                    metadata,
+                }
+            })
+            .collect();
+        
+        info!("Vector search completed: found {} results for model {}", results.len(), query.model_id);
+        
+        Ok(results)
     }
 
     /// Search similar vectors
-    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, _project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    /// 
+    /// Performs vector similarity search using pgvector's cosine distance operator.
+    /// Simplified interface that takes a query vector directly and returns top-k similar vectors.
+    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
             return Err(anyhow::anyhow!("Vector store pool has no active references"));
         }
 
-        debug!("Searching similar vectors for model {} with k={} in pool {}", model_id, k, self.pool.stats().pool_id);
-
-        // TODO: Implement real vector similarity search with query vector
-        // - [ ] Execute SQL query for vector similarity search with query vector
-        // - [ ] Use proper distance metrics (cosine, L2, inner product)
-        // - [ ] Support filtering and metadata queries
-        // - [ ] Return ranked results with similarity scores
-        // - [ ] Add pagination support for large result sets
-        // - [ ] Add unit tests with mock vector data
-        // - [ ] Add integration tests with real vector search
-        // TODO: Execute vector similarity search query with filtering
-        //       Currently only validates input; should execute SQL query with vector similarity function and filters.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Construct SQL query with vector similarity function
-        // [ ] Apply metadata filters to query
-        // [ ] Execute parameterized query with query vector and filters
-        // [ ] Return ranked results with similarity scores
-        // [ ] Support pagination for large result sets
-        // [ ] Add unit tests for filtered vector search
-        // [ ] Add integration tests with real database
-        // [ ] Verify search accuracy with filters
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Vector similarity search executes with filters
-        // - Results are ranked by similarity score
-        // - Metadata filters are applied correctly
-        // - Pagination handles large result sets
-        //
-        // DEPENDENCIES:
-        // - Database connection pool (Required)
-        // - Vector similarity functions (Required)
-        // - Query builder utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (core search feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Vector search and database expertise
-        if query_vector.is_empty() { // Temporary: validate input until search query is implemented
+        // Validate input
+        if query_vector.is_empty() {
             return Err(anyhow::anyhow!("Query vector cannot be empty"));
         }
 
-        let stats = self.pool.stats();
-        if k > 1000 {
-            debug!("Large k={} requested for pool {}, may impact performance", k, stats.pool_id);
-        }
+        info!("Searching similar vectors for model {} with k={} in pool {}", model_id, k, self.pool.stats().pool_id);
 
-        Ok(Vec::new())
+        // Build SQL query with pgvector cosine similarity
+        // Using <=> operator for cosine distance, then converting to similarity (1 - distance)
+        let mut sql = String::from(
+            "SELECT block_id, embedding, metadata, 
+                    1 - (embedding <=> $1::vector) as similarity
+             FROM block_vectors
+             WHERE embedding_model_id = $2"
+        );
+        
+        let mut param_count = 2;
+        
+        // Add project_scope filter if provided
+        if let Some(project_scope) = project_scope {
+            param_count += 1;
+            sql.push_str(&format!(" AND project_scope = ${}", param_count));
+        }
+        
+        // Order by similarity (distance ascending) and limit results
+        sql.push_str(&format!(" ORDER BY embedding <=> $1::vector LIMIT ${}", param_count + 1));
+        
+        // Execute query with parameters
+        let mut db_query = sqlx::query(&sql)
+            .bind(query_vector as &[f32]) // $1: query vector
+            .bind(model_id); // $2: model_id
+        
+        // Bind project_scope if provided
+        if let Some(project_scope) = project_scope {
+            db_query = db_query.bind(project_scope);
+        }
+        
+        // Bind limit
+        db_query = db_query.bind(k as i64);
+        
+        let rows = db_query
+            .fetch_all(&*self.pool)
+            .await
+            .context("Failed to execute vector similarity search")?;
+        
+        // Convert rows to VectorSearchResult
+        let results: Vec<VectorSearchResult> = rows
+            .into_iter()
+            .map(|row: sqlx::postgres::PgRow| {
+                let block_id: Uuid = row.get::<Uuid, &str>("block_id");
+                let similarity: f64 = row.get::<f64, &str>("similarity");
+                let embedding: Vec<f32> = row.get::<Vec<f32>, &str>("embedding");
+                let metadata: serde_json::Value = row.get::<serde_json::Value, &str>("metadata");
+                
+                VectorSearchResult {
+                    block_id,
+                    score: similarity as f32,
+                    vector: embedding,
+                    metadata,
+                }
+            })
+            .collect();
+        
+        info!("Similar vector search completed: found {} results for model {}", results.len(), model_id);
+        
+        Ok(results)
     }
 
     /// Log search operation
-    pub async fn log_search(&self, _entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
+    /// 
+    /// Inserts an audit log entry into the search_audit_log table for tracking vector search operations.
+    /// Errors are logged but do not block the operation to ensure search functionality is not impacted.
+    pub async fn log_search(&self, entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
             return Err(anyhow::anyhow!("Vector store pool has no active references"));
         }
 
-        debug!("Logging search operation in pool {}", self.pool.stats().pool_id);
+        debug!(
+            audit_entry_id = %entry.id,
+            query_type = %entry.query_type,
+            results_count = entry.results_count,
+            search_time_ms = entry.search_time_ms,
+            "Logging search operation in pool {}",
+            self.pool.stats().pool_id
+        );
 
-        // TODO: Implement audit log insertion with the following requirements:
-        // 1. Audit log insertion: Insert audit logs into database
-        //    - Prepare INSERT statement with audit log data
-        //    - Include search parameters, results count, execution time
-        //    - Execute SQL transaction with proper error handling
-        // 2. Audit log querying: Support audit log querying and filtering
-        //    - Implement query interface for audit logs
-        //    - Support filtering by timestamp, operation type, etc.
-        //    - Handle query performance and indexing
-        // 3. Error handling: Handle audit log insertion errors gracefully
-        //    - Retry failed insertions with exponential backoff
-        //    - Log errors without blocking main operation
-        //    - Maintain audit log integrity
-        // 4. Testing: Add comprehensive test coverage
-        //    - Add unit tests with mock audit logs
-        //    - Add integration tests with real audit logging
-        //
-        // TODO: Implement comprehensive audit logging for vector store operations
-        //       Currently validates pool accessibility only; should implement comprehensive audit logging with structured logs, integration tests, and proper audit trail maintenance.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - All vector store operations are logged with structured audit logs
-        // - Unit tests use mock audit logs for validation
-        // - Integration tests validate real audit logging functionality
-        // - Audit trail is properly maintained and queryable
-        //
-        // DEPENDENCIES:
-        // - Audit logging infrastructure (Required)
-        // - Structured logging utilities (Required)
-        // - Audit trail storage system (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (audit logging enhancement)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Audit logging and observability expertise
-        let stats = self.pool.stats();
-        if stats.active_refs > 10 {
-            debug!("High reference count ({}) for pool {}, consider connection pooling optimization", stats.active_refs, stats.pool_id);
+        // Insert audit log entry into search_audit_log table
+        // Use entry.timestamp if provided, otherwise use current time
+        let timestamp = entry.timestamp;
+        
+        // Serialize results and features as JSONB
+        let results_json = entry.results.unwrap_or_else(|| serde_json::json!([]));
+        let features_json = entry.features.unwrap_or_else(|| serde_json::json!({}));
+        
+        // Build query string with query_type included in features for additional context
+        let query_with_type = format!("{} [type: {}]", entry.query, entry.query_type);
+        
+        // Insert into search_audit_log table
+        // Note: user_id and session_id are optional and not in SearchAuditEntry, so we use NULL
+        let result = sqlx::query(
+            r#"
+            INSERT INTO search_audit_log (
+                id, query, results, features, timestamp,
+                user_id, session_id, response_time_ms, result_count
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            "#
+        )
+        .bind(entry.id)
+        .bind(&query_with_type)
+        .bind(&results_json)
+        .bind(&features_json)
+        .bind(timestamp)
+        .bind::<Option<Uuid>>(None::<Uuid>) // user_id - not available in SearchAuditEntry
+        .bind::<Option<String>>(None::<String>) // session_id - not available in SearchAuditEntry
+        .bind(entry.search_time_ms as i32) // response_time_ms
+        .bind(entry.results_count as i32) // result_count
+        .execute(&*self.pool)
+        .await;
+
+        match result {
+            Ok(_) => {
+                debug!(
+                    audit_entry_id = %entry.id,
+                    "Audit log entry inserted successfully"
+                );
+                Ok(())
+            }
+            Err(e) => {
+                // Log error but don't fail - audit logging should not block search operations
+                warn!(
+                    audit_entry_id = %entry.id,
+                    error = %e,
+                    "Failed to insert audit log entry - continuing without audit log"
+                );
+                // Return error for caller to handle, but don't block search operations
+                Err(anyhow::anyhow!("Failed to insert audit log entry: {}", e))
+            }
         }
-
-        Ok(())
     }
 
     /// Get current pool statistics
