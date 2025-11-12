@@ -1692,14 +1692,166 @@ impl DatabaseOperations for DatabaseClient {
     }
 
     async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>> {
-        Ok(vec![])
+        sqlx::query_as::<_, ExecutionPlan>(
+            r#"
+            SELECT id, session_id, working_spec_id, title, overview, state,
+                   milestones, dependency_graph, change_budget, quality_gates,
+                   evidence_requirements, active_waivers, metadata, created_at, updated_at,
+                   approved_at, completed_at
+            FROM execution_plans
+            ORDER BY created_at DESC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("Failed to get execution plans")
     }
 
-    async fn update_execution_plan(&self, _id: Uuid, _update: UpdateExecutionPlan) -> Result<ExecutionPlan> {
-        Err(anyhow::anyhow!("Not implemented"))
+    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<ExecutionPlan> {
+        let mut updates = Vec::new();
+        let mut bind_index = 1;
+        
+        // Build dynamic UPDATE query based on provided fields
+        if update.title.is_some() {
+            updates.push(format!("title = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.overview.is_some() {
+            updates.push(format!("overview = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.state.is_some() {
+            updates.push(format!("state = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.milestones.is_some() {
+            updates.push(format!("milestones = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.dependency_graph.is_some() {
+            updates.push(format!("dependency_graph = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.change_budget.is_some() {
+            updates.push(format!("change_budget = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.quality_gates.is_some() {
+            updates.push(format!("quality_gates = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.evidence_requirements.is_some() {
+            updates.push(format!("evidence_requirements = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.active_waivers.is_some() {
+            updates.push(format!("active_waivers = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.metadata.is_some() {
+            updates.push(format!("metadata = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.approved_at.is_some() {
+            updates.push(format!("approved_at = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.completed_at.is_some() {
+            updates.push(format!("completed_at = ${}", bind_index));
+            bind_index += 1;
+        }
+        
+        // Always update updated_at timestamp
+        updates.push(format!("updated_at = ${}", bind_index));
+        bind_index += 1;
+        
+        if updates.is_empty() {
+            // No fields to update, just return the existing plan
+            return self.get_execution_plan(id)
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("Execution plan not found: {}", id));
+        }
+        
+        // Build SQL query
+        let sql = format!(
+            "UPDATE execution_plans SET {} WHERE id = ${}",
+            updates.join(", "),
+            bind_index
+        );
+        
+        // Execute update with bound parameters
+        let mut query = sqlx::query(&sql);
+        
+        if let Some(ref title) = update.title {
+            query = query.bind(title);
+        }
+        if let Some(ref overview) = update.overview {
+            query = query.bind(overview);
+        }
+        if let Some(ref state) = update.state {
+            query = query.bind(state);
+        }
+        if let Some(ref milestones) = update.milestones {
+            query = query.bind(milestones);
+        }
+        if let Some(ref dependency_graph) = update.dependency_graph {
+            query = query.bind(dependency_graph);
+        }
+        if let Some(ref change_budget) = update.change_budget {
+            query = query.bind(change_budget);
+        }
+        if let Some(ref quality_gates) = update.quality_gates {
+            query = query.bind(quality_gates);
+        }
+        if let Some(ref evidence_requirements) = update.evidence_requirements {
+            query = query.bind(evidence_requirements);
+        }
+        if let Some(ref active_waivers) = update.active_waivers {
+            query = query.bind(active_waivers);
+        }
+        if let Some(ref metadata) = update.metadata {
+            query = query.bind(metadata);
+        }
+        if let Some(ref approved_at) = update.approved_at {
+            query = query.bind(approved_at);
+        }
+        if let Some(ref completed_at) = update.completed_at {
+            query = query.bind(completed_at);
+        }
+        
+        // Bind updated_at timestamp
+        query = query.bind(Utc::now());
+        
+        // Bind plan id
+        query = query.bind(id);
+        
+        // Execute update
+        query.execute(&self.pool)
+            .await
+            .context("Failed to update execution plan")?;
+        
+        // Return updated plan
+        self.get_execution_plan(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Execution plan not found after update: {}", id))
     }
 
-    async fn delete_execution_plan(&self, _id: Uuid) -> Result<()> {
+    async fn delete_execution_plan(&self, id: Uuid) -> Result<()> {
+        // Check if plan exists first
+        let plan = self.get_execution_plan(id).await?;
+        if plan.is_none() {
+            return Err(anyhow::anyhow!("Execution plan not found: {}", id));
+        }
+        
+        // Delete the execution plan (CASCADE will handle related milestones)
+        sqlx::query(
+            "DELETE FROM execution_plans WHERE id = $1"
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .context("Failed to delete execution plan")?;
+        
         Ok(())
     }
 

@@ -51,6 +51,7 @@ pub use tool_registry::{ToolRegistry, RegisteredTool, ToolRegistration};
 // pub use crate::tool_orchestrator::ToolOrchestrator; // Module not implemented yet
 
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Policy validation result
 #[derive(Debug, Clone, JsonSchema)]
@@ -61,4 +62,18 @@ pub enum PolicyValidationResult {
     RequiresWaiver(String),
     /// Task is blocked by policy
     Blocked(String),
+}
+
+/// Compliance status for optimization results
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ComplianceStatus {
+    /// CAWS compliance score (0.0-1.0)
+    pub caws_compliance: f64,
+    /// Quality threshold compliance (0.0-1.0)
+    pub quality_threshold: f64,
+    /// Trade-off score between performance and quality (0.0-1.0)
+    pub trade_off_score: f64,
+    /// Last compliance check timestamp
+    #[schemars(with = "String")]
+    pub last_checked: chrono::DateTime<chrono::Utc>,
 }

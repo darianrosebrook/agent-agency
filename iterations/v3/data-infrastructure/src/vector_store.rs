@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -340,7 +340,7 @@ impl VectorStore {
         let mut param_count = 2;
         
         // Add project_scope filter if provided
-        if let Some(ref project_scope) = query.project_scope {
+        if query.project_scope.is_some() {
             param_count += 1;
             sql.push_str(&format!(" AND project_scope = ${}", param_count));
         }
@@ -364,7 +364,7 @@ impl VectorStore {
         let rows = db_query
             .fetch_all(&*self.pool)
             .await
-            .context("Failed to execute vector similarity search")?;
+            .map_err(|e| anyhow::anyhow!("Failed to execute vector similarity search: {}", e))?;
         
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows
@@ -418,7 +418,7 @@ impl VectorStore {
         let mut param_count = 2;
         
         // Add project_scope filter if provided
-        if let Some(project_scope) = project_scope {
+        if project_scope.is_some() {
             param_count += 1;
             sql.push_str(&format!(" AND project_scope = ${}", param_count));
         }
@@ -442,7 +442,7 @@ impl VectorStore {
         let rows = db_query
             .fetch_all(&*self.pool)
             .await
-            .context("Failed to execute vector similarity search")?;
+            .map_err(|e| anyhow::anyhow!("Failed to execute vector similarity search: {}", e))?;
         
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows

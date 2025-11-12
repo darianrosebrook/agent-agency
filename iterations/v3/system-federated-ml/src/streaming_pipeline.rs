@@ -266,6 +266,11 @@ impl StreamingPipelineExecutor {
 
     /// Tune pipeline parameters
     pub async fn tune_pipeline(&self, parameters: &HashMap<String, f64>) -> Result<()> {
+        self.apply_tuning_parameters(parameters).await
+    }
+    
+    /// Internal method to apply tuning parameters
+    async fn apply_tuning_parameters(&self, parameters: &HashMap<String, f64>) -> Result<()> {
         info!("Tuning streaming pipeline parameters");
 
         // Extract relevant parameters
@@ -791,14 +796,41 @@ impl StreamingPipelineExecutor {
     }
 
     /// Tune pipeline with optimization results
-    pub async fn tune_pipeline(&self, _optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<()> {
-        // Stub implementation for pipeline tuning
+    /// 
+    /// Extracts optimal parameters from optimization result and applies them to the pipeline.
+    /// This method converts OptimizationResult to parameter HashMap and applies them.
+    pub async fn tune_pipeline_with_optimization(&self, optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<()> {
+        info!("Tuning pipeline with optimization results");
+        
+        // Extract optimal parameters from optimization result
+        let parameters: HashMap<String, f64> = optimization_result.optimal_parameters
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect();
+        
+        // Apply parameters using the internal helper method
+        self.apply_tuning_parameters(&parameters).await?;
+        
+        info!(
+            "Pipeline tuned with {} parameters, expected improvement: {:.2}%",
+            parameters.len(),
+            optimization_result.expected_improvement * 100.0
+        );
+        
         Ok(())
     }
 
     /// Apply optimized parameters to pipeline
-    pub async fn apply_parameters(&self, _parameters: &HashMap<String, f64>) -> Result<()> {
-        // Stub implementation for parameter application
+    /// 
+    /// Applies parameters directly to the pipeline configuration.
+    /// This is a convenience method that delegates to tune_pipeline.
+    pub async fn apply_parameters(&self, parameters: &HashMap<String, f64>) -> Result<()> {
+        info!("Applying {} optimized parameters to pipeline", parameters.len());
+        
+        // Delegate to apply_tuning_parameters which handles parameter application
+        self.apply_tuning_parameters(parameters).await?;
+        
+        info!("Parameters applied successfully");
         Ok(())
     }
 }

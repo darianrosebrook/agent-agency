@@ -396,20 +396,77 @@ impl QualityGuardrails {
     }
 
     /// Establish baseline performance metrics
-    pub async fn establish_baseline(&self, _metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
-        // Stub implementation for baseline establishment
+    /// 
+    /// Stores baseline metrics for comparison during optimization.
+    /// Similar to KokoroTuner::establish_baseline, this stores metrics
+    /// for quality guardrail validation.
+    pub async fn establish_baseline(&self, metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
+        info!("Establishing baseline performance metrics for quality guardrails");
+        
+        // Store baseline metrics in performance validator for SLA comparison
+        // The performance validator can use these to check if optimizations maintain SLA compliance
+        self.performance_validator.set_baseline(metrics).await;
+        
+        info!("Baseline established for quality guardrails");
         Ok(())
     }
 
     /// Validate compliance with optimization results
-    pub async fn validate_compliance(&self, _optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<crate::ComplianceStatus> {
-        // Stub implementation for compliance validation
-        Ok(crate::ComplianceStatus {
-            caws_compliance: 1.0,
-            quality_threshold: 1.0,
-            trade_off_score: 1.0,
+    /// 
+    /// Validates that optimization results meet CAWS compliance, quality thresholds,
+    /// and acceptable trade-offs between performance and quality.
+    pub async fn validate_compliance(&self, optimization_result: &crate::bayesian_optimizer::OptimizationResult) -> Result<crate::ComplianceStatus> {
+        info!("Validating compliance for optimization result");
+        
+        // Extract compliance scores from optimization result
+        // The optimization result contains quality_preservation and metadata with compliance_score
+        let quality_preservation = optimization_result.quality_preservation;
+        let confidence = optimization_result.confidence;
+        
+        // Calculate CAWS compliance score from evaluation history
+        // Use the average compliance score from parameter evaluations
+        let caws_compliance = if !optimization_result.metadata.evaluation_history.is_empty() {
+            let avg_compliance: f64 = optimization_result.metadata.evaluation_history
+                .iter()
+                .map(|e| e.compliance_score)
+                .sum::<f64>() / optimization_result.metadata.evaluation_history.len() as f64;
+            avg_compliance
+        } else {
+            // Default to high compliance if no history
+            0.95
+        };
+        
+        // Quality threshold is the quality preservation score
+        // This represents how well quality is maintained vs baseline
+        let quality_threshold = quality_preservation;
+        
+        // Trade-off score balances performance improvement vs quality preservation
+        // Higher expected_improvement with maintained quality = better trade-off
+        let expected_improvement = optimization_result.expected_improvement;
+        let trade_off_score = if expected_improvement > 0.0 && quality_preservation >= 0.9 {
+            // Good trade-off: improvement with maintained quality
+            (expected_improvement * quality_preservation).min(1.0)
+        } else if quality_preservation < 0.8 {
+            // Poor trade-off: quality degraded too much
+            0.5 * quality_preservation
+        } else {
+            // Moderate trade-off
+            0.7
+        };
+        
+        let compliance_status = crate::ComplianceStatus {
+            caws_compliance,
+            quality_threshold,
+            trade_off_score,
             last_checked: chrono::Utc::now(),
-        })
+        };
+        
+        info!(
+            "Compliance validation complete: CAWS={:.2}, Quality={:.2}, Trade-off={:.2}",
+            caws_compliance, quality_threshold, trade_off_score
+        );
+        
+        Ok(compliance_status)
     }
 }
 
@@ -429,13 +486,20 @@ impl ComplianceChecker {
 /// Performance validator for SLA compliance
 struct PerformanceValidator {
     sla_thresholds: HashMap<String, f32>,
+    baseline_metrics: Arc<RwLock<Option<crate::performance_monitor::PerformanceMetrics>>>,
 }
 
 impl PerformanceValidator {
     fn new() -> Self {
         Self {
             sla_thresholds: HashMap::new(),
+            baseline_metrics: Arc::new(RwLock::new(None)),
         }
+    }
+    
+    async fn set_baseline(&self, metrics: crate::performance_monitor::PerformanceMetrics) {
+        let mut baseline = self.baseline_metrics.write().await;
+        *baseline = Some(metrics);
     }
 }
 

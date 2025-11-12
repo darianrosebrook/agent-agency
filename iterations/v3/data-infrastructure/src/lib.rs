@@ -201,6 +201,7 @@ pub use api::handlers::chat_handlers::create_chat_session as create_api_chat_ses
 pub use api::handlers::{get_chat_sessions, get_chat_messages, stream_agent_response, list_waivers, create_waiver};
 pub use api::handlers::{approve_waiver, get_task_provenance};
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
+pub use api::metrics::{BusinessMetrics, SystemMetrics, DiskIOMetrics};
 
 // Re-export health check from api module
 pub use api::health::health_check;
