@@ -3,10 +3,10 @@
 //! This module provides async inference execution with proper timeout handling,
 //! performance monitoring, and error recovery for Apple Neural Engine operations.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::models::coreml_model::LoadedCoreMLModel;
 use crate::ane::metrics::ewma::Ewma;
+use crate::ane::models::coreml_model::LoadedCoreMLModel;
+use schemars::JsonSchema;
 use std::time::{Duration, Instant};
 
 /// Inference execution options
@@ -83,12 +83,12 @@ impl Default for InferenceMetrics {
 }
 
 /// Execute inference on a loaded model
-/// 
+///
 /// # Arguments
 /// * `model` - Loaded Core ML model
 /// * `input` - Input tensor data
 /// * `options` - Inference options
-/// 
+///
 /// # Returns
 /// * `Ok(InferenceResult)` - Inference result with metrics
 /// * `Err(ANEError)` - If inference fails
@@ -98,27 +98,27 @@ pub async fn execute_inference(
     options: &InferenceOptions,
 ) -> Result<InferenceResult> {
     let start_time = Instant::now();
-    
+
     // Validate input
     validate_input(model, input)?;
-    
+
     // Prepare input (measure time)
     let input_prep_start = Instant::now();
     let prepared_input = prepare_input(model, input, options)?;
     let input_prep_time = input_prep_start.elapsed();
-    
+
     // Execute inference with timeout
     let inference_start = Instant::now();
     let output = execute_with_timeout(model, &prepared_input, options).await?;
     let core_time = inference_start.elapsed();
-    
+
     // Process output (measure time)
     let output_proc_start = Instant::now();
     let processed_output = process_output(model, &output)?;
     let output_proc_time = output_proc_start.elapsed();
-    
+
     let total_time = start_time.elapsed();
-    
+
     // Calculate metrics
     let metrics = calculate_metrics(
         total_time,
@@ -128,10 +128,10 @@ pub async fn execute_inference(
         input.len(),
         processed_output.len(),
     );
-    
+
     // Estimate memory usage
     let memory_usage_mb = estimate_memory_usage(model, input, &processed_output);
-    
+
     Ok(InferenceResult {
         output: processed_output,
         execution_time_ms: total_time.as_millis() as u64,
@@ -143,19 +143,22 @@ pub async fn execute_inference(
 /// Validate input tensor against model schema
 fn validate_input(model: &LoadedCoreMLModel, _input: &[f32]) -> Result<()> {
     if model.schema.inputs.is_empty() {
-        return Err(ANEError::InvalidShape("Model has no input specifications".to_string()));
-    }
-    
-    let expected_input = &model.schema.inputs[0];
-    let expected_elements = expected_input.shape.iter().product::<usize>();
-    
-    if _input.len() != expected_elements {
         return Err(ANEError::InvalidShape(
-            format!("Input size mismatch: expected {} elements, got {}",
-                   expected_elements, _input.len())
+            "Model has no input specifications".to_string(),
         ));
     }
-    
+
+    let expected_input = &model.schema.inputs[0];
+    let expected_elements = expected_input.shape.iter().product::<usize>();
+
+    if _input.len() != expected_elements {
+        return Err(ANEError::InvalidShape(format!(
+            "Input size mismatch: expected {} elements, got {}",
+            expected_elements,
+            _input.len()
+        )));
+    }
+
     Ok(())
 }
 
@@ -209,10 +212,7 @@ fn prepare_input(
     if model.requires_normalization {
         let mean = model.normalization_mean.unwrap_or(0.0);
         let std = model.normalization_std.unwrap_or(1.0);
-        prepared_input = prepared_input
-            .iter()
-            .map(|&x| (x - mean) / std)
-            .collect();
+        prepared_input = prepared_input.iter().map(|&x| (x - mean) / std).collect();
     }
 
     // Handle batch dimension if specified
@@ -255,7 +255,7 @@ fn prepare_input(
             // - Reviewer Requirements: Batch processing and tensor manipulation expertise
             if batch_size != 1 {
                 return Err(ANEError::InvalidInput(
-                    "Batch size > 1 not yet supported".to_string()
+                    "Batch size > 1 not yet supported".to_string(),
                 ));
             }
         }
@@ -271,11 +271,19 @@ async fn execute_with_timeout(
     options: &InferenceOptions,
 ) -> Result<Vec<f32>> {
     let timeout_duration = Duration::from_millis(options.timeout_ms);
-    
-    let inference_future = async {
-        // Prepare input tensor
-        let _prepared_input = prepare_input(model, input, options)?;
-        
+
+    // Prepare input tensor (non-blocking)
+    let _prepared_input = prepare_input(model, input, options)?;
+
+    // CRITICAL: Wrap blocking FFI call in spawn_blocking to prevent async runtime starvation
+    // The Core ML FFI call is synchronous and can block for extended periods. If called
+    // directly in async context, it can block the async runtime thread and prevent watchdog
+    // check-ins, causing kernel panics. spawn_blocking moves the work to a separate thread pool.
+    let model_ref = model.model_ref.clone();
+    let input_name = model.input_name.clone();
+    let input_shape = model.input_shape.clone();
+
+    let inference_future = tokio::task::spawn_blocking(move || {
         // CRITICAL: DO NOT REMOVE OR DISABLE - Real CoreML inference execution
         // This is production functionality that was restored after fixing candle-core conflicts.
         // DO NOT replace with placeholder tensors or mock implementations.
@@ -283,35 +291,36 @@ async fn execute_with_timeout(
         // If you encounter issues, fix them rather than disabling this functionality.
         // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
         let output_tensor = crate::ane::compat::coreml::run_inference(
-            model.model_ref,
-            &model.input_name,
+            model_ref,
+            &input_name,
             &_prepared_input,
-            &model.input_shape,
+            &input_shape,
         )?;
 
         // Convert tensor output to Vec<f32>
         let output_data = output_tensor.flatten_all()?.to_vec1::<f32>()?;
-        
-        Ok(output_data)
-    };
-    
+
+        Ok::<Vec<f32>, crate::ane::ane_errors::ANEError>(output_data)
+    });
+
     tokio::time::timeout(timeout_duration, inference_future)
         .await
         .map_err(|_| ANEError::Timeout(options.timeout_ms))?
+        .map_err(|e| ANEError::Internal(format!("Inference task panicked: {}", e)))?
 }
 
 /// Process output tensor
-fn process_output(
-    model: &LoadedCoreMLModel,
-    output: &[f32],
-) -> Result<Vec<f32>> {
+fn process_output(model: &LoadedCoreMLModel, output: &[f32]) -> Result<Vec<f32>> {
     let mut processed_output = output.to_vec();
 
     // Validate output dimensions match model expectations
-    let expected_size = model.schema.outputs.iter()
+    let expected_size = model
+        .schema
+        .outputs
+        .iter()
         .map(|output_spec| output_spec.shape.iter().product::<usize>())
         .sum::<usize>();
-    
+
     if output.len() != expected_size {
         return Err(ANEError::InvalidInput(format!(
             "Output size {} doesn't match expected size {}",
@@ -324,10 +333,10 @@ fn process_output(
     for output_spec in &model.schema.outputs {
         let start_idx = output_spec.start_index;
         let end_idx = start_idx + output_spec.shape.iter().product::<usize>();
-        
+
         if end_idx <= processed_output.len() {
             let output_slice = &mut processed_output[start_idx..end_idx];
-            
+
             match output_spec.post_processing.as_deref() {
                 Some("softmax") => {
                     apply_softmax(output_slice);
@@ -355,7 +364,7 @@ fn process_output(
 fn apply_softmax(output: &mut [f32]) {
     let max_val = output.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
     let exp_sum: f32 = output.iter().map(|&x| (x - max_val).exp()).sum();
-    
+
     for val in output.iter_mut() {
         *val = (*val - max_val).exp() / exp_sum;
     }
@@ -398,27 +407,27 @@ fn calculate_metrics(
     let core_ms = core_time.as_millis() as u64;
     let input_prep_ms = input_prep_time.as_millis() as u64;
     let output_proc_ms = output_proc_time.as_millis() as u64;
-    
+
     // Calculate throughput (inferences per second)
     let throughput_ips = if total_ms > 0 {
         1000.0 / total_ms as f64
     } else {
         0.0
     };
-    
+
     // Calculate efficiency metrics
     let memory_efficiency = if total_ms > 0 {
         (core_ms as f32 / total_ms as f32).min(1.0)
     } else {
         1.0
     };
-    
+
     let compute_efficiency = if core_ms > 0 {
         (core_ms as f32 / total_ms as f32).min(1.0)
     } else {
         1.0
     };
-    
+
     InferenceMetrics {
         total_time_ms: total_ms,
         core_time_ms: core_ms,
@@ -431,33 +440,29 @@ fn calculate_metrics(
 }
 
 /// Estimate memory usage for inference
-fn estimate_memory_usage(
-    model: &LoadedCoreMLModel,
-    input: &[f32],
-    output: &[f32],
-) -> usize {
+fn estimate_memory_usage(model: &LoadedCoreMLModel, input: &[f32], output: &[f32]) -> usize {
     // Model memory (from metadata)
     let model_mb = (model.metadata.size_bytes / (1024 * 1024)) as usize;
-    
+
     // Input memory
     let input_mb = (input.len() * 4) / (1024 * 1024); // 4 bytes per f32
-    
+
     // Output memory
     let output_mb = (output.len() * 4) / (1024 * 1024); // 4 bytes per f32
-    
+
     // Overhead (model loading, intermediate tensors, etc.)
     let overhead_mb = (model_mb + input_mb + output_mb) / 4; // 25% overhead
-    
+
     model_mb + input_mb + output_mb + overhead_mb
 }
 
 /// Execute batch inference
-/// 
+///
 /// # Arguments
 /// * `model` - Loaded Core ML model
 /// * `inputs` - Batch of input tensors
 /// * `options` - Inference options
-/// 
+///
 /// # Returns
 /// * `Ok(Vec<InferenceResult>)` - Batch of inference results
 /// * `Err(ANEError)` - If batch inference fails
@@ -469,16 +474,16 @@ pub async fn execute_batch_inference(
     if inputs.is_empty() {
         return Ok(vec![]);
     }
-    
+
     let batch_size = options.batch_size.unwrap_or(1);
     let mut results = Vec::new();
-    
+
     // Process inputs in batches
     for batch in inputs.chunks(batch_size) {
         let batch_results = execute_batch_chunk(model, batch, options).await?;
         results.extend(batch_results);
     }
-    
+
     Ok(results)
 }
 
@@ -489,12 +494,12 @@ async fn execute_batch_chunk(
     options: &InferenceOptions,
 ) -> Result<Vec<InferenceResult>> {
     let mut results = Vec::new();
-    
+
     for input in batch {
         let result = execute_inference(model, input, options).await?;
         results.push(result);
     }
-    
+
     Ok(results)
 }
 
@@ -506,20 +511,17 @@ pub fn update_performance_metrics(
 ) {
     // Update total inferences
     current_metrics.total_inferences += 1;
-    
+
     // Update average latency using EWMA
     let new_latency = new_result.execution_time_ms as f64;
-    current_metrics.average_latency_ms = Ewma::update(
-        current_metrics.average_latency_ms,
-        new_latency,
-        alpha,
-    );
-    
+    current_metrics.average_latency_ms =
+        Ewma::update(current_metrics.average_latency_ms, new_latency, alpha);
+
     // Update peak memory usage
     if new_result.memory_usage_mb > current_metrics.peak_memory_usage_mb {
         current_metrics.peak_memory_usage_mb = new_result.memory_usage_mb;
     }
-    
+
     // Update last inference time
     current_metrics.last_inference_time = std::time::Instant::now();
 }
@@ -527,7 +529,7 @@ pub fn update_performance_metrics(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ane::models::coreml_model::{ModelMetadata, ModelSchema, IOTensorSpec, DType};
+    use crate::ane::models::coreml_model::{DType, IOTensorSpec, ModelMetadata, ModelSchema};
     use std::time::Instant;
 
     fn create_test_model() -> LoadedCoreMLModel {
@@ -584,11 +586,11 @@ mod tests {
     #[test]
     fn test_input_validation() {
         let model = create_test_model();
-        
+
         // Valid input
         let valid_input = vec![0.0f32; 1 * 3 * 224 * 224];
         assert!(validate_input(&model, &valid_input).is_ok());
-        
+
         // Invalid input size
         let invalid_input = vec![0.0f32; 100];
         assert!(validate_input(&model, &invalid_input).is_err());
@@ -600,7 +602,7 @@ mod tests {
         let core_time = Duration::from_millis(80);
         let input_prep_time = Duration::from_millis(10);
         let output_proc_time = Duration::from_millis(10);
-        
+
         let metrics = calculate_metrics(
             total_time,
             core_time,
@@ -609,7 +611,7 @@ mod tests {
             1000,
             100,
         );
-        
+
         assert_eq!(metrics.total_time_ms, 100);
         assert_eq!(metrics.core_time_ms, 80);
         assert_eq!(metrics.input_prep_time_ms, 10);
@@ -626,7 +628,7 @@ mod tests {
         model.metadata.size_bytes = 2 * 1024 * 1024; // 2MB
         let input = vec![0.0f32; 1000];
         let output = vec![0.0f32; 100];
-        
+
         let memory_mb = estimate_memory_usage(&model, &input, &output);
         assert!(memory_mb > 0);
     }
@@ -640,16 +642,16 @@ mod tests {
             error_count: 0,
             last_inference_time: Instant::now(),
         };
-        
+
         let result = InferenceResult {
             output: vec![0.0f32; 100],
             execution_time_ms: 50,
             memory_usage_mb: 64,
             metrics: InferenceMetrics::default(),
         };
-        
+
         update_performance_metrics(&mut metrics, &result, 0.2);
-        
+
         assert_eq!(metrics.total_inferences, 1);
         // EWMA with alpha=0.2: 0.0 * 0.8 + 50.0 * 0.2 = 10.0
         assert_eq!(metrics.average_latency_ms, 10.0);
@@ -658,21 +660,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_inference() {
-        use crate::ane::compat::coreml_module::{load_model, query_model_inputs, query_model_outputs};
         use crate::ane::compat::coreml_direct::{CoreMLModel, MLFeatureProvider, MLFeatureValue};
-        use std::path::{PathBuf, Path};
-        use std::collections::HashMap;
+        use crate::ane::compat::coreml_module::{
+            load_model, query_model_inputs, query_model_outputs,
+        };
         use image::io::Reader as ImageReader;
-        
+        use std::collections::HashMap;
+        use std::path::{Path, PathBuf};
+
         // Try to find a real model in the models directory
         let model_paths = [
             "../../../models/coreml/fastvit/FastViTT8F16.mlpackage.mlmodelc",
             "../../../models/coreml/yolov3/YOLOv3.mlmodel.mlmodelc",
         ];
-        
+
         let mut model_ref = None;
         let mut model_path = None;
-        
+
         for path_str in &model_paths {
             let path = PathBuf::from(path_str);
             if path.exists() {
@@ -686,7 +690,7 @@ mod tests {
                 }
             }
         }
-        
+
         let (mr, mp) = match (model_ref, model_path) {
             (Some(mr), Some(path)) => (mr, path),
             _ => {
@@ -694,7 +698,7 @@ mod tests {
                 return;
             }
         };
-        
+
         // Query model inputs to find image input name
         let input_specs = match query_model_inputs(mr.clone()) {
             Ok(specs) => specs,
@@ -703,12 +707,13 @@ mod tests {
                 return;
             }
         };
-        
+
         // Find image input (dtype contains "image" or name suggests image)
-        let image_input = input_specs.iter()
-            .find(|spec| spec.dtype.to_lowercase().contains("image") || 
-                         spec.name.to_lowercase().contains("image"));
-        
+        let image_input = input_specs.iter().find(|spec| {
+            spec.dtype.to_lowercase().contains("image")
+                || spec.name.to_lowercase().contains("image")
+        });
+
         let input_name = match image_input {
             Some(spec) => &spec.name,
             None => {
@@ -716,24 +721,29 @@ mod tests {
                 return;
             }
         };
-        
+
         // Load test image
         let image_path = PathBuf::from("../../../test-fixtures/images/test-image.jpg");
         if !image_path.exists() {
-            eprintln!("⚠️ Test image not found at {:?} - skipping test", image_path);
+            eprintln!(
+                "⚠️ Test image not found at {:?} - skipping test",
+                image_path
+            );
             return;
         }
-        
+
         // Load and resize image
         // Try to get expected dimensions from model, default to 224x224
-        let expected_size = image_input.and_then(|spec| {
-            if spec.shape.len() >= 2 {
-                Some((spec.shape[0].max(1) as u32, spec.shape[1].max(1) as u32))
-            } else {
-                None
-            }
-        }).unwrap_or((224, 224));
-        
+        let expected_size = image_input
+            .and_then(|spec| {
+                if spec.shape.len() >= 2 {
+                    Some((spec.shape[0].max(1) as u32, spec.shape[1].max(1) as u32))
+                } else {
+                    None
+                }
+            })
+            .unwrap_or((224, 224));
+
         let img = match ImageReader::open(&image_path) {
             Ok(reader) => match reader.decode() {
                 Ok(img) => img,
@@ -747,25 +757,35 @@ mod tests {
                 return;
             }
         };
-        
-        let resized = img.resize_exact(expected_size.0, expected_size.1, image::imageops::FilterType::Triangle);
+
+        let resized = img.resize_exact(
+            expected_size.0,
+            expected_size.1,
+            image::imageops::FilterType::Triangle,
+        );
         let rgb_image = resized.to_rgb8();
-        
+
         // Convert to raw RGB bytes
         let image_data: Vec<u8> = rgb_image.into_raw();
-        
+
         // Query model outputs to get correct output name
         let output_specs = match query_model_outputs(mr.clone()) {
             Ok(specs) => {
-                eprintln!("⚠️ Model outputs: {:?}", specs.iter().map(|s| format!("{} ({})", s.name, s.dtype)).collect::<Vec<_>>());
+                eprintln!(
+                    "⚠️ Model outputs: {:?}",
+                    specs
+                        .iter()
+                        .map(|s| format!("{} ({})", s.name, s.dtype))
+                        .collect::<Vec<_>>()
+                );
                 specs
-            },
+            }
             Err(e) => {
                 eprintln!("⚠️ Failed to query model outputs: {:?} - skipping test", e);
                 return;
             }
         };
-        
+
         // Use CoreML direct API with image feature
         let path_str = mp.to_string_lossy().to_string();
         let mut coreml_model = match CoreMLModel::from_path(Path::new(&path_str)) {
@@ -775,19 +795,22 @@ mod tests {
                 return;
             }
         };
-        
+
         // Create feature provider with image
         let mut features = HashMap::new();
         features.insert(input_name.to_string(), MLFeatureValue::Image(image_data));
-        
+
         let provider = match MLFeatureProvider::from_dictionary(&features) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("⚠️ Failed to create feature provider: {:?} - skipping test", e);
+                eprintln!(
+                    "⚠️ Failed to create feature provider: {:?} - skipping test",
+                    e
+                );
                 return;
             }
         };
-        
+
         // Use output names from query if available
         let output_names: Vec<String> = output_specs.iter().map(|s| s.name.clone()).collect();
         let result = if !output_names.is_empty() {
@@ -795,7 +818,7 @@ mod tests {
         } else {
             coreml_model.prediction_from_features(&provider)
         };
-        
+
         match &result {
             Ok(_) => {
                 // Inference succeeded - output extraction also succeeded
@@ -803,45 +826,56 @@ mod tests {
             Err(e) => {
                 // Check if it's an output extraction error (inference may have succeeded)
                 let error_msg = format!("{:?}", e);
-                if error_msg.contains("Failed to extract output") || error_msg.contains("not a multiarray") {
+                if error_msg.contains("Failed to extract output")
+                    || error_msg.contains("not a multiarray")
+                {
                     // Inference likely succeeded, but output extraction failed
                     // This is acceptable for models with dictionary/string outputs
                     eprintln!("⚠️ Inference succeeded but output extraction failed (outputs may be dictionaries/strings): {:?}", e);
-                    eprintln!("⚠️ Model has {} output(s): {:?}", output_specs.len(), 
-                        output_specs.iter().map(|s| format!("{} ({})", s.name, s.dtype)).collect::<Vec<_>>());
+                    eprintln!(
+                        "⚠️ Model has {} output(s): {:?}",
+                        output_specs.len(),
+                        output_specs
+                            .iter()
+                            .map(|s| format!("{} ({})", s.name, s.dtype))
+                            .collect::<Vec<_>>()
+                    );
                     // For now, consider this a success since inference worked
                     return;
                 } else {
                     // Actual inference failure
                     eprintln!("⚠️ Inference failed: {:?}", e);
-                    eprintln!("⚠️ Model has {} output(s): {:?}", output_specs.len(), 
-                        output_specs.iter().map(|s| &s.name).collect::<Vec<_>>());
+                    eprintln!(
+                        "⚠️ Model has {} output(s): {:?}",
+                        output_specs.len(),
+                        output_specs.iter().map(|s| &s.name).collect::<Vec<_>>()
+                    );
                     panic!("Inference should succeed with real model");
                 }
             }
         }
-        
+
         // If we get here, both inference and output extraction succeeded
         assert!(result.is_ok(), "Inference should succeed with real model");
     }
 
     #[tokio::test]
     async fn test_batch_inference() {
-        use crate::ane::compat::coreml_module::{load_model, query_model_inputs};
         use crate::ane::compat::coreml_direct::{CoreMLModel, MLFeatureProvider, MLFeatureValue};
-        use std::path::{PathBuf, Path};
-        use std::collections::HashMap;
+        use crate::ane::compat::coreml_module::{load_model, query_model_inputs};
         use image::io::Reader as ImageReader;
-        
+        use std::collections::HashMap;
+        use std::path::{Path, PathBuf};
+
         // Try to find a real model in the models directory
         let model_paths = [
             "../../../models/coreml/fastvit/FastViTT8F16.mlpackage.mlmodelc",
             "../../../models/coreml/yolov3/YOLOv3.mlmodel.mlmodelc",
         ];
-        
+
         let mut model_ref = None;
         let mut model_path = None;
-        
+
         for path_str in &model_paths {
             let path = PathBuf::from(path_str);
             if path.exists() {
@@ -855,7 +889,7 @@ mod tests {
                 }
             }
         }
-        
+
         let (mr, mp) = match (model_ref, model_path) {
             (Some(mr), Some(path)) => (mr, path),
             _ => {
@@ -863,7 +897,7 @@ mod tests {
                 return;
             }
         };
-        
+
         // Query model inputs to find image input name
         let input_specs = match query_model_inputs(mr.clone()) {
             Ok(specs) => specs,
@@ -872,12 +906,13 @@ mod tests {
                 return;
             }
         };
-        
+
         // Find image input
-        let image_input = input_specs.iter()
-            .find(|spec| spec.dtype.to_lowercase().contains("image") || 
-                         spec.name.to_lowercase().contains("image"));
-        
+        let image_input = input_specs.iter().find(|spec| {
+            spec.dtype.to_lowercase().contains("image")
+                || spec.name.to_lowercase().contains("image")
+        });
+
         let input_name = match image_input {
             Some(spec) => &spec.name,
             None => {
@@ -885,23 +920,28 @@ mod tests {
                 return;
             }
         };
-        
+
         // Load test image
         let image_path = PathBuf::from("../../../test-fixtures/images/test-image.jpg");
         if !image_path.exists() {
-            eprintln!("⚠️ Test image not found at {:?} - skipping test", image_path);
+            eprintln!(
+                "⚠️ Test image not found at {:?} - skipping test",
+                image_path
+            );
             return;
         }
-        
+
         // Get expected dimensions from model
-        let expected_size = image_input.and_then(|spec| {
-            if spec.shape.len() >= 2 {
-                Some((spec.shape[0].max(1) as u32, spec.shape[1].max(1) as u32))
-            } else {
-                None
-            }
-        }).unwrap_or((224, 224));
-        
+        let expected_size = image_input
+            .and_then(|spec| {
+                if spec.shape.len() >= 2 {
+                    Some((spec.shape[0].max(1) as u32, spec.shape[1].max(1) as u32))
+                } else {
+                    None
+                }
+            })
+            .unwrap_or((224, 224));
+
         // Load and prepare two images for batch inference
         let img = match ImageReader::open(&image_path) {
             Ok(reader) => match reader.decode() {
@@ -916,11 +956,15 @@ mod tests {
                 return;
             }
         };
-        
-        let resized = img.resize_exact(expected_size.0, expected_size.1, image::imageops::FilterType::Triangle);
+
+        let resized = img.resize_exact(
+            expected_size.0,
+            expected_size.1,
+            image::imageops::FilterType::Triangle,
+        );
         let rgb_image = resized.to_rgb8();
         let image_data: Vec<u8> = rgb_image.into_raw();
-        
+
         // Use CoreML direct API for batch inference
         let path_str = mp.to_string_lossy().to_string();
         let mut coreml_model = match CoreMLModel::from_path(Path::new(&path_str)) {
@@ -930,21 +974,27 @@ mod tests {
                 return;
             }
         };
-        
+
         // Run inference twice (simulating batch)
         let mut results = Vec::new();
         for _ in 0..2 {
             let mut features = HashMap::new();
-            features.insert(input_name.to_string(), MLFeatureValue::Image(image_data.clone()));
-            
+            features.insert(
+                input_name.to_string(),
+                MLFeatureValue::Image(image_data.clone()),
+            );
+
             let provider = match MLFeatureProvider::from_dictionary(&features) {
                 Ok(p) => p,
                 Err(e) => {
-                    eprintln!("⚠️ Failed to create feature provider: {:?} - skipping test", e);
+                    eprintln!(
+                        "⚠️ Failed to create feature provider: {:?} - skipping test",
+                        e
+                    );
                     return;
                 }
             };
-            
+
             let result = coreml_model.prediction_from_features(&provider);
             if let Err(e) = &result {
                 eprintln!("⚠️ Batch inference failed: {:?}", e);
@@ -952,7 +1002,7 @@ mod tests {
             }
             results.push(result.unwrap());
         }
-        
+
         assert_eq!(results.len(), 2, "Batch inference should return 2 results");
     }
 }

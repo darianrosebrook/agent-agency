@@ -11,15 +11,14 @@
 //! Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::models::yolo_model::{
-    LoadedYOLOModel, YOLODetectionResult, Detection,
-    YOLOInferenceOptions,
-};
 use crate::ane::compat::coreml::{coreml, ModelRef};
-use system_configuration::geometry::BoundingBox;
 use crate::ane::infer::execute::InferenceOptions;
+use crate::ane::models::yolo_model::{
+    Detection, LoadedYOLOModel, YOLODetectionResult, YOLOInferenceOptions,
+};
 use image::{DynamicImage, ImageBuffer, Rgb};
 use std::time::Instant;
+use system_configuration::geometry::BoundingBox;
 
 /// YOLO inference executor
 #[derive(Debug)]
@@ -57,7 +56,12 @@ impl YOLOInferenceExecutor {
         let _input_spec = crate::ane::TensorSpec {
             name: "image".to_string(),
             dtype: "F32".to_string(),
-            shape: vec![1, 3, self.model.config.input_size.1 as usize, self.model.config.input_size.0 as usize], // [batch, channels, height, width]
+            shape: vec![
+                1,
+                3,
+                self.model.config.input_size.1 as usize,
+                self.model.config.input_size.0 as usize,
+            ], // [batch, channels, height, width]
             required: true,
             batch_capable: false,
         };
@@ -71,13 +75,31 @@ impl YOLOInferenceExecutor {
             batch_capable: false,
         };
 
+        // CRITICAL: Wrap blocking FFI call in spawn_blocking to prevent async runtime starvation
+        // The Core ML FFI call is synchronous and can block for extended periods. If called
+        // directly in async context, it can block the async runtime thread and prevent watchdog
+        // check-ins, causing kernel panics. spawn_blocking moves the work to a separate thread pool.
+        let input_data = input_tensor
+            .flatten_all()
+            .unwrap()
+            .to_vec1::<f32>()
+            .unwrap();
+        let input_shape = vec![
+            1,
+            3,
+            self.model.config.input_size.1 as usize,
+            self.model.config.input_size.0 as usize,
+        ];
+        let model_ref = ModelRef::new();
+        let input_name = "image".to_string();
+
         // Run CoreML inference
-        let outputs = coreml::run_inference(
-            ModelRef::new(),
-            "image",
-            &input_tensor.flatten_all().unwrap().to_vec1::<f32>().unwrap(),
-            &[1, 3, self.model.config.input_size.1 as usize, self.model.config.input_size.0 as usize]
-        ).map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
+        let outputs = tokio::task::spawn_blocking(move || {
+            coreml::run_inference(model_ref, &input_name, &input_data, &input_shape)
+        })
+        .await
+        .map_err(|e| ANEError::Internal(format!("Inference task panicked: {}", e)))?
+        .map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
 
         let inference_time = start_time.elapsed();
 
@@ -88,7 +110,9 @@ impl YOLOInferenceExecutor {
         let detections = self.decode_detections_from_tensor(&output_tensor, image, options)?;
 
         // Record telemetry
-        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true);
+        self.model
+            .telemetry
+            .record_inference(inference_time.as_millis() as u64, true);
 
         // Update access time
         self.model.last_accessed = Instant::now();
@@ -160,29 +184,40 @@ impl YOLOInferenceExecutor {
         options: &YOLOInferenceOptions,
     ) -> Result<Vec<Detection>> {
         // Get tensor data as slice
-        let output_data = output_tensor.to_vec1::<f32>()
+        let output_data = output_tensor
+            .to_vec1::<f32>()
             .map_err(|e| ANEError::Internal(format!("Failed to extract tensor data: {}", e)))?;
-
 
         // YOLOv3 output format parsing
         let detections = self.parse_yolo_output(
             &output_data,
             original_image.width() as f32,
             original_image.height() as f32,
-            options.confidence_threshold.unwrap_or(self.model.config.confidence_threshold),
+            options
+                .confidence_threshold
+                .unwrap_or(self.model.config.confidence_threshold),
         )?;
 
         // Apply Non-Maximum Suppression if enabled
         let filtered_detections = if self.model.config.nms_enabled {
             self.apply_non_maximum_suppression(
                 detections,
-                options.iou_threshold.unwrap_or(self.model.config.iou_threshold),
-                options.max_detections.unwrap_or(self.model.config.max_detections),
+                options
+                    .iou_threshold
+                    .unwrap_or(self.model.config.iou_threshold),
+                options
+                    .max_detections
+                    .unwrap_or(self.model.config.max_detections),
             )
         } else {
             // Limit detections without NMS
-            detections.into_iter()
-                .take(options.max_detections.unwrap_or(self.model.config.max_detections))
+            detections
+                .into_iter()
+                .take(
+                    options
+                        .max_detections
+                        .unwrap_or(self.model.config.max_detections),
+                )
                 .collect()
         };
 
@@ -222,7 +257,9 @@ impl YOLOInferenceExecutor {
             }
 
             // Find best class
-            let (class_id, class_prob) = class_probs.iter().enumerate()
+            let (class_id, class_prob) = class_probs
+                .iter()
+                .enumerate()
                 .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
                 .map(|(idx, prob)| (idx, *prob))
                 .unwrap_or((0, 0.0));
@@ -244,7 +281,11 @@ impl YOLOInferenceExecutor {
             };
 
             let detection = Detection {
-                class: self.model.config.class_names.get(class_id)
+                class: self
+                    .model
+                    .config
+                    .class_names
+                    .get(class_id)
                     .cloned()
                     .unwrap_or_else(|| format!("class_{}", class_id)),
                 class_id,
@@ -317,11 +358,11 @@ pub fn create_yolo_executor(model: LoadedYOLOModel) -> YOLOInferenceExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::telemetry::TelemetryCollector;
     use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use crate::ane::models::{YOLOConfig, YOLOMetadata};
+    use crate::telemetry::TelemetryCollector;
     use std::path::PathBuf;
-    
+
     fn create_test_yolo_model() -> LoadedYOLOModel {
         LoadedYOLOModel {
             model_id: "test_yolo".to_string(),
@@ -398,8 +439,18 @@ mod tests {
     fn test_iou_calculation() {
         let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
-        let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
-        let bbox2 = BoundingBox { x: 5.0, y: 5.0, width: 10.0, height: 10.0 };
+        let bbox1 = BoundingBox {
+            x: 0.0,
+            y: 0.0,
+            width: 10.0,
+            height: 10.0,
+        };
+        let bbox2 = BoundingBox {
+            x: 5.0,
+            y: 5.0,
+            width: 10.0,
+            height: 10.0,
+        };
 
         let iou = executor.calculate_iou(&bbox1, &bbox2);
         assert!(iou > 0.0 && iou < 1.0); // Partial overlap
@@ -409,8 +460,18 @@ mod tests {
     fn test_no_overlap_iou() {
         let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
-        let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
-        let bbox2 = BoundingBox { x: 20.0, y: 20.0, width: 10.0, height: 10.0 };
+        let bbox1 = BoundingBox {
+            x: 0.0,
+            y: 0.0,
+            width: 10.0,
+            height: 10.0,
+        };
+        let bbox2 = BoundingBox {
+            x: 20.0,
+            y: 20.0,
+            width: 10.0,
+            height: 10.0,
+        };
 
         let iou = executor.calculate_iou(&bbox1, &bbox2);
         assert_eq!(iou, 0.0); // No overlap
@@ -420,8 +481,18 @@ mod tests {
     fn test_complete_overlap_iou() {
         let executor = YOLOInferenceExecutor::new(create_test_yolo_model());
 
-        let bbox1 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
-        let bbox2 = BoundingBox { x: 0.0, y: 0.0, width: 10.0, height: 10.0 };
+        let bbox1 = BoundingBox {
+            x: 0.0,
+            y: 0.0,
+            width: 10.0,
+            height: 10.0,
+        };
+        let bbox2 = BoundingBox {
+            x: 0.0,
+            y: 0.0,
+            width: 10.0,
+            height: 10.0,
+        };
 
         let iou = executor.calculate_iou(&bbox1, &bbox2);
         assert_eq!(iou, 1.0); // Complete overlap

@@ -3,11 +3,11 @@
 //! This module provides Mistral model inference capabilities including
 //! constitutional reasoning, debate generation, and text generation.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::models::mistral_model::{MistralModel, reasoning_templates};
-use candle_core::{Tensor, Device, IndexOp};
+use crate::ane::models::mistral_model::{reasoning_templates, MistralModel};
+use candle_core::{Device, IndexOp, Tensor};
 use rand::Rng;
+use schemars::JsonSchema;
 
 /// Inference options for Mistral models
 #[derive(Debug, Clone, JsonSchema)]
@@ -95,11 +95,8 @@ pub async fn deliberate_constitution(
     options: &MistralInferenceOptions,
 ) -> Result<ConstitutionalVerdict> {
     // Format the constitutional analysis prompt
-    let prompt = reasoning_templates::format_constitutional_analysis(
-        task_spec,
-        evidence,
-        debate_history,
-    )?;
+    let prompt =
+        reasoning_templates::format_constitutional_analysis(task_spec, evidence, debate_history)?;
 
     // Generate response using Mistral model
     let response = generate_text(model, &prompt, options).await?;
@@ -117,11 +114,8 @@ pub async fn generate_debate_argument(
     options: &MistralInferenceOptions,
 ) -> Result<DebateArgument> {
     // Format the debate argument prompt
-    let prompt = reasoning_templates::format_debate_argument(
-        debate_topic,
-        previous_arguments,
-        evidence,
-    )?;
+    let prompt =
+        reasoning_templates::format_debate_argument(debate_topic, previous_arguments, evidence)?;
 
     // Generate response using Mistral model
     let response = generate_text(model, &prompt, options).await?;
@@ -143,18 +137,20 @@ pub async fn generate_text(
 
     // Check circuit breaker
     if model.circuit_breaker.is_open() {
-        return Err(ANEError::CircuitBreakerOpen("Circuit breaker is open".to_string()));
+        return Err(ANEError::CircuitBreakerOpen(
+            "Circuit breaker is open".to_string(),
+        ));
     }
 
     // Tokenize input
     let input_tokens = model.tokenizer.encode(prompt)?;
-    
+
     // Check if input fits in context window
     let context_length = model.schema.context_length;
     if input_tokens.len() > context_length {
         return Err(ANEError::ContextTooLong(format!(
-            "Input length {} exceeds context window {}", 
-            input_tokens.len(), 
+            "Input length {} exceeds context window {}",
+            input_tokens.len(),
             context_length
         )));
     }
@@ -192,53 +188,63 @@ pub async fn generate_text(
     // Keep token ids as i32; the backend embeds internally
     // Note: Candle requires converting to f32 for tensor creation, but we'll treat them as IDs
     let input_tokens_f32: Vec<f32> = input_tokens.iter().map(|&x| x as f32).collect();
-    let _input_tensor = Tensor::from_slice(input_tokens_f32.as_slice(), (input_tokens_f32.len(),), &device)?
-        .unsqueeze(0)?; // Add batch dimension
+    let _input_tensor = Tensor::from_slice(
+        input_tokens_f32.as_slice(),
+        (input_tokens_f32.len(),),
+        &device,
+    )?
+    .unsqueeze(0)?; // Add batch dimension
 
     // Generate tokens
     let mut generated_tokens = input_tokens.clone();
     let mut kv_cache = model.kv_cache.lock().await;
-    
+
     // Get EOS token ID from tokenizer
     let eos_id = model.tokenizer.eos_id().unwrap_or(2);
-    
+
     // Pre-allocate capacity to avoid reallocations
     generated_tokens.reserve(input_tokens.len() + options.max_tokens);
-    
+
     for _ in 0..options.max_tokens {
         // Prepare input for next token prediction
         let input_len = generated_tokens.len();
         let input_slice = &generated_tokens[input_len.saturating_sub(context_length)..];
-        
+
         // Keep token ids as i32; the backend embeds internally
         // Note: Candle requires converting to f32 for tensor creation, but we'll treat them as IDs
         let input_slice_f32: Vec<f32> = input_slice.iter().map(|&x| x as f32).collect();
-        let input_tensor = Tensor::from_slice(input_slice_f32.as_slice(), (input_slice_f32.len(),), &device)?
-            .unsqueeze(0)?;
+        let input_tensor = Tensor::from_slice(
+            input_slice_f32.as_slice(),
+            (input_slice_f32.len(),),
+            &device,
+        )?
+        .unsqueeze(0)?;
 
         // Run inference through Core ML with timeout
         let step_future = run_mistral_inference(model, &input_tensor);
         let logits = match tokio::time::timeout(
             std::time::Duration::from_millis(options.timeout_ms),
-            step_future
-        ).await {
+            step_future,
+        )
+        .await
+        {
             Ok(result) => result?,
             Err(_) => {
                 model.circuit_breaker.record_failure();
                 return Err(ANEError::Timeout(options.timeout_ms));
             }
         };
-        
+
         // Sample next token
         let next_token = sample_token(&logits, options)?;
-        
+
         // Check for end token
         if next_token == eos_id {
             break;
         }
-        
+
         generated_tokens.push(next_token);
-        
+
         // Update KV cache if enabled
         if options.use_kv_cache {
             if let Err(e) = kv_cache.step() {
@@ -249,24 +255,23 @@ pub async fn generate_text(
     }
 
     // Decode generated tokens
-    let generated_text = model.tokenizer.decode(&generated_tokens[input_tokens.len()..])?;
-    
+    let generated_text = model
+        .tokenizer
+        .decode(&generated_tokens[input_tokens.len()..])?;
+
     // Record successful inference
     model.circuit_breaker.record_success();
-    
+
     Ok(generated_text)
 }
 
 /// Run Mistral inference through Core ML
-async fn run_mistral_inference(
-    model: &MistralModel,
-    input_tensor: &Tensor,
-) -> Result<Tensor> {
+async fn run_mistral_inference(model: &MistralModel, input_tensor: &Tensor) -> Result<Tensor> {
     use crate::ane::compat::coreml_module::run_inference;
-    
+
     // Get the model reference from SafeModelHandle
     let model_ref = model.handle.get_model_ref(); // SafeModelHandle.get_model_ref() returns ModelRef
-    
+
     // Convert input tensor to f32 slice
     // Input tensor shape: [batch_size, sequence_length]
     let input_dims = input_tensor.dims();
@@ -276,28 +281,37 @@ async fn run_mistral_inference(
             input_dims
         )));
     }
-    
+
     let batch_size = input_dims[0];
     let seq_len = input_dims[1];
-    
+
     // Flatten tensor to f32 slice
     let input_data = input_tensor
         .flatten_all()
         .map_err(|e| ANEError::InferenceFailed(format!("Failed to flatten input tensor: {}", e)))?
         .to_vec1::<f32>()
-        .map_err(|e| ANEError::InferenceFailed(format!("Failed to convert tensor to f32: {}", e)))?;
-    
+        .map_err(|e| {
+            ANEError::InferenceFailed(format!("Failed to convert tensor to f32: {}", e))
+        })?;
+
     // Input shape for CoreML: [batch_size, sequence_length]
     let input_shape = vec![batch_size, seq_len];
-    
+
     // Mistral models typically use "input_ids" as the input feature name
     // This may need to be configurable based on the actual model schema
-    let input_name = "input_ids";
-    
-    // Run inference through CoreML module
-    let output_tensor = run_inference(model_ref, input_name, &input_data, &input_shape)
-        .map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
-    
+    let input_name = "input_ids".to_string();
+
+    // CRITICAL: Wrap blocking FFI call in spawn_blocking to prevent async runtime starvation
+    // The Core ML FFI call is synchronous and can block for extended periods. If called
+    // directly in async context, it can block the async runtime thread and prevent watchdog
+    // check-ins, causing kernel panics. spawn_blocking moves the work to a separate thread pool.
+    let output_tensor = tokio::task::spawn_blocking(move || {
+        run_inference(model_ref, &input_name, &input_data, &input_shape)
+    })
+    .await
+    .map_err(|e| ANEError::Internal(format!("Inference task panicked: {}", e)))?
+    .map_err(|e| ANEError::InferenceFailed(format!("CoreML inference failed: {}", e)))?;
+
     // Output tensor shape should be [batch_size, vocab_size] for logits
     // Verify output shape matches expectations
     let output_dims = output_tensor.dims();
@@ -307,14 +321,14 @@ async fn run_mistral_inference(
             output_dims
         )));
     }
-    
+
     if output_dims[0] != batch_size {
         return Err(ANEError::Internal(format!(
             "Output batch size {} doesn't match input batch size {}",
             output_dims[0], batch_size
         )));
     }
-    
+
     Ok(output_tensor)
 }
 
@@ -323,18 +337,19 @@ fn sample_token(logits: &Tensor, options: &MistralInferenceOptions) -> Result<i3
     // Logits shape is [B, V] (last token logits only)
     // Extract logits for batch index 0
     let logits = logits.i((0, ..))?;
-    
+
     // Fast path: greedy sampling (temperature=None, top_p=None)
     if options.temperature.is_none() && options.top_p.is_none() {
         let logits_vec: Vec<f32> = logits.to_vec1()?;
-        let argmax = logits_vec.iter()
+        let argmax = logits_vec
+            .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map(|(i, _)| i)
             .unwrap_or(0);
         return Ok(argmax as i32);
     }
-    
+
     // Apply temperature if specified
     let logits = if let Some(temp) = options.temperature {
         let temp_tensor = Tensor::new(&[temp], logits.device())?;
@@ -342,22 +357,22 @@ fn sample_token(logits: &Tensor, options: &MistralInferenceOptions) -> Result<i3
     } else {
         logits
     };
-    
+
     // Apply top-p filtering if specified (stable version)
     let logits = if let Some(top_p) = options.top_p {
         apply_top_p_filtering_stable(&logits, top_p)?
     } else {
         logits
     };
-    
+
     // Convert to probabilities
     let probs = candle_nn::ops::softmax_last_dim(&logits)?;
-    
+
     // Sample from the distribution
     let probs_vec: Vec<f32> = probs.to_vec1()?;
     let mut rng = rand::thread_rng();
     let random_val: f32 = rng.gen();
-    
+
     let mut cumulative = 0.0;
     for (i, prob) in probs_vec.iter().enumerate() {
         cumulative += prob;
@@ -365,62 +380,62 @@ fn sample_token(logits: &Tensor, options: &MistralInferenceOptions) -> Result<i3
             return Ok(i as i32);
         }
     }
-    
+
     // Fallback to argmax
-    let argmax = probs_vec.iter()
+    let argmax = probs_vec
+        .iter()
         .enumerate()
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
         .map(|(i, _)| i)
         .unwrap_or(0);
-    
+
     Ok(argmax as i32)
 }
 
 /// Apply top-p (nucleus) filtering with numerically stable log-sum-exp
 fn apply_top_p_filtering_stable(logits: &Tensor, top_p: f32) -> Result<Tensor> {
     use candle_core::DType;
-    
+
     // Ensure logits are float type
     let dtype = logits.dtype();
     if !matches!(dtype, DType::F32 | DType::F16 | DType::BF16) {
-        return Err(ANEError::InvalidInput(
-            format!("Logits must be float type, got {:?}", dtype)
-        ));
+        return Err(ANEError::InvalidInput(format!(
+            "Logits must be float type, got {:?}",
+            dtype
+        )));
     }
-    
+
     // Log-sum-exp normalization for numerical stability
     // Convert to Vec for stable computation
     let logits_vec: Vec<f32> = logits.to_vec1()?;
-    
+
     // Find max logit
-    let max_logit = logits_vec.iter()
+    let max_logit = logits_vec
+        .iter()
         .fold(f32::NEG_INFINITY, |acc, &x| acc.max(x));
-    
+
     // Compute exp(shifted) and sum in a single pass for efficiency
     let mut exp_sum = 0.0;
-    let exp_shifted: Vec<f32> = logits_vec.iter()
+    let exp_shifted: Vec<f32> = logits_vec
+        .iter()
         .map(|&x| {
             let exp_val = (x - max_logit).exp();
             exp_sum += exp_val;
             exp_val
         })
         .collect();
-    
+
     // Compute probabilities: exp(shifted) / sumexp
-    let probs_vec: Vec<f32> = exp_shifted.iter()
-        .map(|&x| x / exp_sum)
-        .collect();
-    
+    let probs_vec: Vec<f32> = exp_shifted.iter().map(|&x| x / exp_sum).collect();
+
     // Sort indices by probability (descending)
     let mut indices: Vec<usize> = (0..probs_vec.len()).collect();
-    indices.sort_unstable_by(|&i, &j| {
-        probs_vec[j].partial_cmp(&probs_vec[i]).unwrap()
-    });
-    
+    indices.sort_unstable_by(|&i, &j| probs_vec[j].partial_cmp(&probs_vec[i]).unwrap());
+
     // Find cutoff: how many top tokens to keep to reach top_p probability mass
     let mut cumulative_prob = 0.0;
     let mut keep_count = 0;
-    
+
     for &idx in &indices {
         cumulative_prob += probs_vec[idx];
         keep_count += 1;
@@ -428,15 +443,15 @@ fn apply_top_p_filtering_stable(logits: &Tensor, top_p: f32) -> Result<Tensor> {
             break;
         }
     }
-    
+
     // Create mask: keep top-p set, mask rest with -inf
     let mut filtered_logits = vec![f32::NEG_INFINITY; logits_vec.len()];
-    
+
     // Keep only the top-p tokens (first keep_count indices)
     for &idx in indices.iter().take(keep_count) {
         filtered_logits[idx] = logits_vec[idx];
     }
-    
+
     Tensor::new(&*filtered_logits, logits.device())
         .map_err(|e| ANEError::InferenceFailed(format!("Tensor creation failed: {}", e)))
 }
@@ -471,7 +486,10 @@ fn parse_constitutional_response(response: &str) -> Result<ConstitutionalVerdict
         } else if line.starts_with("KEY_CONCERNS:") {
             let concerns_str = line.split(':').nth(1).unwrap_or("").trim();
             if !concerns_str.is_empty() {
-                key_concerns = concerns_str.split(',').map(|s| s.trim().to_string()).collect();
+                key_concerns = concerns_str
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect();
             }
         } else if line.starts_with("RECOMMENDATIONS:") {
             let recs_str = line.split(':').nth(1).unwrap_or("").trim();
@@ -529,7 +547,10 @@ fn parse_debate_response(response: &str) -> Result<DebateArgument> {
         } else if line.starts_with("EVIDENCE_CITATIONS:") {
             let citations_str = line.split(':').nth(1).unwrap_or("").trim();
             if !citations_str.is_empty() {
-                evidence_citations = citations_str.split(',').map(|s| s.trim().to_string()).collect();
+                evidence_citations = citations_str
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect();
             }
         } else if line.starts_with("CONFIDENCE_LEVEL:") {
             confidence_level = match line.split(':').nth(1).unwrap_or("").trim() {
