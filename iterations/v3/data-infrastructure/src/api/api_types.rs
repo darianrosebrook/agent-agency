@@ -464,7 +464,8 @@ impl ProgressTracker {
                 let estimated_completion = plan_row.try_get::<Option<DateTime<Utc>>, &str>("completed_at")
                     .ok()
                     .flatten();
-                (status, progress, status.clone(), estimated_completion)
+                let current_step = status.clone();
+                (status, progress, current_step, estimated_completion)
             }
             (None, None, None) => {
                 // No execution, state, or plan found - check if task exists
