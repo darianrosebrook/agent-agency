@@ -4339,58 +4339,83 @@ mod tests {
 
     #[tokio::test]
     async fn test_audit_trail_entry_creation() {
-        let _client = DatabaseClient::default();
+        // Skip test if database is not available (for CI environments)
+        if std::env::var("SKIP_DB_TESTS").is_ok() {
+            return;
+        }
 
+        // Create database client with real connection
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://postgres:agent_agency_secure_password_123@localhost:5433/agent_agency".to_string());
+        
+        let config = DatabaseConfig {
+            database_url: database_url.clone(),
+            ..Default::default()
+        };
+
+        let client = match DatabaseClient::new(config).await {
+            Ok(client) => client,
+            Err(e) => {
+                eprintln!("Skipping test: Database not available: {}", e);
+                return;
+            }
+        };
+
+        // Create test audit trail entry
+        let entity_id = Uuid::new_v4();
         let entry = CreateAuditTrailEntry {
             entity_type: "test_entity".to_string(),
-            entity_id: Uuid::new_v4(),
+            entity_id,
             action: "test_action".to_string(),
-            details: json!({"test": "data"}),
+            details: json!({"test": "data", "timestamp": Utc::now().to_rfc3339()}),
             user_id: Some("test_user".to_string()),
             ip_address: Some("127.0.0.1".to_string()),
             timestamp: Some(Utc::now()),
         };
 
-        // TODO: Implement comprehensive test with real database connection
-        //       Currently verifies struct creation only; should implement comprehensive test with real database connection for full audit trail functionality.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Test uses real database connection
-        // - Audit trail insertion is tested
-        // - Database queries are tested
-        // - Test assertions are comprehensive
-        //
-        // DEPENDENCIES:
-        // - Test database setup (Required)
-        // - Database test utilities (Required)
-        // - Test fixtures (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (test infrastructure enhancement)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database testing expertise
-        assert_eq!(entry.entity_type, "test_entity"); // Temporary: struct verification until database test
-        assert_eq!(entry.action, "test_action");
-        assert!(entry.user_id.is_some());
-        assert!(entry.ip_address.is_some());
-        assert!(entry.timestamp.is_some());
+        // Test audit trail insertion
+        let audit_json = serde_json::to_value(&entry).expect("Failed to serialize audit entry");
+        let insert_result = client.create_audit_trail_entry(audit_json.clone()).await;
+        assert!(insert_result.is_ok(), "Audit trail entry insertion should succeed");
+
+        // Query the inserted entry from database
+        let query_result = sqlx::query_as::<_, AuditTrailEntry>(
+            r#"
+            SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
+            FROM audit_trail_entries
+            WHERE entity_id = $1 AND action = $2
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(entity_id)
+        .bind("test_action")
+        .fetch_optional(&client.pool)
+        .await;
+
+        // Verify the entry was inserted correctly
+        match query_result {
+            Ok(Some(inserted_entry)) => {
+                assert_eq!(inserted_entry.entity_type, "test_entity");
+                assert_eq!(inserted_entry.entity_id, entity_id);
+                assert_eq!(inserted_entry.action, "test_action");
+                assert_eq!(inserted_entry.user_id, Some("test_user".to_string()));
+                assert_eq!(inserted_entry.ip_address, Some("127.0.0.1".to_string()));
+                assert!(inserted_entry.details.get("test").is_some());
+            }
+            Ok(None) => {
+                panic!("Audit trail entry not found in database after insertion");
+            }
+            Err(e) => {
+                panic!("Failed to query audit trail entry: {}", e);
+            }
+        }
+
+        // Cleanup: Delete the test entry
+        let _ = sqlx::query("DELETE FROM audit_trail_entries WHERE entity_id = $1")
+            .bind(entity_id)
+            .execute(&client.pool)
+            .await;
     }
 
     #[tokio::test]

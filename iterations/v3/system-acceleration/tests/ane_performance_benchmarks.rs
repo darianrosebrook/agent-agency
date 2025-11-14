@@ -534,44 +534,36 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
         .join("StatefulMistral7BInstructFP16.mlpackage.mlmodelc");
 
     if mistral_path.exists() {
+        // Query model metadata for actual input shape
+        let input_shape = match load_model(&mistral_path.to_string_lossy().to_string()) {
+            Ok(model_ref) => {
+                // Query model inputs to get actual input shape
+                match query_model_inputs(model_ref) {
+                    Ok(input_specs) => {
+                        if !input_specs.is_empty() {
+                            // Use actual input shape from model metadata
+                            input_specs[0].shape.clone()
+                        } else {
+                            // Fallback to default shape if no inputs found
+                            vec![1, 128]
+                        }
+                    }
+                    Err(_) => {
+                        // Query failed, use default shape
+                        vec![1, 128]
+                    }
+                }
+            }
+            Err(_) => {
+                // Model load failed, use default shape
+                vec![1, 128]
+            }
+        };
+        
         models.push(ModelInfo {
             name: "Mistral 7B FP16".to_string(),
             path: mistral_path.to_string_lossy().to_string(),
-            // TODO: Use actual model input shape from model metadata
-            //       Currently uses basic fixed shape for testing; should query model for actual input requirements.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Query model metadata for actual input shape requirements
-            // [ ] Support variable batch sizes and sequence lengths
-            // [ ] Handle model-specific input format requirements
-            // [ ] Add validation for input shape compatibility
-            // [ ] Add unit tests for input shape detection
-            // [ ] Add integration tests with various models
-            // [ ] Verify input shape accuracy
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Input shapes are detected from model metadata
-            // - Variable batch sizes and sequence lengths are supported
-            // - Input shape validation ensures compatibility
-            // - Input shape detection works with various model types
-            //
-            // DEPENDENCIES:
-            // - Model metadata API (Required)
-            // - Model input shape detection utilities (Required)
-            // - Input validation utilities (Required)
-            //
-            // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (test infrastructure enhancement)
-            // - Change Budget: ~50 LOC
-            // - Reviewer Requirements: Model integration expertise
-            // Note: Testing shows 128 tokens gives best ANE speedup (1.07x)
-            // Larger sequences (512 tokens) actually slow down ANE more than CPU
-            // This suggests the model may not be fully optimized for ANE
-            input_shape: vec![1, 128], // Default size for this model's ANE performance
+            input_shape, // Use actual input shape from model metadata
             _input_dtype: "I32".to_string(),
         });
     }
@@ -581,8 +573,14 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
     let micro_dir = Path::new(models_dir).join("micro");
     
     // Dense layer model (single linear layer)
+    // Try .mlpackage.mlmodelc first (compiled), then .mlpackage (package directory)
     let dense_path = micro_dir
         .join("micro_dense_layer.mlpackage.mlmodelc");
+    let dense_path = if dense_path.exists() {
+        dense_path
+    } else {
+        micro_dir.join("micro_dense_layer.mlpackage")
+    };
     if dense_path.exists() {
         models.push(ModelInfo {
             name: "Micro Dense Layer".to_string(),
@@ -593,8 +591,14 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
     }
     
     // Attention block model (single self-attention block)
+    // Try .mlpackage.mlmodelc first (compiled), then .mlpackage (package directory)
     let attention_path = micro_dir
         .join("micro_attention_block.mlpackage.mlmodelc");
+    let attention_path = if attention_path.exists() {
+        attention_path
+    } else {
+        micro_dir.join("micro_attention_block.mlpackage")
+    };
     if attention_path.exists() {
         models.push(ModelInfo {
             name: "Micro Attention Block".to_string(),
@@ -1042,38 +1046,17 @@ async fn test_model_performance(
     let ane_runner = BenchmarkRunner::new(ane_inference, ane_config);
     let mut ane_metrics = ane_runner.run()?;
 
-    // TODO: Query actual ANE utilization from system metrics
-    //       Currently uses basic measurement; should query system metrics for real ANE utilization.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Query system metrics for ANE utilization
-    // [ ] Use IOKit or system APIs for hardware metrics
-    // [ ] Track ANE power consumption and thermal state
-    // [ ] Measure ANE compute utilization percentage
-    // [ ] Add unit tests for utilization measurement
-    // [ ] Add integration tests with real hardware
-    // [ ] Verify utilization measurement accuracy
-    //
-    // ACCEPTANCE CRITERIA:
-    // - ANE utilization is measured from system metrics
-    // - Power consumption and thermal state are tracked
-    // - Utilization percentage is accurate
-    // - Measurement works across different Apple Silicon chips
-    //
-    // DEPENDENCIES:
-    // - System metrics API (Required)
-    // - IOKit integration (Required)
-    // - Hardware monitoring utilities (Required)
-    //
-    // ESTIMATED EFFORT: 4-6 hours (low confidence - requires system API research)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (test infrastructure enhancement)
-    // - Change Budget: ~80 LOC
-    // - Reviewer Requirements: macOS system programming expertise
-    ane_metrics.ane_utilization = Some(measure_ane_utilization().await); // Temporary: basic measurement until system metrics integration
+    // Query actual ANE utilization from system metrics using IOKit
+    #[cfg(target_os = "macos")]
+    {
+        use system_acceleration::ane::compat::iokit::iokit::ane_utilization_percent;
+        ane_metrics.ane_utilization = ane_utilization_percent().map(|util| util as f64);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Non-macOS platforms don't have ANE, so utilization is always 0
+        ane_metrics.ane_utilization = Some(0.0);
+    }
 
     Ok((cpu_metrics, ane_metrics))
 }
@@ -1447,41 +1430,24 @@ async fn test_ane_memory_and_resources() {
     }
 }
 
-/// Get current memory usage
+/// Get current memory usage using platform-specific APIs
 fn get_memory_usage() -> Option<u64> {
-    // TODO: Implement platform-specific memory usage statistics
-    //       Currently simulates usage; should use platform-specific APIs to get accurate memory usage statistics.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Use platform-specific APIs for memory statistics
-    // [ ] Query actual process memory usage
-    // [ ] Get accurate memory statistics
-    // [ ] Handle platform differences (macOS, Linux, Windows)
-    // [ ] Add unit tests with mock memory stats
-    // [ ] Add integration tests with real memory measurement
-    // [ ] Performance: Query should complete in <10ms
-    // [ ] Documentation: Document platform-specific implementation
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Memory usage is queried from actual system
-    // - Statistics are accurate
-    // - Multiple platforms are supported
-    // - Query errors are handled gracefully
-    // - Query performance is acceptable
-    //
-    // DEPENDENCIES:
-    // - Platform-specific memory APIs (Required)
-    // - Process memory query utilities (Required)
-    //
-    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-    // PRIORITY: Medium
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 2 (monitoring feature)
-    // - Change Budget: ~150 LOC
-    // - Reviewer Requirements: Platform-specific API expertise
-    Some(100 * 1024 * 1024) // Simulate 100MB usage
+    use sysinfo::{System, Pid};
+    
+    let mut system = System::new_all();
+    system.refresh_all();
+    
+    // Get current process ID
+    let current_pid = Pid::from(std::process::id() as usize);
+    
+    // Query process memory usage
+    if let Some(process) = system.process(current_pid) {
+        // Return memory usage in bytes (RSS - Resident Set Size)
+        Some(process.memory() * 1024) // sysinfo returns memory in KB, convert to bytes
+    } else {
+        // Process not found, return None
+        None
+    }
 }
 
 /// ANE Performance Benchmarks: Error handling and resilience test
@@ -1640,4 +1606,233 @@ async fn test_ane_stability_and_consistency() {
     } else {
         println!("⚠️ No models available for consistency testing - skipping");
     }
+}
+
+/// Test prefill vs decode performance analysis
+///
+/// This test measures TTFT (Time To First Token) and per-token decode latency
+/// separately for CPU vs ANE to determine if ANE wins on prefill but loses on decode.
+#[tokio::test]
+async fn test_prefill_decode_analysis() {
+    use system_acceleration::ane::infer::mistral::{
+        generate_text_with_metrics, MistralInferenceOptions,
+    };
+    use system_acceleration::ane::manager::ANEManager;
+    use system_acceleration::ane::models::mistral_model::MistralCompilationOptions;
+    use system_acceleration::ane::policy::BackendPolicy;
+
+    println!("\n=========================================");
+    println!("Prefill vs Decode Performance Analysis");
+    println!("=========================================\n");
+
+    // Find available Mistral models
+    let models_dir = std::env::var("MODELS_DIR")
+        .unwrap_or_else(|_| "../../../models/coreml/mistral".to_string());
+    let models_path = Path::new(&models_dir);
+
+    if !models_path.exists() {
+        println!("⚠️ Mistral models directory not found: {} - skipping", models_dir);
+        return;
+    }
+
+    // Find a Mistral model
+    let model_paths = [
+        models_path.join("StatefulMistral7BInstructFP16.mlpackage.mlmodelc"),
+        models_path.join("StatefulMistral7BInstructFP16.mlpackage"),
+        models_path.join("StatefulMistral7BInstructInt4.mlpackage.mlmodelc"),
+        models_path.join("StatefulMistral7BInstructInt4.mlpackage"),
+        // Fallback to old naming convention
+        models_path.join("mistral-7b-instruct-fp16.mlpackage.mlmodelc"),
+        models_path.join("mistral-7b-instruct-fp16.mlpackage"),
+    ];
+
+    let model_path = model_paths.iter().find(|p| p.exists());
+    let model_path_str = match model_path {
+        Some(p) => p.to_string_lossy().to_string(),
+        None => {
+            println!("⚠️ No Mistral models found - skipping prefill/decode analysis");
+            return;
+        }
+    };
+
+    println!("📊 Loading model: {}", model_path_str);
+
+    // Create ANE manager
+    let manager = match ANEManager::default() {
+        manager => manager,
+    };
+
+    // Test prompt
+    let test_prompt = "The quick brown fox jumps over the lazy dog. Explain why this sentence is used for testing.";
+
+    // Load model with CPU backend
+    println!("\n1️⃣ Testing CPU backend...");
+    let cpu_options = MistralCompilationOptions {
+        precision: Some("fp16".to_string()),
+        compute_units: Some("cpu_only".to_string()), // Use snake_case as expected by validation
+        enable_quantization: false,
+        context_length: Some(256),
+    };
+
+    let cpu_model_id = match manager.load_mistral_model(&model_path_str, cpu_options).await {
+        Ok(id) => id,
+        Err(e) => {
+            println!("⚠️ Failed to load model for CPU: {} - skipping", e);
+            return;
+        }
+    };
+
+    // Get CPU model and run inference
+    let options_cpu = MistralInferenceOptions {
+        backend_policy: Some(BackendPolicy::CPU),
+        max_tokens: 30, // Generate 30 tokens for meaningful decode analysis
+        sequence_length: Some(256),
+        ..Default::default()
+    };
+
+    let cpu_result = match manager.with_mistral_model(&cpu_model_id, |model| {
+        Box::pin(async move {
+            generate_text_with_metrics(model, test_prompt, &options_cpu).await
+        })
+    }).await {
+        Ok(result) => result,
+        Err(e) => {
+            println!("⚠️ CPU inference failed: {} - skipping", e);
+            let _ = manager.unload_mistral_model(&cpu_model_id).await;
+            return;
+        }
+    };
+
+    println!("   ✅ CPU inference complete");
+    println!("      TTFT: {:.2}ms", cpu_result.metrics.ttft_ms);
+    println!("      Decode avg: {:.2}ms/token", cpu_result.metrics.decode_ms_per_token);
+    println!("      Decode P50: {:.2}ms/token", cpu_result.metrics.p50_decode_ms());
+    println!("      Decode P95: {:.2}ms/token", cpu_result.metrics.p95_decode_ms());
+    println!("      Tokens generated: {}", cpu_result.metrics.tokens_generated);
+    println!("      Throughput: {:.2} tokens/sec", cpu_result.metrics.tokens_per_second());
+
+    // Unload CPU model
+    let _ = manager.unload_mistral_model(&cpu_model_id).await;
+
+    // Load model with ANE backend
+    println!("\n2️⃣ Testing ANE backend...");
+    let ane_options = MistralCompilationOptions {
+        precision: Some("fp16".to_string()),
+        compute_units: Some("cpu_and_neural_engine".to_string()), // Use snake_case as expected by validation
+        enable_quantization: false,
+        context_length: Some(256),
+    };
+
+    let ane_model_id = match manager.load_mistral_model(&model_path_str, ane_options).await {
+        Ok(id) => id,
+        Err(e) => {
+            println!("⚠️ Failed to load model for ANE: {} - skipping", e);
+            return;
+        }
+    };
+
+    // Get ANE model and run inference
+    let options_ane = MistralInferenceOptions {
+        backend_policy: Some(BackendPolicy::ANE),
+        max_tokens: 30, // Same number of tokens for fair comparison
+        sequence_length: Some(256),
+        ..Default::default()
+    };
+
+    let ane_result = match manager.with_mistral_model(&ane_model_id, |model| {
+        Box::pin(async move {
+            generate_text_with_metrics(model, test_prompt, &options_ane).await
+        })
+    }).await {
+        Ok(result) => result,
+        Err(e) => {
+            println!("⚠️ ANE inference failed: {} - skipping", e);
+            let _ = manager.unload_mistral_model(&ane_model_id).await;
+            return;
+        }
+    };
+
+    println!("   ✅ ANE inference complete");
+    println!("      TTFT: {:.2}ms", ane_result.metrics.ttft_ms);
+    println!("      Decode avg: {:.2}ms/token", ane_result.metrics.decode_ms_per_token);
+    println!("      Decode P50: {:.2}ms/token", ane_result.metrics.p50_decode_ms());
+    println!("      Decode P95: {:.2}ms/token", ane_result.metrics.p95_decode_ms());
+    println!("      Tokens generated: {}", ane_result.metrics.tokens_generated);
+    println!("      Throughput: {:.2} tokens/sec", ane_result.metrics.tokens_per_second());
+
+    // Unload ANE model
+    let _ = manager.unload_mistral_model(&ane_model_id).await;
+
+    // Compare results
+    println!("\n📊 Comparison: CPU vs ANE");
+    println!("=========================================");
+    
+    let ttft_speedup = cpu_result.metrics.ttft_ms / ane_result.metrics.ttft_ms;
+    let decode_speedup = cpu_result.metrics.decode_ms_per_token / ane_result.metrics.decode_ms_per_token;
+    let total_speedup = cpu_result.metrics.total_generation_ms / ane_result.metrics.total_generation_ms;
+
+    println!("TTFT (Prefill):");
+    println!("   CPU:  {:.2}ms", cpu_result.metrics.ttft_ms);
+    println!("   ANE:  {:.2}ms ({:.2}x {})", 
+        ane_result.metrics.ttft_ms,
+        ttft_speedup,
+        if ttft_speedup > 1.0 { "faster" } else { "slower" }
+    );
+
+    println!("\nDecode (Per-Token):");
+    println!("   CPU:  {:.2}ms/token (avg), {:.2}ms/token (P50), {:.2}ms/token (P95)",
+        cpu_result.metrics.decode_ms_per_token,
+        cpu_result.metrics.p50_decode_ms(),
+        cpu_result.metrics.p95_decode_ms()
+    );
+    println!("   ANE:  {:.2}ms/token (avg), {:.2}ms/token (P50), {:.2}ms/token (P95) ({:.2}x {})",
+        ane_result.metrics.decode_ms_per_token,
+        ane_result.metrics.p50_decode_ms(),
+        ane_result.metrics.p95_decode_ms(),
+        decode_speedup,
+        if decode_speedup > 1.0 { "faster" } else { "slower" }
+    );
+
+    println!("\nTotal Generation:");
+    println!("   CPU:  {:.2}ms ({:.2} tokens/sec)",
+        cpu_result.metrics.total_generation_ms,
+        cpu_result.metrics.tokens_per_second()
+    );
+    println!("   ANE:  {:.2}ms ({:.2} tokens/sec) ({:.2}x {})",
+        ane_result.metrics.total_generation_ms,
+        ane_result.metrics.tokens_per_second(),
+        total_speedup,
+        if total_speedup > 1.0 { "faster" } else { "slower" }
+    );
+
+    println!("\n📋 Findings:");
+    if ttft_speedup > 1.0 {
+        println!("   ✅ ANE wins on prefill (large matmuls)");
+    } else {
+        println!("   ❌ CPU wins on prefill");
+    }
+
+    if decode_speedup > 1.0 {
+        println!("   ✅ ANE wins on decode (per-token generation)");
+    } else {
+        println!("   ❌ CPU wins on decode (ANE overhead)");
+    }
+
+    if total_speedup > 1.0 {
+        println!("   ✅ ANE provides overall speedup ({:.2}x)", total_speedup);
+    } else {
+        println!("   ❌ CPU is better overall ({:.2}x)", 1.0 / total_speedup);
+    }
+
+    // Recommendation
+    println!("\n💡 Recommendation:");
+    if ttft_speedup > 1.0 && decode_speedup < 1.0 {
+        println!("   Hybrid strategy: Use ANE for prefill, CPU for decode");
+    } else if total_speedup > 1.0 {
+        println!("   Use ANE for full pipeline");
+    } else {
+        println!("   Use CPU for this workload");
+    }
+
+    println!("\n✅ Prefill/decode analysis complete\n");
 }

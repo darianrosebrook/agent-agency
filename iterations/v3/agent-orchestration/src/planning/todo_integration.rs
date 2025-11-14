@@ -6,6 +6,7 @@
 //! @author @darianrosebrook
 
 use crate::planning::DatabaseOperations;
+use crate::planning::data_infrastructure_types::models::ExecutionPlan as DbExecutionPlan;
 use agent_agency_contracts::planning_io::ExecutionPlan;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
@@ -81,42 +82,30 @@ impl TodoIntegration {
 
     /// Initialize TODO tracking for a plan
     pub async fn initialize_plan_todos(&mut self, plan_id: Uuid, _title: &str) -> Result<()> {
-        // TODO: Implement comprehensive template selection based on plan characteristics
-        //       Currently uses default template since only plan_id and title are available; should implement comprehensive selection that analyzes plan characteristics to determine appropriate template for accurate TODO tracking initialization.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Template selection analyzes plan characteristics
-        // - Appropriate template is selected based on plan type
-        // - Template selection handles missing characteristics gracefully
-        // - Selection logic is extensible for new plan types
-        //
-        // DEPENDENCIES:
-        // - Plan characteristic analysis (Required)
-        // - Template selection logic (Required)
-        // - Template registry system (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (TODO integration functionality)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Template selection and plan analysis expertise
-        let template_name = "standard-feature-template".to_string();
+        // Get plan from database to analyze characteristics
+        let plan = match self.db_ops.get_execution_plan(plan_id).await {
+            Ok(Some(plan)) => plan,
+            Ok(None) => {
+                // Plan not found, use default template
+                tracing::warn!("Plan {} not found, using default template", plan_id);
+                return self.initialize_with_default_template(plan_id).await;
+            }
+            Err(e) => {
+                // Database error, use default template
+                tracing::warn!("Failed to get plan {}: {}, using default template", plan_id, e);
+                return self.initialize_with_default_template(plan_id).await;
+            }
+        };
+
+        // Select template based on plan characteristics
+        let template_name = match self.select_template_for_plan(&plan) {
+            Ok(template) => template,
+            Err(e) => {
+                // Template selection failed, use default template
+                tracing::warn!("Template selection failed for plan {}: {}, using default template", plan_id, e);
+                "standard-feature-template".to_string()
+            }
+        };
 
         // Create TODO instance (requires mutable access to todo_system)
         let todo_instance_id = {
@@ -287,19 +276,85 @@ impl TodoIntegration {
     }
 
     /// Select appropriate template based on plan characteristics
-    #[allow(dead_code)] // Reserved for future use
-    fn select_template_for_plan(&self, plan: &ExecutionPlan) -> Result<String> {
-        // Simple template selection logic
-        match plan
-            .contract_plan
-            .quality_gates
-            .as_ref()
-            .map(|qg| qg.requires_manual_review)
-            .unwrap_or(false)
-        {
-            true => Ok("critical-feature-template".to_string()),
-            false => Ok("standard-feature-template".to_string()),
+    fn select_template_for_plan(&self, plan: &DbExecutionPlan) -> Result<String> {
+        use agent_agency_contracts::planning_io::QualityGates;
+        
+        // Analyze plan characteristics for comprehensive template selection
+        // Parse JSON fields from database ExecutionPlan
+        
+        // 1. Check risk tier from metadata (highest priority)
+        // Risk tier is stored in metadata, not in quality_gates
+        if let Some(risk_tier) = plan.metadata.get("risk_tier")
+            .and_then(|v| v.as_str())
+            .or_else(|| {
+                // Try to extract from change_budget JSON (sometimes stored there)
+                plan.change_budget.get("risk_tier")
+                    .and_then(|v| v.as_str())
+            }) {
+            match risk_tier {
+                "Tier1" | "tier1" | "1" => return Ok("critical-feature-template".to_string()),
+                "Tier2" | "tier2" | "2" => return Ok("standard-feature-template".to_string()),
+                "Tier3" | "tier3" | "3" => return Ok("low-risk-feature-template".to_string()),
+                _ => {}
+            }
         }
+        
+        // 2. Check quality gates for manual review requirement
+        if let Ok(quality_gates) = serde_json::from_value::<QualityGates>(plan.quality_gates.clone()) {
+            if quality_gates.requires_manual_review {
+                return Ok("critical-feature-template".to_string());
+            }
+        }
+        
+        // 3. Check plan complexity (number of milestones)
+        let milestone_count = plan.milestones
+            .as_array()
+            .map(|arr| arr.len())
+            .unwrap_or(0);
+        if milestone_count > 10 {
+            return Ok("complex-feature-template".to_string());
+        }
+        if milestone_count > 5 {
+            return Ok("standard-feature-template".to_string());
+        }
+        
+        // 4. Check for data migration or infrastructure changes from metadata
+        if let Some(blast_radius) = plan.metadata.get("blast_radius") {
+            if let Some(data_migration) = blast_radius.get("data_migration")
+                .and_then(|v| v.as_bool()) {
+                if data_migration {
+                    return Ok("data-migration-template".to_string());
+                }
+            }
+            
+            // 5. Check for external API dependencies
+            if let Some(external_apis) = blast_radius.get("external_apis")
+                .and_then(|v| v.as_array()) {
+                if !external_apis.is_empty() {
+                    return Ok("integration-feature-template".to_string());
+                }
+            }
+        }
+        
+        // 6. Default to standard template
+        Ok("standard-feature-template".to_string())
+    }
+    
+    /// Initialize TODO tracking with default template (fallback)
+    async fn initialize_with_default_template(&mut self, plan_id: Uuid) -> Result<()> {
+        let template_name = "standard-feature-template".to_string();
+        
+        let todo_instance_id = {
+            let mut system = self.todo_system.lock().await;
+            system.create_instance(
+                &template_name,
+                plan_id,
+                None,
+            )?
+        };
+        
+        self.plan_todos.insert(plan_id.to_string(), todo_instance_id);
+        Ok(())
     }
 
     /// Map milestone ID to TODO step ID

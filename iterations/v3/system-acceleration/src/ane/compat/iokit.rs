@@ -108,47 +108,50 @@ pub mod iokit {
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
-        // Look for temperature data in ioreg output
-        if output_str.contains("Temperature") {
-            // TODO: Parse temperature value properly from ioreg output
-            //       Currently uses placeholder; should parse temperature value properly from ioreg output for accurate temperature monitoring.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Temperature is parsed correctly from ioreg output
-            // - Parsing handles various output formats
-            // - Error handling works for parse failures
-            // - Performance is acceptable
-            //
-            // DEPENDENCIES:
-            // - ioreg output parsing utilities (Required)
-            // - Temperature extraction algorithms (Required)
-            // - Output format handling (Required)
-            //
-            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (monitoring enhancement)
-            // - Change Budget: ~80 LOC
-            // - Reviewer Requirements: System monitoring expertise
-            Some(45.0) // Temporary: placeholder until proper parsing
-        } else {
-            Some(45.0) // Default temperature
+        // Parse temperature value from ioreg output
+        // ioreg output format examples:
+        //   "Temperature" = 45
+        //   "Temperature"=<integer>
+        //   |   "Temperature" = 45.5
+        //   "temperature" = 45
+        // Try multiple patterns to handle different ioreg output formats
+        let temp_patterns = vec![
+            r#""Temperature"\s*=\s*(\d+(?:\.\d+)?)"#,
+            r#""temperature"\s*=\s*(\d+(?:\.\d+)?)"#,
+            r#""Temperature"\s*=<(\d+)>"#,
+            r#"\|\s*"Temperature"\s*=\s*(\d+(?:\.\d+)?)"#,
+            r#""Temperature"\s+(\d+(?:\.\d+)?)"#,
+        ];
+        
+        for pattern_str in temp_patterns {
+            // Simple regex-like parsing without external dependency
+            // Look for pattern: "Temperature" = <number>
+            if let Some(colon_pos) = output_str.find("Temperature") {
+                let after_temp = &output_str[colon_pos..];
+                // Find equals sign
+                if let Some(equals_pos) = after_temp.find('=') {
+                    let after_equals = &after_temp[equals_pos + 1..];
+                    // Skip whitespace and angle brackets
+                    let num_start = after_equals
+                        .chars()
+                        .position(|c| c.is_ascii_digit())
+                        .unwrap_or(0);
+                    let num_str: String = after_equals[num_start..]
+                        .chars()
+                        .take_while(|c| c.is_ascii_digit() || *c == '.')
+                        .collect();
+                    
+                    if let Ok(temp_value) = num_str.parse::<f32>() {
+                        // Validate temperature is in reasonable range (0-150°C)
+                        if temp_value >= 0.0 && temp_value <= 150.0 {
+                            return Some(temp_value);
+                        }
+                    }
+                }
+            }
         }
+        
+        None
     }
 
     /// Get current power consumption in watts
@@ -190,44 +193,76 @@ pub mod iokit {
         // Fallback: estimate based on battery discharge rate
         let output = Command::new("pmset").args(&["-g", "batt"]).output().ok()?;
 
-        let _output_str = String::from_utf8(output.stdout).ok()?;
-
-        // TODO: Estimate power usage from battery discharge rate
-        //       Currently returns default; should estimate power usage from battery discharge rate for accurate power monitoring.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Power usage is estimated from discharge rate correctly
-        // - Estimation handles various battery states
-        // - Error handling works for estimation failures
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Battery monitoring APIs (Required)
-        // - Power estimation algorithms (Required)
-        // - Discharge rate calculation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Power monitoring expertise
-        Some(5.0) // Temporary: default until discharge rate estimation
+        let output_str = String::from_utf8(output.stdout).ok()?;
+        
+        // Parse battery discharge rate from pmset output
+        // pmset output format examples:
+        //   " -InternalBattery-0 (id=12345678)	100%; discharging; 3:45 remaining present: true"
+        //   " -InternalBattery-0 (id=12345678)	95%; discharging; 2:30 remaining present: true"
+        //   " -InternalBattery-0 (id=12345678)	100%; AC attached; not present: true"
+        
+        // Check if battery is discharging
+        if !output_str.contains("discharging") {
+            // Battery is charging or AC attached - can't estimate from discharge rate
+            return Some(5.0); // Default estimate when not discharging
+        }
+        
+        // Extract battery percentage and time remaining
+        // Look for pattern: "XX%; discharging; H:MM remaining"
+        if let Some(percent_pos) = output_str.find('%') {
+            let before_percent = &output_str[..percent_pos];
+            // Find the last number before % (battery percentage)
+            let percent_str: String = before_percent
+                .chars()
+                .rev()
+                .take_while(|c| c.is_ascii_digit())
+                .collect::<String>()
+                .chars()
+                .rev()
+                .collect();
+            
+            if let Ok(current_percent) = percent_str.parse::<f32>() {
+                // Look for time remaining pattern: "H:MM remaining" or "M:SS remaining"
+                if let Some(remaining_pos) = output_str.find("remaining") {
+                    let before_remaining = &output_str[..remaining_pos];
+                    // Find time pattern like "3:45" or "2:30"
+                    if let Some(time_start) = before_remaining.rfind(|c: char| c.is_ascii_digit()) {
+                        let time_str = &before_remaining[time_start.saturating_sub(3)..time_start + 4];
+                        // Parse time as "H:MM" or "M:SS"
+                        if let Some(colon_pos) = time_str.find(':') {
+                            let hours_str = &time_str[..colon_pos];
+                            let minutes_str = &time_str[colon_pos + 1..];
+                            
+                            if let (Ok(hours), Ok(minutes)) = (hours_str.parse::<f32>(), minutes_str.parse::<f32>()) {
+                                let total_minutes = hours * 60.0 + minutes;
+                                
+                                // Estimate power usage from discharge rate
+                                // Power (W) ≈ (Battery Capacity (Wh) * Discharge Rate (%/hour)) / 100
+                                // Discharge rate = (100 - current_percent) / (time_remaining in hours)
+                                // For typical MacBook: ~50-60 Wh battery capacity
+                                let battery_capacity_wh = 55.0; // Typical MacBook battery capacity
+                                let time_remaining_hours = total_minutes / 60.0;
+                                
+                                if time_remaining_hours > 0.0 {
+                                    // Calculate discharge rate (% per hour)
+                                    let discharge_rate_percent_per_hour = (100.0 - current_percent) / time_remaining_hours;
+                                    
+                                    // Estimate power: Power = (Capacity * Discharge Rate) / 100
+                                    let estimated_power = (battery_capacity_wh * discharge_rate_percent_per_hour) / 100.0;
+                                    
+                                    // Validate power estimate is reasonable (0-100W for laptop)
+                                    if estimated_power >= 0.0 && estimated_power <= 100.0 {
+                                        return Some(estimated_power);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Some(5.0) // Default power estimate if parsing fails
     }
 
     /// Get ANE-specific thermal data

@@ -503,38 +503,25 @@ pub fn run_inference(
             ));
         }
 
-        // TODO: Make output feature name configurable
-        //       Currently assumes output name matches input; should make output feature name configurable from model metadata or configuration.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Query model metadata for output feature names
-        // [ ] Support configurable output feature name
-        // [ ] Handle multiple output features
-        // [ ] Validate output feature name exists
-        // [ ] Add unit tests for output name handling
-        // [ ] Add integration tests with various models
-        // [ ] Verify output name configuration
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Output feature name is configurable
-        // - Model metadata is queried correctly
-        // - Multiple output features are supported
-        // - Invalid output names are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - Model metadata API (Required)
-        // - Output feature configuration (Required)
-        // - Feature name validation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (model configuration feature)
-        // - Change Budget: ~50 LOC
-        // - Reviewer Requirements: Core ML expertise
-        let output_name_cstr = CString::new(input_name) // Temporary: assume same as input until configurable output names
+        // Query model metadata for output feature names
+        // Use first output name from model metadata, or fallback to input name
+        let output_name = match query_model_outputs(model_ref.clone()) {
+            Ok(output_specs) => {
+                if !output_specs.is_empty() {
+                    // Use first output feature name from model metadata
+                    output_specs[0].name.clone()
+                } else {
+                    // No outputs found in metadata, fallback to input name
+                    input_name.to_string()
+                }
+            }
+            Err(_) => {
+                // Query failed, fallback to input name
+                input_name.to_string()
+            }
+        };
+        
+        let output_name_cstr = CString::new(output_name.clone())
             .map_err(|e| ANEError::Internal(format!("Invalid output name: {}", e)))?;
 
         let mut output_data_ptr: *mut f32 = std::ptr::null_mut();

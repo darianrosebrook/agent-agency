@@ -72,3 +72,4 @@ coreml_probe = []  # Feature flag for CoreML probe functionality
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.0"
+sysinfo = "0.30"
