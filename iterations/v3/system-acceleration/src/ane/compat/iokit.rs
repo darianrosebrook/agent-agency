@@ -123,7 +123,7 @@ pub mod iokit {
             r#""Temperature"\s+(\d+(?:\.\d+)?)"#,
         ];
         
-        for pattern_str in temp_patterns {
+        for _pattern_str in temp_patterns {
             // Simple regex-like parsing without external dependency
             // Look for pattern: "Temperature" = <number>
             if let Some(colon_pos) = output_str.find("Temperature") {
@@ -511,7 +511,6 @@ pub mod iokit {
     /// 2. Power-based estimation from ANE power consumption
     /// 3. Activity-based inference from system metrics
     pub fn ane_utilization_percent() -> Option<f32> {
-        use std::process::Command;
         use std::time::{Duration, Instant};
         use tracing::{debug, warn};
 

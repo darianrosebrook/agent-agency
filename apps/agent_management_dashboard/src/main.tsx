@@ -82,6 +82,19 @@ function Providers({ children }: { children: React.ReactNode }) {
       console.warn("Failed to deduplicate notifications:", error);
     }
 
+    // Load cache setting from API
+    try {
+      import("./lib/utils/cacheSettings").then(
+        ({ loadCacheSettingFromApi }) => {
+          loadCacheSettingFromApi().catch((error) => {
+            console.debug("Failed to load cache setting from API:", error);
+          });
+        }
+      );
+    } catch (error) {
+      console.warn("Failed to initialize cache settings:", error);
+    }
+
     setMounted(true);
   }, []);
 

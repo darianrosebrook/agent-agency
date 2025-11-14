@@ -46,11 +46,10 @@ export function TaskCompletionGauge({
     completed: "#e0e7ff", // indigo-100 - light indigo for completed tasks
   };
 
-  // Calculate completion rate improvement (simplified - using completion_rate from API)
-  // For now, we'll use the completion_rate directly as a positive indicator
+  // Calculate completion rate from available stats (completed / total * 100)
   // TODO: Implement month-over-month comparison when historical data endpoint is available
-  const completionRate = taskStats?.completion_rate 
-    ? Math.round(taskStats.completion_rate * 100) 
+  const completionRate = taskStats && taskStats.total > 0
+    ? Math.round((taskStats.completed / taskStats.total) * 100)
     : 0;
 
   // Task distribution from API stats

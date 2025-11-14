@@ -186,9 +186,9 @@ impl Modify for SecurityAddon {
 
 /// Create Swagger UI router for interactive API documentation
 pub fn create_swagger_ui() -> SwaggerUi {
-    SwaggerUi::new("/swagger-ui/{_:.*}")
+    // Use a unique path to avoid conflicts with other routes
+    SwaggerUi::new("/swagger-ui")
         .url("/api-docs/openapi.json", ApiDoc::openapi())
-        .config(utoipa_swagger_ui::Config::new(["/api-docs/openapi.json"]))
 }
 
 /// Handler to serve OpenAPI JSON spec

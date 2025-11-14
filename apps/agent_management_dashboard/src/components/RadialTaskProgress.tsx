@@ -278,7 +278,7 @@ export function RadialTaskProgress({
                       ? "Loading task statistics..." 
                       : error 
                       ? `Error: ${error.message}`
-                      : taskStats
+                      : taskStats && typeof taskStats.total === 'number'
                       ? `Total: ${taskStats.total} tasks`
                       : "No data available"}
                   </p>

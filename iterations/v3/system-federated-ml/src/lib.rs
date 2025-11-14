@@ -22,6 +22,7 @@ pub mod fact_verification;
 pub mod multi_modal_verification;
 pub mod parallel_integration;
 pub mod policy_enforcement;
+pub mod protocol;
 pub mod schema_registry;
 pub mod source_validation;
 pub mod tool_chain_planner;
@@ -31,6 +32,7 @@ pub mod tool_execution;
 pub mod tool_registry;
 pub mod validation;
 pub mod model_updates;
+pub mod security;
 
 pub use arbiter_pipeline::{
     ArbiterPipelineOptimizer, DecisionInput, DecisionPipelineConfig, DecisionResult,

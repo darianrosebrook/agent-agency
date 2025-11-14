@@ -34,7 +34,7 @@ export function Testing() {
       setError(null);
       try {
         const data = await listTestScenarios();
-        setScenarios(data);
+        setScenarios(Array.isArray(data) ? data : (data?.scenarios || []));
       } catch (err) {
         console.error("Failed to load test scenarios:", err);
         // Provide more detailed error message

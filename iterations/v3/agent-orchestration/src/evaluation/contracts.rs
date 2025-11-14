@@ -6,6 +6,7 @@
 use crate::audit_trail::AuditEvent;
 use crate::chain_of_thought::{CoordinationEvent, DecisionPoint};
 use crate::evaluation::framework::{AgentEvaluation, EvaluationReport, EvaluationScenario};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Scenario trait for test scenarios

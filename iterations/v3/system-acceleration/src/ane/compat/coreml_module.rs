@@ -437,7 +437,7 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
 pub fn run_inference_with_handle_multi_input(
     model_handle_ptr: u64,
     input_features: &HashMap<String, MLFeatureValue>,
-    output_name: &str,
+    _output_name: &str,
 ) -> Result<Tensor> {
     if !coreml_runtime_available() {
         return Err(ANEError::Internal(

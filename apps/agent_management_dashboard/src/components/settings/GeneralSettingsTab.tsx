@@ -7,8 +7,6 @@
  * @author @darianrosebrook
  */
 
-import { useState, useEffect } from "react";
-import { Label } from "@/components/primitives/label";
 import {
   Card,
   CardContent,
@@ -16,11 +14,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/primitives/card";
+import { Label } from "@/components/primitives/label";
+import { Switch } from "@/components/primitives/switch";
 import {
+  createUserSetting,
   getUserSettings,
   updateUserSetting,
-  createUserSetting,
 } from "@/lib/api/settings";
+import { isCacheEnabled, setCacheEnabled } from "@/lib/utils/cacheSettings";
+import { useEffect, useState } from "react";
 import styles from "./GeneralSettingsTab.module.scss";
 
 type SettingValue = string | number | boolean | null | undefined;
@@ -28,9 +30,12 @@ type SettingValue = string | number | boolean | null | undefined;
 export function GeneralSettingsTab() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Record<string, SettingValue>>({});
+  const [cacheEnabled, setCacheEnabledState] = useState(true);
 
   useEffect(() => {
     loadSettings();
+    // Load cache setting from localStorage (immediate) and API (async)
+    setCacheEnabledState(isCacheEnabled());
   }, []);
 
   const loadSettings = async () => {
@@ -38,12 +43,31 @@ export function GeneralSettingsTab() {
       setLoading(true);
       const userSettings = await getUserSettings();
       const settingsMap: Record<string, SettingValue> = {};
-      userSettings.forEach((setting) => {
-        settingsMap[setting.setting_key] = setting.setting_value;
-      });
+
+      // Handle both array and object responses
+      if (Array.isArray(userSettings)) {
+        userSettings.forEach((setting) => {
+          settingsMap[setting.setting_key] = setting.setting_value;
+        });
+      } else if (userSettings && typeof userSettings === "object") {
+        // If it's an object, use it directly
+        Object.assign(settingsMap, userSettings);
+      }
+
       setSettings(settingsMap);
+
+      // Update cache enabled state from settings
+      if (settingsMap.cache_enabled !== undefined) {
+        const enabled =
+          settingsMap.cache_enabled === true ||
+          settingsMap.cache_enabled === "true";
+        setCacheEnabledState(enabled);
+      }
     } catch (error: unknown) {
       console.error("Failed to load settings:", error);
+      // On error, still allow UI to function with localStorage cache setting
+      const cachedEnabled = isCacheEnabled();
+      setCacheEnabledState(cachedEnabled);
     } finally {
       setLoading(false);
     }
@@ -148,6 +172,56 @@ export function GeneralSettingsTab() {
               <option value="MM/DD/YYYY">MM/DD/YYYY</option>
               <option value="DD/MM/YYYY">DD/MM/YYYY</option>
             </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Settings</CardTitle>
+          <CardDescription>
+            Configure performance and caching options
+          </CardDescription>
+        </CardHeader>
+        <CardContent className={styles.form}>
+          <div className={styles.formGroup}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <Label htmlFor="cacheEnabled">Enable Response Caching</Label>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--muted-foreground)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Cache API responses to reduce server load and improve
+                  performance. When disabled, all requests will bypass cache and
+                  fetch fresh data.
+                </p>
+              </div>
+              <Switch
+                id="cacheEnabled"
+                checked={cacheEnabled}
+                onCheckedChange={async (checked) => {
+                  try {
+                    await setCacheEnabled(checked, true);
+                    setCacheEnabledState(checked);
+                    // Also save to settings API
+                    await saveSetting("cache_enabled", checked, "boolean");
+                  } catch (error: unknown) {
+                    console.error("Failed to update cache setting:", error);
+                    alert("Failed to update cache setting");
+                  }
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

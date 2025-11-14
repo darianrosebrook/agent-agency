@@ -6,7 +6,6 @@
 //!
 //! @author @darianrosebrook
 
-use crate::api::api_errors::ErrorResponse;
 use crate::api::api_types::{LinkProvenanceRequest, SaveQueryRequest, WaiverApprovalRequest, WaiverRequest};
 use crate::api::handlers::auth_handlers::{LoginRequest, LoginResponse, RefreshTokenRequest, UserResponse};
 use crate::api::types::{TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse};

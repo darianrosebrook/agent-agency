@@ -313,6 +313,9 @@ impl CoreMLEngine {
             top_p: Some(0.9),
             timeout_ms: 30000, // 30 second timeout
             use_kv_cache: true,
+            sequence_length: None,  // Will use policy recommendation
+            task_type: None,        // Will auto-detect from input
+            backend_policy: None,   // Will use policy recommendation (ANE by default)
         };
 
         // Run constitutional deliberation

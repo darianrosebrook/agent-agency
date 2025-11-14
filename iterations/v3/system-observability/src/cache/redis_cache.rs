@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 /// Redis cache backend
 pub struct RedisCache {
     client: Client,
-    connection_pool: Arc<Mutex<Vec<redis::aio::Connection>>>,
+    connection_pool: Arc<Mutex<Vec<redis::aio::MultiplexedConnection>>>,
     pool_size: usize,
     default_ttl: Duration,
     circuit_breaker: RedisCircuitBreaker,
@@ -33,6 +33,7 @@ impl RedisCache {
         let conn_info = ConnectionInfo {
             addr,
             redis: redis::RedisConnectionInfo {
+                protocol: redis::ProtocolVersion::RESP2,
                 db: database as i64,
                 username: None,
                 password: password.map(|s| s.to_string()),
@@ -44,7 +45,7 @@ impl RedisCache {
 
         // Validate connection by attempting to connect
         // This ensures invalid hosts/ports fail during initialization
-        client.get_async_connection().await.map_err(|e| {
+        client.get_multiplexed_async_connection().await.map_err(|e| {
             RedisCacheError::ConnectionError(format!("Failed to connect to Redis: {}", e))
         })?;
 
@@ -52,7 +53,7 @@ impl RedisCache {
         let mut pool = Vec::new();
         for _ in 0..pool_size.min(5) {
             // Limit initial connections
-            match client.get_async_connection().await {
+            match client.get_multiplexed_async_connection().await {
                 Ok(conn) => pool.push(conn),
                 Err(e) => {
                     tracing::warn!("Failed to establish Redis connection: {}", e);
@@ -78,7 +79,7 @@ impl RedisCache {
     }
 
     /// Get a connection from the pool
-    async fn get_connection(&self) -> Result<redis::aio::Connection, RedisCacheError> {
+    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, RedisCacheError> {
         if self.circuit_breaker.is_open() {
             return Err(RedisCacheError::CircuitBreakerOpen);
         }
@@ -90,7 +91,7 @@ impl RedisCache {
         }
 
         // Create new connection if pool is empty
-        match self.client.get_async_connection().await {
+        match self.client.get_multiplexed_async_connection().await {
             Ok(conn) => Ok(conn),
             Err(e) => {
                 self.circuit_breaker.record_failure().await;
@@ -100,7 +101,7 @@ impl RedisCache {
     }
 
     /// Return a connection to the pool
-    async fn return_connection(&self, conn: redis::aio::Connection) {
+    async fn return_connection(&self, conn: redis::aio::MultiplexedConnection) {
         let mut pool = self.connection_pool.lock().await;
         if pool.len() < self.pool_size {
             pool.push(conn);

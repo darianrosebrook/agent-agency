@@ -9,23 +9,24 @@
  * @author @darianrosebrook
  */
 
+import { z } from "zod";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { z } from "zod";
-import { env } from "../utils/env";
+import { parseApiError } from "../errors";
 import {
-  MessageSchema,
-  ChatSessionResponseSchema,
-  ChatSessionsResponseSchema,
   ChatMessageResponseSchema,
   ChatMessagesResponseSchema,
+  ChatSessionResponseSchema,
+  ChatSessionsResponseSchema,
   CreateChatSessionRequestSchema,
+  MessageSchema,
   type ChatData,
   type Message,
 } from "../schemas/chat";
-import { toastError, toastSuccess, toastLoading } from "../utils/toast";
-import { parseApiError } from "../errors";
 import { apiGet, apiPost } from "../utils/api";
+import { isCacheEnabled } from "../utils/cacheSettings";
+import { env } from "../utils/env";
+import { toastError, toastLoading, toastSuccess } from "../utils/toast";
 
 interface ChatState {
   // State (cached from database)
@@ -34,7 +35,7 @@ interface ChatState {
     lastFetched: number;
     ttl: number; // Time-to-live in milliseconds (30 seconds for chats)
   };
-  
+
   // UI State
   currentChatId: string | null;
   isLoading: boolean;
@@ -63,7 +64,7 @@ interface ChatState {
     sessionId: string,
     message: Omit<Message, "id" | "timestamp">
   ) => Promise<void>;
-  
+
   // Cache management
   refreshChats: () => Promise<void>; // Force refresh from database
   isCacheStale: () => boolean; // Check if cache needs refresh
@@ -135,603 +136,691 @@ export const useChatStore = create<ChatState>()(
   env.DEV
     ? devtools(
         (set, get) => ({
-      // Initial state
-      chats: [],
-      currentChatId: null,
-      isLoading: false,
-      error: null,
+          // Initial state
+          chats: [],
+          cacheMetadata: {
+            lastFetched: 0,
+            ttl: 30000, // 30 seconds for chat sessions
+          },
+          currentChatId: null,
+          isLoading: false,
+          error: null,
 
-      // Computed getters
-      getCurrentChat: () => {
-        const { currentChatId, chats } = get();
-        if (!currentChatId) return null;
-        return chats.find((chat) => chat.id === currentChatId) ?? null;
-      },
+          // Computed getters
+          getCurrentChat: () => {
+            const { currentChatId, chats } = get();
+            if (!currentChatId) return null;
+            return chats.find((chat) => chat.id === currentChatId) ?? null;
+          },
 
-      getChatById: (chatId: string) => {
-        return get().chats.find((chat) => chat.id === chatId);
-      },
+          getChatById: (chatId: string) => {
+            return get().chats.find((chat) => chat.id === chatId);
+          },
 
-      // Basic actions
-      setChats: (chats) => set({ chats }),
-      setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
+          // Basic actions
+          setChats: (chats) => set({ chats }),
+          setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
 
-      createNewChat: () => {
-        const newChatId = `chat-${Date.now()}`;
-        const newChat: ChatData = {
-          id: newChatId,
-          title: generateChatTitle(),
-          messages: [],
-          createdAt: new Date(),
-        };
+          createNewChat: () => {
+            const newChatId = `chat-${Date.now()}`;
+            const newChat: ChatData = {
+              id: newChatId,
+              title: generateChatTitle(),
+              messages: [],
+              createdAt: new Date(),
+            };
 
-        set((state) => ({
-          chats: [newChat, ...state.chats],
-          currentChatId: newChatId,
-        }));
+            set((state) => ({
+              chats: [newChat, ...state.chats],
+              currentChatId: newChatId,
+            }));
 
-        return newChatId;
-      },
+            return newChatId;
+          },
 
-      switchToChat: (chatId: string) => {
-        set({ currentChatId: chatId });
-      },
+          switchToChat: (chatId: string) => {
+            set({ currentChatId: chatId });
+          },
 
-      addMessageToCurrentChat: (message: Message) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
+          addMessageToCurrentChat: (message: Message) => {
+            const { currentChatId } = get();
+            if (!currentChatId) return;
 
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? { ...chat, messages: [...chat.messages, message] }
-              : chat
-          ),
-        }));
-      },
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === currentChatId
+                  ? { ...chat, messages: [...chat.messages, message] }
+                  : chat
+              ),
+            }));
+          },
 
-      updateMessageInCurrentChat: (
-        messageId: string,
-        updates: Partial<Message>
-      ) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
+          updateMessageInCurrentChat: (
+            messageId: string,
+            updates: Partial<Message>
+          ) => {
+            const { currentChatId } = get();
+            if (!currentChatId) return;
 
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: chat.messages.map((msg) =>
-                    msg.id === messageId ? { ...msg, ...updates } : msg
-                  ),
-                }
-              : chat
-          ),
-        }));
-      },
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === currentChatId
+                  ? {
+                      ...chat,
+                      messages: chat.messages.map((msg) =>
+                        msg.id === messageId ? { ...msg, ...updates } : msg
+                      ),
+                    }
+                  : chat
+              ),
+            }));
+          },
 
-      // API actions with Zod validation
-      fetchChatSessions: async () => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading chat sessions...");
+          // Cache management
+          isCacheStale: () => {
+            const { cacheMetadata } = get();
+            return Date.now() - cacheMetadata.lastFetched > cacheMetadata.ttl;
+          },
 
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiGet<unknown>(`${apiUrl}/api/v1/chat/sessions`, {
-            retry: { maxAttempts: 3, initialDelay: 1000 },
-          });
+          refreshChats: async () => {
+            // Force refresh from database
+            await get().fetchChatSessions(true);
+          },
 
-          const validatedSessions = validateApiResponse(
-            ChatSessionsResponseSchema,
-            data,
-            "fetchChatSessions"
-          );
+          // API actions with Zod validation
+          fetchChatSessions: async (forceRefresh = false) => {
+            const { chats, isCacheStale } = get();
 
-          // Transform API response to ChatData format
-          const chats: ChatData[] = validatedSessions.map((session) => ({
-            id: session.id,
-            title: session.title,
-            messages: [],
-            createdAt: session.created_at,
-            groupId: undefined,
-          }));
-
-          set({ chats, isLoading: false });
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      createChatSession: async (request) => {
-        // Validate request
-        const validatedRequest = CreateChatSessionRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/chat/sessions`,
-            validatedRequest
-          );
-
-          const validatedSession = validateApiResponse(
-            ChatSessionResponseSchema,
-            data,
-            "createChatSession"
-          );
-
-          // Transform to ChatData format
-          const newChat: ChatData = {
-            id: validatedSession.id,
-            title: validatedSession.title,
-            messages: [],
-            createdAt: validatedSession.created_at,
-          };
-
-          set((state) => ({
-            chats: [newChat, ...state.chats],
-            currentChatId: validatedSession.id,
-            isLoading: false,
-          }));
-
-          toastSuccess("Chat session created");
-          return validatedSession.id;
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      fetchChatMessages: async (sessionId: string) => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading messages...");
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiGet<unknown>(
-            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
-            { retry: { maxAttempts: 3, initialDelay: 1000 } }
-          );
-
-          const validatedMessages = validateApiResponse(
-            ChatMessagesResponseSchema,
-            data,
-            "fetchChatMessages"
-          );
-
-          // Transform API messages to Message format
-          const messages: Message[] = validatedMessages.map((msg) =>
-            MessageSchema.parse({
-              id: msg.id,
-              role: msg.role as "user" | "assistant",
-              content: msg.content,
-              timestamp: msg.timestamp,
-            })
-          );
-
-          // Update chat with messages
-          set((state) => ({
-            chats: state.chats.map((chat) =>
-              chat.id === sessionId ? { ...chat, messages } : chat
-            ),
-            isLoading: false,
-          }));
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      addMessage: async (
-        sessionId: string,
-        message: Omit<Message, "id" | "timestamp">
-      ) => {
-        // Optimistic update
-        const optimisticMessage: Message = {
-          ...message,
-          id: `temp-${Date.now()}`,
-          timestamp: new Date(),
-        };
-        get().optimisticAddMessage(optimisticMessage);
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
-            {
-              role: message.role,
-              content: message.content,
-              contextFiles: message.contextFiles,
+            // Check if cache is enabled and use cache if fresh and not forcing refresh
+            if (
+              isCacheEnabled() &&
+              !forceRefresh &&
+              chats.length > 0 &&
+              !isCacheStale()
+            ) {
+              return; // Use cached data
             }
-          );
 
-          const validatedMessage = validateApiResponse(
-            ChatMessageResponseSchema,
-            data,
-            "addMessage"
-          );
+            set({ isLoading: true, error: null });
+            const loadingToast = toastLoading("Loading chat sessions...");
 
-          // Replace optimistic message with validated one
-          const finalMessage: Message = MessageSchema.parse({
-            id: validatedMessage.id,
-            role: validatedMessage.role as "user" | "assistant",
-            content: validatedMessage.content,
-            timestamp: validatedMessage.timestamp,
-            isLoading: message.isLoading,
-            tasks: message.tasks,
-            contextFiles: message.contextFiles,
-          });
-
-          set((state) => ({
-            chats: state.chats.map((chat) =>
-              chat.id === sessionId
-                ? {
-                    ...chat,
-                    messages: chat.messages.map((msg) =>
-                      msg.id === optimisticMessage.id ? finalMessage : msg
-                    ),
-                  }
-                : chat
-            ),
-          }));
-        } catch (error) {
-          // Rollback optimistic update
-          get().rollbackOptimisticUpdate(optimisticMessage.id);
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      // Optimistic updates
-      optimisticAddMessage: (message: Message) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
-
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? { ...chat, messages: [...chat.messages, message] }
-              : chat
-          ),
-        }));
-      },
-
-      rollbackOptimisticUpdate: (messageId: string) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
-
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: chat.messages.filter((msg) => msg.id !== messageId),
+            try {
+              const apiUrl = env.API_URL;
+              const data = await apiGet<unknown>(
+                `${apiUrl}/api/v1/chat/sessions`,
+                {
+                  retry: { maxAttempts: 3, initialDelay: 1000 },
                 }
-              : chat
-          ),
-        }));
-      },
+              );
 
-      // Error handling
-      setError: (error) => set({ error }),
-      clearError: () => set({ error: null }),
-    }),
-    { name: "ChatStore" }
+              const validatedSessions = validateApiResponse(
+                ChatSessionsResponseSchema,
+                data,
+                "fetchChatSessions"
+              );
+
+              // Transform API response to ChatData format
+              const chats: ChatData[] = validatedSessions.map((session) => ({
+                id: session.id,
+                title: session.title,
+                messages: [],
+                createdAt: session.created_at,
+                groupId: undefined,
+              }));
+
+              // Update cache metadata
+              set({
+                chats,
+                isLoading: false,
+                cacheMetadata: {
+                  lastFetched: Date.now(),
+                  ttl: 30000, // 30 seconds
+                },
+              });
+              loadingToast();
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              loadingToast();
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          createChatSession: async (request) => {
+            // Validate request
+            const validatedRequest =
+              CreateChatSessionRequestSchema.parse(request);
+
+            set({ isLoading: true, error: null });
+
+            try {
+              const apiUrl = env.API_URL;
+              const data = await apiPost<unknown>(
+                `${apiUrl}/api/v1/chat/sessions`,
+                validatedRequest
+              );
+
+              const validatedSession = validateApiResponse(
+                ChatSessionResponseSchema,
+                data,
+                "createChatSession"
+              );
+
+              // Transform to ChatData format
+              const newChat: ChatData = {
+                id: validatedSession.id,
+                title: validatedSession.title,
+                messages: [],
+                createdAt: validatedSession.created_at,
+              };
+
+              set((state) => ({
+                chats: [newChat, ...state.chats],
+                currentChatId: validatedSession.id,
+                isLoading: false,
+                // Update cache metadata
+                cacheMetadata: {
+                  lastFetched: Date.now(),
+                  ttl: 30000,
+                },
+              }));
+
+              toastSuccess("Chat session created");
+              return validatedSession.id;
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          fetchChatMessages: async (sessionId: string) => {
+            set({ isLoading: true, error: null });
+            const loadingToast = toastLoading("Loading messages...");
+
+            try {
+              const apiUrl = env.API_URL;
+              const data = await apiGet<unknown>(
+                `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
+                { retry: { maxAttempts: 3, initialDelay: 1000 } }
+              );
+
+              const validatedMessages = validateApiResponse(
+                ChatMessagesResponseSchema,
+                data,
+                "fetchChatMessages"
+              );
+
+              // Transform API messages to Message format
+              const messages: Message[] = validatedMessages.map((msg) =>
+                MessageSchema.parse({
+                  id: msg.id,
+                  role: msg.role as "user" | "assistant",
+                  content: msg.content,
+                  timestamp: msg.timestamp,
+                })
+              );
+
+              // Update chat with messages
+              set((state) => ({
+                chats: state.chats.map((chat) =>
+                  chat.id === sessionId ? { ...chat, messages } : chat
+                ),
+                isLoading: false,
+              }));
+              loadingToast();
+            } catch (error) {
+              const appError = parseApiError(error);
+              set({ error: appError, isLoading: false });
+              loadingToast();
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          addMessage: async (
+            sessionId: string,
+            message: Omit<Message, "id" | "timestamp">
+          ) => {
+            // Optimistic update
+            const optimisticMessage: Message = {
+              ...message,
+              id: `temp-${Date.now()}`,
+              timestamp: new Date(),
+            };
+            get().optimisticAddMessage(optimisticMessage);
+
+            try {
+              const apiUrl = env.API_URL;
+              const data = await apiPost<unknown>(
+                `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
+                {
+                  role: message.role,
+                  content: message.content,
+                  contextFiles: message.contextFiles,
+                }
+              );
+
+              const validatedMessage = validateApiResponse(
+                ChatMessageResponseSchema,
+                data,
+                "addMessage"
+              );
+
+              // Replace optimistic message with validated one
+              const finalMessage: Message = MessageSchema.parse({
+                id: validatedMessage.id,
+                role: validatedMessage.role as "user" | "assistant",
+                content: validatedMessage.content,
+                timestamp: validatedMessage.timestamp,
+                isLoading: message.isLoading,
+                tasks: message.tasks,
+                contextFiles: message.contextFiles,
+              });
+
+              set((state) => ({
+                chats: state.chats.map((chat) =>
+                  chat.id === sessionId
+                    ? {
+                        ...chat,
+                        messages: chat.messages.map((msg) =>
+                          msg.id === optimisticMessage.id ? finalMessage : msg
+                        ),
+                      }
+                    : chat
+                ),
+              }));
+            } catch (error) {
+              // Rollback optimistic update
+              get().rollbackOptimisticUpdate(optimisticMessage.id);
+              const appError = parseApiError(error);
+              set({ error: appError });
+              toastError(error);
+              throw appError;
+            }
+          },
+
+          // Optimistic updates
+          optimisticAddMessage: (message: Message) => {
+            const { currentChatId } = get();
+            if (!currentChatId) return;
+
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === currentChatId
+                  ? { ...chat, messages: [...chat.messages, message] }
+                  : chat
+              ),
+            }));
+          },
+
+          rollbackOptimisticUpdate: (messageId: string) => {
+            const { currentChatId } = get();
+            if (!currentChatId) return;
+
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === currentChatId
+                  ? {
+                      ...chat,
+                      messages: chat.messages.filter(
+                        (msg) => msg.id !== messageId
+                      ),
+                    }
+                  : chat
+              ),
+            }));
+          },
+
+          // Error handling
+          setError: (error) => set({ error }),
+          clearError: () => set({ error: null }),
+        }),
+        { name: "ChatStore" }
       )
-    : ((set, get) => ({
-      // Initial state
-      chats: [],
-      cacheMetadata: {
-        lastFetched: 0,
-        ttl: 30000, // 30 seconds for chat sessions
-      },
-      currentChatId: null,
-      isLoading: false,
-      error: null,
+    : (set, get) => ({
+        // Initial state
+        chats: [],
+        cacheMetadata: {
+          lastFetched: 0,
+          ttl: 30000, // 30 seconds for chat sessions
+        },
+        currentChatId: null,
+        isLoading: false,
+        error: null,
 
-      // Computed getters
-      getCurrentChat: () => {
-        const { currentChatId, chats } = get();
-        if (!currentChatId) return null;
-        return chats.find((chat) => chat.id === currentChatId) ?? null;
-      },
+        // Computed getters
+        getCurrentChat: () => {
+          const { currentChatId, chats } = get();
+          if (!currentChatId) return null;
+          return chats.find((chat) => chat.id === currentChatId) ?? null;
+        },
 
-      getChatById: (chatId: string) => {
-        return get().chats.find((chat) => chat.id === chatId);
-      },
+        getChatById: (chatId: string) => {
+          return get().chats.find((chat) => chat.id === chatId);
+        },
 
-      // Basic actions
-      setChats: (chats) => set({ chats }),
-      setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
+        // Basic actions
+        setChats: (chats) => set({ chats }),
+        setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
 
-      createNewChat: () => {
-        const newChatId = `chat-${Date.now()}`;
-        const newChat: ChatData = {
-          id: newChatId,
-          title: generateChatTitle(),
-          messages: [],
-          createdAt: new Date(),
-        };
-
-        set((state) => ({
-          chats: [newChat, ...state.chats],
-          currentChatId: newChatId,
-        }));
-
-        return newChatId;
-      },
-
-      switchToChat: (chatId: string) => {
-        set({ currentChatId: chatId });
-      },
-
-      addMessageToCurrentChat: (message: Message) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
-
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? { ...chat, messages: [...chat.messages, message] }
-              : chat
-          ),
-        }));
-      },
-
-      updateMessageInCurrentChat: (
-        messageId: string,
-        updates: Partial<Message>
-      ) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
-
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: chat.messages.map((msg) =>
-                    msg.id === messageId ? { ...msg, ...updates } : msg
-                  ),
-                }
-              : chat
-          ),
-        }));
-      },
-
-      // API actions with Zod validation
-      fetchChatSessions: async () => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading chat sessions...");
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiGet<unknown>(`${apiUrl}/api/v1/chat/sessions`, {
-            retry: { maxAttempts: 3, initialDelay: 1000 },
-          });
-
-          const validatedSessions = validateApiResponse(
-            ChatSessionsResponseSchema,
-            data,
-            "fetchChatSessions"
-          );
-
-          // Transform API response to ChatData format
-          const chats: ChatData[] = validatedSessions.map((session) => ({
-            id: session.id,
-            title: session.title,
-            messages: [],
-            createdAt: session.created_at,
-            groupId: undefined,
-          }));
-
-          set({ chats, isLoading: false });
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
-
-      createChatSession: async (request) => {
-        // Validate request
-        const validatedRequest = CreateChatSessionRequestSchema.parse(request);
-
-        set({ isLoading: true, error: null });
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/chat/sessions`,
-            validatedRequest
-          );
-
-          const validatedSession = validateApiResponse(
-            ChatSessionResponseSchema,
-            data,
-            "createChatSession"
-          );
-
-          // Transform to ChatData format
+        createNewChat: () => {
+          const newChatId = `chat-${Date.now()}`;
           const newChat: ChatData = {
-            id: validatedSession.id,
-            title: validatedSession.title,
+            id: newChatId,
+            title: generateChatTitle(),
             messages: [],
-            createdAt: validatedSession.created_at,
+            createdAt: new Date(),
           };
 
           set((state) => ({
             chats: [newChat, ...state.chats],
-            currentChatId: validatedSession.id,
-            isLoading: false,
+            currentChatId: newChatId,
           }));
 
-          toastSuccess("Chat session created");
-          return validatedSession.id;
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          toastError(error);
-          throw appError;
-        }
-      },
+          return newChatId;
+        },
 
-      fetchChatMessages: async (sessionId: string) => {
-        set({ isLoading: true, error: null });
-        const loadingToast = toastLoading("Loading messages...");
+        switchToChat: (chatId: string) => {
+          set({ currentChatId: chatId });
+        },
 
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiGet<unknown>(
-            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
-            { retry: { maxAttempts: 3, initialDelay: 1000 } }
-          );
+        addMessageToCurrentChat: (message: Message) => {
+          const { currentChatId } = get();
+          if (!currentChatId) return;
 
-          const validatedMessages = validateApiResponse(
-            ChatMessagesResponseSchema,
-            data,
-            "fetchChatMessages"
-          );
-
-          // Transform API messages to Message format
-          const messages: Message[] = validatedMessages.map((msg) =>
-            MessageSchema.parse({
-              id: msg.id,
-              role: msg.role as "user" | "assistant",
-              content: msg.content,
-              timestamp: msg.timestamp,
-            })
-          );
-
-          // Update chat with messages
           set((state) => ({
             chats: state.chats.map((chat) =>
-              chat.id === sessionId ? { ...chat, messages } : chat
+              chat.id === currentChatId
+                ? { ...chat, messages: [...chat.messages, message] }
+                : chat
             ),
-            isLoading: false,
           }));
-          loadingToast();
-        } catch (error) {
-          const appError = parseApiError(error);
-          set({ error: appError, isLoading: false });
-          loadingToast();
-          toastError(error);
-          throw appError;
-        }
-      },
+        },
 
-      addMessage: async (
-        sessionId: string,
-        message: Omit<Message, "id" | "timestamp">
-      ) => {
-        // Optimistic update
-        const optimisticMessage: Message = {
-          ...message,
-          id: `temp-${Date.now()}`,
-          timestamp: new Date(),
-        };
-        get().optimisticAddMessage(optimisticMessage);
-
-        try {
-          const apiUrl = env.API_URL;
-          const data = await apiPost<unknown>(
-            `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
-            {
-              role: message.role,
-              content: message.content,
-              contextFiles: message.contextFiles,
-            }
-          );
-
-          const validatedMessage = validateApiResponse(
-            ChatMessageResponseSchema,
-            data,
-            "addMessage"
-          );
-
-          // Replace optimistic message with validated one
-          const finalMessage: Message = MessageSchema.parse({
-            id: validatedMessage.id,
-            role: validatedMessage.role as "user" | "assistant",
-            content: validatedMessage.content,
-            timestamp: validatedMessage.timestamp,
-            isLoading: message.isLoading,
-            tasks: message.tasks,
-            contextFiles: message.contextFiles,
-          });
+        updateMessageInCurrentChat: (
+          messageId: string,
+          updates: Partial<Message>
+        ) => {
+          const { currentChatId } = get();
+          if (!currentChatId) return;
 
           set((state) => ({
             chats: state.chats.map((chat) =>
-              chat.id === sessionId
+              chat.id === currentChatId
                 ? {
                     ...chat,
                     messages: chat.messages.map((msg) =>
-                      msg.id === optimisticMessage.id ? finalMessage : msg
+                      msg.id === messageId ? { ...msg, ...updates } : msg
                     ),
                   }
                 : chat
             ),
           }));
-        } catch (error) {
-          // Rollback optimistic update
-          get().rollbackOptimisticUpdate(optimisticMessage.id);
-          const appError = parseApiError(error);
-          set({ error: appError });
-          toastError(error);
-          throw appError;
-        }
-      },
+        },
 
-      // Optimistic updates
-      optimisticAddMessage: (message: Message) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
+        // Cache management
+        isCacheStale: () => {
+          const { cacheMetadata } = get();
+          return Date.now() - cacheMetadata.lastFetched > cacheMetadata.ttl;
+        },
 
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? { ...chat, messages: [...chat.messages, message] }
-              : chat
-          ),
-        }));
-      },
+        refreshChats: async () => {
+          // Force refresh from database
+          await get().fetchChatSessions(true);
+        },
 
-      rollbackOptimisticUpdate: (messageId: string) => {
-        const { currentChatId } = get();
-        if (!currentChatId) return;
+        // API actions with Zod validation
+        fetchChatSessions: async (forceRefresh = false) => {
+          const { chats, isCacheStale } = get();
 
-        set((state) => ({
-          chats: state.chats.map((chat) =>
-            chat.id === currentChatId
-              ? {
-                  ...chat,
-                  messages: chat.messages.filter((msg) => msg.id !== messageId),
-                }
-              : chat
-          ),
-        }));
-      },
+          // Check if cache is enabled and use cache if fresh and not forcing refresh
+          if (
+            isCacheEnabled() &&
+            !forceRefresh &&
+            chats.length > 0 &&
+            !isCacheStale()
+          ) {
+            return; // Use cached data
+          }
 
-      // Error handling
-      setError: (error) => set({ error }),
-      clearError: () => set({ error: null }),
-    }))
+          set({ isLoading: true, error: null });
+          const loadingToast = toastLoading("Loading chat sessions...");
+
+          try {
+            const apiUrl = env.API_URL;
+            const data = await apiGet<unknown>(
+              `${apiUrl}/api/v1/chat/sessions`,
+              {
+                retry: { maxAttempts: 3, initialDelay: 1000 },
+              }
+            );
+
+            const validatedSessions = validateApiResponse(
+              ChatSessionsResponseSchema,
+              data,
+              "fetchChatSessions"
+            );
+
+            // Transform API response to ChatData format
+            const chats: ChatData[] = validatedSessions.map((session) => ({
+              id: session.id,
+              title: session.title,
+              messages: [],
+              createdAt: session.created_at,
+              groupId: undefined,
+            }));
+
+            // Update cache metadata
+            set({
+              chats,
+              isLoading: false,
+              cacheMetadata: {
+                lastFetched: Date.now(),
+                ttl: 30000, // 30 seconds
+              },
+            });
+            loadingToast();
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            loadingToast();
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        createChatSession: async (request) => {
+          // Validate request
+          const validatedRequest =
+            CreateChatSessionRequestSchema.parse(request);
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const apiUrl = env.API_URL;
+            const data = await apiPost<unknown>(
+              `${apiUrl}/api/v1/chat/sessions`,
+              validatedRequest
+            );
+
+            const validatedSession = validateApiResponse(
+              ChatSessionResponseSchema,
+              data,
+              "createChatSession"
+            );
+
+            // Transform to ChatData format
+            const newChat: ChatData = {
+              id: validatedSession.id,
+              title: validatedSession.title,
+              messages: [],
+              createdAt: validatedSession.created_at,
+            };
+
+            set((state) => ({
+              chats: [newChat, ...state.chats],
+              currentChatId: validatedSession.id,
+              isLoading: false,
+              // Update cache metadata
+              cacheMetadata: {
+                lastFetched: Date.now(),
+                ttl: 30000,
+              },
+            }));
+
+            toastSuccess("Chat session created");
+            return validatedSession.id;
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        fetchChatMessages: async (sessionId: string) => {
+          set({ isLoading: true, error: null });
+          const loadingToast = toastLoading("Loading messages...");
+
+          try {
+            const apiUrl = env.API_URL;
+            const data = await apiGet<unknown>(
+              `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
+              { retry: { maxAttempts: 3, initialDelay: 1000 } }
+            );
+
+            const validatedMessages = validateApiResponse(
+              ChatMessagesResponseSchema,
+              data,
+              "fetchChatMessages"
+            );
+
+            // Transform API messages to Message format
+            const messages: Message[] = validatedMessages.map((msg) =>
+              MessageSchema.parse({
+                id: msg.id,
+                role: msg.role as "user" | "assistant",
+                content: msg.content,
+                timestamp: msg.timestamp,
+              })
+            );
+
+            // Update chat with messages
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === sessionId ? { ...chat, messages } : chat
+              ),
+              isLoading: false,
+            }));
+            loadingToast();
+          } catch (error) {
+            const appError = parseApiError(error);
+            set({ error: appError, isLoading: false });
+            loadingToast();
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        addMessage: async (
+          sessionId: string,
+          message: Omit<Message, "id" | "timestamp">
+        ) => {
+          // Optimistic update
+          const optimisticMessage: Message = {
+            ...message,
+            id: `temp-${Date.now()}`,
+            timestamp: new Date(),
+          };
+          get().optimisticAddMessage(optimisticMessage);
+
+          try {
+            const apiUrl = env.API_URL;
+            const data = await apiPost<unknown>(
+              `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
+              {
+                role: message.role,
+                content: message.content,
+                contextFiles: message.contextFiles,
+              }
+            );
+
+            const validatedMessage = validateApiResponse(
+              ChatMessageResponseSchema,
+              data,
+              "addMessage"
+            );
+
+            // Replace optimistic message with validated one
+            const finalMessage: Message = MessageSchema.parse({
+              id: validatedMessage.id,
+              role: validatedMessage.role as "user" | "assistant",
+              content: validatedMessage.content,
+              timestamp: validatedMessage.timestamp,
+              isLoading: message.isLoading,
+              tasks: message.tasks,
+              contextFiles: message.contextFiles,
+            });
+
+            set((state) => ({
+              chats: state.chats.map((chat) =>
+                chat.id === sessionId
+                  ? {
+                      ...chat,
+                      messages: chat.messages.map((msg) =>
+                        msg.id === optimisticMessage.id ? finalMessage : msg
+                      ),
+                    }
+                  : chat
+              ),
+            }));
+          } catch (error) {
+            // Rollback optimistic update
+            get().rollbackOptimisticUpdate(optimisticMessage.id);
+            const appError = parseApiError(error);
+            set({ error: appError });
+            toastError(error);
+            throw appError;
+          }
+        },
+
+        // Optimistic updates
+        optimisticAddMessage: (message: Message) => {
+          const { currentChatId } = get();
+          if (!currentChatId) return;
+
+          set((state) => ({
+            chats: state.chats.map((chat) =>
+              chat.id === currentChatId
+                ? { ...chat, messages: [...chat.messages, message] }
+                : chat
+            ),
+          }));
+        },
+
+        rollbackOptimisticUpdate: (messageId: string) => {
+          const { currentChatId } = get();
+          if (!currentChatId) return;
+
+          set((state) => ({
+            chats: state.chats.map((chat) =>
+              chat.id === currentChatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.filter(
+                      (msg) => msg.id !== messageId
+                    ),
+                  }
+                : chat
+            ),
+          }));
+        },
+
+        // Error handling
+        setError: (error) => set({ error }),
+        clearError: () => set({ error: null }),
+      })
 );

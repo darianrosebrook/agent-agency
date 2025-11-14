@@ -1,7 +1,7 @@
 "use client";
 
+import { ChevronDown, ChevronRight, MessageSquare, Plus } from "lucide-react";
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus, MessageSquare } from "lucide-react";
 import { useChatStore } from "../../lib/stores";
 import { ChatListSkeleton } from "../compounds";
 import { cn } from "../primitives/utils";
@@ -20,8 +20,12 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
-  const { chats, currentChatId, createNewChat, switchToChat, isLoading } =
-    useChatStore();
+  // Use selectors to only subscribe to specific parts of the store
+  const chats = useChatStore((state) => state.chats);
+  const currentChatId = useChatStore((state) => state.currentChatId);
+  const createNewChat = useChatStore((state) => state.createNewChat);
+  const switchToChat = useChatStore((state) => state.switchToChat);
+  const isLoading = useChatStore((state) => state.isLoading);
 
   // TODO: Replace hardcoded chat groups with dynamic groups from v3 database with the following requirements:
   // 1. Chat group fetching: Load chat groups and organization from database

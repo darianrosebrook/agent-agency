@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 use sqlx::Row;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// API configuration
@@ -48,7 +49,7 @@ pub struct TaskSubmissionResponse {
 }
 
 /// Link provenance request
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct LinkProvenanceRequest {
     #[schemars(with = "String")]
     pub task_id: Uuid,
@@ -582,7 +583,7 @@ pub struct DashboardDiffSummary {
 }
 
 /// Waiver approval request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct WaiverApprovalRequest {
     #[schemars(with = "String")]
     pub waiver_id: Uuid,
@@ -591,7 +592,7 @@ pub struct WaiverApprovalRequest {
 }
 
 /// Waiver request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, utoipa::ToSchema)]
 pub struct WaiverRequest {
     #[schemars(with = "String")]
     pub task_id: Uuid,
@@ -660,7 +661,7 @@ pub struct SavedQueryResponse {
 }
 
 /// Save query request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct SaveQueryRequest {
     pub name: String,
     pub query_text: String,

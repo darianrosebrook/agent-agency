@@ -81,7 +81,7 @@ use data_interfaces_adapters::orchestration_adapter::UnifiedOrchestratorAdapter;
 #[cfg(feature = "orchestration")]
 use data_infrastructure::api::handlers::*;
 #[cfg(feature = "orchestration")]
-use data_infrastructure::api::openapi::{create_swagger_ui, get_openapi_spec};
+use data_infrastructure::api::openapi::create_swagger_ui;
 #[cfg(feature = "orchestration")]
 use data_infrastructure::api::types::ApiConfig as DataApiConfig;
 #[cfg(feature = "orchestration")]
@@ -548,9 +548,8 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
     // OpenAPI documentation endpoints
     #[cfg(feature = "orchestration")]
     {
-        router = router
-            .route("/api-docs/openapi.json", axum::routing::get(get_openapi_spec))
-            .merge(create_swagger_ui());
+        // SwaggerUi already includes the /api-docs/openapi.json route, so we don't need to register it separately
+        router = router.merge(create_swagger_ui());
     }
 
     // Task management endpoints
@@ -1406,7 +1405,7 @@ async fn list_tasks_handler(State(state): State<AppState>) -> Result<Json<JsonVa
 }
 
 async fn get_task_status_handler(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<JsonValue>, StatusCode> {
     let task_uuid = Uuid::parse_str(&task_id).map_err(|_| StatusCode::BAD_REQUEST)?;
@@ -4104,6 +4103,9 @@ async fn generate_coreml_chat_response(
         top_p: Some(0.9),
         timeout_ms: 30000,
         use_kv_cache: true,
+        sequence_length: None,  // Will use policy recommendation
+        task_type: None,        // Will auto-detect from input
+        backend_policy: None,   // Will use policy recommendation (ANE by default)
     };
 
     // Generate response using Mistral model

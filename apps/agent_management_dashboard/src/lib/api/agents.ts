@@ -168,7 +168,9 @@ export async function getAgentsStats(): Promise<AgentStats> {
  * Get list of all agents
  */
 export async function getAgents(): Promise<Agent[]> {
-  return apiGet<Agent[]>(`${API_BASE}/agents`);
+  // API returns { "agents": [...] }, so extract the agents array
+  const response = await apiGet<{ agents?: Agent[] } | Agent[]>(`${API_BASE}/agents`);
+  return Array.isArray(response) ? response : (response.agents || []);
 }
 
 /**

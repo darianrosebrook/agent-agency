@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
 // Import types from lib.rs
-use crate::ParticipantContribution;
+use crate::protocol::ParticipantContribution;
 
 /// Differential privacy engine for adding noise to model updates
 #[derive(Debug)]
@@ -212,7 +212,7 @@ impl DifferentialPrivacyEngine {
     /// Validate privacy properties of a contribution
     pub async fn validate_privacy(&self, contribution: &ParticipantContribution) -> Result<()> {
         // Check that the contribution meets privacy requirements
-        if contribution.update_data.is_empty() {
+        if contribution.encrypted_update.is_empty() {
             return Err(anyhow::anyhow!("Empty contribution violates privacy requirements"));
         }
 

@@ -243,13 +243,19 @@ If the goal is **meaningful speedups (2-3x)** on ANE, the evidence says you won'
 - ✅ **ANE is functional**: Runtime path is correct, ANE is participating (47.4% utilization confirms participation)
 - ✅ **Platform characteristic confirmed**: Micro models and Mistral show identical behavior, proving this is hardware/platform behavior, not a runtime or conversion issue
 - ✅ **Input pooling is the big lever**: ~30ms allocation overhead eliminated with input pooling (~40% latency improvement)
-- ✅ **Backend selection for FP16 Mistral**: CPU and ANE are latency-equivalent; choose based on power/concurrency, not speed
+- ✅ **Constitutional requirement met**: "CoreML/ANE available and functional" - performance characteristics accepted as platform limits
+- ✅ **ANE preferred by default**: ANE is used by default when available, preparing for future quantization improvements
 - ✅ **For meaningful speedups**: Need to change the problem (quantization, smaller models) rather than tuning the existing FP16 Mistral graph
+
+**Constitutional Requirement Acceptance**:
+
+Performance characteristics (0.95-1.01x speedup) are **accepted as platform limits** and **meet the constitutional requirement**: "CoreML/ANE available and functional". The system is production-ready with CoreML/ANE available and functional.
 
 **Production Readiness**:
 
 The system is operational and ready for production use. For FP16 Mistral on this hardware:
 
 - **Single-request latency**: CPU and ANE are equivalent (~46ms with input pooling)
-- **Backend choice**: Driven by power profile, thermal headroom, and CPU resource sharing
-- **Optimization path**: Input pooling (immediate), quantization/smaller models (future track for meaningful speedups)
+- **Backend choice**: ANE preferred by default when available, CPU fallback when unavailable
+- **Optimization path**: Input pooling (immediate, enabled by default), quantization/smaller models (future track for meaningful speedups)
+- **Constitutional requirement**: CoreML/ANE available and functional (met)

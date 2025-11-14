@@ -2,7 +2,7 @@
 
 use anyhow::{Context, Result};
 use redis::AsyncCommands;
-use redis::{aio::Connection, Client as RedisClientImpl};
+use redis::{aio::MultiplexedConnection, Client as RedisClientImpl};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -119,7 +119,7 @@ impl RedisConfig {
 pub struct ProductionRedisClient {
     client: RedisClientImpl,
     config: RedisConfig,
-    connection_pool: Arc<RwLock<Vec<Connection>>>,
+    connection_pool: Arc<RwLock<Vec<MultiplexedConnection>>>,
     health_check_interval: std::time::Duration,
 }
 
@@ -144,7 +144,7 @@ impl ProductionRedisClient {
         // Initialize connection pool
         let mut pool = Vec::with_capacity(config.pool_size);
         for _ in 0..config.pool_size {
-            let conn = client.get_async_connection().await
+            let conn = client.get_multiplexed_async_connection().await
                 .context("Failed to establish Redis connection for pool")?;
             pool.push(conn);
         }
@@ -164,7 +164,7 @@ impl ProductionRedisClient {
     }
 
     /// Get a connection from the pool with health checking
-    async fn get_connection(&self) -> Result<Connection> {
+    async fn get_connection(&self) -> Result<MultiplexedConnection> {
         let mut pool = self.connection_pool.write().await;
 
         // Try to get an available connection
@@ -179,12 +179,12 @@ impl ProductionRedisClient {
         }
 
         // Create new connection if pool is empty or all connections unhealthy
-        self.client.get_async_connection().await
+        self.client.get_multiplexed_async_connection().await
             .context("Failed to get new Redis connection")
     }
 
     /// Return connection to the pool
-    async fn return_connection(&self, conn: Connection) {
+    async fn return_connection(&self, conn: MultiplexedConnection) {
         let mut pool = self.connection_pool.write().await;
 
         // Only keep healthy connections in the pool
@@ -194,7 +194,7 @@ impl ProductionRedisClient {
     }
 
     /// Check if Redis connection is healthy
-    async fn is_connection_healthy(&self, _conn: &Connection) -> bool {
+    async fn is_connection_healthy(&self, _conn: &MultiplexedConnection) -> bool {
         // TODO: Implement comprehensive Redis connection health check
         //       Currently assumes connection is healthy; should implement comprehensive health check that uses redis::cmd to perform PING check for accurate connection health verification.
         //

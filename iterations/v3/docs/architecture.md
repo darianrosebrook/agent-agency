@@ -2,7 +2,7 @@
 
 ## Overview
 
-Agent Agency V3 implements a **modular constitutional AI system** with 17 specialized crates providing comprehensive autonomous agent capabilities. The system leverages CoreML-optimized Mistral models with Apple Neural Engine acceleration for high-performance local inference, ensuring ethical compliance, technical quality, and system coherence through evidence-based decision making.
+Agent Agency V3 implements a **modular constitutional AI system** with 17 specialized crates providing comprehensive autonomous agent capabilities. The system leverages CoreML-optimized Mistral models with Apple Neural Engine acceleration for local inference. CoreML/ANE is available and functional, with performance characteristics (0.95-1.01x speedup) accepted as platform limits for FP16 Mistral models. The system ensures ethical compliance, technical quality, and system coherence through evidence-based decision making.
 
 The architecture consists of specialized Rust crates with clear responsibilities, communicating via well-defined contracts, with PostgreSQL persistence, comprehensive provenance tracking, and monitoring capabilities.
 
@@ -403,7 +403,7 @@ flowchart LR
 - Safe CoreML model loading and inference
 - Memory-safe tensor operations with bounds validation
 - FFI boundary control with comprehensive error handling
-- ANE acceleration support for vision processing
+- ANE acceleration support (available and functional, 0.95-1.01x speedup accepted as platform limit)
 
 ### Monitoring & Control
 

@@ -886,17 +886,17 @@ impl RestApi {
         let mut iteration_number = 1u32;
 
         for row in iteration_rows {
-            let execution_id: Uuid = row.try_get("id")
+            let _execution_id: Uuid = row.try_get("id")
                 .map_err(|e| ApiError::InternalError(format!("Failed to get execution id: {}", e)))?;
             let status: String = row.try_get("status")
                 .unwrap_or_else(|_| "unknown".to_string());
             let started_at: DateTime<Utc> = row.try_get("execution_started_at")
                 .unwrap_or_else(|_| Utc::now());
-            let completed_at: Option<DateTime<Utc>> = row.try_get("execution_completed_at").ok();
-            let execution_time_ms: Option<i32> = row.try_get("execution_time_ms").ok();
+            let _completed_at: Option<DateTime<Utc>> = row.try_get("execution_completed_at").ok();
+            let _execution_time_ms: Option<i32> = row.try_get("execution_time_ms").ok();
             
             // Extract progress from self_assessment or metadata
-            let progress = if let Ok(Some(self_assessment)) = row.try_get::<Option<serde_json::Value>, &str>("self_assessment") {
+            let _progress = if let Ok(Some(self_assessment)) = row.try_get::<Option<serde_json::Value>, &str>("self_assessment") {
                 self_assessment
                     .get("progress")
                     .or_else(|| self_assessment.get("completion_percentage"))

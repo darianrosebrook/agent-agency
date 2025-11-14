@@ -7,10 +7,10 @@ use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::debug;
 
 // Import types from lib.rs
-use crate::ParticipantContribution;
+use crate::protocol::ParticipantContribution;
 
 /// Security validator for federation operations
 #[derive(Debug)]
@@ -183,7 +183,7 @@ impl SecurityValidator {
     /// Validate a contribution for security
     pub async fn validate_contribution(&self, contribution: &ParticipantContribution) -> Result<()> {
         // Basic validation - check size, format, etc.
-        if contribution.update_data.is_empty() {
+        if contribution.encrypted_update.is_empty() {
             return Err(anyhow::anyhow!("Empty model update"));
         }
         Ok(())

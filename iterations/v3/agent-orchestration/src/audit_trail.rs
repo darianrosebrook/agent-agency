@@ -974,7 +974,7 @@ impl AuditTrailManager {
     /// Records when a task begins execution on a worker.
     pub async fn record_task_execution_start(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
         execution_id: Uuid,
         worker_id: Option<Uuid>,
         correlation_id: Option<String>,
@@ -1395,7 +1395,7 @@ impl AuditTrailManager {
     /// Record heartbeat for progress monitoring
     pub async fn record_heartbeat(
         &self,
-        _task_id: Uuid,
+        task_id: Uuid,
         component: &str,
         progress: crate::chain_of_thought::ProgressIndicator,
         _estimated_remaining: Option<std::time::Duration>,

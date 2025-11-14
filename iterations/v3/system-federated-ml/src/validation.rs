@@ -6,9 +6,10 @@
 use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// Update validator for model contributions
+#[derive(Debug)]
 pub struct UpdateValidator {
     quality_thresholds: QualityThresholds,
     security_validator: SecurityValidator,
@@ -30,7 +31,7 @@ pub struct QualityThresholds {
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ValidationResult {
     /// Whether the update passed validation
     pub is_valid: bool,

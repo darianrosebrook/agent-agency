@@ -266,9 +266,18 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
                     );
                 }
                 Err(e) => {
-                    error!("Migration {} statement {} failed: {}", version, idx + 1, e);
-                    migration_success = false;
-                    break;
+                    let error_msg = e.to_string();
+                    // Check if error is due to object already existing (CREATE IF NOT EXISTS should handle this, but some objects don't support it)
+                    if error_msg.contains("already exists") 
+                        || error_msg.contains("duplicate key") 
+                        || error_msg.contains("relation") && error_msg.contains("already exists") {
+                        warn!("Migration {} statement {}: Object already exists, skipping: {}", version, idx + 1, error_msg);
+                        // Continue with next statement instead of failing
+                    } else {
+                        error!("Migration {} statement {} failed: {}", version, idx + 1, e);
+                        migration_success = false;
+                        break;
+                    }
                 }
             }
         }

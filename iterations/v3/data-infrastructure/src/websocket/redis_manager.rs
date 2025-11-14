@@ -79,7 +79,7 @@ impl RedisSessionManager {
         session_id: &str,
     ) -> Result<(), redis::RedisError> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
 
             // Add to Redis set
@@ -138,7 +138,7 @@ impl RedisSessionManager {
         session_id: &str,
     ) -> Result<(), redis::RedisError> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
 
             // Remove from Redis set
@@ -187,7 +187,7 @@ impl RedisSessionManager {
         user_id: &str,
     ) -> Result<Vec<String>, redis::RedisError> {
         if let Some(ref client) = self.redis_client {
-            let mut conn = client.get_async_connection().await?;
+            let mut conn = client.get_multiplexed_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
             let sessions: Vec<String> = conn.smembers(&key).await?;
             return Ok(sessions);

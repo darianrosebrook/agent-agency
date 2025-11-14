@@ -46,8 +46,8 @@ export default function RulesGovernancePage() {
           getComplianceStats(),
         ]);
 
-        setRules(rulesData);
-        setViolations(violationsData);
+        setRules(Array.isArray(rulesData) ? rulesData : []);
+        setViolations(Array.isArray(violationsData) ? violationsData : []);
         setCompliance(complianceData);
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Failed to load rules and governance data"));
@@ -127,8 +127,8 @@ export default function RulesGovernancePage() {
           <div className={styles.metricsGrid}>
             <BentoPanel className={styles.metricCard}>
               <div className={styles.metricLabel}>Compliance Score</div>
-              <div className={styles.metricValue} style={{ color: compliance.compliance_score >= 90 ? '#22c55e' : compliance.compliance_score >= 70 ? '#eab308' : '#ef4444' }}>
-                {compliance.compliance_score.toFixed(1)}%
+              <div className={styles.metricValue} style={{ color: (compliance.compliance_score || 0) >= 90 ? '#22c55e' : (compliance.compliance_score || 0) >= 70 ? '#eab308' : '#ef4444' }}>
+                {((compliance.compliance_score || 0)).toFixed(1)}%
               </div>
             </BentoPanel>
 
@@ -301,7 +301,7 @@ export default function RulesGovernancePage() {
         </BentoPanel>
 
         {/* Violations by Severity */}
-        {compliance && Object.keys(compliance.violations_by_severity).length > 0 && (
+        {compliance && compliance.violations_by_severity && Object.keys(compliance.violations_by_severity).length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Violations by Severity</h2>
             <div className={styles.severityList}>
@@ -316,7 +316,7 @@ export default function RulesGovernancePage() {
         )}
 
         {/* Most Violated Rules */}
-        {compliance && compliance.violations_by_rule.length > 0 && (
+        {compliance && compliance.violations_by_rule && compliance.violations_by_rule.length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Most Violated Rules</h2>
             <div className={styles.topViolationsList}>

@@ -19,9 +19,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
-use sysinfo::{System, Cpu, Disks};
+use sysinfo::{System, Disks};
 
 /// Execution strategy for task execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -1535,6 +1535,7 @@ pub struct HybridTaskExecutor {
     #[cfg(not(feature = "task-queue"))]
     task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
+    circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
     semaphore: tokio::sync::Semaphore,
     active_tasks: Arc<
         tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>,
@@ -1569,12 +1570,21 @@ impl HybridTaskExecutor {
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         let semaphore = tokio::sync::Semaphore::new(config.max_concurrent_tasks / 2); // Reserve some capacity for sequential
+        let circuit_breaker = if config.enable_health_monitoring {
+            Some(Arc::new(crate::error_handling::CircuitBreaker::new(
+                "task_executor_hybrid".to_string(),
+                crate::error_handling::ErrorHandlingCircuitBreakerConfig::default(),
+            )))
+        } else {
+            None
+        };
 
         Self {
             config,
             worker_pool,
             task_queue,
             audit_manager,
+            circuit_breaker,
             semaphore,
             active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         }

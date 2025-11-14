@@ -11,7 +11,8 @@ use crate::{DataProcessingError, DataProcessingResult};
 use chrono::{Duration, Utc};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
-use sqlx::{postgres::PgPoolOptions, Encode, PgPool, Postgres, Row, Type};
+use sqlx::{postgres::{PgArgumentBuffer, PgPoolOptions}, Encode, PgPool, Postgres, Row, Type};
+use std::error::Error;
 use std::collections::HashMap;
 use std::io::Write;
 use std::sync::Arc;
@@ -61,8 +62,8 @@ pub enum QueryParam {
 impl<'q> Encode<'q, Postgres> for QueryParam {
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, Box<dyn Error + Send + Sync>> {
         match self {
             QueryParam::String(s) => <String as Encode<'q, Postgres>>::encode_by_ref(s, buf),
             QueryParam::I32(i) => <i32 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
@@ -76,7 +77,7 @@ impl<'q> Encode<'q, Postgres> for QueryParam {
             QueryParam::Timestamp(t) => {
                 <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf)
             }
-            QueryParam::Null => sqlx::encode::IsNull::Yes,
+            QueryParam::Null => Ok(sqlx::encode::IsNull::Yes),
         }
     }
 }

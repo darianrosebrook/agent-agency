@@ -184,7 +184,8 @@ fn get_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
 // Database client for rate limiting persistence
 // Implemented locally to avoid circular dependency with agent-data-processing
 
-use sqlx::{postgres::PgPoolOptions, Encode, PgPool, Postgres, Row, Type};
+use sqlx::{postgres::{PgArgumentBuffer, PgPoolOptions}, Encode, PgPool, Postgres, Row, Type};
+use std::error::Error;
 
 /// Query parameter wrapper for type-safe parameterized queries
 #[derive(Debug, Clone)]
@@ -203,8 +204,8 @@ pub enum QueryParam {
 impl<'q> Encode<'q, Postgres> for QueryParam {
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<sqlx::encode::IsNull, Box<dyn Error + Send + Sync>> {
         match self {
             QueryParam::String(s) => <String as Encode<'q, Postgres>>::encode_by_ref(s, buf),
             QueryParam::I32(i) => <i32 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
@@ -218,7 +219,7 @@ impl<'q> Encode<'q, Postgres> for QueryParam {
             QueryParam::Timestamp(t) => {
                 <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf)
             }
-            QueryParam::Null => sqlx::encode::IsNull::Yes,
+            QueryParam::Null => Ok(sqlx::encode::IsNull::Yes),
         }
     }
 }

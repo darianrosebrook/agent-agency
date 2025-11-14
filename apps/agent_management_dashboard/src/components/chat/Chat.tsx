@@ -1,36 +1,48 @@
 "use client";
 
-import { useState, useRef, type KeyboardEvent } from "react";
-import { MessageSquare, X } from "lucide-react";
-import { FileDropzoneModal } from "./FileDropzone";
-import { Badge } from "../primitives/badge";
-import { ChatMessage, ChatMessageSkeleton } from "../compounds";
-import { EnhancedChatInput } from "./EnhancedChatInput";
-import svgPaths from "../../imports/svg-quupl4zjo1";
-import { useChatStore } from "../../lib/stores";
+import { MessageSquare } from "lucide-react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { useStreamingResponse } from "../../lib/hooks";
 import type { Message } from "../../lib/schemas/chat";
-import { simulateAIResponse } from "./ChatAIHelper";
-import { cn } from "../primitives/utils";
+import { useChatStore } from "../../lib/stores";
 import { env } from "../../lib/utils/env";
+import { ChatMessage, ChatMessageSkeleton } from "../compounds";
 import styles from "./Chat.module.scss";
+import { simulateAIResponse } from "./ChatAIHelper";
+import { EnhancedChatInput } from "./EnhancedChatInput";
+import { FileDropzoneModal } from "./FileDropzone";
 
 // Types imported from schemas
 
 export function Chat() {
-  const {
-    getCurrentChat,
-    createNewChat,
-    addMessageToCurrentChat,
-    updateMessageInCurrentChat,
-    currentChatId,
-  } = useChatStore();
+  // Use selectors to only subscribe to specific parts of the store
+  const currentChatId = useChatStore((state) => state.currentChatId);
+  const chats = useChatStore((state) => state.chats);
+  const createNewChat = useChatStore((state) => state.createNewChat);
+  const addMessageToCurrentChat = useChatStore(
+    (state) => state.addMessageToCurrentChat
+  );
+  const updateMessageInCurrentChat = useChatStore(
+    (state) => state.updateMessageInCurrentChat
+  );
+
   const [contextFiles, setContextFiles] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [promptValue, setPromptValue] = useState("");
   const streamingAssistantIdRef = useRef<string | null>(null);
 
-  const currentChat = getCurrentChat();
+  // Memoize currentChat to prevent unnecessary re-renders
+  const currentChat = useMemo(() => {
+    if (!currentChatId) return null;
+    return chats.find((chat) => chat.id === currentChatId) ?? null;
+  }, [currentChatId, chats]);
+
   const messages = currentChat?.messages ?? [];
 
   // Get API base URL from environment or use proxy
@@ -39,11 +51,9 @@ export function Chat() {
   // Track accumulated content for streaming
   const streamingContentRef = useRef<string>("");
 
-  // Streaming response hook for CoreML orchestrator inference
-  const { start: startStreaming, stop: stopStreaming } = useStreamingResponse({
-    url: `${apiBaseUrl}/chat/stream`,
-    method: "POST",
-    onChunk: (chunk: string) => {
+  // Memoize callbacks to prevent infinite loops
+  const handleChunk = useCallback(
+    (chunk: string) => {
       // Accumulate streaming content
       streamingContentRef.current += chunk;
       // Update assistant message with accumulated content
@@ -53,7 +63,11 @@ export function Chat() {
         });
       }
     },
-    onComplete: (content: string) => {
+    [updateMessageInCurrentChat]
+  );
+
+  const handleComplete = useCallback(
+    (content: string) => {
       // Finalize assistant message
       if (streamingAssistantIdRef.current) {
         updateMessageInCurrentChat(streamingAssistantIdRef.current, {
@@ -64,7 +78,11 @@ export function Chat() {
         streamingContentRef.current = "";
       }
     },
-    onError: (error: Error) => {
+    [updateMessageInCurrentChat]
+  );
+
+  const handleError = useCallback(
+    (error: Error) => {
       console.error("Streaming error:", error);
       // Update assistant message with error
       if (streamingAssistantIdRef.current) {
@@ -76,6 +94,16 @@ export function Chat() {
         streamingContentRef.current = "";
       }
     },
+    [updateMessageInCurrentChat]
+  );
+
+  // Streaming response hook for CoreML orchestrator inference
+  const { start: startStreaming, stop: stopStreaming } = useStreamingResponse({
+    url: `${apiBaseUrl}/chat/stream`,
+    method: "POST",
+    onChunk: handleChunk,
+    onComplete: handleComplete,
+    onError: handleError,
   });
 
   const handleFilesAdded = (files: string[]) => {
@@ -139,7 +167,10 @@ export function Chat() {
       });
     } catch (error) {
       // Fallback to simulation if API is not available
-      console.warn("CoreML orchestrator API not available, using simulation:", error);
+      console.warn(
+        "CoreML orchestrator API not available, using simulation:",
+        error
+      );
       streamingAssistantIdRef.current = null;
       streamingContentRef.current = "";
       simulateAIResponse(

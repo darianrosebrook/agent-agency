@@ -43,7 +43,7 @@ tdigest = "0.2"
 hdrhistogram = "7.5"
 
 # Redis integration (from system-health-monitor and observability)
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+redis = { version = "0.32", features = ["tokio-comp", "connection-manager"] }
 
 # Tracing and logging (from observability)
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
@@ -52,7 +52,7 @@ cadence = "1.4"   # StatsD client
 # ONNX protobuf parsing (from observability)
 protobuf = "3.4"
 lru = "0.12"  # LRU cache for metadata
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 
 # macOS system calls (from system-health-monitor)
 [target.'cfg(target_os = "macos")'.dependencies]

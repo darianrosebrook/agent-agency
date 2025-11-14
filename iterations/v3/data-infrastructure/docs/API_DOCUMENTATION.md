@@ -77,7 +77,79 @@ The Agent Agency API now has comprehensive OpenAPI 3.0 documentation with intera
 - `GET /api/v1/agents/{id}` - Get agent details
 - `GET /api/v1/agents/{id}/stats` - Get agent statistics
 
-**Total Documented Endpoints: 36**
+**Total Documented Endpoints: 95+**
+
+### Additional Observation Endpoints
+
+#### Task Observation (7 additional)
+- `GET /api/v1/tasks/stats` - Task statistics
+- `GET /api/v1/tasks/stats/history` - Task statistics history
+- `GET /api/v1/tasks/{task_id}/logs` - Task execution logs
+- `GET /api/v1/tasks/{task_id}/progress` - Task progress details
+- `GET /api/v1/tasks/{task_id}/events` - Task execution events
+- `GET /api/v1/tasks/{task_id}/comments` - Task comments
+- `POST /api/v1/tasks/{task_id}/comments` - Create task comment
+- `GET /api/v1/tasks/{task_id}/provenance` - Task provenance
+
+#### Agent Observation (8 additional)
+- `GET /api/v1/agents/stats` - Overall agent statistics
+- `GET /api/v1/agents/tasks/completion` - Agent task completion metrics
+- `GET /api/v1/agents/efficiency` - Agent efficiency metrics
+- `GET /api/v1/agents/{id}/health` - Agent health status
+- `GET /api/v1/agents/{id}/metrics` - Agent performance metrics
+- `GET /api/v1/agents/{id}/logs` - Agent execution logs
+
+#### Judge Observation (5 additional)
+- `GET /api/v1/judges` - List all judges
+- `GET /api/v1/judges/stats` - Judge statistics
+- `GET /api/v1/judges/{id}` - Get judge details
+- `GET /api/v1/judges/{id}/stats` - Judge-specific statistics
+- `GET /api/v1/judges/{id}/evaluations` - Judge evaluation history
+
+#### Telemetry & Observability (6 additional)
+- `GET /api/v1/telemetry/contributions` - Contributions telemetry
+- `GET /api/v1/telemetry/model-contributions` - Model contributions
+- `GET /api/v1/telemetry/agent-activity` - Agent activity tracking
+- `GET /api/v1/observability/efficiency` - System efficiency metrics
+- `GET /api/v1/observability/system-metrics` - System observability metrics
+- `GET /api/v1/observability/alerts` - System alerts
+
+#### System Monitoring (2 additional)
+- `GET /api/v1/system/health` - Detailed system health
+- `GET /api/v1/system/resources` - System resource usage
+
+#### Session Control (4 additional)
+- `GET /api/v1/sessions/{session_id}` - Get session status
+- `POST /api/v1/sessions/{session_id}/pause` - Pause session
+- `POST /api/v1/sessions/{session_id}/resume` - Resume session
+- `POST /api/v1/sessions/{session_id}/cancel` - Cancel session
+
+#### Search & Queries (5 additional)
+- `GET /api/v1/search` - Global search
+- `GET /api/v1/queries` - List saved queries
+- `POST /api/v1/queries` - Save query
+- `DELETE /api/v1/queries/{query_id}` - Delete query
+
+#### Query Performance (4 additional)
+- `GET /api/v1/query-performance/summary` - Query performance summary
+- `GET /api/v1/query-performance/metrics` - Query performance metrics
+- `GET /api/v1/query-performance/slow` - Slow queries
+- `GET /api/v1/query-performance/top-slow` - Top slow queries
+
+#### Provenance (2 additional)
+- `POST /api/v1/provenance/link` - Link provenance to task
+- `GET /api/v1/provenance/verify/{commit_hash}` - Verify provenance
+
+#### Waivers (3 additional)
+- `GET /api/v1/waivers` - List waivers
+- `POST /api/v1/waivers` - Create waiver
+- `POST /api/v1/waivers/{waiver_id}/approve` - Approve waiver
+
+#### SLOs (4 additional)
+- `GET /api/v1/slos` - List SLOs
+- `GET /api/v1/slos/{slo_name}/status` - Get SLO status
+- `GET /api/v1/slos/{slo_name}/measurements` - Get SLO measurements
+- `GET /api/v1/slo-alerts` - List SLO alerts
 
 ## Documented Schemas
 

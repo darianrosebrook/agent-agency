@@ -83,13 +83,18 @@ export default function AgentHealthPage() {
           apiGet<{ status: string; database?: { status: string; error?: string }; timestamp?: string }>('/api/proxy/api/v1/system/health').catch(() => null),
         ]);
 
-        setAgents(agentsData);
-        setAlerts(alertsData);
+        // Ensure agents is an array
+        const agentsArray = Array.isArray(agentsData) 
+          ? agentsData 
+          : (agentsData?.agents || []);
+        setAgents(agentsArray);
+        // Ensure alerts is an array
+        setAlerts(Array.isArray(alertsData) ? alertsData : []);
         setSystemMetrics(systemMetricsData);
         setSystemHealth(systemHealthData);
 
         // Fetch health and metrics for each agent
-        const healthPromises = agentsData.map(async (agent) => {
+        const healthPromises = agentsArray.map(async (agent) => {
           try {
             const [health, metrics, logs] = await Promise.all([
               getAgentHealth(agent.id).catch(() => null),
@@ -267,19 +272,19 @@ export default function AgentHealthPage() {
         <div className={styles.systemMetrics}>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>CPU Usage</div>
-            <div className={styles.metricValue}>{systemMetrics.cpu_usage_percent.toFixed(1)}%</div>
+            <div className={styles.metricValue}>{(systemMetrics?.cpu_usage_percent || 0).toFixed(1)}%</div>
           </div>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Memory Usage</div>
-            <div className={styles.metricValue}>{(systemMetrics.memory_usage_mb / 1024).toFixed(1)} GB</div>
+            <div className={styles.metricValue}>{((systemMetrics?.memory_usage_mb || 0) / 1024).toFixed(1)} GB</div>
           </div>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Disk Usage</div>
-            <div className={styles.metricValue}>{systemMetrics.disk_usage_percent.toFixed(1)}%</div>
+            <div className={styles.metricValue}>{(systemMetrics?.disk_usage_percent || 0).toFixed(1)}%</div>
           </div>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Network I/O</div>
-            <div className={styles.metricValue}>{systemMetrics.network_io_mbps.toFixed(2)} Mbps</div>
+            <div className={styles.metricValue}>{(systemMetrics?.network_io_mbps || 0).toFixed(2)} Mbps</div>
           </div>
         </div>
       )}
@@ -345,25 +350,25 @@ export default function AgentHealthPage() {
                     </div>
                     <div className={styles.metricRow}>
                       <span>Health Score:</span>
-                      <span>{health.health_score.toFixed(0)}%</span>
+                      <span>{(health?.health_score || 0).toFixed(0)}%</span>
                     </div>
                     <div className={styles.metricRow}>
                       <span>Errors:</span>
                       <span>{health.error_count}</span>
                     </div>
-                    {metrics && (
+                    {metrics && metrics.cpu_usage_percent !== undefined && (
                       <>
                         <div className={styles.metricRow}>
                           <span>CPU:</span>
-                          <span>{metrics.cpu_usage_percent.toFixed(1)}%</span>
+                          <span>{(metrics.cpu_usage_percent || 0).toFixed(1)}%</span>
                         </div>
                         <div className={styles.metricRow}>
                           <span>Memory:</span>
-                          <span>{(metrics.memory_usage_mb / 1024).toFixed(1)} GB</span>
+                          <span>{((metrics.memory_usage_mb || 0) / 1024).toFixed(1)} GB</span>
                         </div>
                         <div className={styles.metricRow}>
                           <span>Response Time (P95):</span>
-                          <span>{metrics.response_time_p95_ms.toFixed(0)}ms</span>
+                          <span>{(metrics.response_time_p95_ms || 0).toFixed(0)}ms</span>
                         </div>
                       </>
                     )}

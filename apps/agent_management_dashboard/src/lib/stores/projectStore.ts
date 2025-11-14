@@ -9,38 +9,42 @@
  * @author @darianrosebrook
  */
 
+import { z } from "zod";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { z } from "zod";
-import { env } from "../utils/env";
-import {
-  ProjectSchema,
-  ProjectResponseSchema,
-  ProjectsResponseSchema,
-  CreateProjectRequestSchema,
-  UpdateProjectRequestSchema,
-  CreateTaskRequestSchema,
-  UpdateTaskRequestSchema,
-  type Project,
-  type ProjectTask,
-  type CreateProjectRequest,
-  type UpdateProjectRequest,
-  type CreateTaskRequest,
-  type UpdateTaskRequest,
-} from "../schemas/project";
-import { toastError, toastSuccess, toastLoading } from "../utils/toast";
-import { parseApiError } from "../errors";
-import { apiGet, apiPost, apiPatch } from "../utils/api";
 import {
   createProject as createProjectApiClient,
-  listProjects as listProjectsApiClient,
-  getProjectHandler,
   deleteProject as deleteProjectApiClient,
+  getProjectHandler,
+  listProjects as listProjectsApiClient,
 } from "../api/projects";
+import { parseApiError } from "../errors";
+import {
+  CreateProjectRequestSchema,
+  CreateTaskRequestSchema,
+  ProjectResponseSchema,
+  ProjectSchema,
+  UpdateProjectRequestSchema,
+  UpdateTaskRequestSchema,
+  type CreateProjectRequest,
+  type CreateTaskRequest,
+  type Project,
+  type ProjectTask,
+  type UpdateProjectRequest,
+  type UpdateTaskRequest,
+} from "../schemas/project";
+import { apiPatch, apiPost } from "../utils/api";
+import { isCacheEnabled } from "../utils/cacheSettings";
+import { env } from "../utils/env";
+import { toastError, toastLoading, toastSuccess } from "../utils/toast";
 
 interface ProjectState {
   // State
   projects: Project[];
+  cacheMetadata: {
+    lastFetched: number;
+    ttl: number; // Time-to-live in milliseconds (60 seconds for projects)
+  };
   currentProjectId: string | null;
   isLoading: boolean;
   error: Error | null;
@@ -65,7 +69,7 @@ interface ProjectState {
   ) => void;
 
   // API actions (with Zod validation)
-  fetchProjects: () => Promise<void>;
+  fetchProjects: (forceRefresh?: boolean) => Promise<void>;
   createProjectApi: (request: CreateProjectRequest) => Promise<string>;
   updateProject: (
     projectId: string,
@@ -77,6 +81,10 @@ interface ProjectState {
     taskId: string,
     updates: UpdateTaskRequest
   ) => Promise<void>;
+
+  // Cache management
+  refreshProjects: () => Promise<void>; // Force refresh from database
+  isCacheStale: () => boolean; // Check if cache needs refresh
 
   // Optimistic updates
   optimisticAddTask: (projectId: string, task: ProjectTask) => void;
@@ -122,6 +130,10 @@ export const useProjectStore = create<ProjectState>()(
         (set, get) => ({
           // Initial state
           projects: [],
+          cacheMetadata: {
+            lastFetched: 0,
+            ttl: 60000, // 60 seconds for projects
+          },
           currentProjectId: null,
           isLoading: false,
           error: null,
@@ -253,8 +265,31 @@ export const useProjectStore = create<ProjectState>()(
             }));
           },
 
+          // Cache management
+          isCacheStale: () => {
+            const { cacheMetadata } = get();
+            return Date.now() - cacheMetadata.lastFetched > cacheMetadata.ttl;
+          },
+
+          refreshProjects: async () => {
+            // Force refresh from database
+            await get().fetchProjects(true);
+          },
+
           // API actions with Zod validation
-          fetchProjects: async () => {
+          fetchProjects: async (forceRefresh = false) => {
+            const { projects, isCacheStale } = get();
+
+            // Check if cache is enabled and use cache if fresh and not forcing refresh
+            if (
+              isCacheEnabled() &&
+              !forceRefresh &&
+              projects.length > 0 &&
+              !isCacheStale()
+            ) {
+              return; // Use cached data
+            }
+
             set({ isLoading: true, error: null });
             const loadingToast = toastLoading("Loading projects...");
 
@@ -262,7 +297,9 @@ export const useProjectStore = create<ProjectState>()(
               const response = await listProjectsApiClient();
 
               // Safely extract projects array
-              const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
+              const projectsArray = Array.isArray(response?.projects)
+                ? response.projects
+                : [];
 
               // Fetch full details for each project in parallel
               const projectPromises = projectsArray.map(
@@ -317,7 +354,15 @@ export const useProjectStore = create<ProjectState>()(
                 (project): project is Project => project !== null
               );
 
-              set({ projects: projectsData, isLoading: false });
+              // Update cache metadata
+              set({
+                projects: projectsData,
+                isLoading: false,
+                cacheMetadata: {
+                  lastFetched: Date.now(),
+                  ttl: 60000, // 60 seconds
+                },
+              });
               loadingToast();
             } catch (error) {
               const appError = parseApiError(error);
@@ -376,6 +421,11 @@ export const useProjectStore = create<ProjectState>()(
                 projects: [newProject, ...state.projects],
                 currentProjectId: validatedProject.id,
                 isLoading: false,
+                // Update cache metadata
+                cacheMetadata: {
+                  lastFetched: Date.now(),
+                  ttl: 60000,
+                },
               }));
 
               toastSuccess("Project created successfully");
@@ -424,6 +474,11 @@ export const useProjectStore = create<ProjectState>()(
                     : p
                 ),
                 isLoading: false,
+                // Update cache metadata
+                cacheMetadata: {
+                  lastFetched: Date.now(),
+                  ttl: 60000,
+                },
               }));
             } catch (error) {
               const appError = parseApiError(error);
@@ -622,6 +677,10 @@ export const useProjectStore = create<ProjectState>()(
     : (set, get) => ({
         // Initial state
         projects: [],
+        cacheMetadata: {
+          lastFetched: 0,
+          ttl: 60000, // 60 seconds for projects
+        },
         currentProjectId: null,
         isLoading: false,
         error: null,
@@ -751,8 +810,31 @@ export const useProjectStore = create<ProjectState>()(
           }));
         },
 
+        // Cache management
+        isCacheStale: () => {
+          const { cacheMetadata } = get();
+          return Date.now() - cacheMetadata.lastFetched > cacheMetadata.ttl;
+        },
+
+        refreshProjects: async () => {
+          // Force refresh from database
+          await get().fetchProjects(true);
+        },
+
         // API actions with Zod validation
-        fetchProjects: async () => {
+        fetchProjects: async (forceRefresh = false) => {
+          const { projects, isCacheStale } = get();
+
+          // Check if cache is enabled and use cache if fresh and not forcing refresh
+          if (
+            isCacheEnabled() &&
+            !forceRefresh &&
+            projects.length > 0 &&
+            !isCacheStale()
+          ) {
+            return; // Use cached data
+          }
+
           set({ isLoading: true, error: null });
           const loadingToast = toastLoading("Loading projects...");
 
@@ -760,7 +842,9 @@ export const useProjectStore = create<ProjectState>()(
             const response = await listProjectsApiClient();
 
             // Safely extract projects array
-            const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
+            const projectsArray = Array.isArray(response?.projects)
+              ? response.projects
+              : [];
 
             // Fetch full details for each project in parallel
             const projectPromises = projectsArray.map(
@@ -815,7 +899,15 @@ export const useProjectStore = create<ProjectState>()(
               (project): project is Project => project !== null
             );
 
-            set({ projects: projectsData, isLoading: false });
+            // Update cache metadata
+            set({
+              projects: projectsData,
+              isLoading: false,
+              cacheMetadata: {
+                lastFetched: Date.now(),
+                ttl: 60000, // 60 seconds
+              },
+            });
             loadingToast();
           } catch (error) {
             const appError = parseApiError(error);
@@ -877,6 +969,11 @@ export const useProjectStore = create<ProjectState>()(
               projects: [newProject, ...state.projects],
               currentProjectId: validatedProject.id,
               isLoading: false,
+              // Update cache metadata
+              cacheMetadata: {
+                lastFetched: Date.now(),
+                ttl: 60000,
+              },
             }));
 
             toastSuccess("Project created successfully");
@@ -926,6 +1023,11 @@ export const useProjectStore = create<ProjectState>()(
                   : p
               ),
               isLoading: false,
+              // Update cache metadata
+              cacheMetadata: {
+                lastFetched: Date.now(),
+                ttl: 60000,
+              },
             }));
           } catch (error) {
             const appError = parseApiError(error);

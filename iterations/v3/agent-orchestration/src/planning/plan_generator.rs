@@ -876,6 +876,9 @@ Provide your analysis and milestone suggestions in a structured format."#,
             top_p: Some(0.9),
             timeout_ms: 30000,
             use_kv_cache: true,
+            sequence_length: None,  // Will use policy recommendation
+            task_type: None,        // Will auto-detect from input
+            backend_policy: None,   // Will use policy recommendation (ANE by default)
         };
 
         coreml_manager
@@ -934,6 +937,9 @@ Provide milestone suggestions in a structured format with:
             top_p: Some(0.9),
             timeout_ms: 30000,
             use_kv_cache: true,
+            sequence_length: None,  // Will use policy recommendation
+            task_type: None,        // Will auto-detect from input
+            backend_policy: None,   // Will use policy recommendation (ANE by default)
         };
 
         coreml_manager

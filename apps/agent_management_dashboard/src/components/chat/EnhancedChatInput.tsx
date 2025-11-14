@@ -9,19 +9,19 @@
  * @author @darianrosebrook
  */
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import {
-  Plus,
-  X,
+  Clock,
   FileText,
   MessageSquare,
-  Settings2,
-  Send,
-  Zap,
-  Clock,
-  Pause,
   Paperclip,
+  Pause,
+  Plus,
+  Send,
+  Settings2,
+  X,
+  Zap,
 } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Badge } from "../primitives/badge";
 import { Button } from "../primitives/button";
 import {
@@ -92,6 +92,7 @@ export function EnhancedChatInput({
   const [mode, setMode] = useState<Mode>("chat");
   const [sendTiming, setSendTiming] = useState<SendTiming>("now");
   const contentEditableRef = useRef<HTMLDivElement>(null);
+  const isUpdatingRef = useRef(false); // Flag to prevent infinite loop
 
   // Rotate placeholder examples
   useEffect(() => {
@@ -105,8 +106,16 @@ export function EnhancedChatInput({
 
   // Sync contentEditable with value prop
   useEffect(() => {
-    if (contentEditableRef.current && contentEditableRef.current.textContent !== value) {
+    if (
+      contentEditableRef.current &&
+      contentEditableRef.current.textContent !== value
+    ) {
+      isUpdatingRef.current = true; // Set flag before updating
       contentEditableRef.current.textContent = value;
+      // Reset flag after a microtask to allow any input events to process
+      queueMicrotask(() => {
+        isUpdatingRef.current = false;
+      });
     }
   }, [value]);
 
@@ -119,6 +128,10 @@ export function EnhancedChatInput({
   };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    // Ignore input events triggered by programmatic updates
+    if (isUpdatingRef.current) {
+      return;
+    }
     const text = e.currentTarget.textContent || "";
     onChange(text);
   };
@@ -168,7 +181,9 @@ export function EnhancedChatInput({
       {/* Header Section */}
       <div className={styles.header}>
         <h2 className={styles.title}>Start Creating</h2>
-        <p className={styles.caption}>{PLACEHOLDER_EXAMPLES[currentPlaceholder]}</p>
+        <p className={styles.caption}>
+          {PLACEHOLDER_EXAMPLES[currentPlaceholder]}
+        </p>
       </div>
 
       {/* Context Items */}
@@ -191,7 +206,9 @@ export function EnhancedChatInput({
                 <div className={styles.contextItemText}>
                   <div className={styles.contextItemTitle}>{item.title}</div>
                   {expandedContext === item.id && item.preview && (
-                    <div className={styles.contextItemPreview}>{item.preview}</div>
+                    <div className={styles.contextItemPreview}>
+                      {item.preview}
+                    </div>
                   )}
                 </div>
               </div>
@@ -250,11 +267,18 @@ export function EnhancedChatInput({
               {/* Add Attachment */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className={styles.footerButton}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.footerButton}
+                  >
                     <Plus className={styles.footerIcon} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className={styles.dropdownContent}>
+                <DropdownMenuContent
+                  align="start"
+                  className={styles.dropdownContent}
+                >
                   <DropdownMenuLabel>Add Attachment</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -288,7 +312,9 @@ export function EnhancedChatInput({
                       Add Context from Chats
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      <DropdownMenuLabel>Add Context from Chats</DropdownMenuLabel>
+                      <DropdownMenuLabel>
+                        Add Context from Chats
+                      </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() =>
@@ -298,7 +324,9 @@ export function EnhancedChatInput({
                             title: "Product Launch Discussion",
                             preview:
                               "Conversation about Q4 product launch strategy and timeline",
-                            icon: <MessageSquare className={styles.contextIcon} />,
+                            icon: (
+                              <MessageSquare className={styles.contextIcon} />
+                            ),
                           })
                         }
                       >
@@ -306,7 +334,9 @@ export function EnhancedChatInput({
                           <div className={styles.chatMenuItemTitle}>
                             Product Launch Discussion
                           </div>
-                          <div className={styles.chatMenuItemTime}>2 hours ago</div>
+                          <div className={styles.chatMenuItemTime}>
+                            2 hours ago
+                          </div>
                         </div>
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -315,8 +345,11 @@ export function EnhancedChatInput({
                             id: Date.now().toString() + "1",
                             type: "chat",
                             title: "Design System Updates",
-                            preview: "Chat about component library improvements",
-                            icon: <MessageSquare className={styles.contextIcon} />,
+                            preview:
+                              "Chat about component library improvements",
+                            icon: (
+                              <MessageSquare className={styles.contextIcon} />
+                            ),
                           })
                         }
                       >
@@ -324,7 +357,9 @@ export function EnhancedChatInput({
                           <div className={styles.chatMenuItemTitle}>
                             Design System Updates
                           </div>
-                          <div className={styles.chatMenuItemTime}>Yesterday</div>
+                          <div className={styles.chatMenuItemTime}>
+                            Yesterday
+                          </div>
                         </div>
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
@@ -335,39 +370,59 @@ export function EnhancedChatInput({
               {/* Settings */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className={styles.footerButton}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.footerButton}
+                  >
                     <Settings2 className={styles.footerIcon} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className={styles.dropdownContent}>
+                <DropdownMenuContent
+                  align="start"
+                  className={styles.dropdownContent}
+                >
                   <DropdownMenuLabel>Quick Settings</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <span>Writing Style</span>
                       {writingStyle && (
-                        <Badge variant="secondary" className={styles.styleBadge}>
+                        <Badge
+                          variant="secondary"
+                          className={styles.styleBadge}
+                        >
                           {writingStyle}
                         </Badge>
                       )}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      <DropdownMenuItem onClick={() => setWritingStyle("Professional")}>
+                      <DropdownMenuItem
+                        onClick={() => setWritingStyle("Professional")}
+                      >
                         Professional
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setWritingStyle("Casual")}>
+                      <DropdownMenuItem
+                        onClick={() => setWritingStyle("Casual")}
+                      >
                         Casual
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setWritingStyle("Technical")}>
+                      <DropdownMenuItem
+                        onClick={() => setWritingStyle("Technical")}
+                      >
                         Technical
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setWritingStyle("Creative")}>
+                      <DropdownMenuItem
+                        onClick={() => setWritingStyle("Creative")}
+                      >
                         Creative
                       </DropdownMenuItem>
                       {writingStyle && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setWritingStyle(null)}>
+                          <DropdownMenuItem
+                            onClick={() => setWritingStyle(null)}
+                          >
                             Clear Style
                           </DropdownMenuItem>
                         </>
@@ -376,7 +431,10 @@ export function EnhancedChatInput({
                   </DropdownMenuSub>
                   <div className={styles.switchRow}>
                     <span>Web Search</span>
-                    <Switch checked={webSearch} onCheckedChange={setWebSearch} />
+                    <Switch
+                      checked={webSearch}
+                      onCheckedChange={setWebSearch}
+                    />
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
@@ -387,7 +445,10 @@ export function EnhancedChatInput({
               </DropdownMenu>
 
               {/* Mode Selector */}
-              <Select value={mode} onValueChange={(value: Mode) => setMode(value)}>
+              <Select
+                value={mode}
+                onValueChange={(value: Mode) => setMode(value)}
+              >
                 <SelectTrigger className={styles.modeSelect}>
                   <SelectValue />
                 </SelectTrigger>
@@ -403,15 +464,26 @@ export function EnhancedChatInput({
               {/* Send Timing */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className={styles.footerButton}>
-                    <SendTimingIcon className={cn(styles.footerIcon, sendConfig.color)} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={styles.footerButton}
+                  >
+                    <SendTimingIcon
+                      className={cn(styles.footerIcon, sendConfig.color)}
+                    />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={styles.dropdownContent}>
+                <DropdownMenuContent
+                  align="end"
+                  className={styles.dropdownContent}
+                >
                   <DropdownMenuLabel>Send Timing</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setSendTiming("now")}>
-                    <Zap className={cn(styles.footerIcon, styles.timingIconNow)} />
+                    <Zap
+                      className={cn(styles.footerIcon, styles.timingIconNow)}
+                    />
                     <div className={styles.timingOption}>
                       <span>Send Now</span>
                       <span className={styles.timingDescription}>
@@ -420,7 +492,9 @@ export function EnhancedChatInput({
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSendTiming("soon")}>
-                    <Clock className={cn(styles.footerIcon, styles.timingIconSoon)} />
+                    <Clock
+                      className={cn(styles.footerIcon, styles.timingIconSoon)}
+                    />
                     <div className={styles.timingOption}>
                       <span>Send Soon</span>
                       <span className={styles.timingDescription}>
@@ -429,7 +503,9 @@ export function EnhancedChatInput({
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSendTiming("after")}>
-                    <Pause className={cn(styles.footerIcon, styles.timingIconAfter)} />
+                    <Pause
+                      className={cn(styles.footerIcon, styles.timingIconAfter)}
+                    />
                     <div className={styles.timingOption}>
                       <span>Send After</span>
                       <span className={styles.timingDescription}>
@@ -493,4 +569,3 @@ export function EnhancedChatInput({
     </div>
   );
 }
-

@@ -206,12 +206,10 @@ impl FederationCoordinator {
         self.validate_contribution(participant_id, &contribution).await?;
 
         // Forward to aggregator
-        let zkp = contribution.zkp.as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Missing zero-knowledge proof for contribution"))?;
         self.aggregator.accept_encrypted_update(
             participant_id,
-            contribution.update_data,
-            zkp,
+            contribution.encrypted_update.clone(),
+            contribution.zero_knowledge_proof.clone(),
         ).await?;
 
         // Update round state
@@ -277,7 +275,7 @@ impl FederationCoordinator {
         }
 
         // Validate contribution size
-        let contribution_size = contribution.update_data.len();
+        let contribution_size = contribution.encrypted_update.len();
         if contribution_size < self.config.quality_thresholds.min_contribution_size ||
            contribution_size > self.config.quality_thresholds.max_contribution_size {
             return Err(anyhow::anyhow!("Invalid contribution size: {}", contribution_size));
@@ -450,9 +448,8 @@ pub struct RoundInfo {
 //
 // Dependency types for coordinator module
 use crate::aggregation::SecureAggregator;
-use crate::protocol::{FederationProtocol, ProtocolMessage};
+use crate::protocol::{FederationProtocol, ParticipantContribution, ProtocolMessage};
 use crate::participant::FederationParticipant;
 use crate::security::ZeroKnowledgeProof;
-use crate::ParticipantContribution;
 use crate::differential_privacy::PrivacyParameters;
 

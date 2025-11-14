@@ -30,8 +30,9 @@ use crate::planning::parallel_coordinator::ParallelCoordinator;
 use crate::planning::plan_executor::PlanExecutor;
 use crate::planning::plan_generator::PlanGenerator;
 use crate::planning::plan_types::{
-    ExecutionPlan, PlanGenerationContext,
-    PlanGenerationStrategy, ResourceInventory,
+    ExecutionPlan,
+    PlanGenerationContext, PlanGenerationStrategy, ResourceInventory,
+    TaskDescriptorProvider, WorkingSpecProvider,
 };
 use crate::planning::refinement_loop::{
     ArtifactValidator, CouncilReviewer, OrchestrationExecutor, ProgressTracker,
@@ -474,7 +475,7 @@ impl UnifiedOrchestrator {
         };
 
         // Phase 0: Session management and context retrieval (multi-session continuity)
-        let session_id = if let Some(ref session_mgr) = self.session_manager {
+        let _session_id = if let Some(ref session_mgr) = self.session_manager {
             // Try to get existing session for this task, or create a new one
             let existing_session = session_mgr.get_session_for_task(plan_id).await;
 
@@ -571,9 +572,9 @@ impl UnifiedOrchestrator {
         let cross_session_contexts: Vec<agent_memory::memory_types::TaskContext> = {
             let mut contexts = Vec::new();
             if let Some(ref session_mgr) = self.session_manager {
-                if session_id != Uuid::nil() {
+                if _session_id != Uuid::nil() {
                     if let Ok(retrieved_contexts) = session_mgr
-                        .retrieve_cross_session_context(session_id, 10)
+                        .retrieve_cross_session_context(_session_id, 10)
                         .await
                     {
                         if !retrieved_contexts.is_empty() {

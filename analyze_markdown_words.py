@@ -116,3 +116,4 @@ with open('markdown_word_analysis.txt', 'w') as f:
         f.write(f"{count:4d}  {word}{is_prohibited}\n")
 
 print(f"\n\nDetailed analysis saved to: markdown_word_analysis.txt")
+

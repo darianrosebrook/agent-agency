@@ -111,7 +111,7 @@ impl UnifiedOrchestratorFactory {
         }));
 
         let decision_engine = Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Majority));
-        let council = Arc::new(Council::new(
+        let _council = Arc::new(Council::new(
             council_config.clone(),
             judges,
             verdict_aggregator,
@@ -143,7 +143,7 @@ impl UnifiedOrchestratorFactory {
 
         // Create database operations adapter if not provided
         // Use real DatabaseOperationsAdapter implementation (inline to avoid circular dependency)
-        let db_ops = if let Some(db_ops) = db_ops {
+        let _db_ops = if let Some(db_ops) = db_ops {
             db_ops
         } else {
             // Verify database schema before creating adapter
@@ -183,7 +183,7 @@ impl UnifiedOrchestratorFactory {
         // Create planning components using PlanningSystemFactory
         // Research is in default features, so it's always available
         #[cfg(feature = "research")]
-        let research_collector = {
+        let _research_collector = {
             use agent_research::evidence::collector::EvidenceCollector;
             Arc::new(EvidenceCollector::new())
         };
@@ -384,14 +384,14 @@ impl UnifiedOrchestratorFactory {
             CouncilIntegrationImpl::new(council.clone(), council_config.clone()),
         );
         let debate_scorer = Arc::new(CawsDebateScorer::new(council.clone()));
-        let adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
+        let _adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
             council.clone(),
             council_integration.clone(),
             debate_scorer,
         ));
 
         // Create worker lifecycle manager
-        let worker_lifecycle_manager =
+        let _worker_lifecycle_manager =
             Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
 
         // Create PerformanceTracker if research feature is enabled
@@ -427,7 +427,7 @@ impl UnifiedOrchestratorFactory {
             Arc::new(WorkerEvolutionEngine::new(db_ops.clone(), evolution_config));
 
         // Create reflexive learner with evolution engine
-        let reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
+        let _reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
             worker_assignment_strategy.clone(),
             evolution_engine,
             LearningConfig::default(),
@@ -529,7 +529,7 @@ impl UnifiedOrchestratorFactory {
         };
 
         #[cfg(not(feature = "memory"))]
-        let executor_worker_pool: Arc<dyn WorkerPool> = {
+        let _executor_worker_pool: Arc<dyn WorkerPool> = {
             // Fallback when memory feature is not enabled
             struct FallbackWorkerPool;
             #[async_trait]

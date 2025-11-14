@@ -12,7 +12,7 @@ tokio.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 chrono.workspace = true
 uuid.workspace = true
 anyhow.workspace = true
@@ -29,8 +29,8 @@ axum-extra = { version = "0.9", features = ["typed-header"] }
 schemars = { version = "0.8", features = ["uuid1", "chrono", "derive"] }
 
 # OpenAPI documentation generation
-utoipa = { version = "5.4", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+utoipa = { version = "4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 
 # HTTP client (from api-server)
 reqwest = { version = "0.11", features = ["json"] }
@@ -101,6 +101,10 @@ mcp = ["agent-mcp"]
 orchestration = []  # Feature flag for conditional compilation
 schema-validation = []  # Enable comprehensive schema validation
 coreml = ["ort/coreml"]  # CoreML/ANE acceleration for production (optional for tests)
+
+[[bin]]
+name = "run_migrations"
+path = "src/bin/run_migrations.rs"
 
 [dev-dependencies]
 tokio-test = "0.4"

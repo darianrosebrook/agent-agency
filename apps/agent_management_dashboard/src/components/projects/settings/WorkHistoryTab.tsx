@@ -71,10 +71,14 @@ export function WorkHistoryTabContent() {
     return entryDate >= weekAgo && entry.action.includes('completed');
   }).length;
 
+  // Calculate completion rate from available stats
+  const completionRate = taskStats && taskStats.total > 0
+    ? (taskStats.completed / taskStats.total) * 100
+    : 0;
+
   // Calculate average completion time (simplified)
-  const avgCompletionTime = taskStats?.completion_rate 
-    ? `${(taskStats.completion_rate / 100).toFixed(1)} days`
-    : 'N/A';
+  // TODO: Fetch actual completion time metrics from API when available
+  const avgCompletionTime = 'N/A';
 
   return (
     <div className={styles.workHistoryTab}>
@@ -107,7 +111,7 @@ export function WorkHistoryTabContent() {
               </div>
               <div className={styles.metricCard}>
                 <p className={styles.metricLabel}>Completion Rate</p>
-                <p className={styles.metricValue}>{taskStats.completion_rate.toFixed(1)}%</p>
+                <p className={styles.metricValue}>{completionRate.toFixed(1)}%</p>
               </div>
               <div className={styles.metricCard}>
                 <p className={styles.metricLabel}>Failed</p>

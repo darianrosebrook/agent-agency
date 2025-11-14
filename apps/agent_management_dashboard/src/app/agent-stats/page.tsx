@@ -14,7 +14,9 @@ import {
   type Agent,
   type AgentActivityPoint,
   type ModelContribution,
+  type ModelContributionsResponse,
   type ContributionStats,
+  type ContributionsResponse,
   type EfficiencyResponse,
   type TaskCompletionResponse,
 } from "../../lib/api/agents";
@@ -35,9 +37,9 @@ export default function AgentStatsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [activity, setActivity] = useState<AgentActivityPoint[]>([]);
   const [modelContributions, setModelContributions] = useState<
-    ModelContribution[]
-  >([]);
-  const [contributions, setContributions] = useState<ContributionStats[]>([]);
+    ModelContribution[] | ModelContributionsResponse | null
+  >(null);
+  const [contributions, setContributions] = useState<ContributionStats[] | ContributionsResponse | null>(null);
   const [efficiency, setEfficiency] = useState<EfficiencyResponse | null>(null);
   const [taskCompletion, setTaskCompletion] =
     useState<TaskCompletionResponse | null>(null);
@@ -82,10 +84,19 @@ export default function AgentStatsPage() {
         ]);
 
         setStats(statsData);
-        setAgents(agentsData);
+        // Ensure agents is an array - handle case where API returns object with agents property
+        const agentsArray = Array.isArray(agentsData) 
+          ? agentsData 
+          : (agentsData?.agents || []);
+        setAgents(agentsArray);
         setActivity(activityData);
-        setModelContributions(modelData);
-        setContributions(contributionsData);
+        // Handle both array and object responses from getModelContributions
+        const modelArray = Array.isArray(modelData) 
+          ? modelData 
+          : (modelData?.models || modelData?.monthly_contributions || []);
+        setModelContributions(modelArray);
+        // Handle both array and object responses from getContributions
+        setContributions(Array.isArray(contributionsData) ? contributionsData : contributionsData as ContributionsResponse);
         setEfficiency(efficiencyData);
         setTaskCompletion(completionData);
       } catch (err) {
@@ -170,10 +181,19 @@ export default function AgentStatsPage() {
                   getAgentsTaskCompletion({ hours }),
                 ]);
                 setStats(statsData);
-                setAgents(agentsData);
+                // Ensure agents is an array - handle case where API returns object with agents property
+                const agentsArray = Array.isArray(agentsData) 
+                  ? agentsData 
+                  : (agentsData?.agents || []);
+                setAgents(agentsArray);
                 setActivity(activityData);
-                setModelContributions(modelData);
-                setContributions(contributionsData);
+                // Handle both array and object responses from getModelContributions
+                const modelArray = Array.isArray(modelData) 
+                  ? modelData 
+                  : (modelData?.models || modelData?.monthly_contributions || []);
+                setModelContributions(modelArray);
+                // Handle both array and object responses from getContributions
+        setContributions(Array.isArray(contributionsData) ? contributionsData : contributionsData as ContributionsResponse);
                 setEfficiency(efficiencyData);
                 setTaskCompletion(completionData);
               } catch (err) {
@@ -192,12 +212,22 @@ export default function AgentStatsPage() {
     );
   }
 
+  // Ensure contributions is an array - handle case where API returns ContributionsResponse object
+  const contributionsArray = Array.isArray(contributions) 
+    ? contributions 
+    : [];
+
+  // Ensure modelContributions is an array - handle case where API returns ModelContributionsResponse object
+  const modelContributionsArray = Array.isArray(modelContributions)
+    ? modelContributions
+    : [];
+
   const filteredContributions = selectedAgentId
-    ? contributions.filter((c) => c.agent_id === selectedAgentId)
-    : contributions;
+    ? contributionsArray.filter((c) => c.agent_id === selectedAgentId)
+    : contributionsArray;
 
   const totalLinesChanged = filteredContributions.reduce(
-    (sum, c) => sum + c.lines_added + c.lines_modified + c.lines_deleted,
+    (sum, c) => sum + (c.lines_added || 0) + (c.lines_modified || 0) + (c.lines_deleted || 0),
     0
   );
 
@@ -278,7 +308,7 @@ export default function AgentStatsPage() {
         )}
 
         {/* Agent Type Breakdown */}
-        {stats && Object.keys(stats.by_type).length > 0 && (
+        {stats && stats.by_type && Object.keys(stats.by_type).length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Agents by Type</h2>
             <div className={styles.typeList}>
@@ -293,11 +323,11 @@ export default function AgentStatsPage() {
         )}
 
         {/* Model Usage */}
-        {modelContributions.length > 0 && (
+        {modelContributionsArray.length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Model Usage</h2>
             <div className={styles.modelList}>
-              {modelContributions.map((model) => (
+              {modelContributionsArray.map((model) => (
                 <div key={model.model_name} className={styles.modelItem}>
                   <div className={styles.modelHeader}>
                     <span className={styles.modelName}>{model.model_name}</span>
@@ -383,7 +413,7 @@ export default function AgentStatsPage() {
         )}
 
         {/* Task Completion Metrics */}
-        {taskCompletion && taskCompletion.agents.length > 0 && (
+        {taskCompletion && taskCompletion.agents && taskCompletion.agents.length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Task Completion Metrics</h2>
             {taskCompletion.summary && (
@@ -474,7 +504,7 @@ export default function AgentStatsPage() {
         )}
 
         {/* Efficiency Metrics */}
-        {efficiency && efficiency.agents.length > 0 && (
+        {efficiency && efficiency.agents && efficiency.agents.length > 0 && (
           <BentoPanel className={styles.section}>
             <h2 className={styles.sectionTitle}>Efficiency Metrics</h2>
             {efficiency.summary && (
