@@ -1,23 +1,25 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { getUnreadCount } from "@/lib/stores/notificationStore";
 import {
-  Search,
-  MessageSquare,
-  FileSignature,
-  LayoutGrid,
-  TrendingUp,
-  FileCode,
-  HeartPulse,
-  Workflow,
-  Settings,
-  Moon,
-  ChevronDown,
-  FolderPlus,
-  TestTube,
   Bell,
+  ChevronDown,
+  FileCode,
+  FileSignature,
+  FolderPlus,
+  HeartPulse,
+  LayoutGrid,
+  MessageSquare,
+  Moon,
+  Search,
+  Settings,
+  TestTube,
+  TrendingUp,
+  Workflow,
 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { listProjects, type ProjectListItem } from "../../lib/api/projects";
 import {
   Tooltip,
   TooltipContent,
@@ -25,8 +27,6 @@ import {
   TooltipTrigger,
 } from "../primitives/tooltip";
 import { cn } from "../primitives/utils";
-import { getUnreadCount } from "@/lib/stores/notificationStore";
-import { listProjects, type ProjectListItem } from "../../lib/api/projects";
 import styles from "./NavigationSidebar.module.scss";
 
 // Helper function to map project state to status dot color
@@ -139,15 +139,15 @@ export function Sidebar() {
 
         {/* Search */}
         {!isCollapsed && (
-          <div 
+          <div
             className={styles.searchContainer}
-            onClick={() => navigate('/search')}
+            onClick={() => navigate("/search")}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                navigate('/search');
+                navigate("/search");
               }
             }}
           >
@@ -159,7 +159,7 @@ export function Sidebar() {
               readOnly
               onClick={(e) => {
                 e.stopPropagation();
-                navigate('/search');
+                navigate("/search");
               }}
             />
             <kbd className={styles.searchKeyboard}>/</kbd>
@@ -408,7 +408,7 @@ export function Sidebar() {
                     <Bell className={styles.icon} />
                     {unreadCount > 0 && (
                       <span className={styles.unreadBadge}>
-                        {unreadCount > 99 ? '99+' : unreadCount}
+                        {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     )}
                   </div>
@@ -419,7 +419,9 @@ export function Sidebar() {
               </TooltipTrigger>
               {isCollapsed && (
                 <TooltipContent side="right">
-                  <p>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</p>
+                  <p>
+                    Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
+                  </p>
                 </TooltipContent>
               )}
             </Tooltip>
@@ -455,13 +457,18 @@ export function Sidebar() {
           {!isCollapsed && (
             <div className={styles.folders}>
               {isLoadingProjects ? (
-                <div className={styles.loadingProjects}>Loading projects...</div>
+                <div className={styles.loadingProjects}>
+                  Loading projects...
+                </div>
               ) : recentProjects.length > 0 ? (
                 recentProjects.map((project) => (
                   <Link
                     key={project.project_id}
                     to={`/projects/${project.project_id}`}
-                    className={cn(styles.folderButton, styles.folderButtonGroup)}
+                    className={cn(
+                      styles.folderButton,
+                      styles.folderButtonGroup
+                    )}
                   >
                     <div
                       className={cn(

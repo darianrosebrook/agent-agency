@@ -44,6 +44,18 @@ $color-input: transparent;
 $color-input-background: #f3f3f5;
 $color-switch-background: #cbced4;
 
+// Surface colors (derived from card colors)
+$color-surface: $color-card;
+$color-surface-hover: lighten($color-card, 2%);
+
+// Text colors
+$color-text: $color-foreground;
+$color-text-secondary: $color-muted-foreground;
+
+// Hover states
+$color-primary-hover: darken($color-primary, 10%);
+$color-primary-light: lighten($color-primary, 30%);
+
 // Ring color
 $color-ring: oklch(0.708 0 0);
 

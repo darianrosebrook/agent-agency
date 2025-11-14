@@ -1,4 +1,4 @@
-@use "design-tokens" as *;
+@use "../../../styles/design-tokens.scss" as *;
 
 .subtaskItem {
   display: flex;

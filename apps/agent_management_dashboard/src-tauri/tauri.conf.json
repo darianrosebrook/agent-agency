@@ -1,7 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "devPath": "http://localhost:3002"
+    "devPath": "http://localhost:3002",
+    "distDir": "../out"
   },
   "tauri": {
     "bundle": {
@@ -41,7 +42,3 @@
     ]
   }
 }
-
-
-
-
