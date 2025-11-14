@@ -7,36 +7,42 @@
 // This matches the :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) selector
 :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
   h1 {
+    font-family: var(--font-nohemi);
     font-size: 96px;
     font-weight: var(--font-weight-semibold);
     line-height: 116px;
   }
 
   h2 {
+    font-family: var(--font-nohemi);
     font-size: 60px;
     font-weight: var(--font-weight-semibold);
     line-height: 60px;
   }
 
   h3 {
+    font-family: var(--font-nohemi);
     font-size: 48px;
     font-weight: var(--font-weight-semibold);
     line-height: 48px;
   }
 
   h4 {
+    font-family: var(--font-nohemi);
     font-size: 36px;
     font-weight: var(--font-weight-semibold);
     line-height: 40px;
   }
 
   h5 {
+    font-family: var(--font-nohemi);
     font-size: 24px;
     font-weight: var(--font-weight-semibold);
     line-height: 32px;
   }
 
   h6 {
+    font-family: var(--font-nohemi);
     font-size: 20px;
     font-weight: var(--font-weight-semibold);
     line-height: 28px;
