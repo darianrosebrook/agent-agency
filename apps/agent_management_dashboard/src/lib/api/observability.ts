@@ -59,13 +59,16 @@ export async function getEfficiencyMetrics(agentId?: string): Promise<Efficiency
   const url = `${API_BASE}/agents/efficiency${queryString ? `?${queryString}` : ''}`;
   const response = await apiGet<EfficiencyResponse>(url);
   
+  // Safely extract agents array
+  const agentsArray = Array.isArray(response?.agents) ? response.agents : [];
+  
   // Transform AgentEfficiencyMetrics[] to EfficiencyMetrics[]
-  return response.agents.map((agent: AgentEfficiencyMetrics) => ({
+  return agentsArray.map((agent: AgentEfficiencyMetrics) => ({
     agent_id: agent.agent_id,
     efficiency_score: agent.efficiency_score,
     resource_utilization: 0, // Not available in backend response
     throughput: agent.tasks_per_hour,
-    timestamp: response.period_end,
+    timestamp: response?.period_end || new Date().toISOString(),
   }));
 }
 

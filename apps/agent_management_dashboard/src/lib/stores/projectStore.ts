@@ -260,8 +260,11 @@ export const useProjectStore = create<ProjectState>()(
             try {
               const response = await listProjectsApiClient();
 
+              // Safely extract projects array
+              const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
+
               // Fetch full details for each project in parallel
-              const projectPromises = response.projects.map(
+              const projectPromises = projectsArray.map(
                 async (projectListItem) => {
                   try {
                     const projectDetails = await getProjectHandler(
@@ -273,14 +276,21 @@ export const useProjectStore = create<ProjectState>()(
                       "fetchProjects"
                     );
 
+                    // Safely extract tasks array
+                    const tasksArray = Array.isArray(validatedProject?.tasks)
+                      ? validatedProject.tasks
+                      : [];
+
                     // Transform API response to Project format
                     return ProjectSchema.parse({
                       id: validatedProject.id,
                       name: validatedProject.name,
                       summary: validatedProject.summary ?? undefined,
                       description: validatedProject.description ?? undefined,
-                      milestones: validatedProject.milestones,
-                      tasks: validatedProject.tasks.map((task) => ({
+                      milestones: Array.isArray(validatedProject.milestones)
+                        ? validatedProject.milestones
+                        : [],
+                      tasks: tasksArray.map((task) => ({
                         id: task.id,
                         title: task.title,
                         description: task.description ?? undefined,
@@ -343,16 +353,20 @@ export const useProjectStore = create<ProjectState>()(
                 name: validatedProject.name,
                 summary: validatedProject.summary ?? undefined,
                 description: validatedProject.description ?? undefined,
-                milestones: validatedProject.milestones,
-                tasks: validatedProject.tasks.map((task) => ({
-                  id: task.id,
-                  title: task.title,
-                  description: task.description ?? undefined,
-                  status: task.status,
-                  priority: task.priority ?? undefined,
-                  assignee: task.assignee ?? undefined,
-                  createdAt: task.created_at,
-                })),
+                milestones: Array.isArray(validatedProject.milestones)
+                  ? validatedProject.milestones
+                  : [],
+                tasks: Array.isArray(validatedProject.tasks)
+                  ? validatedProject.tasks.map((task) => ({
+                      id: task.id,
+                      title: task.title,
+                      description: task.description ?? undefined,
+                      status: task.status,
+                      priority: task.priority ?? undefined,
+                      assignee: task.assignee ?? undefined,
+                      createdAt: task.created_at,
+                    }))
+                  : [],
                 createdAt: validatedProject.created_at,
                 lastAccessed: validatedProject.last_accessed,
               });
@@ -747,8 +761,11 @@ export const useProjectStore = create<ProjectState>()(
           try {
             const response = await listProjectsApiClient();
 
+            // Safely extract projects array
+            const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
+
             // Fetch full details for each project in parallel
-            const projectPromises = response.projects.map(
+            const projectPromises = projectsArray.map(
               async (projectListItem) => {
                 try {
                   const projectDetails = await getProjectHandler(
@@ -760,14 +777,21 @@ export const useProjectStore = create<ProjectState>()(
                     "fetchProjects"
                   );
 
+                  // Safely extract tasks array
+                  const tasksArray = Array.isArray(validatedProject?.tasks)
+                    ? validatedProject.tasks
+                    : [];
+
                   // Transform API response to Project format
                   return ProjectSchema.parse({
                     id: validatedProject.id,
                     name: validatedProject.name,
                     summary: validatedProject.summary ?? undefined,
                     description: validatedProject.description ?? undefined,
-                    milestones: validatedProject.milestones,
-                    tasks: validatedProject.tasks.map((task) => ({
+                    milestones: Array.isArray(validatedProject.milestones)
+                      ? validatedProject.milestones
+                      : [],
+                    tasks: tasksArray.map((task) => ({
                       id: task.id,
                       title: task.title,
                       description: task.description ?? undefined,
@@ -824,14 +848,21 @@ export const useProjectStore = create<ProjectState>()(
               "createProjectApi"
             );
 
+            // Safely extract tasks array
+            const tasksArray = Array.isArray(validatedProject?.tasks)
+              ? validatedProject.tasks
+              : [];
+
             // Transform to Project format
             const newProject: Project = ProjectSchema.parse({
               id: validatedProject.id,
               name: validatedProject.name,
               summary: validatedProject.summary ?? undefined,
               description: validatedProject.description ?? undefined,
-              milestones: validatedProject.milestones,
-              tasks: validatedProject.tasks.map((task) => ({
+              milestones: Array.isArray(validatedProject.milestones)
+                ? validatedProject.milestones
+                : [],
+              tasks: tasksArray.map((task) => ({
                 id: task.id,
                 title: task.title,
                 description: task.description ?? undefined,
