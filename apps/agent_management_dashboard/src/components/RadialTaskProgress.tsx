@@ -59,6 +59,7 @@ export function RadialTaskProgress({
   const status = getStatus(overallProgress);
   const svgRef = useRef<SVGSVGElement>(null);
   const segmentsRef = useRef<SVGPathElement[]>([]);
+  const hasCollectedRefsRef = useRef(false);
 
   // Use GSAP for smooth number animation
   const animatedProgress = useGSAPNumberAnimation(
@@ -136,18 +137,31 @@ export function RadialTaskProgress({
 
   // Collect refs in useEffect to prevent infinite loops
   // This runs after render, so it doesn't trigger re-renders
+  // Only collect refs when totalSegments changes or on initial mount
   useEffect(() => {
     if (!svgRef.current) return;
 
     // Query all segment paths and store refs in correct order
     const paths = svgRef.current.querySelectorAll<SVGPathElement>('[data-segment-index]');
+    if (paths.length === 0) {
+      hasCollectedRefsRef.current = false;
+      return; // Don't update if no paths found yet
+    }
+    
     const sortedPaths = Array.from(paths).sort((a, b) => {
       const indexA = parseInt(a.getAttribute('data-segment-index') || '0', 10);
       const indexB = parseInt(b.getAttribute('data-segment-index') || '0', 10);
       return indexA - indexB;
     });
-    segmentsRef.current = sortedPaths;
-  }, [segments]);
+    
+    // Only update refs if they've actually changed or we haven't collected them yet
+    if (!hasCollectedRefsRef.current || 
+        sortedPaths.length !== segmentsRef.current.length || 
+        sortedPaths.some((path, i) => path !== segmentsRef.current[i])) {
+      segmentsRef.current = sortedPaths;
+      hasCollectedRefsRef.current = true;
+    }
+  }, [totalSegments]); // Only depend on totalSegments, not segments array
 
   // Animate segments with GSAP when progress changes
   useEffect(() => {
