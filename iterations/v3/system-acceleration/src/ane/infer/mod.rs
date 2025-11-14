@@ -35,5 +35,5 @@ pub use yolo::{create_yolo_executor, YOLOInferenceExecutor};
 // Re-export Mistral inference (stub types only - functions disabled)
 pub use mistral::{
     ComplianceLevel, ConfidenceLevel, ConstitutionalVerdict, DebateArgument, DebatePosition,
-    MistralInferenceOptions, RiskTier, Verdict,
+    MistralInferenceOptions, MistralInferenceResult, PrefillDecodeMetrics, RiskTier, Verdict,
 };

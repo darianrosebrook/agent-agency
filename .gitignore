@@ -83,7 +83,297 @@ target/
 **/.rustc_info.json
 
 # Temporal project management documentation
+# These patterns match files that violate documentation organization standards
+# See .cursor/rules/15-documentation-organization.mdc for details
+#
+# Note: These patterns will ignore NEW files matching these names.
+# Files already tracked in git will need to be removed manually if they violate standards.
+# Proper location for temporal docs: docs-status/ (already git-ignored above)
 docs-status/
+
+# Temporal documentation patterns (prohibited in docs/ and root)
+# Note: Patterns include underscore and hyphen delimiters, and case variations
+# Status and progress tracking
+*_SUMMARY.md
+*_summary.md
+*-summary.md
+*-SUMMARY.md
+*_STATUS.md
+*_status.md
+*-status.md
+*-STATUS.md
+*_PROGRESS.md
+*_progress.md
+*-progress.md
+*-PROGRESS.md
+*_PROGRESS_REPORT.md
+*_progress_report.md
+*-progress-report.md
+SESSION_*.md
+session-*.md
+IMPLEMENTATION_*.md
+implementation-*.md
+
+# Assessment and analysis files
+*_ASSESSMENT.md
+*_assessment.md
+*-assessment.md
+*-ASSESSMENT.md
+*_ANALYSIS.md
+*_analysis.md
+*-analysis.md
+*-ANALYSIS.md
+*_INVESTIGATION.md
+*_investigation.md
+*-investigation.md
+*-INVESTIGATION.md
+*_INVESTIGATION_REPORT.md
+*_investigation_report.md
+*-investigation-report.md
+*_EVALUATION.md
+*_evaluation.md
+*-evaluation.md
+*-EVALUATION.md
+*_EVALUATION_PLAN.md
+*_evaluation_plan.md
+*-evaluation-plan.md
+*_EVALUATION_COMPLETE.md
+*_evaluation_complete.md
+*-evaluation-complete.md
+
+# Reports and audits
+*_REPORT.md
+*_report.md
+*-report.md
+*-REPORT.md
+*_AUDIT.md
+*_audit.md
+*-audit.md
+*-AUDIT.md
+*_AUDIT_SUMMARY.md
+*_audit_summary.md
+*-audit-summary.md
+*_TALLY_REPORT.md
+*_tally_report.md
+*-tally-report.md
+*_PRIORITY_LIST.md
+*_priority_list.md
+*-priority-list.md
+*_PRIORITY.md
+*_priority.md
+*-priority.md
+
+# Planning and tracking documents
+*_ROADMAP.md
+*_roadmap.md
+*-roadmap.md
+*-ROADMAP.md
+*_CHECKLIST.md
+*_checklist.md
+*-checklist.md
+*-CHECKLIST.md
+*_PLAN.md
+*_plan.md
+*-plan.md
+*-PLAN.md
+*_NEXT_STEPS.md
+*_next_steps.md
+*-next-steps.md
+
+# Completion and milestone tracking
+*_COMPLETE.md
+*_complete.md
+*-complete.md
+*-COMPLETE.md
+*_COMPLETION.md
+*_completion.md
+*-completion.md
+*-COMPLETION.md
+*_COMPLETION_SUMMARY.md
+*_completion_summary.md
+*-completion-summary.md
+
+# Fix files (general patterns - catch all variations)
+*_FIX.md
+*_fix.md
+*-fix.md
+*-FIX.md
+*_FIXES.md
+*_fixes.md
+*-fixes.md
+*-FIXES.md
+*_FIX*.md
+*_fix*.md
+*-fix*.md
+*-FIX*.md
+*_FIX_COMPLETE.md
+*_fix_complete.md
+*-fix-complete.md
+*_FIX_SUMMARY.md
+*_fix_summary.md
+*-fix-summary.md
+*_FIXES_COMPLETE.md
+*_fixes_complete.md
+*-fixes-complete.md
+*_IMPLEMENTATION_COMPLETE.md
+*_implementation_complete.md
+*-implementation-complete.md
+*_IMPLEMENTATION_FINAL_SUMMARY.md
+*_implementation_final_summary.md
+*-implementation-final-summary.md
+
+# Implementation files (general pattern)
+*_IMPLEMENTATION.md
+*_implementation.md
+*-implementation.md
+*-IMPLEMENTATION.md
+*_IMPLEMENTATION*.md
+*_implementation*.md
+*-implementation*.md
+*-IMPLEMENTATION*.md
+
+# Status and reassessment documents
+*_REASSESSMENT.md
+*_reassessment.md
+*-reassessment.md
+*-REASSESSMENT.md
+*_STATUS_REASSESSMENT.md
+*_status_reassessment.md
+*-status-reassessment.md
+*_UPDATE.md
+*_update.md
+*-update.md
+*-UPDATE.md
+*_STATUS_UPDATE.md
+*_status_update.md
+*-status-update.md
+*-STATUS-UPDATE.md
+BUILD_AND_TEST_STATUS.md
+BUILD_STATUS_REASSESSMENT.md
+BUILD_ERRORS_PRIORITY_LIST.md
+BUILD_WARNINGS_PRIORITY_LIST.md
+
+# Final and completion documents
+*_FINAL.md
+*_final.md
+*-final.md
+*-FINAL.md
+*_FINAL_*.md
+*-final-*.md
+
+# Comparison and verification documents
+*_COMPARISON.md
+*_comparison.md
+*-comparison.md
+*-COMPARISON.md
+*_VERIFICATION.md
+*_verification.md
+*-verification.md
+*-VERIFICATION.md
+*_VERIFICATION_*.md
+*-verification-*.md
+
+# Migration and conversion progress
+*_MIGRATION*.md
+*_migration*.md
+*-migration*.md
+*-MIGRATION*.md
+*_CONVERSION*.md
+*_conversion*.md
+*-conversion*.md
+*-CONVERSION*.md
+
+# Compilation status and errors
+*_COMPILATION*.md
+*_compilation*.md
+*-compilation*.md
+*-COMPILATION*.md
+*_COMPILATION_STATUS.md
+*_compilation_status.md
+*-compilation-status.md
+*_COMPILATION_ERRORS.md
+*_compilation_errors.md
+*-compilation-errors.md
+
+# Investigation and analysis results
+*_INVESTIGATION_PROGRESS.md
+*_PERFORMANCE_INVESTIGATION_REPORT.md
+*_PERFORMANCE_COMPARISON.md
+*_BASELINE_RESULTS.md
+*_BENCHMARK_DATA.md
+
+# Project management tracking
+*_CLEANUP_SUMMARY.md
+*_CLEANUP_PLAN.md
+WORKER1_CLEANUP_SUMMARY.md
+CLEANUP_PLAN.md
+
+# Feature flag and rollback analysis
+*_FEATURE_FLAG_*.md
+*_ROLLBACK_ANALYSIS.md
+*_FEATURE_FLAG_IMPLEMENTATION_COMPLETE.md
+*_FEATURE_FLAG_ROLLBACK_ANALYSIS.md
+
+# Impact and architectural planning (temporal)
+*_IMPACT_ASSESSMENT.md
+*_ARCHITECTURAL_FIX_PLAN.md
+*_ARCHITECTURAL_FIX_SUMMARY.md
+
+# Test and validation status (temporal)
+*_TEST_STATUS_SUMMARY.md
+*_TEST_STATUS.md
+*_TEST_CATALOG.md
+*_VALIDATION_RESULTS.md
+*_VALIDATION.md
+
+# Documentation that should be in docs-status/
+*_STATUS_AND_NEXT_STEPS.md
+*_CURRENT_STATUS_AND_NEXT_STEPS.md
+*_PRODUCTION_READINESS_ASSESSMENT.md
+*_PRODUCTION_READINESS_CHECKLIST.md
+*_FUTURE_INCOMPATIBILITY_WARNINGS.md
+*_PROJECT_STATUS_ASSESSMENT.md
+*_DEBUG_*.md
+*_debug_*.md
+*-debug-*.md
+*-DEBUG-*.md
+DEBUG_*.md
+debug_*.md
+debug-*.md
+DEBUG-*.md
+*_STUBS_INVENTORY.md
+
+# Analysis reports (generated or temporal)
+*_analysis_report.md
+*_analysis.md
+final_analysis_*.md
+torch_dependency_graph.md
+fixed_todo_analysis_report.md
+v3_todo_priority_manifest.yaml
+todo-analysis*.md
+todo-analysis*.json
+
+# Project management files
+TODO.md
+*_TODO.md
+*_todo.md
+*-todo.md
+*-TODO.md
+*_TODOS.md
+*_todos.md
+*-todos.md
+*-TODOS.md
+*_TODO*.md
+*_todo*.md
+*-todo*.md
+*-TODO*.md
+TODO_*.md
+todo_*.md
+todo-*.md
+TODO-*.md
+stubby.md
+
+# Archive patterns (temporal docs moved to archive)
 docs/archive/
 docs/archive/implementation-tracking/
 docs/archive/session-reports/
@@ -92,17 +382,9 @@ docs/archive/analysis/
 docs/archive/caws/
 docs/archive/plans/
 
-# Analysis and report files (generated)
-*_analysis_report.md
-final_analysis_*.md
-torch_dependency_graph.md
-fixed_todo_analysis_report.md
-v3_todo_priority_manifest.yaml
-
-# Project management files
-TODO.md
-*_TODO.md
-TODO_*.md
+# Status-generated documentation
+**/docs/status-generated/
+**/status-generated/
 
 # Corrupted/temporary files
 scripts/cargo.,toml

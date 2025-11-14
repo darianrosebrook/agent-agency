@@ -27,6 +27,7 @@ Unlike traditional software testing that focuses on binary success/failure, Agen
 The system is organized into 17 focused crates with clear responsibilities:
 
 #### Core Agent Systems
+
 - **agent-orchestration**: Task coordination, council governance, and autonomous file editing
 - **agent-constitutional-council**: Four-judge constitutional oversight with hybrid CAWS + LLM reasoning
 - **agent-workers**: Parallel task execution and MCP-based worker management
@@ -37,6 +38,7 @@ The system is organized into 17 focused crates with clear responsibilities:
 - **agent-mcp**: Model Context Protocol implementation and tool orchestration
 
 #### Infrastructure Services
+
 - **data-infrastructure**: PostgreSQL persistence, API interfaces, and data transformation
 - **system-observability**: Monitoring, metrics collection, distributed tracing, and alerting
 - **system-quality-security**: Authentication, authorization, quality gates, and integrity verification
@@ -49,6 +51,7 @@ The system is organized into 17 focused crates with clear responsibilities:
 - **testing-validation**: Comprehensive testing platform and quality assurance
 
 #### Interface Layer
+
 - **data-interfaces**: CLI, API, and web interface components
 - **agent-agency-contracts**: Type definitions and API contracts
 
@@ -293,11 +296,13 @@ The system enforces CAWS compliance and quality standards:
 ## Documentation
 
 ### Core Documentation
+
 - **[System Architecture](./docs/README.md)**: Component organization and relationships
 - **[CAWS Agent Guide](./docs/agents.md)**: Agent workflow and collaboration patterns
 - **[Production Deployment](./deploy/README.md)**: Deployment and operational guides
 
 ### Component Documentation
+
 - **agent-orchestration**: Task coordination, council governance, and autonomous file editing
 - **agent-constitutional-council**: Four-judge constitutional oversight with hybrid CAWS + LLM reasoning
 - **agent-mcp**: Model Context Protocol implementation with file editing tools and tool registry

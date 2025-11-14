@@ -2,8 +2,10 @@
 // Mapped from CSS variables and globals.css
 
 // Font families
-$font-family-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-$font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+$font-family-sans: var(--font-inter);
+$font-family-mono: var(--font-monaspace);
+$font-family-serif: var(--font-newsreader);
+$font-family-display: var(--font-nohemi);
 
 // Font sizes
 // Base font size from CSS variable --font-size: 16px

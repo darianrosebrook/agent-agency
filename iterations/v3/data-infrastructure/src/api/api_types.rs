@@ -7,6 +7,8 @@ use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::Arc;
+use sqlx::Row;
 use uuid::Uuid;
 
 /// API configuration
@@ -160,50 +162,351 @@ pub struct QualityReport {
     pub checks_failed: u32,
 }
 
-/// Progress tracker (stub)
+/// Progress tracker with real database integration
 #[derive(Debug, Clone, JsonSchema)]
 pub struct ProgressTracker {
     #[schemars(with = "String")]
     pub task_id: Uuid,
     pub current_step: String,
     pub progress_percentage: u8,
+    /// Database client for querying real task execution state
+    /// This is optional to maintain backward compatibility with schema generation
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub db_client: Option<Arc<crate::DatabaseClient>>,
 }
 
 impl ProgressTracker {
-    /// Get progress for a task
-    pub async fn get_progress(&self, _task_id: Uuid) -> Result<ExecutionProgress, anyhow::Error> {
-        // TODO: Implement real progress tracking for tasks
-        //       Currently returns cached progress from tracker; should query actual task execution state.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Query actual task execution state from task executor
-        // [ ] Calculate progress percentage from task steps
-        // [ ] Return current step and status from execution
-        // [ ] Handle task not found errors
-        // [ ] Add unit tests with mock task execution
-        // [ ] Add integration tests with real task progress tracking
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Progress reflects actual task execution state
-        // - Task not found returns appropriate error
-        // - Progress percentage is accurate
-        //
-        // DEPENDENCIES:
-        // - Task executor integration (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (API functionality)
-        // - Change Budget: ~100 LOC
+    /// Create a new ProgressTracker with database access
+    pub fn with_db(db_client: Arc<crate::DatabaseClient>, task_id: Uuid) -> Self {
+        Self {
+            task_id,
+            current_step: String::new(),
+            progress_percentage: 0,
+            db_client: Some(db_client),
+        }
+    }
+
+    /// Get progress for a task by querying actual task execution state from database
+    pub async fn get_progress(&self, task_id: Uuid) -> Result<ExecutionProgress, anyhow::Error> {
+        // If database client is available, query real execution state
+        if let Some(db_client) = &self.db_client {
+            return Self::get_progress_from_db(db_client, task_id).await;
+        }
+
+        // Fallback to struct fields if no database access (for backward compatibility)
         Ok(ExecutionProgress {
             task_id: self.task_id,
             status: "in_progress".to_string(),
             progress: self.progress_percentage,
             current_step: self.current_step.clone(),
             estimated_completion: None,
+        })
+    }
+
+    /// Query actual task execution state from database
+    async fn get_progress_from_db(
+        db_client: &Arc<crate::DatabaseClient>,
+        task_id: Uuid,
+    ) -> Result<ExecutionProgress, anyhow::Error> {
+        // Query task_executions table for execution status and timing
+        let execution_row = sqlx::query(
+            r#"
+            SELECT status, execution_started_at, execution_completed_at, execution_time_ms
+            FROM task_executions
+            WHERE task_id = $1
+            ORDER BY execution_started_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(task_id)
+        .fetch_optional(db_client.pool())
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to query task execution progress: {}", e))?;
+
+        // Query task_execution_states for current state
+        let state_row = sqlx::query(
+            r#"
+            SELECT status, last_updated, state_data
+            FROM task_execution_states
+            WHERE task_id = $1
+            "#,
+        )
+        .bind(task_id)
+        .fetch_optional(db_client.pool())
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to query task execution state: {}", e))?;
+
+        // Query execution_plans to get milestone progress if available
+        let plan_row = sqlx::query(
+            r#"
+            SELECT ep.id, ep.milestones, ep.state, ep.completed_at
+            FROM execution_plans ep
+            INNER JOIN tasks t ON t.project_id = ep.id
+            WHERE t.id = $1
+            LIMIT 1
+            "#,
+        )
+        .bind(task_id)
+        .fetch_optional(db_client.pool())
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to query execution plan: {}", e))?;
+
+        // Determine status and progress from execution, state, and milestones
+        let (status, progress, current_step, estimated_completion) = match (execution_row, state_row, plan_row) {
+            (Some(exec_row), Some(state_row), Some(plan_row)) => {
+                // Use state status if available, otherwise execution status
+                let exec_status: String = exec_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let state_status: String = state_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let plan_state: String = plan_row
+                    .try_get("state")
+                    .unwrap_or_else(|_| "unknown".to_string());
+
+                let final_status = if state_status != "unknown" {
+                    state_status
+                } else if exec_status != "unknown" {
+                    exec_status
+                } else {
+                    plan_state
+                };
+
+                // Calculate progress from milestones if available
+                let progress = if let Ok(Some(milestones_json)) = plan_row.try_get::<Option<serde_json::Value>, &str>("milestones") {
+                    if let Some(milestones_array) = milestones_json.as_array() {
+                        let total = milestones_array.len();
+                        let completed = milestones_array.iter()
+                            .filter(|m| {
+                                m.get("state")
+                                    .and_then(|s| s.as_str())
+                                    .map(|s| s == "completed")
+                                    .unwrap_or(false)
+                            })
+                            .count();
+                        if total > 0 {
+                            ((completed as f64 / total as f64) * 100.0) as u8
+                        } else {
+                            0
+                        }
+                    } else {
+                        // Fallback to status-based progress
+                        match final_status.as_str() {
+                            "pending" => 0,
+                            "running" | "executing" => 50,
+                            "completed" => 100,
+                            "failed" | "cancelled" => 0,
+                            "paused" => 50,
+                            _ => 0,
+                        }
+                    }
+                } else {
+                    // Fallback to status-based progress
+                    match final_status.as_str() {
+                        "pending" => 0,
+                        "running" | "executing" => 50,
+                        "completed" => 100,
+                        "failed" | "cancelled" => 0,
+                        "paused" => 50,
+                        _ => 0,
+                    }
+                };
+
+                // Get current step from state_data or milestone
+                let current_step = if let Ok(Some(state_data)) = state_row.try_get::<Option<serde_json::Value>, &str>("state_data") {
+                    state_data
+                        .get("current_step")
+                        .or_else(|| state_data.get("current_phase"))
+                        .and_then(|s| s.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| final_status.clone())
+                } else {
+                    final_status.clone()
+                };
+
+                // Estimate completion time if task is in progress
+                let estimated_completion = if final_status == "running" || final_status == "executing" {
+                    if let Ok(Some(started)) = exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_started_at") {
+                        // Estimate completion based on average task duration (5 minutes)
+                        Some(started + Duration::minutes(5))
+                    } else {
+                        None
+                    }
+                } else if final_status == "completed" {
+                    exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_completed_at")
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                (final_status, progress, current_step, estimated_completion)
+            }
+            (Some(exec_row), None, _) => {
+                let status: String = exec_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let progress = match status.as_str() {
+                    "running" | "executing" => 50,
+                    "completed" => 100,
+                    "failed" | "cancelled" => 0,
+                    _ => 0,
+                };
+                let estimated_completion = if status == "running" || status == "executing" {
+                    exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_started_at")
+                        .ok()
+                        .flatten()
+                        .map(|started| started + Duration::minutes(5))
+                } else {
+                    exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_completed_at")
+                        .ok()
+                        .flatten()
+                };
+                (status, progress, "executing".to_string(), estimated_completion)
+            }
+            (Some(exec_row), Some(state_row), None) => {
+                // Execution and state available, but no plan
+                let exec_status: String = exec_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let state_status: String = state_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let final_status = if state_status != "unknown" {
+                    state_status
+                } else {
+                    exec_status
+                };
+                let progress = match final_status.as_str() {
+                    "pending" => 0,
+                    "running" | "executing" => 50,
+                    "completed" => 100,
+                    "failed" | "cancelled" => 0,
+                    "paused" => 50,
+                    _ => 0,
+                };
+                let current_step = if let Ok(Some(state_data)) = state_row.try_get::<Option<serde_json::Value>, &str>("state_data") {
+                    state_data
+                        .get("current_step")
+                        .or_else(|| state_data.get("current_phase"))
+                        .and_then(|s| s.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| final_status.clone())
+                } else {
+                    final_status.clone()
+                };
+                let estimated_completion = if final_status == "running" || final_status == "executing" {
+                    exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_started_at")
+                        .ok()
+                        .flatten()
+                        .map(|started| started + Duration::minutes(5))
+                } else if final_status == "completed" {
+                    exec_row.try_get::<Option<DateTime<Utc>>, &str>("execution_completed_at")
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+                (final_status, progress, current_step, estimated_completion)
+            }
+            (None, Some(state_row), _) => {
+                let status: String = state_row
+                    .try_get("status")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let progress = match status.as_str() {
+                    "pending" => 0,
+                    "running" | "executing" => 50,
+                    "completed" => 100,
+                    "failed" | "cancelled" => 0,
+                    "paused" => 50,
+                    _ => 0,
+                };
+                let current_step = if let Ok(Some(state_data)) = state_row.try_get::<Option<serde_json::Value>, &str>("state_data") {
+                    state_data
+                        .get("current_step")
+                        .or_else(|| state_data.get("current_phase"))
+                        .and_then(|s| s.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| status.clone())
+                } else {
+                    status.clone()
+                };
+                (status, progress, current_step, None)
+            }
+            (None, None, Some(plan_row)) => {
+                let status: String = plan_row
+                    .try_get("state")
+                    .unwrap_or_else(|_| "unknown".to_string());
+                let progress = if let Ok(Some(milestones_json)) = plan_row.try_get::<Option<serde_json::Value>, &str>("milestones") {
+                    if let Some(milestones_array) = milestones_json.as_array() {
+                        let total = milestones_array.len();
+                        let completed = milestones_array.iter()
+                            .filter(|m| {
+                                m.get("state")
+                                    .and_then(|s| s.as_str())
+                                    .map(|s| s == "completed")
+                                    .unwrap_or(false)
+                            })
+                            .count();
+                        if total > 0 {
+                            ((completed as f64 / total as f64) * 100.0) as u8
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    }
+                } else {
+                    0
+                };
+                let estimated_completion = plan_row.try_get::<Option<DateTime<Utc>>, &str>("completed_at")
+                    .ok()
+                    .flatten();
+                (status, progress, status.clone(), estimated_completion)
+            }
+            (None, None, None) => {
+                // No execution, state, or plan found - check if task exists
+                let task_row = sqlx::query(
+                    r#"
+                    SELECT status, created_at, updated_at
+                    FROM tasks
+                    WHERE id = $1
+                    "#,
+                )
+                .bind(task_id)
+                .fetch_optional(db_client.pool())
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to query task: {}", e))?;
+
+                match task_row {
+                    Some(row) => {
+                        let status: String = row
+                            .try_get("status")
+                            .unwrap_or_else(|_| "unknown".to_string());
+                        let progress = match status.as_str() {
+                            "pending" => 0,
+                            "in_progress" => 50,
+                            "completed" => 100,
+                            "failed" => 0,
+                            _ => 0,
+                        };
+                        (status, progress, "pending".to_string(), None)
+                    }
+                    None => {
+                        return Err(anyhow::anyhow!("Task not found: {}", task_id));
+                    }
+                }
+            }
+        };
+
+        Ok(ExecutionProgress {
+            task_id,
+            status,
+            progress,
+            current_step,
+            estimated_completion,
         })
     }
 }

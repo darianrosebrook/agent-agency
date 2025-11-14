@@ -213,6 +213,64 @@ def create_attention_block_model(output_dir: Path, hidden_size: int = 4096, num_
     return output_path
 
 
+def compile_model(mlpackage_path: Path) -> Path:
+    """
+    Compile a .mlpackage model to .mlmodelc format.
+
+    Uses Swift's MLModel.compileModel API via the Swift bridge script.
+
+    Args:
+        mlpackage_path: Path to the .mlpackage directory
+
+    Returns:
+        Path to the compiled .mlpackage.mlmodelc directory
+    """
+    # Check if already compiled
+    compiled_path = mlpackage_path.with_suffix(".mlpackage.mlmodelc")
+    if compiled_path.exists():
+        print(f"✅ Model already compiled: {compiled_path}")
+        return compiled_path
+
+    print(f"🔨 Compiling: {mlpackage_path.name}...")
+
+    try:
+        # Use the Swift bridge compiler
+        script_dir = Path(__file__).parent
+        project_root = script_dir.parent.parent
+        swift_compiler = project_root / "models" / "languages" / \
+            "swift" / "bridges" / "CompileModels.swift"
+
+        if swift_compiler.exists():
+            # The Swift script compiles all models in the directory
+            # So we just need to run it and it will compile our model
+            import subprocess
+            result = subprocess.run(
+                ["swift", str(swift_compiler)],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+
+            if result.returncode == 0:
+                # Check if compilation succeeded
+                if compiled_path.exists():
+                    return compiled_path
+                else:
+                    raise Exception(
+                        "Compilation completed but compiled file not found")
+            else:
+                raise Exception(f"Swift compilation failed: {result.stderr}")
+        else:
+            raise Exception(
+                "Swift compiler script not found. Please compile manually using Xcode.")
+
+    except subprocess.TimeoutExpired:
+        raise Exception("Compilation timed out. Try compiling manually.")
+    except Exception as e:
+        raise Exception(
+            f"Compilation failed: {e}. Try compiling manually with: swift models/languages/swift/bridges/CompileModels.swift")
+
+
 def main():
     """Create micro-models for ANE baseline testing."""
     # Determine output directory
@@ -243,6 +301,26 @@ def main():
         print(f"   - Dense layer: {dense_path}")
         print(f"   - Attention block: {attention_path}")
         print("=" * 60)
+
+        # Compile models to .mlmodelc format
+        print("\nCompiling models...")
+        try:
+            dense_compiled = compile_model(dense_path)
+            print(f"✅ Compiled dense layer: {dense_compiled}")
+
+            attention_compiled = compile_model(attention_path)
+            print(f"✅ Compiled attention block: {attention_compiled}")
+
+            print("\n" + "=" * 60)
+            print("✅ Successfully compiled micro-models:")
+            print(f"   - Dense layer: {dense_compiled}")
+            print(f"   - Attention block: {attention_compiled}")
+            print("=" * 60)
+        except Exception as e:
+            print(f"\n⚠️  Warning: Model compilation failed: {e}")
+            print("Models are saved but not compiled. You may need to compile manually.")
+            print("You can compile using Xcode or the Swift bridge script.")
+
         print("\nNext steps:")
         print("1. Run benchmarks: cargo test --test ane_performance_benchmarks")
         print("2. Compare micro-model ANE speedup vs Mistral 7B")

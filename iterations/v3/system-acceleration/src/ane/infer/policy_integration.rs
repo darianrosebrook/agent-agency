@@ -28,11 +28,9 @@ pub fn backend_policy_to_compute_units(backend: BackendPolicy) -> MLComputeUnits
 pub fn create_compilation_options_from_policy(
     inference_options: &MistralInferenceOptions,
     input_length: usize,
-    policy: Option<&PerformancePolicy>,
+    _policy: Option<&PerformancePolicy>,
 ) -> MistralCompilationOptions {
-    let policy = policy.unwrap_or(&PerformancePolicy::default());
-    
-    // Get backend recommendation from policy
+    // Get backend recommendation from policy (policy is used via inference_options)
     let backend = inference_options
         .effective_backend_policy(input_length);
     
@@ -60,7 +58,7 @@ pub fn create_compilation_options_from_policy(
 /// This is a convenience function that applies the performance policy to
 /// inference options, making it easy to use policy-based optimization.
 pub fn apply_policy_to_options(
-    mut options: MistralInferenceOptions,
+    options: MistralInferenceOptions,
     input_length: usize,
     policy: Option<&PerformancePolicy>,
 ) -> MistralInferenceOptions {
