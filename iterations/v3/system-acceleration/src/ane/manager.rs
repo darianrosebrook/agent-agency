@@ -3,25 +3,31 @@
 //! This module contains the core ANE manager and device management
 //! functionality for Apple Neural Engine operations.
 
+use parking_lot::RwLock as SyncRwLock;
 use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use parking_lot::RwLock as SyncRwLock;
 
 // Import our new modules
-use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::compat::iokit;
-use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
-use crate::ane::models::coreml_model::{LoadedCoreMLModel, CompilationOptions, estimate_memory_usage as estimate_coreml_memory_usage};
-use crate::ane::compat::coreml::coreml::{compile_model, load_model};
-use crate::ane::models::mistral_model::{estimate_memory_usage as estimate_mistral_memory_usage};
-use crate::ane::models::mistral_model::{MistralModel, MistralCompilationOptions, SafeModelHandle, SafeMistralTokenizer, KVCache};
 use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use crate::ane::ane_errors::{ANEError, Result};
+use crate::ane::compat::coreml::coreml::{compile_model, load_model};
+use crate::ane::compat::iokit;
+use crate::ane::infer::execute::{
+    execute_inference, InferenceOptions as ExecuteOptions, InferenceResult,
+};
+use crate::ane::models::coreml_model::{
+    estimate_memory_usage as estimate_coreml_memory_usage, CompilationOptions, LoadedCoreMLModel,
+};
+use crate::ane::models::mistral_model::estimate_memory_usage as estimate_mistral_memory_usage;
+use crate::ane::models::mistral_model::{
+    KVCache, MistralCompilationOptions, MistralModel, SafeMistralTokenizer, SafeModelHandle,
+};
+use crate::ane::resource_pool::{Pool, PoolBuilder, PoolStats};
 use crate::telemetry::TelemetryCollector;
-use crate::ane::infer::execute::{execute_inference, InferenceOptions as ExecuteOptions, InferenceResult};
 // Removed unused imports: deliberate_constitution, generate_debate_argument, MistralInferenceOptions, ConstitutionalVerdict, DebateArgument
-use crate::ane::metrics::ewma::{Ewma, PerformanceTracker, PerformanceSummary};
+use crate::ane::metrics::ewma::{Ewma, PerformanceSummary, PerformanceTracker};
 
 /// Apple Neural Engine manager for ANE-accelerated inference
 #[derive(Debug)]
@@ -141,10 +147,10 @@ pub struct ANEDeviceConfig {
 /// ANE performance profiles
 #[derive(Debug, Clone, JsonSchema)]
 pub enum ANEPerformanceProfile {
-    PowerSaver,      // Minimize power, acceptable performance
-    Balanced,        // Balance performance and power
-    Performance,     // Maximize performance
-    RealTime,        // Lowest latency, highest power
+    PowerSaver,  // Minimize power, acceptable performance
+    Balanced,    // Balance performance and power
+    Performance, // Maximize performance
+    RealTime,    // Lowest latency, highest power
 }
 
 /// ANE thermal management configuration
@@ -158,9 +164,9 @@ pub struct ANEThermalConfig {
 /// ANE fan control settings
 #[derive(Debug, Clone, JsonSchema)]
 pub enum ANEFanControl {
-    Auto,           // System manages fan speed
-    Manual(u8),     // Fixed fan speed (0-100%)
-    Dynamic,        // Adaptive based on workload
+    Auto,       // System manages fan speed
+    Manual(u8), // Fixed fan speed (0-100%)
+    Dynamic,    // Adaptive based on workload
 }
 
 /// ANE power optimization configuration
@@ -212,7 +218,7 @@ impl ANEManager {
             .max_concurrent(4)
             .memory_total_mb(8192) // 8GB default
             .build()?;
-        
+
         Ok(Self {
             loaded_coreml_models: Arc::new(RwLock::new(HashMap::new())),
             loaded_mistral_models: Arc::new(RwLock::new(HashMap::new())),
@@ -233,7 +239,7 @@ impl ANEManager {
             _ane_symbols: SyncRwLock::new(ANESymbols::default()),
         })
     }
-    
+
     /// Create a new ANE manager with custom configuration
     pub fn with_config(
         max_concurrent: usize,
@@ -244,7 +250,7 @@ impl ANEManager {
             .max_concurrent(max_concurrent)
             .memory_total_mb(memory_total_mb)
             .build()?;
-        
+
         Ok(Self {
             loaded_coreml_models: Arc::new(RwLock::new(HashMap::new())),
             loaded_mistral_models: Arc::new(RwLock::new(HashMap::new())),
@@ -265,7 +271,7 @@ impl ANEManager {
     pub async fn detect_capabilities() -> crate::ANECapabilities {
         // Check if ANE is available through Core ML
         let is_available = crate::ane::compat::coreml::coreml::is_ane_available();
-        
+
         if !is_available {
             return crate::ANECapabilities {
                 is_available: false,
@@ -275,13 +281,13 @@ impl ANEManager {
                 ..Default::default()
             };
         }
-        
+
         // Get Core ML capabilities
         let coreml_caps = crate::ane::compat::coreml::coreml::detect_coreml_capabilities();
-        
+
         crate::ANECapabilities {
             is_available: true,
-            compute_units: 16, // Heuristic for Apple Silicon
+            compute_units: 16,         // Heuristic for Apple Silicon
             max_memory_mb: Some(8192), // Conservative estimate
             supported_precisions: coreml_caps.supported_precisions.clone(),
             ..Default::default()
@@ -289,16 +295,16 @@ impl ANEManager {
     }
 
     /// Load a model for ANE inference
-    /// 
+    ///
     /// # Arguments
     /// * `model_path` - Path to the model file (.mlmodel or .mlmodelc)
-    /// 
+    ///
     /// # Returns
     /// * `Ok(String)` - Model ID for tracking
     /// * `Err(ANEError)` - If loading fails
     pub async fn load_model(&self, model_path: &str) -> Result<String> {
         use std::path::Path;
-        
+
         // Check if model is already loaded
         {
             let models = self.loaded_coreml_models.read().await;
@@ -306,21 +312,22 @@ impl ANEManager {
                 return Err(ANEError::ModelAlreadyLoaded(model_path.to_string()));
             }
         }
-        
+
         // Load and compile model
         let model_path = Path::new(model_path);
         let compilation_options = CompilationOptions::default();
-        let loaded_model = crate::ane::models::coreml_model::load_model(model_path, &compilation_options)?;
-        
+        let loaded_model =
+            crate::ane::models::coreml_model::load_model(model_path, &compilation_options)?;
+
         // Validate ANE compatibility
         crate::ane::models::coreml_model::validate_ane_compatibility(&loaded_model)?;
-        
+
         // Estimate memory usage
         let memory_cost_mb = estimate_coreml_memory_usage(&loaded_model);
-        
+
         // Request admission to resource pool
         let _admission = self.resource_pool.admit(memory_cost_mb).await?;
-        
+
         // Register model
         let model_id = loaded_model.model_id.clone();
 
@@ -328,28 +335,31 @@ impl ANEManager {
             let mut models = self.loaded_coreml_models.write().await;
             models.insert(model_path.to_string_lossy().to_string(), loaded_model);
         }
-        
+
         // Initialize performance metrics
         {
             let mut metrics = self.performance_metrics.write().await;
-            metrics.insert(model_id.clone(), ANEPerformanceMetrics {
-                total_inferences: 0,
-                average_latency_ms: 0.0,
-                peak_memory_usage_mb: memory_cost_mb,
-                error_count: 0,
-                last_inference_time: std::time::Instant::now(),
-            });
+            metrics.insert(
+                model_id.clone(),
+                ANEPerformanceMetrics {
+                    total_inferences: 0,
+                    average_latency_ms: 0.0,
+                    peak_memory_usage_mb: memory_cost_mb,
+                    error_count: 0,
+                    last_inference_time: std::time::Instant::now(),
+                },
+            );
         }
-        
+
         Ok(model_id)
     }
 
     /// Execute inference on a loaded model
-    /// 
+    ///
     /// # Arguments
     /// * `model_id` - Model ID returned from load_model
     /// * `input` - Input tensor data
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Vec<f32>)` - Output tensor data
     /// * `Err(ANEError)` - If inference fails
@@ -357,12 +367,13 @@ impl ANEManager {
         // Find the model
         let model = {
             let models = self.loaded_coreml_models.read().await;
-            models.values()
+            models
+                .values()
                 .find(|m| m.model_id == model_id)
                 .cloned()
                 .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?
         };
-        
+
         // Create inference options
         let options = ExecuteOptions {
             timeout_ms: 5000,
@@ -371,7 +382,7 @@ impl ANEManager {
             compute_units: Some("all".to_string()),
             enable_monitoring: true,
         };
-        
+
         // Create a mock loaded model for inference
         let loaded_model = LoadedCoreMLModel {
             model_id: model_id.to_string(),
@@ -388,7 +399,12 @@ impl ANEManager {
             schema: crate::ane::models::coreml_model::ModelSchema {
                 inputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "input".to_string(),
-                    shape: model.schema.inputs.first().map(|i| i.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
+                    shape: model
+                        .schema
+                        .inputs
+                        .first()
+                        .map(|i| i.shape.iter().map(|&x| x as usize).collect())
+                        .unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
                     start_index: 0,
@@ -396,7 +412,12 @@ impl ANEManager {
                 }],
                 outputs: vec![crate::ane::models::coreml_model::IOTensorSpec {
                     name: "output".to_string(),
-                    shape: model.schema.outputs.first().map(|o| o.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
+                    shape: model
+                        .schema
+                        .outputs
+                        .first()
+                        .map(|o| o.shape.iter().map(|&x| x as usize).collect())
+                        .unwrap_or_default(),
                     dtype: crate::ane::models::coreml_model::DType::F32,
                     optional: false,
                     start_index: 0,
@@ -405,23 +426,30 @@ impl ANEManager {
             },
             loaded_at: std::time::Instant::now(),
             last_accessed: std::time::Instant::now(),
-            model_ref: crate::ane::compat::coreml::coreml::load_model(&model.compiled_path.to_string_lossy())?,
+            model_ref: crate::ane::compat::coreml::coreml::load_model(
+                &model.compiled_path.to_string_lossy(),
+            )?,
             input_name: "input".to_string(),
-            input_shape: model.schema.inputs.first().map(|i| i.shape.iter().map(|&x| x as usize).collect()).unwrap_or_default(),
+            input_shape: model
+                .schema
+                .inputs
+                .first()
+                .map(|i| i.shape.iter().map(|&x| x as usize).collect())
+                .unwrap_or_default(),
             requires_normalization: false,
             normalization_mean: None,
             normalization_std: None,
         };
-        
+
         // Execute inference
         let result = execute_inference(&loaded_model, input, &options).await?;
-        
+
         // Update performance metrics
         self.update_performance_metrics(model_id, &result).await;
-        
+
         Ok(result.output)
     }
-    
+
     /// Update performance metrics for a model
     async fn update_performance_metrics(&self, model_id: &str, result: &InferenceResult) {
         // Update model-specific metrics
@@ -440,7 +468,7 @@ impl ANEManager {
                 model_metrics.last_inference_time = std::time::Instant::now();
             }
         }
-        
+
         // Update global performance tracker
         {
             let mut tracker = self.performance_tracker.write().await;
@@ -461,11 +489,37 @@ impl ANEManager {
                 models.len(),
             )
         };
-        
-        // Get thermal and power data from IOKit
-        let thermal_status = iokit::iokit::thermal_status();
-        let power_status = iokit::iokit::power_status();
-        
+
+        // CRITICAL: Wrap blocking subprocess calls in spawn_blocking to prevent async runtime starvation
+        // The IOKit functions use Command::new().output() which blocks. If called directly in async
+        // context, it can block the async runtime thread and prevent watchdog check-ins, causing
+        // kernel panics. spawn_blocking moves the work to a separate thread pool.
+        let thermal_status = tokio::task::spawn_blocking(|| iokit::iokit::thermal_status())
+            .await
+            .unwrap_or_else(|_| {
+                // Fallback on task panic - use default values
+                use crate::ane::compat::iokit::ThermalStatus;
+                ThermalStatus {
+                    system_temperature: 45.0,
+                    ane_temperature: None,
+                    battery_temperature: None,
+                    thermal_pressure: 0.0,
+                    fan_speed: None,
+                    is_throttling: false,
+                }
+            });
+        let power_status = tokio::task::spawn_blocking(|| iokit::iokit::power_status())
+            .await
+            .unwrap_or_else(|_| {
+                // Fallback on task panic - use default values
+                use crate::ane::compat::iokit::PowerStatus;
+                PowerStatus {
+                    system_power: 5.0,
+                    ane_power: 2.0,
+                    thermal_pressure: 0.0,
+                }
+            });
+
         ANEDeviceStatus {
             is_available: crate::ane::compat::coreml::coreml::is_ane_available(),
             memory_used_mb: used_mb,
@@ -476,40 +530,41 @@ impl ANEManager {
             power_watts: power_status.system_power,
         }
     }
-    
+
     /// Get performance summary
     pub async fn get_performance_summary(&self) -> PerformanceSummary {
         let tracker = self.performance_tracker.read().await;
         tracker.get_summary()
     }
-    
+
     /// Get resource pool statistics
     pub fn get_resource_pool_stats(&self) -> PoolStats {
         self.resource_pool.stats()
     }
-    
+
     /// Unload a model
     pub async fn unload_model(&self, model_id: &str) -> Result<()> {
         let _model_path = {
             let models = self.loaded_coreml_models.read().await;
-            models.values()
+            models
+                .values()
                 .find(|m| m.model_id == model_id)
                 .map(|m| m.compiled_path.clone())
                 .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?
         };
-        
+
         // Remove from loaded models
         {
             let mut models = self.loaded_coreml_models.write().await;
             models.retain(|_, m| m.model_id != model_id);
         }
-        
+
         // Remove performance metrics
         {
             let mut metrics = self.performance_metrics.write().await;
             metrics.remove(model_id);
         }
-        
+
         Ok(())
     }
 
@@ -529,7 +584,7 @@ impl ANEManager {
     ) -> Result<()> {
         // Validate model inputs - Mistral expects specific input schema
         let expected_inputs = vec![
-            ("input_ids", "I32", vec![-1, -1]), // [batch_size, seq_len]
+            ("input_ids", "I32", vec![-1, -1]),      // [batch_size, seq_len]
             ("attention_mask", "I32", vec![-1, -1]), // Optional attention mask
         ];
 
@@ -549,31 +604,33 @@ impl ANEManager {
                 Some(spec) => {
                     // Validate data type
                     if spec.dtype != expected_dtype {
-                        return Err(ANEError::InvalidModelFormat(
-                            format!("Input '{}' has wrong dtype: expected {}, got {}",
-                                expected_name, expected_dtype, spec.dtype)
-                        ));
+                        return Err(ANEError::InvalidModelFormat(format!(
+                            "Input '{}' has wrong dtype: expected {}, got {}",
+                            expected_name, expected_dtype, spec.dtype
+                        )));
                     }
 
                     // Validate shape compatibility
                     if !Self::validate_shape_compatibility(&spec.shape, &expected_shape) {
-                        return Err(ANEError::InvalidModelFormat(
-                            format!("Input '{}' has incompatible shape: expected {:?}, got {:?}",
-                                expected_name, expected_shape, spec.shape)
-                        ));
+                        return Err(ANEError::InvalidModelFormat(format!(
+                            "Input '{}' has incompatible shape: expected {:?}, got {:?}",
+                            expected_name, expected_shape, spec.shape
+                        )));
                     }
 
                     // Validate batch capability
                     if !spec.batch_capable {
-                        return Err(ANEError::InvalidModelFormat(
-                            format!("Input '{}' is not batch-capable", expected_name)
-                        ));
+                        return Err(ANEError::InvalidModelFormat(format!(
+                            "Input '{}' is not batch-capable",
+                            expected_name
+                        )));
                     }
                 }
                 None => {
-                    return Err(ANEError::InvalidModelFormat(
-                        format!("Missing required input '{}'", expected_name)
-                    ));
+                    return Err(ANEError::InvalidModelFormat(format!(
+                        "Missing required input '{}'",
+                        expected_name
+                    )));
                 }
             }
         }
@@ -584,30 +641,33 @@ impl ANEManager {
         // Validate output specifications against expectations
         for (expected_name, expected_dtype, expected_shape) in expected_outputs {
             // Find the actual output spec for this expected output
-            let actual_spec = actual_outputs.iter().find(|spec| spec.name == expected_name);
+            let actual_spec = actual_outputs
+                .iter()
+                .find(|spec| spec.name == expected_name);
 
             match actual_spec {
                 Some(spec) => {
                     // Validate data type
                     if spec.dtype != expected_dtype {
-                        return Err(ANEError::InvalidModelFormat(
-                            format!("Output '{}' has wrong dtype: expected {}, got {}",
-                                expected_name, expected_dtype, spec.dtype)
-                        ));
+                        return Err(ANEError::InvalidModelFormat(format!(
+                            "Output '{}' has wrong dtype: expected {}, got {}",
+                            expected_name, expected_dtype, spec.dtype
+                        )));
                     }
 
                     // Validate shape compatibility
                     if !Self::validate_shape_compatibility(&spec.shape, &expected_shape) {
-                        return Err(ANEError::InvalidModelFormat(
-                            format!("Output '{}' has incompatible shape: expected {:?}, got {:?}",
-                                expected_name, expected_shape, spec.shape)
-                        ));
+                        return Err(ANEError::InvalidModelFormat(format!(
+                            "Output '{}' has incompatible shape: expected {:?}, got {:?}",
+                            expected_name, expected_shape, spec.shape
+                        )));
                     }
                 }
                 None => {
-                    return Err(ANEError::InvalidModelFormat(
-                        format!("Missing required output '{}'", expected_name)
-                    ));
+                    return Err(ANEError::InvalidModelFormat(format!(
+                        "Missing required output '{}'",
+                        expected_name
+                    )));
                 }
             }
         }
@@ -618,9 +678,12 @@ impl ANEManager {
                 "fp16" | "fp32" | "int4" | "int8" => {
                     // Valid precision options
                 }
-                _ => return Err(ANEError::UnsupportedPrecision(
-                    format!("Unsupported precision: {}", precision)
-                )),
+                _ => {
+                    return Err(ANEError::UnsupportedPrecision(format!(
+                        "Unsupported precision: {}",
+                        precision
+                    )))
+                }
             }
         }
 
@@ -629,9 +692,12 @@ impl ANEManager {
                 "cpu_only" | "cpu_and_gpu" | "cpu_and_neural_engine" | "all" => {
                     // Valid compute unit options
                 }
-                _ => return Err(ANEError::CapabilityMismatch(
-                    format!("Unsupported compute units: {}", compute_units)
-                )),
+                _ => {
+                    return Err(ANEError::CapabilityMismatch(format!(
+                        "Unsupported compute units: {}",
+                        compute_units
+                    )))
+                }
             }
         }
 
@@ -691,10 +757,10 @@ impl ANEManager {
         });
 
         if estimated_memory > self.device_capabilities.max_memory_mb {
-            return Err(ANEError::InsufficientMemory(
-                format!("Model requires {}MB, only {}MB available",
-                    estimated_memory, self.device_capabilities.max_memory_mb)
-            ));
+            return Err(ANEError::InsufficientMemory(format!(
+                "Model requires {}MB, only {}MB available",
+                estimated_memory, self.device_capabilities.max_memory_mb
+            )));
         }
 
         // Load and compile Mistral model
@@ -708,22 +774,22 @@ impl ANEManager {
             // Already compiled, use as-is
             model_path.to_path_buf()
         } else {
-            return Err(ANEError::InvalidInput(
-                format!("Unsupported model format: {}. Expected .mlmodel or .mlmodelc", model_path.display())
-            ));
+            return Err(ANEError::InvalidInput(format!(
+                "Unsupported model format: {}. Expected .mlmodel or .mlmodelc",
+                model_path.display()
+            )));
         };
 
         // Validate compiled model exists and is readable
         if !compiled_path.exists() {
-            return Err(ANEError::ModelLoadFailed(
-                format!("Compiled model not found at: {}", compiled_path.display())
-            ));
+            return Err(ANEError::ModelLoadFailed(format!(
+                "Compiled model not found at: {}",
+                compiled_path.display()
+            )));
         }
 
         // Load compiled model through CoreML bridge
-        let model_ref = load_model(
-            compiled_path.to_string_lossy().as_ref()
-        )?;
+        let model_ref = load_model(compiled_path.to_string_lossy().as_ref())?;
 
         // Validate model compatibility with Mistral architecture
         Self::validate_mistral_model_compatibility(&model_ref, &options)?;
@@ -873,7 +939,8 @@ impl ANEManager {
     /// * `Err(ANEError)` - If model not found
     pub async fn unload_mistral_model(&self, model_id: &str) -> Result<()> {
         let mut models = self.loaded_mistral_models.write().await;
-        models.remove(model_id)
+        models
+            .remove(model_id)
             .ok_or_else(|| ANEError::ModelNotFound(model_id.to_string()))?;
 
         Ok(())
@@ -894,7 +961,8 @@ impl ANEManager {
     /// * `HashMap<String, usize>` - Model ID to memory usage in MB
     pub async fn get_mistral_memory_usage(&self) -> HashMap<String, usize> {
         let models = self.loaded_mistral_models.read().await;
-        models.iter()
+        models
+            .iter()
             .map(|(id, model)| (id.clone(), estimate_mistral_memory_usage(model)))
             .collect()
     }
@@ -904,12 +972,17 @@ impl Default for ANEManager {
     fn default() -> Self {
         Self::new().unwrap_or_else(|_| {
             // Fallback to a minimal configuration if default creation fails
-            Self::with_config(1, 1024, ANEDeviceCapabilities {
-                max_memory_mb: 1024,
-                supported_precisions: vec!["fp16".to_string()],
-                max_concurrent_operations: 1,
-                compute_units: 1,
-            }).unwrap()
+            Self::with_config(
+                1,
+                1024,
+                ANEDeviceCapabilities {
+                    max_memory_mb: 1024,
+                    supported_precisions: vec!["fp16".to_string()],
+                    max_concurrent_operations: 1,
+                    compute_units: 1,
+                },
+            )
+            .unwrap()
         })
     }
 }
