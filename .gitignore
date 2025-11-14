@@ -223,14 +223,25 @@ recovery_output/
 recovery_report.json
 
 # ML/AI Models and datasets (large binary files)
-models/
-*.mlpackage/
-*.mlmodelc/
-*.mlmodelc.zip
-*.bin
-*.safetensors
-*.gguf
-*.ggml
+# Ignore actual model files but track our interface code
+models/coreml/
+models/wiki-wordnet/
+models/**/*.mlpackage/
+models/**/*.mlmodelc/
+models/**/*.mlmodelc.zip
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.gguf
+models/**/*.ggml
+models/**/*.onnx
+models/**/*.pt
+models/**/*.pth
+models/**/*.h5
+models/**/*.hdf5
+models/**/*.pkl
+models/**/*.pickle
+models/**/*.joblib
+models/**/.build/
 datasets/
 *.h5
 *.hdf5
@@ -306,3 +317,30 @@ tmp/
 */**/true/**
 test-fixtures/
 test-fixtures/images/
+# CAWS Local Runtime Data (developer-specific, should not be tracked)
+# ====================================================================
+# Note: Specs, policy, waivers, provenance, and plans ARE tracked for team collaboration
+# Only local agent tracking, generated tools, and temporary files are ignored
+
+# Agent runtime tracking (local to each developer)
+.agent/
+
+# CAWS tools (now in .caws/tools/)
+.caws/tools/
+# Legacy location (for backward compatibility)
+apps/tools/caws/
+
+# Temporary CAWS files
+**/*.caws.tmp
+**/*.working-spec.bak
+.caws/*.tmp
+.caws/*.bak
+
+# CAWS logs (local debugging)
+caws-debug.log*
+**/caws.log
+.caws/*.log
+
+# Local development overrides (developer-specific)
+caws.local.*
+.caws/local.*
