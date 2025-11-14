@@ -2,19 +2,19 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use blake3;
 use hex;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256, Sha512};
 use std::time::Instant;
-use serde::{Deserialize, Serialize};
 
 use crate::integrity_types::{HashAlgorithm, TamperingIndicator};
 
 /// BLAKE3 digest wrapper for content addressing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct Digest (pub [u8; 32]);
+pub struct Digest(pub [u8; 32]);
 
 impl Digest {
     /// Create a new digest from BLAKE3 hash
@@ -157,7 +157,7 @@ impl MerkleTree {
 
         while current_level.len() > 1 {
             let mut next_level = Vec::new();
-            
+
             for chunk in current_level.chunks(2) {
                 if chunk.len() == 2 {
                     let children = vec![chunk[0].digest, chunk[1].digest];
@@ -167,7 +167,7 @@ impl MerkleTree {
                     next_level.push(chunk[0].clone());
                 }
             }
-            
+
             current_level = next_level;
         }
 

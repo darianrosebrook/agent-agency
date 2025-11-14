@@ -1,0 +1,12 @@
+id: WV-0371
+title: 'Kernel panic fix: blocking FFI calls'
+reason: critical_fix
+description: Critical fix for kernel panic caused by blocking Core ML FFI calls in async context. Pre-existing TODOs in these files are unrelated to this fix and should not block this critical system stability improvement.
+gates:
+  - hidden_todo
+created_at: '2025-11-14T13:41:10.371Z'
+expires_at: '2025-11-21'
+approved_by: darianrosebrook
+impact_level: critical
+mitigation_plan: Pre-existing TODOs in files are unrelated to this critical kernel panic fix. The fix wraps blocking Core ML FFI calls in spawn_blocking to prevent async runtime starvation and watchdog timeouts. TODOs will be addressed in separate PRs.
+status: active

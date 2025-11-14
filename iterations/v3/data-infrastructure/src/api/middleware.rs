@@ -5,15 +5,15 @@
 
 pub mod auth;
 
-pub use auth::{VerifiedUser, AdminUser, ViewerUser, roles, has_role, has_any_role, has_all_roles};
+pub use auth::{has_all_roles, has_any_role, has_role, roles, AdminUser, VerifiedUser, ViewerUser};
 
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 
 /// Simple in-memory rate limiter
 pub struct RateLimiter {
@@ -54,20 +54,13 @@ impl RateLimiter {
 ///
 /// Extracts API key from Authorization header (Bearer token) or X-API-Key header
 /// and validates it against the configured list of valid keys.
-pub async fn api_key_auth(
-    headers: HeaderMap,
-    api_keys: Vec<String>,
-) -> Result<(), StatusCode> {
+pub async fn api_key_auth(headers: HeaderMap, api_keys: Vec<String>) -> Result<(), StatusCode> {
     // Extract API key from Authorization header (Bearer token) or X-API-Key header
     let api_key = headers
         .get("authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|auth| auth.strip_prefix("Bearer "))
-        .or_else(|| {
-            headers
-                .get("x-api-key")
-                .and_then(|h| h.to_str().ok())
-        });
+        .or_else(|| headers.get("x-api-key").and_then(|h| h.to_str().ok()));
 
     match api_key {
         Some(key) => {
@@ -82,25 +75,14 @@ pub async fn api_key_auth(
 }
 
 /// Rate limiting middleware
-pub async fn rate_limit(
-    headers: &HeaderMap,
-    rate_limiter: &RateLimiter,
-) -> Result<(), StatusCode> {
+pub async fn rate_limit(headers: &HeaderMap, rate_limiter: &RateLimiter) -> Result<(), StatusCode> {
     // Use API key or client IP as rate limiting key
     let rate_limit_key = headers
         .get("authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|auth| auth.strip_prefix("Bearer "))
-        .or_else(|| {
-            headers
-                .get("x-api-key")
-                .and_then(|h| h.to_str().ok())
-        })
-        .or_else(|| {
-            headers
-                .get("x-forwarded-for")
-                .and_then(|h| h.to_str().ok())
-        })
+        .or_else(|| headers.get("x-api-key").and_then(|h| h.to_str().ok()))
+        .or_else(|| headers.get("x-forwarded-for").and_then(|h| h.to_str().ok()))
         .unwrap_or("anonymous");
 
     rate_limiter.check_rate_limit(rate_limit_key).await
@@ -108,12 +90,20 @@ pub async fn rate_limit(
 
 /// CORS middleware
 pub fn cors() -> axum::middleware::FromFnLayer<
-    impl Fn(axum::http::Request<axum::body::Body>, Next) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>> + Send + Sync + Clone + 'static,
+    impl Fn(
+            axum::http::Request<axum::body::Body>,
+            Next,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+        + Send
+        + Sync
+        + Clone
+        + 'static,
     (),
     (),
 > {
     axum::middleware::from_fn(|req, next| {
-        Box::pin(cors_middleware(req, next)) as std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
+        Box::pin(cors_middleware(req, next))
+            as std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>
     })
 }
 

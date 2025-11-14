@@ -40,7 +40,8 @@ impl PipelineMetrics {
             data.failed_executions += 1;
         }
 
-        data.avg_execution_time_ms = data.total_execution_time_ms as f64 / data.total_executions as f64;
+        data.avg_execution_time_ms =
+            data.total_execution_time_ms as f64 / data.total_executions as f64;
         data.last_updated = chrono::Utc::now();
     }
 
@@ -48,7 +49,9 @@ impl PipelineMetrics {
     pub async fn record_stage_execution(&self, stage_name: &str, duration_ms: u64, success: bool) {
         let mut data = self.data.write().await;
 
-        let stage_metric = data.stage_metrics.entry(stage_name.to_string())
+        let stage_metric = data
+            .stage_metrics
+            .entry(stage_name.to_string())
             .or_insert_with(StageMetrics::default);
 
         stage_metric.total_executions += 1;
@@ -60,7 +63,8 @@ impl PipelineMetrics {
             stage_metric.failed_executions += 1;
         }
 
-        stage_metric.avg_execution_time_ms = stage_metric.total_execution_time_ms as f64 / stage_metric.total_executions as f64;
+        stage_metric.avg_execution_time_ms =
+            stage_metric.total_execution_time_ms as f64 / stage_metric.total_executions as f64;
     }
 
     /// Record an error
@@ -94,15 +98,20 @@ impl PipelineMetrics {
         data.buffer_depth_metrics.current_depth = depth;
         data.buffer_depth_metrics.max_depth = data.buffer_depth_metrics.max_depth.max(depth);
         data.buffer_depth_metrics.min_depth = data.buffer_depth_metrics.min_depth.min(depth);
-        
+
         // Calculate moving average
         let alpha = 0.1; // Smoothing factor
-        data.buffer_depth_metrics.average_depth = alpha * depth as f64 + (1.0 - alpha) * data.buffer_depth_metrics.average_depth;
-        
+        data.buffer_depth_metrics.average_depth =
+            alpha * depth as f64 + (1.0 - alpha) * data.buffer_depth_metrics.average_depth;
+
         // Track depth distribution
         let depth_bucket = (depth / 10) * 10; // 10-unit buckets
-        *data.buffer_depth_metrics.depth_distribution.entry(depth_bucket).or_insert(0) += 1;
-        
+        *data
+            .buffer_depth_metrics
+            .depth_distribution
+            .entry(depth_bucket)
+            .or_insert(0) += 1;
+
         data.last_updated = chrono::Utc::now();
     }
 

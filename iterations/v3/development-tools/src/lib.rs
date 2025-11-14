@@ -3,14 +3,14 @@
 
 // CAWS Runtime Validator modules
 pub mod policy;
-pub mod validator;
 pub mod validation_budget;
+pub mod validator;
 pub mod waiver;
 
 // Development workflow modules
-pub mod integration;
 pub mod analyzers;
 pub mod codemod;
+pub mod integration;
 pub mod templates;
 
 // Minimal diff evaluator modules (consolidated)
@@ -22,18 +22,18 @@ pub mod impact_analyzer;
 pub mod language_support;
 
 // Re-export key functionality
-pub use policy::{CawsPolicy, PolicyValidator};
-pub use validator::{CawsValidator, ValidationResult, Violation};
-pub use validation_budget::{BudgetChecker, BudgetLimits, BudgetState};
-pub use waiver::{WaiverGenerator, WaiverManager};
-pub use integration::{McpIntegration, OrchestrationIntegration};
 pub use analyzers::{
-    LanguageAnalyzer, LanguageAnalyzerRegistry, LanguageAnalysisResult,
-    ProgrammingLanguage, LanguageViolation, LanguageWarning, SourceLocation, ViolationSeverity,
-    RustAnalyzer, TypeScriptAnalyzer, JavaScriptAnalyzer,
+    JavaScriptAnalyzer, LanguageAnalysisResult, LanguageAnalyzer, LanguageAnalyzerRegistry,
+    LanguageViolation, LanguageWarning, ProgrammingLanguage, RustAnalyzer, SourceLocation,
+    TypeScriptAnalyzer, ViolationSeverity,
 };
 pub use codemod::CodeModRunner;
+pub use integration::{McpIntegration, OrchestrationIntegration};
+pub use policy::{CawsPolicy, PolicyValidator};
 pub use templates::TemplateManager;
+pub use validation_budget::{BudgetChecker, BudgetLimits, BudgetState};
+pub use validator::{CawsValidator, ValidationResult, Violation};
+pub use waiver::{WaiverGenerator, WaiverManager};
 
 // Minimal diff evaluator re-exports
 pub use ast_analyzer::ASTAnalyzer;

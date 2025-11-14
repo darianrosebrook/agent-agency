@@ -5,12 +5,13 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
+use agent_agency_contracts::planning_io::DependencyGraph;
 use anyhow::{anyhow, Result};
 use petgraph::algo::toposort;
 use petgraph::graph::{DiGraph, NodeIndex};
-use agent_agency_contracts::planning_io::DependencyGraph;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Dependency resolver for milestone execution ordering
 pub struct DependencyResolver {
@@ -28,7 +29,10 @@ impl DependencyResolver {
     pub fn resolve_execution_order(&self) -> Result<Vec<Vec<String>>> {
         // Check for cycles first
         if self.graph.has_cycles {
-            return Err(anyhow!("Dependency graph contains cycles: {:?}", self.graph.cycles));
+            return Err(anyhow!(
+                "Dependency graph contains cycles: {:?}",
+                self.graph.cycles
+            ));
         }
 
         // Use topological sort to get execution order
@@ -39,13 +43,16 @@ impl DependencyResolver {
         while !remaining.is_empty() {
             // Find all milestones that can execute in parallel
             // (all dependencies satisfied)
-            let ready: Vec<String> = remaining.iter()
+            let ready: Vec<String> = remaining
+                .iter()
                 .filter(|milestone_id| self.can_execute(milestone_id, &completed))
                 .cloned()
                 .collect();
 
             if ready.is_empty() {
-                return Err(anyhow!("No milestones ready for execution - possible circular dependency"));
+                return Err(anyhow!(
+                    "No milestones ready for execution - possible circular dependency"
+                ));
             }
 
             // Add batch and mark as completed
@@ -70,7 +77,9 @@ impl DependencyResolver {
 
     /// Get dependencies for a milestone
     pub fn get_dependencies(&self, milestone_id: &str) -> Vec<String> {
-        self.graph.edges.iter()
+        self.graph
+            .edges
+            .iter()
             .filter(|edge| edge.to == milestone_id)
             .map(|edge| edge.from.clone())
             .collect()
@@ -78,7 +87,9 @@ impl DependencyResolver {
 
     /// Get milestones that depend on this one
     pub fn get_dependents(&self, milestone_id: &str) -> Vec<String> {
-        self.graph.edges.iter()
+        self.graph
+            .edges
+            .iter()
             .filter(|edge| edge.from == milestone_id)
             .map(|edge| edge.to.clone())
             .collect()
@@ -110,15 +121,21 @@ impl DependencyResolver {
         let total_edges = self.graph.edges.len();
 
         // Calculate parallelism potential
-        let max_parallelism = self.graph.parallel_groups.iter()
+        let max_parallelism = self
+            .graph
+            .parallel_groups
+            .iter()
             .map(|group| group.len())
             .max()
             .unwrap_or(1);
 
         let avg_parallelism = if !self.graph.parallel_groups.is_empty() {
-            self.graph.parallel_groups.iter()
+            self.graph
+                .parallel_groups
+                .iter()
                 .map(|group| group.len())
-                .sum::<usize>() as f64 / self.graph.parallel_groups.len() as f64
+                .sum::<usize>() as f64
+                / self.graph.parallel_groups.len() as f64
         } else {
             1.0
         };
@@ -172,7 +189,7 @@ pub struct AdvancedDependencyResolver {
 
     /// Milestone ID to node index mapping
     milestone_ids: HashMap<NodeIndex, String>,
-    
+
     /// Original dependency graph (for critical path calculation with full node data)
     original_graph: DependencyGraph,
 }
@@ -193,9 +210,11 @@ impl AdvancedDependencyResolver {
 
         // Add all edges
         for edge in &dep_graph.edges {
-            let from_idx = node_indices.get(&edge.from)
+            let from_idx = node_indices
+                .get(&edge.from)
                 .ok_or_else(|| anyhow!("Unknown milestone: {}", edge.from))?;
-            let to_idx = node_indices.get(&edge.to)
+            let to_idx = node_indices
+                .get(&edge.to)
                 .ok_or_else(|| anyhow!("Unknown milestone: {}", edge.to))?;
 
             graph.add_edge(*from_idx, *to_idx, edge.weight);
@@ -211,10 +230,11 @@ impl AdvancedDependencyResolver {
 
     /// Get topological execution order
     pub fn topological_order(&self) -> Result<Vec<String>> {
-        let sorted_indices = toposort(&self.graph, None)
-            .map_err(|_| anyhow!("Dependency graph contains cycles"))?;
+        let sorted_indices =
+            toposort(&self.graph, None).map_err(|_| anyhow!("Dependency graph contains cycles"))?;
 
-        let order: Vec<String> = sorted_indices.iter()
+        let order: Vec<String> = sorted_indices
+            .iter()
             .filter_map(|idx| self.milestone_ids.get(idx))
             .cloned()
             .collect();
@@ -231,7 +251,8 @@ impl AdvancedDependencyResolver {
         sccs.into_iter()
             .filter(|component| component.len() > 1) // Only cycles
             .map(|component| {
-                component.into_iter()
+                component
+                    .into_iter()
                     .filter_map(|idx| self.milestone_ids.get(&idx).cloned())
                     .collect()
             })
@@ -244,7 +265,7 @@ impl AdvancedDependencyResolver {
         // This ensures we have full node metadata (estimated_time_ms, etc.) for accurate calculation
         crate::planning::graph_algorithms::calculate_critical_path(
             &self.original_graph.nodes,
-            &self.original_graph.edges
+            &self.original_graph.edges,
         )
         .or_else(|_| {
             // Fallback to topological order if calculation fails
@@ -258,7 +279,7 @@ impl AdvancedDependencyResolver {
         // This provides more accurate grouping based on topological levels
         crate::planning::graph_algorithms::identify_parallel_groups(
             &self.original_graph.nodes,
-            &self.original_graph.edges
+            &self.original_graph.edges,
         )
         .or_else(|_| {
             // Fallback to simple grouping if calculation fails
@@ -274,11 +295,12 @@ impl AdvancedDependencyResolver {
 
                 // Check if this milestone can run in parallel with current group
                 let can_add = current_group.iter().all(|existing_id| {
-                    !self.depends_on(existing_id, &milestone_id) &&
-                    !self.depends_on(&milestone_id, existing_id)
+                    !self.depends_on(existing_id, &milestone_id)
+                        && !self.depends_on(&milestone_id, existing_id)
                 });
 
-                if can_add && current_group.len() < 5 { // Limit group size
+                if can_add && current_group.len() < 5 {
+                    // Limit group size
                     current_group.push(milestone_id.clone());
                 } else {
                     if !current_group.is_empty() {
@@ -301,10 +323,7 @@ impl AdvancedDependencyResolver {
 
     /// Check if milestone A depends on milestone B
     fn depends_on(&self, a: &str, b: &str) -> bool {
-        if let (Some(a_idx), Some(b_idx)) = (
-            self.node_indices.get(a),
-            self.node_indices.get(b)
-        ) {
+        if let (Some(a_idx), Some(b_idx)) = (self.node_indices.get(a), self.node_indices.get(b)) {
             // Check if there's a path from B to A (B must complete before A)
             use petgraph::algo::has_path_connecting;
             has_path_connecting(&self.graph, *b_idx, *a_idx, None)
@@ -317,7 +336,7 @@ impl AdvancedDependencyResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agent_agency_contracts::planning_io::{DependencyNodeType, DependencyEdgeType};
+    use agent_agency_contracts::planning_io::{DependencyEdgeType, DependencyNodeType};
 
     #[test]
     fn test_dependency_resolver_creation() {
@@ -338,22 +357,28 @@ mod tests {
     #[test]
     fn test_simple_execution_order() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M1".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
-        nodes.insert("M2".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M2".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
+        nodes.insert(
+            "M1".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M1".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
+        nodes.insert(
+            "M2".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M2".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
 
         let edges = vec![agent_agency_contracts::planning_io::DependencyEdge {
             from: "M1".to_string(),
@@ -383,30 +408,39 @@ mod tests {
     #[test]
     fn test_parallel_execution() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M1".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
-        nodes.insert("M2".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M2".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
-        nodes.insert("M3".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M3".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
+        nodes.insert(
+            "M1".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M1".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
+        nodes.insert(
+            "M2".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M2".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
+        nodes.insert(
+            "M3".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M3".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
 
         // M1 and M2 can run in parallel, M3 depends on both
         let edges = vec![
@@ -430,7 +464,10 @@ mod tests {
             nodes,
             edges,
             critical_path: vec!["M1".to_string(), "M3".to_string()],
-            parallel_groups: vec![vec!["M1".to_string(), "M2".to_string()], vec!["M3".to_string()]],
+            parallel_groups: vec![
+                vec!["M1".to_string(), "M2".to_string()],
+                vec!["M3".to_string()],
+            ],
             has_cycles: false,
             cycles: vec![],
         };
@@ -447,14 +484,17 @@ mod tests {
     fn test_execution_stats() {
         let mut nodes = HashMap::new();
         for i in 1..=5 {
-            nodes.insert(format!("M{}", i), agent_agency_contracts::planning_io::DependencyNode {
-                milestone_id: format!("M{}", i),
-                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-                estimated_cost: 1.0,
-                estimated_time_ms: 1000,
-                resource_requirements: HashMap::new(),
-                metadata: HashMap::new(),
-            });
+            nodes.insert(
+                format!("M{}", i),
+                agent_agency_contracts::planning_io::DependencyNode {
+                    milestone_id: format!("M{}", i),
+                    node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                    estimated_cost: 1.0,
+                    estimated_time_ms: 1000,
+                    resource_requirements: HashMap::new(),
+                    metadata: HashMap::new(),
+                },
+            );
         }
 
         let graph = DependencyGraph {
@@ -482,14 +522,17 @@ mod tests {
     #[test]
     fn test_cycle_detection() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), agent_agency_contracts::planning_io::DependencyNode {
-            milestone_id: "M1".to_string(),
-            node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
-            estimated_cost: 1.0,
-            estimated_time_ms: 1000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
+        nodes.insert(
+            "M1".to_string(),
+            agent_agency_contracts::planning_io::DependencyNode {
+                milestone_id: "M1".to_string(),
+                node_type: agent_agency_contracts::planning_io::DependencyNodeType::Milestone,
+                estimated_cost: 1.0,
+                estimated_time_ms: 1000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
 
         let edges = vec![agent_agency_contracts::planning_io::DependencyEdge {
             from: "M1".to_string(),

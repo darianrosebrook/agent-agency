@@ -27,7 +27,10 @@ impl MockInferenceBackend {
 
 #[async_trait]
 impl InferenceBackend for MockInferenceBackend {
-    async fn execute(&self, request: InferenceInput) -> Result<InferenceOutput, ModelManagementError> {
+    async fn execute(
+        &self,
+        request: InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError> {
         // Simulate processing time
         tokio::time::sleep(std::time::Duration::from_millis(self.latency_ms)).await;
 
@@ -108,7 +111,10 @@ impl HttpInferenceBackend {
 
 #[async_trait]
 impl InferenceBackend for HttpInferenceBackend {
-    async fn execute(&self, request: InferenceInput) -> Result<InferenceOutput, ModelManagementError> {
+    async fn execute(
+        &self,
+        request: InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError> {
         let start_time = std::time::Instant::now();
 
         // Prepare request payload
@@ -119,7 +125,8 @@ impl InferenceBackend for HttpInferenceBackend {
         });
 
         // Make HTTP request
-        let response = self.client
+        let response = self
+            .client
             .post(&self.endpoint)
             .json(&payload)
             .send()
@@ -130,13 +137,15 @@ impl InferenceBackend for HttpInferenceBackend {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(ModelManagementError::Http(format!(
-                "HTTP {}: {}", status, error_text
+                "HTTP {}: {}",
+                status, error_text
             )));
         }
 
         // Parse response
-        let response_data: serde_json::Value = response.json().await
-            .map_err(|e| ModelManagementError::Http(format!("Failed to parse JSON response: {}", e)))?;
+        let response_data: serde_json::Value = response.json().await.map_err(|e| {
+            ModelManagementError::Http(format!("Failed to parse JSON response: {}", e))
+        })?;
 
         let execution_time = start_time.elapsed();
 
@@ -144,7 +153,8 @@ impl InferenceBackend for HttpInferenceBackend {
             backend: self.name.clone(),
             model_version: "remote".to_string(),
             executed_at: chrono::Utc::now(),
-            tokens_processed: response_data.get("tokens_used")
+            tokens_processed: response_data
+                .get("tokens_used")
                 .and_then(|v| v.as_u64())
                 .map(|v| v as usize),
         };

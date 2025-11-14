@@ -23,11 +23,11 @@ use dashmap::DashMap;
 use serde_json;
 use tracing::{info, warn};
 
-use agent_agency_contracts::{
-    JudgeEngine, EngineRequest, EngineResponse, EngineError, EngineCaps, TokenUsage,
-    JudgePrompt, JudgeVerdict,
-};
 use agent_agency_contracts::JudgeType;
+use agent_agency_contracts::{
+    EngineCaps, EngineError, EngineRequest, EngineResponse, JudgeEngine, JudgePrompt, JudgeVerdict,
+    TokenUsage,
+};
 use system_acceleration::ane::infer::mistral::{deliberate_constitution, MistralInferenceOptions};
 use system_acceleration::ane::models::mistral_model::{load_mistral_model, MistralModel};
 
@@ -77,8 +77,7 @@ struct CachedVerdict {
 }
 
 /// Engine performance metrics
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct EngineMetrics {
     /// Time to first token histograms per judge
     #[allow(dead_code)] // Reserved for future use
@@ -120,19 +119,21 @@ impl CoreMLEngine {
         let ane_active = Self::check_ane_availability();
 
         // Load Mistral model and wrap in Arc<tokio::sync::Mutex<>> for thread-safe shared access
-        let compilation_options = system_acceleration::ane::models::mistral_model::MistralCompilationOptions::default();
+        let compilation_options =
+            system_acceleration::ane::models::mistral_model::MistralCompilationOptions::default();
         let telemetry = system_acceleration::telemetry::TelemetryCollector::new();
-        let mistral_model = match load_mistral_model(&model_path, &compilation_options, telemetry).await {
-            Ok(model) => {
-                info!("✅ Loaded Mistral model from {}", model_path.display());
-                Some(Arc::new(tokio::sync::Mutex::new(model)))
-            }
-            Err(e) => {
-                warn!("❌ Failed to load Mistral model: {}", e);
-                warn!("   Continuing with simulation mode");
-                None
-            }
-        };
+        let mistral_model =
+            match load_mistral_model(&model_path, &compilation_options, telemetry).await {
+                Ok(model) => {
+                    info!("✅ Loaded Mistral model from {}", model_path.display());
+                    Some(Arc::new(tokio::sync::Mutex::new(model)))
+                }
+                Err(e) => {
+                    warn!("❌ Failed to load Mistral model: {}", e);
+                    warn!("   Continuing with simulation mode");
+                    None
+                }
+            };
 
         let models_loaded = mistral_model.is_some();
 
@@ -145,14 +146,16 @@ impl CoreMLEngine {
         };
 
         if models_loaded {
-            info!("CoreML engine initialized with real Mistral model: ANE={}, caps={:?}", ane_active, caps_clone);
+            info!(
+                "CoreML engine initialized with real Mistral model: ANE={}, caps={:?}",
+                ane_active, caps_clone
+            );
         } else {
             warn!("CoreML engine initialized in simulation mode (model loading failed)");
         }
 
         Ok(engine)
     }
-
 
     /// Check if models are available by attempting to load from path
     #[allow(dead_code)] // Reserved for future use
@@ -272,13 +275,19 @@ impl CoreMLEngine {
     }
 
     /// Run inference using real Mistral model or fallback to simulation
-    async fn run_inference(&self, prompt: &JudgePrompt, max_tokens: usize) -> Result<String, EngineError> {
+    async fn run_inference(
+        &self,
+        prompt: &JudgePrompt,
+        max_tokens: usize,
+    ) -> Result<String, EngineError> {
         // Use real Mistral inference if model is loaded
         if let Some(ref model) = self.mistral_model {
             let mut model_guard = model.lock().await;
-            return self.run_real_mistral_inference(&mut model_guard, prompt, max_tokens).await;
+            return self
+                .run_real_mistral_inference(&mut model_guard, prompt, max_tokens)
+                .await;
         }
-        
+
         // Fallback to simulation if model is not loaded
         warn!("Mistral model not loaded - using simulation");
         self.run_simulated_inference(prompt, max_tokens).await
@@ -313,8 +322,11 @@ impl CoreMLEngine {
             &evidence_vec,
             &debate_history,
             &options,
-        ).await
-        .map_err(|e| EngineError::InferenceFailed { message: format!("Mistral inference failed: {}", e) })?;
+        )
+        .await
+        .map_err(|e| EngineError::InferenceFailed {
+            message: format!("Mistral inference failed: {}", e),
+        })?;
 
         // Convert constitutional verdict to JSON response
         self.format_constitutional_verdict_as_json(&verdict, prompt.role.clone())
@@ -354,40 +366,48 @@ impl CoreMLEngine {
         use system_acceleration::ane::infer::mistral::{ComplianceLevel, Verdict};
 
         // Map constitutional verdict to judge verdict format
-                let (score, label, violations) = match (&verdict.compliance_level, &verdict.verdict) {
+        let (score, label, violations) = match (&verdict.compliance_level, &verdict.verdict) {
             (ComplianceLevel::Full, Verdict::Approve) => (0.95, "Pass", vec![]),
-            (ComplianceLevel::Partial, Verdict::Approve) => (0.78, "Conditional", vec![
-                serde_json::json!({
+            (ComplianceLevel::Partial, Verdict::Approve) => (
+                0.78,
+                "Conditional",
+                vec![serde_json::json!({
                     "rule_id": format!("{}-COMPLIANCE", Self::judge_type_str(judge_type)),
                     "severity": "Medium",
                     "waivable": true,
                     "description": "Partial compliance with requirements"
-                })
-            ]),
-            (_, Verdict::Modify) => (0.65, "NeedsInfo", vec![
-                serde_json::json!({
+                })],
+            ),
+            (_, Verdict::Modify) => (
+                0.65,
+                "NeedsInfo",
+                vec![serde_json::json!({
                     "rule_id": format!("{}-MODIFY", Self::judge_type_str(judge_type)),
                     "severity": "High",
                     "waivable": false,
                     "description": "Requires modifications before approval"
-                })
-            ]),
-            (_, Verdict::Reject) => (0.2, "Fail", vec![
-                serde_json::json!({
+                })],
+            ),
+            (_, Verdict::Reject) => (
+                0.2,
+                "Fail",
+                vec![serde_json::json!({
                     "rule_id": format!("{}-REJECT", Self::judge_type_str(judge_type)),
                     "severity": "Critical",
                     "waivable": false,
                     "description": &verdict.justification
-                })
-            ]),
-            (ComplianceLevel::None, Verdict::Approve) => (0.4, "NeedsInfo", vec![
-                serde_json::json!({
+                })],
+            ),
+            (ComplianceLevel::None, Verdict::Approve) => (
+                0.4,
+                "NeedsInfo",
+                vec![serde_json::json!({
                     "rule_id": format!("{}-NO-COMPLIANCE", Self::judge_type_str(judge_type)),
                     "severity": "High",
                     "waivable": false,
                     "description": "No compliance assessment available"
-                })
-            ]),
+                })],
+            ),
         };
 
         let response = serde_json::json!({
@@ -400,8 +420,9 @@ impl CoreMLEngine {
                 .collect::<Vec<_>>()
         });
 
-        serde_json::to_string(&response)
-            .map_err(|e| EngineError::ParseError { message: format!("Failed to serialize verdict: {}", e) })
+        serde_json::to_string(&response).map_err(|e| EngineError::ParseError {
+            message: format!("Failed to serialize verdict: {}", e),
+        })
     }
 
     /// Helper function to convert JudgeType to string
@@ -420,7 +441,11 @@ impl CoreMLEngine {
     }
 
     /// Run simulated inference as fallback
-    async fn run_simulated_inference(&self, prompt: &JudgePrompt, _max_tokens: usize) -> Result<String, EngineError> {
+    async fn run_simulated_inference(
+        &self,
+        prompt: &JudgePrompt,
+        _max_tokens: usize,
+    ) -> Result<String, EngineError> {
         // Simulate inference time
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
@@ -431,18 +456,29 @@ impl CoreMLEngine {
     }
 
     /// Validate verdict against JSON schema
-    fn validate_against_schema(&self, verdict: &JudgeVerdict, schema: &str) -> Result<(), EngineError> {
+    fn validate_against_schema(
+        &self,
+        verdict: &JudgeVerdict,
+        schema: &str,
+    ) -> Result<(), EngineError> {
         // Parse the JSON schema
-        let schema_value: serde_json::Value = serde_json::from_str(schema)
-            .map_err(|e| EngineError::ValidationError { message: format!("Invalid schema: {}", e) })?;
+        let schema_value: serde_json::Value =
+            serde_json::from_str(schema).map_err(|e| EngineError::ValidationError {
+                message: format!("Invalid schema: {}", e),
+            })?;
 
         // Compile the schema
-        let compiled_schema = jsonschema::JSONSchema::compile(&schema_value)
-            .map_err(|e| EngineError::ValidationError { message: format!("Schema compilation failed: {}", e) })?;
+        let compiled_schema = jsonschema::JSONSchema::compile(&schema_value).map_err(|e| {
+            EngineError::ValidationError {
+                message: format!("Schema compilation failed: {}", e),
+            }
+        })?;
 
         // Convert verdict to JSON value
-        let verdict_value = serde_json::to_value(verdict)
-            .map_err(|e| EngineError::ValidationError { message: format!("Verdict serialization failed: {}", e) })?;
+        let verdict_value =
+            serde_json::to_value(verdict).map_err(|e| EngineError::ValidationError {
+                message: format!("Verdict serialization failed: {}", e),
+            })?;
 
         // Validate against schema
         let result = compiled_schema.validate(&verdict_value);
@@ -454,13 +490,10 @@ impl CoreMLEngine {
         if errors.is_empty() {
             Ok(())
         } else {
-            let error_messages: Vec<String> = errors.iter()
-                .map(|e| e.to_string())
-                .collect();
-            Err(EngineError::ValidationError { message: format!(
-                "Schema validation failed: {}",
-                error_messages.join(", ")
-            ) })
+            let error_messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
+            Err(EngineError::ValidationError {
+                message: format!("Schema validation failed: {}", error_messages.join(", ")),
+            })
         }
     }
 }
@@ -474,7 +507,9 @@ impl JudgeEngine for CoreMLEngine {
         }
 
         // Check cache first
-        let cache_key = self.prompt_cache.key(&self.caps.model_id, &self.caps, &req.prompt);
+        let cache_key = self
+            .prompt_cache
+            .key(&self.caps.model_id, &self.caps, &req.prompt);
         if let Some(cached) = self.prompt_cache.get(&cache_key) {
             if let Ok(mut metrics) = self.metrics.lock() {
                 metrics.record_cache_hit();
@@ -491,14 +526,21 @@ impl JudgeEngine for CoreMLEngine {
         let ttft = start.elapsed();
 
         // Parse and validate JSON
-        let parsed: JudgeVerdict = serde_json::from_str(&raw_text)
-            .map_err(|e| EngineError::ParseError { message: e.to_string() })?;
+        let parsed: JudgeVerdict =
+            serde_json::from_str(&raw_text).map_err(|e| EngineError::ParseError {
+                message: e.to_string(),
+            })?;
 
         // Validate against schema
         self.validate_against_schema(&parsed, &req.prompt.output_schema)?;
 
         // Cache result
-        self.prompt_cache.put(cache_key, parsed.clone(), req.prompt.role.clone(), self.prompt_cache.ttl_seconds);
+        self.prompt_cache.put(
+            cache_key,
+            parsed.clone(),
+            req.prompt.role.clone(),
+            self.prompt_cache.ttl_seconds,
+        );
 
         // Record metrics
         if let Ok(mut metrics) = self.metrics.lock() {
@@ -506,7 +548,11 @@ impl JudgeEngine for CoreMLEngine {
         }
         let usage = TokenUsage::from_text(&raw_text);
 
-        Ok(EngineResponse { raw_text, parsed, usage })
+        Ok(EngineResponse {
+            raw_text,
+            parsed,
+            usage,
+        })
     }
 
     fn capabilities(&self) -> EngineCaps {
@@ -531,14 +577,19 @@ impl PromptCache {
     }
 
     fn get(&self, key: &Hash) -> Option<JudgeVerdict> {
-        self.cache.get(key)
+        self.cache
+            .get(key)
             .filter(|v| v.expires_at > chrono::Utc::now())
             .map(|v| v.verdict.clone())
     }
 
     fn put(&self, key: Hash, verdict: JudgeVerdict, judge_type: JudgeType, ttl_seconds: u64) {
         let expires_at = chrono::Utc::now() + chrono::Duration::seconds(ttl_seconds as i64);
-        let cached = CachedVerdict { verdict, judge_type, expires_at };
+        let cached = CachedVerdict {
+            verdict,
+            judge_type,
+            expires_at,
+        };
         self.cache.insert(key, cached);
     }
 
@@ -572,16 +623,24 @@ impl EngineMetrics {
 
     #[allow(dead_code)] // Reserved for future use
     fn record_inference_time(&mut self, judge_type: JudgeType, ttft_ms: u64) {
-        self.ttft_histogram.entry(judge_type)
+        self.ttft_histogram
+            .entry(judge_type)
             .or_insert_with(Vec::new)
             .push(ttft_ms);
     }
 
-    fn record_inference(&mut self, judge_type: JudgeType, ttft: std::time::Duration, response_len: usize, _score: f32) {
+    fn record_inference(
+        &mut self,
+        judge_type: JudgeType,
+        ttft: std::time::Duration,
+        response_len: usize,
+        _score: f32,
+    ) {
         let ttft_ms = ttft.as_millis() as u64;
 
         // Record latency per judge type
-        self.e2e_latency_ms.entry(judge_type.clone())
+        self.e2e_latency_ms
+            .entry(judge_type.clone())
             .or_insert_with(Vec::new)
             .push(ttft_ms);
 
@@ -594,7 +653,8 @@ impl EngineMetrics {
         };
 
         // Record tokens per second per judge type
-        self.tokens_per_sec.entry(judge_type)
+        self.tokens_per_sec
+            .entry(judge_type)
             .or_insert_with(Vec::new)
             .push(tokens_per_sec);
     }
@@ -614,7 +674,6 @@ impl EngineMetrics {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

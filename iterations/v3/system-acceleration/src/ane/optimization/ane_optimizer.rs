@@ -5,7 +5,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 /// ANE optimization strategies
 #[derive(Debug, Clone, JsonSchema)]
@@ -116,13 +116,15 @@ impl ANEOptimizer {
             ANEOptimizationStrategy::Custom(params) => params.clone(),
         };
 
-        self.current_params.insert(model_name.to_string(), params.clone());
+        self.current_params
+            .insert(model_name.to_string(), params.clone());
         params
     }
 
     /// Record performance metrics and potentially adapt optimization parameters
     pub fn record_performance(&mut self, model_name: &str, inference_time_ms: f64) {
-        let history = self.performance_history
+        let history = self
+            .performance_history
             .entry(model_name.to_string())
             .or_insert_with(Vec::new);
 
@@ -155,7 +157,10 @@ impl ANEOptimizer {
 
         // If performance is degrading, try different parameters
         if recent_avg > avg_time * 1.1 {
-            debug!("Performance degrading for {}, attempting optimization", model_name);
+            debug!(
+                "Performance degrading for {}, attempting optimization",
+                model_name
+            );
             self.optimize_for_model(model_name, avg_time, recent_avg);
         }
     }
@@ -168,14 +173,21 @@ impl ANEOptimizer {
         };
 
         // If inference is slow, try different strategies
-        if avg_time > 50.0 { // More than 50ms average
+        if avg_time > 50.0 {
+            // More than 50ms average
             match current_params.compute_units {
                 ComputeUnitPreference::ANE => {
-                    info!("Switching {} from ANE to Auto due to slow performance", model_name);
+                    info!(
+                        "Switching {} from ANE to Auto due to slow performance",
+                        model_name
+                    );
                     current_params.compute_units = ComputeUnitPreference::Auto;
                 }
                 ComputeUnitPreference::Auto => {
-                    info!("Switching {} from Auto to CPU for memory efficiency", model_name);
+                    info!(
+                        "Switching {} from Auto to CPU for memory efficiency",
+                        model_name
+                    );
                     current_params.compute_units = ComputeUnitPreference::CPU;
                     current_params.precision = PrecisionMode::Half;
                 }
@@ -202,9 +214,7 @@ impl ANEOptimizer {
         let sum: f64 = history.iter().sum();
         let avg = sum / count as f64;
 
-        let variance = history.iter()
-            .map(|x| (x - avg).powi(2))
-            .sum::<f64>() / count as f64;
+        let variance = history.iter().map(|x| (x - avg).powi(2)).sum::<f64>() / count as f64;
         let std_dev = variance.sqrt();
 
         let min = history.iter().fold(f64::INFINITY, |a, &b| a.min(b));
@@ -281,13 +291,19 @@ impl ANEMemoryOptimizer {
         let mut recommendations = Vec::new();
 
         if current_memory_mb > self.memory_pressure_threshold_mb * 1.5 {
-            recommendations.push("Critical: Memory usage very high. Consider model quantization.".to_string());
+            recommendations
+                .push("Critical: Memory usage very high. Consider model quantization.".to_string());
         } else if current_memory_mb > self.memory_pressure_threshold_mb {
-            recommendations.push("High memory usage. Consider reducing batch size or using memory pooling.".to_string());
+            recommendations.push(
+                "High memory usage. Consider reducing batch size or using memory pooling."
+                    .to_string(),
+            );
         }
 
         if current_memory_mb > 1000.0 {
-            recommendations.push("Memory usage over 1GB. Consider model offloading or smaller variants.".to_string());
+            recommendations.push(
+                "Memory usage over 1GB. Consider model offloading or smaller variants.".to_string(),
+            );
         }
 
         recommendations

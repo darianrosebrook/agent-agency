@@ -91,11 +91,11 @@ impl OfflineEvaluator {
         for decision in &relevant_decisions {
             // Calculate new policy propensity for this context
             let new_propensity = self.calculate_new_propensity(new_policy, decision)?;
-            
+
             // IPS weight: π_new(a|x) / π_old(a|x)
             let old_propensity = decision.log_propensity.exp();
             let ips_weight = new_propensity / old_propensity;
-            
+
             // Weighted reward
             let weighted_reward = ips_weight * decision.outcome.quality_score;
             weighted_rewards.push(weighted_reward);
@@ -114,7 +114,7 @@ impl OfflineEvaluator {
 
         // Calculate IPS estimate
         let ips_estimate = weighted_rewards.iter().sum::<f64>() / total_weight;
-        
+
         // Calculate confidence interval using bootstrap
         let confidence_interval = self.bootstrap_confidence_interval(&weighted_rewards, ips_estimate)?;
 
@@ -157,14 +157,14 @@ impl OfflineEvaluator {
             let new_propensity = self.calculate_new_propensity(new_policy, decision)?;
             let old_propensity = decision.log_propensity.exp();
             let ips_weight = new_propensity / old_propensity;
-            
+
             // Model-based prediction
             let model_prediction = outcome_model.predict(&decision.context_features, &decision.chosen_params);
-            
+
             // Doubly Robust: IPS + model correction
-            let dr_estimate = ips_weight * decision.outcome.quality_score 
+            let dr_estimate = ips_weight * decision.outcome.quality_score
                 + (new_propensity - ips_weight) * model_prediction;
-            
+
             dr_estimates.push(dr_estimate);
             total_weight += new_propensity;
             effective_sample_size += ips_weight;
@@ -203,10 +203,10 @@ impl OfflineEvaluator {
     ) -> Result<f64> {
         // Create a mock arm set with the chosen parameters
         let arms = vec![decision.chosen_params.clone()];
-        
+
         // Get selection result from new policy
         let selection = new_policy.select(&decision.context_features, &arms);
-        
+
         // Return the propensity (probability) of selecting the same arm
         Ok(selection.propensity)
     }
@@ -224,10 +224,10 @@ impl OfflineEvaluator {
         // Simple bootstrap: resample with replacement and calculate percentiles
         let n_bootstrap = 1000;
         let mut bootstrap_estimates = Vec::new();
-        
+
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        
+
         for _ in 0..n_bootstrap {
             let mut bootstrap_sum = 0.0;
             for _ in 0..estimates.len() {
@@ -236,15 +236,15 @@ impl OfflineEvaluator {
             }
             bootstrap_estimates.push(bootstrap_sum / estimates.len() as f64);
         }
-        
+
         bootstrap_estimates.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
+
         let lower_idx = (0.025 * n_bootstrap as f64) as usize;
         let upper_idx = (0.975 * n_bootstrap as f64) as usize;
-        
+
         let lower_bound = bootstrap_estimates[lower_idx.min(bootstrap_estimates.len() - 1)];
         let upper_bound = bootstrap_estimates[upper_idx.min(bootstrap_estimates.len() - 1)];
-        
+
         Ok((lower_bound, upper_bound))
     }
 

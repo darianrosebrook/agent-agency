@@ -8,12 +8,11 @@ use uuid::Uuid;
 /// Memory type classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MemoryType {
-    Episodic,  // Event-based memories
-    Semantic,  // Factual knowledge
+    Episodic,   // Event-based memories
+    Semantic,   // Factual knowledge
     Procedural, // Skill-based memories
-    Working,   // Short-term working memory
+    Working,    // Short-term working memory
 }
-
 
 /// Temporal context for memory operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -345,10 +344,9 @@ pub struct WorkspaceAccessControl {
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-
 impl TryFrom<i32> for MemoryType {
     type Error = ();
-    
+
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
             0 => Ok(MemoryType::Episodic),
@@ -392,10 +390,10 @@ pub enum WorkspaceAccess {
 /// Workspace isolation levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WorkspaceIsolationLevel {
-    Strict,        // Only current workspace
+    Strict,         // Only current workspace
     WorkspaceFirst, // Prefer current workspace
-    GlobalFirst,   // Allow global access
-    Unrestricted,  // Allow all workspaces
+    GlobalFirst,    // Allow global access
+    Unrestricted,   // Allow all workspaces
 }
 
 /// Memory content types
@@ -428,7 +426,6 @@ pub struct ContextualMemory {
     pub relevance_score: f32,
     pub reasoning_path: Vec<String>,
 }
-
 
 /// Reinforcement context for serde support
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -666,4 +663,3 @@ pub struct EvolutionPoint {
     /// Performance metrics at this point
     pub metrics: HashMap<String, f32>,
 }
-

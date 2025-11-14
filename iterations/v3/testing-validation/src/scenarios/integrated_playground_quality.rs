@@ -9,37 +9,38 @@
 //! - Real code quality analysis on fixed files
 //! - Real decision points extracted from agent execution
 
-use std::time::Instant;
-use std::path::PathBuf;
-use tracing::{info, warn};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
+use tracing::{info, warn};
 
-use crate::harness::{TestEnvironment, LocalServiceManager};
+use crate::harness::{LocalServiceManager, TestEnvironment};
 use crate::quality_analyzers::{
-    ReasoningDepthScore, DecisionQualityScore, CodeQualityScore,
-    OverallQualityScore
+    CodeQualityScore, DecisionQualityScore, OverallQualityScore, ReasoningDepthScore,
 };
 use crate::scenarios::quality_evaluation::QualityEvaluationResult;
 
 #[cfg(feature = "full")]
-use agent_orchestration::evaluation::playground::PlaygroundManager;
-#[cfg(feature = "full")]
-use agent_orchestration::chain_of_thought::{DecisionPoint, DecisionType, DecisionContext, Alternative, RiskAssessment};
-#[cfg(feature = "full")]
-use agent_research::self_prompting_agent::{
-    SelfPromptingAgent,
-    models::ModelRegistry,
-    evaluation::EvaluationOrchestrator,
-    loop_controller::SelfPromptingEvent,
-    prompting_types::{Task as SelfPromptingTask, TaskType, AutonomousMode, SafetyMode},
+use agent_orchestration::chain_of_thought::{
+    Alternative, DecisionContext, DecisionPoint, DecisionType, RiskAssessment,
 };
+#[cfg(feature = "full")]
+use agent_orchestration::evaluation::playground::PlaygroundManager;
 #[cfg(feature = "full")]
 use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
 #[cfg(feature = "full")]
-use std::collections::HashMap;
+use agent_research::self_prompting_agent::{
+    evaluation::EvaluationOrchestrator,
+    loop_controller::SelfPromptingEvent,
+    models::ModelRegistry,
+    prompting_types::{AutonomousMode, SafetyMode, Task as SelfPromptingTask, TaskType},
+    SelfPromptingAgent,
+};
 #[cfg(feature = "full")]
 use chrono::Utc;
+#[cfg(feature = "full")]
+use std::collections::HashMap;
 #[cfg(feature = "full")]
 use uuid::Uuid;
 
@@ -88,24 +89,36 @@ pub async fn run_integrated_test(
     info!("Starting integrated test: {} ({})", scenario_id, file_type);
 
     // Step 1: Playground Test - Functional Correctness
-    let (playground_result, agent) = run_playground_test(env, services, scenario_id, file_type).await;
+    let (playground_result, agent) =
+        run_playground_test(env, services, scenario_id, file_type).await;
 
     // Step 2: Quality Evaluation - Only if playground test passed
     let quality_result = if playground_result.fixed {
         info!("Playground test passed, running quality evaluation...");
-        Some(run_quality_evaluation(env, &playground_result, playground_result.fixed_file_path.clone(), agent.as_ref().map(|a| a.as_ref())).await)
+        Some(
+            run_quality_evaluation(
+                env,
+                &playground_result,
+                playground_result.fixed_file_path.clone(),
+                agent.as_ref().map(|a| a.as_ref()),
+            )
+            .await,
+        )
     } else {
         warn!("Playground test failed, skipping quality evaluation");
         None
     };
 
-    let overall_passed = playground_result.fixed 
-        && quality_result.as_ref().map(|q| q.passed).unwrap_or(false);
+    let overall_passed =
+        playground_result.fixed && quality_result.as_ref().map(|q| q.passed).unwrap_or(false);
 
     let duration_ms = start_time.elapsed().as_millis() as u64;
 
-    info!("Integrated test completed in {}ms. Overall: {}", duration_ms, 
-        if overall_passed { "PASSED" } else { "FAILED" });
+    info!(
+        "Integrated test completed in {}ms. Overall: {}",
+        duration_ms,
+        if overall_passed { "PASSED" } else { "FAILED" }
+    );
 
     IntegratedTestResult {
         scenario_id: scenario_id.to_string(),
@@ -124,32 +137,17 @@ async fn run_playground_test(
     scenario_id: &str,
     file_type: &str,
 ) -> (PlaygroundTestResult, Option<Arc<SelfPromptingAgent>>) {
-    info!("Running playground test for {} with real agent execution", file_type);
+    info!(
+        "Running playground test for {} with real agent execution",
+        file_type
+    );
 
     let playground = PlaygroundManager::new();
-    
+
     // Setup playground scenario
     if let Err(e) = playground.setup_scenario(scenario_id).await {
-        return (PlaygroundTestResult {
-            scenario_id: scenario_id.to_string(),
-            file_name: format!("broken-{}.rs", file_type),
-            fixed: false,
-            errors_detected: 0,
-            errors_fixed: 0,
-            chain_of_thought_complete: false,
-            decision_points: vec![],
-            fixed_file_path: None,
-            error_message: Some(format!("Failed to setup playground: {}", e)),
-        }, None);
-    }
-
-    // Create broken file
-    let file_name = match file_type {
-        "rust" => "broken-rust.rs",
-        "typescript" => "broken-types.ts",
-        "python" => "broken-python.py",
-        _ => {
-            return (PlaygroundTestResult {
+        return (
+            PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: format!("broken-{}.rs", file_type),
                 fixed: false,
@@ -158,16 +156,68 @@ async fn run_playground_test(
                 chain_of_thought_complete: false,
                 decision_points: vec![],
                 fixed_file_path: None,
-            error_message: Some(format!("Unknown file type: {}", file_type)),
-            }, None);
+                error_message: Some(format!("Failed to setup playground: {}", e)),
+            },
+            None,
+        );
+    }
+
+    // Create broken file
+    let file_name = match file_type {
+        "rust" => "broken-rust.rs",
+        "typescript" => "broken-types.ts",
+        "python" => "broken-python.py",
+        _ => {
+            return (
+                PlaygroundTestResult {
+                    scenario_id: scenario_id.to_string(),
+                    file_name: format!("broken-{}.rs", file_type),
+                    fixed: false,
+                    errors_detected: 0,
+                    errors_fixed: 0,
+                    chain_of_thought_complete: false,
+                    decision_points: vec![],
+                    fixed_file_path: None,
+                    error_message: Some(format!("Unknown file type: {}", file_type)),
+                },
+                None,
+            );
         }
     };
 
     // Scaffold comprehensive broken files
-    let broken_files = match playground.scaffold_comprehensive_broken_files(scenario_id).await {
+    let broken_files = match playground
+        .scaffold_comprehensive_broken_files(scenario_id)
+        .await
+    {
         Ok(files) => files,
         Err(e) => {
-            return (PlaygroundTestResult {
+            return (
+                PlaygroundTestResult {
+                    scenario_id: scenario_id.to_string(),
+                    file_name: file_name.to_string(),
+                    fixed: false,
+                    errors_detected: 0,
+                    errors_fixed: 0,
+                    chain_of_thought_complete: false,
+                    decision_points: vec![],
+                    fixed_file_path: None,
+                    error_message: Some(format!("Failed to scaffold broken files: {}", e)),
+                },
+                None,
+            );
+        }
+    };
+
+    // Find the target file
+    let target_file = broken_files
+        .iter()
+        .find(|f| f.file_name().unwrap().to_string_lossy() == file_name)
+        .cloned();
+
+    if target_file.is_none() {
+        return (
+            PlaygroundTestResult {
                 scenario_id: scenario_id.to_string(),
                 file_name: file_name.to_string(),
                 fixed: false,
@@ -176,28 +226,10 @@ async fn run_playground_test(
                 chain_of_thought_complete: false,
                 decision_points: vec![],
                 fixed_file_path: None,
-            error_message: Some(format!("Failed to scaffold broken files: {}", e)),
-            }, None);
-        }
-    };
-
-    // Find the target file
-    let target_file = broken_files.iter()
-        .find(|f| f.file_name().unwrap().to_string_lossy() == file_name)
-        .cloned();
-
-    if target_file.is_none() {
-        return (PlaygroundTestResult {
-            scenario_id: scenario_id.to_string(),
-            file_name: file_name.to_string(),
-            fixed: false,
-            errors_detected: 0,
-            errors_fixed: 0,
-            chain_of_thought_complete: false,
-            decision_points: vec![],
-            fixed_file_path: None,
-            error_message: Some(format!("Target file {} not found", file_name)),
-        }, None);
+                error_message: Some(format!("Target file {} not found", file_name)),
+            },
+            None,
+        );
     }
 
     let target_file_path = target_file.unwrap();
@@ -207,20 +239,26 @@ async fn run_playground_test(
     let errors_detected = count_errors_in_file(&target_file_path, file_type).await;
 
     // Create workspace for agent execution
-    let workspace = match env.create_workspace(&format!("playground_{}", scenario_id)).await {
+    let workspace = match env
+        .create_workspace(&format!("playground_{}", scenario_id))
+        .await
+    {
         Ok(ws) => ws,
         Err(e) => {
-            return (PlaygroundTestResult {
-                scenario_id: scenario_id.to_string(),
-                file_name: file_name.to_string(),
-                fixed: false,
-                errors_detected,
-                errors_fixed: 0,
-                chain_of_thought_complete: false,
-                decision_points: vec![],
-                fixed_file_path: None,
-                error_message: Some(format!("Failed to create workspace: {}", e)),
-            }, None);
+            return (
+                PlaygroundTestResult {
+                    scenario_id: scenario_id.to_string(),
+                    file_name: file_name.to_string(),
+                    fixed: false,
+                    errors_detected,
+                    errors_fixed: 0,
+                    chain_of_thought_complete: false,
+                    decision_points: vec![],
+                    fixed_file_path: None,
+                    error_message: Some(format!("Failed to create workspace: {}", e)),
+                },
+                None,
+            );
         }
     };
 
@@ -230,7 +268,7 @@ async fn run_playground_test(
             // Create src directory and Cargo.toml for Rust
             let src_dir = workspace.path().join("src");
             std::fs::create_dir_all(&src_dir).unwrap();
-            
+
             // Create minimal Cargo.toml with lib target
             let cargo_toml = r#"[package]
 name = "test-project"
@@ -242,7 +280,7 @@ name = "test_project"
 path = "src/lib.rs"
 "#;
             std::fs::write(workspace.path().join("Cargo.toml"), cargo_toml).unwrap();
-            
+
             // Copy file to src/lib.rs (Rust convention)
             let file_path = src_dir.join("lib.rs");
             std::fs::copy(&target_file_path, &file_path).unwrap();
@@ -261,7 +299,7 @@ path = "src/lib.rs"
 }
 "#;
             std::fs::write(workspace.path().join("tsconfig.json"), tsconfig).unwrap();
-            
+
             // Copy file to workspace root
             let file_path = workspace.path().join(file_name);
             std::fs::copy(&target_file_path, &file_path).unwrap();
@@ -289,13 +327,10 @@ path = "src/lib.rs"
     let base_url = "http://localhost:11434".to_string(); // Default Ollama URL
     let default_model = "gemma3n:e2b".to_string();
     drop(ollama_lock); // Release lock
-    
+
     let mut model_registry = ModelRegistry::new();
     use agent_research::self_prompting_agent::models::OllamaProvider;
-    let ollama_provider = Arc::new(OllamaProvider::new(
-        base_url,
-        default_model,
-    ));
+    let ollama_provider = Arc::new(OllamaProvider::new(base_url, default_model));
     model_registry.register_provider("ollama".to_string(), ollama_provider);
     let model_registry = Arc::new(model_registry);
 
@@ -311,29 +346,32 @@ path = "src/lib.rs"
         execution_mode: AutonomousMode::Auto,
         safety_mode: SafetyMode::Sandbox,
         enable_learning: true, // Enable learning bridge for compilation feedback signals
-        enable_rl: false, // RL training can be enabled for advanced learning
+        enable_rl: false,      // RL training can be enabled for advanced learning
     };
 
     let agent = match SelfPromptingAgent::new(agent_config, model_registry, evaluator).await {
         Ok(agent) => Arc::new(agent),
         Err(e) => {
-            return (PlaygroundTestResult {
-                scenario_id: scenario_id.to_string(),
-                file_name: file_name.to_string(),
-                fixed: false,
-                errors_detected,
-                errors_fixed: 0,
-                chain_of_thought_complete: false,
-                decision_points: vec![],
-                fixed_file_path: None,
-                error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
-            }, None);
+            return (
+                PlaygroundTestResult {
+                    scenario_id: scenario_id.to_string(),
+                    file_name: file_name.to_string(),
+                    fixed: false,
+                    errors_detected,
+                    errors_fixed: 0,
+                    chain_of_thought_complete: false,
+                    decision_points: vec![],
+                    fixed_file_path: None,
+                    error_message: Some(format!("Failed to initialize SelfPromptingAgent: {}", e)),
+                },
+                None,
+            );
         }
     };
 
     // Build language-specific instructions
     let language_instructions = build_language_specific_instructions(file_type);
-    
+
     // Create task for fixing the broken code with language-specific instructions and self-review
     let task = SelfPromptingTask {
         id: Uuid::new_v4(),
@@ -393,7 +431,10 @@ path = "src/lib.rs"
     let original_content = std::fs::read_to_string(&workspace_file_path)
         .ok()
         .unwrap_or_default();
-    info!("Original file content length: {} chars", original_content.len());
+    info!(
+        "Original file content length: {} chars",
+        original_content.len()
+    );
 
     // Execute task with compilation feedback loop
     let (execution_result, _final_task) = run_playground_test_with_feedback(
@@ -402,57 +443,73 @@ path = "src/lib.rs"
         &workspace_file_path,
         file_type,
         3, // max_iterations
-    ).await;
-    
+    )
+    .await;
+
     let execution_result = match execution_result {
         Ok(result) => result,
         Err(e) => {
-            return (PlaygroundTestResult {
-                scenario_id: scenario_id.to_string(),
-                file_name: file_name.to_string(),
-                fixed: false,
-                errors_detected,
-                errors_fixed: 0,
-                chain_of_thought_complete: false,
-                decision_points: vec![],
-                fixed_file_path: None,
-                error_message: Some(format!("Agent execution failed: {}", e)),
-            }, Some(agent));
+            return (
+                PlaygroundTestResult {
+                    scenario_id: scenario_id.to_string(),
+                    file_name: file_name.to_string(),
+                    fixed: false,
+                    errors_detected,
+                    errors_fixed: 0,
+                    chain_of_thought_complete: false,
+                    decision_points: vec![],
+                    fixed_file_path: None,
+                    error_message: Some(format!("Agent execution failed: {}", e)),
+                },
+                Some(agent),
+            );
         }
     };
 
     // Run agent with feedback loop - artifacts will be written during iterations
     // Check file modification and final compilation status
-    info!("Checking final compilation status for file: {:?}", workspace_file_path);
+    info!(
+        "Checking final compilation status for file: {:?}",
+        workspace_file_path
+    );
     info!("File exists: {}", workspace_file_path.exists());
-    
+
     let file_was_modified = if workspace_file_path.exists() {
         if let Ok(current_content) = std::fs::read_to_string(&workspace_file_path) {
             let modified = current_content != original_content;
-            info!("File content length: {} chars (was {} chars)", current_content.len(), original_content.len());
+            info!(
+                "File content length: {} chars (was {} chars)",
+                current_content.len(),
+                original_content.len()
+            );
             info!("File was modified by agent: {}", modified);
-            
+
             if modified {
-                info!("File content preview (first 500 chars):\n{}", 
-                    current_content.chars().take(500).collect::<String>());
+                info!(
+                    "File content preview (first 500 chars):\n{}",
+                    current_content.chars().take(500).collect::<String>()
+                );
             } else {
                 warn!("File content unchanged after agent execution - agent may not have fixed the code");
             }
-            
+
             if let Ok(metadata) = std::fs::metadata(&workspace_file_path) {
                 info!("File size: {} bytes", metadata.len());
             }
-            
+
             modified
         } else {
             warn!("Could not read file content after agent execution");
             false
         }
     } else {
-        warn!("File {:?} does not exist after agent execution!", workspace_file_path);
+        warn!(
+            "File {:?} does not exist after agent execution!",
+            workspace_file_path
+        );
         false
     };
-    
+
     // Final compilation check (wrapper already checked, but verify for reporting)
     let fixed = if file_was_modified {
         check_code_compiles(&workspace_file_path, file_type).await
@@ -460,15 +517,20 @@ path = "src/lib.rs"
         warn!("Skipping compilation check - file was not modified by agent");
         false
     };
-    info!("Final compilation check result for {:?}: {}", workspace_file_path, fixed);
+    info!(
+        "Final compilation check result for {:?}: {}",
+        workspace_file_path, fixed
+    );
     let errors_fixed = if fixed { errors_detected } else { 0 };
     let chain_of_thought_complete = !execution_result.events.is_empty();
 
     // Extract decision points from agent execution events
-    let decision_points = extract_decision_points_from_events(&execution_result.events, &execution_result.task.id);
+    let decision_points =
+        extract_decision_points_from_events(&execution_result.events, &execution_result.task.id);
 
     // Convert decision points to summaries for quality analysis
-    let decision_summaries: Vec<DecisionPointSummary> = decision_points.iter()
+    let decision_summaries: Vec<DecisionPointSummary> = decision_points
+        .iter()
         .map(|dp| DecisionPointSummary {
             reasoning_length: dp.reasoning.len(),
             alternatives_count: dp.alternatives.len(),
@@ -481,17 +543,24 @@ path = "src/lib.rs"
     let _ = playground.cleanup_scenario(scenario_id).await;
     // TestWorkspace cleanup is handled by TempDir drop
 
-    (PlaygroundTestResult {
-        scenario_id: scenario_id.to_string(),
-        file_name: file_name.to_string(),
-        fixed,
-        errors_detected,
-        errors_fixed,
-        chain_of_thought_complete,
-        decision_points: decision_summaries,
-        fixed_file_path: if fixed { Some(workspace_file_path) } else { None },
-        error_message: None,
-    }, Some(agent))
+    (
+        PlaygroundTestResult {
+            scenario_id: scenario_id.to_string(),
+            file_name: file_name.to_string(),
+            fixed,
+            errors_detected,
+            errors_fixed,
+            chain_of_thought_complete,
+            decision_points: decision_summaries,
+            fixed_file_path: if fixed {
+                Some(workspace_file_path)
+            } else {
+                None
+            },
+            error_message: None,
+        },
+        Some(agent),
+    )
 }
 
 /// Step 2: Run quality evaluation on fixed code using REAL fixed file
@@ -509,7 +578,7 @@ async fn run_quality_evaluation(
 
     // Analyze reasoning depth from REAL decision points
     let reasoning_depth = ReasoningDepthScore::analyze(&decision_points);
-    
+
     // Analyze decision quality from REAL decision points
     let decision_quality = DecisionQualityScore::analyze(&decision_points);
 
@@ -545,16 +614,16 @@ async fn run_quality_evaluation(
     // For playground tests, council evaluation is not part of the test flow,
     // so we use a documented default value. In real evaluation scenarios with council sessions,
     // this would be extracted from the CouncilSession or VerdictRecord and passed to this function.
-    // 
+    //
     // This default (0.7) represents "good" council transparency for calculation purposes
     // and ensures overall score calculation works correctly. Council transparency is better
     // evaluated in dedicated council evaluation scenarios that include verdict records.
-    // 
+    //
     // NOTE: This is intentional - playground tests focus on code fixing and quality,
     // not council evaluation. To evaluate council transparency, use dedicated council
     // evaluation scenarios that provide VerdictRecord data.
     let council_transparency_score = 0.7;
-    
+
     let overall_score = OverallQualityScore::calculate(
         reasoning_depth.score,
         decision_quality.score,
@@ -567,7 +636,7 @@ async fn run_quality_evaluation(
         if let Some(learning_bridge) = agent.learning_bridge() {
             use agent_research::self_prompting_agent::learning_bridge::LearningSignal;
             use chrono::Utc;
-            
+
             let signal = LearningSignal {
                 signal_type: "quality_evaluation".to_string(),
                 value: overall_score.score,
@@ -580,10 +649,13 @@ async fn run_quality_evaluation(
                 ),
                 timestamp: Utc::now(),
             };
-            
+
             match learning_bridge.process_signal(signal).await {
                 Ok(_) => {
-                    info!("Sent learning signal for quality evaluation: overall_score={:.2}", overall_score.score);
+                    info!(
+                        "Sent learning signal for quality evaluation: overall_score={:.2}",
+                        overall_score.score
+                    );
                 }
                 Err(e) => {
                     warn!("Failed to send quality evaluation learning signal: {}", e);
@@ -614,9 +686,8 @@ async fn run_quality_evaluation(
         success_criteria_failed.push(format!("Code quality {} < 0.7", code_quality_score));
     }
 
-    let passed = reasoning_depth.score >= 0.7 
-        && decision_quality.score >= 0.7 
-        && code_quality_score >= 0.7;
+    let passed =
+        reasoning_depth.score >= 0.7 && decision_quality.score >= 0.7 && code_quality_score >= 0.7;
 
     QualityEvaluationResult {
         scenario_name: format!("Playground + Quality: {}", playground_result.file_name),
@@ -642,39 +713,53 @@ async fn run_playground_test_with_feedback(
     workspace_file_path: &PathBuf,
     file_type: &str,
     max_iterations: usize,
-) -> (Result<agent_research::self_prompting_agent::loop_controller::SelfPromptingResult, String>, SelfPromptingTask) {
+) -> (
+    Result<agent_research::self_prompting_agent::loop_controller::SelfPromptingResult, String>,
+    SelfPromptingTask,
+) {
     let mut task = task; // Make mutable for updates
     use agent_research::self_prompting_agent::loop_controller::SelfPromptingResult;
-    
+
     let mut all_events = Vec::new();
     let mut last_result: Option<SelfPromptingResult> = None;
-    
+
     for iteration in 1..=max_iterations {
-        info!("Running iteration {} of {} with compilation feedback", iteration, max_iterations);
-        
+        info!(
+            "Running iteration {} of {} with compilation feedback",
+            iteration, max_iterations
+        );
+
         // Execute task with agent
         let result = match agent.execute_task(task.clone()).await {
             Ok(r) => r,
             Err(e) => {
-                return (Err(format!("Agent execution failed at iteration {}: {}", iteration, e)), task);
+                return (
+                    Err(format!(
+                        "Agent execution failed at iteration {}: {}",
+                        iteration, e
+                    )),
+                    task,
+                );
             }
         };
-        
+
         // Collect events and extract fields before moving result
         all_events.extend(result.events.clone());
         let result_task = result.task.clone();
         let result_task_result = result.result.clone();
         let result_iterations = result.iterations;
         let result_artifacts = result.result.artifacts.clone();
-        
+
         // Store result for final return
-        last_result = Some(agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
-            task: result_task.clone(),
-            result: result_task_result.clone(),
-            iterations: result_iterations,
-            events: result.events.clone(),
-        });
-        
+        last_result = Some(
+            agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
+                task: result_task.clone(),
+                result: result_task_result.clone(),
+                iterations: result_iterations,
+                events: result.events.clone(),
+            },
+        );
+
         // Write artifacts to file system for compilation check
         let mut artifacts_written = 0;
         for artifact in &result_artifacts {
@@ -693,56 +778,76 @@ async fn run_playground_test_with_feedback(
                 cleaned_content = cleaned_content.trim_end_matches('`').trim_end().to_string();
             }
             cleaned_content = cleaned_content.trim().to_string();
-            
+
             if cleaned_content.is_empty() {
                 continue;
             }
-            
+
             // Determine target path
-            let file_name_str = workspace_file_path.file_name()
+            let file_name_str = workspace_file_path
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("");
-            let artifact_target_path = if artifact.file_path == file_name_str || artifact.file_path.ends_with(file_name_str) {
+            let artifact_target_path = if artifact.file_path == file_name_str
+                || artifact.file_path.ends_with(file_name_str)
+            {
                 workspace_file_path.clone()
             } else {
-                workspace_file_path.parent()
+                workspace_file_path
+                    .parent()
                     .unwrap_or_else(|| std::path::Path::new("."))
                     .join(&artifact.file_path)
             };
-            
+
             // Ensure parent directory exists
             if let Some(parent) = artifact_target_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
-            
+
             // Write artifact
             if std::fs::write(&artifact_target_path, &cleaned_content).is_ok() {
                 artifacts_written += 1;
             }
         }
-        
-        info!("Iteration {}: {} artifacts found, {} artifacts written", iteration, result.result.artifacts.len(), artifacts_written);
+
+        info!(
+            "Iteration {}: {} artifacts found, {} artifacts written",
+            iteration,
+            result.result.artifacts.len(),
+            artifacts_written
+        );
         if artifacts_written == 0 && !result.result.artifacts.is_empty() {
-            warn!("No artifacts written in iteration {}, continuing...", iteration);
+            warn!(
+                "No artifacts written in iteration {}, continuing...",
+                iteration
+            );
             for (idx, artifact) in result.result.artifacts.iter().enumerate() {
-                warn!("  Artifact {}: file_path={:?}, content_length={}", idx, artifact.file_path, artifact.content.len());
+                warn!(
+                    "  Artifact {}: file_path={:?}, content_length={}",
+                    idx,
+                    artifact.file_path,
+                    artifact.content.len()
+                );
             }
         } else if result.result.artifacts.is_empty() {
             warn!("No artifacts produced by agent in iteration {}", iteration);
         }
-        
+
         // Check compilation after this iteration
         let compilation_success = check_code_compiles(workspace_file_path, file_type).await;
-        
+
         // Send learning signal for compilation result
         if let Some(learning_bridge) = agent.learning_bridge() {
             use agent_research::self_prompting_agent::learning_bridge::LearningSignal;
             use chrono::Utc;
-            
+
             let compilation_errors = if !compilation_success {
-                extract_compilation_feedback(workspace_file_path, file_type, iteration).await
+                extract_compilation_feedback(workspace_file_path, file_type, iteration)
+                    .await
                     .lines()
-                    .filter(|line| line.trim().starts_with("error") || line.trim().starts_with("Error"))
+                    .filter(|line| {
+                        line.trim().starts_with("error") || line.trim().starts_with("Error")
+                    })
                     .take(5)
                     .map(|s| s.trim().to_string())
                     .collect::<Vec<_>>()
@@ -750,7 +855,7 @@ async fn run_playground_test_with_feedback(
             } else {
                 String::new()
             };
-            
+
             let signal = LearningSignal {
                 signal_type: if compilation_success {
                     "compilation_success".to_string()
@@ -762,15 +867,26 @@ async fn run_playground_test_with_feedback(
                     "{}_compilation_iteration_{}_errors:{}",
                     file_type,
                     iteration,
-                    if compilation_errors.is_empty() { "none" } else { &compilation_errors }
+                    if compilation_errors.is_empty() {
+                        "none"
+                    } else {
+                        &compilation_errors
+                    }
                 ),
                 timestamp: Utc::now(),
             };
-            
+
             match learning_bridge.process_signal(signal).await {
                 Ok(_) => {
-                    info!("Sent learning signal for compilation {} at iteration {}", 
-                        if compilation_success { "success" } else { "failure" }, iteration);
+                    info!(
+                        "Sent learning signal for compilation {} at iteration {}",
+                        if compilation_success {
+                            "success"
+                        } else {
+                            "failure"
+                        },
+                        iteration
+                    );
                 }
                 Err(e) => {
                     warn!("Failed to send learning signal: {}", e);
@@ -782,12 +898,25 @@ async fn run_playground_test_with_feedback(
                 let state = format!("{}_compilation_iteration_{}", file_type, iteration);
                 let action = format!("fix_compilation_strategy");
                 let reward = if compilation_success { 1.0 } else { 0.0 };
-                let next_state = format!("{}_compilation_result_{}", file_type, if compilation_success { "success" } else { "failure" });
-                
-                match rl_trainer.train_on_experience(&state, &action, reward, &next_state).await {
+                let next_state = format!(
+                    "{}_compilation_result_{}",
+                    file_type,
+                    if compilation_success {
+                        "success"
+                    } else {
+                        "failure"
+                    }
+                );
+
+                match rl_trainer
+                    .train_on_experience(&state, &action, reward, &next_state)
+                    .await
+                {
                     Ok(_) => {
-                        info!("Trained RL on compilation experience: {} -> {} -> {} (reward: {:.2})", 
-                            state, action, next_state, reward);
+                        info!(
+                            "Trained RL on compilation experience: {} -> {} -> {} (reward: {:.2})",
+                            state, action, next_state, reward
+                        );
                     }
                     Err(e) => {
                         warn!("Failed to train RL on compilation experience: {}", e);
@@ -795,40 +924,51 @@ async fn run_playground_test_with_feedback(
                 }
             }
         }
-        
+
         if compilation_success {
-            info!("Compilation succeeded at iteration {} - early stopping", iteration);
+            info!(
+                "Compilation succeeded at iteration {} - early stopping",
+                iteration
+            );
             // Create result with merged events (use stored values)
             if let Some(stored_result) = last_result {
-                let final_result = agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
-                    task: stored_result.task,
-                    result: stored_result.result,
-                    iterations: stored_result.iterations,
-                    events: all_events,
-                };
+                let final_result =
+                    agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
+                        task: stored_result.task,
+                        result: stored_result.result,
+                        iterations: stored_result.iterations,
+                        events: all_events,
+                    };
                 return (Ok(final_result), task);
             }
         }
-        
+
         // Compilation failed - extract feedback and add to task for next iteration
         if iteration < max_iterations {
-            let compilation_feedback = extract_compilation_feedback(
-                workspace_file_path,
-                file_type,
-                iteration,
-            ).await;
-            
-            info!("Compilation failed at iteration {}, adding feedback for next iteration", iteration);
+            let compilation_feedback =
+                extract_compilation_feedback(workspace_file_path, file_type, iteration).await;
+
+            info!(
+                "Compilation failed at iteration {}, adding feedback for next iteration",
+                iteration
+            );
             info!("Compilation feedback: {}", compilation_feedback);
-            
+
             // Get learning recommendations if learning is enabled
             if let Some(learning_bridge) = agent.learning_bridge() {
-                match learning_bridge.get_recommendations(&format!("{}_code_fixing", file_type)).await {
+                match learning_bridge
+                    .get_recommendations(&format!("{}_code_fixing", file_type))
+                    .await
+                {
                     Ok(recommendations) => {
                         if !recommendations.is_empty() {
-                            info!("Learning system provided {} recommendations", recommendations.len());
+                            info!(
+                                "Learning system provided {} recommendations",
+                                recommendations.len()
+                            );
                             for rec in recommendations {
-                                task.refinement_context.push(format!("Learning insight: {}", rec));
+                                task.refinement_context
+                                    .push(format!("Learning insight: {}", rec));
                             }
                         }
                     }
@@ -837,10 +977,10 @@ async fn run_playground_test_with_feedback(
                     }
                 }
             }
-            
+
             // Add compilation feedback to refinement context
             task.refinement_context.push(compilation_feedback);
-            
+
             // Add self-review reminder
             task.refinement_context.push(format!(
                 "Self-review completed (Iteration {}): Compilation check failed. Please review your code for:\n\
@@ -854,16 +994,17 @@ async fn run_playground_test_with_feedback(
             warn!("Max iterations reached, compilation still failing");
         }
     }
-    
+
     // Return the last result with all events merged
     if let Some(final_result) = last_result {
         // Create new result with merged events (SelfPromptingResult doesn't implement Clone)
-        let merged_result = agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
-            task: final_result.task,
-            result: final_result.result,
-            iterations: final_result.iterations,
-            events: all_events,
-        };
+        let merged_result =
+            agent_research::self_prompting_agent::loop_controller::SelfPromptingResult {
+                task: final_result.task,
+                result: final_result.result,
+                iterations: final_result.iterations,
+                events: all_events,
+            };
         (Ok(merged_result), task)
     } else {
         (Err("No iterations completed".to_string()), task)
@@ -913,16 +1054,14 @@ async fn extract_compilation_feedback(
     iteration: usize,
 ) -> String {
     use std::process::Command;
-    
+
     let mut feedback = format!("Compilation Check (Iteration {}): ", iteration);
-    
+
     // Run compilation check and capture detailed output
     let (success, errors) = match file_type {
         "rust" => {
             if let Some(parent) = file_path.parent() {
-                let parent_name = parent.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
+                let parent_name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 if parent_name == "src" {
                     if let Some(workspace_root) = parent.parent() {
                         let workspace_root = match std::fs::canonicalize(workspace_root) {
@@ -936,7 +1075,7 @@ async fn extract_compilation_feedback(
                                 .arg(&cargo_toml)
                                 .current_dir(&workspace_root)
                                 .output();
-                            
+
                             match output {
                                 Ok(result) => {
                                     let success = result.status.success();
@@ -965,10 +1104,12 @@ async fn extract_compilation_feedback(
             }
         }
         "typescript" => {
-            let file_dir = file_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+            let file_dir = file_path
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."));
             let tsconfig_path = file_dir.join("tsconfig.json");
             let file_path_str = file_path.to_string_lossy().to_string();
-            
+
             let output = if tsconfig_path.exists() {
                 let tsconfig_path_str = tsconfig_path.to_string_lossy().to_string();
                 Command::new("tsc")
@@ -981,7 +1122,7 @@ async fn extract_compilation_feedback(
                     .current_dir(file_dir)
                     .output()
             };
-            
+
             match output {
                 Ok(result) => {
                     let success = result.status.success();
@@ -996,8 +1137,17 @@ async fn extract_compilation_feedback(
                 Err(_) => {
                     // Fallback: basic syntax check
                     if let Ok(content) = std::fs::read_to_string(file_path) {
-                        let has_syntax = content.contains("function") || content.contains("const") || content.contains("interface");
-                        (has_syntax, if has_syntax { "SUCCESS - Basic syntax valid".to_string() } else { "Syntax check failed".to_string() })
+                        let has_syntax = content.contains("function")
+                            || content.contains("const")
+                            || content.contains("interface");
+                        (
+                            has_syntax,
+                            if has_syntax {
+                                "SUCCESS - Basic syntax valid".to_string()
+                            } else {
+                                "Syntax check failed".to_string()
+                            },
+                        )
                     } else {
                         (false, "Failed to read file".to_string())
                     }
@@ -1009,7 +1159,7 @@ async fn extract_compilation_feedback(
             let output = Command::new("python3")
                 .args(&["-m", "py_compile", &file_path_str])
                 .output();
-            
+
             match output {
                 Ok(result) => {
                     let success = result.status.success();
@@ -1026,18 +1176,22 @@ async fn extract_compilation_feedback(
         }
         _ => (false, "Unknown file type".to_string()),
     };
-    
+
     if success {
         feedback.push_str("SUCCESS\n");
         feedback.push_str(&format!("Status: {}\n", errors));
-        feedback.push_str("Code compiles successfully. Continue with quality improvements if needed.");
+        feedback
+            .push_str("Code compiles successfully. Continue with quality improvements if needed.");
     } else {
         feedback.push_str("FAILED\n");
         feedback.push_str("Errors:\n");
         // Format errors for better readability - match plan format exactly
         for line in errors.lines().take(20) {
             let trimmed = line.trim();
-            if trimmed.starts_with("error") || trimmed.starts_with("Error") || trimmed.starts_with("SyntaxError") {
+            if trimmed.starts_with("error")
+                || trimmed.starts_with("Error")
+                || trimmed.starts_with("SyntaxError")
+            {
                 // Format as "- Line X: error message" if line number is present
                 if trimmed.contains(":") {
                     feedback.push_str(&format!("- {}\n", trimmed));
@@ -1048,7 +1202,7 @@ async fn extract_compilation_feedback(
         }
         feedback.push_str("\nPlease fix these compilation errors in the next iteration.");
     }
-    
+
     feedback
 }
 
@@ -1073,14 +1227,17 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
         }
     };
 
-    info!("check_code_compiles: file_path={:?} (absolute), file_type={}", file_path, file_type);
-    
+    info!(
+        "check_code_compiles: file_path={:?} (absolute), file_type={}",
+        file_path, file_type
+    );
+
     // First, verify file exists and has content
     if !file_path.exists() {
         warn!("File does not exist: {:?}", file_path);
         return false;
     }
-    
+
     if let Ok(metadata) = std::fs::metadata(&file_path) {
         if metadata.len() == 0 {
             warn!("File is empty: {:?}", file_path);
@@ -1088,7 +1245,7 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
         }
         info!("File exists and has {} bytes", metadata.len());
     }
-    
+
     // Verify file has content
     if let Ok(content) = std::fs::read_to_string(&file_path) {
         if content.trim().is_empty() {
@@ -1100,20 +1257,18 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
         warn!("Failed to read file content: {:?}", file_path);
         return false;
     }
-    
+
     match file_type {
         "rust" => {
             // For Rust, check if it's in a Cargo project context
             // If file is in src/, try cargo check
             if let Some(parent) = file_path.parent() {
                 info!("Rust file parent directory: {:?}", parent);
-                
+
                 // Check if parent directory name is "src" (more robust than string matching)
-                let parent_name = parent.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
+                let parent_name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 let is_src_dir = parent_name == "src";
-                
+
                 if is_src_dir {
                     info!("Parent directory is src/, checking for workspace root");
                     if let Some(workspace_root) = parent.parent() {
@@ -1122,11 +1277,15 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
                             Err(_) => workspace_root.to_path_buf(),
                         };
                         info!("Workspace root: {:?}", workspace_root);
-                        
+
                         // Check if Cargo.toml exists
                         let cargo_toml = workspace_root.join("Cargo.toml");
-                        info!("Cargo.toml path: {:?}, exists: {}", cargo_toml, cargo_toml.exists());
-                        
+                        info!(
+                            "Cargo.toml path: {:?}, exists: {}",
+                            cargo_toml,
+                            cargo_toml.exists()
+                        );
+
                         if cargo_toml.exists() {
                             // Verify Cargo.toml has content
                             if let Ok(cargo_content) = std::fs::read_to_string(&cargo_toml) {
@@ -1136,28 +1295,38 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
                                     return false;
                                 }
                             }
-                            
-                            info!("Running cargo check from {:?} with manifest {:?}", workspace_root, cargo_toml);
+
+                            info!(
+                                "Running cargo check from {:?} with manifest {:?}",
+                                workspace_root, cargo_toml
+                            );
                             let output = Command::new("cargo")
                                 .args(&["check", "--manifest-path"])
                                 .arg(&cargo_toml)
                                 .current_dir(&workspace_root)
                                 .output();
-                            
+
                             match output {
                                 Ok(result) => {
                                     let success = result.status.success();
                                     let exit_code = result.status.code().unwrap_or(-1);
-                                    info!("cargo check exit status: {}, success: {}", exit_code, success);
-                                    
+                                    info!(
+                                        "cargo check exit status: {}, success: {}",
+                                        exit_code, success
+                                    );
+
                                     if !success {
                                         let stderr = String::from_utf8_lossy(&result.stderr);
                                         let stdout = String::from_utf8_lossy(&result.stdout);
                                         warn!("cargo check failed");
-                                        info!("cargo check stderr (first 2000 chars):\n{}", 
-                                            stderr.chars().take(2000).collect::<String>());
-                                        info!("cargo check stdout (first 2000 chars):\n{}", 
-                                            stdout.chars().take(2000).collect::<String>());
+                                        info!(
+                                            "cargo check stderr (first 2000 chars):\n{}",
+                                            stderr.chars().take(2000).collect::<String>()
+                                        );
+                                        info!(
+                                            "cargo check stdout (first 2000 chars):\n{}",
+                                            stdout.chars().take(2000).collect::<String>()
+                                        );
                                     } else {
                                         info!("cargo check succeeded!");
                                     }
@@ -1183,27 +1352,34 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
                         warn!("Could not find workspace root (parent of src/)");
                     }
                 } else {
-                    warn!("File parent {:?} is not src/ directory (name: '{}')", parent, parent_name);
+                    warn!(
+                        "File parent {:?} is not src/ directory (name: '{}')",
+                        parent, parent_name
+                    );
                 }
             } else {
                 warn!("Could not get parent directory for {:?}", file_path);
             }
             // Fallback: try rustc directly (will fail for most files due to dependencies)
             // But at least we tried real compilation
-            warn!("Rust compilation check failed - file may not be in proper Cargo project structure");
+            warn!(
+                "Rust compilation check failed - file may not be in proper Cargo project structure"
+            );
             false
         }
         "typescript" => {
             // Real TypeScript compilation check
             // Use absolute path and check for tsconfig.json in same directory or parent
-            let file_dir = file_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+            let file_dir = file_path
+                .parent()
+                .unwrap_or_else(|| std::path::Path::new("."));
             let tsconfig_path = file_dir.join("tsconfig.json");
-            
+
             info!("TypeScript file path: {:?}", file_path);
             info!("Looking for tsconfig.json at: {:?}", tsconfig_path);
-            
+
             let file_path_str = file_path.to_string_lossy().to_string();
-            
+
             // Build command arguments - use owned strings to avoid lifetime issues
             let output = if tsconfig_path.exists() {
                 info!("Found tsconfig.json, using it for compilation");
@@ -1219,37 +1395,43 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
                     .current_dir(file_dir)
                     .output()
             };
-            
+
             match output {
                 Ok(result) => {
                     let success = result.status.success();
                     let exit_code = result.status.code().unwrap_or(-1);
                     info!("tsc exit status: {}, success: {}", exit_code, success);
-                    
+
                     if !success {
                         let stderr = String::from_utf8_lossy(&result.stderr);
                         let stdout = String::from_utf8_lossy(&result.stdout);
                         warn!("tsc failed");
-                        info!("tsc stderr (first 2000 chars):\n{}", 
-                            stderr.chars().take(2000).collect::<String>());
-                        info!("tsc stdout (first 2000 chars):\n{}", 
-                            stdout.chars().take(2000).collect::<String>());
-            } else {
+                        info!(
+                            "tsc stderr (first 2000 chars):\n{}",
+                            stderr.chars().take(2000).collect::<String>()
+                        );
+                        info!(
+                            "tsc stdout (first 2000 chars):\n{}",
+                            stdout.chars().take(2000).collect::<String>()
+                        );
+                    } else {
                         info!("tsc succeeded!");
                     }
                     success
                 }
                 Err(e) => {
                     warn!("Failed to execute tsc: {}", e);
-                // tsc not available, check if file has basic syntax
+                    // tsc not available, check if file has basic syntax
                     if let Ok(content) = std::fs::read_to_string(&file_path) {
                         warn!("tsc not available, falling back to basic syntax check");
-                    // Basic check: has valid TypeScript structure
-                        let has_syntax = content.contains("function") || content.contains("const") || content.contains("interface");
+                        // Basic check: has valid TypeScript structure
+                        let has_syntax = content.contains("function")
+                            || content.contains("const")
+                            || content.contains("interface");
                         info!("Basic syntax check result: {}", has_syntax);
                         has_syntax
-                } else {
-                    false
+                    } else {
+                        false
                     }
                 }
             }
@@ -1257,16 +1439,14 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
         "python" => {
             // Real Python compilation check
             info!("Running python3 -m py_compile on {:?}", file_path);
-            
+
             // Use absolute path for python compilation
             let file_path_str = file_path.to_string_lossy().to_string();
             info!("Python file path (absolute): {}", file_path_str);
-            
+
             // Check if python3 is available
-            let python_check = Command::new("python3")
-                .arg("--version")
-                .output();
-            
+            let python_check = Command::new("python3").arg("--version").output();
+
             match python_check {
                 Ok(version_output) => {
                     let version = String::from_utf8_lossy(&version_output.stdout);
@@ -1277,29 +1457,34 @@ async fn check_code_compiles(file_path: &PathBuf, file_type: &str) -> bool {
                     return false;
                 }
             }
-            
+
             // Use absolute path for compilation
             let output = Command::new("python3")
                 .args(&["-m", "py_compile", &file_path_str])
                 .output();
-            
+
             match output {
                 Ok(result) => {
                     let success = result.status.success();
                     let exit_code = result.status.code().unwrap_or(-1);
-                    info!("py_compile exit status: {}, success: {}", exit_code, success);
-                    
+                    info!(
+                        "py_compile exit status: {}, success: {}",
+                        exit_code, success
+                    );
+
                     if !success {
                         let stderr = String::from_utf8_lossy(&result.stderr);
                         let stdout = String::from_utf8_lossy(&result.stdout);
                         warn!("py_compile failed");
                         info!("py_compile stderr:\n{}", stderr);
                         info!("py_compile stdout:\n{}", stdout);
-                        
+
                         // Also check file content for debugging
                         if let Ok(content) = std::fs::read_to_string(&file_path) {
-                            info!("File content preview (first 500 chars):\n{}", 
-                                content.chars().take(500).collect::<String>());
+                            info!(
+                                "File content preview (first 500 chars):\n{}",
+                                content.chars().take(500).collect::<String>()
+                            );
                         }
                     } else {
                         info!("py_compile succeeded!");
@@ -1323,12 +1508,14 @@ fn extract_decision_points_from_events(
     events: &[SelfPromptingEvent],
     task_id: &Uuid,
 ) -> Vec<DecisionPoint> {
-
     let mut decision_points = Vec::new();
 
     for (_idx, event) in events.iter().enumerate() {
         match event {
-            SelfPromptingEvent::IterationStarted { iteration, task_id: _ } => {
+            SelfPromptingEvent::IterationStarted {
+                iteration,
+                task_id: _,
+            } => {
                 // Create decision point for iteration strategy
                 let decision = DecisionPoint {
                     decision_id: Uuid::new_v4(),
@@ -1613,7 +1800,7 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
                             .arg(workspace_root.join("Cargo.toml"))
                             .current_dir(workspace_root)
                             .output();
-                        
+
                         if let Ok(result) = output {
                             if !result.status.success() {
                                 // Parse cargo check output for error count
@@ -1634,11 +1821,14 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
             let output = Command::new("rustc")
                 .args(&["--crate-type", "lib", file_path.to_string_lossy().as_ref()])
                 .output();
-            
+
             if let Ok(result) = output {
                 if !result.status.success() {
                     let stderr = String::from_utf8_lossy(&result.stderr);
-                    return stderr.matches("error[").count().max(stderr.matches("error:").count());
+                    return stderr
+                        .matches("error[")
+                        .count()
+                        .max(stderr.matches("error:").count());
                 }
             }
             0
@@ -1648,7 +1838,7 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
             let output = Command::new("tsc")
                 .args(&["--noEmit", file_path.to_string_lossy().as_ref()])
                 .output();
-            
+
             if let Ok(result) = output {
                 if !result.status.success() {
                     let stderr = String::from_utf8_lossy(&result.stderr);
@@ -1665,7 +1855,7 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
             let output = Command::new("python3")
                 .args(&["-m", "py_compile", file_path.to_string_lossy().as_ref()])
                 .output();
-            
+
             if let Ok(result) = output {
                 if !result.status.success() {
                     let stderr = String::from_utf8_lossy(&result.stderr);
@@ -1679,7 +1869,7 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
             let mypy_output = Command::new("mypy")
                 .args(&[file_path.to_string_lossy().as_ref()])
                 .output();
-            
+
             if let Ok(result) = mypy_output {
                 if !result.status.success() {
                     let stdout = String::from_utf8_lossy(&result.stdout);
@@ -1707,9 +1897,9 @@ async fn count_errors_in_file(file_path: &PathBuf, file_type: &str) -> usize {
 /// Convert decision point summaries to DecisionPoints for analysis
 #[cfg(feature = "full")]
 fn convert_summaries_to_decision_points(summaries: &[DecisionPointSummary]) -> Vec<DecisionPoint> {
-
-    summaries.iter().map(|summary| {
-        DecisionPoint {
+    summaries
+        .iter()
+        .map(|summary| DecisionPoint {
             decision_id: Uuid::new_v4(),
             decision_type: DecisionType::FailureRecovery,
             timestamp: Utc::now(),
@@ -1746,8 +1936,8 @@ fn convert_summaries_to_decision_points(summaries: &[DecisionPointSummary]) -> V
                 None
             },
             metadata: HashMap::new(),
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 /// Run all integrated tests (playground + quality for all file types)
@@ -1780,22 +1970,45 @@ pub async fn generate_integrated_report(results: &[IntegratedTestResult]) {
     info!("Generating integrated test report");
 
     let mut report = String::from("# Integrated Playground + Quality Evaluation Report\n\n");
-    report.push_str(&format!("Generated: {}\n\n", chrono::Utc::now().to_rfc3339()));
+    report.push_str(&format!(
+        "Generated: {}\n\n",
+        chrono::Utc::now().to_rfc3339()
+    ));
 
     for result in results {
         report.push_str(&format!("## {}\n\n", result.scenario_id));
-        report.push_str(&format!("**Overall Status**: {}\n", 
-            if result.overall_passed { "PASSED" } else { "FAILED" }));
+        report.push_str(&format!(
+            "**Overall Status**: {}\n",
+            if result.overall_passed {
+                "PASSED"
+            } else {
+                "FAILED"
+            }
+        ));
         report.push_str(&format!("**Duration**: {}ms\n\n", result.duration_ms));
 
         // Playground results
         report.push_str("### Playground Test (Functional Correctness)\n\n");
-        report.push_str(&format!("- **File**: {}\n", result.playground_result.file_name));
-        report.push_str(&format!("- **Fixed**: {}\n", result.playground_result.fixed));
-        report.push_str(&format!("- **Errors Detected**: {}\n", result.playground_result.errors_detected));
-        report.push_str(&format!("- **Errors Fixed**: {}\n", result.playground_result.errors_fixed));
-        report.push_str(&format!("- **Chain-of-Thought Complete**: {}\n", 
-            result.playground_result.chain_of_thought_complete));
+        report.push_str(&format!(
+            "- **File**: {}\n",
+            result.playground_result.file_name
+        ));
+        report.push_str(&format!(
+            "- **Fixed**: {}\n",
+            result.playground_result.fixed
+        ));
+        report.push_str(&format!(
+            "- **Errors Detected**: {}\n",
+            result.playground_result.errors_detected
+        ));
+        report.push_str(&format!(
+            "- **Errors Fixed**: {}\n",
+            result.playground_result.errors_fixed
+        ));
+        report.push_str(&format!(
+            "- **Chain-of-Thought Complete**: {}\n",
+            result.playground_result.chain_of_thought_complete
+        ));
         if let Some(ref err) = result.playground_result.error_message {
             report.push_str(&format!("- **Error**: {}\n", err));
         }
@@ -1804,12 +2017,27 @@ pub async fn generate_integrated_report(results: &[IntegratedTestResult]) {
         // Quality results
         if let Some(ref quality) = result.quality_result {
             report.push_str("### Quality Evaluation\n\n");
-            report.push_str(&format!("- **Overall Score**: {:.2}\n", quality.overall_score.score));
-            report.push_str(&format!("- **Reasoning Depth**: {:.2} ({})\n", 
-                quality.reasoning_depth.score, quality.reasoning_depth.quality_level()));
-            report.push_str(&format!("- **Decision Quality**: {:.2}\n", quality.decision_quality.score));
-            report.push_str(&format!("- **Output Quality**: {:.2}\n", quality.output_quality));
-            report.push_str(&format!("- **Status**: {}\n\n", if quality.passed { "PASSED" } else { "FAILED" }));
+            report.push_str(&format!(
+                "- **Overall Score**: {:.2}\n",
+                quality.overall_score.score
+            ));
+            report.push_str(&format!(
+                "- **Reasoning Depth**: {:.2} ({})\n",
+                quality.reasoning_depth.score,
+                quality.reasoning_depth.quality_level()
+            ));
+            report.push_str(&format!(
+                "- **Decision Quality**: {:.2}\n",
+                quality.decision_quality.score
+            ));
+            report.push_str(&format!(
+                "- **Output Quality**: {:.2}\n",
+                quality.output_quality
+            ));
+            report.push_str(&format!(
+                "- **Status**: {}\n\n",
+                if quality.passed { "PASSED" } else { "FAILED" }
+            ));
 
             if !quality.success_criteria_met.is_empty() {
                 report.push_str("#### Success Criteria Met\n\n");
@@ -1841,7 +2069,10 @@ pub async fn generate_integrated_report(results: &[IntegratedTestResult]) {
     report.push_str(&format!("- **Total Tests**: {}\n", total));
     report.push_str(&format!("- **Passed**: {}\n", passed));
     report.push_str(&format!("- **Failed**: {}\n", total - passed));
-    report.push_str(&format!("- **Pass Rate**: {:.1}%\n", (passed as f64 / total as f64) * 100.0));
+    report.push_str(&format!(
+        "- **Pass Rate**: {:.1}%\n",
+        (passed as f64 / total as f64) * 100.0
+    ));
 
     // Save report
     let report_path = PathBuf::from("integrated_test_report.md");
@@ -1851,4 +2082,3 @@ pub async fn generate_integrated_report(results: &[IntegratedTestResult]) {
         info!("Integrated report saved to: {}", report_path.display());
     }
 }
-

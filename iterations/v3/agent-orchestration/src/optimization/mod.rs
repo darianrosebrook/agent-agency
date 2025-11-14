@@ -5,24 +5,21 @@
 //!
 //! @author @darianrosebrook
 
-pub mod multi_stage_pipeline;
 pub mod auto_tuner;
+pub mod multi_stage_pipeline;
 pub mod streaming_executor;
 
 // Re-export main types
 pub use multi_stage_pipeline::{
-    MultiStagePipeline, TaskClassification, TaskComplexity, WorkerSelectionResult,
-    PipelineStageResult, DualExecutionConfig,
+    DualExecutionConfig, MultiStagePipeline, PipelineStageResult, TaskClassification,
+    TaskComplexity, WorkerSelectionResult,
 };
 
 pub use auto_tuner::{
-    AutoTuner, ParameterSpace, OptimizationObjective, PerformanceMeasurement,
-    BayesianOptimizationConfig, OptimizationStatistics,
+    AutoTuner, BayesianOptimizationConfig, OptimizationObjective, OptimizationStatistics,
+    ParameterSpace, PerformanceMeasurement,
 };
 
 pub use streaming_executor::{
-    StreamingTaskExecutor, StreamingConfig, TaskExecutionState, TaskChunk,
-    ExecutionCheckpoint,
+    ExecutionCheckpoint, StreamingConfig, StreamingTaskExecutor, TaskChunk, TaskExecutionState,
 };
-
-

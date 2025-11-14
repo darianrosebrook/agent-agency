@@ -33,28 +33,41 @@ impl ASTAnalyzer {
         file_path: &str,
         language: &ProgrammingLanguage,
     ) -> Result<LanguageAnalysisResult> {
-        debug!("Analyzing AST changes for file: {} (language: {:?})", file_path, language);
+        debug!(
+            "Analyzing AST changes for file: {} (language: {:?})",
+            file_path, language
+        );
 
         // 1. Diff content parsing: Parse the diff content for AST analysis
         let diff_hunks = self.parse_diff_content(diff_content)?;
         if diff_hunks.is_empty() {
             debug!("No diff hunks found for file: {}", file_path);
-            return Ok(LanguageAnalysisResult::default_for_language(language.clone()));
+            return Ok(LanguageAnalysisResult::default_for_language(
+                language.clone(),
+            ));
         }
 
         // 2. AST change extraction: Extract AST changes from parsed content
-        let ast_changes = self.extract_ast_changes(&diff_hunks, file_path, language).await?;
+        let ast_changes = self
+            .extract_ast_changes(&diff_hunks, file_path, language)
+            .await?;
 
         // 3. Quality and complexity metrics: Calculate metrics from changes
-        let quality_metrics = self.calculate_quality_metrics(&diff_hunks, &ast_changes, language)?;
+        let quality_metrics =
+            self.calculate_quality_metrics(&diff_hunks, &ast_changes, language)?;
         let complexity_metrics = self.calculate_complexity_metrics(&ast_changes)?;
 
         // 4. Detect violations and warnings
         let violations = self.detect_violations(&ast_changes, language)?;
         let warnings = self.detect_warnings(&ast_changes, language)?;
 
-        debug!("AST analysis completed for {}: {} changes, {} violations, {} warnings",
-               file_path, ast_changes.len(), violations.len(), warnings.len());
+        debug!(
+            "AST analysis completed for {}: {} changes, {} violations, {} warnings",
+            file_path,
+            ast_changes.len(),
+            violations.len(),
+            warnings.len()
+        );
 
         Ok(LanguageAnalysisResult {
             language: language.clone(),
@@ -107,7 +120,12 @@ impl ASTAnalyzer {
     }
 
     /// Extract AST changes from diff hunks
-    async fn extract_ast_changes(&self, hunks: &[DiffHunk], file_path: &str, language: &ProgrammingLanguage) -> Result<Vec<ASTChange>> {
+    async fn extract_ast_changes(
+        &self,
+        hunks: &[DiffHunk],
+        file_path: &str,
+        language: &ProgrammingLanguage,
+    ) -> Result<Vec<ASTChange>> {
         let mut changes = Vec::new();
 
         for (hunk_idx, hunk) in hunks.iter().enumerate() {
@@ -136,7 +154,13 @@ impl ASTAnalyzer {
     }
 
     /// Analyze a single line of code for AST changes
-    fn analyze_code_line(&self, line: &str, file_path: &str, language: &ProgrammingLanguage, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_code_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        language: &ProgrammingLanguage,
+        is_addition: bool,
+    ) -> Option<ASTChange> {
         let line = line.trim();
 
         // Skip empty lines and comments
@@ -147,15 +171,21 @@ impl ASTAnalyzer {
         // Language-specific analysis
         match language {
             ProgrammingLanguage::Rust => self.analyze_rust_line(line, file_path, is_addition),
-            ProgrammingLanguage::TypeScript | ProgrammingLanguage::JavaScript =>
-                self.analyze_typescript_line(line, file_path, is_addition),
+            ProgrammingLanguage::TypeScript | ProgrammingLanguage::JavaScript => {
+                self.analyze_typescript_line(line, file_path, is_addition)
+            }
             ProgrammingLanguage::Python => self.analyze_python_line(line, file_path, is_addition),
             _ => self.analyze_generic_line(line, file_path, is_addition),
         }
     }
 
     /// Analyze Rust code line
-    fn analyze_rust_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_rust_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        is_addition: bool,
+    ) -> Option<ASTChange> {
         // Function definitions
         if line.contains("fn ") && line.contains('(') {
             return Some(ASTChange {
@@ -171,7 +201,11 @@ impl ASTAnalyzer {
                     start_byte: 0,
                     end_byte: 0,
                 },
-                description: format!("Function {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Function {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Medium,
                 dependencies: Vec::new(),
             });
@@ -184,7 +218,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ClassDefinition,
                 node_type: "struct".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Struct {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Struct {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::High,
                 dependencies: Vec::new(),
             });
@@ -197,7 +235,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ImportExport,
                 node_type: "import".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Import {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Import {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Low,
                 dependencies: Vec::new(),
             });
@@ -207,10 +249,18 @@ impl ASTAnalyzer {
     }
 
     /// Analyze TypeScript/JavaScript code line
-    fn analyze_typescript_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_typescript_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        is_addition: bool,
+    ) -> Option<ASTChange> {
         // Function definitions
-        if (line.contains("function ") || line.contains("=>") || line.contains("const ") && line.contains('=')) &&
-           (line.contains('(') || line.contains("=>")) {
+        if (line.contains("function ")
+            || line.contains("=>")
+            || line.contains("const ") && line.contains('='))
+            && (line.contains('(') || line.contains("=>"))
+        {
             return Some(ASTChange {
                 id: Uuid::new_v4(),
                 change_type: ASTChangeType::FunctionSignature,
@@ -224,7 +274,11 @@ impl ASTAnalyzer {
                     start_byte: 0,
                     end_byte: 0,
                 },
-                description: format!("Function {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Function {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Medium,
                 dependencies: Vec::new(),
             });
@@ -237,7 +291,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ClassDefinition,
                 node_type: "class".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Class {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Class {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::High,
                 dependencies: Vec::new(),
             });
@@ -250,7 +308,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ImportExport,
                 node_type: "import".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Import {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Import {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Low,
                 dependencies: Vec::new(),
             });
@@ -260,7 +322,12 @@ impl ASTAnalyzer {
     }
 
     /// Analyze Python code line
-    fn analyze_python_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_python_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        is_addition: bool,
+    ) -> Option<ASTChange> {
         // Function definitions
         if line.starts_with("def ") {
             return Some(ASTChange {
@@ -276,7 +343,11 @@ impl ASTAnalyzer {
                     start_byte: 0,
                     end_byte: 0,
                 },
-                description: format!("Function {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Function {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Medium,
                 dependencies: Vec::new(),
             });
@@ -289,7 +360,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ClassDefinition,
                 node_type: "class".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Class {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Class {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::High,
                 dependencies: Vec::new(),
             });
@@ -302,7 +377,11 @@ impl ASTAnalyzer {
                 change_type: ASTChangeType::ImportExport,
                 node_type: "import".to_string(),
                 location: SourceLocation::default(),
-                description: format!("Import {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Import {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Low,
                 dependencies: Vec::new(),
             });
@@ -312,7 +391,12 @@ impl ASTAnalyzer {
     }
 
     /// Generic analysis for unsupported languages
-    fn analyze_generic_line(&self, line: &str, file_path: &str, is_addition: bool) -> Option<ASTChange> {
+    fn analyze_generic_line(
+        &self,
+        line: &str,
+        file_path: &str,
+        is_addition: bool,
+    ) -> Option<ASTChange> {
         // Basic pattern matching for common constructs
         if line.contains("function") || line.contains("def ") || line.contains("fn ") {
             return Some(ASTChange {
@@ -328,7 +412,11 @@ impl ASTAnalyzer {
                     start_byte: 0,
                     end_byte: 0,
                 },
-                description: format!("Function-like construct {}: {}", if is_addition { "added" } else { "removed" }, line),
+                description: format!(
+                    "Function-like construct {}: {}",
+                    if is_addition { "added" } else { "removed" },
+                    line
+                ),
                 impact_level: ImpactLevel::Medium,
                 dependencies: Vec::new(),
             });
@@ -341,23 +429,34 @@ impl ASTAnalyzer {
     fn is_comment(&self, line: &str, language: &ProgrammingLanguage) -> bool {
         let trimmed = line.trim();
         match language {
-            ProgrammingLanguage::Rust | ProgrammingLanguage::C | ProgrammingLanguage::Cpp |
-            ProgrammingLanguage::Java | ProgrammingLanguage::C | ProgrammingLanguage::Swift |
-            ProgrammingLanguage::Go | ProgrammingLanguage::Scala | ProgrammingLanguage::Kotlin =>
-                trimmed.starts_with("//") || trimmed.starts_with("/*"),
-            ProgrammingLanguage::Python | ProgrammingLanguage::Ruby | ProgrammingLanguage::Perl |
-            ProgrammingLanguage::Shell =>
-                trimmed.starts_with("#"),
-            ProgrammingLanguage::JavaScript | ProgrammingLanguage::TypeScript =>
-                trimmed.starts_with("//") || trimmed.starts_with("/*"),
-            ProgrammingLanguage::Haskell | ProgrammingLanguage::Lua =>
-                trimmed.starts_with("--"),
+            ProgrammingLanguage::Rust
+            | ProgrammingLanguage::C
+            | ProgrammingLanguage::Cpp
+            | ProgrammingLanguage::Java
+            | ProgrammingLanguage::C
+            | ProgrammingLanguage::Swift
+            | ProgrammingLanguage::Go
+            | ProgrammingLanguage::Scala
+            | ProgrammingLanguage::Kotlin => trimmed.starts_with("//") || trimmed.starts_with("/*"),
+            ProgrammingLanguage::Python
+            | ProgrammingLanguage::Ruby
+            | ProgrammingLanguage::Perl
+            | ProgrammingLanguage::Shell => trimmed.starts_with("#"),
+            ProgrammingLanguage::JavaScript | ProgrammingLanguage::TypeScript => {
+                trimmed.starts_with("//") || trimmed.starts_with("/*")
+            }
+            ProgrammingLanguage::Haskell | ProgrammingLanguage::Lua => trimmed.starts_with("--"),
             _ => trimmed.starts_with("//") || trimmed.starts_with("#") || trimmed.starts_with("/*"),
         }
     }
 
     /// Calculate quality metrics from changes
-    fn calculate_quality_metrics(&self, hunks: &[DiffHunk], changes: &[ASTChange], language: &ProgrammingLanguage) -> Result<QualityMetrics> {
+    fn calculate_quality_metrics(
+        &self,
+        hunks: &[DiffHunk],
+        changes: &[ASTChange],
+        language: &ProgrammingLanguage,
+    ) -> Result<QualityMetrics> {
         let mut lines_of_code = 0;
         let mut comment_lines = 0;
         let mut cyclomatic_complexity = 0;
@@ -403,7 +502,9 @@ impl ASTAnalyzer {
         let mut complexity = 0;
 
         // Count control flow keywords
-        let control_keywords = ["if", "else", "for", "while", "loop", "match", "switch", "case", "try", "catch"];
+        let control_keywords = [
+            "if", "else", "for", "while", "loop", "match", "switch", "case", "try", "catch",
+        ];
         for keyword in &control_keywords {
             if line.contains(keyword) {
                 complexity += 1;
@@ -459,22 +560,29 @@ impl ASTAnalyzer {
         }
 
         // Count different types of changes
-        let high_impact_changes = changes.iter()
+        let high_impact_changes = changes
+            .iter()
             .filter(|c| c.impact_level >= ImpactLevel::High)
             .count() as f64;
 
-        let dependency_changes = changes.iter()
-            .map(|c| c.dependencies.len())
-            .sum::<usize>() as f64;
+        let dependency_changes = changes.iter().map(|c| c.dependencies.len()).sum::<usize>() as f64;
 
         // Calculate metrics
         let structural_complexity = high_impact_changes / total_changes;
-        let logical_complexity = (changes.iter()
-            .filter(|c| matches!(c.change_type, ASTChangeType::FunctionSignature | ASTChangeType::FunctionBody))
-            .count() as f64) / total_changes;
+        let logical_complexity = (changes
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.change_type,
+                    ASTChangeType::FunctionSignature | ASTChangeType::FunctionBody
+                )
+            })
+            .count() as f64)
+            / total_changes;
         let dependency_complexity = dependency_changes / total_changes;
 
-        let overall_complexity = (structural_complexity + logical_complexity + dependency_complexity) / 3.0;
+        let overall_complexity =
+            (structural_complexity + logical_complexity + dependency_complexity) / 3.0;
 
         Ok(ComplexityMetrics {
             structural_complexity,
@@ -485,7 +593,11 @@ impl ASTAnalyzer {
     }
 
     /// Detect language-specific violations
-    fn detect_violations(&self, changes: &[ASTChange], language: &ProgrammingLanguage) -> Result<Vec<LanguageViolation>> {
+    fn detect_violations(
+        &self,
+        changes: &[ASTChange],
+        language: &ProgrammingLanguage,
+    ) -> Result<Vec<LanguageViolation>> {
         let mut violations = Vec::new();
 
         for change in changes {
@@ -495,11 +607,13 @@ impl ASTAnalyzer {
                     if change.description.contains("unsafe") {
                         violations.push(LanguageViolation {
                             id: Uuid::new_v4(),
-                    rule: "unsafe_code".to_string(),
-                    severity: ViolationSeverity::Warning,
-                    description: "Unsafe code usage detected".to_string(),
+                            rule: "unsafe_code".to_string(),
+                            severity: ViolationSeverity::Warning,
+                            description: "Unsafe code usage detected".to_string(),
                             location: Some(change.location.clone()),
-                            suggestion: Some("Review unsafe block necessity and safety guarantees".to_string()),
+                            suggestion: Some(
+                                "Review unsafe block necessity and safety guarantees".to_string(),
+                            ),
                         });
                     }
                 }
@@ -508,9 +622,9 @@ impl ASTAnalyzer {
                     if change.description.contains(": any") {
                         violations.push(LanguageViolation {
                             id: Uuid::new_v4(),
-                    rule: "any_type_usage".to_string(),
-                    severity: ViolationSeverity::Info,
-                    description: "Use of 'any' type detected".to_string(),
+                            rule: "any_type_usage".to_string(),
+                            severity: ViolationSeverity::Info,
+                            description: "Use of 'any' type detected".to_string(),
                             location: Some(change.location.clone()),
                             suggestion: Some("Consider using more specific types".to_string()),
                         });
@@ -524,7 +638,11 @@ impl ASTAnalyzer {
     }
 
     /// Detect language-specific warnings
-    fn detect_warnings(&self, changes: &[ASTChange], _language: &ProgrammingLanguage) -> Result<Vec<LanguageWarning>> {
+    fn detect_warnings(
+        &self,
+        changes: &[ASTChange],
+        _language: &ProgrammingLanguage,
+    ) -> Result<Vec<LanguageWarning>> {
         let mut warnings = Vec::new();
 
         for change in changes {
@@ -540,7 +658,10 @@ impl ASTAnalyzer {
             }
 
             // Warn about breaking changes
-            if matches!(change.change_type, ASTChangeType::FunctionSignature | ASTChangeType::InterfaceChange) {
+            if matches!(
+                change.change_type,
+                ASTChangeType::FunctionSignature | ASTChangeType::InterfaceChange
+            ) {
                 warnings.push(LanguageWarning {
                     id: Uuid::new_v4(),
                     rule: "breaking_change".to_string(),

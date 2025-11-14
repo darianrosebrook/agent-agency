@@ -5,8 +5,8 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Council verdict enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -55,7 +55,11 @@ pub struct JudgeResult {
 /// Session identifier for council review sessions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
-pub struct SessionId(#[schemars(with = "String")] #[serde(with = "uuid::serde::simple")] pub uuid::Uuid);
+pub struct SessionId(
+    #[schemars(with = "String")]
+    #[serde(with = "uuid::serde::simple")]
+    pub uuid::Uuid,
+);
 
 /// Status of a council review session
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -87,4 +91,3 @@ pub enum SessionStatusType {
     /// Session failed or was cancelled
     Failed,
 }
-

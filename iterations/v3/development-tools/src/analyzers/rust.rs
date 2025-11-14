@@ -4,12 +4,15 @@
 //! complexity calculation, violation detection, and best practices checking.
 //! Extracted from workers/src/caws/analyzers/rust.rs.
 
-use super::{LanguageAnalyzer, LanguageAnalysisResult, ProgrammingLanguage, ViolationSeverity, LanguageViolation, LanguageWarning, SourceLocation};
+use super::{
+    LanguageAnalysisResult, LanguageAnalyzer, LanguageViolation, LanguageWarning,
+    ProgrammingLanguage, SourceLocation, ViolationSeverity,
+};
 use std::collections::HashMap;
 
 /// Rust-specific analyzer
 #[derive(Debug)]
-pub struct RustAnalyzer ;
+pub struct RustAnalyzer;
 
 impl RustAnalyzer {
     /// Create a new Rust analyzer
@@ -73,7 +76,8 @@ impl RustAnalyzer {
 
         // Check for complex patterns
         let match_count = code.matches("match ").count() as f32;
-        let loop_count = code.matches("for ").count() as f32 + code.matches("while ").count() as f32;
+        let loop_count =
+            code.matches("for ").count() as f32 + code.matches("while ").count() as f32;
         let async_count = code.matches("async ").count() as f32;
         let unsafe_count = code.matches("unsafe ").count() as f32;
 
@@ -86,7 +90,13 @@ impl RustAnalyzer {
     }
 
     /// Check for common Rust violations and warnings
-    fn check_rust_violations(&self, code: &str, file_path: &str, violations: &mut Vec<LanguageViolation>, warnings: &mut Vec<LanguageWarning>) {
+    fn check_rust_violations(
+        &self,
+        code: &str,
+        file_path: &str,
+        violations: &mut Vec<LanguageViolation>,
+        warnings: &mut Vec<LanguageWarning>,
+    ) {
         let lines: Vec<&str> = code.lines().collect();
 
         for (line_num, line) in lines.iter().enumerate() {
@@ -136,7 +146,9 @@ impl RustAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use environment variables or configuration for URLs".to_string()),
+                    suggestion: Some(
+                        "Use environment variables or configuration for URLs".to_string(),
+                    ),
                 });
             }
 
@@ -153,7 +165,9 @@ impl RustAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Ensure unsafe code is properly documented and tested".to_string()),
+                    suggestion: Some(
+                        "Ensure unsafe code is properly documented and tested".to_string(),
+                    ),
                 });
             }
 
@@ -170,7 +184,9 @@ impl RustAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use Result types or proper error handling instead of panic!".to_string()),
+                    suggestion: Some(
+                        "Use Result types or proper error handling instead of panic!".to_string(),
+                    ),
                 });
             }
         }
@@ -206,7 +222,11 @@ impl LanguageAnalyzer for RustAnalyzer {
         matches!(ext, "rs")
     }
 
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<f32, String> {
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<f32, String> {
         // Calculate complexity based on diff content
         let added_lines = diff.lines().filter(|line| line.starts_with('+')).count() as f32;
         let removed_lines = diff.lines().filter(|line| line.starts_with('-')).count() as f32;
@@ -216,7 +236,11 @@ impl LanguageAnalyzer for RustAnalyzer {
         let mut complexity = (added_lines + removed_lines) * 0.5;
 
         // Higher complexity for structural changes
-        if diff.contains("fn ") || diff.contains("struct ") || diff.contains("trait ") || diff.contains("impl ") {
+        if diff.contains("fn ")
+            || diff.contains("struct ")
+            || diff.contains("trait ")
+            || diff.contains("impl ")
+        {
             complexity *= 2.0;
         }
 

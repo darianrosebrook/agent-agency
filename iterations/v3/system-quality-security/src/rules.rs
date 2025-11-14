@@ -8,7 +8,12 @@ use std::collections::HashMap;
 pub trait QualityRule {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation>;
+    fn check_file(
+        &self,
+        file_path: &str,
+        content: &str,
+        config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation>;
 }
 
 /// God object detection rule
@@ -23,7 +28,12 @@ impl QualityRule for GodObjectRule {
         "Detects files that are too large (god objects)"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(
+        &self,
+        file_path: &str,
+        content: &str,
+        config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let line_count = content.lines().count();
 
@@ -34,8 +44,13 @@ impl QualityRule for GodObjectRule {
                 file: file_path.to_string(),
                 line: None,
                 column: None,
-                message: format!("File has {} lines, exceeds maximum of {}", line_count, config.max_lines_per_file),
-                suggestion: Some("Consider splitting this file into smaller, focused modules".to_string()),
+                message: format!(
+                    "File has {} lines, exceeds maximum of {}",
+                    line_count, config.max_lines_per_file
+                ),
+                suggestion: Some(
+                    "Consider splitting this file into smaller, focused modules".to_string(),
+                ),
                 details: Some({
                     let mut details = HashMap::new();
                     details.insert("line_count".to_string(), line_count.into());
@@ -61,7 +76,12 @@ impl QualityRule for DuplicateNameRule {
         "Detects excessive duplicate struct/enum names"
     }
 
-    fn check_file(&self, _file_path: &str, _content: &str, _config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(
+        &self,
+        _file_path: &str,
+        _content: &str,
+        _config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation> {
         // This rule needs global analysis across all files
         // Will be implemented in the runner
         Vec::new()
@@ -80,7 +100,12 @@ impl QualityRule for FunctionComplexityRule {
         "Detects functions that are too long"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(
+        &self,
+        file_path: &str,
+        content: &str,
+        config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let function_regex = Regex::new(r"fn\s+\w+\s*\(").unwrap();
 
@@ -122,12 +147,21 @@ impl QualityRule for FunctionComplexityRule {
                         file: file_path.to_string(),
                         line: Some(line_num + 1),
                         column: None,
-                        message: format!("Function has {} lines, exceeds maximum of {}", function_lines, config.max_lines_per_function),
-                        suggestion: Some("Consider breaking this function into smaller, focused functions".to_string()),
+                        message: format!(
+                            "Function has {} lines, exceeds maximum of {}",
+                            function_lines, config.max_lines_per_function
+                        ),
+                        suggestion: Some(
+                            "Consider breaking this function into smaller, focused functions"
+                                .to_string(),
+                        ),
                         details: Some({
                             let mut details = HashMap::new();
                             details.insert("function_lines".to_string(), function_lines.into());
-                            details.insert("max_lines".to_string(), config.max_lines_per_function.into());
+                            details.insert(
+                                "max_lines".to_string(),
+                                config.max_lines_per_function.into(),
+                            );
                             details
                         }),
                     });
@@ -151,7 +185,12 @@ impl QualityRule for StructComplexityRule {
         "Detects structs with too many fields"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(
+        &self,
+        file_path: &str,
+        content: &str,
+        config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
         let struct_regex = Regex::new(r"pub struct\s+(\w+)").unwrap();
 
@@ -200,13 +239,20 @@ impl QualityRule for StructComplexityRule {
                         file: file_path.to_string(),
                         line: Some(line_num + 1),
                         column: None,
-                        message: format!("Struct '{}' has {} fields, exceeds maximum of {}", struct_name, field_count, config.max_struct_fields),
-                        suggestion: Some("Consider grouping related fields or splitting into smaller structs".to_string()),
+                        message: format!(
+                            "Struct '{}' has {} fields, exceeds maximum of {}",
+                            struct_name, field_count, config.max_struct_fields
+                        ),
+                        suggestion: Some(
+                            "Consider grouping related fields or splitting into smaller structs"
+                                .to_string(),
+                        ),
                         details: Some({
                             let mut details = HashMap::new();
                             details.insert("struct_name".to_string(), struct_name.into());
                             details.insert("field_count".to_string(), field_count.into());
-                            details.insert("max_fields".to_string(), config.max_struct_fields.into());
+                            details
+                                .insert("max_fields".to_string(), config.max_struct_fields.into());
                             details
                         }),
                     });
@@ -230,19 +276,25 @@ impl QualityRule for PlaceholderRule {
         "Detects TODO, PLACEHOLDER, and MOCK comments"
     }
 
-    fn check_file(&self, file_path: &str, content: &str, _config: &crate::gates_config::QualityGateConfig) -> Vec<QualityViolation> {
+    fn check_file(
+        &self,
+        file_path: &str,
+        content: &str,
+        _config: &crate::gates_config::QualityGateConfig,
+    ) -> Vec<QualityViolation> {
         let mut violations = Vec::new();
 
         for (line_num, line) in content.lines().enumerate() {
             let line_lower = line.to_lowercase();
 
-            if line_lower.contains("// todo") ||
-               line_lower.contains("// placeholder") ||
-               line_lower.contains("// mock") ||
-               line_lower.contains("// fixme") ||
-               line_lower.contains("// hack") {
-
-                let severity = if line_lower.contains("// todo") && !line_lower.contains("critical") {
+            if line_lower.contains("// todo")
+                || line_lower.contains("// placeholder")
+                || line_lower.contains("// mock")
+                || line_lower.contains("// fixme")
+                || line_lower.contains("// hack")
+            {
+                let severity = if line_lower.contains("// todo") && !line_lower.contains("critical")
+                {
                     Severity::Info
                 } else {
                     Severity::Warning
@@ -255,7 +307,10 @@ impl QualityRule for PlaceholderRule {
                     line: Some(line_num + 1),
                     column: None,
                     message: format!("Found placeholder comment: {}", line.trim()),
-                    suggestion: Some("Replace with actual implementation or remove if no longer needed".to_string()),
+                    suggestion: Some(
+                        "Replace with actual implementation or remove if no longer needed"
+                            .to_string(),
+                    ),
                     details: Some({
                         let mut details = HashMap::new();
                         details.insert("line_content".to_string(), line.trim().to_string().into());

@@ -1,24 +1,24 @@
 //! Core multimodal retriever functionality and configuration
 
-use schemars::JsonSchema;
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
-use super::search::SearchCoordinator;
 use super::fusion::FusionEngine;
 use super::query_processing::QueryProcessor;
+use super::search::SearchCoordinator;
 
 // Import the embedding service types that the context provider expects
-use data_infrastructure::embedding::embedding_types::{SearchResultFeature, ContentType};
+use data_infrastructure::embedding::embedding_types::{ContentType, SearchResultFeature};
 
 // Use QueryType from contracts
 use agent_agency_contracts::types::research::QueryType;
 
 /// Configuration for multimodal retrieval
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalRetrieverConfig {
     /// Maximum number of results per modality
     pub k_per_modality: usize,
@@ -63,7 +63,7 @@ pub struct MultimodalRetriever {
 }
 
 /// Search query with optional multimodal content
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalQuery {
     pub text: Option<String>,
     pub image_path: Option<std::path::PathBuf>,
@@ -78,7 +78,7 @@ pub struct MultimodalQuery {
 
 /// Advanced fusion strategies for multimodal results
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FusionStrategy {
     /// Simple weighted combination
     Weighted,
@@ -92,7 +92,7 @@ pub enum FusionStrategy {
 
 /// Search result combining multiple modalities
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalSearchResult {
     pub id: String,
     pub content: String,
@@ -106,7 +106,7 @@ pub struct MultimodalSearchResult {
 }
 
 /// Visual search result for image-based queries
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisualSearchResult {
     pub image_id: String,
     pub similarity_score: f32,
@@ -115,7 +115,7 @@ pub struct VisualSearchResult {
 }
 
 /// Configuration for visual search operations
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisualSearchConfig {
     pub similarity_threshold: f32,
     pub max_results: usize,
@@ -158,7 +158,9 @@ impl MultimodalRetriever {
     ) -> Result<Self> {
         let config = config.unwrap_or_default();
 
-        let search_coordinator = Arc::new(SearchCoordinator::new_with_database(database_pool.clone(), config.clone()).await?);
+        let search_coordinator = Arc::new(
+            SearchCoordinator::new_with_database(database_pool.clone(), config.clone()).await?,
+        );
         let fusion_engine = Arc::new(FusionEngine::new(config.clone())?);
         let query_processor = Arc::new(QueryProcessor::new(config.clone())?);
 
@@ -181,7 +183,10 @@ impl MultimodalRetriever {
         let processed_query = self.query_processor.process_query(query, project_scope)?;
 
         // Coordinate search across modalities
-        let search_results = self.search_coordinator.execute_multimodal_search(&processed_query, k).await?;
+        let search_results = self
+            .search_coordinator
+            .execute_multimodal_search(&processed_query, k)
+            .await?;
 
         // Fuse results from different modalities
         let fused_results = self.fusion_engine.fuse_results(search_results, k)?;
@@ -209,55 +214,65 @@ impl MultimodalRetriever {
         };
 
         // Process the structured query
-        let processed_query = self.query_processor.process_multimodal_query(multimodal_query)?;
+        let processed_query = self
+            .query_processor
+            .process_multimodal_query(multimodal_query)?;
 
         // Execute search
-        let search_results = self.search_coordinator.execute_multimodal_search(&processed_query, processed_query.max_results).await?;
+        let search_results = self
+            .search_coordinator
+            .execute_multimodal_search(&processed_query, processed_query.max_results)
+            .await?;
 
         // Fuse results
-        let fused_results = self.fusion_engine.fuse_results(search_results, processed_query.max_results)?;
+        let fused_results = self
+            .fusion_engine
+            .fuse_results(search_results, processed_query.max_results)?;
 
         // Convert to the format expected by MultimodalContextProvider
-        let converted_results = fused_results.into_iter().map(|result| {
-            // TODO: Detect and preserve content type from search results:
-            // 1. Content type detection: Identify actual content type from results
-            //    - Analyze result metadata to determine content type (text/image/video)
-            //    - Use MIME type information if available
-            //    - Fall back to content analysis if metadata unavailable
-            // 2. Type preservation: Preserve content type through conversion
-            //    - Map detected types to ContentType enum correctly
-            //    - Maintain type information through search result conversion
-            //    - Handle mixed content types appropriately
-            // 3. Type-specific handling: Support type-specific result processing
-            //    - Handle text results with snippet extraction
-            //    - Handle image results with thumbnail generation
-            //    - Handle video results with frame extraction
-            // ACCEPTANCE CRITERIA:
-            // - Content type is correctly detected from search results
-            // - Content type is preserved through conversion process
-            // - Type-specific result processing works correctly
-            // DEPENDENCIES:
-            // - Content type detection utilities (Required)
-            // - MIME type parsing (Required)
-            // PRIORITY: Medium
-            data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
-                ref_id: result.id,
-                kind: ContentType::Text,
-                snippet: result.content,
-                citation: None, // Could be populated from metadata if needed
-                feature: SearchResultFeature {
-                    score_text: Some(result.combined_score),
-                    score_image: None,
-                    score_graph: None,
-                    fused_score: result.combined_score,
-                    features_json: serde_json::json!({
-                        "modality_scores": result.modality_scores,
-                        "metadata": result.metadata
-                    }),
-                },
-                project_scope: project_scope.map(|s| s.to_string()),
-            }
-        }).collect();
+        let converted_results = fused_results
+            .into_iter()
+            .map(|result| {
+                // TODO: Detect and preserve content type from search results:
+                // 1. Content type detection: Identify actual content type from results
+                //    - Analyze result metadata to determine content type (text/image/video)
+                //    - Use MIME type information if available
+                //    - Fall back to content analysis if metadata unavailable
+                // 2. Type preservation: Preserve content type through conversion
+                //    - Map detected types to ContentType enum correctly
+                //    - Maintain type information through search result conversion
+                //    - Handle mixed content types appropriately
+                // 3. Type-specific handling: Support type-specific result processing
+                //    - Handle text results with snippet extraction
+                //    - Handle image results with thumbnail generation
+                //    - Handle video results with frame extraction
+                // ACCEPTANCE CRITERIA:
+                // - Content type is correctly detected from search results
+                // - Content type is preserved through conversion process
+                // - Type-specific result processing works correctly
+                // DEPENDENCIES:
+                // - Content type detection utilities (Required)
+                // - MIME type parsing (Required)
+                // PRIORITY: Medium
+                data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
+                    ref_id: result.id,
+                    kind: ContentType::Text,
+                    snippet: result.content,
+                    citation: None, // Could be populated from metadata if needed
+                    feature: SearchResultFeature {
+                        score_text: Some(result.combined_score),
+                        score_image: None,
+                        score_graph: None,
+                        fused_score: result.combined_score,
+                        features_json: serde_json::json!({
+                            "modality_scores": result.modality_scores,
+                            "metadata": result.metadata
+                        }),
+                    },
+                    project_scope: project_scope.map(|s| s.to_string()),
+                }
+            })
+            .collect();
 
         Ok(converted_results)
     }
@@ -269,57 +284,65 @@ impl MultimodalRetriever {
     ) -> Result<Vec<data_infrastructure::embedding::embedding_types::MultimodalSearchResult>> {
         // Extract project scope before moving query
         let project_scope = query.project_scope.clone();
-        
+
         // Process the structured query
         let processed_query = self.query_processor.process_multimodal_query(query)?;
 
         // Execute search
-        let search_results = self.search_coordinator.execute_multimodal_search(&processed_query, processed_query.max_results).await?;
+        let search_results = self
+            .search_coordinator
+            .execute_multimodal_search(&processed_query, processed_query.max_results)
+            .await?;
 
         // Fuse results
-        let fused_results = self.fusion_engine.fuse_results(search_results, processed_query.max_results)?;
+        let fused_results = self
+            .fusion_engine
+            .fuse_results(search_results, processed_query.max_results)?;
 
         // Convert to the format expected by MultimodalContextProvider
-        let converted_results = fused_results.into_iter().map(|result| {
-            // TODO: Detect and preserve content type from search results:
-            // 1. Content type detection: Identify actual content type from results
-            //    - Analyze result metadata to determine content type (text/image/video)
-            //    - Use MIME type information if available
-            //    - Fall back to content analysis if metadata unavailable
-            // 2. Type preservation: Preserve content type through conversion
-            //    - Map detected types to ContentType enum correctly
-            //    - Maintain type information through search result conversion
-            //    - Handle mixed content types appropriately
-            // 3. Type-specific handling: Support type-specific result processing
-            //    - Handle text results with snippet extraction
-            //    - Handle image results with thumbnail generation
-            //    - Handle video results with frame extraction
-            // ACCEPTANCE CRITERIA:
-            // - Content type is correctly detected from search results
-            // - Content type is preserved through conversion process
-            // - Type-specific result processing works correctly
-            // DEPENDENCIES:
-            // - Content type detection utilities (Required)
-            // - MIME type parsing (Required)
-            // PRIORITY: Medium
-            data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
-                ref_id: result.id,
-                kind: ContentType::Text,
-                snippet: result.content,
-                citation: None, // Could be populated from metadata if needed
-                feature: SearchResultFeature {
-                    score_text: Some(result.combined_score),
-                    score_image: None,
-                    score_graph: None,
-                    fused_score: result.combined_score,
-                    features_json: serde_json::json!({
-                        "modality_scores": result.modality_scores,
-                        "metadata": result.metadata
-                    }),
-                },
-                project_scope: project_scope.clone(),
-            }
-        }).collect();
+        let converted_results = fused_results
+            .into_iter()
+            .map(|result| {
+                // TODO: Detect and preserve content type from search results:
+                // 1. Content type detection: Identify actual content type from results
+                //    - Analyze result metadata to determine content type (text/image/video)
+                //    - Use MIME type information if available
+                //    - Fall back to content analysis if metadata unavailable
+                // 2. Type preservation: Preserve content type through conversion
+                //    - Map detected types to ContentType enum correctly
+                //    - Maintain type information through search result conversion
+                //    - Handle mixed content types appropriately
+                // 3. Type-specific handling: Support type-specific result processing
+                //    - Handle text results with snippet extraction
+                //    - Handle image results with thumbnail generation
+                //    - Handle video results with frame extraction
+                // ACCEPTANCE CRITERIA:
+                // - Content type is correctly detected from search results
+                // - Content type is preserved through conversion process
+                // - Type-specific result processing works correctly
+                // DEPENDENCIES:
+                // - Content type detection utilities (Required)
+                // - MIME type parsing (Required)
+                // PRIORITY: Medium
+                data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
+                    ref_id: result.id,
+                    kind: ContentType::Text,
+                    snippet: result.content,
+                    citation: None, // Could be populated from metadata if needed
+                    feature: SearchResultFeature {
+                        score_text: Some(result.combined_score),
+                        score_image: None,
+                        score_graph: None,
+                        fused_score: result.combined_score,
+                        features_json: serde_json::json!({
+                            "modality_scores": result.modality_scores,
+                            "metadata": result.metadata
+                        }),
+                    },
+                    project_scope: project_scope.clone(),
+                }
+            })
+            .collect();
 
         Ok(converted_results)
     }

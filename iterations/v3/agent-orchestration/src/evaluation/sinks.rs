@@ -6,24 +6,24 @@
 //! - Parquet sink (for analysis)
 //! - Redaction layer for PII removal
 
-use crate::evaluation::trace::{Trace, EventEnvelope};
-use crate::chain_of_thought::{DecisionPoint, CoordinationEvent};
 use crate::audit_trail::AuditEvent;
-use std::io::{Write, BufWriter};
+use crate::chain_of_thought::{CoordinationEvent, DecisionPoint};
+use crate::evaluation::trace::{EventEnvelope, Trace};
+use chrono::{DateTime, Utc};
 use std::fs::{File, OpenOptions};
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Trait for storage sinks
 pub trait TraceSink: Send + Sync {
     /// Write a trace to the sink
     fn write_trace(&self, trace: &Trace) -> Result<(), String>;
-    
+
     /// Get sink identifier
     fn sink_type(&self) -> &str;
-    
+
     /// Flush any buffered data
     fn flush(&self) -> Result<(), String>;
 }
@@ -40,12 +40,12 @@ impl InMemorySink {
             traces: Arc::new(std::sync::Mutex::new(Vec::new())),
         }
     }
-    
+
     /// Get all stored traces
     pub fn get_traces(&self) -> Vec<Trace> {
         self.traces.lock().unwrap().clone()
     }
-    
+
     /// Clear all traces
     pub fn clear(&self) {
         self.traces.lock().unwrap().clear();
@@ -63,11 +63,11 @@ impl TraceSink for InMemorySink {
         self.traces.lock().unwrap().push(trace.clone());
         Ok(())
     }
-    
+
     fn sink_type(&self) -> &str {
         "in-memory"
     }
-    
+
     fn flush(&self) -> Result<(), String> {
         // No-op for in-memory sink
         Ok(())
@@ -84,25 +84,25 @@ impl JsonlSink {
     /// Create new JSONL sink
     pub fn new<P: AsRef<Path>>(file_path: P) -> Result<Self, String> {
         let path = file_path.as_ref();
-        
+
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create directory: {}", e))?;
         }
-        
+
         let file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(path)
             .map_err(|e| format!("Failed to open file: {}", e))?;
-        
+
         Ok(Self {
             file_path: path.to_path_buf(),
             writer: Arc::new(std::sync::Mutex::new(BufWriter::new(file))),
         })
     }
-    
+
     /// Get file path
     pub fn file_path(&self) -> &Path {
         &self.file_path
@@ -113,20 +113,22 @@ impl TraceSink for JsonlSink {
     fn write_trace(&self, trace: &Trace) -> Result<(), String> {
         let json = serde_json::to_string(trace)
             .map_err(|e| format!("Failed to serialize trace: {}", e))?;
-        
+
         let mut writer = self.writer.lock().unwrap();
-        writeln!(writer, "{}", json)
-            .map_err(|e| format!("Failed to write to file: {}", e))?;
-        
+        writeln!(writer, "{}", json).map_err(|e| format!("Failed to write to file: {}", e))?;
+
         Ok(())
     }
-    
+
     fn sink_type(&self) -> &str {
         "jsonl"
     }
-    
+
     fn flush(&self) -> Result<(), String> {
-        self.writer.lock().unwrap().flush()
+        self.writer
+            .lock()
+            .unwrap()
+            .flush()
             .map_err(|e| format!("Failed to flush: {}", e))?;
         Ok(())
     }
@@ -141,18 +143,18 @@ impl ParquetSink {
     /// Create new Parquet sink
     pub fn new<P: AsRef<Path>>(file_path: P) -> Result<Self, String> {
         let path = file_path.as_ref();
-        
+
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create directory: {}", e))?;
         }
-        
+
         Ok(Self {
             file_path: path.to_path_buf(),
         })
     }
-    
+
     /// Get file path
     pub fn file_path(&self) -> &Path {
         &self.file_path
@@ -196,13 +198,14 @@ impl TraceSink for ParquetSink {
         // - CAWS Tier: 3 (storage format enhancement)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Parquet and data serialization expertise
-        Err("Parquet sink not yet implemented. Use JSONL sink instead.".to_string()) // Temporary: error until Parquet implementation
+        Err("Parquet sink not yet implemented. Use JSONL sink instead.".to_string())
+        // Temporary: error until Parquet implementation
     }
-    
+
     fn sink_type(&self) -> &str {
         "parquet"
     }
-    
+
     fn flush(&self) -> Result<(), String> {
         Ok(())
     }
@@ -225,24 +228,24 @@ impl RedactionLayer {
             sink_type_cache,
         }
     }
-    
+
     /// Redact PII from a trace
     fn redact_trace(&self, trace: &Trace) -> Trace {
         if !self.redact_pii {
             return trace.clone();
         }
-        
+
         // Create a redacted copy of the trace
         let mut redacted = trace.clone();
-        
+
         // Redact PII from events
         for event in &mut redacted.events {
             self.redact_event(event);
         }
-        
+
         redacted
     }
-    
+
     /// Redact PII from an event
     fn redact_event(&self, event: &mut EventEnvelope) {
         // Implemented: Comprehensive PII detection with pattern matching and Luhn algorithm validation
@@ -252,7 +255,7 @@ impl RedactionLayer {
         //
         // Future enhancement: Consider integrating specialized PII detection library (e.g., Microsoft Presidio)
         // for advanced detection of names, addresses, and other structured PII if requirements expand.
-        
+
         match &mut event.kind {
             crate::evaluation::trace::EventKind::Decision(dp) => {
                 // Redact reasoning text that might contain PII
@@ -265,7 +268,8 @@ impl RedactionLayer {
                 if let Some(details) = ce.details.get_mut("message") {
                     if let Some(msg) = details.as_str() {
                         if self.contains_pii(msg) {
-                            *details = serde_json::Value::String("[REDACTED: Contains PII]".to_string());
+                            *details =
+                                serde_json::Value::String("[REDACTED: Contains PII]".to_string());
                         }
                     }
                 }
@@ -273,32 +277,41 @@ impl RedactionLayer {
             _ => {}
         }
     }
-    
+
     /// Check if text contains PII patterns
     fn contains_pii(&self, text: &str) -> bool {
         // Comprehensive PII detection patterns
-        
+
         // Email pattern
-        if regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap().is_match(text) {
+        if regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+            .unwrap()
+            .is_match(text)
+        {
             return true;
         }
-        
+
         // IP address pattern (IPv4)
         if regex::Regex::new(r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b").unwrap().is_match(text) {
             return true;
         }
-        
+
         // Social Security Number (SSN) pattern: XXX-XX-XXXX
-        if regex::Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap().is_match(text) {
+        if regex::Regex::new(r"\b\d{3}-\d{2}-\d{4}\b")
+            .unwrap()
+            .is_match(text)
+        {
             return true;
         }
-        
+
         // Phone number patterns (US format)
         // (XXX) XXX-XXXX, XXX-XXX-XXXX, XXX.XXX.XXXX, XXXXXXXXXX
-        if regex::Regex::new(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b").unwrap().is_match(text) {
+        if regex::Regex::new(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+            .unwrap()
+            .is_match(text)
+        {
             return true;
         }
-        
+
         // Credit card detection with Luhn algorithm validation
         // Matches common credit card formats: XXXX-XXXX-XXXX-XXXX, XXXX XXXX XXXX XXXX, XXXXXXXXXXXXXXXX
         let cc_pattern = regex::Regex::new(r"\b(?:\d{4}[-.\s]?){3}\d{4}\b|\b\d{13,19}\b").unwrap();
@@ -313,29 +326,29 @@ impl RedactionLayer {
                 }
             }
         }
-        
+
         false
     }
-    
+
     /// Validate credit card number using Luhn algorithm
-    /// 
+    ///
     /// The Luhn algorithm is used to validate credit card numbers and other identification numbers.
     /// It checks if a number is valid by verifying a checksum digit.
     fn validate_luhn(&self, number: &str) -> bool {
         if number.is_empty() || !number.chars().all(|c| c.is_ascii_digit()) {
             return false;
         }
-        
+
         let digits: Vec<u32> = number
             .chars()
             .rev()
             .filter_map(|c| c.to_digit(10))
             .collect();
-        
+
         if digits.len() < 13 || digits.len() > 19 {
             return false;
         }
-        
+
         let sum: u32 = digits
             .iter()
             .enumerate()
@@ -354,7 +367,7 @@ impl RedactionLayer {
                 }
             })
             .sum();
-        
+
         // Valid if sum is divisible by 10
         sum % 10 == 0
     }
@@ -365,11 +378,11 @@ impl TraceSink for RedactionLayer {
         let redacted = self.redact_trace(trace);
         self.inner.write_trace(&redacted)
     }
-    
+
     fn sink_type(&self) -> &str {
         &self.sink_type_cache
     }
-    
+
     fn flush(&self) -> Result<(), String> {
         self.inner.flush()
     }
@@ -390,26 +403,26 @@ impl SinkFactory {
         if uri == "memory://" {
             return Ok(Arc::new(InMemorySink::new()));
         }
-        
+
         if uri.starts_with("jsonl://") {
             let path = uri.strip_prefix("jsonl://").unwrap();
             let sink = JsonlSink::new(path)?;
             return Ok(Arc::new(sink));
         }
-        
+
         if uri.starts_with("parquet://") {
             let path = uri.strip_prefix("parquet://").unwrap();
             let sink = ParquetSink::new(path)?;
             return Ok(Arc::new(sink));
         }
-        
+
         if uri.starts_with("redacted:") {
             let inner_uri = uri.strip_prefix("redacted:").unwrap();
             let inner = Self::from_uri(inner_uri)?;
             let redacted = RedactionLayer::new(inner, true);
             return Ok(Arc::new(redacted));
         }
-        
+
         Err(format!("Unknown sink URI format: {}", uri))
     }
 }
@@ -438,10 +451,10 @@ mod tests {
     fn test_in_memory_sink() {
         let sink = InMemorySink::new();
         let trace = create_test_trace();
-        
+
         assert!(sink.write_trace(&trace).is_ok());
         assert_eq!(sink.get_traces().len(), 1);
-        
+
         sink.clear();
         assert_eq!(sink.get_traces().len(), 0);
     }
@@ -457,14 +470,14 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let file_path = temp_dir.path().join("test.jsonl");
         let uri = format!("jsonl://{}", file_path.display());
-        
+
         let sink = SinkFactory::from_uri(&uri).unwrap();
         assert_eq!(sink.sink_type(), "jsonl");
-        
+
         let trace = create_test_trace();
         assert!(sink.write_trace(&trace).is_ok());
         assert!(sink.flush().is_ok());
-        
+
         // Verify file was created
         assert!(file_path.exists());
     }
@@ -473,7 +486,7 @@ mod tests {
     fn test_redaction_layer() {
         let inner = Arc::new(InMemorySink::new());
         let redacted = RedactionLayer::new(inner.clone(), true);
-        
+
         let mut trace = create_test_trace();
         // Add event with PII
         trace.events.push(crate::evaluation::trace::EventEnvelope {
@@ -503,9 +516,9 @@ mod tests {
             }),
             metadata: std::collections::HashMap::new(),
         });
-        
+
         assert!(redacted.write_trace(&trace).is_ok());
-        
+
         // Check that PII was redacted
         let traces = inner.get_traces();
         assert_eq!(traces.len(), 1);

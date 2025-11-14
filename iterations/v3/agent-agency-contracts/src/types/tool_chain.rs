@@ -5,8 +5,8 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Tool chain plan containing ordered tool execution sequence
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

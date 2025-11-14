@@ -4,13 +4,13 @@
 //! and recovery orchestration for production resilience.
 
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tokio::time;
-use serde::{Deserialize, Serialize};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::api_circuit_breaker::CircuitBreaker;
 use system_quality_security::CircuitBreakerConfig;
@@ -153,7 +153,7 @@ impl ServiceFailoverManager {
             success_threshold: 2, // Default success threshold
             timeout_duration: Duration::from_secs(self.config.recovery_time_secs),
             request_timeout: Duration::from_secs(30), // Default request timeout
-            half_open_max_requests: 3, // Default
+            half_open_max_requests: 3,                // Default
         };
         let circuit_breaker = CircuitBreaker::with_config(cb_config);
         let service_type = service.service_type;
@@ -470,7 +470,11 @@ impl ServiceFailoverManager {
 
             // Handle failover events
             match event {
-                FailoverEvent::ServiceFailure { service_id, service_type, .. } => {
+                FailoverEvent::ServiceFailure {
+                    service_id,
+                    service_type,
+                    ..
+                } => {
                     if self.config.enable_auto_failover {
                         if let Err(e) = self.initiate_failover(&service_id, service_type).await {
                             error!("Failover initiation failed for {}: {}", service_id, e);
@@ -483,11 +487,17 @@ impl ServiceFailoverManager {
     }
 
     /// Initiate failover for a failed service
-    async fn initiate_failover(&self, failed_service_id: &str, service_type: ServiceType) -> Result<(), String> {
+    async fn initiate_failover(
+        &self,
+        failed_service_id: &str,
+        service_type: ServiceType,
+    ) -> Result<(), String> {
         info!("Initiating failover for service: {}", failed_service_id);
 
         // Find healthy backup service
-        let backup_service = self.find_backup_service(failed_service_id, service_type).await?;
+        let backup_service = self
+            .find_backup_service(failed_service_id, service_type)
+            .await?;
 
         // Emit failover initiation event
         let _ = self.event_sender.send(FailoverEvent::FailoverInitiated {
@@ -505,7 +515,8 @@ impl ServiceFailoverManager {
                 let duration = start_time.elapsed().as_millis() as u64;
 
                 // Update service roles
-                self.update_service_roles(failed_service_id, &backup_service.id).await?;
+                self.update_service_roles(failed_service_id, &backup_service.id)
+                    .await?;
 
                 // Emit success event
                 let _ = self.event_sender.send(FailoverEvent::FailoverCompleted {
@@ -514,7 +525,10 @@ impl ServiceFailoverManager {
                     duration_ms: duration,
                 });
 
-                info!("Failover completed successfully to service: {}", backup_service.id);
+                info!(
+                    "Failover completed successfully to service: {}",
+                    backup_service.id
+                );
                 Ok(())
             }
             Err(e) => {
@@ -531,21 +545,30 @@ impl ServiceFailoverManager {
     }
 
     /// Find a healthy backup service for failover
-    async fn find_backup_service(&self, failed_service_id: &str, service_type: ServiceType) -> Result<ApiServiceInstance, String> {
+    async fn find_backup_service(
+        &self,
+        failed_service_id: &str,
+        service_type: ServiceType,
+    ) -> Result<ApiServiceInstance, String> {
         let services = self.services.read().await;
 
         // Find services of the same type, excluding the failed one
-        let candidates: Vec<_> = services.values()
+        let candidates: Vec<_> = services
+            .values()
             .filter(|s| s.service_type == service_type && s.id != failed_service_id)
             .filter(|s| matches!(s.status, ServiceStatus::Healthy))
             .collect();
 
         if candidates.is_empty() {
-            return Err(format!("No healthy backup services found for type {:?}", service_type));
+            return Err(format!(
+                "No healthy backup services found for type {:?}",
+                service_type
+            ));
         }
 
         // Select service with highest priority (lowest priority number)
-        candidates.iter()
+        candidates
+            .iter()
             .min_by_key(|s| s.priority)
             .cloned()
             .cloned()
@@ -591,7 +614,10 @@ impl ServiceFailoverManager {
     }
 
     /// Worker pool failover implementation
-    async fn failover_worker_pool(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
+    async fn failover_worker_pool(
+        &self,
+        backup_service: &ApiServiceInstance,
+    ) -> Result<(), String> {
         // Implementation would:
         // 1. Redirect job queue to backup workers
         // 2. Scale up backup worker instances
@@ -601,12 +627,18 @@ impl ServiceFailoverManager {
     }
 
     /// Message queue failover implementation
-    async fn failover_message_queue(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
+    async fn failover_message_queue(
+        &self,
+        backup_service: &ApiServiceInstance,
+    ) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup queue cluster
         // 2. Ensure message persistence
         // 3. Update producer/consumer configurations
-        info!("Performing message queue failover to: {}", backup_service.id);
+        info!(
+            "Performing message queue failover to: {}",
+            backup_service.id
+        );
         Ok(())
     }
 
@@ -621,7 +653,10 @@ impl ServiceFailoverManager {
     }
 
     /// File storage failover implementation
-    async fn failover_file_storage(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
+    async fn failover_file_storage(
+        &self,
+        backup_service: &ApiServiceInstance,
+    ) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup storage cluster
         // 2. Sync any pending uploads/downloads
@@ -631,7 +666,10 @@ impl ServiceFailoverManager {
     }
 
     /// External API failover implementation
-    async fn failover_external_api(&self, backup_service: &ApiServiceInstance) -> Result<(), String> {
+    async fn failover_external_api(
+        &self,
+        backup_service: &ApiServiceInstance,
+    ) -> Result<(), String> {
         // Implementation would:
         // 1. Switch to backup API endpoint
         // 2. Update API keys/credentials if needed
@@ -641,7 +679,11 @@ impl ServiceFailoverManager {
     }
 
     /// Update service roles after successful failover
-    async fn update_service_roles(&self, old_primary: &str, new_primary: &str) -> Result<(), String> {
+    async fn update_service_roles(
+        &self,
+        old_primary: &str,
+        new_primary: &str,
+    ) -> Result<(), String> {
         let mut services = self.services.write().await;
 
         if let Some(old_service) = services.get_mut(old_primary) {
@@ -660,7 +702,8 @@ impl ServiceFailoverManager {
     /// Get service status overview
     pub async fn get_service_status(&self) -> HashMap<String, ServiceStatus> {
         let services = self.services.read().await;
-        services.iter()
+        services
+            .iter()
             .map(|(id, service)| (id.clone(), service.status))
             .collect()
     }
@@ -668,11 +711,7 @@ impl ServiceFailoverManager {
     /// Get failover event history
     pub async fn get_failover_history(&self, limit: usize) -> Vec<FailoverEvent> {
         let history = self.failover_history.read().await;
-        history.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+        history.iter().rev().take(limit).cloned().collect()
     }
 
     /// Manually trigger failover for testing
@@ -684,11 +723,15 @@ impl ServiceFailoverManager {
 
         let service = service.ok_or(format!("Service not found: {}", service_id))?;
 
-        self.initiate_failover(service_id, service.service_type).await
+        self.initiate_failover(service_id, service.service_type)
+            .await
     }
 
     /// Get circuit breaker status for a service
-    pub async fn get_circuit_breaker_status(&self, service_id: &str) -> Option<crate::api_circuit_breaker::CircuitBreakerMetrics> {
+    pub async fn get_circuit_breaker_status(
+        &self,
+        service_id: &str,
+    ) -> Option<crate::api_circuit_breaker::CircuitBreakerMetrics> {
         let circuit_breakers = self.circuit_breakers.read().await;
         if let Some(cb) = circuit_breakers.get(service_id) {
             Some(cb.metrics().await)

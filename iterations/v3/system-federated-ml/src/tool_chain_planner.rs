@@ -4,8 +4,8 @@
 //! for fan-out/fan-in support, joins, and retries. Includes schema validation
 //! and cost-aware planning.
 
-use schemars::JsonSchema;
 use petgraph::graph::{Graph, NodeIndex};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use crate::tool_registry::{ToolRegistry, RegisteredTool};
+use crate::tool_registry::{RegisteredTool, ToolRegistry};
 
 /// Tool chain planner with typed DAG support
 pub struct ToolChainPlanner {
@@ -29,7 +29,7 @@ pub type PortName = String;
 /// Port schema reference for type safety
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PortSchemaRef {
-    pub registry_key: String,      // e.g. "web.search.Query@v1"
+    pub registry_key: String, // e.g. "web.search.Query@v1"
     pub optional: bool,
 }
 
@@ -46,10 +46,10 @@ pub struct ToolNode {
     pub tool_id: ToolId,
     pub inputs: Vec<ToolPort>,
     pub outputs: Vec<ToolPort>,
-    pub params: Value,             // static params (validated)
+    pub params: Value, // static params (validated)
     pub fallback: Option<ToolId>,
-    pub sla_ms: u64,               // per-step SLO target
-    pub cost_hint: f64,            // $ estimate
+    pub sla_ms: u64,    // per-step SLO target
+    pub cost_hint: f64, // $ estimate
     pub retry_policy: RetryPolicy,
 }
 
@@ -58,7 +58,7 @@ pub struct ToolNode {
 pub struct ToolEdge {
     pub from_port: PortName,
     pub to_port: PortName,
-    pub codec: Option<String>,     // optional converter key
+    pub codec: Option<String>, // optional converter key
 }
 
 /// Complete tool chain as a DAG
@@ -70,7 +70,7 @@ pub struct ToolChain {
     pub estimated_cost: f64,
     pub estimated_time_ms: u64,
     pub confidence: f64,
-    pub plan_hash: u64,            // blake3 of canonical plan
+    pub plan_hash: u64, // blake3 of canonical plan
     pub metadata: ChainMetadata,
 }
 
@@ -155,10 +155,7 @@ impl Default for RetryPolicy {
 
 impl ToolChainPlanner {
     /// Create a new tool chain planner
-    pub fn new(
-        tool_registry: Arc<ToolRegistry>,
-        schema_registry: Arc<SchemaRegistry>,
-    ) -> Self {
+    pub fn new(tool_registry: Arc<ToolRegistry>, schema_registry: Arc<SchemaRegistry>) -> Self {
         Self {
             tool_registry,
             schema_registry,
@@ -196,7 +193,10 @@ impl ToolChainPlanner {
             cache.insert(cache_key, best_chain.clone());
         }
 
-        info!("Generated tool chain with {} steps", best_chain.dag.node_count());
+        info!(
+            "Generated tool chain with {} steps",
+            best_chain.dag.node_count()
+        );
         Ok(best_chain)
     }
 
@@ -216,12 +216,14 @@ impl ToolChainPlanner {
         }
 
         // Extend with multi-step chains using A* search
-        let mut extended = self.extend_chains_with_astar(
-            candidates.clone(), // Clone candidates for extension
-            &available_tools,
-            context,
-            constraints
-        ).await?;
+        let mut extended = self
+            .extend_chains_with_astar(
+                candidates.clone(), // Clone candidates for extension
+                &available_tools,
+                context,
+                constraints,
+            )
+            .await?;
 
         candidates.append(&mut extended);
         candidates.truncate(10); // Keep top 10 candidates
@@ -243,10 +245,10 @@ impl ToolChainPlanner {
             dag,
             roots: vec![node_idx],
             sinks: vec![node_idx],
-            estimated_cost: 0.01, // Minimal cost
+            estimated_cost: 0.01,    // Minimal cost
             estimated_time_ms: 1000, // 1 second estimate
-            confidence: 0.7, // Base confidence
-            plan_hash: 0, // Will be computed
+            confidence: 0.7,         // Base confidence
+            plan_hash: 0,            // Will be computed
             metadata: ChainMetadata {
                 name: format!("single_{}", tool.metadata.name),
                 description: format!("Single step chain using {}", tool.metadata.name),
@@ -277,7 +279,9 @@ impl ToolChainPlanner {
 
             // Try adding each available tool as a new step
             for tool in available_tools {
-                let extended = self.try_extend_chain(&base_chain, tool, context, constraints).await?;
+                let extended = self
+                    .try_extend_chain(&base_chain, tool, context, constraints)
+                    .await?;
                 if let Some(chain) = extended {
                     extended_chains.push(chain);
 
@@ -306,13 +310,15 @@ impl ToolChainPlanner {
         let new_node_idx = new_dag.add_node(new_node);
 
         // Try to connect the new node to existing nodes
-        let connections_made = self.connect_node_to_chain(
-            &mut new_dag,
-            new_node_idx,
-            &new_node_clone,
-            base_chain,
-            context,
-        ).await?;
+        let connections_made = self
+            .connect_node_to_chain(
+                &mut new_dag,
+                new_node_idx,
+                &new_node_clone,
+                base_chain,
+                context,
+            )
+            .await?;
 
         // If no connections made, it's a parallel/independent step
         if connections_made == 0 {
@@ -343,8 +349,9 @@ impl ToolChainPlanner {
         };
 
         // Validate constraints
-        if extended_chain.estimated_cost > constraints.max_cost_cents as f64 / 100.0 ||
-           extended_chain.estimated_time_ms > constraints.max_time_ms {
+        if extended_chain.estimated_cost > constraints.max_cost_cents as f64 / 100.0
+            || extended_chain.estimated_time_ms > constraints.max_time_ms
+        {
             return Ok(None);
         }
 
@@ -370,7 +377,10 @@ impl ToolChainPlanner {
 
                 // Check if existing node has compatible output
                 for output in &existing_node.outputs {
-                    if self.schemas_compatible(&input.schema, &output.schema).await? {
+                    if self
+                        .schemas_compatible(&input.schema, &output.schema)
+                        .await?
+                    {
                         // Create edge
                         let edge = ToolEdge {
                             from_port: output.name.clone(),
@@ -389,14 +399,21 @@ impl ToolChainPlanner {
     }
 
     /// Check if two port schemas are compatible
-    async fn schemas_compatible(&self, input: &PortSchemaRef, output: &PortSchemaRef) -> Result<bool, anyhow::Error> {
+    async fn schemas_compatible(
+        &self,
+        input: &PortSchemaRef,
+        output: &PortSchemaRef,
+    ) -> Result<bool, anyhow::Error> {
         // Exact schema match (most compatible)
         if input.registry_key == output.registry_key {
             return Ok(true);
         }
 
         // Check if direct conversion is available
-        if self.schema_registry.can_convert(&output.registry_key, &input.registry_key) {
+        if self
+            .schema_registry
+            .can_convert(&output.registry_key, &input.registry_key)
+        {
             return Ok(true);
         }
 
@@ -446,7 +463,11 @@ impl ToolChainPlanner {
     }
 
     /// Convert a registered tool to a DAG node
-    fn tool_to_node(&self, tool: &RegisteredTool, context: &PlanningContext) -> Result<ToolNode, anyhow::Error> {
+    fn tool_to_node(
+        &self,
+        tool: &RegisteredTool,
+        context: &PlanningContext,
+    ) -> Result<ToolNode, anyhow::Error> {
         // Extract port information from tool metadata
         let inputs = self.extract_tool_ports(tool, true)?;
         let outputs = self.extract_tool_ports(tool, false)?;
@@ -464,7 +485,11 @@ impl ToolChainPlanner {
     }
 
     /// Extract port information from tool metadata
-    fn extract_tool_ports(&self, tool: &RegisteredTool, is_input: bool) -> Result<Vec<ToolPort>, anyhow::Error> {
+    fn extract_tool_ports(
+        &self,
+        tool: &RegisteredTool,
+        is_input: bool,
+    ) -> Result<Vec<ToolPort>, anyhow::Error> {
         let mut ports = Vec::new();
 
         // TODO: Extract ports from tool's JSON schema
@@ -567,13 +592,19 @@ impl ToolChainPlanner {
     }
 
     /// Get tools relevant to the planning context
-    async fn get_relevant_tools(&self, context: &PlanningContext) -> Result<Vec<RegisteredTool>, anyhow::Error> {
+    async fn get_relevant_tools(
+        &self,
+        context: &PlanningContext,
+    ) -> Result<Vec<RegisteredTool>, anyhow::Error> {
         let all_tools = self.tool_registry.get_all_tools().await;
 
         // Filter by required capabilities
-        let relevant_tools: Vec<RegisteredTool> = all_tools.into_iter()
+        let relevant_tools: Vec<RegisteredTool> = all_tools
+            .into_iter()
             .filter(|(_, tool)| {
-                context.required_capabilities.iter()
+                context
+                    .required_capabilities
+                    .iter()
                     .any(|cap| tool.metadata.capabilities.contains(cap))
             })
             .map(|(_, tool)| tool)
@@ -641,18 +672,29 @@ impl ToolChainPlanner {
     }
 
     /// Compute roots and sinks of the DAG
-    fn compute_roots_and_sinks(&self, dag: &Graph<ToolNode, ToolEdge>) -> (Vec<NodeIndex>, Vec<NodeIndex>) {
+    fn compute_roots_and_sinks(
+        &self,
+        dag: &Graph<ToolNode, ToolEdge>,
+    ) -> (Vec<NodeIndex>, Vec<NodeIndex>) {
         let mut roots = Vec::new();
         let mut sinks = Vec::new();
 
         for node_idx in dag.node_indices() {
             // Check if node has no incoming edges (root)
-            if dag.edges_directed(node_idx, petgraph::Direction::Incoming).next().is_none() {
+            if dag
+                .edges_directed(node_idx, petgraph::Direction::Incoming)
+                .next()
+                .is_none()
+            {
                 roots.push(node_idx);
             }
 
             // Check if node has no outgoing edges (sink)
-            if dag.edges_directed(node_idx, petgraph::Direction::Outgoing).next().is_none() {
+            if dag
+                .edges_directed(node_idx, petgraph::Direction::Outgoing)
+                .next()
+                .is_none()
+            {
                 sinks.push(node_idx);
             }
         }
@@ -668,7 +710,9 @@ impl ToolChainPlanner {
         canonical.push_str(&format!("{}", chain.dag.node_count()));
 
         // Sort nodes by tool_id for deterministic hashing
-        let mut node_tools: Vec<_> = chain.dag.node_indices()
+        let mut node_tools: Vec<_> = chain
+            .dag
+            .node_indices()
             .map(|idx| chain.dag[idx].tool_id.clone())
             .collect();
         node_tools.sort();
@@ -689,7 +733,8 @@ impl ToolChainPlanner {
 
     /// Create cache key for planning context
     fn create_cache_key(&self, context: &PlanningContext) -> String {
-        format!("{}_{}_{:?}_{:?}",
+        format!(
+            "{}_{}_{:?}_{:?}",
             context.task_type,
             context.complexity.clone() as u8,
             context.required_capabilities,
@@ -747,7 +792,3 @@ impl Default for PlanningConstraints {
         }
     }
 }
-
-
-
-

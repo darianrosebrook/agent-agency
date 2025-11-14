@@ -13,11 +13,15 @@ use tracing::{debug, info};
 /// Schema registry trait
 #[async_trait::async_trait]
 pub trait SchemaRegistry: Send + Sync {
-    fn get(&self, key: &str) -> Option<Value>;       // JSON Schema
+    fn get(&self, key: &str) -> Option<Value>; // JSON Schema
     fn validate(&self, key: &str, value: &Value) -> Result<(), SchemaError>;
     fn convert(&self, from: &str, to: &str, value: Value) -> Result<Value, SchemaError>;
     fn register_schema(&mut self, key: String, schema: Value) -> Result<(), SchemaError>;
-    fn register_converter(&mut self, key: String, converter: Box<dyn Converter>) -> Result<(), SchemaError>;
+    fn register_converter(
+        &mut self,
+        key: String,
+        converter: Box<dyn Converter>,
+    ) -> Result<(), SchemaError>;
 }
 
 /// Converter trait for data transformation
@@ -47,20 +51,14 @@ impl JsonSchemaRegistry {
         // HTML to Markdown converter
         self.register_converter(
             "html->markdown".to_string(),
-            Box::new(HtmlToMarkdownConverter)
+            Box::new(HtmlToMarkdownConverter),
         )?;
 
         // CSV to Table converter
-        self.register_converter(
-            "csv->table".to_string(),
-            Box::new(CsvToTableConverter)
-        )?;
+        self.register_converter("csv->table".to_string(), Box::new(CsvToTableConverter))?;
 
         // String to URL converter
-        self.register_converter(
-            "string->url".to_string(),
-            Box::new(StringToUrlConverter)
-        )?;
+        self.register_converter("string->url".to_string(), Box::new(StringToUrlConverter))?;
 
         info!("Registered built-in converters");
         Ok(())
@@ -165,8 +163,9 @@ impl SchemaRegistry for JsonSchemaRegistry {
             let compiled = jsonschema::JSONSchema::compile(&schema)
                 .map_err(|e| SchemaError::Compilation(e.to_string()))?;
 
-            compiled.validate(value)
-                .map_err(|e| SchemaError::Validation(format!("Validation errors: {:?}", e.collect::<Vec<_>>())))?;
+            compiled.validate(value).map_err(|e| {
+                SchemaError::Validation(format!("Validation errors: {:?}", e.collect::<Vec<_>>()))
+            })?;
 
             Ok(())
         } else {
@@ -204,7 +203,11 @@ impl SchemaRegistry for JsonSchemaRegistry {
         Ok(())
     }
 
-    fn register_converter(&mut self, key: String, _converter: Box<dyn Converter>) -> Result<(), SchemaError> {
+    fn register_converter(
+        &mut self,
+        key: String,
+        _converter: Box<dyn Converter>,
+    ) -> Result<(), SchemaError> {
         // TODO: Convert to async implementation with the following requirements:
         // 1. Async operation: Make converter registration async
         //    - Change function signature to async fn
@@ -268,7 +271,9 @@ impl Converter for HtmlToMarkdownConverter {
             let markdown = format!("# Converted HTML\n\n{}", html_str);
             Ok(Value::String(markdown))
         } else {
-            Err(SchemaError::Conversion("Expected string input for HTML conversion".to_string()))
+            Err(SchemaError::Conversion(
+                "Expected string input for HTML conversion".to_string(),
+            ))
         }
     }
 }
@@ -286,8 +291,12 @@ impl Converter for CsvToTableConverter {
                 return Ok(Value::Array(vec![]));
             }
 
-            let headers: Vec<Value> = lines[0].split(',').map(|s| Value::String(s.trim().to_string())).collect();
-            let rows: Vec<Vec<Value>> = lines[1..].iter()
+            let headers: Vec<Value> = lines[0]
+                .split(',')
+                .map(|s| Value::String(s.trim().to_string()))
+                .collect();
+            let rows: Vec<Vec<Value>> = lines[1..]
+                .iter()
                 .map(|line| {
                     line.split(',')
                         .map(|s| Value::String(s.trim().to_string()))
@@ -300,7 +309,9 @@ impl Converter for CsvToTableConverter {
                 "rows": rows
             }))
         } else {
-            Err(SchemaError::Conversion("Expected string input for CSV conversion".to_string()))
+            Err(SchemaError::Conversion(
+                "Expected string input for CSV conversion".to_string(),
+            ))
         }
     }
 }
@@ -325,7 +336,9 @@ impl Converter for StringToUrlConverter {
                 Err(SchemaError::Conversion(format!("Invalid URL: {}", url_str)))
             }
         } else {
-            Err(SchemaError::Conversion("Expected string input for URL conversion".to_string()))
+            Err(SchemaError::Conversion(
+                "Expected string input for URL conversion".to_string(),
+            ))
         }
     }
 }
@@ -351,28 +364,37 @@ impl CachedSchemaRegistry {
     pub async fn warmup_cache(&self) -> Result<(), SchemaError> {
         // Pre-load common schemas
         let common_schemas = vec![
-            ("web.search.Query", serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 100}
-                },
-                "required": ["query"]
-            })),
-            ("web.search.Result", serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "url": {"type": "string"},
-                    "snippet": {"type": "string"}
-                },
-                "required": ["title", "url"]
-            })),
+            (
+                "web.search.Query",
+                serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+                    },
+                    "required": ["query"]
+                }),
+            ),
+            (
+                "web.search.Result",
+                serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "url": {"type": "string"},
+                        "snippet": {"type": "string"}
+                    },
+                    "required": ["title", "url"]
+                }),
+            ),
         ];
 
         let schema_count = common_schemas.len();
         for (key, schema) in common_schemas {
-            self.schema_cache.write().await.insert(key.to_string(), schema);
+            self.schema_cache
+                .write()
+                .await
+                .insert(key.to_string(), schema);
         }
 
         debug!("Warmed up schema cache with {} schemas", schema_count);
@@ -384,8 +406,12 @@ impl CachedSchemaRegistry {
 impl SchemaRegistry for CachedSchemaRegistry {
     fn get(&self, key: &str) -> Option<Value> {
         // Check cache first
-        if let Some(cached) = self.schema_cache.try_read().ok()
-            .and_then(|cache| cache.get(key).cloned()) {
+        if let Some(cached) = self
+            .schema_cache
+            .try_read()
+            .ok()
+            .and_then(|cache| cache.get(key).cloned())
+        {
             return Some(cached);
         }
 
@@ -403,13 +429,19 @@ impl SchemaRegistry for CachedSchemaRegistry {
 
     fn register_schema(&mut self, key: String, schema: Value) -> Result<(), SchemaError> {
         // Update cache
-        self.schema_cache.try_write().ok()
+        self.schema_cache
+            .try_write()
+            .ok()
             .map(|mut cache| cache.insert(key.clone(), schema.clone()));
 
         self.inner.register_schema(key, schema)
     }
 
-    fn register_converter(&mut self, key: String, converter: Box<dyn Converter>) -> Result<(), SchemaError> {
+    fn register_converter(
+        &mut self,
+        key: String,
+        converter: Box<dyn Converter>,
+    ) -> Result<(), SchemaError> {
         self.inner.register_converter(key, converter)
     }
 }
@@ -544,7 +576,8 @@ impl SchemaEvolutionTracker {
             created_at: chrono::Utc::now(),
         };
 
-        self.versions.entry(key.to_string())
+        self.versions
+            .entry(key.to_string())
             .or_insert_with(Vec::new)
             .push(schema_version);
     }

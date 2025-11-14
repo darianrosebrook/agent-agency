@@ -4,11 +4,11 @@
 //! with optional components (file watching, embeddings, context generation).
 
 use super::embedding_trait::EmbeddingServiceTrait;
-use super::unified::{
-    UnifiedWorkspaceStateManager, UnifiedWorkspaceConfig,
-    FileWatchConfig, ContextGenerationConfig, MetricsConfig,
-};
 use super::state_types::{WorkspaceConfig, WorkspaceError};
+use super::unified::{
+    ContextGenerationConfig, FileWatchConfig, MetricsConfig, UnifiedWorkspaceConfig,
+    UnifiedWorkspaceStateManager,
+};
 use super::StateStorage;
 use std::path::{Path, PathBuf};
 
@@ -30,43 +30,43 @@ impl UnifiedWorkspaceStateManagerBuilder {
             embedding_service: None,
         }
     }
-    
+
     /// Set state management configuration
     pub fn with_state_config(mut self, config: WorkspaceConfig) -> Self {
         self.config.state_config = config;
         self
     }
-    
+
     /// Enable and configure file watching
     pub fn with_file_watching(mut self, config: FileWatchConfig) -> Self {
         self.config.watch_config = Some(config);
         self
     }
-    
+
     /// Enable and configure context generation
     pub fn with_context_generation(mut self, config: ContextGenerationConfig) -> Self {
         self.config.context_config = Some(config);
         self
     }
-    
+
     /// Set metrics configuration
     pub fn with_metrics_config(mut self, config: MetricsConfig) -> Self {
         self.config.metrics_config = config;
         self
     }
-    
+
     /// Set storage backend
     pub fn with_storage(mut self, storage: Box<dyn StateStorage>) -> Self {
         self.state_storage = Some(storage);
         self
     }
-    
+
     /// Set embedding service
     pub fn with_embedding_service(mut self, service: Box<dyn EmbeddingServiceTrait>) -> Self {
         self.embedding_service = Some(service);
         self
     }
-    
+
     /// Build the unified workspace state manager
     pub fn build(mut self) -> Result<UnifiedWorkspaceStateManager, WorkspaceError> {
         // Use provided storage or create default file storage
@@ -75,21 +75,20 @@ impl UnifiedWorkspaceStateManagerBuilder {
         } else {
             use super::storage::FileStorage;
             let storage_path = self.workspace_root.join(".workspace-state");
-            Box::new(FileStorage::new(&storage_path, self.config.state_config.compress_states))
+            Box::new(FileStorage::new(
+                &storage_path,
+                self.config.state_config.compress_states,
+            ))
         };
-        
-        let mut manager = UnifiedWorkspaceStateManager::new(
-            &self.workspace_root,
-            self.config,
-            storage,
-        );
-        
+
+        let mut manager =
+            UnifiedWorkspaceStateManager::new(&self.workspace_root, self.config, storage);
+
         // Set embedding service if provided
         if let Some(service) = self.embedding_service {
             manager = manager.with_embedding_service(service);
         }
-        
+
         Ok(manager)
     }
 }
-

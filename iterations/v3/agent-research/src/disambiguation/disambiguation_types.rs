@@ -1,15 +1,14 @@
 //! Shared types and traits for disambiguation module
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Programming languages supported by the system
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
     Rust,
     TypeScript,
@@ -20,31 +19,31 @@ pub enum Language {
 
 /// Result of disambiguation process
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisambiguationResult {
     pub original_sentence: String,
     pub disambiguated_sentence: String,
     pub ambiguities_resolved: u32,
-    pub unresolvable_ambiguities: Vec<agent_agency_contracts::types::research::UnresolvableAmbiguity>,
+    pub unresolvable_ambiguities:
+        Vec<agent_agency_contracts::types::research::UnresolvableAmbiguity>,
 }
 
 /// Represents an ambiguity found in text
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ambiguity {
     pub text: String,
     pub ambiguity_type: AmbiguityType,
     pub start_pos: usize,
     pub end_pos: usize,
-    pub position: (usize, usize),  // (start_pos, end_pos) tuple
-    pub original_text: String,  // Alias for text
+    pub position: (usize, usize), // (start_pos, end_pos) tuple
+    pub original_text: String,    // Alias for text
     pub possible_resolutions: Vec<String>,
     pub confidence: f64,
     pub context: Option<String>,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -55,7 +54,7 @@ pub enum AmbiguityType {
 
 /// Ambiguity that cannot be resolved with available context
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnresolvableAmbiguity {
     pub ambiguity: Ambiguity,
     pub reason: agent_agency_contracts::types::research::UnresolvableReason,
@@ -67,7 +66,7 @@ pub struct UnresolvableAmbiguity {
 
 /// Information about a pronoun referent
 /// Uses contracts::EntityType for consistency
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferentInfo {
     pub entity: String,
     pub confidence: f64,
@@ -77,7 +76,7 @@ pub struct ReferentInfo {
 
 /// Entity type classification
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EntityType {
     Person,
     Organization,
@@ -90,7 +89,7 @@ pub enum EntityType {
 
 /// Named entity with standardized field names
 /// Uses contracts::EntityType for consistency
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NamedEntity {
     pub text: String,
     pub entity_type: agent_agency_contracts::types::research::EntityType,
@@ -103,7 +102,7 @@ pub struct NamedEntity {
 /// Entity match result for caching (domain-specific, different from contracts::EntityMatch)
 /// This type is used internally in disambiguation and has different fields.
 /// Use contracts::EntityMatch when you need the standard entity match structure.
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityMatch {
     pub entity: NamedEntity,
     pub confidence: f64,
@@ -113,7 +112,7 @@ pub struct EntityMatch {
 
 /// Knowledge base search result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeBaseResult {
     pub id: Uuid,
     pub canonical_name: String,
@@ -123,7 +122,7 @@ pub struct KnowledgeBaseResult {
 
 /// Knowledge source types (renamed from KnowledgeSource to avoid collision)
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KbSource {
     Wikidata,
     WordNet,
@@ -132,7 +131,7 @@ pub enum KbSource {
 
 /// Related entity information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RelatedEntity {
     pub id: Uuid,
     pub canonical_name: String,
@@ -142,15 +141,14 @@ pub struct RelatedEntity {
 
 /// Analysis helpers
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalEntityAnalysis {
     pub entity_id: Uuid,
     pub historical_context: String,
     pub temporal_relevance: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityRelationship {
     pub source_entity: String,
     pub target_entity: String,
@@ -158,8 +156,7 @@ pub struct EntityRelationship {
     pub confidence: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedEntity {
     pub text: String,
     pub canonical_form: String,
@@ -167,8 +164,7 @@ pub struct ResolvedEntity {
     pub confidence: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextAwareDisambiguation {
     pub original_text: String,
     pub resolved_text: String,
@@ -176,8 +172,7 @@ pub struct ContextAwareDisambiguation {
     pub confidence: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainIntegration {
     pub domain: String,
     pub entities: Vec<String>,
@@ -219,7 +214,7 @@ impl IngestionChannel {
 
 /// Ingestion candidate
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngestionCandidate {
     pub channel: IngestionChannel,
     pub label: String,
@@ -229,7 +224,7 @@ pub struct IngestionCandidate {
 
 /// Scheduled ingestion source
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledSource {
     pub channel: IngestionChannel,
     pub schedule: String,
@@ -238,7 +233,7 @@ pub struct ScheduledSource {
 
 /// Ingestion cache entry
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngestionCacheEntry {
     pub key: String,
     pub data: Vec<u8>,
@@ -248,7 +243,7 @@ pub struct IngestionCacheEntry {
 
 /// Pipeline statistics for ingestion
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IngestionPipelineStats {
     pub total_candidates: usize,
     pub processed: usize,

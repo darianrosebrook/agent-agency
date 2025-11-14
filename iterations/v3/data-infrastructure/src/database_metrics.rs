@@ -65,14 +65,20 @@ impl DatabaseMetrics {
         }
 
         // Update simple running average
-        let total = self.connection_acquisition_times.fetch_add(1, Ordering::Relaxed) + 1;
+        let total = self
+            .connection_acquisition_times
+            .fetch_add(1, Ordering::Relaxed)
+            + 1;
 
         if total > 1 {
             let current_avg = self.avg_execution_time_ns.load(Ordering::Relaxed);
-            let new_avg = ((current_avg as u128 * (total - 1) as u128) + duration_ns as u128) / total as u128;
-            self.avg_execution_time_ns.store(new_avg as u64, Ordering::Relaxed);
+            let new_avg =
+                ((current_avg as u128 * (total - 1) as u128) + duration_ns as u128) / total as u128;
+            self.avg_execution_time_ns
+                .store(new_avg as u64, Ordering::Relaxed);
         } else {
-            self.avg_execution_time_ns.store(duration_ns, Ordering::Relaxed);
+            self.avg_execution_time_ns
+                .store(duration_ns, Ordering::Relaxed);
         }
     }
 
@@ -124,7 +130,8 @@ impl DatabaseMetrics {
             let new_avg = (current_avg * (total - 1) + duration_ns) / total;
             self.avg_execution_time_ns.store(new_avg, Ordering::Relaxed);
         } else {
-            self.avg_execution_time_ns.store(duration_ns, Ordering::Relaxed);
+            self.avg_execution_time_ns
+                .store(duration_ns, Ordering::Relaxed);
         }
     }
 
@@ -184,7 +191,8 @@ impl DatabaseMetrics {
         self.max_execution_time_ns.store(0, Ordering::Relaxed);
         self.pool_usage.store(0, Ordering::Relaxed);
         self.circuit_breaker_trips.store(0, Ordering::Relaxed);
-        self.connection_acquisition_times.store(0, Ordering::Relaxed);
+        self.connection_acquisition_times
+            .store(0, Ordering::Relaxed);
         self.health_check_times.store(0, Ordering::Relaxed);
     }
 }
@@ -215,5 +223,3 @@ impl DatabaseMetricsSnapshot {
         self.max_execution_time_ns as f64 / 1_000_000.0
     }
 }
-
-

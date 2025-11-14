@@ -26,19 +26,19 @@ use crate::caws_integration::CAWSBudgetTracker;
 pub struct ParameterDashboard {
     /// Current optimization status across all task types
     pub optimization_status: HashMap<String, OptimizationStatus>,
-    
+
     /// Historical performance metrics
     pub performance_metrics: ParameterDashboardMetrics,
-    
+
     /// Rollout status across all task types
     pub rollout_status: HashMap<String, RolloutStatus>,
-    
+
     /// CAWS budget utilization
     pub budget_status: BudgetStatus,
-    
+
     /// Recent alerts and issues
     pub alerts: Vec<DashboardAlert>,
-    
+
     /// Dashboard metadata
     pub metadata: DashboardMetadata,
 }
@@ -283,22 +283,22 @@ impl ParameterDashboardManager {
     /// Update dashboard with latest data
     pub async fn update_dashboard(&self) -> Result<()> {
         let mut dashboard = self.dashboard_data.write().await;
-        
+
         // Update optimization status
         self.update_optimization_status(&mut dashboard).await?;
-        
+
         // Update performance metrics
         self.update_performance_metrics(&mut dashboard).await?;
-        
+
         // Update rollout status
         self.update_rollout_status(&mut dashboard).await?;
-        
+
         // Update budget status
         self.update_budget_status(&mut dashboard).await?;
-        
+
         // Update metadata
         dashboard.metadata.last_updated = Utc::now();
-        
+
         Ok(())
     }
 
@@ -313,7 +313,7 @@ impl ParameterDashboardManager {
         // This would analyze historical parameter sets and their outcomes
         // to identify the Pareto-optimal solutions
         let decisions = self.get_historical_decisions(task_type).await?;
-        
+
         let mut points = Vec::new();
         for decision in decisions {
             if let Some(outcome) = &decision.outcome {
@@ -328,15 +328,15 @@ impl ParameterDashboardManager {
                 points.push(point);
             }
         }
-        
+
         // Calculate Pareto dominance
         self.calculate_pareto_dominance(&mut points);
-        
+
         let hypervolume = self.calculate_hypervolume(&points);
-        
+
         let dominated_count = points.iter().filter(|p| p.dominated).count() as u32;
         let non_dominated_count = points.iter().filter(|p| !p.dominated).count() as u32;
-        
+
         Ok(ParetoFront {
             task_type: task_type.to_string(),
             points,
@@ -349,19 +349,19 @@ impl ParameterDashboardManager {
     /// Generate attribution analysis
     pub async fn generate_attribution_analysis(&self, task_type: &str) -> Result<AttributionAnalysis> {
         let decisions = self.get_historical_decisions(task_type).await?;
-        
+
         // Calculate parameter importance using SHAP-like analysis
         let parameter_importance = self.calculate_parameter_importance(&decisions);
-        
+
         // Calculate interaction effects
         let interaction_effects = self.calculate_interaction_effects(&decisions);
-        
+
         // Calculate feature importance
         let feature_importance = self.calculate_feature_importance(&decisions);
-        
+
         // Calculate model attribution
         let model_attribution = self.calculate_model_attribution(&decisions);
-        
+
         Ok(AttributionAnalysis {
             task_type: task_type.to_string(),
             parameter_importance,
@@ -374,23 +374,23 @@ impl ParameterDashboardManager {
     /// Detect performance drift
     pub async fn detect_drift(&self, task_type: &str) -> Result<Option<DriftDetection>> {
         let decisions = self.get_historical_decisions(task_type).await?;
-        
+
         if decisions.len() < 100 {
             return Ok(None); // Need sufficient data for drift detection
         }
-        
+
         // Split data into recent and historical windows
         let split_point = decisions.len() / 2;
         let historical = &decisions[..split_point];
         let recent = &decisions[split_point..];
-        
+
         // Calculate drift score using statistical tests
         let drift_score = self.calculate_drift_score(historical, recent);
-        
+
         if drift_score > 0.7 { // Threshold for significant drift
             let drift_direction = self.determine_drift_direction(historical, recent);
             let affected_parameters = self.identify_affected_parameters(historical, recent);
-            
+
             let drift_direction_clone = drift_direction.clone();
             Ok(Some(DriftDetection {
                 task_type: task_type.to_string(),
@@ -410,13 +410,13 @@ impl ParameterDashboardManager {
     pub async fn add_alert(&self, alert: DashboardAlert) -> Result<()> {
         let mut alerts = self.alerts.write().await;
         alerts.push(alert);
-        
+
         // Keep only last 1000 alerts
         if alerts.len() > 1000 {
             let len = alerts.len();
             alerts.drain(0..len - 1000);
         }
-        
+
         Ok(())
     }
 
@@ -502,7 +502,7 @@ impl ParameterDashboardManager {
                 if i != j {
                     let point_i = &points[i];
                     let point_j = &points[j];
-                    
+
                     // Check if point_j dominates point_i
                     if point_j.quality >= point_i.quality
                         && point_j.latency <= point_i.latency
@@ -526,7 +526,7 @@ impl ParameterDashboardManager {
         if non_dominated.is_empty() {
             return 0.0;
         }
-        
+
         let mut volume = 0.0;
         for point in non_dominated {
             volume += point.quality * (1.0 / (point.latency as f64 + 1.0)) * (1.0 / (point.tokens as f64 + 1.0));

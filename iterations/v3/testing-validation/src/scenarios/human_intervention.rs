@@ -16,9 +16,12 @@
 use std::time::Instant;
 use tracing::info;
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 #[cfg(feature = "full")]
 // autonomous_executor doesn't exist - using contracts types instead
 use agent_agency_contracts::types::prelude::ExecutionMode;
@@ -49,7 +52,10 @@ pub async fn run_human_intervention_test(
             intervention_api_calls += result.api_calls;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Task pause/resume failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Task pause/resume failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -65,7 +71,10 @@ pub async fn run_human_intervention_test(
             intervention_api_calls += result.api_calls;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Task cancellation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Task cancellation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -80,7 +89,10 @@ pub async fn run_human_intervention_test(
             intervention_api_calls += result.api_calls;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Real-time monitoring failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Real-time monitoring failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -96,7 +108,10 @@ pub async fn run_human_intervention_test(
             intervention_api_calls += result.api_calls;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Human override failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Human override failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -111,7 +126,10 @@ pub async fn run_human_intervention_test(
             intervention_api_calls += result.api_calls;
             if !result.passed {
                 passed = false;
-                errors.push(format!("API security failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "API security failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -142,7 +160,10 @@ pub async fn run_human_intervention_test(
 }
 
 /// Test task pause and resume functionality using real AutonomousExecutor
-async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_task_pause_resume(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task pause and resume with real AutonomousExecutor");
 
     // TODO: Implement comprehensive task pause and resume testing
@@ -183,18 +204,18 @@ async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalService
     // Since agent-orchestration compiles, we can implement basic pause/resume tests
     // For now, implement a simple mock-based test that validates the test infrastructure
     // Full implementation with AutonomousExecutor can be added later when needed
-    
+
     let mut task_pauses = 0;
     let mut task_resumes = 0;
     let mut api_calls = 0;
-    
+
     // Test 1: Simulate task pause
     let mut task_state = TaskState::new("test-task-1".to_string());
     task_state.start().await?; // Start task first
     task_state.pause().await?; // Then pause it
     task_pauses += 1;
     api_calls += 1;
-    
+
     if task_state.get_status() != TaskStatus::Paused {
         return Ok(InterventionSubResult {
             passed: false,
@@ -206,12 +227,12 @@ async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalService
             api_calls,
         });
     }
-    
+
     // Test 2: Simulate task resume
     task_state.resume().await?;
     task_resumes += 1;
     api_calls += 1;
-    
+
     if task_state.get_status() != TaskStatus::Running {
         return Ok(InterventionSubResult {
             passed: false,
@@ -223,7 +244,7 @@ async fn test_task_pause_resume(_env: &TestEnvironment, _services: &LocalService
             api_calls,
         });
     }
-    
+
     // Basic test passed - infrastructure works
     Ok(InterventionSubResult {
         passed: true,
@@ -280,7 +301,10 @@ impl TaskState {
         Ok(())
     }
 
-    async fn perform_work(&mut self, amount: usize) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn perform_work(
+        &mut self,
+        amount: usize,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if self.status == TaskStatus::Running {
             self.work_completed += amount;
         }
@@ -325,7 +349,10 @@ enum TaskStatus {
 }
 
 /// Test task cancellation with cleanup using real AutonomousExecutor
-async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_task_cancellation(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing task cancellation with real AutonomousExecutor");
 
     // TODO: Implement comprehensive task cancellation testing
@@ -365,15 +392,19 @@ async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalService
     // - Reviewer Requirements: Integration testing and task orchestration expertise
     // Since agent-orchestration compiles, we can implement basic cancellation tests
     // For now, implement a simple mock-based test that validates the test infrastructure
-    
+
     let mut task_cancellations = 0;
     let mut api_calls = 0;
-    
+
     // Test 1: Simulate task cancellation with cleanup
     let mut task_resources = TaskResources::new();
-    task_resources.allocate("file".to_string(), "test-file.txt".to_string()).await?;
-    task_resources.allocate("connection".to_string(), "conn-123".to_string()).await?;
-    
+    task_resources
+        .allocate("file".to_string(), "test-file.txt".to_string())
+        .await?;
+    task_resources
+        .allocate("connection".to_string(), "conn-123".to_string())
+        .await?;
+
     let resource_count_before = task_resources.count();
     if resource_count_before == 0 {
         return Ok(InterventionSubResult {
@@ -386,12 +417,12 @@ async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalService
             api_calls,
         });
     }
-    
+
     // Simulate cancellation and cleanup
     task_resources.cleanup().await?;
     task_cancellations += 1;
     api_calls += 1;
-    
+
     let resource_count_after = task_resources.count();
     if resource_count_after != 0 {
         return Ok(InterventionSubResult {
@@ -404,7 +435,7 @@ async fn test_task_cancellation(_env: &TestEnvironment, _services: &LocalService
             api_calls,
         });
     }
-    
+
     // Basic test passed - infrastructure works
     Ok(InterventionSubResult {
         passed: true,
@@ -429,7 +460,11 @@ impl TaskResources {
         }
     }
 
-    async fn allocate(&mut self, resource_type: String, resource_id: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn allocate(
+        &mut self,
+        resource_type: String,
+        resource_id: String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.resources.insert(resource_type, resource_id);
         Ok(())
     }
@@ -445,7 +480,10 @@ impl TaskResources {
 }
 
 /// Test real-time status monitoring
-async fn test_real_time_monitoring(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_real_time_monitoring(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing real-time status monitoring");
 
     let mut api_calls = 0;
@@ -523,7 +561,10 @@ async fn test_real_time_monitoring(_env: &TestEnvironment, _services: &LocalServ
     if status4 != TaskStatus::Running {
         return Ok(InterventionSubResult {
             passed: false,
-            error: Some(format!("Expected Running status after resume, got {:?}", status4)),
+            error: Some(format!(
+                "Expected Running status after resume, got {:?}",
+                status4
+            )),
             task_pauses: 0,
             task_resumes: 0,
             task_cancellations: 0,
@@ -544,7 +585,10 @@ async fn test_real_time_monitoring(_env: &TestEnvironment, _services: &LocalServ
 }
 
 /// Test human override capabilities
-async fn test_human_override(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_human_override(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing human override capabilities");
 
     let mut human_overrides = 0;
@@ -642,7 +686,9 @@ impl DecisionTask {
         Ok(())
     }
 
-    async fn make_autonomous_decision(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn make_autonomous_decision(
+        &mut self,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         if self.status != TaskStatus::Running {
             return Err("Task not running".into());
         }
@@ -651,21 +697,31 @@ impl DecisionTask {
         Ok(decision)
     }
 
-    async fn apply_human_override(&mut self, decision: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn apply_human_override(
+        &mut self,
+        decision: String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.current_decision = Some(decision.clone());
-        self.override_log.push(format!("Human override applied: {}", decision));
+        self.override_log
+            .push(format!("Human override applied: {}", decision));
         Ok(())
     }
 
-    async fn get_current_decision(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        self.current_decision.clone().ok_or_else(|| "No decision made".into())
+    async fn get_current_decision(
+        &self,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        self.current_decision
+            .clone()
+            .ok_or_else(|| "No decision made".into())
     }
 
     fn has_override_log(&self) -> bool {
         !self.override_log.is_empty()
     }
 
-    async fn continue_with_override(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn continue_with_override(
+        &mut self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if self.status != TaskStatus::Running {
             return Err("Task not running".into());
         }
@@ -677,7 +733,10 @@ impl DecisionTask {
 }
 
 /// Test intervention API security
-async fn test_intervention_api_security(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_intervention_api_security(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<InterventionSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing intervention API security");
 
     let mut api_calls = 0;
@@ -806,7 +865,8 @@ struct AuditTestResult {
 }
 
 /// Test unauthorized access
-async fn test_unauthorized_access() -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_unauthorized_access(
+) -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simulate unauthorized request without token
     Ok(SecurityTestResult {
         allowed: false, // Should be rejected
@@ -815,7 +875,8 @@ async fn test_unauthorized_access() -> Result<SecurityTestResult, Box<dyn std::e
 }
 
 /// Test valid authentication
-async fn test_valid_authentication() -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_valid_authentication(
+) -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simulate valid authentication with token
     Ok(SecurityTestResult {
         allowed: true,
@@ -824,7 +885,9 @@ async fn test_valid_authentication() -> Result<SecurityTestResult, Box<dyn std::
 }
 
 /// Test role-based authorization
-async fn test_role_authorization(role: String) -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_role_authorization(
+    role: String,
+) -> Result<SecurityTestResult, Box<dyn std::error::Error + Send + Sync>> {
     match role.as_str() {
         "admin" => Ok(SecurityTestResult {
             allowed: true,
@@ -842,7 +905,8 @@ async fn test_role_authorization(role: String) -> Result<SecurityTestResult, Box
 }
 
 /// Test rate limiting
-async fn test_rate_limiting() -> Result<RateLimitTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_rate_limiting(
+) -> Result<RateLimitTestResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simulate making too many requests quickly
     let mut request_count = 0;
     let mut rate_limited = false;

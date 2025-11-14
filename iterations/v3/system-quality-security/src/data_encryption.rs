@@ -5,17 +5,17 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use async_trait::async_trait;
+use base64::{engine::general_purpose, Engine as _};
+use chrono::{DateTime, Utc};
 use ring::aead::{Aad, LessSafeKey, Nonce, NonceSequence, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use base64::{Engine as _, engine::general_purpose};
 
 /// Data encryption service
 #[derive(Debug, Clone, JsonSchema)]
@@ -131,7 +131,6 @@ pub struct EncryptedData {
     pub algorithm: EncryptionAlgorithm,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -175,16 +174,17 @@ impl DataEncryptionService {
     ) -> Result<Uuid, EncryptionError> {
         let key_id = Uuid::new_v4();
         let rng = SystemRandom::new();
-        
+
         let key_size = match algorithm {
             EncryptionAlgorithm::Aes256Gcm => 32,
             EncryptionAlgorithm::Aes128Gcm => 16,
         };
-        
+
         let mut key_bytes = vec![0u8; key_size];
-        rng.fill(&mut key_bytes).map_err(|e| EncryptionError::KeyGenerationFailed {
-            message: format!("Failed to generate random key: {}", e),
-        })?;
+        rng.fill(&mut key_bytes)
+            .map_err(|e| EncryptionError::KeyGenerationFailed {
+                message: format!("Failed to generate random key: {}", e),
+            })?;
 
         let expires_at = rotation_days.map(|days| Utc::now() + chrono::Duration::days(days as i64));
 
@@ -210,14 +210,16 @@ impl DataEncryptionService {
         field_name: &str,
         data: &str,
     ) -> Result<EncryptedData, EncryptionError> {
-        let config = self.field_config.get(field_name)
-            .ok_or_else(|| EncryptionError::ConfigurationError {
+        let config = self.field_config.get(field_name).ok_or_else(|| {
+            EncryptionError::ConfigurationError {
                 message: format!("Field encryption not configured for: {}", field_name),
-            })?;
+            }
+        })?;
 
         let key_id = config.key_id.unwrap_or_else(|| {
             // Use default key if not specified
-            self.at_rest_config.as_ref()
+            self.at_rest_config
+                .as_ref()
                 .map(|c| c.default_key_id)
                 .unwrap_or_else(|| {
                     // TODO: Implement proper key management system
@@ -231,12 +233,15 @@ impl DataEncryptionService {
 
     /// Encrypt data at rest
     pub async fn encrypt_at_rest(&self, data: &str) -> Result<EncryptedData, EncryptionError> {
-        let config = self.at_rest_config.as_ref()
-            .ok_or_else(|| EncryptionError::ConfigurationError {
-                message: "Encryption at rest not configured".to_string(),
-            })?;
+        let config =
+            self.at_rest_config
+                .as_ref()
+                .ok_or_else(|| EncryptionError::ConfigurationError {
+                    message: "Encryption at rest not configured".to_string(),
+                })?;
 
-        self.encrypt_data(data, config.default_key_id, config.algorithm).await
+        self.encrypt_data(data, config.default_key_id, config.algorithm)
+            .await
     }
 
     /// Encrypt data with specified key and algorithm
@@ -248,7 +253,9 @@ impl DataEncryptionService {
     ) -> Result<EncryptedData, EncryptionError> {
         // Get encryption key
         let manager = self.key_manager.read().await;
-        let encryption_key = manager.keys.get(&key_id)
+        let encryption_key = manager
+            .keys
+            .get(&key_id)
             .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
 
         if !encryption_key.active {
@@ -265,68 +272,70 @@ impl DataEncryptionService {
         let key_bytes = &encryption_key.key_material;
 
         // Create unbound key based on algorithm
-        let unbound_key = match algorithm {
-            EncryptionAlgorithm::Aes256Gcm => {
-                UnboundKey::new(&AES_256_GCM, key_bytes)
+        let unbound_key =
+            match algorithm {
+                EncryptionAlgorithm::Aes256Gcm => UnboundKey::new(&AES_256_GCM, key_bytes)
                     .map_err(|e| EncryptionError::EncryptionFailed {
                         message: format!("Failed to create encryption key: {}", e),
+                    })?,
+                EncryptionAlgorithm::Aes128Gcm => {
+                    // TODO: Implement comprehensive AES-128-GCM key creation
+                    //       Currently uses AES_256_GCM as fallback; should implement comprehensive key creation that uses proper AES_128_GCM algorithm for accurate AES-128-GCM encryption support.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - AES_128_GCM algorithm is used for AES-128-GCM encryption
+                    // - Key creation uses proper 128-bit key size
+                    // - Encryption matches AES-128-GCM specification
+                    // - Key creation handles errors gracefully
+                    //
+                    // DEPENDENCIES:
+                    // - AES_128_GCM algorithm support (Required)
+                    // - Key size validation (Required)
+                    // - Encryption algorithm utilities (Required)
+                    //
+                    // ESTIMATED EFFORT: 4-6 hours (high confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (encryption functionality)
+                    // - Change Budget: ~100 LOC
+                    // - Reviewer Requirements: Encryption algorithms and key management expertise
+                    UnboundKey::new(&AES_256_GCM, key_bytes).map_err(|e| {
+                        EncryptionError::EncryptionFailed {
+                            message: format!("Failed to create encryption key: {}", e),
+                        }
                     })?
-            }
-            EncryptionAlgorithm::Aes128Gcm => {
-                // TODO: Implement comprehensive AES-128-GCM key creation
-                //       Currently uses AES_256_GCM as fallback; should implement comprehensive key creation that uses proper AES_128_GCM algorithm for accurate AES-128-GCM encryption support.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - AES_128_GCM algorithm is used for AES-128-GCM encryption
-                // - Key creation uses proper 128-bit key size
-                // - Encryption matches AES-128-GCM specification
-                // - Key creation handles errors gracefully
-                //
-                // DEPENDENCIES:
-                // - AES_128_GCM algorithm support (Required)
-                // - Key size validation (Required)
-                // - Encryption algorithm utilities (Required)
-                //
-                // ESTIMATED EFFORT: 4-6 hours (high confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (encryption functionality)
-                // - Change Budget: ~100 LOC
-                // - Reviewer Requirements: Encryption algorithms and key management expertise
-                UnboundKey::new(&AES_256_GCM, key_bytes)
-                    .map_err(|e| EncryptionError::EncryptionFailed {
-                        message: format!("Failed to create encryption key: {}", e),
-                    })?
-            }
-        };
+                }
+            };
 
         // Generate random nonce
         let rng = SystemRandom::new();
         let mut nonce_bytes = [0u8; 12];
-        rng.fill(&mut nonce_bytes).map_err(|e| EncryptionError::EncryptionFailed {
-            message: format!("Failed to generate nonce: {}", e),
-        })?;
+        rng.fill(&mut nonce_bytes)
+            .map_err(|e| EncryptionError::EncryptionFailed {
+                message: format!("Failed to generate nonce: {}", e),
+            })?;
 
         // Create nonce for storage
-        let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes)
-            .map_err(|e| EncryptionError::EncryptionFailed {
+        let nonce = Nonce::try_assume_unique_for_key(&nonce_bytes).map_err(|e| {
+            EncryptionError::EncryptionFailed {
                 message: format!("Failed to create nonce: {}", e),
-            })?;
+            }
+        })?;
 
         // Create sealing key with explicit type annotation
         // Note: We use LessSafeKey here because we need to manually manage the nonce
@@ -337,7 +346,8 @@ impl DataEncryptionService {
         let mut in_out = data.as_bytes().to_vec();
         let aad = Aad::empty();
 
-        sealing_key.seal_in_place_append_tag(nonce, aad, &mut in_out)
+        sealing_key
+            .seal_in_place_append_tag(nonce, aad, &mut in_out)
             .map_err(|e| EncryptionError::EncryptionFailed {
                 message: format!("Encryption failed: {}", e),
             })?;
@@ -356,40 +366,42 @@ impl DataEncryptionService {
     }
 
     /// Decrypt data
-    pub async fn decrypt_data(&self, encrypted_data: &EncryptedData) -> Result<String, EncryptionError> {
+    pub async fn decrypt_data(
+        &self,
+        encrypted_data: &EncryptedData,
+    ) -> Result<String, EncryptionError> {
         // Get decryption key
         let manager = self.key_manager.read().await;
-        let encryption_key = manager.keys.get(&encrypted_data.key_id)
-            .ok_or_else(|| EncryptionError::KeyNotFound { 
-                key_id: encrypted_data.key_id 
-            })?;
+        let encryption_key = manager.keys.get(&encrypted_data.key_id).ok_or_else(|| {
+            EncryptionError::KeyNotFound {
+                key_id: encrypted_data.key_id,
+            }
+        })?;
 
         if !encryption_key.active {
-            return Err(EncryptionError::KeyInactive { 
-                key_id: encrypted_data.key_id 
+            return Err(EncryptionError::KeyInactive {
+                key_id: encrypted_data.key_id,
             });
         }
 
         let key_bytes = &encryption_key.key_material;
 
         // Create unbound key
-        let unbound_key = match encrypted_data.algorithm {
-            EncryptionAlgorithm::Aes256Gcm => {
-                UnboundKey::new(&AES_256_GCM, key_bytes)
+        let unbound_key =
+            match encrypted_data.algorithm {
+                EncryptionAlgorithm::Aes256Gcm => UnboundKey::new(&AES_256_GCM, key_bytes)
                     .map_err(|e| EncryptionError::DecryptionFailed {
                         message: format!("Failed to create decryption key: {}", e),
-                    })?
-            }
-            EncryptionAlgorithm::Aes128Gcm => {
-                UnboundKey::new(&AES_256_GCM, key_bytes)
+                    })?,
+                EncryptionAlgorithm::Aes128Gcm => UnboundKey::new(&AES_256_GCM, key_bytes)
                     .map_err(|e| EncryptionError::DecryptionFailed {
                         message: format!("Failed to create decryption key: {}", e),
-                    })?
-            }
-        };
+                    })?,
+            };
 
         // Decode nonce
-        let nonce_bytes = general_purpose::STANDARD.decode(&encrypted_data.nonce)
+        let nonce_bytes = general_purpose::STANDARD
+            .decode(&encrypted_data.nonce)
             .map_err(|e| EncryptionError::DecryptionFailed {
                 message: format!("Failed to decode nonce: {}", e),
             })?;
@@ -400,16 +412,19 @@ impl DataEncryptionService {
             });
         }
 
-        let nonce_array: [u8; 12] = nonce_bytes.try_into()
-            .map_err(|_| EncryptionError::DecryptionFailed {
-                message: "Failed to convert nonce to array".to_string(),
-            })?;
+        let nonce_array: [u8; 12] =
+            nonce_bytes
+                .try_into()
+                .map_err(|_| EncryptionError::DecryptionFailed {
+                    message: "Failed to convert nonce to array".to_string(),
+                })?;
 
         // Create nonce for decryption
-        let nonce = Nonce::try_assume_unique_for_key(&nonce_array)
-            .map_err(|e| EncryptionError::DecryptionFailed {
+        let nonce = Nonce::try_assume_unique_for_key(&nonce_array).map_err(|e| {
+            EncryptionError::DecryptionFailed {
                 message: format!("Failed to create nonce: {}", e),
-            })?;
+            }
+        })?;
 
         // Create opening key
         // Note: We use LessSafeKey here because we need to manually manage the nonce
@@ -417,14 +432,16 @@ impl DataEncryptionService {
         let mut opening_key = LessSafeKey::new(unbound_key);
 
         // Decode encrypted data
-        let mut encrypted_bytes = general_purpose::STANDARD.decode(&encrypted_data.encrypted)
+        let mut encrypted_bytes = general_purpose::STANDARD
+            .decode(&encrypted_data.encrypted)
             .map_err(|e| EncryptionError::DecryptionFailed {
                 message: format!("Failed to decode encrypted data: {}", e),
             })?;
 
         // Decrypt
         let aad = Aad::empty();
-        opening_key.open_in_place(nonce, aad, &mut encrypted_bytes)
+        opening_key
+            .open_in_place(nonce, aad, &mut encrypted_bytes)
             .map_err(|e| EncryptionError::DecryptionFailed {
                 message: format!("Decryption failed: {}", e),
             })?;
@@ -432,10 +449,9 @@ impl DataEncryptionService {
         // Remove authentication tag (last 16 bytes)
         encrypted_bytes.truncate(encrypted_bytes.len() - 16);
 
-        String::from_utf8(encrypted_bytes)
-            .map_err(|e| EncryptionError::DecryptionFailed {
-                message: format!("Failed to convert decrypted data to string: {}", e),
-            })
+        String::from_utf8(encrypted_bytes).map_err(|e| EncryptionError::DecryptionFailed {
+            message: format!("Failed to convert decrypted data to string: {}", e),
+        })
     }
 
     /// Rotate encryption key
@@ -443,7 +459,9 @@ impl DataEncryptionService {
         // Extract owned values before dropping lock
         let (algorithm, rotation_days) = {
             let manager = self.key_manager.read().await;
-            let key = manager.keys.get(&key_id)
+            let key = manager
+                .keys
+                .get(&key_id)
                 .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
             // Copy types can be extracted directly
             (key.algorithm, key.rotation_days)
@@ -471,7 +489,9 @@ impl DataEncryptionService {
     /// Check if key rotation is needed
     pub async fn check_rotation_needed(&self, key_id: Uuid) -> Result<bool, EncryptionError> {
         let manager = self.key_manager.read().await;
-        let key = manager.keys.get(&key_id)
+        let key = manager
+            .keys
+            .get(&key_id)
             .ok_or_else(|| EncryptionError::KeyNotFound { key_id })?;
 
         if let Some(expires_at) = key.expires_at {
@@ -534,4 +554,3 @@ pub enum EncryptionError {
     #[error("Key rotation failed: {message}")]
     RotationFailed { message: String },
 }
-

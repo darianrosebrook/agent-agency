@@ -1,7 +1,7 @@
 //! Secure configuration management with validated environment variable loading
 
-use schemars::JsonSchema;
 use crate::input_validation::validate_env_var_name;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::env;
 
@@ -76,9 +76,7 @@ impl SecureConfigLoader {
 
     /// Get test required environment variables
     fn test_required_vars() -> Vec<String> {
-        vec![
-            "AGENT_AGENCY_ENV".to_string(),
-        ]
+        vec!["AGENT_AGENCY_ENV".to_string()]
     }
 
     /// Add required variables to the loader
@@ -117,7 +115,8 @@ impl SecureConfigLoader {
         }
 
         // Validate sensitive variables
-        let sensitive_vars: HashMap<String, String> = config.iter()
+        let sensitive_vars: HashMap<String, String> = config
+            .iter()
             .filter(|(k, _)| Self::is_sensitive_var(k))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
@@ -132,7 +131,8 @@ impl SecureConfigLoader {
         self.validate_environment_specific(&config, &mut validation_errors, &mut warnings);
 
         // Create masked config for logging
-        let masked_config = config.iter()
+        let masked_config = config
+            .iter()
             .map(|(k, v)| (k.clone(), mask_sensitive_value(v)))
             .collect();
 
@@ -169,13 +169,17 @@ impl SecureConfigLoader {
 
                 if let Some(jwt_secret) = config.get("JWT_SECRET") {
                     if jwt_secret.len() < 32 {
-                        errors.push("Production JWT_SECRET must be at least 32 characters".to_string());
+                        errors.push(
+                            "Production JWT_SECRET must be at least 32 characters".to_string(),
+                        );
                     }
                 }
 
                 if let Some(enc_key) = config.get("ENCRYPTION_KEY") {
                     if enc_key.len() < 32 {
-                        errors.push("Production ENCRYPTION_KEY must be at least 32 characters".to_string());
+                        errors.push(
+                            "Production ENCRYPTION_KEY must be at least 32 characters".to_string(),
+                        );
                     }
                 }
             }
@@ -191,7 +195,9 @@ impl SecureConfigLoader {
                 // Development-specific validations (more lenient)
                 if let Some(db_url) = config.get("DATABASE_URL") {
                     if db_url.contains("prod") || db_url.contains("production") {
-                        warnings.push("Development environment using production database URL".to_string());
+                        warnings.push(
+                            "Development environment using production database URL".to_string(),
+                        );
                     }
                 }
             }
@@ -204,11 +210,20 @@ impl SecureConfigLoader {
     /// Check if a variable name represents a sensitive variable
     fn is_sensitive_var(var_name: &str) -> bool {
         let sensitive_patterns = [
-            "SECRET", "KEY", "PASSWORD", "TOKEN", "CREDENTIALS",
-            "PRIVATE", "CERT", "TLS", "SSL", "AUTH",
+            "SECRET",
+            "KEY",
+            "PASSWORD",
+            "TOKEN",
+            "CREDENTIALS",
+            "PRIVATE",
+            "CERT",
+            "TLS",
+            "SSL",
+            "AUTH",
         ];
 
-        sensitive_patterns.iter()
+        sensitive_patterns
+            .iter()
             .any(|pattern| var_name.contains(pattern))
     }
 
@@ -224,7 +239,7 @@ impl SecureConfigLoader {
         if !name_validation.is_valid {
             return Err(SecureConfigError::InvalidVariableName(
                 name.to_string(),
-                name_validation.errors.join(", ")
+                name_validation.errors.join(", "),
             ));
         }
 
@@ -232,17 +247,19 @@ impl SecureConfigLoader {
         if Self::is_sensitive_var(name) {
             // For sensitive variables, check length and complexity
             if value.len() < 8 {
-                return Err(SecureConfigError::ValidationFailed(
-                    vec![format!("Sensitive variable {} must be at least 8 characters", name)]
-                ));
+                return Err(SecureConfigError::ValidationFailed(vec![format!(
+                    "Sensitive variable {} must be at least 8 characters",
+                    name
+                )]));
             }
 
             // Check for special characters in secrets
             if name.contains("SECRET") || name.contains("KEY") {
                 if !value.chars().any(|c| !c.is_alphanumeric()) {
-                    return Err(SecureConfigError::ValidationFailed(
-                        vec![format!("Variable {} must contain special characters for security", name)]
-                    ));
+                    return Err(SecureConfigError::ValidationFailed(vec![format!(
+                        "Variable {} must contain special characters for security",
+                        name
+                    )]));
                 }
             }
         }
@@ -262,28 +279,43 @@ fn load_optional_var(var_name: &str) -> Option<String> {
 }
 
 /// Validate sensitive variables for security requirements
-fn validate_sensitive_vars(sensitive_vars: &HashMap<String, String>) -> Result<(), SecureConfigError> {
+fn validate_sensitive_vars(
+    sensitive_vars: &HashMap<String, String>,
+) -> Result<(), SecureConfigError> {
     let mut errors = Vec::new();
 
     for (name, value) in sensitive_vars {
         // Check minimum length
         if value.len() < 8 {
-            errors.push(format!("Sensitive variable {} must be at least 8 characters", name));
+            errors.push(format!(
+                "Sensitive variable {} must be at least 8 characters",
+                name
+            ));
             continue;
         }
 
         // Check for special characters in secrets/keys
         if name.contains("SECRET") || name.contains("KEY") {
-            if !value.chars().any(|c| !c.is_alphanumeric() && !c.is_whitespace()) {
-                errors.push(format!("Variable {} must contain special characters for security", name));
+            if !value
+                .chars()
+                .any(|c| !c.is_alphanumeric() && !c.is_whitespace())
+            {
+                errors.push(format!(
+                    "Variable {} must contain special characters for security",
+                    name
+                ));
             }
         }
 
         // Check for common weak patterns
-        if value.to_lowercase().contains("password") ||
-           value.to_lowercase().contains("admin") ||
-           value.to_lowercase().contains("123456") {
-            errors.push(format!("Variable {} contains potentially weak patterns", name));
+        if value.to_lowercase().contains("password")
+            || value.to_lowercase().contains("admin")
+            || value.to_lowercase().contains("123456")
+        {
+            errors.push(format!(
+                "Variable {} contains potentially weak patterns",
+                name
+            ));
         }
     }
 
@@ -299,7 +331,7 @@ fn mask_sensitive_value(value: &str) -> String {
     if value.len() <= 4 {
         "*".repeat(value.len())
     } else {
-        format!("{}****{}", &value[0..2], &value[value.len()-2..])
+        format!("{}****{}", &value[0..2], &value[value.len() - 2..])
     }
 }
 
@@ -321,19 +353,21 @@ static SECURE_CONFIG_LOADER: once_cell::sync::OnceCell<SecureConfigLoader> =
 /// Initialize the global secure configuration loader
 pub fn init_secure_config_loader(environment: &str) -> Result<(), SecureConfigError> {
     let loader = SecureConfigLoader::new(environment);
-    SECURE_CONFIG_LOADER.set(loader)
-        .map_err(|_| SecureConfigError::ValidationFailed(
-            vec!["Secure config loader already initialized".to_string()]
-        ))?;
+    SECURE_CONFIG_LOADER.set(loader).map_err(|_| {
+        SecureConfigError::ValidationFailed(vec![
+            "Secure config loader already initialized".to_string()
+        ])
+    })?;
     Ok(())
 }
 
 /// Get the global secure configuration loader
 pub fn get_secure_config_loader() -> Result<&'static SecureConfigLoader, SecureConfigError> {
-    SECURE_CONFIG_LOADER.get()
-        .ok_or_else(|| SecureConfigError::ValidationFailed(
-            vec!["Secure config loader not initialized".to_string()]
-        ))
+    SECURE_CONFIG_LOADER.get().ok_or_else(|| {
+        SecureConfigError::ValidationFailed(
+            vec!["Secure config loader not initialized".to_string()],
+        )
+    })
 }
 
 /// Load secure configuration using the global loader
@@ -382,7 +416,9 @@ mod tests {
         let loader = SecureConfigLoader::new("production");
 
         // Valid variable name
-        assert!(loader.validate_var("DATABASE_URL", "postgresql://user:pass@host:5432/db").is_ok());
+        assert!(loader
+            .validate_var("DATABASE_URL", "postgresql://user:pass@host:5432/db")
+            .is_ok());
 
         // Invalid variable name
         assert!(loader.validate_var("invalid-name", "value").is_err());
@@ -391,7 +427,9 @@ mod tests {
         assert!(loader.validate_var("JWT_SECRET", "short").is_err());
 
         // Invalid sensitive variable (no special chars)
-        assert!(loader.validate_var("JWT_SECRET", "verylongsecretwithoutspecialchars").is_err());
+        assert!(loader
+            .validate_var("JWT_SECRET", "verylongsecretwithoutspecialchars")
+            .is_err());
     }
 
     #[test]

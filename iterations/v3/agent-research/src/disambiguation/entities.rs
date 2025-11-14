@@ -1,21 +1,21 @@
 //! Named entity recognition
 
+use crate::disambiguation::disambiguation_types::NamedEntity;
+use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::Result;
-use crate::disambiguation::disambiguation_types::{NamedEntity};
 // Explicit imports from contracts (narrow, not wildcard)
-use agent_agency_contracts::types::research::{
-    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
-    EntityMatch as ContractsEntityMatch, EntityType, UnresolvableReason,
-};
-use crate::ProcessingContext;
 use crate::disambiguation::patterns::EntityPatterns;
+use crate::ProcessingContext;
+use agent_agency_contracts::types::research::{
+    EmbeddingProvider, EntityMatch as ContractsEntityMatch, EntityType, KnowledgeBase,
+    KnowledgeIngest, UnresolvableReason,
+};
 
 /// Named Entity Recognizer with optional integrations
 pub struct NamedEntityRecognizer {
-    entity_cache: Arc<RwLock<HashMap<String, Vec<NamedEntity>>>>,  // Cache NamedEntity directly
+    entity_cache: Arc<RwLock<HashMap<String, Vec<NamedEntity>>>>, // Cache NamedEntity directly
     confidence_threshold: f64,
     entity_patterns: EntityPatterns,
     embedding_provider: Option<Arc<dyn EmbeddingProvider>>,
@@ -154,11 +154,15 @@ impl NamedEntityRecognizer {
                 if confidence > 0.5 {
                     entities.push(NamedEntity {
                         text: entity_text.to_string(),
-                        entity_type: agent_agency_contracts::types::research::EntityType::Organization,
+                        entity_type:
+                            agent_agency_contracts::types::research::EntityType::Organization,
                         start: mat.start(),
                         end: mat.end(),
                         confidence,
-                        context: Some(format!("Organization entity in context: {}", context.input_text)),
+                        context: Some(format!(
+                            "Organization entity in context: {}",
+                            context.input_text
+                        )),
                     });
                 }
             }
@@ -287,7 +291,8 @@ impl NamedEntityRecognizer {
                 if confidence > 0.6 {
                     entities.push(NamedEntity {
                         text: mat.as_str().to_string(),
-                        entity_type: agent_agency_contracts::types::research::EntityType::TechnicalTerm,
+                        entity_type:
+                            agent_agency_contracts::types::research::EntityType::TechnicalTerm,
                         start: mat.start(),
                         end: mat.end(),
                         confidence,
@@ -395,7 +400,11 @@ impl NamedEntityRecognizer {
         let mut confidence: f64 = 0.6;
 
         // Boost confidence if it looks like a proper name (capitalized)
-        if entity_text.chars().next().map_or(false, |c| c.is_uppercase()) {
+        if entity_text
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_uppercase())
+        {
             confidence += 0.2;
         }
 
@@ -408,10 +417,12 @@ impl NamedEntityRecognizer {
 
         // Check surrounding words for context clues
         if position > 0 && position < words.len() {
-            let surrounding = words[position.saturating_sub(1)..(position + 1).min(words.len())].join(" ");
-            if surrounding.to_lowercase().contains("mr") ||
-               surrounding.to_lowercase().contains("mrs") ||
-               surrounding.to_lowercase().contains("dr") {
+            let surrounding =
+                words[position.saturating_sub(1)..(position + 1).min(words.len())].join(" ");
+            if surrounding.to_lowercase().contains("mr")
+                || surrounding.to_lowercase().contains("mrs")
+                || surrounding.to_lowercase().contains("dr")
+            {
                 confidence += 0.15;
             }
         }
@@ -420,22 +431,27 @@ impl NamedEntityRecognizer {
     }
 
     /// Calculate confidence for organization detection
-    fn calculate_organization_confidence(&self, entity_text: &str, context: &ProcessingContext) -> f64 {
+    fn calculate_organization_confidence(
+        &self,
+        entity_text: &str,
+        context: &ProcessingContext,
+    ) -> f64 {
         let mut confidence: f64 = 0.65;
 
         // Boost for common organization indicators
-        if entity_text.contains("Inc") ||
-           entity_text.contains("Corp") ||
-           entity_text.contains("Ltd") ||
-           entity_text.contains("Company") {
+        if entity_text.contains("Inc")
+            || entity_text.contains("Corp")
+            || entity_text.contains("Ltd")
+            || entity_text.contains("Company")
+        {
             confidence += 0.2;
         }
 
         // Boost if in business/tech domain
         if context.domain_hints.iter().any(|hint| {
-            hint.to_lowercase().contains("business") ||
-            hint.to_lowercase().contains("company") ||
-            hint.to_lowercase().contains("organization")
+            hint.to_lowercase().contains("business")
+                || hint.to_lowercase().contains("company")
+                || hint.to_lowercase().contains("organization")
         }) {
             confidence += 0.1;
         }
@@ -449,16 +465,25 @@ impl NamedEntityRecognizer {
 
         // Boost for programming/technical domain hints
         if context.domain_hints.iter().any(|hint| {
-            hint.to_lowercase().contains("programming") ||
-            hint.to_lowercase().contains("software") ||
-            hint.to_lowercase().contains("technical") ||
-            hint.to_lowercase().contains("code")
+            hint.to_lowercase().contains("programming")
+                || hint.to_lowercase().contains("software")
+                || hint.to_lowercase().contains("technical")
+                || hint.to_lowercase().contains("code")
         }) {
             confidence += 0.2;
         }
 
         // Known technical terms get higher confidence
-        let known_terms = ["API", "HTTP", "JSON", "XML", "SQL", "REST", "Docker", "Kubernetes"];
+        let known_terms = [
+            "API",
+            "HTTP",
+            "JSON",
+            "XML",
+            "SQL",
+            "REST",
+            "Docker",
+            "Kubernetes",
+        ];
         if known_terms.contains(&term.to_uppercase().as_str()) {
             confidence += 0.1;
         }
@@ -486,7 +511,10 @@ mod tests {
             language: None,
         };
 
-        let entities = recognizer.recognize_entities("John Smith works at Google.", &context).await.unwrap();
+        let entities = recognizer
+            .recognize_entities("John Smith works at Google.", &context)
+            .await
+            .unwrap();
 
         // Should find at least some entities
         assert!(!entities.is_empty() || true); // Relaxed for basic test

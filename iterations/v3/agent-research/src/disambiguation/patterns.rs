@@ -1,8 +1,8 @@
 //! Entity pattern recognition using regex
 
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Pattern-based entity recognition using regex
 #[derive(Clone, Debug)]

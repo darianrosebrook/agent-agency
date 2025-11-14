@@ -29,7 +29,8 @@ pub fn format_file_size(bytes: u64) -> String {
 
 /// Format a list of items with consistent spacing
 pub fn format_list(items: &[String], prefix: &str) -> String {
-    items.iter()
+    items
+        .iter()
         .map(|item| format!("{}{}", prefix, item))
         .collect::<Vec<_>>()
         .join("\n")

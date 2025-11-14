@@ -4,14 +4,14 @@
 //! without creating circular dependencies. These types define the common
 //! language for communication between system components.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Unique identifier for tasks and operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TaskId (pub Uuid);
+pub struct TaskId(pub Uuid);
 
 impl TaskId {
     pub fn new() -> Self {
@@ -108,7 +108,7 @@ pub struct AuditLogEntry {
 
 /// Message envelope for inter-service communication
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MessageEnvelope <T> {
+pub struct MessageEnvelope<T> {
     pub id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub sender: String,
@@ -122,14 +122,39 @@ pub struct MessageEnvelope <T> {
 /// Event types for the event system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SystemEvent {
-    TaskStarted { task_id: TaskId, task_type: String },
-    TaskCompleted { task_id: TaskId, result: TaskResult },
-    TaskFailed { task_id: TaskId, error: String },
-    ServiceStarted { service_name: String, version: String },
-    ServiceStopped { service_name: String },
-    HealthCheckFailed { component: String, error: String },
-    ResourceThresholdExceeded { resource: String, current: f64, threshold: f64 },
-    ConfigurationChanged { key: String, old_value: Option<String>, new_value: Option<String> },
+    TaskStarted {
+        task_id: TaskId,
+        task_type: String,
+    },
+    TaskCompleted {
+        task_id: TaskId,
+        result: TaskResult,
+    },
+    TaskFailed {
+        task_id: TaskId,
+        error: String,
+    },
+    ServiceStarted {
+        service_name: String,
+        version: String,
+    },
+    ServiceStopped {
+        service_name: String,
+    },
+    HealthCheckFailed {
+        component: String,
+        error: String,
+    },
+    ResourceThresholdExceeded {
+        resource: String,
+        current: f64,
+        threshold: f64,
+    },
+    ConfigurationChanged {
+        key: String,
+        old_value: Option<String>,
+        new_value: Option<String>,
+    },
 }
 
 /// Event metadata
@@ -145,7 +170,9 @@ pub struct EventMetadata {
 }
 
 /// Event severity levels
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize, schemars::JsonSchema,
+)]
 pub enum EventSeverity {
     Debug,
     Info,
@@ -211,7 +238,7 @@ pub struct QueryParams {
 
 /// API response wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiResponse <T> {
+pub struct ApiResponse<T> {
     pub data: T,
     pub metadata: ResponseMetadata,
 }

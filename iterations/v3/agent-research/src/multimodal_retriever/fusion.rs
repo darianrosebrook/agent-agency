@@ -4,11 +4,10 @@ use anyhow::Result;
 
 use super::core::MultimodalSearchResult;
 
-/// Fusion engine for combining results from different modalities
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+/// Fusion engine for combining results from different modalities
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FusionEngine {
     config: super::core::MultimodalRetrieverConfig,
 }

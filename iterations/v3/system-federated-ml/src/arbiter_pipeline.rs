@@ -4,15 +4,18 @@
 //! supporting 1000+ tasks/minute sustained throughput while maintaining CAWS compliance.
 //! Now uses common-pipeline framework for standardized patterns.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use system_configuration::{
+    ExecutablePipeline, PipelineResult, PipelineStage as CommonPipelineStage, SequentialPipeline,
+    SequentialPipelineConfig,
+};
 use tokio::sync::RwLock;
 use tracing::{info, warn};
-use async_trait::async_trait;
-use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as CommonPipelineStage, ExecutablePipeline, PipelineResult};
 
 /// Configuration for arbiter decision pipeline optimization
 /// Now wraps SequentialPipelineConfig with domain-specific settings
@@ -148,10 +151,12 @@ impl CommonPipelineStage<DecisionResult, DecisionResult> for DecisionStageAdapte
             }
             DecisionStage::Classification => {
                 // Extract task description from metadata if available, or use task_type
-                let task_description = input.metadata.get("task_description")
+                let task_description = input
+                    .metadata
+                    .get("task_description")
                     .and_then(|v| v.as_str())
                     .unwrap_or(&input.task_type);
-                
+
                 // Simple classification based on keywords
                 let task_type = if task_description.contains("planning") {
                     "planning"
@@ -174,22 +179,26 @@ impl CommonPipelineStage<DecisionResult, DecisionResult> for DecisionStageAdapte
             }
             DecisionStage::RiskAssessment => {
                 // Extract task description from metadata for risk assessment
-                let task_description = input.metadata.get("task_description")
+                let task_description = input
+                    .metadata
+                    .get("task_description")
                     .and_then(|v| v.as_str())
                     .unwrap_or(&input.task_type);
-                
+
                 // Simple risk assessment based on keywords
-                let risk_tier = if task_description.contains("auth") || 
-                    task_description.contains("security") || 
-                    task_description.contains("billing") || 
-                    task_description.contains("payment") ||
-                    task_description.contains("database") || 
-                    task_description.contains("migration") {
+                let risk_tier = if task_description.contains("auth")
+                    || task_description.contains("security")
+                    || task_description.contains("billing")
+                    || task_description.contains("payment")
+                    || task_description.contains("database")
+                    || task_description.contains("migration")
+                {
                     "high"
-                } else if task_description.contains("api") || 
-                    task_description.contains("integration") ||
-                    task_description.contains("deployment") || 
-                    task_description.contains("production") {
+                } else if task_description.contains("api")
+                    || task_description.contains("integration")
+                    || task_description.contains("deployment")
+                    || task_description.contains("production")
+                {
                     "medium"
                 } else {
                     "low"
@@ -257,7 +266,7 @@ impl ArbiterPipelineOptimizer {
     /// Create new arbiter pipeline optimizer
     pub async fn new(config: DecisionPipelineConfig) -> Result<Self> {
         let decision_cache = Arc::new(RwLock::new(lru::LruCache::new(
-            std::num::NonZeroUsize::new(config.cache_size).unwrap()
+            std::num::NonZeroUsize::new(config.cache_size).unwrap(),
         )));
 
         let metrics = Arc::new(RwLock::new(PipelineMetrics {
@@ -282,31 +291,41 @@ impl ArbiterPipelineOptimizer {
 
         // Add decision stages
         let cache_ref = Some(Arc::clone(&decision_cache));
-        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
-            DecisionStage::CacheLookup,
-            cache_ref,
-        ))).await;
+        sequential_pipeline
+            .add_stage(Box::new(DecisionStageAdapter::new(
+                DecisionStage::CacheLookup,
+                cache_ref,
+            )))
+            .await;
 
-        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
-            DecisionStage::Classification,
-            None,
-        ))).await;
+        sequential_pipeline
+            .add_stage(Box::new(DecisionStageAdapter::new(
+                DecisionStage::Classification,
+                None,
+            )))
+            .await;
 
-        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
-            DecisionStage::RiskAssessment,
-            None,
-        ))).await;
+        sequential_pipeline
+            .add_stage(Box::new(DecisionStageAdapter::new(
+                DecisionStage::RiskAssessment,
+                None,
+            )))
+            .await;
 
-        sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
-            DecisionStage::WorkerSelection,
-            None,
-        ))).await;
+        sequential_pipeline
+            .add_stage(Box::new(DecisionStageAdapter::new(
+                DecisionStage::WorkerSelection,
+                None,
+            )))
+            .await;
 
         if config.speculative_execution {
-            sequential_pipeline.add_stage(Box::new(DecisionStageAdapter::new(
-                DecisionStage::SpeculativeExecution,
-                None,
-            ))).await;
+            sequential_pipeline
+                .add_stage(Box::new(DecisionStageAdapter::new(
+                    DecisionStage::SpeculativeExecution,
+                    None,
+                )))
+                .await;
         }
 
         Ok(Self {
@@ -325,13 +344,16 @@ impl ArbiterPipelineOptimizer {
 
         // Extract relevant parameters
         let current_config = self.config.read().await;
-        let target_latency = parameters.get("decision_timeout_ms")
+        let target_latency = parameters
+            .get("decision_timeout_ms")
             .copied()
             .unwrap_or(current_config.target_latency_ms as f64) as u64;
 
-        let max_concurrent = parameters.get("max_concurrent_decisions")
+        let max_concurrent = parameters
+            .get("max_concurrent_decisions")
             .copied()
-            .unwrap_or(current_config.max_concurrent_decisions as f64) as usize;
+            .unwrap_or(current_config.max_concurrent_decisions as f64)
+            as usize;
         drop(current_config);
 
         // Update configuration
@@ -339,10 +361,11 @@ impl ArbiterPipelineOptimizer {
             let mut config = self.config.write().await;
             config.target_latency_ms = target_latency;
             config.max_concurrent_decisions = max_concurrent;
-            
+
             // Update base pipeline config timeout based on target latency
             config.base.base.timeout = std::time::Duration::from_millis(target_latency * 2); // Allow 2x latency for timeout
-            config.base.stage_timeout = std::time::Duration::from_millis(target_latency / 4); // Each stage gets 1/4 of total latency budget
+            config.base.stage_timeout = std::time::Duration::from_millis(target_latency / 4);
+            // Each stage gets 1/4 of total latency budget
         }
 
         // Update metrics with optimization event
@@ -351,14 +374,19 @@ impl ArbiterPipelineOptimizer {
             metrics.last_updated = chrono::Utc::now();
         }
 
-        info!("Updated pipeline config: latency={}ms, concurrent={}", target_latency, max_concurrent);
+        info!(
+            "Updated pipeline config: latency={}ms, concurrent={}",
+            target_latency, max_concurrent
+        );
 
         Ok(())
     }
-    
+
     /// Start continuous performance monitoring and auto-tuning loop
     /// Returns a channel receiver that can be used to trigger optimizations
-    pub fn start_monitoring(&mut self) -> Result<tokio::sync::mpsc::Receiver<HashMap<String, f64>>> {
+    pub fn start_monitoring(
+        &mut self,
+    ) -> Result<tokio::sync::mpsc::Receiver<HashMap<String, f64>>> {
         if self.monitoring_handle.is_some() {
             warn!("Monitoring loop already running");
             return Err(anyhow::anyhow!("Monitoring loop already running"));
@@ -367,11 +395,11 @@ impl ArbiterPipelineOptimizer {
         let (tx, rx) = tokio::sync::mpsc::channel(10);
         let config = Arc::clone(&self.config);
         let metrics = Arc::clone(&self.metrics);
-        
+
         // Spawn background monitoring task
         let handle = tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(30)); // Check every 30 seconds
-            
+
             loop {
                 tokio::select! {
                     _ = interval.tick() => {
@@ -383,27 +411,27 @@ impl ArbiterPipelineOptimizer {
                             let config_guard = config.read().await;
                             config_guard.target_latency_ms as f64
                         };
-                        
+
                         drop(current_metrics);
-                        
+
                         // Auto-tune if latency exceeds target
                         if avg_latency > target_latency * 1.2 || p95_latency > target_latency * 1.5 {
-                            info!("Performance degradation detected: avg={:.2}ms, p95={:.2}ms, target={}ms", 
+                            info!("Performance degradation detected: avg={:.2}ms, p95={:.2}ms, target={}ms",
                                   avg_latency, p95_latency, target_latency);
-                            
+
                             // Calculate optimization parameters
                             let mut optimization_params = HashMap::new();
-                            
+
                             // Reduce timeout if latency is high
                             let new_timeout = (target_latency * 0.9) as u64; // Target 90% of current target
                             optimization_params.insert("decision_timeout_ms".to_string(), new_timeout as f64);
-                            
+
                             // Adjust concurrent decisions based on performance
                             let current_concurrent = {
                                 let config_guard = config.read().await;
                                 config_guard.max_concurrent_decisions
                             };
-                            
+
                             // Reduce concurrency if latency is high
                             let new_concurrent = if avg_latency > target_latency * 1.5 {
                                 (current_concurrent as f64 * 0.8) as usize // Reduce by 20%
@@ -411,7 +439,7 @@ impl ArbiterPipelineOptimizer {
                                 current_concurrent
                             };
                             optimization_params.insert("max_concurrent_decisions".to_string(), new_concurrent as f64);
-                            
+
                             // Send optimization request via channel
                             if tx.send(optimization_params).await.is_err() {
                                 break; // Receiver dropped, exit loop
@@ -421,22 +449,25 @@ impl ArbiterPipelineOptimizer {
                 }
             }
         });
-        
+
         self.monitoring_handle = Some(handle);
         info!("Started continuous performance monitoring loop");
-        
+
         Ok(rx)
     }
-    
+
     /// Process optimization requests from monitoring loop
-    pub async fn process_optimization_requests(&self, mut rx: tokio::sync::mpsc::Receiver<HashMap<String, f64>>) {
+    pub async fn process_optimization_requests(
+        &self,
+        mut rx: tokio::sync::mpsc::Receiver<HashMap<String, f64>>,
+    ) {
         while let Some(params) = rx.recv().await {
             if let Err(e) = self.optimize_pipeline(&params).await {
                 warn!("Failed to apply optimization parameters: {}", e);
             }
         }
     }
-    
+
     /// Stop continuous monitoring loop
     pub fn stop_monitoring(&mut self) {
         if let Some(handle) = self.monitoring_handle.take() {
@@ -446,7 +477,11 @@ impl ArbiterPipelineOptimizer {
     }
 
     /// Make optimized decision with caching and speculative execution
-    pub async fn make_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
+    pub async fn make_decision(
+        &self,
+        task_description: &str,
+        context: &str,
+    ) -> Result<DecisionResult> {
         let start_time = std::time::Instant::now();
 
         // Convert DecisionInput to DecisionResult for pipeline (SequentialPipeline requires Input = Output)
@@ -459,11 +494,20 @@ impl ArbiterPipelineOptimizer {
             timestamp: chrono::Utc::now(),
             metadata: HashMap::new(),
         };
-        initial_result.metadata.insert("task_description".to_string(), serde_json::Value::String(task_description.to_string()));
-        initial_result.metadata.insert("context".to_string(), serde_json::Value::String(context.to_string()));
+        initial_result.metadata.insert(
+            "task_description".to_string(),
+            serde_json::Value::String(task_description.to_string()),
+        );
+        initial_result.metadata.insert(
+            "context".to_string(),
+            serde_json::Value::String(context.to_string()),
+        );
 
         // Execute through sequential pipeline
-        let result = self.sequential_pipeline.execute(initial_result).await
+        let result = self
+            .sequential_pipeline
+            .execute(initial_result)
+            .await
             .map_err(|e| anyhow::anyhow!("Pipeline execution failed: {}", e))?;
 
         // Cache the result
@@ -508,7 +552,11 @@ impl ArbiterPipelineOptimizer {
 
     /// Make standard decision (non-speculative)
     #[allow(dead_code)]
-    async fn make_standard_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
+    async fn make_standard_decision(
+        &self,
+        task_description: &str,
+        context: &str,
+    ) -> Result<DecisionResult> {
         // TODO: Implement ML-based or rule-based decision logic
         //       Currently uses basic decision logic; should use ML models or rule-based classification for accurate decisions.
         //
@@ -557,7 +605,11 @@ impl ArbiterPipelineOptimizer {
 
     /// Make speculative decision with quality validation
     #[allow(dead_code)]
-    async fn make_speculative_decision(&self, task_description: &str, context: &str) -> Result<DecisionResult> {
+    async fn make_speculative_decision(
+        &self,
+        task_description: &str,
+        context: &str,
+    ) -> Result<DecisionResult> {
         // Fast-path decision for immediate response
         let fast_result = self.make_fast_decision(task_description)?;
 
@@ -588,13 +640,14 @@ impl ArbiterPipelineOptimizer {
             "general"
         };
 
-        let risk_tier = if task_description.contains("security") || task_description.contains("auth") {
-            "high"
-        } else if task_description.contains("billing") || task_description.contains("payment") {
-            "high"
-        } else {
-            "medium"
-        };
+        let risk_tier =
+            if task_description.contains("security") || task_description.contains("auth") {
+                "high"
+            } else if task_description.contains("billing") || task_description.contains("payment") {
+                "high"
+            } else {
+                "medium"
+            };
 
         let worker_pool = match risk_tier {
             "high" => "specialized",
@@ -632,14 +685,21 @@ impl ArbiterPipelineOptimizer {
         let content = format!("{} {}", task_description, context);
 
         // High risk indicators
-        if content.contains("security") || content.contains("auth") ||
-           content.contains("billing") || content.contains("payment") ||
-           content.contains("database") || content.contains("migration") {
+        if content.contains("security")
+            || content.contains("auth")
+            || content.contains("billing")
+            || content.contains("payment")
+            || content.contains("database")
+            || content.contains("migration")
+        {
             Ok("high".to_string())
         }
         // Medium risk indicators
-        else if content.contains("api") || content.contains("integration") ||
-                content.contains("deployment") || content.contains("production") {
+        else if content.contains("api")
+            || content.contains("integration")
+            || content.contains("deployment")
+            || content.contains("production")
+        {
             Ok("medium".to_string())
         }
         // Low risk default
@@ -675,7 +735,8 @@ impl ArbiterPipelineOptimizer {
         // Update cache hit rate
         let hit_rate_alpha = 0.01; // Slow-moving average for hit rate
         let hit = if cache_hit { 1.0 } else { 0.0 };
-        metrics.cache_hit_rate = metrics.cache_hit_rate * (1.0 - hit_rate_alpha) + hit * hit_rate_alpha;
+        metrics.cache_hit_rate =
+            metrics.cache_hit_rate * (1.0 - hit_rate_alpha) + hit * hit_rate_alpha;
 
         // TODO: Implement proper speculative accuracy tracking
         //       Currently uses basic update; should track speculative accuracy with proper statistical methods.
@@ -717,7 +778,8 @@ impl ArbiterPipelineOptimizer {
         };
         if confidence >= threshold {
             let accuracy_alpha = 0.05;
-            metrics.speculative_accuracy = metrics.speculative_accuracy * (1.0 - accuracy_alpha) + 0.9 * accuracy_alpha;
+            metrics.speculative_accuracy =
+                metrics.speculative_accuracy * (1.0 - accuracy_alpha) + 0.9 * accuracy_alpha;
         }
 
         metrics.last_updated = chrono::Utc::now();
@@ -728,5 +790,3 @@ impl ArbiterPipelineOptimizer {
         self.metrics.read().await.clone()
     }
 }
-
-

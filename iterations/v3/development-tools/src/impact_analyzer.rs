@@ -25,13 +25,19 @@ impl ImpactAnalyzer {
         language_analysis: &LanguageAnalysisResult,
         context: &EvaluationContext,
     ) -> Result<ImpactAnalysis> {
-        debug!("Analyzing change impact for file: {} (language: {:?})", file_path, language_analysis.language);
+        debug!(
+            "Analyzing change impact for file: {} (language: {:?})",
+            file_path, language_analysis.language
+        );
 
         // 1. Dependency analysis: Analyze dependencies affected by changes
-        let dependency_impact = self.analyze_dependencies(&language_analysis.ast_changes, context).await?;
+        let dependency_impact = self
+            .analyze_dependencies(&language_analysis.ast_changes, context)
+            .await?;
 
         // 2. Blast radius calculation: Calculate blast radius and impact scope
-        let blast_radius = self.calculate_blast_radius(&language_analysis.ast_changes, &dependency_impact)?;
+        let blast_radius =
+            self.calculate_blast_radius(&language_analysis.ast_changes, &dependency_impact)?;
 
         // 3. File type impact assessment: Assess impact on different file types
         let file_type_impact = self.assess_file_type_impact(file_path, &language_analysis)?;
@@ -41,7 +47,7 @@ impl ImpactAnalyzer {
             &language_analysis.ast_changes,
             &dependency_impact,
             blast_radius,
-            &file_type_impact
+            &file_type_impact,
         )?;
 
         debug!("Impact analysis completed for {}: score={:.2}, blast_radius={}, dependencies_affected={}",
@@ -62,7 +68,11 @@ impl ImpactAnalyzer {
     }
 
     /// Analyze dependencies affected by AST changes
-    async fn analyze_dependencies(&self, ast_changes: &[ASTChange], context: &EvaluationContext) -> Result<DependencyImpact> {
+    async fn analyze_dependencies(
+        &self,
+        ast_changes: &[ASTChange],
+        context: &EvaluationContext,
+    ) -> Result<DependencyImpact> {
         let mut dependencies_affected = 0;
         let mut affected_modules = std::collections::HashSet::new();
         let mut affected_external_deps = Vec::new();
@@ -113,11 +123,16 @@ impl ImpactAnalyzer {
     }
 
     /// Calculate blast radius based on change impact and dependencies
-    fn calculate_blast_radius(&self, ast_changes: &[ASTChange], dependency_impact: &DependencyImpact) -> Result<u32> {
+    fn calculate_blast_radius(
+        &self,
+        ast_changes: &[ASTChange],
+        dependency_impact: &DependencyImpact,
+    ) -> Result<u32> {
         let mut blast_radius = 1; // Base radius for the changed file
 
         // Factor in the number and severity of AST changes
-        let high_impact_changes = ast_changes.iter()
+        let high_impact_changes = ast_changes
+            .iter()
             .filter(|c| c.impact_level >= ImpactLevel::High)
             .count();
 
@@ -134,7 +149,11 @@ impl ImpactAnalyzer {
     }
 
     /// Assess impact based on file type and characteristics
-    fn assess_file_type_impact(&self, file_path: &str, language_analysis: &LanguageAnalysisResult) -> Result<FileTypeImpact> {
+    fn assess_file_type_impact(
+        &self,
+        file_path: &str,
+        language_analysis: &LanguageAnalysisResult,
+    ) -> Result<FileTypeImpact> {
         let path_lower = file_path.to_lowercase();
 
         let mut test_files_affected = 0;
@@ -146,14 +165,21 @@ impl ImpactAnalyzer {
             test_files_affected = 1;
         }
 
-        if path_lower.contains("readme") || path_lower.contains("doc") ||
-           path_lower.contains(".md") || path_lower.contains(".txt") {
+        if path_lower.contains("readme")
+            || path_lower.contains("doc")
+            || path_lower.contains(".md")
+            || path_lower.contains(".txt")
+        {
             documentation_files_affected = 1;
         }
 
-        if path_lower.contains("config") || path_lower.contains("settings") ||
-           path_lower.ends_with(".json") || path_lower.ends_with(".yaml") ||
-           path_lower.ends_with(".toml") || path_lower.ends_with(".ini") {
+        if path_lower.contains("config")
+            || path_lower.contains("settings")
+            || path_lower.ends_with(".json")
+            || path_lower.ends_with(".yaml")
+            || path_lower.ends_with(".toml")
+            || path_lower.ends_with(".ini")
+        {
             configuration_files_affected = 1;
         }
 
@@ -174,20 +200,29 @@ impl ImpactAnalyzer {
         file_type_impact: &FileTypeImpact,
     ) -> Result<OverallImpactMetrics> {
         // Count different types of AST changes
-        let functions_affected = ast_changes.iter()
-            .filter(|c| matches!(c.change_type, ASTChangeType::FunctionSignature | ASTChangeType::FunctionBody))
+        let functions_affected = ast_changes
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.change_type,
+                    ASTChangeType::FunctionSignature | ASTChangeType::FunctionBody
+                )
+            })
             .count();
 
-        let classes_affected = ast_changes.iter()
+        let classes_affected = ast_changes
+            .iter()
             .filter(|c| matches!(c.change_type, ASTChangeType::ClassDefinition))
             .count();
 
-        let interfaces_affected = ast_changes.iter()
+        let interfaces_affected = ast_changes
+            .iter()
             .filter(|c| matches!(c.change_type, ASTChangeType::InterfaceChange))
             .count();
 
         // Calculate impact score based on multiple factors
-        let change_severity_score = ast_changes.iter()
+        let change_severity_score = ast_changes
+            .iter()
             .map(|c| match c.impact_level {
                 ImpactLevel::None => 0.1,
                 ImpactLevel::Low => 0.2,
@@ -195,7 +230,8 @@ impl ImpactAnalyzer {
                 ImpactLevel::High => 0.8,
                 ImpactLevel::Critical => 1.0,
             })
-            .sum::<f64>() / ast_changes.len().max(1) as f64;
+            .sum::<f64>()
+            / ast_changes.len().max(1) as f64;
 
         let dependency_score = (dependency_impact.dependencies_affected as f64 / 10.0).min(1.0);
         let blast_radius_score = (blast_radius as f64 / 20.0).min(1.0);
@@ -211,9 +247,9 @@ impl ImpactAnalyzer {
             1.0 // Regular code files
         };
 
-        let impact_score = (change_severity_score * 0.4 +
-                           dependency_score * 0.3 +
-                           blast_radius_score * 0.3) * file_type_modifier;
+        let impact_score =
+            (change_severity_score * 0.4 + dependency_score * 0.3 + blast_radius_score * 0.3)
+                * file_type_modifier;
 
         Ok(OverallImpactMetrics {
             functions_affected,

@@ -3,10 +3,12 @@
 //! Provides hooks to store processed data in agent memory and retrieve
 //! contextual memories to enhance data processing.
 
-use schemars::JsonSchema;
 use crate::data_processing_types::*;
-use agent_memory::{MemoryManager, AgentExperience, TaskContext, MemoryStats, memory_manager::MemoryQuery};
-use crate::{DataProcessingResult, DataProcessingError};
+use crate::{DataProcessingError, DataProcessingResult};
+use agent_memory::{
+    memory_manager::MemoryQuery, AgentExperience, MemoryManager, MemoryStats, TaskContext,
+};
+use schemars::JsonSchema;
 use std::sync::Arc;
 
 /// Configuration for memory integration
@@ -39,8 +41,9 @@ impl MemoryIntegrationHooks {
     /// Create new memory integration hooks
     pub async fn new(config: &MemoryConfig) -> DataProcessingResult<Self> {
         let memory_config = agent_memory::MemoryConfig::default();
-        let memory_manager = Arc::new(MemoryManager::new(memory_config).await
-            .map_err(|e| DataProcessingError::Other(format!("Memory manager init failed: {:?}", e)))?);
+        let memory_manager = Arc::new(MemoryManager::new(memory_config).await.map_err(|e| {
+            DataProcessingError::Other(format!("Memory manager init failed: {:?}", e))
+        })?);
 
         Ok(Self {
             memory_manager,
@@ -49,7 +52,10 @@ impl MemoryIntegrationHooks {
     }
 
     /// Store the result of data processing as an agent experience
-    pub async fn store_processing_result(&self, output: &ProcessingOutput) -> DataProcessingResult<()> {
+    pub async fn store_processing_result(
+        &self,
+        output: &ProcessingOutput,
+    ) -> DataProcessingResult<()> {
         if !self.config.store_processing_experiences {
             return Ok(());
         }
@@ -58,14 +64,21 @@ impl MemoryIntegrationHooks {
         let experience = self.create_experience_from_output(output);
 
         // Store in memory system
-        self.memory_manager.store_experience(experience).await
-            .map_err(|e| DataProcessingError::Other(format!("Failed to store processing experience: {}", e)))?;
+        self.memory_manager
+            .store_experience(experience)
+            .await
+            .map_err(|e| {
+                DataProcessingError::Other(format!("Failed to store processing experience: {}", e))
+            })?;
 
         Ok(())
     }
 
     /// Retrieve contextual memories relevant to the current processing task
-    pub async fn get_contextual_memories(&self, query: &DataQuery) -> DataProcessingResult<Vec<AgentExperience>> {
+    pub async fn get_contextual_memories(
+        &self,
+        query: &DataQuery,
+    ) -> DataProcessingResult<Vec<AgentExperience>> {
         if !self.config.enable_contextual_retrieval {
             return Ok(vec![]);
         }
@@ -80,36 +93,45 @@ impl MemoryIntegrationHooks {
         };
 
         // Search memories
-        let memories = self.memory_manager.search_memories(memory_query).await
-            .map_err(|e| DataProcessingError::Other(format!("Failed to search memories: {:?}", e)))?;
+        let memories = self
+            .memory_manager
+            .search_memories(memory_query)
+            .await
+            .map_err(|e| {
+                DataProcessingError::Other(format!("Failed to search memories: {:?}", e))
+            })?;
 
         // Implemented: Relevance scoring for memory search results
         // Calculates relevance scores based on query similarity, ranks results, and applies threshold/limit
-        
-        use tracing::debug;
+
         use std::collections::HashSet;
-        
+        use tracing::debug;
+
         if memories.is_empty() {
             return Ok(Vec::new());
         }
-        
+
         // Extract query text from context for similarity calculation
         let query_text = format!(
             "{} {}",
             query.context.description.clone(),
             query.context.keywords.join(" ")
-        ).to_lowercase();
-        
+        )
+        .to_lowercase();
+
         // Tokenize query text for keyword matching
         let query_tokens: HashSet<String> = query_text
             .split_whitespace()
-            .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase())
+            .map(|s| {
+                s.trim_matches(|c: char| !c.is_alphanumeric())
+                    .to_lowercase()
+            })
             .filter(|s| s.len() > 2) // Filter out very short tokens
             .collect();
-        
+
         // Calculate relevance scores for each memory
         let mut scored_memories: Vec<(AgentExperience, f64)> = Vec::new();
-        
+
         for memory in memories {
             // Build memory text from input, output, and context
             let memory_text = format!(
@@ -117,15 +139,19 @@ impl MemoryIntegrationHooks {
                 memory.input.clone(),
                 memory.output.clone(),
                 serde_json::to_string(&memory.context).unwrap_or_default()
-            ).to_lowercase();
-            
+            )
+            .to_lowercase();
+
             // Tokenize memory text
             let memory_tokens: HashSet<String> = memory_text
                 .split_whitespace()
-                .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase())
+                .map(|s| {
+                    s.trim_matches(|c: char| !c.is_alphanumeric())
+                        .to_lowercase()
+                })
                 .filter(|s| s.len() > 2)
                 .collect();
-            
+
             // Calculate keyword overlap score (Jaccard similarity)
             let intersection: usize = query_tokens.intersection(&memory_tokens).count();
             let union: usize = query_tokens.union(&memory_tokens).count();
@@ -134,14 +160,14 @@ impl MemoryIntegrationHooks {
             } else {
                 0.0
             };
-            
+
             // Calculate substring match score (for exact phrase matches)
             let substring_score = if query_text.len() > 5 && memory_text.contains(&query_text) {
                 0.3 // Bonus for exact phrase match
             } else {
                 0.0
             };
-            
+
             // Calculate context relevance (task_type match)
             let context_score = if let Some(ref task_type) = memory_query.task_type {
                 if memory.context.task_type == *task_type {
@@ -152,29 +178,28 @@ impl MemoryIntegrationHooks {
             } else {
                 0.0
             };
-            
+
             // Combine scores (weighted sum)
-            let relevance_score = (keyword_score * 0.6) + (substring_score * 0.3) + (context_score * 0.1);
-            
+            let relevance_score =
+                (keyword_score * 0.6) + (substring_score * 0.3) + (context_score * 0.1);
+
             scored_memories.push((memory, relevance_score));
         }
-        
+
         // Sort by relevance score (descending)
-        scored_memories.sort_by(|a, b| {
-            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
-        });
-        
+        scored_memories.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
         // Apply relevance threshold and limit
         let threshold = self.config.memory_relevance_threshold;
         let limit = self.config.max_context_memories;
-        
+
         let filtered_memories: Vec<AgentExperience> = scored_memories
             .into_iter()
             .filter(|(_, score)| *score >= threshold)
             .take(limit)
             .map(|(memory, _)| memory)
             .collect();
-        
+
         debug!(
             "Relevance scoring: {} memories scored, {} passed threshold ({}), {} returned (limit: {})",
             scored_memories.len(),
@@ -183,22 +208,32 @@ impl MemoryIntegrationHooks {
             filtered_memories.len().min(limit),
             limit
         );
-        
+
         Ok(filtered_memories)
     }
 
     /// Get memory system statistics
     pub async fn get_memory_stats(&self) -> DataProcessingResult<MemoryStats> {
-        self.memory_manager.get_memory_stats().await
+        self.memory_manager
+            .get_memory_stats()
+            .await
             .map_err(|e| DataProcessingError::Other(format!("Failed to get memory stats: {}", e)))
     }
 
     /// Perform memory maintenance operations
     pub async fn run_memory_maintenance(&self) -> DataProcessingResult<()> {
-        let _consolidated = self.memory_manager.consolidate_memories().await
-            .map_err(|e| DataProcessingError::Other(format!("Memory consolidation failed: {}", e)))?;
+        let _consolidated = self
+            .memory_manager
+            .consolidate_memories()
+            .await
+            .map_err(|e| {
+                DataProcessingError::Other(format!("Memory consolidation failed: {}", e))
+            })?;
 
-        let _cleaned = self.memory_manager.cleanup_expired_memories().await
+        let _cleaned = self
+            .memory_manager
+            .cleanup_expired_memories()
+            .await
             .map_err(|e| DataProcessingError::Other(format!("Memory cleanup failed: {}", e)))?;
 
         Ok(())
@@ -245,12 +280,15 @@ impl MemoryIntegrationHooks {
 
         AgentExperience {
             id: output.id.0, // MemoryId is just Uuid
-            agent_id: output.original_input.processing_context.user_id.clone()
+            agent_id: output
+                .original_input
+                .processing_context
+                .user_id
+                .clone()
                 .unwrap_or_else(|| "data-processor".to_string()),
             task_id: output.id.0.to_string(),
             context: self.create_task_context_from_input(&output.original_input),
-            input: serde_json::to_value(&output.original_input)
-                .unwrap_or(serde_json::Value::Null),
+            input: serde_json::to_value(&output.original_input).unwrap_or(serde_json::Value::Null),
             output: serde_json::to_value(&output.processed_content)
                 .unwrap_or(serde_json::Value::Null),
             outcome,
@@ -258,12 +296,18 @@ impl MemoryIntegrationHooks {
             timestamp: output.created_at,
             metadata: {
                 let mut metadata = std::collections::HashMap::new();
-                metadata.insert("entities_extracted".to_string(),
-                    serde_json::Value::Number(output.processing_stats.entities_extracted.into()));
-                metadata.insert("processing_time_ms".to_string(),
-                    serde_json::Value::Number(output.processing_stats.processing_time_ms.into()));
-                metadata.insert("bytes_processed".to_string(),
-                    serde_json::Value::Number(output.processing_stats.bytes_processed.into()));
+                metadata.insert(
+                    "entities_extracted".to_string(),
+                    serde_json::Value::Number(output.processing_stats.entities_extracted.into()),
+                );
+                metadata.insert(
+                    "processing_time_ms".to_string(),
+                    serde_json::Value::Number(output.processing_stats.processing_time_ms.into()),
+                );
+                metadata.insert(
+                    "bytes_processed".to_string(),
+                    serde_json::Value::Number(output.processing_stats.bytes_processed.into()),
+                );
                 metadata
             },
         }
@@ -277,11 +321,13 @@ impl MemoryIntegrationHooks {
             description: format!("Processing {} data", input.content_type()),
             domain: vec!["data_processing".to_string()],
             entities: input.metadata.keys().cloned().collect(),
-            temporal_context: input.processing_context.deadline.map(|dt| agent_memory::TemporalContext {
-                start_time: chrono::Utc::now(),
-                deadline: Some(dt),
-                priority: agent_memory::TaskPriority::Medium,
-                recurrence_pattern: None,
+            temporal_context: input.processing_context.deadline.map(|dt| {
+                agent_memory::TemporalContext {
+                    start_time: chrono::Utc::now(),
+                    deadline: Some(dt),
+                    priority: agent_memory::TaskPriority::Medium,
+                    recurrence_pattern: None,
+                }
             }),
             metadata: input.metadata.clone(),
         }

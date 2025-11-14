@@ -40,7 +40,7 @@ impl EmbeddingVector {
 
 /// Unique identifier for an embedding
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct EmbeddingId (String);
+pub struct EmbeddingId(String);
 
 impl EmbeddingId {
     pub fn new(id: String) -> Self {

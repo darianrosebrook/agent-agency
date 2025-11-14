@@ -1,9 +1,9 @@
 //! Failure taxonomy for categorizing and analyzing failures
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::learning::types::*;
@@ -31,7 +31,8 @@ impl FailureTaxonomy {
     ) -> Result<FailureAnalysis, Box<dyn std::error::Error + Send + Sync>> {
         let category = self.categorize_error(error_message);
         let root_cause = self.identify_root_cause(error_message, execution_context);
-        let contributing_factors = self.identify_contributing_factors(error_message, execution_context);
+        let contributing_factors =
+            self.identify_contributing_factors(error_message, execution_context);
         let prevention_suggestions = self.generate_prevention_suggestions(&category, &root_cause);
 
         let analysis = FailureAnalysis {
@@ -46,7 +47,8 @@ impl FailureTaxonomy {
         self.analysis_history.push(analysis.clone());
 
         // Update failure patterns
-        self.update_failure_patterns(&category, &root_cause, execution_context).await?;
+        self.update_failure_patterns(&category, &root_cause, execution_context)
+            .await?;
 
         Ok(analysis)
     }
@@ -57,17 +59,35 @@ impl FailureTaxonomy {
 
         if error_lower.contains("timeout") || error_lower.contains("timed out") {
             FailureCategory::Timeout
-        } else if error_lower.contains("memory") || error_lower.contains("out of memory") || error_lower.contains("oom") {
+        } else if error_lower.contains("memory")
+            || error_lower.contains("out of memory")
+            || error_lower.contains("oom")
+        {
             FailureCategory::ResourceExhaustion
-        } else if error_lower.contains("permission") || error_lower.contains("access denied") || error_lower.contains("unauthorized") {
+        } else if error_lower.contains("permission")
+            || error_lower.contains("access denied")
+            || error_lower.contains("unauthorized")
+        {
             FailureCategory::WorkerFailure
-        } else if error_lower.contains("network") || error_lower.contains("connection") || error_lower.contains("unreachable") {
+        } else if error_lower.contains("network")
+            || error_lower.contains("connection")
+            || error_lower.contains("unreachable")
+        {
             FailureCategory::DependencyFailure
-        } else if error_lower.contains("syntax") || error_lower.contains("parse") || error_lower.contains("invalid") {
+        } else if error_lower.contains("syntax")
+            || error_lower.contains("parse")
+            || error_lower.contains("invalid")
+        {
             FailureCategory::TaskFailure
-        } else if error_lower.contains("quality") || error_lower.contains("coverage") || error_lower.contains("test") {
+        } else if error_lower.contains("quality")
+            || error_lower.contains("coverage")
+            || error_lower.contains("test")
+        {
             FailureCategory::QualityViolation
-        } else if error_lower.contains("config") || error_lower.contains("setting") || error_lower.contains("parameter") {
+        } else if error_lower.contains("config")
+            || error_lower.contains("setting")
+            || error_lower.contains("parameter")
+        {
             FailureCategory::ConfigurationError
         } else {
             FailureCategory::Unknown
@@ -75,7 +95,11 @@ impl FailureTaxonomy {
     }
 
     /// Identify root cause of failure
-    fn identify_root_cause(&self, error_message: &str, context: &HashMap<String, serde_json::Value>) -> String {
+    fn identify_root_cause(
+        &self,
+        error_message: &str,
+        context: &HashMap<String, serde_json::Value>,
+    ) -> String {
         let error_lower = error_message.to_lowercase();
 
         // Check context for additional clues
@@ -110,20 +134,24 @@ impl FailureTaxonomy {
     }
 
     /// Identify contributing factors
-    fn identify_contributing_factors(&self, error_message: &str, context: &HashMap<String, serde_json::Value>) -> Vec<String> {
+    fn identify_contributing_factors(
+        &self,
+        error_message: &str,
+        context: &HashMap<String, serde_json::Value>,
+    ) -> Vec<String> {
         let mut factors = Vec::new();
 
         // Analyze error message for contributing factors
         let error_lower = error_message.to_lowercase();
-        
+
         if error_lower.contains("high load") || error_lower.contains("busy") {
             factors.push("High system load".to_string());
         }
-        
+
         if error_lower.contains("resource") || error_lower.contains("limit") {
             factors.push("Resource constraints".to_string());
         }
-        
+
         if error_lower.contains("dependency") || error_lower.contains("service") {
             factors.push("External service dependency".to_string());
         }
@@ -149,14 +177,19 @@ impl FailureTaxonomy {
     }
 
     /// Generate prevention suggestions
-    fn generate_prevention_suggestions(&self, category: &FailureCategory, root_cause: &str) -> Vec<String> {
+    fn generate_prevention_suggestions(
+        &self,
+        category: &FailureCategory,
+        root_cause: &str,
+    ) -> Vec<String> {
         let mut suggestions = Vec::new();
 
         match category {
             FailureCategory::Timeout => {
                 suggestions.push("Increase timeout limits for long-running tasks".to_string());
                 suggestions.push("Optimize task execution for better performance".to_string());
-                suggestions.push("Consider breaking down complex tasks into smaller subtasks".to_string());
+                suggestions
+                    .push("Consider breaking down complex tasks into smaller subtasks".to_string());
             }
             FailureCategory::ResourceExhaustion => {
                 suggestions.push("Increase memory allocation for workers".to_string());
@@ -169,7 +202,9 @@ impl FailureTaxonomy {
                 suggestions.push("Add worker health monitoring".to_string());
             }
             FailureCategory::DependencyFailure => {
-                suggestions.push("Implement circuit breaker pattern for external dependencies".to_string());
+                suggestions.push(
+                    "Implement circuit breaker pattern for external dependencies".to_string(),
+                );
                 suggestions.push("Add retry logic with exponential backoff".to_string());
                 suggestions.push("Implement fallback mechanisms".to_string());
             }
@@ -189,7 +224,8 @@ impl FailureTaxonomy {
                 suggestions.push("Add configuration testing and validation".to_string());
             }
             FailureCategory::Unknown => {
-                suggestions.push("Implement comprehensive error logging and monitoring".to_string());
+                suggestions
+                    .push("Implement comprehensive error logging and monitoring".to_string());
                 suggestions.push("Add detailed error context collection".to_string());
                 suggestions.push("Review and improve error handling coverage".to_string());
             }
@@ -205,7 +241,9 @@ impl FailureTaxonomy {
         // Increase confidence based on category specificity
         match category {
             FailureCategory::Timeout | FailureCategory::ResourceExhaustion => confidence += 0.3,
-            FailureCategory::WorkerFailure | FailureCategory::DependencyFailure => confidence += 0.2,
+            FailureCategory::WorkerFailure | FailureCategory::DependencyFailure => {
+                confidence += 0.2
+            }
             FailureCategory::TaskFailure | FailureCategory::QualityViolation => confidence += 0.25,
             FailureCategory::ConfigurationError => confidence += 0.2,
             FailureCategory::Unknown => confidence -= 0.2,
@@ -238,14 +276,20 @@ impl FailureTaxonomy {
         };
 
         // Add to category
-        self.failure_categories.entry(category.clone()).or_default().push(pattern);
+        self.failure_categories
+            .entry(category.clone())
+            .or_default()
+            .push(pattern);
 
         Ok(())
     }
 
     /// Get failure patterns by category
     pub fn get_failure_patterns(&self, category: &FailureCategory) -> Vec<&FailurePattern> {
-        self.failure_categories.get(category).map(|patterns| patterns.iter().collect()).unwrap_or_default()
+        self.failure_categories
+            .get(category)
+            .map(|patterns| patterns.iter().collect())
+            .unwrap_or_default()
     }
 
     /// Get all failure categories
@@ -264,7 +308,9 @@ impl FailureTaxonomy {
         let mut category_counts = HashMap::new();
 
         for analysis in &self.analysis_history {
-            *category_counts.entry(analysis.category.clone()).or_insert(0) += 1;
+            *category_counts
+                .entry(analysis.category.clone())
+                .or_insert(0) += 1;
         }
 
         FailureStatistics {
@@ -278,12 +324,15 @@ impl FailureTaxonomy {
     /// Find most common failure category
     fn find_most_common_category(&self) -> Option<FailureCategory> {
         let mut category_counts = HashMap::new();
-        
+
         for analysis in &self.analysis_history {
-            *category_counts.entry(analysis.category.clone()).or_insert(0) += 1;
+            *category_counts
+                .entry(analysis.category.clone())
+                .or_insert(0) += 1;
         }
 
-        category_counts.into_iter()
+        category_counts
+            .into_iter()
             .max_by_key(|(_, count)| *count)
             .map(|(category, _)| category)
     }
@@ -293,7 +342,11 @@ impl FailureTaxonomy {
         if self.analysis_history.is_empty() {
             0.0
         } else {
-            self.analysis_history.iter().map(|a| a.confidence).sum::<f64>() / self.analysis_history.len() as f64
+            self.analysis_history
+                .iter()
+                .map(|a| a.confidence)
+                .sum::<f64>()
+                / self.analysis_history.len() as f64
         }
     }
 }

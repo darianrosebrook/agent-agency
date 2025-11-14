@@ -24,6 +24,9 @@ members = [
     "iterations/v3/development-tools",
     "iterations/v3/agent-agency-contracts"
 ]
+exclude = [
+    "apps/agent_management_dashboard/src-tauri"
+]
 
 [workspace.package]
 version = "0.1.0"

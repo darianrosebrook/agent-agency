@@ -1,13 +1,13 @@
 //! Execution statistics and metrics for parallel task execution
-//! 
+//!
 //! This module contains structures and utilities for tracking and analyzing
 //! execution statistics and performance metrics.
 
-use schemars::JsonSchema;
-use crate::worker_types::{TaskId, SubTaskId, WorkerId};
-use std::collections::HashMap;
+use crate::worker_types::{SubTaskId, TaskId, WorkerId};
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Statistics for parallel execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -38,7 +38,6 @@ pub struct ParallelExecutionStats {
     pub resource_utilization: f64,
     /// Timestamp when stats were calculated
     #[schemars(with = "String")]
-
     pub calculated_at: DateTime<Utc>,
 }
 
@@ -103,12 +102,14 @@ impl ParallelExecutionStats {
     /// Recalculate all derived metrics
     fn recalculate_metrics(&mut self) {
         if self.total_tasks > 0 {
-            self.avg_execution_time_ms = self.total_execution_time_ms as f64 / self.total_tasks as f64;
+            self.avg_execution_time_ms =
+                self.total_execution_time_ms as f64 / self.total_tasks as f64;
             self.success_rate = self.successful_tasks as f64 / self.total_tasks as f64;
-            
+
             // Calculate throughput (tasks per second)
             if self.total_execution_time_ms > 0 {
-                self.throughput_tasks_per_second = (self.total_tasks as f64 * 1000.0) / self.total_execution_time_ms as f64;
+                self.throughput_tasks_per_second =
+                    (self.total_tasks as f64 * 1000.0) / self.total_execution_time_ms as f64;
             }
         }
 
@@ -139,7 +140,10 @@ impl ParallelExecutionStats {
         let quality_efficiency = self.quality_score;
         let success_efficiency = self.success_rate;
 
-        (time_efficiency * 0.3 + throughput_efficiency * 0.2 + quality_efficiency * 0.3 + success_efficiency * 0.2)
+        (time_efficiency * 0.3
+            + throughput_efficiency * 0.2
+            + quality_efficiency * 0.3
+            + success_efficiency * 0.2)
             .min(1.0)
             .max(0.0)
     }
@@ -153,7 +157,7 @@ impl ParallelExecutionStats {
         self.total_execution_time_ms += other.total_execution_time_ms;
         self.total_subtasks += other.total_subtasks;
         self.workers_used = self.workers_used.max(other.workers_used);
-        
+
         self.recalculate_metrics();
     }
 
@@ -184,7 +188,6 @@ pub struct WorkerPerformanceMetrics {
     pub success_rate: f64,
     pub quality_score: f64,
     #[schemars(with = "String")]
-
     pub last_active: DateTime<Utc>,
     pub utilization_percentage: f64,
 }
@@ -213,8 +216,11 @@ impl WorkerPerformanceMetrics {
         let total_tasks = self.tasks_completed + self.tasks_failed;
         if total_tasks > 0 {
             self.success_rate = self.tasks_completed as f64 / total_tasks as f64;
-            self.avg_execution_time_ms = (self.avg_execution_time_ms * (total_tasks - 1) as f64 + execution_time_ms as f64) / total_tasks as f64;
-            self.quality_score = (self.quality_score * (total_tasks - 1) as f64 + quality_score) / total_tasks as f64;
+            self.avg_execution_time_ms = (self.avg_execution_time_ms * (total_tasks - 1) as f64
+                + execution_time_ms as f64)
+                / total_tasks as f64;
+            self.quality_score = (self.quality_score * (total_tasks - 1) as f64 + quality_score)
+                / total_tasks as f64;
         }
 
         self.last_active = Utc::now();
@@ -231,7 +237,6 @@ pub struct TaskComplexityAnalysis {
     pub difficulty_factors: Vec<String>,
     pub optimization_suggestions: Vec<String>,
     #[schemars(with = "String")]
-
     pub analyzed_at: DateTime<Utc>,
 }
 
@@ -250,10 +255,10 @@ impl TaskComplexityAnalysis {
 
     pub fn analyze_complexity(&mut self, factors: Vec<String>) {
         self.difficulty_factors = factors.clone();
-        
+
         // Calculate complexity score based on factors
         let mut score: f32 = 0.5; // Base score
-        
+
         for factor in &factors {
             match factor.as_str() {
                 "large_codebase" => score += 0.2,
@@ -266,37 +271,57 @@ impl TaskComplexityAnalysis {
                 _ => score += 0.05,
             }
         }
-        
+
         self.complexity_score = (score as f64).min(1.0).max(0.0);
-        
+
         // Estimate execution time based on complexity
         self.estimated_execution_time_ms = (300000.0 * (0.5 + self.complexity_score * 1.5)) as u64;
-        
+
         // Estimate required workers
-        self.required_workers = if self.complexity_score > 0.8 { 4 } else if self.complexity_score > 0.6 { 3 } else if self.complexity_score > 0.4 { 2 } else { 1 };
-        
+        self.required_workers = if self.complexity_score > 0.8 {
+            4
+        } else if self.complexity_score > 0.6 {
+            3
+        } else if self.complexity_score > 0.4 {
+            2
+        } else {
+            1
+        };
+
         // Generate optimization suggestions
         self.generate_optimization_suggestions();
     }
 
     fn generate_optimization_suggestions(&mut self) {
         self.optimization_suggestions.clear();
-        
+
         if self.complexity_score > 0.8 {
-            self.optimization_suggestions.push("Consider breaking into smaller subtasks".to_string());
-            self.optimization_suggestions.push("Use specialized workers for different components".to_string());
+            self.optimization_suggestions
+                .push("Consider breaking into smaller subtasks".to_string());
+            self.optimization_suggestions
+                .push("Use specialized workers for different components".to_string());
         }
-        
-        if self.difficulty_factors.contains(&"large_codebase".to_string()) {
-            self.optimization_suggestions.push("Focus on specific modules or files".to_string());
+
+        if self
+            .difficulty_factors
+            .contains(&"large_codebase".to_string())
+        {
+            self.optimization_suggestions
+                .push("Focus on specific modules or files".to_string());
         }
-        
-        if self.difficulty_factors.contains(&"complex_dependencies".to_string()) {
-            self.optimization_suggestions.push("Resolve dependencies in parallel".to_string());
+
+        if self
+            .difficulty_factors
+            .contains(&"complex_dependencies".to_string())
+        {
+            self.optimization_suggestions
+                .push("Resolve dependencies in parallel".to_string());
         }
-        
-        if self.estimated_execution_time_ms > 600000 { // 10 minutes
-            self.optimization_suggestions.push("Increase timeout or optimize task".to_string());
+
+        if self.estimated_execution_time_ms > 600000 {
+            // 10 minutes
+            self.optimization_suggestions
+                .push("Increase timeout or optimize task".to_string());
         }
     }
 }
@@ -307,7 +332,6 @@ pub struct ExecutionTimeline {
     pub task_id: TaskId,
     pub events: Vec<TimelineEvent>,
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub total_duration_ms: Option<u64>,
@@ -317,7 +341,6 @@ pub struct ExecutionTimeline {
 pub struct TimelineEvent {
     pub event_type: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub description: String,
     pub metadata: HashMap<String, serde_json::Value>,
@@ -334,7 +357,12 @@ impl ExecutionTimeline {
         }
     }
 
-    pub fn add_event(&mut self, event_type: String, description: String, metadata: HashMap<String, serde_json::Value>) {
+    pub fn add_event(
+        &mut self,
+        event_type: String,
+        description: String,
+        metadata: HashMap<String, serde_json::Value>,
+    ) {
         let event = TimelineEvent {
             event_type,
             timestamp: Utc::now(),
@@ -347,13 +375,21 @@ impl ExecutionTimeline {
     pub fn finish(&mut self) {
         self.end_time = Some(Utc::now());
         if let Some(end_time) = self.end_time {
-            self.total_duration_ms = Some(end_time.signed_duration_since(self.start_time).num_milliseconds() as u64);
+            self.total_duration_ms = Some(
+                end_time
+                    .signed_duration_since(self.start_time)
+                    .num_milliseconds() as u64,
+            );
         }
     }
 
     pub fn get_duration_ms(&self) -> Option<u64> {
         self.total_duration_ms.or_else(|| {
-            Some(Utc::now().signed_duration_since(self.start_time).num_milliseconds() as u64)
+            Some(
+                Utc::now()
+                    .signed_duration_since(self.start_time)
+                    .num_milliseconds() as u64,
+            )
         })
     }
 }

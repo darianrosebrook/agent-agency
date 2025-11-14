@@ -8,19 +8,16 @@
 //!
 //! NO MOCKS - All integrations are real and tested end-to-end.
 
-use std::time::Instant;
-use tracing::{info, error};
 use std::collections::HashMap;
+use std::time::Instant;
+use tracing::{error, info};
 
-use crate::harness::{TestEnvironment, LocalServiceManager};
-use crate::{TestResult, TestMetrics, Scenario};
+use crate::harness::{LocalServiceManager, TestEnvironment};
 use crate::services::{OllamaService, PostgresService};
+use crate::{Scenario, TestMetrics, TestResult};
 
 /// Run the autonomous workflow test
-pub async fn run_test(
-    env: &TestEnvironment,
-    services: &LocalServiceManager,
-) -> TestResult {
+pub async fn run_test(env: &TestEnvironment, services: &LocalServiceManager) -> TestResult {
     let start_time = Instant::now();
     info!("Starting autonomous workflow E2E test");
 
@@ -87,7 +84,7 @@ pub async fn run_test(
                 let postgres = postgres_arc.lock().await;
                 verify_stored_data(&*postgres, task_description).await
             };
-            
+
             match verification_result {
                 Ok(record_count) => {
                     info!("Successfully verified {} records in database", record_count);
@@ -152,7 +149,9 @@ async fn store_task_result(
 
     // Convert JsonValue to String for database storage
     let citations_str = citations.to_string();
-    postgres.execute(query, &[&task, &result, &citations_str]).await?;
+    postgres
+        .execute(query, &[&task, &result, &citations_str])
+        .await?;
     Ok(())
 }
 

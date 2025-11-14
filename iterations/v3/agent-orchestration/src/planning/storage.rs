@@ -5,19 +5,19 @@
 //!
 //! @author @darianrosebrook
 
+use crate::planning::{
+    models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession},
+    DatabaseOperations,
+};
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::{anyhow, Result};
-use crate::planning::{
-    DatabaseOperations,
-    models::{ExecutionPlan as DbExecutionPlan, PlanningSession as DbPlanningSession},
-};
 
 use crate::planning::plan_types::ExecutionPlan;
 
@@ -101,7 +101,7 @@ impl Default for StorageConfig {
     fn default() -> Self {
         Self {
             max_cache_size: 100,
-            cache_eviction_seconds: 300, // 5 minutes
+            cache_eviction_seconds: 300,    // 5 minutes
             auto_save_interval_seconds: 60, // 1 minute
             enable_versioning: true,
             max_versions: 10,
@@ -119,7 +119,10 @@ impl PlanningStorage {
     ) -> Self {
         Self {
             db_ops,
-            file_storage: FileStorage { plans_dir, specs_dir },
+            file_storage: FileStorage {
+                plans_dir,
+                specs_dir,
+            },
             session_cache: Arc::new(RwLock::new(HashMap::new())),
             config,
         }
@@ -174,13 +177,40 @@ impl PlanningStorage {
         let session_id = Uuid::new_v4();
 
         let mut metadata = HashMap::new();
-        metadata.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
-        metadata.insert("orchestrator_id".to_string(), serde_json::Value::String(plan.orchestration_meta.orchestrator_id.clone()));
-        metadata.insert("worker_pool_id".to_string(), serde_json::Value::String(plan.orchestration_meta.worker_pool_id.clone()));
-        metadata.insert("council_session_id".to_string(), serde_json::Value::String(plan.orchestration_meta.council_session_id.as_ref().unwrap_or(&"none".to_string()).clone()));
-        metadata.insert("audit_correlation_id".to_string(), serde_json::Value::String(plan.orchestration_meta.audit_correlation_id.to_string()));
-        metadata.insert("status".to_string(), serde_json::Value::String("active".to_string()));
-        metadata.insert("execution_state".to_string(), serde_json::to_value(&plan.execution_state).unwrap_or_default());
+        metadata.insert(
+            "session_id".to_string(),
+            serde_json::Value::String(session_id.to_string()),
+        );
+        metadata.insert(
+            "orchestrator_id".to_string(),
+            serde_json::Value::String(plan.orchestration_meta.orchestrator_id.clone()),
+        );
+        metadata.insert(
+            "worker_pool_id".to_string(),
+            serde_json::Value::String(plan.orchestration_meta.worker_pool_id.clone()),
+        );
+        metadata.insert(
+            "council_session_id".to_string(),
+            serde_json::Value::String(
+                plan.orchestration_meta
+                    .council_session_id
+                    .as_ref()
+                    .unwrap_or(&"none".to_string())
+                    .clone(),
+            ),
+        );
+        metadata.insert(
+            "audit_correlation_id".to_string(),
+            serde_json::Value::String(plan.orchestration_meta.audit_correlation_id.to_string()),
+        );
+        metadata.insert(
+            "status".to_string(),
+            serde_json::Value::String("active".to_string()),
+        );
+        metadata.insert(
+            "execution_state".to_string(),
+            serde_json::to_value(&plan.execution_state).unwrap_or_default(),
+        );
 
         let session = CreatePlanningSession {
             plan_id: plan.contract_plan.id,
@@ -203,7 +233,10 @@ impl PlanningStorage {
     }
 
     /// Get planning session with caching
-    pub async fn get_planning_session(&self, session_id: Uuid) -> Result<Option<DbPlanningSession>> {
+    pub async fn get_planning_session(
+        &self,
+        session_id: Uuid,
+    ) -> Result<Option<DbPlanningSession>> {
         // Check cache first
         {
             let cache = self.session_cache.read().await;
@@ -242,7 +275,11 @@ impl PlanningStorage {
     }
 
     /// Update planning session
-    pub async fn update_planning_session(&self, session_id: Uuid, execution_state: serde_json::Value) -> Result<()> {
+    pub async fn update_planning_session(
+        &self,
+        session_id: Uuid,
+        execution_state: serde_json::Value,
+    ) -> Result<()> {
         let mut metadata = HashMap::new();
         metadata.insert("execution_state".to_string(), execution_state);
         // completed_at will be set when session completes
@@ -253,7 +290,9 @@ impl PlanningStorage {
             metadata: Some(metadata),
         };
 
-        self.db_ops.update_planning_session(session_id, update).await?;
+        self.db_ops
+            .update_planning_session(session_id, update)
+            .await?;
 
         // Update cache
         let mut cache = self.session_cache.write().await;
@@ -269,17 +308,24 @@ impl PlanningStorage {
     pub async fn log_audit_event(&self, event: AuditEvent) -> Result<()> {
         // Convert event.metadata (serde_json::Value) to HashMap<String, serde_json::Value>
         let mut metadata: HashMap<String, serde_json::Value> = match event.metadata {
-            serde_json::Value::Object(map) => {
-                map.into_iter().map(|(k, v)| (k, v)).collect()
-            },
+            serde_json::Value::Object(map) => map.into_iter().map(|(k, v)| (k, v)).collect(),
             _ => HashMap::new(),
         };
-        metadata.insert("id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+        metadata.insert(
+            "id".to_string(),
+            serde_json::Value::String(Uuid::new_v4().to_string()),
+        );
         if let Some(milestone_id) = &event.milestone_id {
-            metadata.insert("milestone_id".to_string(), serde_json::Value::String(milestone_id.clone()));
+            metadata.insert(
+                "milestone_id".to_string(),
+                serde_json::Value::String(milestone_id.clone()),
+            );
         }
         if let Some(worker_id) = &event.worker_id {
-            metadata.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+            metadata.insert(
+                "worker_id".to_string(),
+                serde_json::Value::String(worker_id.to_string()),
+            );
         }
 
         let db_event = CreatePlanningAuditEvent {
@@ -294,7 +340,12 @@ impl PlanningStorage {
     }
 
     /// Store planning telemetry
-    pub async fn store_telemetry(&self, plan_id: Uuid, metric_type: String, metric_value: serde_json::Value) -> Result<()> {
+    pub async fn store_telemetry(
+        &self,
+        plan_id: Uuid,
+        metric_type: String,
+        metric_value: serde_json::Value,
+    ) -> Result<()> {
         // Convert metric_value to f64 if it's a number, otherwise store in metadata
         let (metric_value_f64, mut metadata) = match &metric_value {
             serde_json::Value::Number(n) => {
@@ -315,9 +366,18 @@ impl PlanningStorage {
             }
         };
 
-        metadata.insert("id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
-        metadata.insert("plan_id".to_string(), serde_json::Value::String(plan_id.to_string()));
-        metadata.insert("metric_type".to_string(), serde_json::Value::String(metric_type));
+        metadata.insert(
+            "id".to_string(),
+            serde_json::Value::String(Uuid::new_v4().to_string()),
+        );
+        metadata.insert(
+            "plan_id".to_string(),
+            serde_json::Value::String(plan_id.to_string()),
+        );
+        metadata.insert(
+            "metric_type".to_string(),
+            serde_json::Value::String(metric_type),
+        );
 
         // TODO: Use proper session ID instead of plan_id
         // - [ ] Generate or retrieve proper session ID for telemetry
@@ -365,7 +425,9 @@ impl PlanningStorage {
             if let Some(plan) = self.load_execution_plan(session.plan_id).await? {
                 // Restore execution state from session metadata
                 let execution_state: Option<crate::planning::plan_types::ActiveExecutionState> =
-                    session.metadata.get("execution_state")
+                    session
+                        .metadata
+                        .get("execution_state")
                         .and_then(|v| serde_json::from_value(v.clone()).ok());
 
                 let mut recovered_plan = plan;
@@ -402,7 +464,8 @@ impl PlanningStorage {
     /// Clean up old cache entries
     async fn evict_old_cache_entries(&self, cache: &mut HashMap<Uuid, CachedSession>) {
         let now = Utc::now();
-        let eviction_threshold = chrono::Duration::seconds(self.config.cache_eviction_seconds as i64);
+        let eviction_threshold =
+            chrono::Duration::seconds(self.config.cache_eviction_seconds as i64);
 
         // Remove entries older than threshold
         cache.retain(|_, cached| {
@@ -414,7 +477,8 @@ impl PlanningStorage {
             let mut entries: Vec<_> = cache.iter().collect();
             entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
 
-            let to_remove: Vec<Uuid> = entries.into_iter()
+            let to_remove: Vec<Uuid> = entries
+                .into_iter()
                 .take(cache.len() - self.config.max_cache_size)
                 .map(|(id, _)| *id)
                 .collect();
@@ -433,7 +497,7 @@ impl PlanningStorage {
             if let Some(execution_state) = &plan.execution_state {
                 cached.session.metadata.insert(
                     "execution_state".to_string(),
-                    serde_json::to_value(execution_state).unwrap_or(serde_json::Value::Null)
+                    serde_json::to_value(execution_state).unwrap_or(serde_json::Value::Null),
                 );
                 cached.dirty = true;
             }
@@ -453,7 +517,7 @@ impl PlanningStorage {
             // Not in TASK format, use None to let adapter default to PLAN-<id>
             None
         };
-        
+
         let create_plan = CreateExecutionPlan {
             id: plan.contract_plan.id,
             title: plan.contract_plan.title.clone(),
@@ -469,17 +533,28 @@ impl PlanningStorage {
     async fn update_plan_in_database(&self, plan: &ExecutionPlan) -> Result<()> {
         let update = UpdateExecutionPlan {
             id: plan.contract_plan.id,
-            status: Some(serde_json::to_string(&plan.contract_plan.state)?.trim_matches('"').to_string()),
+            status: Some(
+                serde_json::to_string(&plan.contract_plan.state)?
+                    .trim_matches('"')
+                    .to_string(),
+            ),
             title: None,
             overview: None,
         };
 
-        let _updated = self.db_ops.update_execution_plan(plan.contract_plan.id, update).await?;
+        let _updated = self
+            .db_ops
+            .update_execution_plan(plan.contract_plan.id, update)
+            .await?;
         Ok(())
     }
 
     /// Merge plan data from file and database
-    fn merge_plan_data(&self, file_plan: ExecutionPlan, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
+    fn merge_plan_data(
+        &self,
+        file_plan: ExecutionPlan,
+        db_plan: DbExecutionPlan,
+    ) -> Result<ExecutionPlan> {
         // Use file plan as base, but update with latest DB state
         let mut merged = file_plan;
         // Note: WorkingSpec doesn't have lifecycle fields, only ExecutionPlan has state
@@ -497,35 +572,40 @@ impl PlanningStorage {
     /// or corrupted data.
     fn reconstruct_plan_from_db(&self, db_plan: DbExecutionPlan) -> Result<ExecutionPlan> {
         use agent_agency_contracts::planning_io::{
-            ExecutionPlan as ContractExecutionPlan,
-            PlanState, DependencyGraph, QualityGates,
-            EvidenceRequirement, WaiverReference, PlanMetadata,
-            PlanCreator, BudgetEnforcement,
-            MutationRequirements, SecurityRequirements, PerformanceRequirements, DocumentationRequirements,
+            BudgetEnforcement, DependencyGraph, DocumentationRequirements, EvidenceRequirement,
+            ExecutionPlan as ContractExecutionPlan, MutationRequirements, PerformanceRequirements,
+            PlanCreator, PlanMetadata, PlanState, QualityGates, SecurityRequirements,
+            WaiverReference,
         };
-        use agent_agency_contracts::{ChangeBudget, WorkingSpec};
         use agent_agency_contracts::types::planning::PlanningStrategy;
+        use agent_agency_contracts::{ChangeBudget, WorkingSpec};
         use tracing::{debug, warn};
-        
+
         debug!("Reconstructing plan {} from database", db_plan.id);
-        
+
         // Deserialize milestones with fallback to empty vector
-        let milestones: Vec<agent_agency_contracts::planning_io::Milestone> = 
+        let milestones: Vec<agent_agency_contracts::planning_io::Milestone> =
             serde_json::from_value(db_plan.milestones.clone())
                 .map_err(|e| {
-                    warn!("Failed to deserialize milestones for plan {}: {}", db_plan.id, e);
+                    warn!(
+                        "Failed to deserialize milestones for plan {}: {}",
+                        db_plan.id, e
+                    );
                     e
                 })
                 .unwrap_or_else(|_| {
                     warn!("Using empty milestones vector for plan {}", db_plan.id);
                     vec![]
                 });
-        
+
         // Deserialize dependency graph with fallback to empty graph
-        let dependency_graph: DependencyGraph = 
+        let dependency_graph: DependencyGraph =
             serde_json::from_value(db_plan.dependency_graph.clone())
                 .map_err(|e| {
-                    warn!("Failed to deserialize dependency_graph for plan {}: {}", db_plan.id, e);
+                    warn!(
+                        "Failed to deserialize dependency_graph for plan {}: {}",
+                        db_plan.id, e
+                    );
                     e
                 })
                 .unwrap_or_else(|_| {
@@ -539,144 +619,168 @@ impl PlanningStorage {
                         cycles: vec![],
                     }
                 });
-        
+
         // Deserialize change budget with fallback to default
-        let change_budget: ChangeBudget = 
-            serde_json::from_value(db_plan.change_budget.clone())
-                .map_err(|e| {
-                    warn!("Failed to deserialize change_budget for plan {}: {}", db_plan.id, e);
-                    e
-                })
-                .unwrap_or_else(|_| {
-                    warn!("Using default change budget for plan {}", db_plan.id);
-                    ChangeBudget {
-                        max_files: 25,
-                        max_loc: 1000,
-                        max_migrations: 0,
-                        allow_breaking_changes: false,
-                        allow_new_dependencies: false,
-                        enforcement_mode: BudgetEnforcement::Strict,
-                    }
-                });
-        
+        let change_budget: ChangeBudget = serde_json::from_value(db_plan.change_budget.clone())
+            .map_err(|e| {
+                warn!(
+                    "Failed to deserialize change_budget for plan {}: {}",
+                    db_plan.id, e
+                );
+                e
+            })
+            .unwrap_or_else(|_| {
+                warn!("Using default change budget for plan {}", db_plan.id);
+                ChangeBudget {
+                    max_files: 25,
+                    max_loc: 1000,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode: BudgetEnforcement::Strict,
+                }
+            });
+
         // Deserialize quality gates with fallback to default
-        let quality_gates: QualityGates = 
-            serde_json::from_value(db_plan.quality_gates.clone())
-                .map_err(|e| {
-                    warn!("Failed to deserialize quality_gates for plan {}: {}", db_plan.id, e);
-                    e
-                })
-                .unwrap_or_else(|_| {
-                    warn!("Using default quality gates for plan {}", db_plan.id);
-                    QualityGates {
-                        coverage_requirements: {
-                            let mut map = std::collections::HashMap::new();
-                            map.insert("line".to_string(), 0.8);
-                            map.insert("branch".to_string(), 0.75);
-                            map
-                        },
-                        mutation_requirements: MutationRequirements {
-                            required: true,
-                            min_score: 0.5,
-                            operators: vec![],
-                        },
-                        security_requirements: SecurityRequirements {
-                            scan_required: true,
-                            max_issues_by_severity: std::collections::HashMap::new(),
-                            required_controls: vec![],
-                        },
-                        performance_requirements: PerformanceRequirements {
-                            max_regressions: 0,
-                            required_benchmarks: vec![],
-                            slas: vec![],
-                        },
-                        documentation_requirements: DocumentationRequirements {
-                            api_docs_required: false,
-                            code_docs_required: false,
-                            architecture_docs_required: false,
-                            required_formats: vec![],
-                            min_coverage: 0.0,
-                            quality_checks: vec![],
-                            required_types: vec![],
-                        },
-                        requires_manual_review: false,
-                        requires_council_approval: false,
-                        min_coverage: Some(0.8),
-                        min_mutation_score_percent: Some(0.5),
-                    }
-                });
-        
+        let quality_gates: QualityGates = serde_json::from_value(db_plan.quality_gates.clone())
+            .map_err(|e| {
+                warn!(
+                    "Failed to deserialize quality_gates for plan {}: {}",
+                    db_plan.id, e
+                );
+                e
+            })
+            .unwrap_or_else(|_| {
+                warn!("Using default quality gates for plan {}", db_plan.id);
+                QualityGates {
+                    coverage_requirements: {
+                        let mut map = std::collections::HashMap::new();
+                        map.insert("line".to_string(), 0.8);
+                        map.insert("branch".to_string(), 0.75);
+                        map
+                    },
+                    mutation_requirements: MutationRequirements {
+                        required: true,
+                        min_score: 0.5,
+                        operators: vec![],
+                    },
+                    security_requirements: SecurityRequirements {
+                        scan_required: true,
+                        max_issues_by_severity: std::collections::HashMap::new(),
+                        required_controls: vec![],
+                    },
+                    performance_requirements: PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec![],
+                        slas: vec![],
+                    },
+                    documentation_requirements: DocumentationRequirements {
+                        api_docs_required: false,
+                        code_docs_required: false,
+                        architecture_docs_required: false,
+                        required_formats: vec![],
+                        min_coverage: 0.0,
+                        quality_checks: vec![],
+                        required_types: vec![],
+                    },
+                    requires_manual_review: false,
+                    requires_council_approval: false,
+                    min_coverage: Some(0.8),
+                    min_mutation_score_percent: Some(0.5),
+                }
+            });
+
         // Deserialize evidence requirements with fallback to empty vector
-        let evidence_requirements: Vec<EvidenceRequirement> = 
+        let evidence_requirements: Vec<EvidenceRequirement> =
             serde_json::from_value(db_plan.evidence_requirements.clone())
                 .map_err(|e| {
-                    warn!("Failed to deserialize evidence_requirements for plan {}: {}", db_plan.id, e);
+                    warn!(
+                        "Failed to deserialize evidence_requirements for plan {}: {}",
+                        db_plan.id, e
+                    );
                     e
                 })
                 .unwrap_or_else(|_| {
                     warn!("Using empty evidence requirements for plan {}", db_plan.id);
                     vec![]
                 });
-        
+
         // Deserialize active waivers with fallback to empty vector
-        let active_waivers: Vec<WaiverReference> = 
+        let active_waivers: Vec<WaiverReference> =
             serde_json::from_value(db_plan.active_waivers.clone())
                 .map_err(|e| {
-                    warn!("Failed to deserialize active_waivers for plan {}: {}", db_plan.id, e);
+                    warn!(
+                        "Failed to deserialize active_waivers for plan {}: {}",
+                        db_plan.id, e
+                    );
                     e
                 })
                 .unwrap_or_else(|_| {
                     warn!("Using empty active waivers for plan {}", db_plan.id);
                     vec![]
                 });
-        
+
         // Deserialize plan metadata with fallback to default
-        let plan_metadata: PlanMetadata = 
-            serde_json::from_value(db_plan.metadata.clone())
-                .map_err(|e| {
-                    warn!("Failed to deserialize plan metadata for plan {}: {}", db_plan.id, e);
-                    e
-                })
-                .unwrap_or_else(|_| {
-                    warn!("Using default plan metadata for plan {}", db_plan.id);
-                    PlanMetadata {
-                        created_at: db_plan.created_at,
-                        updated_at: db_plan.updated_at,
-                        approved_at: db_plan.approved_at,
-                        completed_at: db_plan.completed_at,
-                        created_by: PlanCreator::AI { model: "system".to_string(), version: "1.0.0".to_string() },
+        let plan_metadata: PlanMetadata = serde_json::from_value(db_plan.metadata.clone())
+            .map_err(|e| {
+                warn!(
+                    "Failed to deserialize plan metadata for plan {}: {}",
+                    db_plan.id, e
+                );
+                e
+            })
+            .unwrap_or_else(|_| {
+                warn!("Using default plan metadata for plan {}", db_plan.id);
+                PlanMetadata {
+                    created_at: db_plan.created_at,
+                    updated_at: db_plan.updated_at,
+                    approved_at: db_plan.approved_at,
+                    completed_at: db_plan.completed_at,
+                    created_by: PlanCreator::AI {
+                        model: "system".to_string(),
                         version: "1.0.0".to_string(),
-                        source: "database_reconstruction".to_string(),
-                        confidence_score: Some(0.5),
-                        generation_time_ms: Some(0),
-                        model_used: None,
-                        fallback_used: false,
-                        strategy: PlanningStrategy::Hybrid,
-                        confidence: 0.5,
-                        estimated_duration_ms: 0,
-                        estimated_cost_cents: 0,
-                        adaptive: false,
-                        engine_version: "1.0.0".to_string(),
-                        additional_metadata: std::collections::HashMap::new(),
-                    }
-                });
-        
+                    },
+                    version: "1.0.0".to_string(),
+                    source: "database_reconstruction".to_string(),
+                    confidence_score: Some(0.5),
+                    generation_time_ms: Some(0),
+                    model_used: None,
+                    fallback_used: false,
+                    strategy: PlanningStrategy::Hybrid,
+                    confidence: 0.5,
+                    estimated_duration_ms: 0,
+                    estimated_cost_cents: 0,
+                    adaptive: false,
+                    engine_version: "1.0.0".to_string(),
+                    additional_metadata: std::collections::HashMap::new(),
+                }
+            });
+
         // Parse plan state from string with fallback to Draft
         let plan_state = match db_plan.state.as_str() {
             "draft" => PlanState::Draft,
             "under_review" | "under-review" => PlanState::UnderReview,
             "approved" => PlanState::Approved,
             "in_progress" | "in-progress" => PlanState::InProgress,
-            "blocked" => PlanState::Blocked { reason: "Plan reconstruction from database".to_string() },
+            "blocked" => PlanState::Blocked {
+                reason: "Plan reconstruction from database".to_string(),
+            },
             "completed" => PlanState::Completed,
-            "failed" => PlanState::Failed { reason: "Plan reconstruction from database".to_string() },
-            "cancelled" => PlanState::Cancelled { reason: "Plan reconstruction from database".to_string() },
+            "failed" => PlanState::Failed {
+                reason: "Plan reconstruction from database".to_string(),
+            },
+            "cancelled" => PlanState::Cancelled {
+                reason: "Plan reconstruction from database".to_string(),
+            },
             _ => {
-                warn!("Unknown plan state '{}' for plan {}, defaulting to Draft", db_plan.state, db_plan.id);
+                warn!(
+                    "Unknown plan state '{}' for plan {}, defaulting to Draft",
+                    db_plan.state, db_plan.id
+                );
                 PlanState::Draft
             }
         };
-        
+
         // Reconstruct working spec from metadata or create minimal default
         // The working spec is stored in the contract_plan field, but we need to reconstruct it
         // For now, create a minimal working spec from available data
@@ -685,7 +789,10 @@ impl PlanningStorage {
             version: "1.0.0".to_string(),
             id: db_plan.working_spec_id.clone(),
             title: db_plan.title.clone(),
-            description: db_plan.overview.clone().unwrap_or_else(|| "Reconstructed from database".to_string()),
+            description: db_plan
+                .overview
+                .clone()
+                .unwrap_or_else(|| "Reconstructed from database".to_string()),
             goals: vec![],
             risk_tier: 2, // Default risk tier
             constraints: agent_agency_contracts::WorkingSpecConstraints {
@@ -725,11 +832,14 @@ impl PlanningStorage {
             change_budget: change_budget.clone(),
             file_changes: vec![],
             coverage_targets: None,
-            overview: db_plan.overview.clone().unwrap_or_else(|| "Reconstructed from database".to_string()),
+            overview: db_plan
+                .overview
+                .clone()
+                .unwrap_or_else(|| "Reconstructed from database".to_string()),
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
-        
+
         // Reconstruct contract execution plan
         let contract_plan = ContractExecutionPlan {
             id: db_plan.id,
@@ -737,7 +847,9 @@ impl PlanningStorage {
             working_spec_id: db_plan.working_spec_id,
             contract_plan: working_spec,
             title: db_plan.title,
-            overview: db_plan.overview.unwrap_or_else(|| "Reconstructed from database".to_string()),
+            overview: db_plan
+                .overview
+                .unwrap_or_else(|| "Reconstructed from database".to_string()),
             state: plan_state,
             milestones,
             dependency_graph,
@@ -752,7 +864,7 @@ impl PlanningStorage {
             approved_at: db_plan.approved_at,
             completed_at: db_plan.completed_at,
         };
-        
+
         // Create execution plan with default orchestration metadata and execution context
         let execution_plan = ExecutionPlan {
             contract_plan,
@@ -760,8 +872,11 @@ impl PlanningStorage {
             execution_context: crate::planning::plan_types::ExecutionContext::default(),
             execution_state: None, // Execution state would need to be reconstructed separately
         };
-        
-        debug!("Successfully reconstructed plan {} from database", db_plan.id);
+
+        debug!(
+            "Successfully reconstructed plan {} from database",
+            db_plan.id
+        );
         Ok(execution_plan)
     }
 }
@@ -769,7 +884,9 @@ impl PlanningStorage {
 impl FileStorage {
     /// Store plan specification as YAML file
     async fn store_plan_spec(&self, plan: &ExecutionPlan) -> Result<()> {
-        let plan_path = self.plans_dir.join(format!("{}.plan.yml", plan.contract_plan.id));
+        let plan_path = self
+            .plans_dir
+            .join(format!("{}.plan.yml", plan.contract_plan.id));
 
         // Create parent directories if needed
         if let Some(parent) = plan_path.parent() {
@@ -800,8 +917,8 @@ impl FileStorage {
 
 // Database operation types (should be imported from data-infrastructure)
 use crate::planning::{
-    CreateExecutionPlan, UpdateExecutionPlan, CreatePlanningSession, UpdatePlanningSession,
-    CreatePlanningAuditEvent, CreatePlanningTelemetry,
+    CreateExecutionPlan, CreatePlanningAuditEvent, CreatePlanningSession, CreatePlanningTelemetry,
+    UpdateExecutionPlan, UpdatePlanningSession,
 };
 
 /// Audit event for storage operations
@@ -816,7 +933,6 @@ pub struct AuditEvent {
     pub event_type: String,
     pub description: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
@@ -962,30 +1078,47 @@ mod tests {
         let session_id = storage.create_planning_session(&plan).await.unwrap();
 
         // Test session retrieval (should be cached)
-        let session = storage.get_planning_session(session_id).await.unwrap().unwrap();
+        let session = storage
+            .get_planning_session(session_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(session.id, session_id);
     }
 
     // Mock database operations for task-to-plan mapping tests
     struct TaskMappingMockDatabaseOps {
-        plans: Arc<tokio::sync::RwLock<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>>>,
+        plans: Arc<
+            tokio::sync::RwLock<
+                Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>,
+            >,
+        >,
         // Track plan timestamps separately to preserve them during storage
         plan_timestamps: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, DateTime<Utc>>>>,
     }
 
     #[async_trait::async_trait]
     impl DatabaseOperations for TaskMappingMockDatabaseOps {
-        async fn create_execution_plan(&self, plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+        async fn create_execution_plan(
+            &self,
+            plan: crate::planning::data_infrastructure_types::CreateExecutionPlan,
+        ) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error>
+        {
             // Check if we have a stored timestamp for this plan
-            let created_at = self.plan_timestamps.read().await
+            let created_at = self
+                .plan_timestamps
+                .read()
+                .await
                 .get(&plan.id)
                 .copied()
                 .unwrap_or_else(Utc::now);
-            
+
             let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
                 id: plan.id,
                 session_id: Uuid::new_v4(),
-                working_spec_id: plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id)),
+                working_spec_id: plan
+                    .working_spec_id
+                    .unwrap_or_else(|| format!("PLAN-{}", plan.id)),
                 title: plan.title,
                 overview: Some(plan.overview),
                 state: "draft".to_string(),
@@ -1005,48 +1138,90 @@ mod tests {
             Ok(db_plan)
         }
 
-        async fn get_execution_plan(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+        async fn get_execution_plan(
+            &self,
+            _id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>,
+            anyhow::Error,
+        > {
             Ok(None)
         }
 
-        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+        async fn get_execution_plans(
+            &self,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>,
+            anyhow::Error,
+        > {
             Ok(self.plans.read().await.clone())
         }
 
-        async fn update_execution_plan(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+        async fn update_execution_plan(
+            &self,
+            _id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateExecutionPlan,
+        ) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn create_audit_trail_entry(&self, _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+        async fn create_audit_trail_entry(
+            &self,
+            _entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::AuditTrailEntry,
+            anyhow::Error,
+        > {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+        async fn get_audit_trail_entries(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
 
-        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+        async fn get_audit_trail_entry(
+            &self,
+            _id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>,
+            anyhow::Error,
+        > {
             Ok(None)
         }
 
-        async fn create_planning_session(&self, session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+        async fn create_planning_session(
+            &self,
+            session: crate::planning::data_infrastructure_types::CreatePlanningSession,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanningSession,
+            anyhow::Error,
+        > {
             use chrono::Utc;
             // Extract session_id from metadata if present (PlanningStorage generates it and stores it there)
             // Otherwise generate a new one
-            let id = session.metadata
+            let id = session
+                .metadata
                 .get("session_id")
                 .and_then(|v| v.as_str())
                 .and_then(|s| Uuid::parse_str(s).ok())
                 .unwrap_or_else(Uuid::new_v4);
             let now = Utc::now();
-            
+
             // Extract status from metadata if present, otherwise default to "active"
-            let status = session.metadata
+            let status = session
+                .metadata
                 .get("status")
                 .and_then(|v| v.as_str())
                 .unwrap_or("active")
                 .to_string();
-            
+
             let db_session = crate::planning::data_infrastructure_types::models::PlanningSession {
                 id,
                 plan_id: session.plan_id,
@@ -1055,50 +1230,95 @@ mod tests {
                 updated_at: now,
                 metadata: session.metadata,
             };
-            
+
             Ok(db_session)
         }
 
-        async fn get_planning_session(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+        async fn get_planning_session(
+            &self,
+            _id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::PlanningSession>,
+            anyhow::Error,
+        > {
             Ok(None)
         }
 
-        async fn create_execution_result(&self, _result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+        async fn create_execution_result(
+            &self,
+            _result: crate::planning::data_infrastructure_types::CreateExecutionResult,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanExecutionResult,
+            anyhow::Error,
+        > {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn get_execution_result(&self, _plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+        async fn get_execution_result(
+            &self,
+            _plan_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>,
+            anyhow::Error,
+        > {
             Ok(None)
         }
 
-        async fn update_planning_session(&self, _id: Uuid, _session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+        async fn update_planning_session(
+            &self,
+            _id: Uuid,
+            _session: crate::planning::data_infrastructure_types::UpdatePlanningSession,
+        ) -> Result<(), anyhow::Error> {
             Ok(())
         }
 
-        async fn create_planning_telemetry(&self, telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+        async fn create_planning_telemetry(
+            &self,
+            telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanningTelemetry,
+            anyhow::Error,
+        > {
             use chrono::Utc;
             let id = Uuid::new_v4();
-            let db_telemetry = crate::planning::data_infrastructure_types::models::PlanningTelemetry {
-                id,
-                session_id: telemetry.session_id,
-                metric_name: telemetry.metric_name,
-                metric_value: telemetry.metric_value,
-                timestamp: Utc::now(),
-                metadata: telemetry.metadata,
-            };
-            
+            let db_telemetry =
+                crate::planning::data_infrastructure_types::models::PlanningTelemetry {
+                    id,
+                    session_id: telemetry.session_id,
+                    metric_name: telemetry.metric_name,
+                    metric_value: telemetry.metric_value,
+                    timestamp: Utc::now(),
+                    metadata: telemetry.metadata,
+                };
+
             Ok(db_telemetry)
         }
 
-        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
+        async fn get_planning_telemetry(
+            &self,
+            _plan_id: Uuid,
+            _metric_type: Option<String>,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
 
-        async fn create_planning_audit_event(&self, _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
+        async fn create_planning_audit_event(
+            &self,
+            _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent,
+        ) -> Result<(), anyhow::Error> {
             Ok(())
         }
 
-        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
+        async fn get_planning_audit_events(
+            &self,
+            _plan_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
 
@@ -1106,51 +1326,136 @@ mod tests {
             Ok(())
         }
 
-        async fn create_judge(&self, _judge: crate::planning::data_infrastructure_types::CreateJudge) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
+        async fn create_judge(
+            &self,
+            _judge: crate::planning::data_infrastructure_types::CreateJudge,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+        async fn get_judge(
+            &self,
+            _id: Uuid,
+        ) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error>
+        {
             Ok(None)
         }
 
-        async fn get_judges(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+        async fn get_judges(
+            &self,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error>
+        {
             Ok(vec![])
         }
 
-        async fn create_judge_evaluation(&self, _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<crate::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
+        async fn create_judge_evaluation(
+            &self,
+            _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::JudgeEvaluation,
+            anyhow::Error,
+        > {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
+        async fn get_judge_evaluations(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
 
-        async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+        async fn get_workers(
+            &self,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error>
+        {
             Ok(vec![])
         }
 
-        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+        async fn get_worker(
+            &self,
+            _id: Uuid,
+        ) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error>
+        {
             Ok(None)
         }
 
-        async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+        async fn create_worker(
+            &self,
+            _worker: crate::planning::data_infrastructure_types::CreateWorker,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+        async fn update_worker(
+            &self,
+            _id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateWorker,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
+        async fn get_waivers(
+            &self,
+            _status: Option<String>,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error>
+        {
             Ok(vec![])
         }
 
-        async fn create_waiver(&self, _waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+        async fn create_waiver(
+            &self,
+            _waiver: crate::planning::data_infrastructure_types::CreateWaiver,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
 
-        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+        async fn update_waiver(
+            &self,
+            _id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateWaiver,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error>
+        {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_council_session(
+            &self,
+            _session: crate::planning::data_infrastructure_types::CreateCouncilSession,
+        ) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession, anyhow::Error>
+        {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn get_council_session(
+            &self,
+            _session_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::CouncilSession>,
+            anyhow::Error,
+        > {
+            Ok(None)
+        }
+        async fn get_council_session_by_task(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::CouncilSession>,
+            anyhow::Error,
+        > {
+            Ok(None)
+        }
+        async fn update_council_session(
+            &self,
+            _session_id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateCouncilSession,
+        ) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
     }
@@ -1167,7 +1472,8 @@ mod tests {
         tokio::fs::create_dir_all(&plans_dir).await.unwrap();
         tokio::fs::create_dir_all(&specs_dir).await.unwrap();
         let config = StorageConfig::default();
-        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+        let storage =
+            PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
 
         let task_id = Uuid::new_v4();
         let plan_id = Uuid::new_v4();
@@ -1200,7 +1506,8 @@ mod tests {
         tokio::fs::create_dir_all(&plans_dir).await.unwrap();
         tokio::fs::create_dir_all(&specs_dir).await.unwrap();
         let config = StorageConfig::default();
-        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+        let storage =
+            PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
 
         let task_id = Uuid::new_v4();
         let non_matching_task_id = Uuid::new_v4();
@@ -1213,7 +1520,10 @@ mod tests {
         storage.store_execution_plan(&plan).await.unwrap();
 
         // Try to retrieve plan for different task
-        let retrieved_plan = storage.get_plan_for_task(non_matching_task_id).await.unwrap();
+        let retrieved_plan = storage
+            .get_plan_for_task(non_matching_task_id)
+            .await
+            .unwrap();
         assert!(retrieved_plan.is_none());
 
         // Cleanup
@@ -1233,7 +1543,8 @@ mod tests {
         tokio::fs::create_dir_all(&plans_dir).await.unwrap();
         tokio::fs::create_dir_all(&specs_dir).await.unwrap();
         let config = StorageConfig::default();
-        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+        let storage =
+            PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
 
         let task_id = Uuid::new_v4();
         let plan_id_1 = Uuid::new_v4();
@@ -1246,7 +1557,11 @@ mod tests {
         let plan1_created_at = Utc::now() - chrono::Duration::hours(2);
         plan1.contract_plan.created_at = plan1_created_at;
         // Store timestamp in mock before storing plan
-        db_ops.plan_timestamps.write().await.insert(plan_id_1, plan1_created_at);
+        db_ops
+            .plan_timestamps
+            .write()
+            .await
+            .insert(plan_id_1, plan1_created_at);
         storage.store_execution_plan(&plan1).await.unwrap();
 
         // Create and store second plan (newer)
@@ -1256,7 +1571,11 @@ mod tests {
         let plan2_created_at = Utc::now() - chrono::Duration::hours(1);
         plan2.contract_plan.created_at = plan2_created_at;
         // Store timestamp in mock before storing plan
-        db_ops.plan_timestamps.write().await.insert(plan_id_2, plan2_created_at);
+        db_ops
+            .plan_timestamps
+            .write()
+            .await
+            .insert(plan_id_2, plan2_created_at);
         storage.store_execution_plan(&plan2).await.unwrap();
 
         // Retrieve plan for task - should get most recent
@@ -1281,7 +1600,8 @@ mod tests {
         tokio::fs::create_dir_all(&plans_dir).await.unwrap();
         tokio::fs::create_dir_all(&specs_dir).await.unwrap();
         let config = StorageConfig::default();
-        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+        let storage =
+            PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
 
         let task_id = Uuid::new_v4();
         let plan_id = Uuid::new_v4();
@@ -1313,7 +1633,8 @@ mod tests {
         tokio::fs::create_dir_all(&plans_dir).await.unwrap();
         tokio::fs::create_dir_all(&specs_dir).await.unwrap();
         let config = StorageConfig::default();
-        let storage = PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
+        let storage =
+            PlanningStorage::new(db_ops.clone(), plans_dir.clone(), specs_dir.clone(), config);
 
         let task_id = Uuid::new_v4();
         let plan_id = Uuid::new_v4();
@@ -1336,7 +1657,9 @@ mod tests {
     }
 
     fn create_test_execution_plan() -> ExecutionPlan {
-        use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory, ExecutionContext as PlanExecutionContext};
+        use crate::planning::plan_types::{
+            ExecutionContext as PlanExecutionContext, OrchestrationMetadata, ResourceInventory,
+        };
 
         ExecutionPlan {
             contract_plan: agent_agency_contracts::planning_io::ExecutionPlan {
@@ -1390,7 +1713,8 @@ mod tests {
                         max_migrations: 0,
                         allow_breaking_changes: false,
                         allow_new_dependencies: false,
-                        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                        enforcement_mode:
+                            agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                     },
                     file_changes: vec![],
                     coverage_targets: None,
@@ -1416,34 +1740,39 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 quality_gates: agent_agency_contracts::planning_io::QualityGates {
                     coverage_requirements: HashMap::new(),
-                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
-                        required: false,
-                        min_score: 0.0,
-                        operators: vec![],
-                    },
-                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
-                        scan_required: false,
-                        max_issues_by_severity: HashMap::new(),
-                        required_controls: vec![],
-                    },
-                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
-                        max_regressions: 0,
-                        required_benchmarks: vec![],
-                        slas: vec![],
-                    },
-                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
-                        api_docs_required: false,
-                        code_docs_required: false,
-                        architecture_docs_required: false,
-                        required_formats: vec![],
-                        required_types: vec![],
-                        min_coverage: 0.0,
-                        quality_checks: vec![],
-                    },
+                    mutation_requirements:
+                        agent_agency_contracts::planning_io::MutationRequirements {
+                            required: false,
+                            min_score: 0.0,
+                            operators: vec![],
+                        },
+                    security_requirements:
+                        agent_agency_contracts::planning_io::SecurityRequirements {
+                            scan_required: false,
+                            max_issues_by_severity: HashMap::new(),
+                            required_controls: vec![],
+                        },
+                    performance_requirements:
+                        agent_agency_contracts::planning_io::PerformanceRequirements {
+                            max_regressions: 0,
+                            required_benchmarks: vec![],
+                            slas: vec![],
+                        },
+                    documentation_requirements:
+                        agent_agency_contracts::planning_io::DocumentationRequirements {
+                            api_docs_required: false,
+                            code_docs_required: false,
+                            architecture_docs_required: false,
+                            required_formats: vec![],
+                            required_types: vec![],
+                            min_coverage: 0.0,
+                            quality_checks: vec![],
+                        },
                     requires_manual_review: false,
                     requires_council_approval: false,
                     min_coverage: None,
@@ -1505,14 +1834,20 @@ mod tests {
             execution_state: None,
         }
     }
-
 }
 
 impl PlanningStorage {
     /// Store execution result for a plan
-    pub async fn store_execution_result(&self, plan_id: Uuid, result: &agent_agency_contracts::planning::PlanExecutionResult) -> Result<()> {
+    pub async fn store_execution_result(
+        &self,
+        plan_id: Uuid,
+        result: &agent_agency_contracts::planning::PlanExecutionResult,
+    ) -> Result<()> {
         // Store execution result as JSON file
-        let result_path = self.file_storage.plans_dir.join(format!("{}_result.json", plan_id));
+        let result_path = self
+            .file_storage
+            .plans_dir
+            .join(format!("{}_result.json", plan_id));
         let result_json = serde_json::to_string_pretty(result)?;
         tokio::fs::write(&result_path, result_json).await?;
 
@@ -1527,9 +1862,9 @@ impl PlanningStorage {
             final_state: format!("{:?}", result.final_state),
             timeline: serde_json::to_value(&result.timeline)?,
         };
-        
+
         self.db_ops.create_execution_result(create_result).await?;
-        
+
         tracing::debug!(
             plan_id = %plan_id,
             success = result.success,
@@ -1541,17 +1876,23 @@ impl PlanningStorage {
     }
 
     /// Get execution result for a plan
-    pub async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<agent_agency_contracts::planning::PlanExecutionResult>> {
+    pub async fn get_execution_result(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Option<agent_agency_contracts::planning::PlanExecutionResult>> {
         // Try to load from database first (preferred source)
         if let Some(db_result) = self.db_ops.get_execution_result(plan_id).await? {
             // Convert database model to contract type
-            let evidence: agent_agency_contracts::planning::ExecutionEvidence = serde_json::from_value(db_result.evidence.clone())
-                .map_err(|e| anyhow!("Failed to deserialize evidence: {}", e))?;
-            let metrics: agent_agency_contracts::planning::ExecutionMetrics = serde_json::from_value(db_result.metrics.clone())
-                .map_err(|e| anyhow!("Failed to deserialize metrics: {}", e))?;
-            let timeline: Vec<agent_agency_contracts::planning::ExecutionEvent> = serde_json::from_value(db_result.timeline.clone())
-                .map_err(|e| anyhow!("Failed to deserialize timeline: {}", e))?;
-            
+            let evidence: agent_agency_contracts::planning::ExecutionEvidence =
+                serde_json::from_value(db_result.evidence.clone())
+                    .map_err(|e| anyhow!("Failed to deserialize evidence: {}", e))?;
+            let metrics: agent_agency_contracts::planning::ExecutionMetrics =
+                serde_json::from_value(db_result.metrics.clone())
+                    .map_err(|e| anyhow!("Failed to deserialize metrics: {}", e))?;
+            let timeline: Vec<agent_agency_contracts::planning::ExecutionEvent> =
+                serde_json::from_value(db_result.timeline.clone())
+                    .map_err(|e| anyhow!("Failed to deserialize timeline: {}", e))?;
+
             // Parse final_state string back to PlanState enum
             let final_state = match db_result.final_state.as_str() {
                 "Draft" => agent_agency_contracts::planning_io::PlanState::Draft,
@@ -1559,11 +1900,15 @@ impl PlanningStorage {
                 "Approved" => agent_agency_contracts::planning_io::PlanState::Approved,
                 "InProgress" => agent_agency_contracts::planning_io::PlanState::InProgress,
                 "Completed" => agent_agency_contracts::planning_io::PlanState::Completed,
-                "Failed" => agent_agency_contracts::planning_io::PlanState::Failed { reason: "Execution failed".to_string() },
-                "Cancelled" => agent_agency_contracts::planning_io::PlanState::Cancelled { reason: "Plan cancelled".to_string() },
+                "Failed" => agent_agency_contracts::planning_io::PlanState::Failed {
+                    reason: "Execution failed".to_string(),
+                },
+                "Cancelled" => agent_agency_contracts::planning_io::PlanState::Cancelled {
+                    reason: "Plan cancelled".to_string(),
+                },
                 _ => agent_agency_contracts::planning_io::PlanState::Draft, // Default fallback
             };
-            
+
             let result = agent_agency_contracts::planning::PlanExecutionResult {
                 plan_id: db_result.plan_id,
                 success: db_result.success,
@@ -1574,26 +1919,30 @@ impl PlanningStorage {
                 final_state,
                 timeline,
             };
-            
+
             tracing::debug!(
                 plan_id = %plan_id,
                 "Retrieved execution result from database"
             );
-            
+
             return Ok(Some(result));
         }
-        
+
         // Fallback to file storage if not in database
-        let result_path = self.file_storage.plans_dir.join(format!("{}_result.json", plan_id));
+        let result_path = self
+            .file_storage
+            .plans_dir
+            .join(format!("{}_result.json", plan_id));
         if result_path.exists() {
             let result_json = tokio::fs::read_to_string(&result_path).await?;
-            let result: agent_agency_contracts::planning::PlanExecutionResult = serde_json::from_str(&result_json)?;
-            
+            let result: agent_agency_contracts::planning::PlanExecutionResult =
+                serde_json::from_str(&result_json)?;
+
             tracing::debug!(
                 plan_id = %plan_id,
                 "Retrieved execution result from file storage"
             );
-            
+
             Ok(Some(result))
         } else {
             Ok(None)
@@ -1610,26 +1959,26 @@ impl PlanningStorage {
         // Extract task_id from working_spec_id format: TASK-<UUID>
         // Query execution_plans table for plans where working_spec_id matches TASK-{task_id}
         let expected_working_spec_id = format!("TASK-{}", task_id);
-        
+
         // Get all execution plans and filter by working_spec_id
         // Note: This could be optimized with a direct query method, but works for now
         let all_plans = self.db_ops.get_execution_plans().await?;
-        
+
         // Find plans matching the task_id (working_spec_id format: TASK-<UUID>)
         let matching_plans: Vec<_> = all_plans
             .into_iter()
             .filter(|plan| plan.working_spec_id == expected_working_spec_id)
             .collect();
-        
+
         if matching_plans.is_empty() {
             return Ok(None);
         }
-        
+
         // Return the most recent plan if multiple exist (sorted by created_at descending)
         let most_recent_plan = matching_plans
             .into_iter()
             .max_by_key(|plan| plan.created_at);
-        
+
         if let Some(db_plan) = most_recent_plan {
             // Load plan spec from file if available
             if let Some(plan_spec) = self.file_storage.load_plan_spec(db_plan.id).await? {
@@ -1653,7 +2002,11 @@ impl PlanningStorage {
 
     /// Store execution plan as execution result (alias for backward compatibility)
     /// Note: Use store_execution_result(plan_id, &PlanExecutionResult) for contract type
-    pub async fn store_execution_result_plan(&self, plan_id: Uuid, result: &ExecutionPlan) -> Result<()> {
+    pub async fn store_execution_result_plan(
+        &self,
+        _plan_id: Uuid,
+        result: &ExecutionPlan,
+    ) -> Result<()> {
         // Store the updated plan with execution results
         self.store_execution_plan(result).await
     }

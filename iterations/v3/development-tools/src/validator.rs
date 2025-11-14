@@ -2,12 +2,12 @@
 //!
 //! Consolidated validation logic extracted from orchestration, workers, and MCP integration.
 
+use crate::policy::{CawsPolicy, RuleCategory, ViolationSeverity};
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
-use crate::policy::{CawsPolicy, ViolationSeverity, RuleCategory};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use async_trait::async_trait;
 
 /// Validation result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -107,8 +107,14 @@ impl CawsValidator {
 
         // Calculate compliance score
         let compliance_score = self.calculate_compliance_score(&violations);
-        let passed = violations.iter().all(|v| v.severity != ViolationSeverity::Critical)
-            && violations.iter().filter(|v| v.severity == ViolationSeverity::Error).count() == 0;
+        let passed = violations
+            .iter()
+            .all(|v| v.severity != ViolationSeverity::Critical)
+            && violations
+                .iter()
+                .filter(|v| v.severity == ViolationSeverity::Error)
+                .count()
+                == 0;
 
         ValidationResult {
             task_id: context.task_id,
@@ -129,9 +135,13 @@ impl CawsValidator {
                     rule_id: "budget-files".to_string(),
                     severity: ViolationSeverity::Error,
                     category: RuleCategory::Budget,
-                    message: format!("Files changed ({}) exceeds budget limit ({})",
-                                   context.diff_stats.files_changed, limits.max_files),
-                    remediation: Some("Split changes into smaller PRs or request budget increase".to_string()),
+                    message: format!(
+                        "Files changed ({}) exceeds budget limit ({})",
+                        context.diff_stats.files_changed, limits.max_files
+                    ),
+                    remediation: Some(
+                        "Split changes into smaller PRs or request budget increase".to_string(),
+                    ),
                     location: None,
                 });
             }
@@ -142,8 +152,10 @@ impl CawsValidator {
                     rule_id: "budget-loc".to_string(),
                     severity: ViolationSeverity::Error,
                     category: RuleCategory::Budget,
-                    message: format!("Lines of code changed ({}) exceeds budget limit ({})",
-                                   total_loc, limits.max_loc),
+                    message: format!(
+                        "Lines of code changed ({}) exceeds budget limit ({})",
+                        total_loc, limits.max_loc
+                    ),
                     remediation: Some("Refactor changes to be more focused".to_string()),
                     location: None,
                 });
@@ -167,8 +179,10 @@ impl CawsValidator {
                                     rule_id: "risk-tier-tests".to_string(),
                                     severity: ViolationSeverity::Error,
                                     category: RuleCategory::Quality,
-                                    message: format!("Risk tier {} requires passing tests, but {} tests failed",
-                                                   context.risk_tier, test_results.failed_tests),
+                                    message: format!(
+                                        "Risk tier {} requires passing tests, but {} tests failed",
+                                        context.risk_tier, test_results.failed_tests
+                                    ),
                                     remediation: Some("Fix failing tests".to_string()),
                                     location: None,
                                 });
@@ -182,9 +196,13 @@ impl CawsValidator {
                                     rule_id: "risk-tier-security".to_string(),
                                     severity: ViolationSeverity::Critical,
                                     category: RuleCategory::Security,
-                                    message: format!("Risk tier {} prohibits critical security vulnerabilities",
-                                                   context.risk_tier),
-                                    remediation: Some("Fix critical security vulnerabilities".to_string()),
+                                    message: format!(
+                                        "Risk tier {} prohibits critical security vulnerabilities",
+                                        context.risk_tier
+                                    ),
+                                    remediation: Some(
+                                        "Fix critical security vulnerabilities".to_string(),
+                                    ),
                                     location: None,
                                 });
                             }
@@ -211,8 +229,13 @@ impl CawsValidator {
                                 rule_id: "quality-coverage-high".to_string(),
                                 severity: ViolationSeverity::Error,
                                 category: RuleCategory::Quality,
-                                message: format!("High risk tier requires 80%+ coverage, got {:.1}%", coverage * 100.0),
-                                remediation: Some("Add more tests to achieve required coverage".to_string()),
+                                message: format!(
+                                    "High risk tier requires 80%+ coverage, got {:.1}%",
+                                    coverage * 100.0
+                                ),
+                                remediation: Some(
+                                    "Add more tests to achieve required coverage".to_string(),
+                                ),
                                 location: None,
                             });
                         }
@@ -223,7 +246,10 @@ impl CawsValidator {
                                 rule_id: "quality-coverage-medium".to_string(),
                                 severity: ViolationSeverity::Warning,
                                 category: RuleCategory::Quality,
-                                message: format!("Medium risk tier recommends 70%+ coverage, got {:.1}%", coverage * 100.0),
+                                message: format!(
+                                    "Medium risk tier recommends 70%+ coverage, got {:.1}%",
+                                    coverage * 100.0
+                                ),
                                 remediation: Some("Consider adding more tests".to_string()),
                                 location: None,
                             });
@@ -254,11 +280,15 @@ impl CawsValidator {
                     rule_id: "security-scan".to_string(),
                     severity,
                     category: RuleCategory::Security,
-                    message: format!("Found {} security vulnerabilities ({} critical, {} high)",
-                                   security.vulnerabilities_found,
-                                   security.critical_vulnerabilities,
-                                   security.high_vulnerabilities),
-                    remediation: Some("Address security vulnerabilities before proceeding".to_string()),
+                    message: format!(
+                        "Found {} security vulnerabilities ({} critical, {} high)",
+                        security.vulnerabilities_found,
+                        security.critical_vulnerabilities,
+                        security.high_vulnerabilities
+                    ),
+                    remediation: Some(
+                        "Address security vulnerabilities before proceeding".to_string(),
+                    ),
                     location: None,
                 });
             }
@@ -273,14 +303,15 @@ impl CawsValidator {
         }
 
         // Weight violations by severity
-        let total_weight: f32 = violations.iter().map(|v| {
-            match v.severity {
+        let total_weight: f32 = violations
+            .iter()
+            .map(|v| match v.severity {
                 ViolationSeverity::Critical => 1.0,
                 ViolationSeverity::Error => 0.8,
                 ViolationSeverity::Warning => 0.4,
                 ViolationSeverity::Info => 0.1,
-            }
-        }).sum();
+            })
+            .sum();
 
         // Perfect score minus weighted violations
         (1.0 - total_weight).max(0.0)

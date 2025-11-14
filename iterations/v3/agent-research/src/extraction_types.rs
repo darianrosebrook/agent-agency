@@ -1,13 +1,13 @@
 //! Types for claim extraction and verification pipeline
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Context for claim processing operations
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessingContext {
     pub task_id: Uuid,
     pub working_spec_id: String,
@@ -37,7 +37,7 @@ impl Default for ProcessingContext {
 }
 
 /// Result of claim extraction process
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimExtractionResult {
     pub original_sentence: String,
     pub disambiguated_sentence: String,
@@ -47,7 +47,7 @@ pub struct ClaimExtractionResult {
 }
 
 /// Analysis of ambiguities in a sentence (ported from V2)
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisambiguationAnalysis {
     pub referential_ambiguities: Vec<String>,
     pub structural_ambiguities: Vec<String>,
@@ -58,7 +58,7 @@ pub struct DisambiguationAnalysis {
 
 /// Factors used to compute disambiguation confidence
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisambiguationConfidenceFactors {
     pub referential_ambiguities: usize,
     pub structural_ambiguities: usize,
@@ -70,7 +70,7 @@ pub struct DisambiguationConfidenceFactors {
 
 /// Information about a pronoun referent
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferentInfo {
     pub entity: String,
     pub confidence: f64,
@@ -78,7 +78,7 @@ pub struct ReferentInfo {
 }
 
 /// Individual atomic claim extracted from sentence
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AtomicClaim {
     pub id: Uuid,
     pub claim_text: String,
@@ -102,7 +102,7 @@ pub struct AtomicClaim {
 }
 
 /// Types of claims that can be extracted
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimType {
     Factual,
     Procedural,
@@ -121,7 +121,7 @@ pub enum ClaimType {
 }
 
 /// Level of verifiability for a claim
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerifiabilityLevel {
     DirectlyVerifiable,
     IndirectlyVerifiable,
@@ -136,7 +136,7 @@ pub enum VerifiabilityLevel {
 }
 
 /// Scope of a claim within the system
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimScope {
     pub working_spec_id: String,
     pub component_boundaries: Vec<String>,
@@ -144,7 +144,7 @@ pub struct ClaimScope {
 }
 
 /// Impact of claim on data/system state
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DataImpact {
     None,
     ReadOnly,
@@ -153,7 +153,7 @@ pub enum DataImpact {
 }
 
 /// Evidence supporting or refuting a claim
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Evidence {
     pub id: Uuid,
     pub claim_id: Uuid,
@@ -166,7 +166,7 @@ pub struct Evidence {
 }
 
 /// Types of evidence that can be collected
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EvidenceType {
     CodeAnalysis,
     TestResults,
@@ -179,7 +179,7 @@ pub enum EvidenceType {
     MultiModalAnalysis,      // Multi-modal verification results
     ExternalSource,          // External API sources
     TestResult,              // Individual test result
-    TestExecution,          // Test execution evidence
+    TestExecution,           // Test execution evidence
     UserFeedback,            // User-provided feedback
     Measurement,
     LogicalAnalysis,
@@ -187,54 +187,54 @@ pub enum EvidenceType {
 }
 
 /// Source of evidence
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum EvidenceSource {
     #[serde(rename = "code_search")]
     CodeSearch {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "code_analysis")]
     CodeAnalysis {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "documentation")]
     Documentation {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "measurement")]
     Measurement {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "logical_reasoning")]
     LogicalReasoning {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "general")]
     General {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
     #[serde(rename = "runtime_execution")]
     RuntimeExecution {
         location: String,
         authority: String,
-    freshness: DateTime<Utc>
+        freshness: DateTime<Utc>,
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SourceType {
     FileSystem,
     Database,
@@ -252,7 +252,7 @@ pub enum SourceType {
 }
 
 /// Metadata about the processing operation
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessingMetadata {
     pub processing_time_ms: u64,
     pub stages_completed: Vec<ProcessingStage>,
@@ -280,7 +280,7 @@ impl Default for ProcessingMetadata {
 }
 
 /// Breakdown of unverifiable content reasons encountered during qualification
-#[derive(Debug, Clone, Serialize, Deserialize, Default) ]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UnverifiableBreakdown {
     pub subjective_language: u32,
     pub vague_criteria: u32,
@@ -291,7 +291,7 @@ pub struct UnverifiableBreakdown {
     pub improvement_claim: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProcessingStage {
     Disambiguation,
     Qualification,
@@ -299,7 +299,7 @@ pub enum ProcessingStage {
     Verification,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProcessingError {
     pub stage: ProcessingStage,
     pub error_type: String,
@@ -308,7 +308,7 @@ pub struct ProcessingError {
 }
 
 /// Result of disambiguation stage
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisambiguationResult {
     pub original_sentence: String,
     pub disambiguated_sentence: String,
@@ -317,7 +317,7 @@ pub struct DisambiguationResult {
 }
 
 /// Result of qualification stage
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualificationResult {
     pub verifiable_parts: Vec<VerifiableContent>,
     pub unverifiable_parts: Vec<UnverifiableContent>,
@@ -325,14 +325,14 @@ pub struct QualificationResult {
 }
 
 /// Result of decomposition stage
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecompositionResult {
     pub atomic_claims: Vec<AtomicClaim>,
     pub decomposition_confidence: f64,
 }
 
 /// Result of verification stage
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResult {
     pub evidence: Vec<Evidence>,
     pub verification_confidence: f64,
@@ -342,7 +342,7 @@ pub struct VerificationResult {
 }
 
 /// Result from council verification process
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CouncilVerificationResult {
     pub submitted_claims: Vec<Uuid>,
     pub council_verdict: String,
@@ -376,7 +376,7 @@ pub enum ClaimExtractionError {
 
 /// Represents an ambiguity found in text
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ambiguity {
     pub ambiguity_type: AmbiguityType,
     pub position: (usize, usize), // Start and end character positions
@@ -385,8 +385,7 @@ pub struct Ambiguity {
     pub confidence: f64,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AmbiguityType {
     Pronoun,
     TechnicalTerm,
@@ -397,15 +396,14 @@ pub enum AmbiguityType {
 
 /// Ambiguity that cannot be resolved with available context
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnresolvableAmbiguity {
     pub ambiguity: Ambiguity,
     pub reason: UnresolvableReason,
     pub suggested_context: Vec<String>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UnresolvableReason {
     InsufficientContext,
     MultipleValidInterpretations,
@@ -415,7 +413,7 @@ pub enum UnresolvableReason {
 
 /// Content that can be verified
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifiableContent {
     pub position: (usize, usize),
     pub content: String,
@@ -424,7 +422,7 @@ pub struct VerifiableContent {
 }
 
 /// Reasons why content cannot be verified
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UnverifiableReason {
     /// Uses subjective language like "best", "worst", "amazing"
     SubjectiveLanguage,
@@ -444,7 +442,7 @@ pub enum UnverifiableReason {
 
 /// Content that cannot be verified
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnverifiableContent {
     pub position: (usize, usize),
     pub content: String,
@@ -453,39 +451,33 @@ pub struct UnverifiableContent {
     pub original_content: String,
 }
 
-
 // Import VerificationMethod from contracts instead of defining locally
 pub use agent_agency_contracts::types::research::VerificationMethod;
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceRequirement {
     pub evidence_type: EvidenceType,
     pub minimum_confidence: f64,
     pub source_requirements: Vec<SourceRequirement>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceRequirement {
     pub source_type: SourceType,
     pub authority_level: AuthorityLevel,
     pub freshness_requirement: Option<chrono::Duration>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthorityLevel {
     Primary,   // Direct source
     Secondary, // Referenced source
     Tertiary,  // Background context
 }
 
-
-
 /// Assessment of content verifiability
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifiabilityAssessment {
     pub overall_verifiability: VerifiabilityLevel,
     pub verifiable_parts: Vec<VerifiableContent>,
@@ -503,7 +495,7 @@ pub struct VerificationResults {
 }
 
 /// Individual verified claim
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifiedClaim {
     pub original_claim: String,
     pub verification_results: VerificationStatus,
@@ -518,7 +510,7 @@ pub struct VerifiedClaim {
 }
 
 /// Status of verification process
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerificationStatus {
     Verified,
     Refuted,
@@ -529,7 +521,7 @@ pub enum VerificationStatus {
 }
 
 /// Council environment settings
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CouncilEnvironment {
     Development,
     Staging,
@@ -537,7 +529,7 @@ pub enum CouncilEnvironment {
 }
 
 /// Programming languages supported for verification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Language {
     Rust,
     TypeScript,
@@ -549,7 +541,7 @@ pub enum Language {
 
 /// Historical claim data structure
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalClaim {
     pub id: String,
     pub claim_text: String,
@@ -574,7 +566,7 @@ pub struct HistoricalClaim {
 
 /// Keyword match result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeywordMatch {
     pub keyword: String,
     pub position: usize,
@@ -586,7 +578,7 @@ pub struct KeywordMatch {
 
 /// Type of keyword match
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MatchType {
     Exact,
     Fuzzy,
@@ -595,7 +587,7 @@ pub enum MatchType {
 
 /// Named entity with type information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NamedEntity {
     pub text: String,
     pub entity_type: EntityType,
@@ -606,7 +598,7 @@ pub struct NamedEntity {
 
 /// Entity type classification
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EntityType {
     Person,
     Organization,
@@ -619,18 +611,18 @@ pub enum EntityType {
 
 /// Validation outcome for historical claims
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationOutcome {
     Validated,
     Invalidated,
     Uncertain,
-    Verified,    // Alias for Validated
-    Unverified,  // Alias for Uncertain
+    Verified,   // Alias for Validated
+    Unverified, // Alias for Uncertain
 }
 
 /// Entity in text with disambiguation information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
     pub text: String,
     pub entity_type: EntityType,
@@ -642,7 +634,7 @@ pub struct Entity {
 
 /// Entity candidate for disambiguation
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityCandidate {
     pub text: String,
     pub confidence: f64,
@@ -652,7 +644,7 @@ pub struct EntityCandidate {
 
 /// Coreference resolution result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreferenceResolution {
     pub resolved_entities: Vec<NamedEntity>,
     pub coreference_chains: Vec<Vec<usize>>, // Indices into resolved_entities
@@ -661,7 +653,7 @@ pub struct CoreferenceResolution {
 
 /// Historical entity analysis for pattern detection
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalEntityAnalysis {
     pub total_entities: usize,
     pub entity_frequency: std::collections::HashMap<String, usize>,
@@ -671,7 +663,7 @@ pub struct HistoricalEntityAnalysis {
 
 /// Entity relationship information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityRelationship {
     pub entity1: String,
     pub entity2: String,
@@ -682,7 +674,7 @@ pub struct EntityRelationship {
 
 /// Context-aware disambiguation result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextAwareDisambiguation {
     pub resolved_entities: Vec<ResolvedEntity>,
     pub disambiguation_confidence: f64,
@@ -691,7 +683,7 @@ pub struct ContextAwareDisambiguation {
 
 /// Resolved entity with disambiguation
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedEntity {
     pub original_text: String,
     pub resolved_entity: Entity,
@@ -701,7 +693,7 @@ pub struct ResolvedEntity {
 
 /// Domain integration result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainIntegration {
     pub domain_hints: Vec<String>,
     pub integrated_entities: Vec<Entity>,
@@ -710,7 +702,7 @@ pub struct DomainIntegration {
 
 /// Subject-predicate-object triple for claim decomposition
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubjectPredicateObject {
     pub subject: String,
     pub predicate: String,
@@ -719,7 +711,7 @@ pub struct SubjectPredicateObject {
 }
 
 /// Verification requirement for claims
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationRequirement {
     pub requirement_type: String,
     pub description: String,
@@ -728,7 +720,7 @@ pub struct VerificationRequirement {
 }
 
 /// Verification priority levels
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationPriority {
     High,
     Medium,
@@ -737,7 +729,7 @@ pub enum VerificationPriority {
 
 /// Entity match result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EntityMatch {
     pub entity: Entity,
     pub confidence: f64,
@@ -753,7 +745,7 @@ pub trait EmbeddingService {
 
 /// Embedding request structure
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingRequest {
     pub text: String,
     pub context: Option<String>,

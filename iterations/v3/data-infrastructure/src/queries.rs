@@ -20,7 +20,7 @@ pub mod judge_queries {
     "#;
 
     pub const UPDATE_JUDGE: &str = r#"
-        UPDATE judges 
+        UPDATE judges
         SET name = $2, model_name = $3, endpoint = $4, weight = $5, timeout_ms = $6, optimization_target = $7
         WHERE id = $1
         RETURNING *
@@ -48,7 +48,7 @@ pub mod worker_queries {
     "#;
 
     pub const UPDATE_WORKER: &str = r#"
-        UPDATE workers 
+        UPDATE workers
         SET name = $2, worker_type = $3, capabilities = $4, status = $5, endpoint = $6
         WHERE id = $1
         RETURNING *
@@ -76,7 +76,7 @@ pub mod task_queries {
     "#;
 
     pub const UPDATE_TASK: &str = r#"
-        UPDATE tasks 
+        UPDATE tasks
         SET title = $2, description = $3, task_type = $4, priority = $5, status = $6, assigned_worker_id = $7
         WHERE id = $1
         RETURNING *
@@ -104,7 +104,7 @@ pub mod task_execution_queries {
     "#;
 
     pub const UPDATE_TASK_EXECUTION: &str = r#"
-        UPDATE task_executions 
+        UPDATE task_executions
         SET status = $2, completed_at = $3, result_data = $4
         WHERE id = $1
         RETURNING *
@@ -179,8 +179,8 @@ pub mod knowledge_queries {
     "#;
 
     pub const SEARCH_KNOWLEDGE_ENTRIES: &str = r#"
-        SELECT * FROM knowledge_entries 
-        WHERE title ILIKE $1 OR content ILIKE $1 
+        SELECT * FROM knowledge_entries
+        WHERE title ILIKE $1 OR content ILIKE $1
         ORDER BY confidence_score DESC, created_at DESC
     "#;
 }
@@ -194,14 +194,14 @@ pub mod performance_queries {
     "#;
 
     pub const GET_METRICS_BY_ENTITY: &str = r#"
-        SELECT * FROM performance_metrics 
-        WHERE entity_type = $1 AND entity_id = $2 
+        SELECT * FROM performance_metrics
+        WHERE entity_type = $1 AND entity_id = $2
         ORDER BY recorded_at DESC
     "#;
 
     pub const GET_AVERAGE_METRICS: &str = r#"
         SELECT metric_name, AVG(metric_value) as avg_value, COUNT(*) as sample_count
-        FROM performance_metrics 
+        FROM performance_metrics
         WHERE entity_type = $1 AND entity_id = $2
         GROUP BY metric_name
     "#;
@@ -220,11 +220,11 @@ pub mod caws_queries {
     "#;
 
     pub const GET_COMPLIANCE_STATS: &str = r#"
-        SELECT 
+        SELECT
             compliance_status,
             COUNT(*) as count,
             AVG(quality_gates_passed) as avg_gates_passed
-        FROM caws_compliance 
+        FROM caws_compliance
         WHERE recorded_at >= $1
         GROUP BY compliance_status
     "#;
@@ -239,14 +239,14 @@ pub mod audit_queries {
     "#;
 
     pub const GET_AUDIT_TRAIL_BY_ENTITY: &str = r#"
-        SELECT * FROM audit_trail 
-        WHERE entity_type = $1 AND entity_id = $2 
+        SELECT * FROM audit_trail
+        WHERE entity_type = $1 AND entity_id = $2
         ORDER BY timestamp DESC
     "#;
 
     pub const GET_AUDIT_TRAIL_BY_USER: &str = r#"
-        SELECT * FROM audit_trail 
-        WHERE user_id = $1 
+        SELECT * FROM audit_trail
+        WHERE user_id = $1
         ORDER BY timestamp DESC
     "#;
 }
@@ -258,7 +258,7 @@ pub mod health_queries {
     pub const GET_TABLE_COUNT: &str = "SELECT COUNT(*) FROM $1";
 
     pub const GET_DATABASE_STATS: &str = r#"
-        SELECT 
+        SELECT
             schemaname,
             tablename,
             n_tup_ins as inserts,
@@ -283,8 +283,8 @@ pub mod migration_queries {
     "#;
 
     pub const GET_APPLIED_MIGRATIONS: &str = r#"
-        SELECT migration_id, name, applied_at, checksum, success 
-        FROM applied_migrations 
+        SELECT migration_id, name, applied_at, checksum, success
+        FROM applied_migrations
         ORDER BY applied_at
     "#;
 
@@ -294,8 +294,8 @@ pub mod migration_queries {
     "#;
 
     pub const MARK_MIGRATION_FAILED: &str = r#"
-        UPDATE applied_migrations 
-        SET success = FALSE 
+        UPDATE applied_migrations
+        SET success = FALSE
         WHERE migration_id = $1
     "#;
 }

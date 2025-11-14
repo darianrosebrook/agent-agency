@@ -212,7 +212,9 @@ impl PerformanceTracker {
                 match b.timestamp.cmp(&a.timestamp) {
                     std::cmp::Ordering::Equal => {
                         // If timestamps are same, sort by score descending
-                        b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal)
+                        b.score
+                            .partial_cmp(&a.score)
+                            .unwrap_or(std::cmp::Ordering::Equal)
                     }
                     other => other,
                 }

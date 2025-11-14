@@ -1,7 +1,7 @@
 //! Database models and types for Agent Agency V3
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -36,13 +36,10 @@ pub struct Waiver {
     pub impact_level: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub status: String,
     pub metadata: serde_json::Value,
@@ -61,10 +58,8 @@ pub struct Judge {
     pub optimization_target: String,
     pub is_active: bool,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -82,10 +77,8 @@ pub struct Worker {
     pub performance_history: serde_json::Value,
     pub is_active: bool,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -106,10 +99,8 @@ pub struct Task {
     #[schemars(with = "String")]
     pub project_id: Option<Uuid>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub priority: Option<i32>,
@@ -137,7 +128,6 @@ pub struct TaskExecution {
     pub error_message: Option<String>,
     pub tokens_used: Option<i32>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
     pub execution_metadata: Option<serde_json::Value>,
@@ -159,7 +149,6 @@ pub struct CouncilVerdict {
     pub debate_rounds: i32,
     pub evaluation_time_ms: i32,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub contract: serde_json::Value,
     pub updated_at: Option<DateTime<Utc>>,
@@ -207,7 +196,6 @@ pub struct JudgeEvaluation {
     pub tokens_used: Option<i32>,
     pub confidence: Option<f32>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub evaluation_score: Option<f32>,
     pub confidence_score: Option<f32>,
@@ -233,7 +221,6 @@ pub struct DebateSession {
     pub status: String,
     pub final_consensus: Option<serde_json::Value>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
@@ -251,10 +238,8 @@ pub struct KnowledgeEntry {
     pub tags: serde_json::Value,
     pub embedding: Option<Vec<f32>>, // pgvector as Vec<f32>
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub content_type: Option<String>,
     pub metadata: Option<serde_json::Value>,
@@ -277,7 +262,6 @@ pub struct PerformanceMetric {
     pub metric_unit: Option<String>,
     pub metadata: serde_json::Value,
     #[schemars(with = "String")]
-
     pub recorded_at: DateTime<Utc>,
 }
 
@@ -296,7 +280,6 @@ pub struct CawsCompliance {
     pub quality_gates: serde_json::Value,
     pub provenance_trail: serde_json::Value,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -313,7 +296,6 @@ pub struct AuditTrailEntry {
     pub user_id: Option<String>,
     pub ip_address: Option<String>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -331,15 +313,12 @@ pub struct SourceIntegrityRecord {
     pub tampering_indicators: serde_json::Value,
     pub verification_metadata: serde_json::Value,
     #[schemars(with = "String")]
-
     pub first_seen_at: DateTime<Utc>,
     pub last_verified_at: Option<DateTime<Utc>>,
     pub verification_count: i32,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -360,7 +339,6 @@ pub struct SourceIntegrityVerification {
     pub verified_by: Option<String>,
     pub verification_duration_ms: Option<i32>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -382,7 +360,6 @@ pub struct SourceIntegrityAlert {
     pub resolved_by: Option<String>,
     pub resolved_at: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -548,7 +525,6 @@ pub struct CreateCawsCompliance {
     pub audit_details: Option<serde_json::Value>,
 }
 
-
 /// Update types for modifying existing records
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateJudge {
@@ -666,7 +642,6 @@ pub struct KnowledgeFilters {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CouncilMetrics {
     #[schemars(with = "String")]
-
     pub date: DateTime<Utc>,
     pub total_verdicts: i64,
     pub avg_consensus_score: Option<f64>,
@@ -745,7 +720,6 @@ pub struct CawsViolation {
     pub constitutional_reference: Option<String>,
     pub status: String,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
     pub metadata: serde_json::Value,
@@ -764,10 +738,8 @@ pub struct CawsRule {
     pub constitutional_reference: Option<String>,
     pub is_active: bool,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -849,7 +821,6 @@ pub struct KnowledgeStats {
     pub avg_confidence: f64,
     pub avg_usage_count: f64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -864,7 +835,6 @@ pub struct AuditLog {
     pub resource_type: Option<String>,
     pub change_summary: serde_json::Value,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -878,7 +848,6 @@ pub struct PlanningTelemetry {
     pub metric_type: String,
     pub metric_value: serde_json::Value,
     #[schemars(with = "String")]
-
     pub collected_at: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
@@ -902,10 +871,8 @@ pub struct ExecutionPlan {
     pub active_waivers: serde_json::Value,
     pub metadata: serde_json::Value,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub approved_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
@@ -935,10 +902,8 @@ pub struct Milestone {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -957,11 +922,9 @@ pub struct PlanningSession {
     pub status: String,
     pub execution_state: serde_json::Value,
     #[schemars(with = "String")]
-
     pub started_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -977,7 +940,6 @@ pub struct EvidenceArtifact {
     pub artifact_data: serde_json::Value,
     pub verified: Option<bool>,
     #[schemars(with = "String")]
-
     pub collected_at: DateTime<Utc>,
     pub verified_at: Option<DateTime<Utc>>,
     pub metadata: serde_json::Value,
@@ -996,7 +958,6 @@ pub struct PlanningAuditEvent {
     pub description: String,
     pub metadata: serde_json::Value,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -1005,7 +966,6 @@ pub struct PlanningAuditEvent {
 pub struct User {
     #[schemars(with = "String")]
     pub id: Uuid,
-    pub email: String,
     pub username: String,
     pub password_hash: String,
     pub name: Option<String>,

@@ -3,9 +3,9 @@
 //! Provides comprehensive monitoring for YOLO inference performance,
 //! ANE utilization, and optimization recommendations.
 
-use schemars::JsonSchema;
-use crate::telemetry::TelemetryCollector;
 use crate::ane::ane_errors::Result;
+use crate::telemetry::TelemetryCollector;
+use schemars::JsonSchema;
 use tracing::{info, warn};
 
 /// YOLO-specific performance metrics
@@ -57,10 +57,7 @@ pub struct YOLOPerformanceMonitor {
 
 impl YOLOPerformanceMonitor {
     /// Create a new YOLO performance monitor
-    pub fn new(
-        telemetry: TelemetryCollector,
-        thresholds: YOLOPerformanceThresholds,
-    ) -> Self {
+    pub fn new(telemetry: TelemetryCollector, thresholds: YOLOPerformanceThresholds) -> Self {
         Self {
             telemetry,
             thresholds,
@@ -82,10 +79,8 @@ impl YOLOPerformanceMonitor {
             && !metrics.memory_usage_mb.is_nan();
 
         // Record in telemetry
-        self.telemetry.record_inference(
-            metrics.total_inference_time_ms as u64,
-            success
-        );
+        self.telemetry
+            .record_inference(metrics.total_inference_time_ms as u64, success);
 
         // Store in history
         self.historical_metrics.push(metrics.clone());
@@ -101,8 +96,7 @@ impl YOLOPerformanceMonitor {
         // Log performance info
         info!(
             "YOLO inference completed: {:.1}ms total, {} objects detected",
-            metrics.total_inference_time_ms,
-            metrics.objects_detected
+            metrics.total_inference_time_ms, metrics.objects_detected
         );
 
         if let Some(ane_time) = metrics.ane_compute_time_ms {
@@ -119,12 +113,12 @@ impl YOLOPerformanceMonitor {
     /// Check for performance alerts
     fn check_alerts(&self, metrics: &YOLOPerformanceMetrics) -> Result<()> {
         // Check inference time
-        if self.thresholds.alert_on_slow_inference &&
-           metrics.total_inference_time_ms > self.thresholds.max_inference_time_ms {
+        if self.thresholds.alert_on_slow_inference
+            && metrics.total_inference_time_ms > self.thresholds.max_inference_time_ms
+        {
             warn!(
                 "YOLO inference too slow: {:.1}ms > {:.1}ms threshold",
-                metrics.total_inference_time_ms,
-                self.thresholds.max_inference_time_ms
+                metrics.total_inference_time_ms, self.thresholds.max_inference_time_ms
             );
         }
 
@@ -132,8 +126,7 @@ impl YOLOPerformanceMonitor {
         if metrics.memory_usage_mb > self.thresholds.max_memory_usage_mb {
             warn!(
                 "YOLO memory usage high: {:.1}MB > {:.1}MB threshold",
-                metrics.memory_usage_mb,
-                self.thresholds.max_memory_usage_mb
+                metrics.memory_usage_mb, self.thresholds.max_memory_usage_mb
             );
         }
 
@@ -142,15 +135,13 @@ impl YOLOPerformanceMonitor {
             if ane_util < self.thresholds.min_ane_utilization_percent {
                 warn!(
                     "YOLO ANE utilization low: {:.1}% < {:.1}% threshold",
-                    ane_util,
-                    self.thresholds.min_ane_utilization_percent
+                    ane_util, self.thresholds.min_ane_utilization_percent
                 );
             }
         }
 
         // Check CPU fallback
-        if self.thresholds.alert_on_cpu_fallback &&
-           metrics.cpu_fallback_time_ms.is_some() {
+        if self.thresholds.alert_on_cpu_fallback && metrics.cpu_fallback_time_ms.is_some() {
             warn!(
                 "YOLO fell back to CPU: {:.1}ms CPU time",
                 metrics.cpu_fallback_time_ms.unwrap()
@@ -206,10 +197,14 @@ impl YOLOPerformanceMonitor {
             average_objects_detected: avg_objects,
             average_ane_utilization_percent: avg_ane_utilization,
             cpu_fallback_rate,
-            min_inference_time_ms: self.historical_metrics.iter()
+            min_inference_time_ms: self
+                .historical_metrics
+                .iter()
                 .map(|m| m.total_inference_time_ms)
                 .fold(f64::INFINITY, f64::min),
-            max_inference_time_ms: self.historical_metrics.iter()
+            max_inference_time_ms: self
+                .historical_metrics
+                .iter()
                 .map(|m| m.total_inference_time_ms)
                 .fold(0.0, f64::max),
         }
@@ -222,36 +217,36 @@ impl YOLOPerformanceMonitor {
 
         // Inference time recommendations
         if stats.average_inference_time_ms > 100.0 {
-            recommendations.push(
-                format!("High average inference time ({:.1}ms). Consider model optimization or batching.",
-                       stats.average_inference_time_ms)
-            );
+            recommendations.push(format!(
+                "High average inference time ({:.1}ms). Consider model optimization or batching.",
+                stats.average_inference_time_ms
+            ));
         }
 
         // Memory recommendations
         if stats.average_memory_usage_mb > 500.0 {
-            recommendations.push(
-                format!("High memory usage ({:.1}MB). Consider quantized model or memory optimization.",
-                       stats.average_memory_usage_mb)
-            );
+            recommendations.push(format!(
+                "High memory usage ({:.1}MB). Consider quantized model or memory optimization.",
+                stats.average_memory_usage_mb
+            ));
         }
 
         // ANE utilization recommendations
         if let Some(ane_util) = stats.average_ane_utilization_percent {
             if ane_util < 70.0 {
-                recommendations.push(
-                    format!("Low ANE utilization ({:.1}%). Check model compatibility or ANE drivers.",
-                           ane_util)
-                );
+                recommendations.push(format!(
+                    "Low ANE utilization ({:.1}%). Check model compatibility or ANE drivers.",
+                    ane_util
+                ));
             }
         }
 
         // CPU fallback recommendations
         if stats.cpu_fallback_rate > 0.1 {
-            recommendations.push(
-                format!("High CPU fallback rate ({:.1}%). ANE may not be available or model incompatible.",
-                       stats.cpu_fallback_rate * 100.0)
-            );
+            recommendations.push(format!(
+                "High CPU fallback rate ({:.1}%). ANE may not be available or model incompatible.",
+                stats.cpu_fallback_rate * 100.0
+            ));
         }
 
         // Object detection recommendations
@@ -262,7 +257,8 @@ impl YOLOPerformanceMonitor {
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Performance looks good! No optimization recommendations.".to_string());
+            recommendations
+                .push("Performance looks good! No optimization recommendations.".to_string());
         }
 
         recommendations
@@ -407,6 +403,8 @@ mod tests {
         let recommendations = monitor.get_optimization_recommendations();
         assert!(recommendations.len() > 1); // Should have multiple recommendations
         assert!(recommendations.iter().any(|r| r.contains("inference time")));
-        assert!(recommendations.iter().any(|r| r.contains("ANE utilization")));
+        assert!(recommendations
+            .iter()
+            .any(|r| r.contains("ANE utilization")));
     }
 }

@@ -3,17 +3,16 @@
 //! Defines the interface for monitoring system reliability metrics,
 //! compliance status, and recovery operations.
 
-use schemars::JsonSchema;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Compliance status for RTO/RPO monitoring
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceStatus {
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub overall_compliant: bool,
     pub rto_compliant: bool,
@@ -39,7 +38,6 @@ pub struct ComplianceViolation {
     #[schemars(with = "String")]
     pub id: Uuid,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub violation_type: ViolationType,
     pub severity: ViolationSeverity,
@@ -82,7 +80,6 @@ pub struct RecoveryMetrics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonthlyStats {
     #[schemars(with = "String")]
-
     pub period_start: DateTime<Utc>,
     pub incidents: u64,
     pub violations: u64,
@@ -96,7 +93,6 @@ pub struct ComplianceAlert {
     #[schemars(with = "String")]
     pub id: Uuid,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub alert_type: AlertType,
     pub severity: AlertSeverity,
@@ -163,24 +159,30 @@ impl AlertManager {
             alerts: std::collections::HashMap::new(),
         }
     }
-    
+
     pub async fn add_alert(&mut self, alert: ComplianceAlert) {
         self.alerts.insert(alert.id, alert);
     }
-    
+
     pub async fn get_alerts(&self) -> Vec<ComplianceAlert> {
         self.alerts.values().cloned().collect()
     }
-    
-    pub async fn get_active_alerts(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
+
+    pub async fn get_active_alerts(
+        &self,
+    ) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
         Ok(self.alerts.values().cloned().collect())
     }
-    
-    pub async fn get_alert_history(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
+
+    pub async fn get_alert_history(
+        &self,
+    ) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error>> {
         Ok(self.alerts.values().cloned().collect())
     }
-    
-    pub async fn get_alert_statistics(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+
+    pub async fn get_alert_statistics(
+        &self,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         Ok(serde_json::json!({
             "total": self.alerts.len(),
             "by_severity": {
@@ -191,12 +193,18 @@ impl AlertManager {
             }
         }))
     }
-    
-    pub async fn acknowledge_alert(&mut self, _alert_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+
+    pub async fn acknowledge_alert(
+        &mut self,
+        _alert_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
-    
-    pub async fn resolve_alert(&mut self, _alert_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+
+    pub async fn resolve_alert(
+        &mut self,
+        _alert_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
@@ -205,14 +213,23 @@ impl AlertManager {
 #[async_trait]
 pub trait ReliabilityMonitor: Send + Sync {
     /// Get current compliance status
-    async fn get_compliance_status(&self) -> Result<ComplianceStatus, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_compliance_status(
+        &self,
+    ) -> Result<ComplianceStatus, Box<dyn std::error::Error + Send + Sync>>;
+
     /// Get recent violations
-    async fn get_recent_violations(&self, hours: i64) -> Result<Vec<ComplianceViolation>, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_recent_violations(
+        &self,
+        hours: i64,
+    ) -> Result<Vec<ComplianceViolation>, Box<dyn std::error::Error + Send + Sync>>;
+
     /// Get recovery metrics
-    async fn get_recovery_metrics(&self) -> Result<RecoveryMetrics, Box<dyn std::error::Error + Send + Sync>>;
-    
+    async fn get_recovery_metrics(
+        &self,
+    ) -> Result<RecoveryMetrics, Box<dyn std::error::Error + Send + Sync>>;
+
     /// Get pending alerts
-    async fn get_pending_alerts(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_pending_alerts(
+        &self,
+    ) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error + Send + Sync>>;
 }

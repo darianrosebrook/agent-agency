@@ -9,16 +9,16 @@ use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock, oneshot};
+use tokio::sync::{broadcast, oneshot, RwLock};
+use tracing::{info, warn};
 use uuid::Uuid;
-use futures_util::{SinkExt, StreamExt};
-use tracing::{warn, info};
 
 #[cfg(feature = "orchestration")]
-use crate::api::{ApiState, middleware::auth::validate_token_and_get_user_id};
+use crate::api::{middleware::auth::validate_token_and_get_user_id, ApiState};
 
 mod redis_manager;
 pub use redis_manager::RedisSessionManager;
@@ -65,12 +65,12 @@ impl WebSocketManager {
 
     /// Create a new channel for agent communication
     /// Format: `agent:{agent_id}:task:{task_id}:session:{session_id}`
-    /// 
+    ///
     /// This standardized format matches open-webui patterns and enables:
     /// - Isolated streams per request
     /// - Multiple concurrent requests per user
     /// - Clean cleanup on task completion
-    /// 
+    ///
     /// Returns the channel ID and a cancellation receiver
     pub async fn create_channel(
         &self,
@@ -78,16 +78,16 @@ impl WebSocketManager {
         task_id: &str,
         session_id: &str,
     ) -> (String, oneshot::Receiver<()>) {
-        let channel = format!(
-            "agent:{}:task:{}:session:{}",
-            agent_id, task_id, session_id
-        );
+        let channel = format!("agent:{}:task:{}:session:{}", agent_id, task_id, session_id);
 
         let (tx, _rx) = broadcast::channel(100);
         let (cancel_tx, cancel_rx) = oneshot::channel();
-        
+
         self.channels.write().await.insert(channel.clone(), tx);
-        self.cancellation_tokens.write().await.insert(channel.clone(), cancel_tx);
+        self.cancellation_tokens
+            .write()
+            .await
+            .insert(channel.clone(), cancel_tx);
 
         tracing::debug!("Created channel: {}", channel);
         (channel, cancel_rx)
@@ -97,7 +97,8 @@ impl WebSocketManager {
     pub async fn send_to_channel(&self, channel: &str, message: Message) -> Result<(), String> {
         let channels = self.channels.read().await;
         if let Some(tx) = channels.get(channel) {
-            tx.send(message).map_err(|e| format!("Failed to send to channel: {}", e))?;
+            tx.send(message)
+                .map_err(|e| format!("Failed to send to channel: {}", e))?;
         }
         Ok(())
     }
@@ -124,12 +125,18 @@ impl WebSocketManager {
     /// Register a connection
     pub async fn register_connection(&self, connection_id: String, user_id: String) {
         // Store in local connections map
-        self.connections.write().await.insert(connection_id.clone(), user_id.clone());
+        self.connections
+            .write()
+            .await
+            .insert(connection_id.clone(), user_id.clone());
 
         // Register with Redis if available
         if let Some(ref redis) = self.redis_manager {
             if let Err(e) = redis.register_session(&user_id, &connection_id).await {
-                tracing::warn!("Failed to register session in Redis: {}. Continuing with local storage.", e);
+                tracing::warn!(
+                    "Failed to register session in Redis: {}. Continuing with local storage.",
+                    e
+                );
             }
         }
     }
@@ -146,7 +153,10 @@ impl WebSocketManager {
         if let Some(ref redis) = self.redis_manager {
             if let Some(user_id) = user_id {
                 if let Err(e) = redis.unregister_session(&user_id, connection_id).await {
-                    tracing::warn!("Failed to unregister session from Redis: {}. Continuing.", e);
+                    tracing::warn!(
+                        "Failed to unregister session from Redis: {}. Continuing.",
+                        e
+                    );
                 }
             }
         }
@@ -218,12 +228,18 @@ pub async fn websocket_handler(
     let user_id = match validate_token_and_get_user_id(&token, &state.api.db_client).await {
         Ok(uid) => uid.to_string(),
         Err(status) => {
-            warn!("WebSocket connection rejected: token validation failed (status: {})", status);
+            warn!(
+                "WebSocket connection rejected: token validation failed (status: {})",
+                status
+            );
             return status.into_response();
         }
     };
 
-    info!("WebSocket connection authenticated: user_id={}, connection_id={}", user_id, connection_id);
+    info!(
+        "WebSocket connection authenticated: user_id={}, connection_id={}",
+        user_id, connection_id
+    );
 
     // Accept connection with validated user_id
     let manager = state.websocket_manager.clone();
@@ -240,7 +256,7 @@ pub async fn websocket_handler(
     let connection_id = Uuid::new_v4().to_string();
     let token = params.get("token").cloned();
     let user_id = token.unwrap_or_else(|| connection_id.clone());
-    
+
     warn!("WebSocket connection accepted without authentication (orchestration feature disabled)");
     ws.on_upgrade(move |socket| handle_socket(socket, manager, connection_id, user_id))
 }
@@ -252,8 +268,13 @@ async fn handle_socket(
     user_id: String,
 ) {
     // Register connection with validated user_id
-    manager.register_connection(connection_id.clone(), user_id.clone()).await;
-    info!("WebSocket connection registered: connection_id={}, user_id={}", connection_id, user_id);
+    manager
+        .register_connection(connection_id.clone(), user_id.clone())
+        .await;
+    info!(
+        "WebSocket connection registered: connection_id={}, user_id={}",
+        connection_id, user_id
+    );
 
     let (mut sender, mut receiver) = socket.split();
 
@@ -282,17 +303,15 @@ async fn handle_socket(
         }
 
         // Cleanup on disconnect
-        manager_clone.unregister_connection(&connection_id_clone).await;
+        manager_clone
+            .unregister_connection(&connection_id_clone)
+            .await;
     });
 
     // Keep connection alive
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-        if sender
-            .send(Message::Ping(vec![]))
-            .await
-            .is_err()
-        {
+        if sender.send(Message::Ping(vec![])).await.is_err() {
             break;
         }
     }
@@ -305,4 +324,3 @@ struct SubscribeMessage {
     #[allow(dead_code)] // Reserved for future use
     channel: Option<String>,
 }
-

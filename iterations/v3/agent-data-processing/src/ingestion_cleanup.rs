@@ -1,11 +1,11 @@
 //! Cleanup hooks for index maintenance on file removal
 
-use async_trait::async_trait;
-use std::path::PathBuf;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use parking_lot::RwLock;
 use crate::data_processing_types::ProcessingId;
+use async_trait::async_trait;
+use parking_lot::RwLock;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{info, warn};
 
 /// Registry mapping file paths to their ProcessingIds for cleanup
@@ -23,12 +23,20 @@ impl PathRegistry {
 
     /// Register a path-to-id mapping
     pub fn register(&self, path: PathBuf, id: ProcessingId) {
-        self.path_to_ids.write().entry(path).or_insert_with(HashSet::new).insert(id);
+        self.path_to_ids
+            .write()
+            .entry(path)
+            .or_insert_with(HashSet::new)
+            .insert(id);
     }
 
     /// Get all ProcessingIds for a given path
     pub fn get_ids_for_path(&self, path: &PathBuf) -> HashSet<ProcessingId> {
-        self.path_to_ids.read().get(path).cloned().unwrap_or_default()
+        self.path_to_ids
+            .read()
+            .get(path)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Remove all mappings for a path
@@ -67,7 +75,10 @@ pub struct IndexCleanupHandler {
 }
 
 impl IndexCleanupHandler {
-    pub fn new(path_registry: Arc<PathRegistry>, indexing_stage: Arc<crate::indexing::DefaultIndexingStage>) -> Self {
+    pub fn new(
+        path_registry: Arc<PathRegistry>,
+        indexing_stage: Arc<crate::indexing::DefaultIndexingStage>,
+    ) -> Self {
         Self {
             path_registry,
             _indexing_stage: indexing_stage,
@@ -79,16 +90,20 @@ impl IndexCleanupHandler {
 impl IndexCleanup for IndexCleanupHandler {
     async fn purge_path(&self, path: &PathBuf) {
         info!("Purging indexes for removed file: {:?}", path);
-        
+
         let ids_to_remove = self.path_registry.purge_path(path);
-        
+
         if ids_to_remove.is_empty() {
             warn!("No indexed content found for path: {:?}", path);
             return;
         }
 
-        info!("Removing {} indexed entries for path: {:?}", ids_to_remove.len(), path);
-        
+        info!(
+            "Removing {} indexed entries for path: {:?}",
+            ids_to_remove.len(),
+            path
+        );
+
         // TODO: Implement actual purge methods in DefaultIndexingStage
         //       Currently logs what would be removed; should implement comprehensive purge methods that call indexing_stage.purge_by_id() for actual removal of indexed entries.
         //

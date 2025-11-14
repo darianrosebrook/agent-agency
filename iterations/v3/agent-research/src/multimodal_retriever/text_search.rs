@@ -1,20 +1,22 @@
 //! Text search engine with BM25 and vector search capabilities
 
-use schemars::JsonSchema;
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use super::core::MultimodalSearchResult;
 use super::query_processing::ProcessedQuery;
-use data_infrastructure::embedding::embedding_types::{MultimodalSearchResult as DataInfraSearchResult, ContentType};
+use data_infrastructure::embedding::embedding_types::{
+    ContentType, MultimodalSearchResult as DataInfraSearchResult,
+};
 
 /// BM25 index for keyword-based text search
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Bm25Index {
     documents: HashMap<String, String>, // doc_id -> content
     term_frequencies: HashMap<String, HashMap<String, usize>>, // term -> (doc_id -> frequency)
@@ -46,7 +48,10 @@ impl Bm25Index {
 
         // Update term frequencies
         for term in terms {
-            let doc_freqs = self.term_frequencies.entry(term).or_insert_with(HashMap::new);
+            let doc_freqs = self
+                .term_frequencies
+                .entry(term)
+                .or_insert_with(HashMap::new);
             *doc_freqs.entry(doc_id.clone()).or_insert(0) += 1;
         }
 
@@ -112,7 +117,7 @@ impl Bm25Index {
 
 /// Vector index for dense embedding search
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct VectorIndex {
     vectors: HashMap<String, Vec<f32>>, // doc_id -> embedding vector
     dimension: usize,
@@ -172,12 +177,17 @@ impl VectorIndex {
 pub struct TextSearchBridge {
     bm25_index: Bm25Index,
     vector_index: VectorIndex,
-    embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>,
+    embedding_service:
+        Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>,
 }
 
 impl TextSearchBridge {
     /// Create a new text search bridge
-    pub fn new(embedding_service: Option<Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>>) -> Self {
+    pub fn new(
+        embedding_service: Option<
+            Arc<dyn data_infrastructure::embedding::embedding_service::EmbeddingService>,
+        >,
+    ) -> Self {
         Self {
             bm25_index: Bm25Index::new(),
             vector_index: VectorIndex::new(384), // Default dimension
@@ -188,12 +198,16 @@ impl TextSearchBridge {
     /// Add a document to both indices
     pub async fn add_document(&mut self, doc_id: String, content: String) -> Result<()> {
         // Add to BM25 index
-        self.bm25_index.add_document(doc_id.clone(), content.clone());
+        self.bm25_index
+            .add_document(doc_id.clone(), content.clone());
 
         // Add to vector index if embedding service is available
         if let Some(service) = &self.embedding_service {
-            let embedding = service.generate_embedding(&content, ContentType::Text, "text_search").await?;
-            self.vector_index.add_vector(doc_id, embedding.vector.values);
+            let embedding = service
+                .generate_embedding(&content, ContentType::Text, "text_search")
+                .await?;
+            self.vector_index
+                .add_vector(doc_id, embedding.vector.values);
         }
 
         Ok(())
@@ -209,12 +223,17 @@ impl TextSearchBridge {
 
         // Vector search if available
         if let Some(service) = &self.embedding_service {
-            if let Ok(query_embedding) = service.generate_embedding(
-                query,
-                data_infrastructure::embedding::embedding_types::ContentType::Text,
-                "text_search"
-            ).await {
-                let vector_results = self.vector_index.search(&query_embedding.vector.values, k * 2);
+            if let Ok(query_embedding) = service
+                .generate_embedding(
+                    query,
+                    data_infrastructure::embedding::embedding_types::ContentType::Text,
+                    "text_search",
+                )
+                .await
+            {
+                let vector_results = self
+                    .vector_index
+                    .search(&query_embedding.vector.values, k * 2);
 
                 // Combine results with reciprocal rank fusion
                 let combined = self.reciprocal_rank_fusion(bm25_results, vector_results, k);
@@ -240,23 +259,32 @@ impl TextSearchBridge {
 
         // Fallback to BM25 only
         if results.is_empty() {
-            results = bm25_fallback.into_iter().map(|(doc_id, score)| {
-                let doc_id_clone = doc_id.clone();
-                DataInfraSearchResult {
-                    ref_id: doc_id,
-                    kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
-                    snippet: self.bm25_index.documents.get(&doc_id_clone).unwrap_or(&String::new()).clone(),
-                    citation: None,
-                    feature: data_infrastructure::embedding::embedding_types::SearchResultFeature {
-                        score_text: Some(score),
-                        score_image: None,
-                        score_graph: None,
-                        fused_score: score,
-                        features_json: serde_json::json!({"search_type": "bm25_only"}),
-                    },
-                    project_scope: None,
-                }
-            }).collect();
+            results = bm25_fallback
+                .into_iter()
+                .map(|(doc_id, score)| {
+                    let doc_id_clone = doc_id.clone();
+                    DataInfraSearchResult {
+                        ref_id: doc_id,
+                        kind: data_infrastructure::embedding::embedding_types::ContentType::Text,
+                        snippet: self
+                            .bm25_index
+                            .documents
+                            .get(&doc_id_clone)
+                            .unwrap_or(&String::new())
+                            .clone(),
+                        citation: None,
+                        feature:
+                            data_infrastructure::embedding::embedding_types::SearchResultFeature {
+                                score_text: Some(score),
+                                score_image: None,
+                                score_graph: None,
+                                fused_score: score,
+                                features_json: serde_json::json!({"search_type": "bm25_only"}),
+                            },
+                        project_scope: None,
+                    }
+                })
+                .collect();
         }
 
         Ok(results)
@@ -345,20 +373,29 @@ impl TextSearchEngine {
         if let Some(text) = &query.text {
             let bridge_results = self.search_bridge.search(text, k).await?;
 
-            let results = bridge_results.into_iter().map(|result| {
-                MultimodalSearchResult {
+            let results = bridge_results
+                .into_iter()
+                .map(|result| MultimodalSearchResult {
                     id: result.ref_id,
                     content: result.snippet,
-                    modality_scores: HashMap::from([("text".to_string(), result.feature.fused_score)]),
+                    modality_scores: HashMap::from([(
+                        "text".to_string(),
+                        result.feature.fused_score,
+                    )]),
                     combined_score: result.feature.fused_score,
-                    metadata: result.feature.features_json.as_object().unwrap_or(&serde_json::Map::new()).iter()
+                    metadata: result
+                        .feature
+                        .features_json
+                        .as_object()
+                        .unwrap_or(&serde_json::Map::new())
+                        .iter()
                         .map(|(k, v)| (k.clone(), v.clone()))
                         .collect(),
                     timestamp: Utc::now(),
                     source_modality: "text".to_string(),
                     project_scope: query.project_scope.clone(),
-                }
-            }).collect();
+                })
+                .collect();
 
             Ok(results)
         } else {
@@ -433,7 +470,7 @@ impl TextSearchEngine {
 
 /// Search engine statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchEngineStats {
     pub total_searches: u64,
     pub average_latency_ms: f64,

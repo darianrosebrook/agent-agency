@@ -5,14 +5,14 @@
 //!
 //! @author @darianrosebrook
 
+use chrono::{DateTime, Utc};
+use rand::Rng;
+use rand_distr::{Distribution, Normal};
+use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use regex::Regex;
-use rand::Rng;
-use rand_distr::{Distribution, Normal};
 
 /// Privacy anonymization service
 #[derive(Debug)]
@@ -194,13 +194,11 @@ impl PrivacyAnonymizationService {
         &self,
         value: f64,
     ) -> Result<f64, PrivacyAnonymizationError> {
-        let params = self
-            .config
-            .differential_privacy
-            .as_ref()
-            .ok_or_else(|| PrivacyAnonymizationError::ConfigurationError {
+        let params = self.config.differential_privacy.as_ref().ok_or_else(|| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: "Differential privacy not configured".to_string(),
-            })?;
+            }
+        })?;
 
         // Laplace mechanism: noise = Lap(0, sensitivity/epsilon)
         let scale = params.sensitivity / params.epsilon;
@@ -227,15 +225,13 @@ impl PrivacyAnonymizationService {
             serde_json::Value::String(s) => {
                 // Check if it's an email, phone, etc.
                 if self.is_email(s) {
-                    Ok(Some(serde_json::Value::String(
-                        self.mask_email(s).await?,
-                    )))
+                    Ok(Some(serde_json::Value::String(self.mask_email(s).await?)))
                 } else if self.is_phone_number(s) {
-                    Ok(Some(serde_json::Value::String(
-                        self.mask_phone(s).await?,
-                    )))
+                    Ok(Some(serde_json::Value::String(self.mask_phone(s).await?)))
                 } else if self.is_credit_card(s) {
-                    Ok(Some(serde_json::Value::String("****-****-****-****".to_string())))
+                    Ok(Some(serde_json::Value::String(
+                        "****-****-****-****".to_string(),
+                    )))
                 } else {
                     // Hash the value for privacy
                     Ok(Some(serde_json::Value::String(self.hash_value(s)?)))
@@ -246,18 +242,20 @@ impl PrivacyAnonymizationService {
                     if self.config.differential_privacy.is_some() {
                         let anonymized = self.apply_differential_privacy(num).await?;
                         Ok(Some(serde_json::Value::Number(
-                            serde_json::Number::from_f64(anonymized)
-                                .ok_or_else(|| PrivacyAnonymizationError::InvalidDataType {
+                            serde_json::Number::from_f64(anonymized).ok_or_else(|| {
+                                PrivacyAnonymizationError::InvalidDataType {
                                     expected: "number".to_string(),
-                                })?,
+                                }
+                            })?,
                         )))
                     } else {
                         // Generalize numeric values
                         Ok(Some(serde_json::Value::Number(
-                            serde_json::Number::from_f64(self.generalize_number(num))
-                                .ok_or_else(|| PrivacyAnonymizationError::InvalidDataType {
+                            serde_json::Number::from_f64(self.generalize_number(num)).ok_or_else(
+                                || PrivacyAnonymizationError::InvalidDataType {
                                     expected: "number".to_string(),
-                                })?,
+                                },
+                            )?,
                         )))
                     }
                 } else {
@@ -267,7 +265,9 @@ impl PrivacyAnonymizationService {
             serde_json::Value::Array(arr) => {
                 let mut anonymized_array = Vec::new();
                 for item in arr {
-                    if let Some(anon_item) = Box::pin(self.anonymize_field(field_name, item)).await? {
+                    if let Some(anon_item) =
+                        Box::pin(self.anonymize_field(field_name, item)).await?
+                    {
                         anonymized_array.push(anon_item);
                     } else {
                         anonymized_array.push(item.clone());
@@ -301,37 +301,43 @@ impl PrivacyAnonymizationService {
 
     /// Remove phone numbers from text
     async fn remove_phone_numbers(&self, text: &str) -> Result<String, PrivacyAnonymizationError> {
-        let phone_regex = Regex::new(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+        let phone_regex = Regex::new(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b").map_err(|e| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: format!("Failed to create phone regex: {}", e),
-            })?;
+            }
+        })?;
         Ok(phone_regex.replace_all(text, "***-***-****").to_string())
     }
 
     /// Remove IP addresses from text
     async fn remove_ip_addresses(&self, text: &str) -> Result<String, PrivacyAnonymizationError> {
-        let ip_regex = Regex::new(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+        let ip_regex = Regex::new(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b").map_err(|e| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: format!("Failed to create IP regex: {}", e),
-            })?;
+            }
+        })?;
         Ok(ip_regex.replace_all(text, "***.***.***.***").to_string())
     }
 
     /// Remove credit card numbers from text
     async fn remove_credit_cards(&self, text: &str) -> Result<String, PrivacyAnonymizationError> {
-        let cc_regex = Regex::new(r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b")
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+        let cc_regex = Regex::new(r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b").map_err(|e| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: format!("Failed to create credit card regex: {}", e),
-            })?;
-        Ok(cc_regex.replace_all(text, "****-****-****-****").to_string())
+            }
+        })?;
+        Ok(cc_regex
+            .replace_all(text, "****-****-****-****")
+            .to_string())
     }
 
     /// Remove SSN from text
     async fn remove_ssn(&self, text: &str) -> Result<String, PrivacyAnonymizationError> {
-        let ssn_regex = Regex::new(r"\b\d{3}-\d{2}-\d{4}\b")
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+        let ssn_regex = Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").map_err(|e| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: format!("Failed to create SSN regex: {}", e),
-            })?;
+            }
+        })?;
         Ok(ssn_regex.replace_all(text, "***-**-****").to_string())
     }
 
@@ -345,9 +351,10 @@ impl PrivacyAnonymizationService {
 
         let mut result = text.to_string();
         for (pattern, replacement) in name_patterns {
-            let regex = Regex::new(pattern).map_err(|e| PrivacyAnonymizationError::ConfigurationError {
-                message: format!("Failed to create name regex: {}", e),
-            })?;
+            let regex =
+                Regex::new(pattern).map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+                    message: format!("Failed to create name regex: {}", e),
+                })?;
             result = regex.replace_all(&result, replacement).to_string();
         }
 
@@ -355,7 +362,10 @@ impl PrivacyAnonymizationService {
     }
 
     /// Aggressive anonymization for maximum privacy
-    async fn aggressive_anonymization(&self, text: &str) -> Result<String, PrivacyAnonymizationError> {
+    async fn aggressive_anonymization(
+        &self,
+        text: &str,
+    ) -> Result<String, PrivacyAnonymizationError> {
         let mut anonymized = text.to_string();
         anonymized = self.remove_emails(&anonymized).await?;
         anonymized = self.remove_phone_numbers(&anonymized).await?;
@@ -363,32 +373,42 @@ impl PrivacyAnonymizationService {
         anonymized = self.remove_credit_cards(&anonymized).await?;
         anonymized = self.remove_ssn(&anonymized).await?;
         anonymized = self.remove_names(&anonymized).await?;
-        
+
         // Hash remaining identifiers
-        let identifier_regex = Regex::new(r"\b[A-Z][a-z]+\b")
-            .map_err(|e| PrivacyAnonymizationError::ConfigurationError {
+        let identifier_regex = Regex::new(r"\b[A-Z][a-z]+\b").map_err(|e| {
+            PrivacyAnonymizationError::ConfigurationError {
                 message: format!("Failed to create identifier regex: {}", e),
-            })?;
-        anonymized = identifier_regex.replace_all(&anonymized, |caps: &regex::Captures| {
-            self.hash_value(&caps[0]).unwrap_or_else(|_| "***".to_string())
-        }).to_string();
-        
+            }
+        })?;
+        anonymized = identifier_regex
+            .replace_all(&anonymized, |caps: &regex::Captures| {
+                self.hash_value(&caps[0])
+                    .unwrap_or_else(|_| "***".to_string())
+            })
+            .to_string();
+
         Ok(anonymized)
     }
 
     /// Check if string is an email
     fn is_email(&self, s: &str) -> bool {
-        Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$").unwrap().is_match(s)
+        Regex::new(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$")
+            .unwrap()
+            .is_match(s)
     }
 
     /// Check if string is a phone number
     fn is_phone_number(&self, s: &str) -> bool {
-        Regex::new(r"^\d{3}[-.]?\d{3}[-.]?\d{4}$").unwrap().is_match(s)
+        Regex::new(r"^\d{3}[-.]?\d{3}[-.]?\d{4}$")
+            .unwrap()
+            .is_match(s)
     }
 
     /// Check if string is a credit card number
     fn is_credit_card(&self, s: &str) -> bool {
-        Regex::new(r"^\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}$").unwrap().is_match(s)
+        Regex::new(r"^\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}$")
+            .unwrap()
+            .is_match(s)
     }
 
     /// Mask email address
@@ -419,7 +439,7 @@ impl PrivacyAnonymizationService {
 
     /// Hash a value for privacy
     fn hash_value(&self, value: &str) -> Result<String, PrivacyAnonymizationError> {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(value.as_bytes());
         let hash = hasher.finalize();
@@ -469,5 +489,3 @@ pub enum PrivacyAnonymizationError {
     #[error("Anonymization failed: {message}")]
     AnonymizationFailed { message: String },
 }
-
-

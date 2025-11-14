@@ -39,16 +39,15 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
 use anyhow::Result;
-use uuid::Uuid;
 use chrono::Utc;
-use tracing::{info, error, warn};
 use serde_json::Value as JsonValue;
+use std::sync::Arc;
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
 use agent_agency_contracts::{
-    WorkingSpec, TaskDescriptor, ExecutionArtifacts, ExecutionMode,
-    types::prelude::*,
+    types::prelude::*, ExecutionArtifacts, ExecutionMode, TaskDescriptor, WorkingSpec,
 };
 
 use crate::simple_client::DatabaseClient;
@@ -67,10 +66,10 @@ pub trait TaskExecutor: Send + Sync {
 pub struct OrchestratorService {
     /// Database client for persistence
     _db_client: Arc<DatabaseClient>,
-    
+
     /// Task executor (optional - can be injected when available)
     task_executor: Option<Arc<dyn TaskExecutor>>,
-    
+
     /// Active task tracking
     active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, TaskExecutionState>>>,
 }
@@ -158,10 +157,7 @@ impl OrchestratorService {
     }
 
     /// Initialize with task executor (when available)
-    pub fn with_task_executor(
-        mut self,
-        executor: Arc<dyn TaskExecutor>,
-    ) -> Self {
+    pub fn with_task_executor(mut self, executor: Arc<dyn TaskExecutor>) -> Self {
         self.task_executor = Some(executor);
         self
     }
@@ -178,7 +174,11 @@ impl OrchestratorService {
         context: Option<String>,
     ) -> Result<Uuid> {
         let task_id = Uuid::new_v4();
-        info!("Executing task {}: {}", task_id, description.chars().take(100).collect::<String>());
+        info!(
+            "Executing task {}: {}",
+            task_id,
+            description.chars().take(100).collect::<String>()
+        );
 
         // Create initial task state
         let task_state = TaskExecutionState {
@@ -205,9 +205,12 @@ impl OrchestratorService {
         // Start execution in background
         let service = self.clone();
         tokio::spawn(async move {
-            if let Err(e) = service.execute_task_internal(task_id, description, execution_mode, context).await {
+            if let Err(e) = service
+                .execute_task_internal(task_id, description, execution_mode, context)
+                .await
+            {
                 error!("Task execution failed for {}: {:?}", task_id, e);
-                
+
                 // Update task state with error
                 let mut tasks = service.active_tasks.write().await;
                 if let Some(task) = tasks.get_mut(&task_id) {
@@ -236,7 +239,7 @@ impl OrchestratorService {
             if let Some(task) = tasks.get_mut(&task_id) {
                 task.status = TaskStatus::Planning;
                 task.updated_at = Utc::now();
-                
+
                 // Record chain of thought
                 task.chain_of_thought.push(ChainOfThoughtEntry {
                     timestamp: Utc::now(),
@@ -251,7 +254,7 @@ impl OrchestratorService {
         // Create task descriptor
         use agent_agency_contracts::planning_io::ChangeBudget;
         use agent_agency_contracts::task_request::ScopeRestrictions;
-        
+
         let task_descriptor = TaskDescriptor {
             task_id,
             description: description.clone(),
@@ -290,14 +293,14 @@ impl OrchestratorService {
         // Execute using task executor if available
         if let Some(ref executor) = self.task_executor {
             info!("Using task executor for task {}", task_id);
-            
+
             // Update status to executing
             {
                 let mut tasks = self.active_tasks.write().await;
                 if let Some(task) = tasks.get_mut(&task_id) {
                     task.status = TaskStatus::Executing;
                     task.updated_at = Utc::now();
-                    
+
                     // Record chain of thought
                     task.chain_of_thought.push(ChainOfThoughtEntry {
                         timestamp: Utc::now(),
@@ -312,7 +315,7 @@ impl OrchestratorService {
             match executor.execute_task(&task_descriptor).await {
                 Ok(artifacts) => {
                     info!("Task {} completed successfully", task_id);
-                    
+
                     // Update task state with results
                     let mut tasks = self.active_tasks.write().await;
                     if let Some(task) = tasks.get_mut(&task_id) {
@@ -321,25 +324,25 @@ impl OrchestratorService {
                         // Note: working_spec would be retrieved separately by working_spec_id if needed
                         task.completed_at = Some(Utc::now());
                         task.updated_at = Utc::now();
-                        
+
                         // Record completion in chain of thought
                         task.chain_of_thought.push(ChainOfThoughtEntry {
                             timestamp: Utc::now(),
                             phase: "completion".to_string(),
                             reasoning: "Task execution completed successfully".to_string(),
                             decision: "Task marked as completed".to_string(),
-                            context: serde_json::json!({ 
+                            context: serde_json::json!({
                                 "working_spec_id": artifacts.working_spec_id,
                                 "iteration": artifacts.iteration,
                             }),
                         });
                     }
-                    
+
                     Ok(())
                 }
                 Err(e) => {
                     error!("Task execution failed: {}", e);
-                    
+
                     // Update task state with error
                     let mut tasks = self.active_tasks.write().await;
                     if let Some(task) = tasks.get_mut(&task_id) {
@@ -347,7 +350,7 @@ impl OrchestratorService {
                         task.error_message = Some(format!("Execution failed: {}", e));
                         task.completed_at = Some(Utc::now());
                         task.updated_at = Utc::now();
-                        
+
                         // Record error in chain of thought
                         task.chain_of_thought.push(ChainOfThoughtEntry {
                             timestamp: Utc::now(),
@@ -357,13 +360,16 @@ impl OrchestratorService {
                             context: serde_json::json!({ "error": e.to_string() }),
                         });
                     }
-                    
+
                     Err(anyhow::anyhow!("Task execution failed: {}", e))
                 }
             }
         } else {
-            warn!("Task executor not available - task {} will be queued", task_id);
-            
+            warn!(
+                "Task executor not available - task {} will be queued",
+                task_id
+            );
+
             // TODO: Implement proper task queuing system when task executor is unavailable
             //       Currently marks task as pending; should queue task for later execution or use fallback executor.
             //
@@ -402,7 +408,7 @@ impl OrchestratorService {
                     task.status = TaskStatus::Pending;
                     task.error_message = Some("Task executor not yet initialized. Initialize with OrchestratorService::with_task_executor()".to_string());
                     task.updated_at = Utc::now();
-                    
+
                     // Record in chain of thought
                     task.chain_of_thought.push(ChainOfThoughtEntry {
                         timestamp: Utc::now(),
@@ -413,7 +419,7 @@ impl OrchestratorService {
                     });
                 }
             }
-            
+
             Err(anyhow::anyhow!("Task executor not available"))
         }
     }
@@ -470,7 +476,9 @@ impl OrchestratorService {
                 timestamp: Utc::now(),
                 phase: "pause_request".to_string(),
                 reasoning: "API requested task pause".to_string(),
-                decision: "Request forwarded to orchestrator - orchestrator will decide if pause is safe".to_string(),
+                decision:
+                    "Request forwarded to orchestrator - orchestrator will decide if pause is safe"
+                        .to_string(),
                 context: serde_json::json!({ "requested_by": "api" }),
             });
             task.updated_at = Utc::now();
@@ -495,7 +503,9 @@ impl OrchestratorService {
                 timestamp: Utc::now(),
                 phase: "resume_request".to_string(),
                 reasoning: "API requested task resume".to_string(),
-                decision: "Request forwarded to orchestrator - orchestrator will decide if resume is safe".to_string(),
+                decision:
+                    "Request forwarded to orchestrator - orchestrator will decide if resume is safe"
+                        .to_string(),
                 context: serde_json::json!({ "requested_by": "api" }),
             });
             task.updated_at = Utc::now();
@@ -542,13 +552,16 @@ impl OrchestratorService {
     /// Returns only essential fields without cloning large vectors
     pub async fn list_task_summaries(&self) -> Vec<TaskSummary> {
         let tasks = self.active_tasks.read().await;
-        tasks.values().map(|task| TaskSummary {
-            task_id: task.task_id,
-            description: task.description.clone(),
-            status: task.status.clone(),
-            started_at: task.started_at,
-            updated_at: task.updated_at,
-        }).collect()
+        tasks
+            .values()
+            .map(|task| TaskSummary {
+                task_id: task.task_id,
+                description: task.description.clone(),
+                status: task.status.clone(),
+                started_at: task.started_at,
+                updated_at: task.updated_at,
+            })
+            .collect()
     }
 
     /// Get task progress summary (observational only)
@@ -588,15 +601,19 @@ impl OrchestratorService {
     pub async fn get_task_logs(&self, task_id: Uuid) -> Result<Vec<JsonValue>> {
         let tasks = self.active_tasks.read().await;
         if let Some(task) = tasks.get(&task_id) {
-            let logs: Vec<JsonValue> = task.chain_of_thought.iter().map(|entry| {
-                serde_json::json!({
-                    "timestamp": entry.timestamp.to_rfc3339(),
-                    "level": "info",
-                    "phase": entry.phase,
-                    "message": format!("{} - {}", entry.reasoning, entry.decision),
-                    "context": entry.context,
+            let logs: Vec<JsonValue> = task
+                .chain_of_thought
+                .iter()
+                .map(|entry| {
+                    serde_json::json!({
+                        "timestamp": entry.timestamp.to_rfc3339(),
+                        "level": "info",
+                        "phase": entry.phase,
+                        "message": format!("{} - {}", entry.reasoning, entry.decision),
+                        "context": entry.context,
+                    })
                 })
-            }).collect();
+                .collect();
             Ok(logs)
         } else {
             Err(anyhow::anyhow!("Task {} not found", task_id))
@@ -660,12 +677,30 @@ impl OrchestratorService {
         let task_list: Vec<_> = tasks.values().collect();
 
         let total_tasks = task_list.len();
-        let completed = task_list.iter().filter(|t| matches!(t.status, TaskStatus::Completed)).count();
-        let failed = task_list.iter().filter(|t| matches!(t.status, TaskStatus::Failed)).count();
-        let in_progress = task_list.iter().filter(|t| {
-            matches!(t.status, TaskStatus::Planning | TaskStatus::Executing | TaskStatus::QualityCheck | TaskStatus::Refining)
-        }).count();
-        let paused = task_list.iter().filter(|t| matches!(t.status, TaskStatus::Paused)).count();
+        let completed = task_list
+            .iter()
+            .filter(|t| matches!(t.status, TaskStatus::Completed))
+            .count();
+        let failed = task_list
+            .iter()
+            .filter(|t| matches!(t.status, TaskStatus::Failed))
+            .count();
+        let in_progress = task_list
+            .iter()
+            .filter(|t| {
+                matches!(
+                    t.status,
+                    TaskStatus::Planning
+                        | TaskStatus::Executing
+                        | TaskStatus::QualityCheck
+                        | TaskStatus::Refining
+                )
+            })
+            .count();
+        let paused = task_list
+            .iter()
+            .filter(|t| matches!(t.status, TaskStatus::Paused))
+            .count();
 
         let success_rate = if total_tasks > 0 {
             (completed as f64 / total_tasks as f64) * 100.0
@@ -698,4 +733,3 @@ impl OrchestratorService {
         })
     }
 }
-

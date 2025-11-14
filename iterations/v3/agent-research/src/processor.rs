@@ -1,12 +1,12 @@
 use crate::decomposition::DecompositionStage;
 use crate::disambiguation::DisambiguationStage;
-use crate::qualification::QualificationStage;
 use crate::extraction_types::VerifiedClaim;
 use crate::extraction_types::*;
+use crate::qualification::QualificationStage;
 use crate::verification::MultiModalVerificationEngine;
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tracing::{debug, info};
 
@@ -77,40 +77,44 @@ impl ClaimExtractionProcessor {
 
         info!(
             "Verification completed: {}/{} claims verified successfully",
-            verification_results.successful_verifications,
-            verification_results.total_processed
+            verification_results.successful_verifications, verification_results.total_processed
         );
 
         // Convert VerificationResults to VerificationResult format
         let verified_claims = VerificationResult {
             verified_claims: verification_results.verified_claims.clone(),
-            evidence: verification_results.verified_claims.iter()
+            evidence: verification_results
+                .verified_claims
+                .iter()
                 .flat_map(|vc| vc.evidence.clone())
                 .collect(),
             verification_confidence: if verification_results.total_processed > 0 {
-                verification_results.successful_verifications as f64 
+                verification_results.successful_verifications as f64
                     / verification_results.total_processed as f64
             } else {
                 0.0
             },
             council_verification: CouncilVerificationResult {
-                submitted_claims: atomic_claims.iter()
-                    .map(|c| c.id)
-                    .collect(),
+                submitted_claims: atomic_claims.iter().map(|c| c.id).collect(),
                 council_verdict: format!(
                     "Verified {}/{} claims with multi-modal analysis",
                     verification_results.successful_verifications,
                     verification_results.total_processed
                 ),
-                additional_evidence: verification_results.verified_claims.iter()
+                additional_evidence: verification_results
+                    .verified_claims
+                    .iter()
                     .flat_map(|vc| vc.evidence.clone())
                     .collect(),
                 verification_timestamp: chrono::Utc::now(),
             },
             overall_confidence: if verification_results.total_processed > 0 {
-                verification_results.verified_claims.iter()
+                verification_results
+                    .verified_claims
+                    .iter()
                     .map(|vc| vc.overall_confidence)
-                    .sum::<f64>() / verification_results.total_processed as f64
+                    .sum::<f64>()
+                    / verification_results.total_processed as f64
             } else {
                 0.0
             },
@@ -152,5 +156,4 @@ impl ClaimExtractionProcessor {
             },
         })
     }
-
 }

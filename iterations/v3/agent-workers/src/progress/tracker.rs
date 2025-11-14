@@ -1,14 +1,14 @@
 //! Individual worker progress tracking
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::parallel_types::*;
-use crate::worker_types::{WorkerId, SubTaskId};
-use crate::{WorkerProgress, WorkerProgressStatus, Progress};
 use crate::error::*;
+use crate::parallel_types::*;
+use crate::worker_types::{SubTaskId, WorkerId};
+use crate::{Progress, WorkerProgress, WorkerProgressStatus};
+use parking_lot::RwLock;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 /// Tracks progress for individual workers
 pub struct WorkerProgressTracker {
@@ -23,21 +23,29 @@ impl WorkerProgressTracker {
     }
 
     /// Update progress for a specific worker
-    pub fn update_progress(&self, worker_id: WorkerId, completed: u32, total: u32, status: WorkerProgressStatus) -> ProgressResult<()> {
+    pub fn update_progress(
+        &self,
+        worker_id: WorkerId,
+        completed: u32,
+        total: u32,
+        status: WorkerProgressStatus,
+    ) -> ProgressResult<()> {
         let mut progress_map = self.progress.write();
 
-        let worker_progress = progress_map.entry(worker_id).or_insert_with(|| WorkerProgress {
-            worker_id: worker_id, // Use the provided worker_id
-            subtask_id: SubTaskId::default(), // Will be set when subtask is assigned
-            progress_percentage: 0.0,
-            status: status.clone(),
-            current_step: String::new(),
-            estimated_completion: None,
-            last_updated: chrono::Utc::now(),
-            completed: 0,
-            total: 0,
-            task_weight: 1.0,
-        });
+        let worker_progress = progress_map
+            .entry(worker_id)
+            .or_insert_with(|| WorkerProgress {
+                worker_id: worker_id,             // Use the provided worker_id
+                subtask_id: SubTaskId::default(), // Will be set when subtask is assigned
+                progress_percentage: 0.0,
+                status: status.clone(),
+                current_step: String::new(),
+                estimated_completion: None,
+                last_updated: chrono::Utc::now(),
+                completed: 0,
+                total: 0,
+                task_weight: 1.0,
+            });
 
         worker_progress.completed = completed;
         worker_progress.total = total;
@@ -48,21 +56,29 @@ impl WorkerProgressTracker {
     }
 
     /// Assign a subtask to a worker
-    pub fn assign_subtask(&self, worker_id: WorkerId, subtask_id: SubTaskId, task_weight: f32) -> ProgressResult<()> {
+    pub fn assign_subtask(
+        &self,
+        worker_id: WorkerId,
+        subtask_id: SubTaskId,
+        task_weight: f32,
+    ) -> ProgressResult<()> {
         let mut progress_map = self.progress.write();
 
-        let worker_progress = progress_map.entry(worker_id.clone()).or_insert_with(|| WorkerProgress {
-            worker_id: worker_id.clone(),
-            subtask_id: subtask_id.clone(),
-            progress_percentage: 0.0,
-            status: WorkerProgressStatus::Pending,
-            current_step: String::new(),
-            estimated_completion: None,
-            last_updated: chrono::Utc::now(),
-            completed: 0,
-            total: 0,
-            task_weight,
-        });
+        let worker_progress =
+            progress_map
+                .entry(worker_id.clone())
+                .or_insert_with(|| WorkerProgress {
+                    worker_id: worker_id.clone(),
+                    subtask_id: subtask_id.clone(),
+                    progress_percentage: 0.0,
+                    status: WorkerProgressStatus::Pending,
+                    current_step: String::new(),
+                    estimated_completion: None,
+                    last_updated: chrono::Utc::now(),
+                    completed: 0,
+                    total: 0,
+                    task_weight,
+                });
 
         worker_progress.subtask_id = subtask_id;
         worker_progress.task_weight = task_weight;
@@ -135,7 +151,8 @@ impl WorkerProgressTracker {
 
     /// Get progress for workers assigned to a specific subtask
     pub fn get_subtask_progress(&self, subtask_id: &SubTaskId) -> Vec<WorkerProgress> {
-        self.progress.read()
+        self.progress
+            .read()
             .values()
             .filter(|wp| wp.subtask_id == *subtask_id)
             .cloned()
@@ -242,8 +259,13 @@ impl ProgressHistory {
     }
 
     /// Get all snapshots within a time range
-    pub fn snapshots_in_range(&self, start: chrono::DateTime<chrono::Utc>, end: chrono::DateTime<chrono::Utc>) -> Vec<ProgressSnapshot> {
-        self.history.read()
+    pub fn snapshots_in_range(
+        &self,
+        start: chrono::DateTime<chrono::Utc>,
+        end: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<ProgressSnapshot> {
+        self.history
+            .read()
             .iter()
             .filter(|snapshot| snapshot.timestamp >= start && snapshot.timestamp <= end)
             .cloned()
@@ -277,7 +299,10 @@ impl ProgressPredictor {
     }
 
     /// Predict completion time based on current progress
-    pub fn predict_completion(&self, current_progress: f32) -> Option<chrono::DateTime<chrono::Utc>> {
+    pub fn predict_completion(
+        &self,
+        current_progress: f32,
+    ) -> Option<chrono::DateTime<chrono::Utc>> {
         let trend = self.history.get_trend(5); // Use last 5 snapshots
 
         if trend.len() < 2 {
@@ -289,8 +314,12 @@ impl ProgressPredictor {
         let mut rate_count = 0;
 
         for i in 1..trend.len() {
-            let time_diff = trend[i].timestamp.signed_duration_since(trend[i-1].timestamp).num_seconds() as f32;
-            let progress_diff = trend[i].stats.overall_progress - trend[i-1].stats.overall_progress;
+            let time_diff = trend[i]
+                .timestamp
+                .signed_duration_since(trend[i - 1].timestamp)
+                .num_seconds() as f32;
+            let progress_diff =
+                trend[i].stats.overall_progress - trend[i - 1].stats.overall_progress;
 
             if time_diff > 0.0 {
                 let rate = progress_diff / time_diff;
@@ -330,9 +359,3 @@ impl Default for ProgressHistory {
         Self::new(100) // Keep last 100 snapshots
     }
 }
-
-
-
-
-
-

@@ -5,27 +5,27 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
-use tracing::info;
 use chrono::Utc;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::info;
 
 /// Optimization parameter space
 #[derive(Debug, Clone)]
 pub struct ParameterSpace {
     /// Parameter name
     pub name: String,
-    
+
     /// Minimum value
     pub min: f64,
-    
+
     /// Maximum value
     pub max: f64,
-    
+
     /// Current value
     pub current: f64,
-    
+
     /// Step size for exploration
     pub step_size: f64,
 }
@@ -35,13 +35,13 @@ pub struct ParameterSpace {
 pub struct OptimizationObjective {
     /// Objective name
     pub name: String,
-    
+
     /// Target value (for minimization, this is the minimum acceptable)
     pub target: f64,
-    
+
     /// Weight in multi-objective optimization (0.0 - 1.0)
     pub weight: f64,
-    
+
     /// Whether to minimize (true) or maximize (false)
     pub minimize: bool,
 }
@@ -51,16 +51,16 @@ pub struct OptimizationObjective {
 pub struct PerformanceMeasurement {
     /// Measurement timestamp
     pub timestamp: chrono::DateTime<Utc>,
-    
+
     /// Parameter values used
     pub parameters: HashMap<String, f64>,
-    
+
     /// Objective values achieved
     pub objectives: HashMap<String, f64>,
-    
+
     /// CAWS compliance score (0.0 - 1.0)
     pub caws_compliance: f64,
-    
+
     /// Overall performance score
     pub performance_score: f64,
 }
@@ -70,13 +70,13 @@ pub struct PerformanceMeasurement {
 pub struct BayesianOptimizationConfig {
     /// Number of random samples before optimization
     pub initial_samples: usize,
-    
+
     /// Maximum number of optimization iterations
     pub max_iterations: usize,
-    
+
     /// Exploration-exploitation balance (0.0 = pure exploitation, 1.0 = pure exploration)
     pub exploration_weight: f64,
-    
+
     /// Convergence threshold (stop if improvement < threshold)
     pub convergence_threshold: f64,
 }
@@ -96,19 +96,19 @@ impl Default for BayesianOptimizationConfig {
 pub struct AutoTuner {
     /// Parameter spaces to optimize
     parameter_spaces: Vec<ParameterSpace>,
-    
+
     /// Optimization objectives
     objectives: Vec<OptimizationObjective>,
-    
+
     /// Bayesian optimization configuration
     config: BayesianOptimizationConfig,
-    
+
     /// Performance measurement history
     measurements: Arc<tokio::sync::RwLock<Vec<PerformanceMeasurement>>>,
-    
+
     /// Best parameters found so far
     best_parameters: Arc<tokio::sync::RwLock<HashMap<String, f64>>>,
-    
+
     /// Best performance score achieved
     best_score: Arc<tokio::sync::RwLock<f64>>,
 }
@@ -153,12 +153,12 @@ impl AutoTuner {
         // Update best parameters if this is better
         let current_score = measurement.performance_score;
         let mut best_score = self.best_score.write().await;
-        
+
         if current_score > *best_score {
             *best_score = current_score;
             let mut best_params = self.best_parameters.write().await;
             *best_params = measurement.parameters.clone();
-            
+
             info!(
                 "New best performance score: {:.4} with parameters: {:?}",
                 current_score, measurement.parameters
@@ -199,7 +199,7 @@ impl AutoTuner {
     ) -> Result<HashMap<String, f64>> {
         // TODO: Implement proper Upper Confidence Bound (UCB) acquisition function with Gaussian Process
         //       Currently uses basic UCB; should use Gaussian Process model for accurate acquisition function.
-        
+
         // Calculate mean and variance for each parameter
         let mut parameter_stats: HashMap<String, (f64, f64)> = HashMap::new();
 
@@ -211,18 +211,14 @@ impl AutoTuner {
 
             if !values.is_empty() {
                 let mean = values.iter().sum::<f64>() / values.len() as f64;
-                let variance = values
-                    .iter()
-                    .map(|v| (v - mean).powi(2))
-                    .sum::<f64>()
-                    / values.len() as f64;
+                let variance =
+                    values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
                 parameter_stats.insert(space.name.clone(), (mean, variance));
             }
         }
 
         // Generate next sample using UCB
-        
-        let rng = rand::thread_rng();
+
         let mut suggested = HashMap::new();
 
         for space in &self.parameter_spaces {
@@ -331,4 +327,3 @@ pub struct OptimizationStatistics {
     pub best_score: f64,
     pub convergence_status: bool,
 }
-

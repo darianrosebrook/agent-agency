@@ -7,8 +7,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
-    TelemetryCollector, TelemetryData, TelemetryDataType, TelemetryError,
-    TelemetryDatabaseStorage,
+    TelemetryCollector, TelemetryData, TelemetryDataType, TelemetryDatabaseStorage, TelemetryError,
 };
 
 /// Enhanced telemetry collector with advanced features
@@ -21,7 +20,11 @@ pub struct EnhancedTelemetryCollector {
 }
 
 impl EnhancedTelemetryCollector {
-    pub fn new(name: String, collection_interval: std::time::Duration, max_buffer_size: usize) -> Self {
+    pub fn new(
+        name: String,
+        collection_interval: std::time::Duration,
+        max_buffer_size: usize,
+    ) -> Self {
         Self {
             name,
             collection_interval,
@@ -60,7 +63,12 @@ impl EnhancedTelemetryCollector {
     }
 
     /// Record a metric
-    pub async fn record_metric(&self, name: String, value: f64, tags: std::collections::HashMap<String, String>) {
+    pub async fn record_metric(
+        &self,
+        name: String,
+        value: f64,
+        tags: std::collections::HashMap<String, String>,
+    ) {
         let data = TelemetryData {
             timestamp: chrono::Utc::now(),
             source: self.name.clone(),
@@ -91,7 +99,12 @@ impl EnhancedTelemetryCollector {
     }
 
     /// Record an event
-    pub async fn record_event(&self, event_name: String, properties: serde_json::Value, tags: std::collections::HashMap<String, String>) {
+    pub async fn record_event(
+        &self,
+        event_name: String,
+        properties: serde_json::Value,
+        tags: std::collections::HashMap<String, String>,
+    ) {
         let data = TelemetryData {
             timestamp: chrono::Utc::now(),
             source: self.name.clone(),
@@ -121,7 +134,13 @@ impl EnhancedTelemetryCollector {
     }
 
     /// Record a log entry
-    pub async fn record_log(&self, level: String, message: String, metadata: serde_json::Value, tags: std::collections::HashMap<String, String>) {
+    pub async fn record_log(
+        &self,
+        level: String,
+        message: String,
+        metadata: serde_json::Value,
+        tags: std::collections::HashMap<String, String>,
+    ) {
         let data = TelemetryData {
             timestamp: chrono::Utc::now(),
             source: self.name.clone(),

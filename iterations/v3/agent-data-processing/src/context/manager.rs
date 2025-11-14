@@ -7,17 +7,17 @@
 //! Provides a unified interface for context lifecycle management.
 
 use crate::context::types::*;
-use crate::{DataProcessingResult, DataProcessingError};
-use chrono::{Utc, Duration};
+use crate::{DataProcessingError, DataProcessingResult};
+use chrono::{Duration, Utc};
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
+use sqlx::{postgres::PgPoolOptions, Encode, PgPool, Postgres, Row, Type};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::io::Write;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
-use sqlx::{PgPool, postgres::PgPoolOptions, Row, Postgres, Encode, Type};
 
 /// Database configuration for context management
 #[derive(Debug, Clone)]
@@ -59,16 +59,23 @@ pub enum QueryParam {
 }
 
 impl<'q> Encode<'q, Postgres> for QueryParam {
-    fn encode_by_ref(&self, buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
         match self {
             QueryParam::String(s) => <String as Encode<'q, Postgres>>::encode_by_ref(s, buf),
             QueryParam::I32(i) => <i32 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
             QueryParam::I64(i) => <i64 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
             QueryParam::Uuid(u) => <Uuid as Encode<'q, Postgres>>::encode_by_ref(u, buf),
             QueryParam::Bool(b) => <bool as Encode<'q, Postgres>>::encode_by_ref(b, buf),
-            QueryParam::Json(j) => <serde_json::Value as Encode<'q, Postgres>>::encode_by_ref(j, buf),
+            QueryParam::Json(j) => {
+                <serde_json::Value as Encode<'q, Postgres>>::encode_by_ref(j, buf)
+            }
             QueryParam::Bytes(b) => <Vec<u8> as Encode<'q, Postgres>>::encode_by_ref(b, buf),
-            QueryParam::Timestamp(t) => <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf),
+            QueryParam::Timestamp(t) => {
+                <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf)
+            }
             QueryParam::Null => sqlx::encode::IsNull::Yes,
         }
     }
@@ -93,13 +100,14 @@ impl DatabaseClient {
             .max_connections(config.max_connections)
             .connect(&config.database_url)
             .await
-            .map_err(|e| DataProcessingError::Operation(format!("Failed to connect to database: {}", e)))?;
+            .map_err(|e| {
+                DataProcessingError::Operation(format!("Failed to connect to database: {}", e))
+            })?;
 
         // Test the connection
-        sqlx::query("SELECT 1")
-            .execute(&pool)
-            .await
-            .map_err(|e| DataProcessingError::Operation(format!("Failed to test database connection: {}", e)))?;
+        sqlx::query("SELECT 1").execute(&pool).await.map_err(|e| {
+            DataProcessingError::Operation(format!("Failed to test database connection: {}", e))
+        })?;
 
         info!("Database client initialized successfully");
         Ok(Self {
@@ -109,10 +117,14 @@ impl DatabaseClient {
 
     /// Execute a parameterized query with proper SQL injection protection
     /// Uses QueryParam enum for type-safe parameter binding
-    pub async fn execute_with_params(&self, query: &str, params: &[QueryParam]) -> Result<(), DataProcessingError> {
+    pub async fn execute_with_params(
+        &self,
+        query: &str,
+        params: &[QueryParam],
+    ) -> Result<(), DataProcessingError> {
         // Validate query structure for security
         self.validate_query_security(query)?;
-        
+
         // Count placeholders in query ($1, $2, etc.)
         let placeholder_count = self.count_placeholders(query);
         if placeholder_count != params.len() {
@@ -125,7 +137,7 @@ impl DatabaseClient {
 
         // Build query with parameter binding
         let mut query_builder = sqlx::query(query);
-        
+
         // Bind each parameter using sqlx's type-safe binding
         for param in params {
             query_builder = match param {
@@ -141,24 +153,26 @@ impl DatabaseClient {
             };
         }
 
-        query_builder
-            .execute(&*self.pool)
-            .await
-            .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
-        
+        query_builder.execute(&*self.pool).await.map_err(|e| {
+            DataProcessingError::Operation(format!("Database execution failed: {}", e))
+        })?;
+
         Ok(())
     }
 
     /// Legacy method - kept for backward compatibility
     /// Prefer execute_with_params() for new code
-    pub async fn execute(&self, query: &str, params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<(), DataProcessingError> {
+    pub async fn execute(
+        &self,
+        query: &str,
+        params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)],
+    ) -> Result<(), DataProcessingError> {
         if params.is_empty() {
             // No parameters - use simple query execution
             self.validate_query_security(query)?;
-            sqlx::query(query)
-                .execute(&*self.pool)
-                .await
-                .map_err(|e| DataProcessingError::Operation(format!("Database execution failed: {}", e)))?;
+            sqlx::query(query).execute(&*self.pool).await.map_err(|e| {
+                DataProcessingError::Operation(format!("Database execution failed: {}", e))
+            })?;
             return Ok(());
         }
 
@@ -190,7 +204,10 @@ impl DatabaseClient {
         let query_lower = query.to_lowercase();
         for (pattern, description) in &dangerous_patterns {
             if query_lower.contains(pattern) {
-                warn!("Query contains potentially dangerous pattern '{}': {}", pattern, description);
+                warn!(
+                    "Query contains potentially dangerous pattern '{}': {}",
+                    pattern, description
+                );
                 // Don't block - these might be legitimate, but log for security monitoring
                 // In production, you might want to block or require additional validation
             }
@@ -205,25 +222,27 @@ impl DatabaseClient {
         // Match $1, $2, etc. pattern
         let re = Regex::new(r"\$\d+").unwrap();
         let matches: Vec<_> = re.find_iter(query).collect();
-        
+
         // Extract numbers and find max
         let max_placeholder = matches
             .iter()
-            .filter_map(|m| {
-                m.as_str().strip_prefix('$')?.parse::<usize>().ok()
-            })
+            .filter_map(|m| m.as_str().strip_prefix('$')?.parse::<usize>().ok())
             .max()
             .unwrap_or(0);
-        
+
         max_placeholder
     }
 
     /// Execute a parameterized query and return rows with proper SQL injection protection
     /// Uses QueryParam enum for type-safe parameter binding
-    pub async fn query_with_params(&self, query: &str, params: &[QueryParam]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
+    pub async fn query_with_params(
+        &self,
+        query: &str,
+        params: &[QueryParam],
+    ) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
         // Validate query structure for security
         self.validate_query_security(query)?;
-        
+
         // Count placeholders in query
         let placeholder_count = self.count_placeholders(query);
         if placeholder_count != params.len() {
@@ -236,7 +255,7 @@ impl DatabaseClient {
 
         // Build query with parameter binding
         let mut query_builder = sqlx::query(query);
-        
+
         // Bind each parameter
         for param in params {
             query_builder = match param {
@@ -260,7 +279,11 @@ impl DatabaseClient {
 
     /// Legacy method - kept for backward compatibility
     /// Prefer query_with_params() for new code
-    pub async fn query(&self, query: &str, _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)]) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
+    pub async fn query(
+        &self,
+        query: &str,
+        _params: &[&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)],
+    ) -> Result<Vec<sqlx::postgres::PgRow>, DataProcessingError> {
         if !_params.is_empty() {
             return Err(DataProcessingError::Operation(
                 "Parameterized queries with trait objects are not supported for security reasons. \
@@ -269,9 +292,7 @@ impl DatabaseClient {
         }
 
         self.validate_query_security(query)?;
-        let rows = sqlx::query(query)
-            .fetch_all(&*self.pool)
-            .await;
+        let rows = sqlx::query(query).fetch_all(&*self.pool).await;
 
         rows.map_err(|e| DataProcessingError::Operation(format!("Database query failed: {}", e)))
     }
@@ -295,7 +316,14 @@ pub struct ModelRegistry {
 impl std::fmt::Debug for ModelRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModelRegistry")
-            .field("embedding_service", &if self.embedding_service.is_some() { "Some(EmbeddingService)" } else { "None" })
+            .field(
+                "embedding_service",
+                &if self.embedding_service.is_some() {
+                    "Some(EmbeddingService)"
+                } else {
+                    "None"
+                },
+            )
             .finish()
     }
 }
@@ -303,12 +331,14 @@ impl std::fmt::Debug for ModelRegistry {
 impl ModelRegistry {
     /// Create a new ModelRegistry with optional embedding service
     #[cfg(feature = "embeddings")]
-    pub fn new(embedding_service: Option<std::sync::Arc<dyn data_infrastructure::embedding::EmbeddingService>>) -> Self {
-        Self {
-            embedding_service,
-        }
+    pub fn new(
+        embedding_service: Option<
+            std::sync::Arc<dyn data_infrastructure::embedding::EmbeddingService>,
+        >,
+    ) -> Self {
+        Self { embedding_service }
     }
-    
+
     /// Create a new ModelRegistry without embedding service (when embeddings feature is disabled)
     #[cfg(not(feature = "embeddings"))]
     pub fn new(_embedding_service: Option<()>) -> Self {
@@ -316,15 +346,19 @@ impl ModelRegistry {
             embedding_service: None,
         }
     }
-    
+
     /// Create a new ModelRegistry without embedding service (fallback mode)
     pub fn new_empty() -> Self {
         Self {
             embedding_service: None,
         }
     }
-    
-    pub async fn generate(&self, _prompt: &str, _options: Option<()>) -> Result<String, DataProcessingError> {
+
+    pub async fn generate(
+        &self,
+        _prompt: &str,
+        _options: Option<()>,
+    ) -> Result<String, DataProcessingError> {
         // TODO: Implement real AI service integration
         // - [ ] Integrate with agent-model-management crate
         // - [ ] Implement proper model selection based on task type
@@ -337,20 +371,19 @@ impl ModelRegistry {
         // This would integrate with agent-model-management or similar
         Ok("Mock summary".to_string())
     }
-    
+
     /// Generate embedding for content
     /// Implemented: Real embedding generation using data-infrastructure embedding service
     #[cfg(feature = "embeddings")]
     pub async fn generate_embedding(&self, content: &str) -> Result<Vec<f32>, DataProcessingError> {
         if let Some(ref embedding_service) = self.embedding_service {
             use data_infrastructure::embedding::embedding_types::ContentType;
-            
+
             // Generate embedding using the embedding service
-            match embedding_service.generate_embedding(
-                content,
-                ContentType::Text,
-                "model_registry"
-            ).await {
+            match embedding_service
+                .generate_embedding(content, ContentType::Text, "model_registry")
+                .await
+            {
                 Ok(stored_embedding) => {
                     // Extract vector from StoredEmbedding
                     let embedding_vector = stored_embedding.vector.values;
@@ -368,10 +401,13 @@ impl ModelRegistry {
             Ok(vec![0.1; 768]) // Default 768-dim embedding
         }
     }
-    
+
     /// Generate embedding for content (fallback when embeddings feature is disabled)
     #[cfg(not(feature = "embeddings"))]
-    pub async fn generate_embedding(&self, _content: &str) -> Result<Vec<f32>, DataProcessingError> {
+    pub async fn generate_embedding(
+        &self,
+        _content: &str,
+    ) -> Result<Vec<f32>, DataProcessingError> {
         // Return mock embedding when embeddings feature is disabled
         Ok(vec![0.1; 768]) // Default 768-dim embedding
     }
@@ -397,9 +433,8 @@ impl ContextManager {
     pub fn new_with_db_client(
         config: ContextConfig,
         ai_service: Arc<ModelRegistry>,
-        db_client: Arc<DatabaseClient>
+        db_client: Arc<DatabaseClient>,
     ) -> DataProcessingResult<Self> {
-
         let stats = Arc::new(RwLock::new(ContextStats {
             total_contexts: 0,
             total_storage_size: 0,
@@ -528,7 +563,12 @@ impl ContextManager {
         // Get context
         let context = match self.retrieve_context_from_db(context_id).await? {
             Some(ctx) => ctx,
-            None => return Err(crate::DataProcessingError::Other(format!("Context not found: {}", context_id))),
+            None => {
+                return Err(crate::DataProcessingError::Other(format!(
+                    "Context not found: {}",
+                    context_id
+                )))
+            }
         };
 
         // Determine folding strategy
@@ -543,7 +583,8 @@ impl ContextManager {
 
         // Store folded result
         if let Ok(folded_context) = &folded {
-            self.store_folded_context(context_id, folded_context).await?;
+            self.store_folded_context(context_id, folded_context)
+                .await?;
         }
 
         folded
@@ -584,16 +625,17 @@ impl ContextManager {
 
         // Check max context size
         if size_bytes > self.config.storage.max_context_size {
-            return Err(crate::DataProcessingError::ResourceExhausted(
-                format!("Context size {} exceeds limit {}", size_bytes, self.config.storage.max_context_size)
-            ));
+            return Err(crate::DataProcessingError::ResourceExhausted(format!(
+                "Context size {} exceeds limit {}",
+                size_bytes, self.config.storage.max_context_size
+            )));
         }
 
         // Check total storage usage
         let current_usage = self.get_current_storage_usage().await?;
         if current_usage + size_bytes > self.config.storage.cache_size_limit {
             return Err(crate::DataProcessingError::ResourceExhausted(
-                "Storage limit exceeded".to_string()
+                "Storage limit exceeded".to_string(),
             ));
         }
 
@@ -609,7 +651,10 @@ impl ContextManager {
 
         // Compress content if enabled
         let (content_data, content_size) = if self.config.storage.enable_compression {
-            let mut encoder = GzEncoder::new(Vec::new(), Compression::new(self.config.storage.compression_level));
+            let mut encoder = GzEncoder::new(
+                Vec::new(),
+                Compression::new(self.config.storage.compression_level),
+            );
             use std::io::Write;
             encoder.write_all(content_json.as_bytes())?;
             let compressed = encoder.finish()?;
@@ -634,7 +679,7 @@ impl ContextManager {
 
         let access_count_i64 = context.access_count as i64;
         let content_size_i64 = content_size as i64;
-        
+
         // Use new parameterized query API with QueryParam enum for SQL injection protection
         let params = vec![
             QueryParam::Uuid(context.id),
@@ -652,7 +697,10 @@ impl ContextManager {
         Ok(())
     }
 
-    async fn retrieve_context_from_db(&self, context_id: &Uuid) -> DataProcessingResult<Option<ContextData>> {
+    async fn retrieve_context_from_db(
+        &self,
+        context_id: &Uuid,
+    ) -> DataProcessingResult<Option<ContextData>> {
         let query = r#"
             SELECT context_type, content, metadata, created_at, last_accessed_at, access_count, size_bytes
             FROM agent_contexts
@@ -678,13 +726,14 @@ impl ContextManager {
             decoder.read_to_string(&mut decompressed)?;
             decompressed
         } else {
-            String::from_utf8(content_data)
-                .map_err(|e| DataProcessingError::Operation(format!("UTF-8 conversion failed: {}", e)))?
+            String::from_utf8(content_data).map_err(|e| {
+                DataProcessingError::Operation(format!("UTF-8 conversion failed: {}", e))
+            })?
         };
 
         let content: serde_json::Value = serde_json::from_str(&content_json)
             .map_err(|e| DataProcessingError::Serialization(e))?;
-        
+
         // Get metadata as JSONB (sqlx can deserialize JSONB directly)
         let metadata_value: serde_json::Value = row.get("metadata");
         let metadata: ContextMetadata = serde_json::from_value(metadata_value)
@@ -740,17 +789,18 @@ impl ContextManager {
         "#;
 
         let now = Utc::now();
-        let params = vec![
-            QueryParam::Timestamp(now),
-            QueryParam::Uuid(*context_id),
-        ];
+        let params = vec![QueryParam::Timestamp(now), QueryParam::Uuid(*context_id)];
 
         self.db_client.execute_with_params(query, &params).await?;
         debug!("Updated access statistics for context {}", context_id);
         Ok(())
     }
 
-    async fn store_folded_context(&self, context_id: &Uuid, folded: &FoldedContext) -> DataProcessingResult<()> {
+    async fn store_folded_context(
+        &self,
+        context_id: &Uuid,
+        folded: &FoldedContext,
+    ) -> DataProcessingResult<()> {
         let (fold_type, fold_data) = match folded {
             FoldedContext::Compressed(data) => ("compressed", serde_json::to_string(data)?),
             FoldedContext::Summarized(summary) => ("summarized", summary.clone()),
@@ -776,7 +826,10 @@ impl ContextManager {
         ];
 
         self.db_client.execute_with_params(query, &params).await?;
-        debug!("Stored folded context {} with type {}", context_id, fold_type);
+        debug!(
+            "Stored folded context {} with type {}",
+            context_id, fold_type
+        );
         Ok(())
     }
 
@@ -788,10 +841,14 @@ impl ContextManager {
             // Remove least recently accessed context
             if let Some((oldest_id, _)) = working_memory
                 .iter()
-                .min_by_key(|(_, ctx)| ctx.last_accessed_at) {
+                .min_by_key(|(_, ctx)| ctx.last_accessed_at)
+            {
                 let oldest_id = *oldest_id;
                 working_memory.remove(&oldest_id);
-                debug!("Removed context {} from working memory due to size limit", oldest_id);
+                debug!(
+                    "Removed context {} from working memory due to size limit",
+                    oldest_id
+                );
             }
         }
 
@@ -799,7 +856,10 @@ impl ContextManager {
         Ok(())
     }
 
-    async fn get_from_working_memory(&self, context_id: &Uuid) -> DataProcessingResult<Option<ContextData>> {
+    async fn get_from_working_memory(
+        &self,
+        context_id: &Uuid,
+    ) -> DataProcessingResult<Option<ContextData>> {
         let mut working_memory = self.working_memory.write().await;
 
         if let Some(context) = working_memory.get_mut(context_id) {
@@ -847,7 +907,8 @@ impl ContextManager {
             LIMIT 100
         "#;
 
-        let age_threshold = Utc::now() - Duration::hours(self.config.folding.age_threshold_hours as i64);
+        let age_threshold =
+            Utc::now() - Duration::hours(self.config.folding.age_threshold_hours as i64);
         let low_access_threshold = Utc::now() - Duration::hours(24); // 1 day
         let min_access_count = 5; // Minimum accesses to avoid folding
         let importance_threshold = self.config.folding.importance_threshold;
@@ -860,16 +921,19 @@ impl ContextManager {
         ];
 
         let rows = self.db_client.query_with_params(query, &params).await?;
-        let context_ids: Vec<Uuid> = rows.into_iter()
-            .map(|row| row.get("id"))
-            .collect();
+        let context_ids: Vec<Uuid> = rows.into_iter().map(|row| row.get("id")).collect();
 
         debug!("Found {} contexts needing folding", context_ids.len());
         Ok(context_ids)
     }
 
-    async fn determine_folding_strategy(&self, context: &ContextData) -> DataProcessingResult<FoldingStrategy> {
-        let age_hours = Utc::now().signed_duration_since(context.created_at).num_hours() as u32;
+    async fn determine_folding_strategy(
+        &self,
+        context: &ContextData,
+    ) -> DataProcessingResult<FoldingStrategy> {
+        let age_hours = Utc::now()
+            .signed_duration_since(context.created_at)
+            .num_hours() as u32;
         let access_frequency = if context.access_count > 0 {
             let age_days = age_hours as f64 / 24.0;
             context.access_count as f64 / age_days
@@ -882,7 +946,9 @@ impl ContextManager {
         // Folding decision logic
         if age_hours >= self.config.folding.age_threshold_hours {
             Ok(self.config.folding.strategy.clone())
-        } else if age_hours >= 1 && access_frequency < self.config.folding.access_frequency_threshold {
+        } else if age_hours >= 1
+            && access_frequency < self.config.folding.access_frequency_threshold
+        {
             Ok(FoldingStrategy::Compress)
         } else if importance_score < self.config.folding.importance_threshold {
             Ok(FoldingStrategy::Compress)
@@ -924,7 +990,10 @@ impl ContextManager {
 
     async fn compress_context(&self, context: ContextData) -> DataProcessingResult<FoldedContext> {
         let json_data = serde_json::to_string(&context)?;
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::new(self.config.storage.compression_level));
+        let mut encoder = GzEncoder::new(
+            Vec::new(),
+            Compression::new(self.config.storage.compression_level),
+        );
         encoder.write_all(json_data.as_bytes())?;
         let compressed = encoder.finish()?;
 
@@ -958,17 +1027,21 @@ impl ContextManager {
                 // Validate summary isn't too short or too long
                 if cleaned_summary.len() < 50 {
                     return Err(DataProcessingError::Operation(
-                        "Generated summary too short".to_string()
+                        "Generated summary too short".to_string(),
                     ));
                 }
 
                 if cleaned_summary.len() > 2000 {
                     return Err(DataProcessingError::Operation(
-                        "Generated summary too long".to_string()
+                        "Generated summary too long".to_string(),
                     ));
                 }
 
-                debug!("AI-generated summary for context {}: {} chars", context.id, cleaned_summary.len());
+                debug!(
+                    "AI-generated summary for context {}: {} chars",
+                    context.id,
+                    cleaned_summary.len()
+                );
                 Ok(FoldedContext::Summarized(cleaned_summary))
             }
             Err(e) => {
@@ -997,7 +1070,7 @@ impl ContextManager {
                     serde_json::to_string_pretty(obj)
                         .map_err(|e| DataProcessingError::Serialization(e))
                 }
-            },
+            }
             _ => {
                 // Convert to string representation
                 serde_json::to_string_pretty(&context.content)
@@ -1008,7 +1081,11 @@ impl ContextManager {
 
     /// Create a fallback summary when AI summarization fails
     fn create_fallback_summary(&self, context: &ContextData) -> DataProcessingResult<String> {
-        let title = context.metadata.title.as_deref().unwrap_or("Untitled context");
+        let title = context
+            .metadata
+            .title
+            .as_deref()
+            .unwrap_or("Untitled context");
         let desc = context.metadata.description.as_deref().unwrap_or("");
         let tags = context.metadata.tags.join(", ");
 
@@ -1030,7 +1107,10 @@ impl ContextManager {
         use std::path::PathBuf;
 
         // Create archive path based on context ID
-        let archive_base = self.config.storage.archive_path
+        let archive_base = self
+            .config
+            .storage
+            .archive_path
             .as_ref()
             .cloned()
             .unwrap_or_else(|| "archive".to_string());
@@ -1046,7 +1126,10 @@ impl ContextManager {
         // Serialize context data
         let context_json = serde_json::to_string(&context)?;
         let compressed_data = if self.config.storage.enable_compression {
-            let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::new(self.config.storage.compression_level));
+            let mut encoder = flate2::write::GzEncoder::new(
+                Vec::new(),
+                flate2::Compression::new(self.config.storage.compression_level),
+            );
             use std::io::Write;
             encoder.write_all(context_json.as_bytes())?;
             encoder.finish()?
@@ -1058,7 +1141,11 @@ impl ContextManager {
         fs::write(&archive_path, &compressed_data)?;
 
         // Generate archive location identifier
-        let archive_location = format!("{}/{}", context.id.to_string()[..2].to_string(), context.id.to_string()[2..4].to_string());
+        let archive_location = format!(
+            "{}/{}",
+            context.id.to_string()[..2].to_string(),
+            context.id.to_string()[2..4].to_string()
+        );
 
         // Update database to mark as archived
         let query = r#"
@@ -1077,13 +1164,20 @@ impl ContextManager {
 
         self.db_client.execute_with_params(query, &params).await?;
 
-        debug!("Archived context {} to cold storage at {}", context.id, archive_path.display());
+        debug!(
+            "Archived context {} to cold storage at {}",
+            context.id,
+            archive_path.display()
+        );
 
         Ok(FoldedContext::Archived(archive_location_clone))
     }
 
     /// Retrieve a context from cold storage archive
-    pub async fn retrieve_archived_context(&self, context_id: &Uuid) -> DataProcessingResult<Option<ContextData>> {
+    pub async fn retrieve_archived_context(
+        &self,
+        context_id: &Uuid,
+    ) -> DataProcessingResult<Option<ContextData>> {
         use std::fs;
         use std::path::PathBuf;
 
@@ -1103,7 +1197,10 @@ impl ContextManager {
         let archive_location: String = rows[0].get("archive_location");
 
         // Reconstruct archive path
-        let archive_base = self.config.storage.archive_path
+        let archive_base = self
+            .config
+            .storage
+            .archive_path
             .as_ref()
             .cloned()
             .unwrap_or_else(|| "archive".to_string());
@@ -1123,8 +1220,9 @@ impl ContextManager {
             decoder.read_to_string(&mut decompressed)?;
             decompressed
         } else {
-            String::from_utf8(compressed_data)
-                .map_err(|e| DataProcessingError::Operation(format!("UTF-8 conversion failed: {}", e)))?
+            String::from_utf8(compressed_data).map_err(|e| {
+                DataProcessingError::Operation(format!("UTF-8 conversion failed: {}", e))
+            })?
         };
 
         // Deserialize context
@@ -1148,9 +1246,15 @@ impl ContextManager {
             QueryParam::Uuid(*context_id),
         ];
 
-        self.db_client.execute_with_params(update_query, &update_params).await?;
+        self.db_client
+            .execute_with_params(update_query, &update_params)
+            .await?;
 
-        debug!("Retrieved archived context {} from {}", context_id, archive_path.display());
+        debug!(
+            "Retrieved archived context {} from {}",
+            context_id,
+            archive_path.display()
+        );
 
         Ok(Some(context))
     }
@@ -1180,7 +1284,10 @@ impl ContextManager {
         let avg_archive_age_seconds: Option<f64> = row.get("avg_archive_age_seconds");
 
         // Calculate archive storage size
-        let archive_base = self.config.storage.archive_path
+        let archive_base = self
+            .config
+            .storage
+            .archive_path
             .as_ref()
             .cloned()
             .unwrap_or_else(|| "archive".to_string());
@@ -1237,7 +1344,10 @@ impl ContextManager {
         let rows = self.db_client.query_with_params(query, &params).await?;
 
         let mut deleted_count = 0u64;
-        let archive_base = self.config.storage.archive_path
+        let archive_base = self
+            .config
+            .storage
+            .archive_path
             .as_ref()
             .cloned()
             .unwrap_or_else(|| "archive".to_string());
@@ -1262,12 +1372,19 @@ impl ContextManager {
             let delete_query = "DELETE FROM agent_contexts WHERE id = $1";
             let delete_params = vec![QueryParam::Uuid(context_id)];
 
-            if let Ok(_) = self.db_client.execute_with_params(delete_query, &delete_params).await {
+            if let Ok(_) = self
+                .db_client
+                .execute_with_params(delete_query, &delete_params)
+                .await
+            {
                 deleted_count += 1;
             }
         }
 
-        info!("Cleaned up {} archived contexts older than {} days", deleted_count, retention_days);
+        info!(
+            "Cleaned up {} archived contexts older than {} days",
+            deleted_count, retention_days
+        );
         Ok(deleted_count)
     }
 
@@ -1349,7 +1466,11 @@ impl ContextManager {
         "#;
         let one_hour_ago = Utc::now() - Duration::hours(1);
         let recent_params = vec![QueryParam::Timestamp(one_hour_ago)];
-        if let Ok(rows) = self.db_client.query_with_params(recent_query, &recent_params).await {
+        if let Ok(rows) = self
+            .db_client
+            .query_with_params(recent_query, &recent_params)
+            .await
+        {
             if !rows.is_empty() {
                 let recent_count: i64 = rows[0].get("recent_count");
                 stats.recent_accesses = recent_count as u64;
@@ -1383,8 +1504,10 @@ impl ContextManager {
             }
         }
 
-        debug!("Updated lifecycle statistics: {} total, {} working memory, {} folded",
-               stats.total_contexts, stats.working_memory_contexts, stats.folded_contexts);
+        debug!(
+            "Updated lifecycle statistics: {} total, {} working memory, {} folded",
+            stats.total_contexts, stats.working_memory_contexts, stats.folded_contexts
+        );
 
         Ok(())
     }
@@ -1429,7 +1552,7 @@ impl ContextManager {
 
         // Calculate compression ratios by strategy
         let compression_query = r#"
-            SELECT 
+            SELECT
                 folding_strategy,
                 AVG(original_size::float / compressed_size::float) as avg_ratio,
                 SUM(original_size - compressed_size) as total_savings
@@ -1443,7 +1566,7 @@ impl ContextManager {
                 let strategy: String = row.get("folding_strategy");
                 let ratio: f64 = row.get("avg_ratio");
                 let savings: i64 = row.get("total_savings");
-                
+
                 efficiency.compression_by_strategy.insert(strategy, ratio);
                 efficiency.storage_savings_bytes = savings as u64;
                 efficiency.avg_compression_ratio = ratio;
@@ -1459,7 +1582,7 @@ impl ContextManager {
 
         // Calculate average retrieval times by source
         let latency_query = r#"
-            SELECT 
+            SELECT
                 source_type,
                 AVG(retrieval_time_ms) as avg_latency
             FROM context_access_logs
@@ -1471,7 +1594,7 @@ impl ContextManager {
             for row in rows {
                 let source_type: String = row.get("source_type");
                 let avg_latency: f64 = row.get("avg_latency");
-                
+
                 match source_type.as_str() {
                     "working_memory" => latency.working_memory_latency_ms = avg_latency,
                     "database" => latency.database_latency_ms = avg_latency,
@@ -1482,7 +1605,9 @@ impl ContextManager {
         }
 
         // Calculate overall average
-        let total_latency = latency.working_memory_latency_ms + latency.database_latency_ms + latency.archive_latency_ms;
+        let total_latency = latency.working_memory_latency_ms
+            + latency.database_latency_ms
+            + latency.archive_latency_ms;
         latency.avg_retrieval_latency_ms = total_latency / 3.0;
 
         Ok(latency)
@@ -1516,8 +1641,8 @@ impl ContextManager {
             FROM agent_contexts
             WHERE last_accessed_at < NOW() - INTERVAL '7 days'
             AND id NOT IN (
-                SELECT DISTINCT context_id 
-                FROM context_access_logs 
+                SELECT DISTINCT context_id
+                FROM context_access_logs
                 WHERE access_time > NOW() - INTERVAL '7 days'
             )
             LIMIT 50
@@ -1532,8 +1657,8 @@ impl ContextManager {
 
         // Calculate access frequency distribution
         let freq_query = r#"
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN access_count = 1 THEN 'single'
                     WHEN access_count BETWEEN 2 AND 5 THEN 'low'
                     WHEN access_count BETWEEN 6 AND 20 THEN 'medium'
@@ -1553,7 +1678,9 @@ impl ContextManager {
             for row in rows {
                 let range: String = row.get("frequency_range");
                 let count: i64 = row.get("context_count");
-                patterns.access_frequency_distribution.insert(range, count as u64);
+                patterns
+                    .access_frequency_distribution
+                    .insert(range, count as u64);
             }
         }
 
@@ -1569,8 +1696,8 @@ impl ContextManager {
             SELECT COUNT(*) as orphaned_count
             FROM agent_contexts
             WHERE id NOT IN (
-                SELECT DISTINCT context_id 
-                FROM context_access_logs 
+                SELECT DISTINCT context_id
+                FROM context_access_logs
                 WHERE access_time > NOW() - INTERVAL '30 days'
             )
             AND created_at < NOW() - INTERVAL '7 days'
@@ -1584,11 +1711,11 @@ impl ContextManager {
 
         // Calculate storage usage trend
         let trend_query = r#"
-            SELECT 
+            SELECT
                 AVG(storage_size) as avg_size,
                 COUNT(*) as context_count
             FROM (
-                SELECT 
+                SELECT
                     DATE_TRUNC('hour', created_at) as hour,
                     SUM(size_bytes) as storage_size
                 FROM agent_contexts
@@ -1608,7 +1735,8 @@ impl ContextManager {
         // Calculate storage limit proximity
         let stats = self.stats.read().await;
         let config = &self.config.storage;
-        health.storage_limit_proximity = stats.total_storage_size as f64 / config.max_context_size as f64;
+        health.storage_limit_proximity =
+            stats.total_storage_size as f64 / config.max_context_size as f64;
 
         // Generate health alerts
         health.health_alerts = self.generate_health_alerts(&health).await?;
@@ -1617,18 +1745,24 @@ impl ContextManager {
     }
 
     /// Generate health alerts based on metrics
-    async fn generate_health_alerts(&self, health: &ContextHealthMetrics) -> DataProcessingResult<Vec<HealthAlert>> {
+    async fn generate_health_alerts(
+        &self,
+        health: &ContextHealthMetrics,
+    ) -> DataProcessingResult<Vec<HealthAlert>> {
         let mut alerts = Vec::new();
 
         // Storage limit alert
         if health.storage_limit_proximity > 0.8 {
             alerts.push(HealthAlert {
                 alert_type: HealthAlertType::StorageLimitApproaching,
-                message: format!("Storage usage at {:.1}% of limit", health.storage_limit_proximity * 100.0),
-                severity: if health.storage_limit_proximity > 0.95 { 
-                    AlertSeverity::Critical 
-                } else { 
-                    AlertSeverity::High 
+                message: format!(
+                    "Storage usage at {:.1}% of limit",
+                    health.storage_limit_proximity * 100.0
+                ),
+                severity: if health.storage_limit_proximity > 0.95 {
+                    AlertSeverity::Critical
+                } else {
+                    AlertSeverity::High
                 },
                 timestamp: Utc::now(),
             });
@@ -1646,10 +1780,14 @@ impl ContextManager {
 
         // Performance degradation alert
         let stats = self.stats.read().await;
-        if stats.average_context_size > 10 * 1024 * 1024 { // 10MB
+        if stats.average_context_size > 10 * 1024 * 1024 {
+            // 10MB
             alerts.push(HealthAlert {
                 alert_type: HealthAlertType::PerformanceDegradation,
-                message: format!("Average context size is {:.1}MB", stats.average_context_size as f64 / 1024.0 / 1024.0),
+                message: format!(
+                    "Average context size is {:.1}MB",
+                    stats.average_context_size as f64 / 1024.0 / 1024.0
+                ),
                 severity: AlertSeverity::Low,
                 timestamp: Utc::now(),
             });
@@ -1664,9 +1802,9 @@ impl ContextManager {
         let stats = Arc::clone(&self.stats);
 
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(config.working_memory.cleanup_interval_minutes as u64 * 60)
-            );
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                config.working_memory.cleanup_interval_minutes as u64 * 60,
+            ));
 
             loop {
                 interval.tick().await;
@@ -1688,7 +1826,10 @@ impl ContextManager {
                 }
 
                 if removed_count > 0 {
-                    debug!("Cleaned up {} expired contexts from working memory", removed_count);
+                    debug!(
+                        "Cleaned up {} expired contexts from working memory",
+                        removed_count
+                    );
                 }
 
                 // Update stats

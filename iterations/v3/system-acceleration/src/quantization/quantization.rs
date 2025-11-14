@@ -2,8 +2,8 @@
 //!
 //! Manages model quantization for Apple Silicon optimization.
 
-use schemars::JsonSchema;
 use crate::QuantizationMethod;
+use schemars::JsonSchema;
 // use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

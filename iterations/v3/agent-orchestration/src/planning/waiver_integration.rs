@@ -6,14 +6,15 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use std::sync::Arc;
+use crate::planning::{models::Waiver, plan_types, DatabaseOperations};
+use agent_agency_contracts::planning_io::{ExecutionPlan, WaiverReference};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
-use crate::planning::{DatabaseOperations, models::Waiver, plan_types};
-use agent_agency_contracts::planning_io::{ExecutionPlan, WaiverReference};
 
 use crate::planning::plan_types::PlanningConstraints;
 
@@ -27,7 +28,7 @@ pub struct WaiverIntegration {
 
     /// Emergency waiver configuration
     emergency_config: EmergencyWaiverConfig,
-    
+
     /// Optional council monitor for emergency notifications
     council_monitor: Option<Arc<crate::planning::council_monitor::CouncilMonitor>>,
 }
@@ -126,7 +127,7 @@ impl WaiverIntegration {
             council_monitor,
         }
     }
-    
+
     /// Create with council monitor for emergency notifications
     pub fn with_council_monitor(
         db_ops: Arc<dyn DatabaseOperations>,
@@ -185,7 +186,11 @@ impl WaiverIntegration {
         justification: &str,
     ) -> Result<WaiverReference> {
         // Validate emergency reason
-        if !self.emergency_config.emergency_reasons.contains(&reason.to_string()) {
+        if !self
+            .emergency_config
+            .emergency_reasons
+            .contains(&reason.to_string())
+        {
             return Err(anyhow!("Invalid emergency waiver reason: {}", reason));
         }
 
@@ -207,7 +212,9 @@ impl WaiverIntegration {
             waiver_id: stored_waiver.id.to_string(),
             reason: stored_waiver.reason.clone(),
             waived_gates: stored_waiver.gates.clone(),
-            expires_at: stored_waiver.expires_at.unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
+            expires_at: stored_waiver
+                .expires_at
+                .unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
             approved_by: stored_waiver.approved_by.clone(),
         };
 
@@ -228,12 +235,14 @@ impl WaiverIntegration {
         let mut waivers = Vec::new();
 
         for constraint in exceeded_constraints {
-            let waiver = self.create_emergency_waiver(
-                plan.id,
-                "infrastructure_limitation",
-                vec![constraint.clone()],
-                &format!("Scope blowout on constraint: {}", constraint),
-            ).await?;
+            let waiver = self
+                .create_emergency_waiver(
+                    plan.id,
+                    "infrastructure_limitation",
+                    vec![constraint.clone()],
+                    &format!("Scope blowout on constraint: {}", constraint),
+                )
+                .await?;
 
             waivers.push(waiver);
         }
@@ -249,7 +258,8 @@ impl WaiverIntegration {
     pub async fn validate_waiver(&self, waiver_ref: &WaiverReference) -> Result<()> {
         // Check if waiver exists and is active
         let waivers = self.db_ops.get_waivers(Some("active".to_string())).await?;
-        let waiver = waivers.iter()
+        let waiver = waivers
+            .iter()
             .find(|w| w.id.to_string() == waiver_ref.waiver_id)
             .ok_or_else(|| anyhow!("Waiver {} not found or inactive", waiver_ref.waiver_id))?;
 
@@ -261,15 +271,27 @@ impl WaiverIntegration {
         }
 
         // Check reason validity
-        if !self.validation_config.allowed_reasons.contains(&waiver.reason) {
+        if !self
+            .validation_config
+            .allowed_reasons
+            .contains(&waiver.reason)
+        {
             return Err(anyhow!("Waiver reason '{}' not allowed", waiver.reason));
         }
 
         // Check high-impact waivers have mitigation plans
-        if self.validation_config.require_mitigation_for_high_impact &&
-           waiver.impact_level == "critical" &&
-           waiver.mitigation_plan.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
-            return Err(anyhow!("Critical waiver {} requires mitigation plan", waiver_ref.waiver_id));
+        if self.validation_config.require_mitigation_for_high_impact
+            && waiver.impact_level == "critical"
+            && waiver
+                .mitigation_plan
+                .as_ref()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(true)
+        {
+            return Err(anyhow!(
+                "Critical waiver {} requires mitigation plan",
+                waiver_ref.waiver_id
+            ));
         }
 
         Ok(())
@@ -279,18 +301,26 @@ impl WaiverIntegration {
     pub async fn get_waiver_stats(&self) -> Result<WaiverStats> {
         let all_waivers = self.db_ops.get_waivers(None).await?;
 
-        let active_waivers = all_waivers.iter()
-            .filter(|w| w.status == "active" && w.expires_at.map(|exp| exp > Utc::now()).unwrap_or(true))
+        let active_waivers = all_waivers
+            .iter()
+            .filter(|w| {
+                w.status == "active" && w.expires_at.map(|exp| exp > Utc::now()).unwrap_or(true)
+            })
             .count();
 
-        let expired_waivers = all_waivers.iter()
+        let expired_waivers = all_waivers
+            .iter()
             .filter(|w| w.expires_at.map(|exp| exp <= Utc::now()).unwrap_or(false))
             .count();
 
-        let emergency_waivers = all_waivers.iter()
-            .filter(|w| w.metadata.get("emergency")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false))
+        let emergency_waivers = all_waivers
+            .iter()
+            .filter(|w| {
+                w.metadata
+                    .get("emergency")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+            })
             .count();
 
         // Group by reason
@@ -302,7 +332,9 @@ impl WaiverIntegration {
         // Group by impact level
         let mut waivers_by_impact = HashMap::new();
         for waiver in &all_waivers {
-            *waivers_by_impact.entry(waiver.impact_level.clone()).or_insert(0) += 1;
+            *waivers_by_impact
+                .entry(waiver.impact_level.clone())
+                .or_insert(0) += 1;
         }
 
         Ok(WaiverStats {
@@ -318,21 +350,28 @@ impl WaiverIntegration {
     /// Clean up expired waivers
     pub async fn cleanup_expired_waivers(&self) -> Result<usize> {
         let all_waivers = self.db_ops.get_waivers(None).await?;
-        let expired_ids: Vec<Uuid> = all_waivers.iter()
-            .filter(|w| w.expires_at.map(|exp| exp <= Utc::now()).unwrap_or(false) && w.status == "active")
+        let expired_ids: Vec<Uuid> = all_waivers
+            .iter()
+            .filter(|w| {
+                w.expires_at.map(|exp| exp <= Utc::now()).unwrap_or(false) && w.status == "active"
+            })
             .map(|w| w.id)
             .collect();
 
         // Mark as expired using update_waiver method
         let mut updated_count = 0;
         for id in expired_ids {
-            match self.db_ops.update_waiver(
-                id,
-                crate::planning::UpdateWaiver {
+            match self
+                .db_ops
+                .update_waiver(
                     id,
-                    status: "expired".to_string(),
-                }
-            ).await {
+                    crate::planning::UpdateWaiver {
+                        id,
+                        status: "expired".to_string(),
+                    },
+                )
+                .await
+            {
                 Ok(_) => updated_count += 1,
                 Err(e) => {
                     warn!("Failed to mark waiver {} as expired: {}", id, e);
@@ -346,22 +385,30 @@ impl WaiverIntegration {
     // Helper methods
 
     /// Get active waivers for a plan
-    async fn get_active_waivers_for_plan(&self, plan: &ExecutionPlan) -> Result<Vec<WaiverReference>> {
+    async fn get_active_waivers_for_plan(
+        &self,
+        plan: &ExecutionPlan,
+    ) -> Result<Vec<WaiverReference>> {
         let mut active_waivers = Vec::new();
 
         // Check database for waivers related to this plan
         // WorkingSpec doesn't have active_waivers field - waivers are stored in database
         let all_waivers = self.db_ops.get_waivers(Some("active".to_string())).await?;
         for waiver in all_waivers {
-            if let Some(plan_id) = waiver.metadata.get("plan_id")
+            if let Some(plan_id) = waiver
+                .metadata
+                .get("plan_id")
                 .and_then(|v| v.as_str())
-                .and_then(|s| Uuid::parse_str(s).ok()) {
+                .and_then(|s| Uuid::parse_str(s).ok())
+            {
                 if plan_id.to_string() == plan.contract_plan.id {
                     let waiver_ref = WaiverReference {
                         waiver_id: waiver.id.to_string(),
                         reason: waiver.reason,
                         waived_gates: waiver.gates,
-                        expires_at: waiver.expires_at.unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
+                        expires_at: waiver
+                            .expires_at
+                            .unwrap_or_else(|| Utc::now() + chrono::Duration::hours(24)),
                         approved_by: waiver.approved_by,
                     };
                     active_waivers.push(waiver_ref);
@@ -391,7 +438,8 @@ impl WaiverIntegration {
                     constraints.cost_limits = Some(plan_types::CostLimits {
                         max_cost_cents: 100000, // $1000 emergency limit
                         cost_per_ms_budget: 0.1,
-                        optimization_priority: plan_types::CostOptimizationPriority::MaximizePerformance,
+                        optimization_priority:
+                            plan_types::CostOptimizationPriority::MaximizePerformance,
                     });
                 }
                 "max_time" => {
@@ -425,26 +473,32 @@ impl WaiverIntegration {
             "Emergency waiver created: {} - {} (expires: {})",
             waiver.waiver_type.clone(),
             waiver.reason,
-            waiver.expires_at.map(|dt| dt.to_rfc3339()).unwrap_or_else(|| "never".to_string())
+            waiver
+                .expires_at
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or_else(|| "never".to_string())
         );
 
         // Notify council if monitor is available
         if let Some(monitor) = &self.council_monitor {
             // Extract plan ID from waiver metadata if available
-            let plan_id = waiver.metadata.get("plan_id")
+            let plan_id = waiver
+                .metadata
+                .get("plan_id")
                 .and_then(|v| v.as_str())
                 .and_then(|s| Uuid::parse_str(s).ok());
-            
+
             if let Some(plan_id) = plan_id {
                 let reason = format!(
                     "Emergency waiver created: {} - {}. Expires: {:?}",
-                    waiver.waiver_type,
-                    waiver.reason,
-                    waiver.expires_at
+                    waiver.waiver_type, waiver.reason, waiver.expires_at
                 );
-                
+
                 // Request council intervention for emergency waiver
-                match monitor.request_intervention(&plan_id.to_string(), &reason).await {
+                match monitor
+                    .request_intervention(&plan_id.to_string(), &reason)
+                    .await
+                {
                     Ok(_) => {
                         tracing::info!("Council notified of emergency waiver for plan {}", plan_id);
                     }
@@ -454,7 +508,9 @@ impl WaiverIntegration {
                     }
                 }
             } else {
-                tracing::warn!("Emergency waiver has no plan_id in metadata, cannot notify council");
+                tracing::warn!(
+                    "Emergency waiver has no plan_id in metadata, cannot notify council"
+                );
             }
         } else {
             tracing::debug!("Council monitor not configured, skipping council notification");
@@ -591,7 +647,9 @@ mod tests {
         let config = WaiverValidationConfig::default();
         assert!(config.require_explicit_approval);
         assert_eq!(config.max_waiver_duration_days, 90);
-        assert!(config.allowed_reasons.contains(&"emergency_hotfix".to_string()));
+        assert!(config
+            .allowed_reasons
+            .contains(&"emergency_hotfix".to_string()));
     }
 
     #[test]
@@ -599,7 +657,9 @@ mod tests {
         let config = EmergencyWaiverConfig::default();
         assert_eq!(config.emergency_duration_hours, 24);
         assert_eq!(config.emergency_approver, "emergency-system");
-        assert!(config.emergency_reasons.contains(&"emergency_hotfix".to_string()));
+        assert!(config
+            .emergency_reasons
+            .contains(&"emergency_hotfix".to_string()));
     }
 
     #[test]
@@ -613,8 +673,8 @@ mod tests {
         };
 
         assert_eq!(waiver_ref.waiver_id, "test-waiver");
-        assert!(waiver_ref.waived_gates.contains(&"quality_gates".to_string()));
+        assert!(waiver_ref
+            .waived_gates
+            .contains(&"quality_gates".to_string()));
     }
 }
-
-

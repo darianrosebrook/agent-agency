@@ -2,11 +2,12 @@
 //!
 //! Core types for judge configuration, health metrics, and review contexts.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use crate::judge_backup::backup_types::JudgeType;
 use crate::judge_backup::verdicts::JudgeVerdict;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Configuration for a judge instance
 
@@ -34,7 +35,6 @@ pub struct JudgeHealthMetrics {
     pub response_time_p95_ms: u64,
     pub error_rate: f64,
     #[schemars(with = "String")]
-
     pub last_health_check: DateTime<Utc>,
 }
 
@@ -60,7 +60,6 @@ pub struct ReviewContext {
 pub struct PreviousReview {
     pub judge_name: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub verdict_summary: String,
 }

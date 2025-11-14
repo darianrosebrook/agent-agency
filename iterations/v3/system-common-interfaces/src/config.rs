@@ -163,10 +163,18 @@ pub trait ConfigurationManager: Send + Sync {
     async fn load_profile(&self, profile_name: &str) -> Result<HashMap<String, ConfigValue>>;
 
     /// Validate configuration against profile requirements
-    async fn validate_profile(&self, profile_name: &str, config: &HashMap<String, ConfigValue>) -> Result<ValidationResult>;
+    async fn validate_profile(
+        &self,
+        profile_name: &str,
+        config: &HashMap<String, ConfigValue>,
+    ) -> Result<ValidationResult>;
 
     /// Merge configurations from multiple sources with precedence
-    async fn merge_configs(&self, configs: Vec<HashMap<String, ConfigValue>>, precedence: Vec<ConfigSource>) -> Result<HashMap<String, ConfigValue>>;
+    async fn merge_configs(
+        &self,
+        configs: Vec<HashMap<String, ConfigValue>>,
+        precedence: Vec<ConfigSource>,
+    ) -> Result<HashMap<String, ConfigValue>>;
 
     /// Get configuration schema for validation
     async fn get_schema(&self) -> Result<ConfigSchema>;
@@ -207,5 +215,6 @@ pub mod keys {
 
     pub const SECURITY_JWT_SECRET: &str = "security.jwt_secret";
     pub const SECURITY_SESSION_TIMEOUT_MINUTES: &str = "security.session_timeout_minutes";
-    pub const SECURITY_RATE_LIMIT_REQUESTS_PER_MINUTE: &str = "security.rate_limit_requests_per_minute";
+    pub const SECURITY_RATE_LIMIT_REQUESTS_PER_MINUTE: &str =
+        "security.rate_limit_requests_per_minute";
 }

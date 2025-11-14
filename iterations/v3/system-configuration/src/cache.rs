@@ -54,10 +54,9 @@ where
 {
     /// Create a new LRU cache
     pub fn new(config: CacheConfig) -> Result<Self, CacheError> {
-        let cache = lru::LruCache::new(
-            std::num::NonZeroUsize::new(config.max_size)
-                .ok_or(CacheError::InvalidConfig("max_size must be > 0".to_string()))?
-        );
+        let cache = lru::LruCache::new(std::num::NonZeroUsize::new(config.max_size).ok_or(
+            CacheError::InvalidConfig("max_size must be > 0".to_string()),
+        )?);
 
         Ok(Self {
             cache: Arc::new(RwLock::new(cache)),
@@ -161,15 +160,13 @@ where
         // - CAWS Tier: 3 (code quality improvement)
         // - Change Budget: ~50 LOC
         // - Reviewer Requirements: Async Rust expertise
-        futures::executor::block_on(async {
-            self.stats.read().await.clone()
-        })
+        futures::executor::block_on(async { self.stats.read().await.clone() })
     }
 }
 
 /// Cache entry with expiration
 #[derive(Debug, Clone)]
-struct CacheEntry <V> {
+struct CacheEntry<V> {
     value: V,
     expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }

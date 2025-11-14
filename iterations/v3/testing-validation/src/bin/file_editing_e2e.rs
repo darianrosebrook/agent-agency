@@ -4,7 +4,7 @@
 //! with real Git worktrees and file operations.
 
 use testing_validation::scenarios::scenario_4_file_editing::run_file_editing_e2e_test;
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber;
 
 #[tokio::main]
@@ -24,8 +24,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     if result.passed {
         info!("✅ E2E File Editing Test PASSED");
         info!("   Duration: {}ms", result.duration_ms);
-        info!("   CAWS Compliance Checks: {}", result.metrics.caws_compliance_checks);
-        info!("   Provenance Entries: {}", result.metrics.provenance_entries);
+        info!(
+            "   CAWS Compliance Checks: {}",
+            result.metrics.caws_compliance_checks
+        );
+        info!(
+            "   Provenance Entries: {}",
+            result.metrics.provenance_entries
+        );
     } else {
         error!("❌ E2E File Editing Test FAILED");
         error!("   Duration: {}ms", result.duration_ms);
@@ -50,7 +56,7 @@ mod smoke_tests {
         // Verify we can import our test scenarios (only those available without full feature)
         let _ = testing_validation::scenarios::scenario_4_file_editing::run_file_editing_e2e_test;
         let _ = testing_validation::scenarios::security_privacy::run_security_test;
-        
+
         #[cfg(feature = "full")]
         {
             let _ = testing_validation::scenarios::claim_verification::run_claim_verification_test;
@@ -62,8 +68,9 @@ mod smoke_tests {
         println!("✅ All E2E test scenario imports successful");
 
         // Verify we can import our services
-        let _: std::marker::PhantomData<testing_validation::services::postgres::PostgresService> = std::marker::PhantomData;
-        
+        let _: std::marker::PhantomData<testing_validation::services::postgres::PostgresService> =
+            std::marker::PhantomData;
+
         #[cfg(feature = "full")]
         {
             use data_infrastructure::file_operations_service::create_file_operations_service;
@@ -78,7 +85,3 @@ mod smoke_tests {
         println!("✅ Basic type creation successful");
     }
 }
-
-
-
-

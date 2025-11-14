@@ -1,18 +1,17 @@
 //! Research session management
 
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-use crate::research_types::{ResearchSession, ResearchQuery};
+use crate::research_types::{ResearchQuery, ResearchSession};
 use anyhow::Result;
 
-/// Session manager for research sessions
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+/// Session manager for research sessions
+use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct SessionManager {
     sessions: Arc<RwLock<HashMap<Uuid, ResearchSession>>>,
@@ -27,7 +26,11 @@ impl SessionManager {
     }
 
     /// Create a new research session
-    pub async fn create_session(&self, name: String, description: Option<String>) -> ResearchSession {
+    pub async fn create_session(
+        &self,
+        name: String,
+        description: Option<String>,
+    ) -> ResearchSession {
         let session = ResearchSession {
             id: Uuid::new_v4(),
             session_name: name,
@@ -39,7 +42,10 @@ impl SessionManager {
             metadata: HashMap::new(),
         };
 
-        self.sessions.write().await.insert(session.id, session.clone());
+        self.sessions
+            .write()
+            .await
+            .insert(session.id, session.clone());
         session
     }
 

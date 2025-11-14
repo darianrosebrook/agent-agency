@@ -2,12 +2,12 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
+use crate::recovery_types::{Digest, StreamingHasher};
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::recovery_types::{Digest, StreamingHasher};
 
 use crate::recovery_types::*;
 
@@ -16,7 +16,7 @@ use crate::recovery_types::*;
 pub struct TreeEntry {
     pub name: String,
     pub mode: FileMode,
-    pub digest: Digest,   // Blob or symlink target
+    pub digest: Digest, // Blob or symlink target
 }
 
 impl TreeEntry {
@@ -84,10 +84,10 @@ impl FileTree {
         // Remove any existing entry with the same name
         self.entries.retain(|e| e.name != entry.name);
         self.entries.push(entry);
-        
+
         // Sort entries by name for deterministic ordering
         self.entries.sort_by(|a, b| a.name.cmp(&b.name));
-        
+
         // Recalculate digest
         self.digest = Self::calculate_tree_digest(&self.entries);
     }
@@ -103,11 +103,11 @@ impl FileTree {
                 true
             }
         });
-        
+
         if removed.is_some() {
             self.digest = Self::calculate_tree_digest(&self.entries);
         }
-        
+
         removed
     }
 
@@ -143,58 +143,58 @@ impl FileTree {
         }
 
         let mut hasher = StreamingHasher::new();
-        
+
         for entry in entries {
             // Hash the entry: name + mode + digest
             hasher.update(entry.name.as_bytes());
             hasher.update(&entry.posix_mode().to_le_bytes());
             hasher.update(entry.digest.as_bytes());
         }
-        
+
         hasher.finalize()
     }
 
     /// Create a tree from a directory path
     pub fn from_directory(path: &PathBuf) -> Result<Self> {
         let mut entries = Vec::new();
-        
+
         if !path.exists() {
             return Ok(Self::empty());
         }
-        
+
         let dir_entries = std::fs::read_dir(path)?;
-        
+
         for entry in dir_entries {
             let entry = entry?;
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
-            
+
             let metadata = entry.metadata()?;
             let file_type = metadata.file_type();
-            
+
             if file_type.is_file() {
                 // Calculate digest for file content
                 let content = std::fs::read(&path)?;
                 let digest = Self::calculate_content_digest(&content);
-                
+
                 // Check if file is executable
                 let mode = if Self::is_executable(&path)? {
                     FileMode::Executable
                 } else {
                     FileMode::Regular
                 };
-                
+
                 entries.push(TreeEntry::new(name, mode, digest));
             } else if file_type.is_symlink() {
                 // For symlinks, store the target as a blob
                 let target = std::fs::read_link(&path)?;
                 let target_str = target.to_string_lossy().to_string();
                 let target_digest = Self::calculate_content_digest(target_str.as_bytes());
-                
+
                 entries.push(TreeEntry::symlink(name, target_digest));
             }
         }
-        
+
         Ok(Self::from_entries(entries))
     }
 
@@ -207,13 +207,16 @@ impl FileTree {
             let permissions = metadata.permissions();
             Ok(permissions.mode() & 0o111 != 0)
         }
-        
+
         #[cfg(not(unix))]
         {
             // On non-Unix systems, check file extension or shebang
             if let Some(extension) = path.extension() {
                 let ext = extension.to_string_lossy().to_lowercase();
-                Ok(matches!(ext.as_str(), "exe" | "bat" | "cmd" | "sh" | "py" | "rb" | "pl" | "ps1"))
+                Ok(matches!(
+                    ext.as_str(),
+                    "exe" | "bat" | "cmd" | "sh" | "py" | "rb" | "pl" | "ps1"
+                ))
             } else {
                 // Check for shebang in first line
                 if let Ok(content) = std::fs::read_to_string(path) {
@@ -235,37 +238,39 @@ impl FileTree {
     /// Apply changes to create a new tree
     pub fn apply_changes(&self, changes: &[FileChange]) -> Result<Self> {
         let mut new_entries = self.entries.clone();
-        
+
         for change in changes {
             match &change.payload {
-                ChangePayload::Full(_) | ChangePayload::UnifiedDiff { .. } | ChangePayload::ChunkMap(_) => {
+                ChangePayload::Full(_)
+                | ChangePayload::UnifiedDiff { .. }
+                | ChangePayload::ChunkMap(_) => {
                     // Calculate new digest for the change
                     let new_digest = self.calculate_change_digest(change)?;
-                    
+
                     // Update or add the entry
                     let entry = TreeEntry::new(
                         change.path.to_string_lossy().to_string(),
                         change.mode,
                         new_digest,
                     );
-                    
+
                     // Remove existing entry with same name
                     new_entries.retain(|e| e.name != entry.name);
                     new_entries.push(entry);
                 }
             }
         }
-        
+
         // Sort entries by name for deterministic ordering
         new_entries.sort_by(|a, b| a.name.cmp(&b.name));
-        
+
         Ok(Self::from_entries(new_entries))
     }
 
     /// Calculate digest for a change
     fn calculate_change_digest(&self, change: &FileChange) -> Result<Digest> {
         let mut hasher = StreamingHasher::new();
-        
+
         match &change.payload {
             ChangePayload::Full(data) => {
                 hasher.update(data);
@@ -283,7 +288,7 @@ impl FileTree {
                 }
             }
         }
-        
+
         Ok(hasher.finalize())
     }
 
@@ -292,15 +297,13 @@ impl FileTree {
         let mut added = Vec::new();
         let mut modified = Vec::new();
         let mut removed = Vec::new();
-        
+
         // Create maps for efficient lookup
-        let self_map: HashMap<String, &TreeEntry> = self.entries.iter()
-            .map(|e| (e.name.clone(), e))
-            .collect();
-        let other_map: HashMap<String, &TreeEntry> = other.entries.iter()
-            .map(|e| (e.name.clone(), e))
-            .collect();
-        
+        let self_map: HashMap<String, &TreeEntry> =
+            self.entries.iter().map(|e| (e.name.clone(), e)).collect();
+        let other_map: HashMap<String, &TreeEntry> =
+            other.entries.iter().map(|e| (e.name.clone(), e)).collect();
+
         // Find added and modified entries
         for entry in &other.entries {
             if let Some(self_entry) = self_map.get(&entry.name) {
@@ -311,14 +314,14 @@ impl FileTree {
                 added.push(entry.clone());
             }
         }
-        
+
         // Find removed entries
         for entry in &self.entries {
             if !other_map.contains_key(&entry.name) {
                 removed.push(entry.clone());
             }
         }
-        
+
         TreeDiff {
             added,
             modified,
@@ -362,12 +365,12 @@ mod tests {
     fn test_tree_with_entries() {
         let digest1 = Digest::from_bytes([1u8; 32]);
         let digest2 = Digest::from_bytes([2u8; 32]);
-        
+
         let entries = vec![
             TreeEntry::file("file1.txt".to_string(), digest1),
             TreeEntry::executable("script.sh".to_string(), digest2),
         ];
-        
+
         let tree = FileTree::from_entries(entries);
         assert_eq!(tree.len(), 2);
         assert!(!tree.is_empty());
@@ -378,7 +381,7 @@ mod tests {
         let mut tree = FileTree::empty();
         let digest = Digest::from_bytes([1u8; 32]);
         let entry = TreeEntry::file("test.txt".to_string(), digest);
-        
+
         tree.add_entry(entry);
         assert_eq!(tree.len(), 1);
     }
@@ -388,7 +391,7 @@ mod tests {
         let digest = Digest::from_bytes([1u8; 32]);
         let entry = TreeEntry::file("test.txt".to_string(), digest);
         let mut tree = FileTree::from_entries(vec![entry.clone()]);
-        
+
         let removed = tree.remove_entry("test.txt");
         assert!(removed.is_some());
         assert!(tree.is_empty());
@@ -399,18 +402,18 @@ mod tests {
         let digest1 = Digest::from_bytes([1u8; 32]);
         let digest2 = Digest::from_bytes([2u8; 32]);
         let digest3 = Digest::from_bytes([3u8; 32]);
-        
+
         let tree1 = FileTree::from_entries(vec![
             TreeEntry::file("file1.txt".to_string(), digest1),
             TreeEntry::file("file2.txt".to_string(), digest2),
         ]);
-        
+
         let tree2 = FileTree::from_entries(vec![
             TreeEntry::file("file1.txt".to_string(), digest1), // unchanged
             TreeEntry::file("file2.txt".to_string(), digest3), // modified
-            TreeEntry::file("file3.txt".to_string(), digest2),  // added
+            TreeEntry::file("file3.txt".to_string(), digest2), // added
         ]);
-        
+
         let diff = tree1.diff(&tree2);
         assert_eq!(diff.added.len(), 1);
         assert_eq!(diff.modified.len(), 1);

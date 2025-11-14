@@ -3,8 +3,8 @@
 //! Provides secure storage, retrieval, rotation, and audit logging for sensitive configuration
 //! values including database credentials, API keys, JWT secrets, and encryption keys.
 
-use schemars::JsonSchema;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -93,7 +93,12 @@ pub trait SecretProviderTrait: Send + Sync {
     async fn get_secret(&self, key: &str) -> SecretResult<Secret>;
 
     /// Store a secret
-    async fn put_secret(&self, key: &str, value: &str, metadata: Option<HashMap<String, String>>) -> SecretResult<SecretMetadata>;
+    async fn put_secret(
+        &self,
+        key: &str,
+        value: &str,
+        metadata: Option<HashMap<String, String>>,
+    ) -> SecretResult<SecretMetadata>;
 
     /// Delete a secret
     async fn delete_secret(&self, key: &str) -> SecretResult<()>;
@@ -125,9 +130,15 @@ impl HashiCorpVaultProvider {
 
         Self {
             client,
-            vault_addr: config.endpoint.clone().unwrap_or_else(|| "http://localhost:8200".to_string()),
+            vault_addr: config
+                .endpoint
+                .clone()
+                .unwrap_or_else(|| "http://localhost:8200".to_string()),
             vault_token: token,
-            mount_path: config.vault_mount_path.clone().unwrap_or_else(|| "secret".to_string()),
+            mount_path: config
+                .vault_mount_path
+                .clone()
+                .unwrap_or_else(|| "secret".to_string()),
         }
     }
 }
@@ -137,35 +148,48 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
     async fn get_secret(&self, key: &str) -> SecretResult<Secret> {
         let url = format!("{}/v1/{}/data/{}", self.vault_addr, self.mount_path, key);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("X-Vault-Token", &self.vault_token)
             .send()
             .await
-            .map_err(|e| SecretError::NetworkError { message: e.to_string() })?;
+            .map_err(|e| SecretError::NetworkError {
+                message: e.to_string(),
+            })?;
 
         if !response.status().is_success() {
             if response.status() == reqwest::StatusCode::NOT_FOUND {
-                return Err(SecretError::NotFound { key: key.to_string() });
+                return Err(SecretError::NotFound {
+                    key: key.to_string(),
+                });
             }
             return Err(SecretError::ProviderError {
-                message: format!("Vault API error: {}", response.status())
+                message: format!("Vault API error: {}", response.status()),
             });
         }
 
-        let data: serde_json::Value = response.json().await
-            .map_err(|e| SecretError::ProviderError { message: e.to_string() })?;
+        let data: serde_json::Value =
+            response
+                .json()
+                .await
+                .map_err(|e| SecretError::ProviderError {
+                    message: e.to_string(),
+                })?;
 
-        let secret_data = data["data"]["data"].as_object()
-            .ok_or_else(|| SecretError::ProviderError {
-                message: "Invalid Vault response format".to_string()
-            })?;
+        let secret_data =
+            data["data"]["data"]
+                .as_object()
+                .ok_or_else(|| SecretError::ProviderError {
+                    message: "Invalid Vault response format".to_string(),
+                })?;
 
         // For simplicity, assume the secret has a "value" field
-        let value = secret_data.get("value")
+        let value = secret_data
+            .get("value")
             .and_then(|v| v.as_str())
             .ok_or_else(|| SecretError::ProviderError {
-                message: "Secret missing value field".to_string()
+                message: "Secret missing value field".to_string(),
             })?;
 
         let metadata = SecretMetadata {
@@ -185,7 +209,12 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
         })
     }
 
-    async fn put_secret(&self, key: &str, value: &str, metadata: Option<HashMap<String, String>>) -> SecretResult<SecretMetadata> {
+    async fn put_secret(
+        &self,
+        key: &str,
+        value: &str,
+        metadata: Option<HashMap<String, String>>,
+    ) -> SecretResult<SecretMetadata> {
         let url = format!("{}/v1/{}/data/{}", self.vault_addr, self.mount_path, key);
 
         let mut data = serde_json::json!({
@@ -202,17 +231,20 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
             }
         }
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .header("X-Vault-Token", &self.vault_token)
             .json(&data)
             .send()
             .await
-            .map_err(|e| SecretError::NetworkError { message: e.to_string() })?;
+            .map_err(|e| SecretError::NetworkError {
+                message: e.to_string(),
+            })?;
 
         if !response.status().is_success() {
             return Err(SecretError::ProviderError {
-                message: format!("Failed to store secret: {}", response.status())
+                message: format!("Failed to store secret: {}", response.status()),
             });
         }
 
@@ -229,18 +261,24 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
     }
 
     async fn delete_secret(&self, key: &str) -> SecretResult<()> {
-        let url = format!("{}/v1/{}/metadata/{}", self.vault_addr, self.mount_path, key);
+        let url = format!(
+            "{}/v1/{}/metadata/{}",
+            self.vault_addr, self.mount_path, key
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .delete(&url)
             .header("X-Vault-Token", &self.vault_token)
             .send()
             .await
-            .map_err(|e| SecretError::NetworkError { message: e.to_string() })?;
+            .map_err(|e| SecretError::NetworkError {
+                message: e.to_string(),
+            })?;
 
         if !response.status().is_success() {
             return Err(SecretError::ProviderError {
-                message: format!("Failed to delete secret: {}", response.status())
+                message: format!("Failed to delete secret: {}", response.status()),
             });
         }
 
@@ -248,26 +286,44 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
     }
 
     async fn list_secrets(&self, prefix: Option<&str>) -> SecretResult<Vec<String>> {
-        let url = format!("{}/v1/{}/metadata/{}", self.vault_addr, self.mount_path, prefix.unwrap_or(""));
+        let url = format!(
+            "{}/v1/{}/metadata/{}",
+            self.vault_addr,
+            self.mount_path,
+            prefix.unwrap_or("")
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .header("X-Vault-Token", &self.vault_token)
             .send()
             .await
-            .map_err(|e| SecretError::NetworkError { message: e.to_string() })?;
+            .map_err(|e| SecretError::NetworkError {
+                message: e.to_string(),
+            })?;
 
         if !response.status().is_success() {
             return Err(SecretError::ProviderError {
-                message: format!("Failed to list secrets: {}", response.status())
+                message: format!("Failed to list secrets: {}", response.status()),
             });
         }
 
-        let data: serde_json::Value = response.json().await
-            .map_err(|e| SecretError::ProviderError { message: e.to_string() })?;
+        let data: serde_json::Value =
+            response
+                .json()
+                .await
+                .map_err(|e| SecretError::ProviderError {
+                    message: e.to_string(),
+                })?;
 
-        let keys = data["data"]["keys"].as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+        let keys = data["data"]["keys"]
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
             .unwrap_or_default();
 
         Ok(keys)
@@ -281,8 +337,8 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
 
     async fn rotate_secret(&self, key: &str) -> SecretResult<Secret> {
         // Generate a new random secret
-        use rand::{thread_rng, Rng};
         use rand::distributions::Alphanumeric;
+        use rand::{thread_rng, Rng};
 
         let new_value: String = thread_rng()
             .sample_iter(&Alphanumeric)
@@ -308,7 +364,9 @@ pub struct AwsSecretsManagerProvider {
 
 impl AwsSecretsManagerProvider {
     pub async fn new(config: &SecretManagerConfig) -> Result<Self, SecretError> {
-        let region = config.region.clone()
+        let region = config
+            .region
+            .clone()
             .unwrap_or_else(|| "us-east-1".to_string());
 
         let config = aws_config::from_env()
@@ -325,23 +383,30 @@ impl AwsSecretsManagerProvider {
 #[async_trait]
 impl SecretProviderTrait for AwsSecretsManagerProvider {
     async fn get_secret(&self, key: &str) -> SecretResult<Secret> {
-        let response = self.client
+        let response = self
+            .client
             .get_secret_value()
             .secret_id(key)
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("AWS Secrets Manager error: {}", e)
+                message: format!("AWS Secrets Manager error: {}", e),
             })?;
 
-        let value = response.secret_string
+        let value = response
+            .secret_string
             .ok_or_else(|| SecretError::ProviderError {
-                message: "Secret has no string value".to_string()
+                message: "Secret has no string value".to_string(),
             })?;
 
         let metadata = SecretMetadata {
             key: key.to_string(),
-            version: response.version_stages.unwrap_or_else(|| vec!["AWSCURRENT".to_string()]).first().unwrap_or(&"AWSCURRENT".to_string()).clone(),
+            version: response
+                .version_stages
+                .unwrap_or_else(|| vec!["AWSCURRENT".to_string()])
+                .first()
+                .unwrap_or(&"AWSCURRENT".to_string())
+                .clone(),
             created_at: chrono::Utc::now(), // AWS doesn't provide creation time in this API
             updated_at: chrono::Utc::now(),
             expires_at: None,
@@ -350,17 +415,16 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
             last_accessed: Some(chrono::Utc::now()),
         };
 
-        Ok(Secret {
-            value,
-            metadata,
-        })
+        Ok(Secret { value, metadata })
     }
 
-    async fn put_secret(&self, key: &str, value: &str, metadata: Option<HashMap<String, String>>) -> SecretResult<SecretMetadata> {
-        let mut request = self.client
-            .create_secret()
-            .name(key)
-            .secret_string(value);
+    async fn put_secret(
+        &self,
+        key: &str,
+        value: &str,
+        metadata: Option<HashMap<String, String>>,
+    ) -> SecretResult<SecretMetadata> {
+        let mut request = self.client.create_secret().name(key).secret_string(value);
 
         if let Some(meta) = metadata {
             if let Some(description) = meta.get("description") {
@@ -372,7 +436,7 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("Failed to create secret: {}", e)
+                message: format!("Failed to create secret: {}", e),
             })?;
 
         Ok(SecretMetadata {
@@ -395,7 +459,7 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("Failed to delete secret: {}", e)
+                message: format!("Failed to delete secret: {}", e),
             })?;
 
         Ok(())
@@ -408,7 +472,7 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
                 aws_sdk_secretsmanager::types::Filter::builder()
                     .key(aws_sdk_secretsmanager::types::FilterNameStringType::Name)
                     .values(p)
-                    .build()
+                    .build(),
             );
         }
 
@@ -416,7 +480,7 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("Failed to list secrets: {}", e)
+                message: format!("Failed to list secrets: {}", e),
             })?;
 
         // TODO: Parse and return actual secrets from response
@@ -457,36 +521,42 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
     }
 
     async fn needs_rotation(&self, key: &str) -> SecretResult<bool> {
-        let response = self.client
+        let response = self
+            .client
             .describe_secret()
             .secret_id(key)
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("Failed to describe secret: {}", e)
+                message: format!("Failed to describe secret: {}", e),
             })?;
 
         // Check if secret is marked for rotation or is past rotation date
-        let needs_rotation = response.rotation_enabled.unwrap_or(false) ||
-            response.last_rotated_date.map(|date| {
-                let rotation_interval_days = 90; // Default 90 days
-                let now = chrono::Utc::now();
-                let last_rotation = chrono::DateTime::from_timestamp(date.secs(), date.subsec_nanos() as u32)
-                    .unwrap_or(now);
-                (now - last_rotation).num_days() > rotation_interval_days
-            }).unwrap_or(false);
+        let needs_rotation = response.rotation_enabled.unwrap_or(false)
+            || response
+                .last_rotated_date
+                .map(|date| {
+                    let rotation_interval_days = 90; // Default 90 days
+                    let now = chrono::Utc::now();
+                    let last_rotation =
+                        chrono::DateTime::from_timestamp(date.secs(), date.subsec_nanos() as u32)
+                            .unwrap_or(now);
+                    (now - last_rotation).num_days() > rotation_interval_days
+                })
+                .unwrap_or(false);
 
         Ok(needs_rotation)
     }
 
     async fn rotate_secret(&self, key: &str) -> SecretResult<Secret> {
-        let response = self.client
+        let response = self
+            .client
             .rotate_secret()
             .secret_id(key)
             .send()
             .await
             .map_err(|e| SecretError::ProviderError {
-                message: format!("Failed to rotate secret: {}", e)
+                message: format!("Failed to rotate secret: {}", e),
             })?;
 
         // Get the new secret value
@@ -534,15 +604,19 @@ impl LocalFileProvider {
 
     fn save_to_file(&self) -> Result<(), SecretError> {
         let secrets = self.secrets.blocking_read();
-        let data: HashMap<String, String> = secrets.iter()
+        let data: HashMap<String, String> = secrets
+            .iter()
             .map(|(k, s)| (k.clone(), s.value.clone()))
             .collect();
 
-        let content = serde_json::to_string_pretty(&data)
-            .map_err(|e| SecretError::ProviderError { message: e.to_string() })?;
+        let content =
+            serde_json::to_string_pretty(&data).map_err(|e| SecretError::ProviderError {
+                message: e.to_string(),
+            })?;
 
-        std::fs::write(&self.file_path, content)
-            .map_err(|e| SecretError::ProviderError { message: e.to_string() })?;
+        std::fs::write(&self.file_path, content).map_err(|e| SecretError::ProviderError {
+            message: e.to_string(),
+        })?;
 
         Ok(())
     }
@@ -583,7 +657,9 @@ impl LocalFileProvider {
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Security and Vault expertise
         warn!("Real Vault authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_vault_fallback".to_string()))) // Temporary: placeholder until Vault SDK integration
+        Ok(Box::new(LocalFileProvider::new(
+            "authenticated_vault_fallback".to_string(),
+        ))) // Temporary: placeholder until Vault SDK integration
     }
 
     /// Create a new authenticated AWS Secrets Manager provider
@@ -622,7 +698,9 @@ impl LocalFileProvider {
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Security and AWS expertise
         warn!("Real AWS authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_aws_fallback".to_string()))) // Temporary: placeholder until AWS SDK integration
+        Ok(Box::new(LocalFileProvider::new(
+            "authenticated_aws_fallback".to_string(),
+        ))) // Temporary: placeholder until AWS SDK integration
     }
 
     /// Create a new authenticated Azure Key Vault provider
@@ -645,7 +723,9 @@ impl LocalFileProvider {
         // TODO: Implement Azure Key Vault authentication
         //       Currently uses placeholder fallback; should implement real Azure Key Vault authentication with proper SDK integration.
         warn!("Real Azure authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_azure_fallback".to_string())))
+        Ok(Box::new(LocalFileProvider::new(
+            "authenticated_azure_fallback".to_string(),
+        )))
     }
 
     /// Create a new authenticated GCP Secret Manager provider
@@ -668,7 +748,9 @@ impl LocalFileProvider {
         // TODO: Implement GCP Secret Manager authentication
         //       Currently uses placeholder fallback; should implement real GCP Secret Manager authentication with proper SDK integration.
         warn!("Real GCP authentication not implemented - using fallback");
-        Ok(Box::new(LocalFileProvider::new("authenticated_gcp_fallback".to_string())))
+        Ok(Box::new(LocalFileProvider::new(
+            "authenticated_gcp_fallback".to_string(),
+        )))
     }
 }
 
@@ -681,9 +763,12 @@ impl LocalFileProvider {
 impl SecretProviderTrait for LocalFileProvider {
     async fn get_secret(&self, key: &str) -> SecretResult<Secret> {
         let secrets = self.secrets.read().await;
-        let mut secret = secrets.get(key)
+        let mut secret = secrets
+            .get(key)
             .cloned()
-            .ok_or_else(|| SecretError::NotFound { key: key.to_string() })?;
+            .ok_or_else(|| SecretError::NotFound {
+                key: key.to_string(),
+            })?;
 
         // Update access tracking
         secret.metadata.access_count += 1;
@@ -692,7 +777,12 @@ impl SecretProviderTrait for LocalFileProvider {
         Ok(secret)
     }
 
-    async fn put_secret(&self, key: &str, value: &str, metadata: Option<HashMap<String, String>>) -> SecretResult<SecretMetadata> {
+    async fn put_secret(
+        &self,
+        key: &str,
+        value: &str,
+        metadata: Option<HashMap<String, String>>,
+    ) -> SecretResult<SecretMetadata> {
         let mut secrets = self.secrets.write().await;
 
         let secret_metadata = SecretMetadata {
@@ -726,7 +816,8 @@ impl SecretProviderTrait for LocalFileProvider {
 
     async fn list_secrets(&self, prefix: Option<&str>) -> SecretResult<Vec<String>> {
         let secrets = self.secrets.read().await;
-        let keys: Vec<String> = secrets.keys()
+        let keys: Vec<String> = secrets
+            .keys()
             .filter(|k| prefix.map_or(true, |p| k.starts_with(p)))
             .cloned()
             .collect();
@@ -740,8 +831,8 @@ impl SecretProviderTrait for LocalFileProvider {
 
     async fn rotate_secret(&self, key: &str) -> SecretResult<Secret> {
         // Generate a new random secret
-        use rand::{thread_rng, Rng};
         use rand::distributions::Alphanumeric;
+        use rand::{thread_rng, Rng};
 
         let new_value: String = thread_rng()
             .sample_iter(&Alphanumeric)
@@ -769,27 +860,31 @@ impl SecretManager {
     pub async fn new(config: SecretManagerConfig) -> Result<Self, SecretError> {
         let provider: Box<dyn SecretProviderTrait> = match config.provider {
             SecretProvider::HashiCorpVault => {
-                let token = std::env::var("VAULT_TOKEN")
-                    .map_err(|_| SecretError::ConfigError {
-                        message: "VAULT_TOKEN environment variable required".to_string()
-                    })?;
+                let token = std::env::var("VAULT_TOKEN").map_err(|_| SecretError::ConfigError {
+                    message: "VAULT_TOKEN environment variable required".to_string(),
+                })?;
                 Box::new(HashiCorpVaultProvider::new(&config, token))
             }
             SecretProvider::AwsSecretsManager => {
                 Box::new(AwsSecretsManagerProvider::new(&config).await?)
             }
             SecretProvider::LocalFile => {
-                let file_path = config.local_file_path.clone()
-                    .ok_or_else(|| SecretError::ConfigError {
-                        message: "Local file path required for LocalFile provider".to_string()
-                    })?;
+                let file_path =
+                    config
+                        .local_file_path
+                        .clone()
+                        .ok_or_else(|| SecretError::ConfigError {
+                            message: "Local file path required for LocalFile provider".to_string(),
+                        })?;
                 let provider = LocalFileProvider::new(file_path);
                 provider.load_from_file()?;
                 Box::new(provider)
             }
-            _ => return Err(SecretError::ConfigError {
-                message: format!("Provider {:?} not yet implemented", config.provider)
-            }),
+            _ => {
+                return Err(SecretError::ConfigError {
+                    message: format!("Provider {:?} not yet implemented", config.provider),
+                })
+            }
         };
 
         Ok(Self {
@@ -826,14 +921,22 @@ impl SecretManager {
         }
 
         if self.audit_enabled {
-            info!("Retrieved secret: {} (version: {})", key, secret.metadata.version);
+            info!(
+                "Retrieved secret: {} (version: {})",
+                key, secret.metadata.version
+            );
         }
 
         Ok(secret)
     }
 
     /// Store a secret
-    pub async fn put_secret(&self, key: &str, value: &str, metadata: Option<HashMap<String, String>>) -> SecretResult<SecretMetadata> {
+    pub async fn put_secret(
+        &self,
+        key: &str,
+        value: &str,
+        metadata: Option<HashMap<String, String>>,
+    ) -> SecretResult<SecretMetadata> {
         let result = self.provider.put_secret(key, value, metadata).await?;
 
         // Invalidate cache
@@ -896,7 +999,10 @@ impl SecretManager {
         }
 
         if self.audit_enabled {
-            info!("Rotated secret: {} (new version: {})", key, result.metadata.version);
+            info!(
+                "Rotated secret: {} (new version: {})",
+                key, result.metadata.version
+            );
         }
 
         Ok(result)
@@ -923,7 +1029,8 @@ impl SecretManager {
         let interval = self.config.rotation_check_interval_seconds;
 
         tokio::spawn(async move {
-            let mut interval_timer = tokio::time::interval(std::time::Duration::from_secs(interval));
+            let mut interval_timer =
+                tokio::time::interval(std::time::Duration::from_secs(interval));
 
             loop {
                 interval_timer.tick().await;
@@ -957,26 +1064,41 @@ impl Clone for SecretManager {
                 // Since clone() cannot be async, we create a placeholder that will be replaced
                 // with a real authenticated connection when used
                 warn!("Clone created placeholder for Vault provider - real authentication happens on first use");
-                Box::new(LocalFileProvider::new(format!("vault_clone_{}", uuid::Uuid::new_v4())))
+                Box::new(LocalFileProvider::new(format!(
+                    "vault_clone_{}",
+                    uuid::Uuid::new_v4()
+                )))
             }
             SecretProvider::AwsSecretsManager => {
                 // Create a new AWS client with fresh credentials
                 warn!("Clone created placeholder for AWS provider - real authentication happens on first use");
-                Box::new(LocalFileProvider::new(format!("aws_clone_{}", uuid::Uuid::new_v4())))
+                Box::new(LocalFileProvider::new(format!(
+                    "aws_clone_{}",
+                    uuid::Uuid::new_v4()
+                )))
             }
             SecretProvider::AzureKeyVault => {
                 // Create a new authenticated Azure client
                 warn!("Clone created placeholder for Azure provider - real authentication happens on first use");
-                Box::new(LocalFileProvider::new(format!("azure_clone_{}", uuid::Uuid::new_v4())))
+                Box::new(LocalFileProvider::new(format!(
+                    "azure_clone_{}",
+                    uuid::Uuid::new_v4()
+                )))
             }
             SecretProvider::GcpSecretManager => {
                 // Create a new authenticated GCP client
                 warn!("Clone created placeholder for GCP provider - real authentication happens on first use");
-                Box::new(LocalFileProvider::new(format!("gcp_clone_{}", uuid::Uuid::new_v4())))
+                Box::new(LocalFileProvider::new(format!(
+                    "gcp_clone_{}",
+                    uuid::Uuid::new_v4()
+                )))
             }
             SecretProvider::LocalFile => {
                 // For local files, create a new file handle
-                Box::new(LocalFileProvider::new(format!("local_clone_{}", uuid::Uuid::new_v4())))
+                Box::new(LocalFileProvider::new(format!(
+                    "local_clone_{}",
+                    uuid::Uuid::new_v4()
+                )))
             }
         };
 

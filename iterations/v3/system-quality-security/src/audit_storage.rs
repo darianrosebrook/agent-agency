@@ -6,13 +6,13 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, postgres::PgPoolOptions, Row};
+use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::audit::{AuditRecord, AuditEventType, AuditSeverity, AuditResult};
+use crate::audit::{AuditEventType, AuditRecord, AuditResult, AuditSeverity};
 
 /// Enhanced audit storage with advanced querying and analytics
 pub struct AuditStorage {
@@ -73,12 +73,12 @@ impl AuditStorage {
         };
 
         // Convert context to JSON
-        let context_json = serde_json::to_string(&record.context)
-            .unwrap_or_else(|_| "{}".to_string());
+        let context_json =
+            serde_json::to_string(&record.context).unwrap_or_else(|_| "{}".to_string());
 
         // Convert metadata to JSON
-        let metadata_json = serde_json::to_string(&record.metadata)
-            .unwrap_or_else(|_| "{}".to_string());
+        let metadata_json =
+            serde_json::to_string(&record.metadata).unwrap_or_else(|_| "{}".to_string());
 
         let stored_id = sqlx::query_scalar(
             r#"
@@ -175,11 +175,11 @@ impl AuditStorage {
             _ => None,
         };
 
-        let context_json = serde_json::to_string(&record.context)
-            .unwrap_or_else(|_| "{}".to_string());
+        let context_json =
+            serde_json::to_string(&record.context).unwrap_or_else(|_| "{}".to_string());
 
-        let metadata_json = serde_json::to_string(&record.metadata)
-            .unwrap_or_else(|_| "{}".to_string());
+        let metadata_json =
+            serde_json::to_string(&record.metadata).unwrap_or_else(|_| "{}".to_string());
 
         let stored_id = sqlx::query_scalar(
             r#"
@@ -237,9 +237,15 @@ impl AuditStorage {
         if let Some(event_types) = &filters.event_types {
             if !event_types.is_empty() {
                 let placeholders: Vec<String> = (0..event_types.len())
-                    .map(|_| { param_count += 1; format!("${}", param_count) })
+                    .map(|_| {
+                        param_count += 1;
+                        format!("${}", param_count)
+                    })
                     .collect();
-                query.push_str(&format!(" AND event_type = ANY(ARRAY[{}])", placeholders.join(",")));
+                query.push_str(&format!(
+                    " AND event_type = ANY(ARRAY[{}])",
+                    placeholders.join(",")
+                ));
 
                 for event_type in event_types {
                     let event_type_str = match event_type {
@@ -260,9 +266,15 @@ impl AuditStorage {
         if let Some(severities) = &filters.severities {
             if !severities.is_empty() {
                 let placeholders: Vec<String> = (0..severities.len())
-                    .map(|_| { param_count += 1; format!("${}", param_count) })
+                    .map(|_| {
+                        param_count += 1;
+                        format!("${}", param_count)
+                    })
                     .collect();
-                query.push_str(&format!(" AND severity = ANY(ARRAY[{}])", placeholders.join(",")));
+                query.push_str(&format!(
+                    " AND severity = ANY(ARRAY[{}])",
+                    placeholders.join(",")
+                ));
 
                 for severity in severities {
                     let severity_str = match severity {
@@ -279,9 +291,15 @@ impl AuditStorage {
         if let Some(actors) = &filters.actors {
             if !actors.is_empty() {
                 let placeholders: Vec<String> = (0..actors.len())
-                    .map(|_| { param_count += 1; format!("${}", param_count) })
+                    .map(|_| {
+                        param_count += 1;
+                        format!("${}", param_count)
+                    })
                     .collect();
-                query.push_str(&format!(" AND actor = ANY(ARRAY[{}])", placeholders.join(",")));
+                query.push_str(&format!(
+                    " AND actor = ANY(ARRAY[{}])",
+                    placeholders.join(",")
+                ));
 
                 for actor in actors {
                     bind_values.push(serde_json::Value::String(actor.clone()));
@@ -292,9 +310,15 @@ impl AuditStorage {
         if let Some(resources) = &filters.resources {
             if !resources.is_empty() {
                 let placeholders: Vec<String> = (0..resources.len())
-                    .map(|_| { param_count += 1; format!("${}", param_count) })
+                    .map(|_| {
+                        param_count += 1;
+                        format!("${}", param_count)
+                    })
                     .collect();
-                query.push_str(&format!(" AND resource = ANY(ARRAY[{}])", placeholders.join(",")));
+                query.push_str(&format!(
+                    " AND resource = ANY(ARRAY[{}])",
+                    placeholders.join(",")
+                ));
 
                 for resource in resources {
                     bind_values.push(serde_json::Value::String(resource.clone()));
@@ -305,9 +329,15 @@ impl AuditStorage {
         if let Some(results) = &filters.results {
             if !results.is_empty() {
                 let placeholders: Vec<String> = (0..results.len())
-                    .map(|_| { param_count += 1; format!("${}", param_count) })
+                    .map(|_| {
+                        param_count += 1;
+                        format!("${}", param_count)
+                    })
                     .collect();
-                query.push_str(&format!(" AND result = ANY(ARRAY[{}])", placeholders.join(",")));
+                query.push_str(&format!(
+                    " AND result = ANY(ARRAY[{}])",
+                    placeholders.join(",")
+                ));
 
                 for result in results {
                     let result_str = match result {
@@ -364,14 +394,16 @@ impl AuditStorage {
         let mut sql_query = sqlx::query(&query);
         for value in &bind_values {
             match value {
-                serde_json::Value::String(s) => { sql_query = sql_query.bind(s.clone()); },
+                serde_json::Value::String(s) => {
+                    sql_query = sql_query.bind(s.clone());
+                }
                 serde_json::Value::Number(n) => {
                     if let Some(i) = n.as_i64() {
                         sql_query = sql_query.bind(i);
                     } else if let Some(f) = n.as_f64() {
                         sql_query = sql_query.bind(f);
                     }
-                },
+                }
                 // TODO: Support additional JSON value types in SQL query binding:
                 // 1. Boolean binding: Bind boolean values to SQL boolean columns
                 //    - Handle serde_json::Value::Bool(true/false)
@@ -445,15 +477,16 @@ impl AuditStorage {
 
     /// Cleanup old audit records based on retention policy
     pub async fn cleanup_old_records(&self, retention_days: i32) -> Result<i64> {
-        let deleted_count: i64 = sqlx::query_scalar(
-            "SELECT cleanup_old_audit_events($1)"
-        )
-        .bind(retention_days)
-        .fetch_one(&*self.pool)
-        .await
-        .context("Failed to cleanup old audit records")?;
+        let deleted_count: i64 = sqlx::query_scalar("SELECT cleanup_old_audit_events($1)")
+            .bind(retention_days)
+            .fetch_one(&*self.pool)
+            .await
+            .context("Failed to cleanup old audit records")?;
 
-        info!("Cleaned up {} old audit records (retention: {} days)", deleted_count, retention_days);
+        info!(
+            "Cleaned up {} old audit records (retention: {} days)",
+            deleted_count, retention_days
+        );
         Ok(deleted_count)
     }
 
@@ -505,8 +538,12 @@ impl AuditStorage {
         let metadata_json: serde_json::Value = row.get("metadata");
         let source_ip: Option<String> = row.get("source_ip");
         let user_agent: Option<String> = row.get("user_agent");
-        let session_id: Option<String> = row.get::<Option<Uuid>, _>("session_id").map(|uuid| uuid.to_string());
-        let request_id: Option<String> = row.get::<Option<Uuid>, _>("request_id").map(|uuid| uuid.to_string());
+        let session_id: Option<String> = row
+            .get::<Option<Uuid>, _>("session_id")
+            .map(|uuid| uuid.to_string());
+        let request_id: Option<String> = row
+            .get::<Option<Uuid>, _>("request_id")
+            .map(|uuid| uuid.to_string());
 
         // Parse event type
         let event_type = match event_type_str.as_str() {
@@ -533,17 +570,19 @@ impl AuditStorage {
         // Parse result
         let result = match result_str.as_str() {
             "success" => AuditResult::Success,
-            "failure" => AuditResult::Failure(details.unwrap_or_else(|| "Unknown error".to_string())),
+            "failure" => {
+                AuditResult::Failure(details.unwrap_or_else(|| "Unknown error".to_string()))
+            }
             "denied" => AuditResult::Denied,
             "timeout" => AuditResult::Timeout,
             _ => AuditResult::Success, // Default fallback
         };
 
         // Parse context and metadata
-        let context: HashMap<String, serde_json::Value> = serde_json::from_value(context_json)
-            .unwrap_or_default();
-        let metadata: HashMap<String, String> = serde_json::from_value(metadata_json)
-            .unwrap_or_default();
+        let context: HashMap<String, serde_json::Value> =
+            serde_json::from_value(context_json).unwrap_or_default();
+        let metadata: HashMap<String, String> =
+            serde_json::from_value(metadata_json).unwrap_or_default();
 
         Ok(AuditRecord {
             id,

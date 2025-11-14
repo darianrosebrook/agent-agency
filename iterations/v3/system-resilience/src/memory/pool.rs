@@ -3,13 +3,13 @@
 //! This module provides generic object pooling capabilities to reduce
 //! allocation overhead for frequently created/destroyed objects.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{RwLock as AsyncRwLock, Notify};
-use tracing::{debug, warn, error};
-use serde::{Serialize, Deserialize};
+use tokio::sync::{Notify, RwLock as AsyncRwLock};
+use tracing::{debug, error, warn};
 
 use crate::memory::types::StatsProvider;
 
@@ -45,26 +45,30 @@ where
 
     /// Borrow an object from the pool with timeout
     pub async fn borrow(&self) -> PooledObject<T> {
-        self.borrow_with_timeout(Duration::from_secs(30)).await
+        self.borrow_with_timeout(Duration::from_secs(30))
+            .await
             .expect("Failed to borrow object from pool")
     }
 
     /// Borrow an object from the pool with specified timeout
-    pub async fn borrow_with_timeout(&self, timeout: Duration) -> Result<PooledObject<T>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn borrow_with_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<PooledObject<T>, Box<dyn std::error::Error + Send + Sync>> {
         let start_time = std::time::Instant::now();
 
         loop {
-        let mut objects = self.objects.write().await;
+            let mut objects = self.objects.write().await;
 
-        let obj = if let Some(obj) = objects.pop() {
-            obj
-        } else {
-            // Create new object if pool is empty and under max size
-            let created = self.created_count.load(Ordering::Relaxed);
-            if created < self.max_size {
-                self.created_count.fetch_add(1, Ordering::Relaxed);
-                (self.factory)()
+            let obj = if let Some(obj) = objects.pop() {
+                obj
             } else {
+                // Create new object if pool is empty and under max size
+                let created = self.created_count.load(Ordering::Relaxed);
+                if created < self.max_size {
+                    self.created_count.fetch_add(1, Ordering::Relaxed);
+                    (self.factory)()
+                } else {
                     // Pool exhausted - wait for an object to be returned
                     drop(objects); // Release the lock before waiting
 
@@ -75,21 +79,27 @@ where
 
                     // Wait for notification that an object might be available
                     let notify = Arc::clone(&self.available_notify);
-                    tokio::time::timeout(timeout - start_time.elapsed(), notify.notified()).await
-                        .map_err(|_| format!("Object pool timeout - no objects available within {:?}", timeout))?;
+                    tokio::time::timeout(timeout - start_time.elapsed(), notify.notified())
+                        .await
+                        .map_err(|_| {
+                            format!(
+                                "Object pool timeout - no objects available within {:?}",
+                                timeout
+                            )
+                        })?;
 
                     continue; // Try again after notification
-            }
-        };
+                }
+            };
 
-        self.borrowed_count.fetch_add(1, Ordering::Relaxed);
+            self.borrowed_count.fetch_add(1, Ordering::Relaxed);
 
-            return         Ok(PooledObject {
-            object: Some(obj),
-            pool: self.objects.clone(),
-            borrowed_count: self.borrowed_count.clone(),
-            available_notify: self.available_notify.clone(),
-        });
+            return Ok(PooledObject {
+                object: Some(obj),
+                pool: self.objects.clone(),
+                borrowed_count: self.borrowed_count.clone(),
+                available_notify: self.available_notify.clone(),
+            });
         }
     }
 
@@ -185,12 +195,12 @@ impl<T: Send + Sync + 'static> PooledObject<T> {
     fn return_to_pool_non_blocking(&self, obj: T) {
         // Strategy 1: Try to spawn async task if tokio runtime is available
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                    let pool = self.pool.clone();
-                    let borrowed_count = self.borrowed_count.clone();
+            let pool = self.pool.clone();
+            let borrowed_count = self.borrowed_count.clone();
             let notify = self.available_notify.clone();
 
             // Spawn background task for non-blocking return
-                    handle.spawn(async move {
+            handle.spawn(async move {
                 Self::return_to_pool_async(pool, borrowed_count, notify, obj).await;
             });
             return;
@@ -217,15 +227,17 @@ impl<T: Send + Sync + 'static> PooledObject<T> {
         obj: T,
     ) {
         match tokio::time::timeout(Duration::from_millis(100), async {
-                        let mut objects = pool.write().await;
-                        objects.push(obj);
-                        borrowed_count.fetch_sub(1, Ordering::Relaxed);
+            let mut objects = pool.write().await;
+            objects.push(obj);
+            borrowed_count.fetch_sub(1, Ordering::Relaxed);
             notify.notify_one();
-        }).await {
+        })
+        .await
+        {
             Ok(_) => {
                 debug!("Object successfully returned to pool asynchronously");
-            },
-                Err(_) => {
+            }
+            Err(_) => {
                 warn!("Timeout returning object to pool - may indicate pool contention");
                 // In a production system, we might want to implement a retry mechanism here
             }
@@ -327,7 +339,8 @@ where
 
     /// Evict the least recently used item from the cache
     fn evict_lru(&mut self) {
-        if let Some((key_to_remove, _)) = self.cache
+        if let Some((key_to_remove, _)) = self
+            .cache
             .iter()
             .min_by_key(|(_, (_, timestamp))| *timestamp)
             .map(|(k, _)| (k.clone(), ()))

@@ -3,12 +3,9 @@
 //! Consolidated from the worker crate - provides command-line interface
 //! for running the worker service.
 
-use schemars::JsonSchema;
-use axum::{
-    routing::post,
-    Json, Router,
-};
+use axum::{routing::post, Json, Router};
 use clap::Parser;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
@@ -35,7 +32,6 @@ pub struct Args {
     pub worker_id: Option<String>,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct TaskExecutionRequest {
     #[schemars(with = "String")]
@@ -46,7 +42,6 @@ struct TaskExecutionRequest {
     pub requirements: Option<String>,
     pub caws_spec: Option<serde_json::Value>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct TaskExecutionResponse {
@@ -62,14 +57,12 @@ struct TaskExecutionResponse {
     pub completed_at: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct TaskCancelRequest {
     #[schemars(with = "String")]
     pub task_id: Uuid,
     pub reason: String,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct TaskCancelResponse {
@@ -81,9 +74,7 @@ struct TaskCancelResponse {
     pub reason: String,
 }
 
-async fn execute_task(
-    Json(request): Json<TaskExecutionRequest>,
-) -> Json<TaskExecutionResponse> {
+async fn execute_task(Json(request): Json<TaskExecutionRequest>) -> Json<TaskExecutionResponse> {
     let started_at = chrono::Utc::now();
     let worker_id = format!("worker-{}", request.task_id.simple());
 
@@ -91,10 +82,14 @@ async fn execute_task(
     let is_dry_run = request.execution_mode.as_deref() == Some("dry_run");
     let mode_indicator = if is_dry_run { "👁️  DRY-RUN" } else { "" };
 
-    println!("{} Worker {} executing task {}", mode_indicator, worker_id, request.task_id);
+    println!(
+        "{} Worker {} executing task {}",
+        mode_indicator, worker_id, request.task_id
+    );
 
     // Simulate task execution with realistic timing
-    let execution_time = std::time::Duration::from_millis(500 + (request.task_id.as_u128() % 1000) as u64);
+    let execution_time =
+        std::time::Duration::from_millis(500 + (request.task_id.as_u128() % 1000) as u64);
     tokio::time::sleep(execution_time).await;
 
     let completed_at = chrono::Utc::now();
@@ -104,7 +99,11 @@ async fn execute_task(
         // Dry-run: simulate but indicate no changes made
         if request.task_id.as_u128() % 10 == 0 {
             // 10% failure rate (simulated)
-            ("".to_string(), "Simulated task failure (dry-run)".to_string(), 1)
+            (
+                "".to_string(),
+                "Simulated task failure (dry-run)".to_string(),
+                1,
+            )
         } else {
             // Successful simulation
             (format!("DRY-RUN: Task {} would complete successfully\nSimulated output: {}\n\n No actual filesystem changes were made", request.task_id, request.prompt), "".to_string(), 0)
@@ -116,14 +115,26 @@ async fn execute_task(
             ("".to_string(), "Simulated task failure".to_string(), 1)
         } else {
             // Successful execution
-            (format!("Task {} completed successfully\nOutput: {}", request.task_id, request.prompt), "".to_string(), 0)
+            (
+                format!(
+                    "Task {} completed successfully\nOutput: {}",
+                    request.task_id, request.prompt
+                ),
+                "".to_string(),
+                0,
+            )
         }
     };
 
     let response = TaskExecutionResponse {
         task_id: request.task_id,
         worker_id,
-        status: if exit_code == 0 { "completed" } else { "failed" }.to_string(),
+        status: if exit_code == 0 {
+            "completed"
+        } else {
+            "failed"
+        }
+        .to_string(),
         stdout,
         stderr,
         exit_code,
@@ -132,17 +143,22 @@ async fn execute_task(
         completed_at: completed_at.to_rfc3339(),
     };
 
-    println!(" Worker completed task {} in {}ms", request.task_id, execution_time.as_millis());
+    println!(
+        " Worker completed task {} in {}ms",
+        request.task_id,
+        execution_time.as_millis()
+    );
 
     Json(response)
 }
 
-async fn cancel_task(
-    Json(request): Json<TaskCancelRequest>,
-) -> Json<TaskCancelResponse> {
+async fn cancel_task(Json(request): Json<TaskCancelRequest>) -> Json<TaskCancelResponse> {
     let worker_id = format!("worker-{}", request.task_id.simple());
 
-    println!(" Worker {} cancelling task {}: {}", worker_id, request.task_id, request.reason);
+    println!(
+        " Worker {} cancelling task {}: {}",
+        worker_id, request.task_id, request.reason
+    );
 
     // OPTIONAL: Implement real task cancellation (deferred - UX enhancement)
     // - [ ] Signal task execution to stop gracefully
@@ -225,7 +241,9 @@ pub async fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Starting Agent Workers CLI");
     println!("📍 Server: {}:{}", args.host, args.port);
 
-    let worker_id = args.worker_id.unwrap_or_else(|| "default-worker".to_string());
+    let worker_id = args
+        .worker_id
+        .unwrap_or_else(|| "default-worker".to_string());
     println!("🆔 Worker ID: {}", worker_id);
 
     // Create router

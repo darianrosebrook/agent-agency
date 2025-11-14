@@ -40,8 +40,9 @@ cocoa-foundation = "0.1"
 core-foundation = "0.9"
 core-graphics = "0.22"
 
-# ANE/Core ML support (macOS only)
-coreml-rs = "0.1"
+# ANE/Core ML support (macOS only) - Optional behind feature flag
+# CoreML is critical for production ANE acceleration, but optional for tests
+coreml-rs = { version = "0.1", optional = true }
 
 # Concurrent data structures
 parking_lot = "0.12"
@@ -63,9 +64,9 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 
 [features]
-default = []
+default = ["coreml"]  # CoreML enabled by default for production ANE acceleration
 metal = []
-coreml = []
+coreml = ["dep:coreml-rs"]  # Feature flag for CoreML functionality
 coreml_probe = []  # Feature flag for CoreML probe functionality
 
 [dev-dependencies]

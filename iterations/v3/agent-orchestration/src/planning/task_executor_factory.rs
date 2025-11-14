@@ -21,6 +21,7 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
+use sysinfo::{System, Cpu, Disks};
 
 /// Execution strategy for task execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -1646,47 +1647,54 @@ impl HybridTaskExecutor {
         };
 
         // Factor 6: System load
-        // TODO: Use real system monitoring for load assessment
-        //       Currently uses semaphore availability as proxy; should query actual CPU, memory, and I/O metrics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Query actual CPU utilization from system monitoring
-        // [ ] Query memory usage and pressure metrics
-        // [ ] Query I/O wait times and disk usage
-        // [ ] Combine metrics into composite system load score
-        // [ ] Set thresholds based on actual system capacity
-        // [ ] Add unit tests with mock system metrics
-        // [ ] Add integration tests with real system monitoring
-        //
-        // ACCEPTANCE CRITERIA:
-        // - System load reflects actual resource utilization
-        // - Load assessment is accurate and timely
-        // - Thresholds are appropriate for system capacity
-        // - Handles monitoring failures gracefully
-        //
-        // DEPENDENCIES:
-        // - System monitoring infrastructure (Required)
-        // - Metrics collection service (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours
-        // PRIORITY: Medium
-        // BLOCKING: No (semaphore proxy works, but less accurate)
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resource management)
-        // - Change Budget: ~120 LOC
-        // Note: Currently uses semaphore availability as proxy for system load
+        // Real system monitoring for load assessment using sysinfo
         let system_load_sequential = {
-            let available_permits = self.semaphore.available_permits();
-            let total_permits = self.config.max_concurrent_tasks;
-            let load_percentage = if total_permits > 0 {
-                (total_permits - available_permits) as f64 / total_permits as f64
+            // Collect real system metrics
+            let mut system = System::new();
+            system.refresh_all();
+            
+            // Get CPU usage
+            let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
+            
+            // Get memory usage
+            let total_memory = system.total_memory() as f64;
+            let used_memory = system.used_memory() as f64;
+            let memory_usage = if total_memory > 0.0 {
+                (used_memory / total_memory) * 100.0
             } else {
                 0.0
             };
-
-            // Sequential if system load > 80%
-            load_percentage > 0.8
+            
+            // Get disk I/O wait (approximate via disk usage)
+            let mut disk_usage = 0.0;
+            let disks = Disks::new_with_refreshed_list();
+            let mut total_disk_space = 0u64;
+            let mut total_used_space = 0u64;
+            for disk in disks.list() {
+                total_disk_space += disk.total_space();
+                total_used_space += disk.total_space().saturating_sub(disk.available_space());
+            }
+            if total_disk_space > 0 {
+                disk_usage = (total_used_space as f64 / total_disk_space as f64) * 100.0;
+            }
+            
+            // Calculate composite system load score (weighted average)
+            // CPU: 40%, Memory: 40%, Disk: 20%
+            let composite_load = (cpu_usage * 0.4) + (memory_usage * 0.4) + (disk_usage * 0.2);
+            
+            // Sequential execution if system load > 80%
+            // This threshold can be adjusted based on system capacity
+            let load_threshold = 80.0;
+            let should_use_sequential = composite_load > load_threshold;
+            
+            if should_use_sequential {
+                debug!(
+                    "System load high (CPU: {:.1}%, Memory: {:.1}%, Disk: {:.1}%, Composite: {:.1}%) - using sequential execution",
+                    cpu_usage, memory_usage, disk_usage, composite_load
+                );
+            }
+            
+            should_use_sequential
         };
 
         // Factor 7: Task requirements complexity
@@ -1931,14 +1939,64 @@ impl TaskExecutor for HybridTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // Basic circuit breaker implementation
-        // TODO: Implement circuit breaker for task executors
-        if circuit_breaker_enabled {
-            // Circuit breaker not yet implemented
-            // Placeholder for future implementation
-            self.execute_task(task_spec, worker_id).await
-        } else {
+        if !circuit_breaker_enabled {
             // Circuit breaker disabled - execute normally
+            return self.execute_task(task_spec, worker_id).await;
+        }
+
+        // Use circuit breaker if available
+        if let Some(circuit_breaker) = &self.circuit_breaker {
+            let task_spec_clone = task_spec.clone();
+            let worker_id_clone = worker_id;
+            
+            // Check circuit breaker state before execution
+            let state = circuit_breaker.get_state().await;
+            if state == crate::error_handling::CircuitBreakerState::Open {
+                // Circuit is open - check if recovery timeout has elapsed (default 60 seconds)
+                let stats = circuit_breaker.get_stats().await;
+                if let Some(last_failure) = stats.last_failure_time {
+                    use std::time::Duration;
+                    let recovery_timeout = Duration::from_secs(60); // Default recovery timeout
+                    if last_failure.elapsed() < recovery_timeout {
+                        // Circuit is still open - reject immediately
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::ConnectionRefused,
+                            format!(
+                                "Circuit breaker is open for task executor. Last failure: {:?} ago",
+                                last_failure.elapsed()
+                            ),
+                        )) as Box<dyn std::error::Error + Send + Sync>);
+                    }
+                    // Recovery timeout elapsed - circuit breaker will transition to half-open
+                    // on next successful operation via record_success
+                } else {
+                    // No failure time recorded but circuit is open - reject
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::ConnectionRefused,
+                        "Circuit breaker is open for task executor",
+                    )) as Box<dyn std::error::Error + Send + Sync>);
+                }
+            }
+
+            // Execute task and track result with circuit breaker
+            let execution_result = self.execute_task(task_spec_clone, worker_id_clone).await;
+            
+            // Update circuit breaker based on result
+            match &execution_result {
+                Ok(_) => {
+                    // Record success - circuit breaker will handle state transitions
+                    circuit_breaker.record_success().await;
+                }
+                Err(_) => {
+                    // Record failure - circuit breaker will track failures
+                    // and open circuit if threshold exceeded
+                    circuit_breaker.record_failure().await;
+                }
+            }
+            
+            execution_result
+        } else {
+            // Circuit breaker not configured - execute normally
             self.execute_task(task_spec, worker_id).await
         }
     }
@@ -2161,51 +2219,69 @@ impl AdaptiveTaskExecutor {
         let low_load = system_load < 0.3; // <30% load
 
         // Factor 2: Worker availability (from worker pool if available)
-        // TODO: Query actual worker pool for availability metrics
-        //       Currently estimates worker load from active tasks; should query worker pool for actual availability.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Query worker pool for actual available worker count
-        // [ ] Get current worker utilization from pool
-        // [ ] Check worker health and capacity
-        // [ ] Calculate accurate worker availability percentage
-        // [ ] Handle async worker pool queries properly
-        // [ ] Add unit tests with mock worker pools
-        // [ ] Add integration tests with real worker pool
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Worker availability reflects actual pool state
-        // - Availability calculation is accurate
-        // - Handles worker pool unavailability gracefully
-        // - Async queries work correctly
-        //
-        // DEPENDENCIES:
-        // - Worker pool query API (Required)
-        // - Async refactoring if needed (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours
-        // PRIORITY: Medium
-        // BLOCKING: No (estimation works, but less accurate)
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resource management)
-        // - Change Budget: ~80 LOC
+        // Query actual worker pool for availability metrics
         let worker_availability = if let Some(ref worker_pool) = self.worker_pool {
-            // Note: This is a synchronous check - async would require refactoring
-            // For now, we estimate based on config
-            let estimated_workers = self.config.worker_pool_size.unwrap_or(5);
-            let worker_load = if estimated_workers > 0 {
-                // Estimate worker load from active tasks (simplified - see TODO above)
-                let active_task_count = self
-                    .active_tasks
-                    .try_read()
-                    .map(|tasks| tasks.len())
-                    .unwrap_or(0);
-                active_task_count as f64 / estimated_workers as f64
-            } else {
-                0.0
-            };
-            worker_load < 0.5 // <50% worker load = good availability
+            // Query worker pool for actual availability
+            // Use block_in_place to call async method from sync context
+            let availability = tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    match worker_pool.available_workers().await {
+                        Ok(workers) => {
+                            if workers.is_empty() {
+                                // No workers available
+                                false
+                            } else {
+                                // Calculate availability from worker load and health
+                                let healthy_workers: Vec<_> = workers
+                                    .iter()
+                                    .filter(|w| {
+                                        matches!(
+                                            w.health,
+                                            crate::planning::plan_executor::WorkerHealth::Healthy
+                                                | crate::planning::plan_executor::WorkerHealth::Degraded
+                                        )
+                                    })
+                                    .collect();
+                                
+                                if healthy_workers.is_empty() {
+                                    // No healthy workers
+                                    false
+                                } else {
+                                    // Calculate average load for healthy workers
+                                    let avg_load: f64 = healthy_workers
+                                        .iter()
+                                        .map(|w| w.load)
+                                        .sum::<f64>() / healthy_workers.len() as f64;
+                                    
+                                    // Scale by ratio of healthy workers to total workers
+                                    let healthy_ratio = healthy_workers.len() as f64 / workers.len() as f64;
+                                    let effective_load = avg_load / healthy_ratio.max(0.1);
+                                    
+                                    // Good availability if load < 50%
+                                    effective_load < 0.5
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to query worker pool availability: {}", e);
+                            // Fallback to estimation on error
+                            let estimated_workers = self.config.worker_pool_size.unwrap_or(5);
+                            let active_task_count = self
+                                .active_tasks
+                                .try_read()
+                                .map(|tasks| tasks.len())
+                                .unwrap_or(0);
+                            if estimated_workers > 0 {
+                                let worker_load = (active_task_count as f64 / estimated_workers as f64).min(1.0);
+                                worker_load < 0.5
+                            } else {
+                                true // Assume availability if no workers configured
+                            }
+                        }
+                    }
+                })
+            });
+            availability
         } else {
             false // No worker pool = assume limited availability
         };

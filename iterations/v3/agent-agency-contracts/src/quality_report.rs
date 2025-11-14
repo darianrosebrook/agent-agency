@@ -362,7 +362,9 @@ pub struct ReportMetadata {
 }
 
 /// Validate a quality report value against the JSON schema
-pub fn validate_quality_report_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_quality_report_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::QUALITY_REPORT_SCHEMA;
 

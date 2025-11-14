@@ -6,20 +6,26 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use system_common_interfaces::{
-    file_operations::FileOperationsService,
-    learning::{LearningService, LearningContext, TaskPerformance, ResourceUsage, SystemMetrics as LearningSystemMetrics, LearningInsights},
-    model_orchestration::{ModelOrchestrator, InferenceRequest, QualityRequirements, PerformanceRequirements, Priority as OrchestratorPriority},
     common::SystemMetrics,
+    file_operations::FileOperationsService,
+    learning::{
+        LearningContext, LearningInsights, LearningService, ResourceUsage,
+        SystemMetrics as LearningSystemMetrics, TaskPerformance,
+    },
+    model_orchestration::{
+        InferenceRequest, ModelOrchestrator, PerformanceRequirements,
+        Priority as OrchestratorPriority, QualityRequirements,
+    },
 };
-use tracing::{info, debug, warn, error, instrument};
+use tracing::{debug, error, info, instrument, warn};
 // Services will be injected to avoid circular dependencies
 // use data_infrastructure::create_file_operations_service;
 // use agent_research::create_learning_service;
 // use agent_model_management::create_model_orchestration_service;
-use crate::autonomous_file_editor::{AutonomousFileEditor, FileChange, ChangeType};
+use crate::autonomous_file_editor::{AutonomousFileEditor, ChangeType, FileChange};
 use agent_agency_contracts::TaskDescriptor;
 
 /// Comprehensive autonomous agent integration
@@ -94,18 +100,23 @@ impl AutonomousAgentIntegration {
             },
         };
 
-        let routing = self.model_orchestrator
+        let routing = self
+            .model_orchestrator
             .route_request(&planning_request)
             .await
             .map_err(|e| AutonomousIntegrationError::ModelOrchestration(e.to_string()))?;
 
-        let planning_response = self.model_orchestrator
-            .execute_inference(&planning_request, &routing).await
-        .map_err(|e| AutonomousIntegrationError::ModelOrchestration(e.to_string()))?;
+        let planning_response = self
+            .model_orchestrator
+            .execute_inference(&planning_request, &routing)
+            .await
+            .map_err(|e| AutonomousIntegrationError::ModelOrchestration(e.to_string()))?;
 
         // Phase 3: Parse planning response and execute file changes
         let file_changes = self.parse_planning_response(&planning_response.text)?;
-        let execution_result = self.execute_file_changes(&task.task_id.to_string(), file_changes).await?;
+        let execution_result = self
+            .execute_file_changes(&task.task_id.to_string(), file_changes)
+            .await?;
 
         // Phase 4: Learn from execution results
         let performance = self.build_performance_metrics(&execution_result, start_time.elapsed());
@@ -129,7 +140,8 @@ impl AutonomousAgentIntegration {
         };
 
         // Learn from execution results
-        let learning_insights = self.learning
+        let learning_insights = self
+            .learning
             .learn_from_execution(&learning_context, &performance)
             .await
             .unwrap_or_else(|e| {
@@ -144,12 +156,18 @@ impl AutonomousAgentIntegration {
 
         // Phase 5: Apply self-improvement recommendations
         if !learning_insights.recommendations.is_empty() {
-            info!("Applying {} self-improvement recommendations", learning_insights.recommendations.len());
+            info!(
+                "Applying {} self-improvement recommendations",
+                learning_insights.recommendations.len()
+            );
             self.apply_self_improvements(&learning_insights).await?;
         }
 
         let total_time = start_time.elapsed();
-        info!("Autonomous task execution completed in {:.2}s", total_time.as_secs_f64());
+        info!(
+            "Autonomous task execution completed in {:.2}s",
+            total_time.as_secs_f64()
+        );
 
         Ok(AutonomousExecutionResult {
             task_id: task.task_id.to_string(),
@@ -212,7 +230,11 @@ impl AutonomousAgentIntegration {
     }
 
     /// Build planning prompt for the model
-    fn build_planning_prompt(&self, task: &TaskDescriptor, context: &TaskAnalysisContext) -> String {
+    fn build_planning_prompt(
+        &self,
+        task: &TaskDescriptor,
+        context: &TaskAnalysisContext,
+    ) -> String {
         format!(
             r#"You are an autonomous coding agent. Plan and execute the following task:
 
@@ -253,7 +275,10 @@ VERIFICATION:
     }
 
     /// Parse planning response to extract file changes
-    fn parse_planning_response(&self, response: &str) -> Result<Vec<FileChange>, AutonomousIntegrationError> {
+    fn parse_planning_response(
+        &self,
+        response: &str,
+    ) -> Result<Vec<FileChange>, AutonomousIntegrationError> {
         let mut changes = Vec::new();
 
         // Simple parsing - look for CHANGES section
@@ -308,7 +333,11 @@ VERIFICATION:
             });
         }
 
-        info!("Executing {} file changes for task {}", changes.len(), task_id);
+        info!(
+            "Executing {} file changes for task {}",
+            changes.len(),
+            task_id
+        );
 
         // Create allowlist and budgets based on task requirements
         let allowlist = system_common_interfaces::AllowList {
@@ -323,7 +352,7 @@ VERIFICATION:
                 ".git/".to_string(),
                 "*.log".to_string(),
             ],
-            max_file_size: Some(1024 * 1024), // 1MB
+            max_file_size: Some(1024 * 1024),           // 1MB
             max_changeset_size: Some(10 * 1024 * 1024), // 10MB
         };
 
@@ -334,9 +363,16 @@ VERIFICATION:
         };
 
         // Apply changes
-        match self.file_editor.apply_changes(task_id, changes, &allowlist, &budgets).await {
+        match self
+            .file_editor
+            .apply_changes(task_id, changes, &allowlist, &budgets)
+            .await
+        {
             Ok(changeset_id) => {
-                info!("Successfully applied changeset {} with {} changes", changeset_id.0, 1); // TODO: Calculate actual changeset change count
+                info!(
+                    "Successfully applied changeset {} with {} changes",
+                    changeset_id.0, 1
+                ); // TODO: Calculate actual changeset change count
                 Ok(FileExecutionResult {
                     success: true,
                     changes_applied: 1, // Would count actual changes
@@ -355,7 +391,11 @@ VERIFICATION:
     }
 
     /// Build performance metrics from execution results
-    fn build_performance_metrics(&self, execution_result: &FileExecutionResult, duration: std::time::Duration) -> TaskPerformance {
+    fn build_performance_metrics(
+        &self,
+        execution_result: &FileExecutionResult,
+        duration: std::time::Duration,
+    ) -> TaskPerformance {
         TaskPerformance {
             task_id: "autonomous-task".to_string(), // Would be passed in
             success_rate: if execution_result.success { 1.0 } else { 0.0 },
@@ -377,11 +417,15 @@ VERIFICATION:
         insights: &system_common_interfaces::LearningInsights,
     ) -> Result<(), AutonomousIntegrationError> {
         // Apply the most highly recommended improvement
-        if let Some(best_rec) = insights.recommendations.iter()
-            .max_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap()) {
-
-            info!("Applying self-improvement: {} (confidence: {:.2})",
-                  best_rec.description, best_rec.confidence);
+        if let Some(best_rec) = insights
+            .recommendations
+            .iter()
+            .max_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap())
+        {
+            info!(
+                "Applying self-improvement: {} (confidence: {:.2})",
+                best_rec.description, best_rec.confidence
+            );
 
             // Apply recommendations based on type - integrate with available services
             match best_rec.recommendation_type {
@@ -396,7 +440,7 @@ VERIFICATION:
                 }
                 system_common_interfaces::RecommendationType::ChangeModel => {
                     // DEPENDENCY: ModelManager.hot_swap_model() is now available
-                    // To use: Inject ModelManager into AutonomousAgentIntegration  
+                    // To use: Inject ModelManager into AutonomousAgentIntegration
                     // Expected signature: async fn hot_swap_model(&self, model_id: &str, new_version: &str, strategy: HotSwapStrategy) -> Result<HotSwapResult, ModelError>
                     // Location: agent-model-management crate - ModelManager.hot_swap_model() implemented
                     // Current status: Available but requires ModelManager injection (not accessible via ModelOrchestrator trait)
@@ -405,7 +449,10 @@ VERIFICATION:
                 }
                 system_common_interfaces::RecommendationType::AdjustResources => {
                     warn!("Resource adjustment recommendation requires ResourceManagementService - not yet implemented");
-                    info!("Recommendation: {} - would adjust resource allocation", best_rec.description);
+                    info!(
+                        "Recommendation: {} - would adjust resource allocation",
+                        best_rec.description
+                    );
                     // DEPENDENCY: ResourceManagementService not implemented
                     // Expected interface: Trait for managing CPU/GPU/memory allocation per task
                     // Location: New service needed in system-resilience or dedicated resource-management crate
@@ -422,18 +469,23 @@ VERIFICATION:
                 }
                 system_common_interfaces::RecommendationType::ExecutionStrategy => {
                     warn!("Execution strategy recommendation requires ExecutionStrategyService - not yet implemented");
-                    info!("Recommendation: {} - would change execution strategy", best_rec.description);
+                    info!(
+                        "Recommendation: {} - would change execution strategy",
+                        best_rec.description
+                    );
                     // DEPENDENCY: ExecutionStrategyService not implemented
                     // Expected interface: Trait for managing execution strategies (parallel, sequential, etc.)
                     // Location: New service needed in agent-orchestration or dedicated strategy-service crate
                     // Current status: No execution strategy service exists
                 }
             }
-            
+
             // Record that recommendation was considered via learning service
             // This allows the learning system to track which recommendations were applied vs ignored
-            debug!("Recorded consideration of recommendation type: {:?} with confidence: {:.2}", 
-                   best_rec.recommendation_type, best_rec.confidence);
+            debug!(
+                "Recorded consideration of recommendation type: {:?} with confidence: {:.2}",
+                best_rec.recommendation_type, best_rec.confidence
+            );
         }
 
         Ok(())
@@ -484,7 +536,10 @@ VERIFICATION:
             max_time_seconds: None,
         };
 
-        self.file_ops.validate_changeset(&dummy_changeset, &allowlist, &budgets).await.is_ok()
+        self.file_ops
+            .validate_changeset(&dummy_changeset, &allowlist, &budgets)
+            .await
+            .is_ok()
     }
 
     async fn check_learning_health(&self) -> bool {
@@ -518,7 +573,10 @@ VERIFICATION:
         };
 
         // Test that learning service works by calling learn_from_execution
-        self.learning.learn_from_execution(&context, &performance).await.is_ok()
+        self.learning
+            .learn_from_execution(&context, &performance)
+            .await
+            .is_ok()
     }
 
     async fn check_model_orchestrator_health(&self) -> bool {

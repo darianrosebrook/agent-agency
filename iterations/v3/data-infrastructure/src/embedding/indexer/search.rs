@@ -3,9 +3,9 @@
 //! Unified search interface combining text, visual, and graph
 //! search capabilities with result fusion and ranking.
 
+use super::graph::{GraphIndexer, GraphQueryBuilder};
 use super::text::TextIndexer;
 use super::visual::VisualIndexer;
-use super::graph::{GraphIndexer, GraphQueryBuilder};
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
 use schemars::JsonSchema;
@@ -88,19 +88,34 @@ impl MultimodalSearchEngine {
         // Text search
         if let Some(text) = &query.text_query {
             let text_results = self.text_indexer.bm25_search(text, query.limit * 2);
-            self.add_results(&mut all_results, text_results, "text", query.modality_weights.text_weight);
+            self.add_results(
+                &mut all_results,
+                text_results,
+                "text",
+                query.modality_weights.text_weight,
+            );
         }
 
         // Visual search
         if let Some(embedding) = &query.visual_embedding {
-            let visual_results = self.visual_indexer.visual_search(embedding, query.limit * 2);
-            self.add_visual_results(&mut all_results, visual_results, query.modality_weights.visual_weight);
+            let visual_results = self
+                .visual_indexer
+                .visual_search(embedding, query.limit * 2);
+            self.add_visual_results(
+                &mut all_results,
+                visual_results,
+                query.modality_weights.visual_weight,
+            );
         }
 
         // Graph constraints
         if let Some(graph_query) = &query.graph_constraints {
             let graph_nodes = self.execute_graph_query(graph_query);
-            self.apply_graph_filter(&mut all_results, &graph_nodes, query.modality_weights.graph_weight);
+            self.apply_graph_filter(
+                &mut all_results,
+                &graph_nodes,
+                query.modality_weights.graph_weight,
+            );
         }
 
         // Fuse and rank results
@@ -112,7 +127,12 @@ impl MultimodalSearchEngine {
     }
 
     /// Hybrid search combining all modalities
-    pub async fn hybrid_search(&self, text: &str, visual_embedding: &EmbeddingVector, limit: usize) -> Result<Vec<UnifiedSearchResult>> {
+    pub async fn hybrid_search(
+        &self,
+        text: &str,
+        visual_embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Result<Vec<UnifiedSearchResult>> {
         let query = MultimodalQuery {
             text_query: Some(text.to_string()),
             visual_embedding: Some(visual_embedding.clone()),
@@ -132,15 +152,19 @@ impl MultimodalSearchEngine {
         weight: f64,
     ) {
         for result in text_results {
-            let entry = results.entry(result.document_id).or_insert(UnifiedSearchResult {
-                document_id: result.document_id,
-                combined_score: 0.0,
-                modality_scores: HashMap::new(),
-                content_preview: result.content_preview.clone(),
-                metadata: result.metadata.clone(),
-            });
+            let entry = results
+                .entry(result.document_id)
+                .or_insert(UnifiedSearchResult {
+                    document_id: result.document_id,
+                    combined_score: 0.0,
+                    modality_scores: HashMap::new(),
+                    content_preview: result.content_preview.clone(),
+                    metadata: result.metadata.clone(),
+                });
 
-            entry.modality_scores.insert(modality.to_string(), result.score * weight);
+            entry
+                .modality_scores
+                .insert(modality.to_string(), result.score * weight);
             entry.combined_score += result.score * weight;
         }
     }
@@ -152,44 +176,51 @@ impl MultimodalSearchEngine {
         weight: f64,
     ) {
         for result in visual_results {
-            let entry = results.entry(result.document_id).or_insert(UnifiedSearchResult {
-                document_id: result.document_id,
-                combined_score: 0.0,
-                modality_scores: HashMap::new(),
-                content_preview: "Visual content".to_string(),
-                metadata: result.metadata.clone(),
-            });
+            let entry = results
+                .entry(result.document_id)
+                .or_insert(UnifiedSearchResult {
+                    document_id: result.document_id,
+                    combined_score: 0.0,
+                    modality_scores: HashMap::new(),
+                    content_preview: "Visual content".to_string(),
+                    metadata: result.metadata.clone(),
+                });
 
-            entry.modality_scores.insert("visual".to_string(), result.similarity_score * weight);
+            entry
+                .modality_scores
+                .insert("visual".to_string(), result.similarity_score * weight);
             entry.combined_score += result.similarity_score * weight;
         }
     }
 
     /// Real graph query execution implementation
     fn execute_graph_query(&self, graph_query: &GraphQuery) -> Vec<Uuid> {
-        use tracing::{info, debug};
-        
-        info!("Executing graph query with {} filters", graph_query.filters.len());
-        
+        use tracing::{debug, info};
+
+        info!(
+            "Executing graph query with {} filters",
+            graph_query.filters.len()
+        );
+
         // Use the graph query builder to execute the query
         let mut query_builder = GraphQueryBuilder::new();
-        
+
         if let Some(start) = graph_query.start_node {
             query_builder = query_builder.from_node(start);
         }
-        
+
         if let Some(max_depth) = graph_query.max_depth {
             query_builder = query_builder.max_depth(max_depth);
         }
-        
+
         // Add filters
         for filter in &graph_query.filters {
             query_builder = query_builder.with_filter(filter.clone());
         }
-        
+
         // Execute the query
         let results = query_builder.execute(&self.graph_indexer);
-        
+
         debug!("Graph query executed: {} nodes found", results.len());
         results
     }
@@ -209,7 +240,9 @@ impl MultimodalSearchEngine {
                 0.0
             };
 
-            result.modality_scores.insert("graph".to_string(), graph_score * weight);
+            result
+                .modality_scores
+                .insert("graph".to_string(), graph_score * weight);
             result.combined_score += graph_score * weight;
         }
     }
@@ -242,5 +275,3 @@ impl Default for ResultQualityMetrics {
         }
     }
 }
-
-

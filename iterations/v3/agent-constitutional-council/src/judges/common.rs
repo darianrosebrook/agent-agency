@@ -6,11 +6,11 @@
 use async_trait::async_trait;
 
 use agent_agency_contracts::{
-    JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, judge_io::Severity, RubricItem, WorkingSpecEvidence,
+    judge_io::Severity, JudgePrompt, JudgeType, JudgeVerdict, RubricItem, VerdictLabel, Violation,
+    WorkingSpecEvidence,
 };
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
+use crate::{CouncilError, CouncilResult, ReviewContext};
 
 /// Fluent API for building judge rubrics
 #[derive(Debug, Clone)]
@@ -27,9 +27,7 @@ impl Default for RubricBuilder {
 impl RubricBuilder {
     /// Create a new empty rubric builder
     pub fn new() -> Self {
-        Self {
-            items: Vec::new(),
-        }
+        Self { items: Vec::new() }
     }
 
     /// Add a rubric item
@@ -97,13 +95,17 @@ pub trait Judge: Send + Sync {
                 score: 0.0,
                 rationale: format!(
                     "Rejected due to critical violations: {}",
-                    violations.iter()
+                    violations
+                        .iter()
                         .map(|v| v.description.as_str())
                         .collect::<Vec<_>>()
                         .join(", ")
                 ),
                 violations,
-                evidence_refs: vec![format!("{}_analysis", self.judge_type().as_str().to_lowercase())],
+                evidence_refs: vec![format!(
+                    "{}_analysis",
+                    self.judge_type().as_str().to_lowercase()
+                )],
             });
         }
 
@@ -158,9 +160,11 @@ pub trait Judge: Send + Sync {
         _violations: Vec<Violation>,
     ) -> CouncilResult<JudgeVerdict> {
         // This is implemented by concrete judges that have access to their engine
-        Err(CouncilError::Engine(agent_agency_contracts::EngineError::InferenceFailed {
-            message: "LLM evaluation not implemented".to_string()
-        }))
+        Err(CouncilError::Engine(
+            agent_agency_contracts::EngineError::InferenceFailed {
+                message: "LLM evaluation not implemented".to_string(),
+            },
+        ))
     }
 }
 
@@ -171,20 +175,30 @@ impl EvidenceBuilder {
     /// Build working spec evidence from review context
     pub fn from_context(ctx: &ReviewContext) -> WorkingSpecEvidence {
         WorkingSpecEvidence {
-            spec_text: format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+            spec_text: format!(
+                "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
                 ctx.working_spec.title,
                 ctx.working_spec.description,
                 ctx.working_spec.goals.join("\n- "),
-                ctx.working_spec.acceptance_criteria.iter()
-                    .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+                ctx.working_spec
+                    .acceptance_criteria
+                    .iter()
+                    .map(|ac| format!(
+                        "{}: Given {}, When {}, Then {}",
+                        ac.id, ac.given, ac.when, ac.then
+                    ))
                     .collect::<Vec<_>>()
                     .join("\n")
             ),
-            acceptance_criteria: ctx.working_spec.acceptance_criteria.iter()
+            acceptance_criteria: ctx
+                .working_spec
+                .acceptance_criteria
+                .iter()
                 .map(|ac| format!("{}: {}", ac.id, ac.then))
                 .collect(),
             risk_tier: ctx.working_spec.risk_tier.to_string(),
-            context: serde_json::to_value(&ctx.working_spec.context).unwrap_or(serde_json::Value::Null),
+            context: serde_json::to_value(&ctx.working_spec.context)
+                .unwrap_or(serde_json::Value::Null),
         }
     }
 }
@@ -220,7 +234,10 @@ pub struct JudgeUtils;
 
 impl JudgeUtils {
     /// Build engine request for a judge
-    pub fn build_request(prompt: JudgePrompt, max_tokens: usize) -> agent_agency_contracts::EngineRequest {
+    pub fn build_request(
+        prompt: JudgePrompt,
+        max_tokens: usize,
+    ) -> agent_agency_contracts::EngineRequest {
         agent_agency_contracts::EngineRequest {
             prompt,
             max_tokens,
@@ -235,7 +252,8 @@ impl JudgeUtils {
         llm_verdict: JudgeVerdict,
     ) -> JudgeVerdict {
         // If there are critical deterministic violations, override LLM score
-        let has_critical_deterministic = deterministic_violations.iter()
+        let has_critical_deterministic = deterministic_violations
+            .iter()
             .any(|v| v.severity == Severity::Critical);
 
         let mut merged_violations = deterministic_violations;
@@ -264,9 +282,9 @@ impl JudgeUtils {
 
     /// Check if violations contain non-waivable failures
     pub fn has_blocking_violations(violations: &[Violation]) -> bool {
-        violations.iter().any(|v| {
-            v.severity == Severity::Critical && !v.waivable
-        })
+        violations
+            .iter()
+            .any(|v| v.severity == Severity::Critical && !v.waivable)
     }
 }
 
@@ -332,8 +350,18 @@ mod tests {
     #[test]
     fn test_rubric_builder() {
         let rubric = RubricBuilder::new()
-            .add_item(RubricItemBuilder::new("TEST-001", "First item", 0.8, vec!["evidence1".to_string()]))
-            .add_item(RubricItemBuilder::new("TEST-002", "Second item", 0.9, vec!["evidence2".to_string()]))
+            .add_item(RubricItemBuilder::new(
+                "TEST-001",
+                "First item",
+                0.8,
+                vec!["evidence1".to_string()],
+            ))
+            .add_item(RubricItemBuilder::new(
+                "TEST-002",
+                "Second item",
+                0.9,
+                vec!["evidence2".to_string()],
+            ))
             .build();
 
         assert_eq!(rubric.len(), 2);

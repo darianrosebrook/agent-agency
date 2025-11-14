@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use system_configuration::HealthStatus;
 use tracing::{debug, info, warn};
-use system_configuration::{HealthStatus};
 
 /// Main workspace state manager with standardized patterns
 pub struct WorkspaceStateManager {
@@ -180,15 +180,17 @@ impl WorkspaceStateManager {
         // Get both states with timeout to prevent hangs
         let from = tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            self.storage.get_state(from_state)
-        ).await
+            self.storage.get_state(from_state),
+        )
+        .await
         .map_err(|_| WorkspaceError::StorageTimeout(from_state))?
         .map_err(|e| WorkspaceError::DiffComputation(format!("Failed to get from_state: {}", e)))?;
-        
+
         let to = tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            self.storage.get_state(to_state)
-        ).await
+            self.storage.get_state(to_state),
+        )
+        .await
         .map_err(|_| WorkspaceError::StorageTimeout(to_state))?
         .map_err(|e| WorkspaceError::DiffComputation(format!("Failed to get to_state: {}", e)))?;
 
@@ -819,7 +821,7 @@ impl WorkspaceStateManager {
                         // Handle other delta types (Rename, Copy, Typechange, etc.)
                         // For unclassified deltas, continue processing
                         debug!("Encountered unhandled delta type: {:?}", delta.status());
-                        return true;  // Continue iteration
+                        return true; // Continue iteration
                     }
                 };
 
@@ -1065,7 +1067,6 @@ impl WorkspaceStateManager {
 
         changes
     }
-
 }
 
 // Implement common patterns traits

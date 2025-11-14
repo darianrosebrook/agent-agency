@@ -6,9 +6,7 @@
 //! @author @darianrosebrook
 
 use crate::errors::ToolChainResult;
-use crate::types::tool_chain::{
-    ToolChainPlan, PlanningContext, ValidationResult, PlanningStats
-};
+use crate::types::tool_chain::{PlanningContext, PlanningStats, ToolChainPlan, ValidationResult};
 
 /// Core tool chain planner interface
 /// Implementations provide tool chain planning and optimization capabilities

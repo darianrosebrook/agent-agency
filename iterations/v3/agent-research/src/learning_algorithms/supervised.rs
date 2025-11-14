@@ -1,15 +1,14 @@
 //! Supervised learning algorithms for reflexive learning
 
-use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
 use rand::Rng;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Simple linear regression implementation
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinearRegressionModel {
     /// Learned weights (coefficients)
     #[serde(skip)]
@@ -34,10 +33,17 @@ impl LinearRegressionModel {
     }
 
     /// Train the model using gradient descent
-    pub fn train(&mut self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> Result<(), String> {
+    pub fn train(
+        &mut self,
+        features: ArrayView2<f64>,
+        targets: ArrayView1<f64>,
+    ) -> Result<(), String> {
         if features.ncols() != self.feature_count {
-            return Err(format!("Feature count mismatch: expected {}, got {}",
-                             self.feature_count, features.ncols()));
+            return Err(format!(
+                "Feature count mismatch: expected {}, got {}",
+                self.feature_count,
+                features.ncols()
+            ));
         }
 
         if features.nrows() != targets.len() {
@@ -65,7 +71,8 @@ impl LinearRegressionModel {
             self.bias -= self.config.learning_rate * bias_gradient;
 
             // Check convergence
-            let max_gradient = weight_gradients.iter()
+            let max_gradient = weight_gradients
+                .iter()
                 .chain(std::iter::once(&bias_gradient))
                 .map(|g| g.abs())
                 .fold(0.0, f64::max);
@@ -102,7 +109,9 @@ impl LinearRegressionModel {
     pub fn r_squared(&self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> f64 {
         let predictions = self.predict_batch(features);
         let ss_res = (&predictions - &targets).mapv(|x| x * x).sum();
-        let ss_tot = (&targets - targets.mean().unwrap_or(0.0)).mapv(|x| x * x).sum();
+        let ss_tot = (&targets - targets.mean().unwrap_or(0.0))
+            .mapv(|x| x * x)
+            .sum();
 
         if ss_tot == 0.0 {
             1.0 // Perfect fit if all targets are the same
@@ -114,7 +123,7 @@ impl LinearRegressionModel {
 
 /// Ridge regression (L2 regularization)
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RidgeRegression {
     base_model: LinearRegressionModel,
     alpha: f64, // Regularization strength
@@ -128,7 +137,11 @@ impl RidgeRegression {
         }
     }
 
-    pub fn train(&mut self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> Result<(), String> {
+    pub fn train(
+        &mut self,
+        features: ArrayView2<f64>,
+        targets: ArrayView1<f64>,
+    ) -> Result<(), String> {
         // TODO: Implement proper ridge regression with L2 penalty in training loop
         //       Currently uses basic implementation; should modify training loop to include L2 penalty for proper ridge regression.
         self.base_model.train(features, targets)
@@ -145,7 +158,7 @@ impl RidgeRegression {
 
 /// Logistic regression for binary classification
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogisticRegression {
     #[serde(skip)]
     weights: Array1<f64>,
@@ -170,10 +183,17 @@ impl LogisticRegression {
     }
 
     /// Train using gradient descent with logistic loss
-    pub fn train(&mut self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> Result<(), String> {
+    pub fn train(
+        &mut self,
+        features: ArrayView2<f64>,
+        targets: ArrayView1<f64>,
+    ) -> Result<(), String> {
         if features.ncols() != self.feature_count {
-            return Err(format!("Feature count mismatch: expected {}, got {}",
-                             self.feature_count, features.ncols()));
+            return Err(format!(
+                "Feature count mismatch: expected {}, got {}",
+                self.feature_count,
+                features.ncols()
+            ));
         }
 
         // Initialize weights
@@ -197,7 +217,8 @@ impl LogisticRegression {
             self.bias -= self.config.learning_rate * bias_gradient;
 
             // Check convergence
-            let max_gradient = weight_gradients.iter()
+            let max_gradient = weight_gradients
+                .iter()
                 .chain(std::iter::once(&bias_gradient))
                 .map(|g| g.abs())
                 .fold(0.0, f64::max);
@@ -229,8 +250,12 @@ impl LogisticRegression {
 
     /// Calculate accuracy
     pub fn accuracy(&self, features: ArrayView2<f64>, targets: ArrayView1<f64>) -> f64 {
-        let predictions = self.predict_proba_batch(features).mapv(|p| if p >= 0.5 { 1.0 } else { 0.0 });
-        let correct = (&predictions - &targets).mapv(|x| if x.abs() < 0.5 { 1.0 } else { 0.0 }).sum();
+        let predictions = self
+            .predict_proba_batch(features)
+            .mapv(|p| if p >= 0.5 { 1.0 } else { 0.0 });
+        let correct = (&predictions - &targets)
+            .mapv(|x| if x.abs() < 0.5 { 1.0 } else { 0.0 })
+            .sum();
         correct / targets.len() as f64
     }
 }

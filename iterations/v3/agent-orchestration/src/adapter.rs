@@ -6,35 +6,29 @@
 //! @author @darianrosebrook
 
 // Use contracts types directly - prefer prelude for commonly used types
+use crate::types::{DiffStats, OrchestratorConfig};
+use agent_agency_contracts::task_executor::ExecutionStatus;
+use agent_agency_contracts::types::prelude::{TaskDescriptor, TaskPriority};
+use agent_agency_contracts::working_spec::WorkingSpec;
+use agent_agency_contracts::ExecutionArtifacts;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use agent_agency_contracts::types::prelude::{
-    TaskDescriptor, TaskPriority
-};
-use agent_agency_contracts::working_spec::WorkingSpec;
-use agent_agency_contracts::task_executor::ExecutionStatus;
-use agent_agency_contracts::ExecutionArtifacts;
-use crate::types::{
-    OrchestratorConfig, DiffStats
-};
 use uuid;
 // TaskExecutionResult is now in contracts
-use agent_agency_contracts::task_executor::TaskExecutionResult;
-use crate::judge_backup::backup_types::JudgeType;
+use crate::audit_trail::{AuditConfig, AuditTrailManager};
 use crate::council::{Council, CouncilConfig};
-use crate::decision_making::ConsensusStrategy;
-use crate::multimodal_orchestration::MultimodalOrchestrator;
-use crate::audit_trail::{AuditTrailManager, AuditConfig};
-use crate::judge_backup::{
-    Judge, JudgeConfig,
-    EthicsJudge,
-    quality_judge::QualityAssuranceJudge,
-    security_judge::SecurityJudge,
-};
-use crate::verdict_aggregation::{
-    VerdictAggregator, AggregationConfig, DissentHandling, RiskAggregationStrategy,
-};
 use crate::decision_making::AlgorithmicDecisionEngine;
+use crate::decision_making::ConsensusStrategy;
+use crate::judge_backup::backup_types::JudgeType;
+use crate::judge_backup::{
+    quality_judge::QualityAssuranceJudge, security_judge::SecurityJudge, EthicsJudge, Judge,
+    JudgeConfig,
+};
+use crate::multimodal_orchestration::MultimodalOrchestrator;
+use crate::verdict_aggregation::{
+    AggregationConfig, DissentHandling, RiskAggregationStrategy, VerdictAggregator,
+};
+use agent_agency_contracts::task_executor::TaskExecutionResult;
 use anyhow::Result;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -59,7 +53,7 @@ pub struct LegacyOrchestratorAdapter {
 
 impl LegacyOrchestratorAdapter {
     /// Initialize memory system for use across components
-    /// 
+    ///
     /// This helper function creates a MemorySystem instance that can be shared
     /// between Council, UnifiedOrchestrator, and other components that need memory.
     #[cfg(feature = "memory")]
@@ -70,19 +64,20 @@ impl LegacyOrchestratorAdapter {
     }
 
     /// Create a contracts-compatible MemorySystem adapter
-    /// 
+    ///
     /// This wraps the agent-memory MemorySystem with the contracts adapter
     /// so it can be used by components expecting the contracts::MemorySystem trait.
     #[cfg(feature = "memory")]
-    pub async fn create_contracts_memory_system() -> Result<Arc<dyn agent_agency_contracts::MemorySystem>> {
+    pub async fn create_contracts_memory_system(
+    ) -> Result<Arc<dyn agent_agency_contracts::MemorySystem>> {
         use agent_memory::MemorySystemAdapter;
-        
+
         let memory_system = Self::init_memory_system().await?;
         Ok(Arc::new(MemorySystemAdapter::new(memory_system)))
     }
 
     /// Get the memory system instance (if memory feature is enabled)
-    /// 
+    ///
     /// This can be used to wire memory into other components like UnifiedOrchestrator
     #[cfg(feature = "memory")]
     pub fn get_memory_system(&self) -> Option<Arc<agent_memory::MemorySystem>> {
@@ -93,8 +88,8 @@ impl LegacyOrchestratorAdapter {
     pub async fn new(config: OrchestratorConfig) -> Result<Self> {
         let council_config = CouncilConfig {
             session_timeout_seconds: 300, // 5 minutes
-            min_judges_required: 3, // Require all available judges
-            max_judges_per_session: 10, // Allow up to 10 for future expansion
+            min_judges_required: 3,       // Require all available judges
+            max_judges_per_session: 10,   // Allow up to 10 for future expansion
             judge_selection_strategy: crate::council::JudgeSelectionStrategy::AllAvailable, // Select all available judges
             consensus_strategy: ConsensusStrategy::Majority,
             risk_thresholds: crate::decision_making::RiskThresholds::default(),
@@ -115,30 +110,24 @@ impl LegacyOrchestratorAdapter {
                 max_response_time_ms: 5000,
                 health_check_interval_ms: 30000,
             })),
-
             // Quality assurance judge
-            Arc::new(QualityAssuranceJudge::new(
-                JudgeConfig {
-                    judge_id: "qa-001".to_string(),
-                    name: "Quality Assurance Judge".to_string(),
-                    judge_type: JudgeType::Quality,
-                    specialization: "code quality".to_string(),
-                    max_response_time_ms: 3000,
-                    health_check_interval_ms: 30000,
-                },
-            )),
-
+            Arc::new(QualityAssuranceJudge::new(JudgeConfig {
+                judge_id: "qa-001".to_string(),
+                name: "Quality Assurance Judge".to_string(),
+                judge_type: JudgeType::Quality,
+                specialization: "code quality".to_string(),
+                max_response_time_ms: 3000,
+                health_check_interval_ms: 30000,
+            })),
             // Security judge
-            Arc::new(SecurityJudge::new(
-                JudgeConfig {
-                    judge_id: "security-001".to_string(),
-                    name: "Security Judge".to_string(),
-                    judge_type: JudgeType::Security,
-                    specialization: "security analysis".to_string(),
-                    max_response_time_ms: 3000,
-                    health_check_interval_ms: 30000,
-                },
-            )),
+            Arc::new(SecurityJudge::new(JudgeConfig {
+                judge_id: "security-001".to_string(),
+                name: "Security Judge".to_string(),
+                judge_type: JudgeType::Security,
+                specialization: "security analysis".to_string(),
+                max_response_time_ms: 3000,
+                health_check_interval_ms: 30000,
+            })),
         ];
 
         // Create verdict aggregator
@@ -154,12 +143,7 @@ impl LegacyOrchestratorAdapter {
         let decision_engine = Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Majority));
 
         // Create the council
-        let mut council = Council::new(
-            council_config,
-            judges,
-            verdict_aggregator,
-            decision_engine,
-        );
+        let council = Council::new(council_config, judges, verdict_aggregator, decision_engine);
 
         #[cfg(feature = "memory")]
         let memory_system = {
@@ -177,7 +161,7 @@ impl LegacyOrchestratorAdapter {
 
         let _orchestrator_config = OrchestratorConfig::default();
         let orchestrator = Arc::new(MultimodalOrchestrator::new().await?);
-        
+
         let audit_config = AuditConfig::default();
         let audit_trail = Arc::new(AuditTrailManager::new(audit_config));
 
@@ -195,25 +179,28 @@ impl LegacyOrchestratorAdapter {
     /// This adapts the old `orchestrate_task` function to work with the new architecture
     /// Returns TaskExecutionResult (from contracts) - working_spec, artifacts, and quality_report
     /// Extract consensus result from council session final_decision
-    /// 
+    ///
     /// Maps FinalDecision enum variants to ConsensusResult with accurate
     /// approval status, confidence, and reasoning extracted from council verdict.
-    fn extract_consensus_from_session(session: &crate::council::CouncilSession) -> crate::council_types::ConsensusResult {
+    fn extract_consensus_from_session(
+        session: &crate::council::CouncilSession,
+    ) -> crate::council_types::ConsensusResult {
         use crate::decision_making::FinalDecision;
-        
+
         match &session.final_decision {
             Some(FinalDecision::Proceed { confidence, .. }) => {
                 crate::council_types::ConsensusResult {
                     approved: true,
                     confidence: *confidence,
-                    reason: format!(
-                        "Council approved with confidence {:.2}",
-                        confidence
-                    ),
+                    reason: format!("Council approved with confidence {:.2}", confidence),
                 }
             }
-            Some(FinalDecision::Refine { refinement_directive, .. }) => {
-                let changes_summary = refinement_directive.required_changes
+            Some(FinalDecision::Refine {
+                refinement_directive,
+                ..
+            }) => {
+                let changes_summary = refinement_directive
+                    .required_changes
                     .iter()
                     .map(|c| c.description.as_str())
                     .collect::<Vec<_>>()
@@ -270,8 +257,8 @@ impl LegacyOrchestratorAdapter {
         spec: &WorkingSpec,
         desc: &TaskDescriptor,
         diff: &DiffStats,
-        tests_added: bool,
-        deterministic: bool,
+        _tests_added: bool,
+        _deterministic: bool,
     ) -> Result<TaskExecutionResult> {
         debug!(
             task_id = %desc.task_id,
@@ -281,7 +268,7 @@ impl LegacyOrchestratorAdapter {
 
         // Step 1: Validate the task
         let validation_result = self.validate_orchestration_task(spec, desc, diff).await?;
-        
+
         if let Some(short_circuit_result) = self.build_short_circuit_verdict(&validation_result) {
             warn!(
                 task_id = %desc.task_id,
@@ -294,23 +281,23 @@ impl LegacyOrchestratorAdapter {
         // Step 2: Evaluate task with council
         // Conduct full council review to get final_decision populated
         use crate::judge_backup::types::ReviewContext;
-        
+
         use uuid::Uuid;
-        
+
         // Convert working spec to JSON string for review context
         let working_spec_json = serde_json::to_string(spec)
             .map_err(|e| anyhow::anyhow!("Failed to serialize working spec: {}", e))?;
-        
+
         // Determine risk tier from task descriptor priority
         let risk_tier = match desc.priority {
-            agent_agency_contracts::types::planning::TaskPriority::Critical 
-            | agent_agency_contracts::types::planning::TaskPriority::High 
+            agent_agency_contracts::types::planning::TaskPriority::Critical
+            | agent_agency_contracts::types::planning::TaskPriority::High
             | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
-            agent_agency_contracts::types::planning::TaskPriority::Normal 
+            agent_agency_contracts::types::planning::TaskPriority::Normal
             | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
             agent_agency_contracts::types::planning::TaskPriority::Low => 3,
         };
-        
+
         // Create review context
         let review_context = ReviewContext {
             session_id: format!("orchestration_{}", Uuid::new_v4()),
@@ -319,11 +306,14 @@ impl LegacyOrchestratorAdapter {
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
         };
-        
+
         // Conduct full council review
-        let council_session = self.council.conduct_review(spec.clone(), review_context).await
+        let council_session = self
+            .council
+            .conduct_review(spec.clone(), review_context)
+            .await
             .map_err(|e| anyhow::anyhow!("Council review failed: {:?}", e))?;
-        
+
         // Extract consensus result from council session final_decision
         let consensus_result = Self::extract_consensus_from_session(&council_session);
 
@@ -331,7 +321,7 @@ impl LegacyOrchestratorAdapter {
 
         // Step 3: Execute task with orchestrator
         let artifacts = self.execute_task_with_orchestrator(spec, desc).await?;
-        
+
         // Step 4: Review artifacts with status and output analysis
         let artifact_verdict = if let Some(first_artifact) = artifacts.first() {
             let artifact_verdict = self.review_artifacts(first_artifact, spec, desc).await?;
@@ -351,7 +341,10 @@ impl LegacyOrchestratorAdapter {
 
         // Step 6: Record audit trail
         if let Err(e) = self.audit_trail.record_execution(&final_result).await {
-            warn!("Failed to record audit trail for task {}: {}", desc.task_id, e);
+            warn!(
+                "Failed to record audit trail for task {}: {}",
+                desc.task_id, e
+            );
             // Don't fail the orchestration if audit trail recording fails
         }
 
@@ -404,20 +397,27 @@ impl LegacyOrchestratorAdapter {
     }
 
     /// Validate task scope
-    /// 
+    ///
     /// Currently validates that scope is non-empty. Full implementation would
     /// check if changed files from diff_stats are within scope.in_scope boundaries.
-    fn validate_scope(&self, scope: &agent_agency_contracts::task_request::ScopeRestrictions, _diff: &DiffStats) -> bool {
+    fn validate_scope(
+        &self,
+        scope: &agent_agency_contracts::task_request::ScopeRestrictions,
+        _diff: &DiffStats,
+    ) -> bool {
         // Basic validation: ensure scope is defined
         // Future enhancement: Cross-reference diff_stats.changed_files with scope.allowed_paths
         !scope.allowed_paths.is_empty()
     }
 
     /// Build short-circuit verdict for validation failures
-    fn build_short_circuit_verdict(&self, validation: &ValidationResult) -> Option<TaskExecutionResult> {
+    fn build_short_circuit_verdict(
+        &self,
+        validation: &ValidationResult,
+    ) -> Option<TaskExecutionResult> {
         use chrono::Utc;
         use uuid::Uuid;
-        
+
         match validation {
             ValidationResult::Valid => None,
             ValidationResult::BudgetExceeded { .. } => {
@@ -434,7 +434,7 @@ impl LegacyOrchestratorAdapter {
                     duration_ms: 0,
                     worker_id: None,
                 })
-            },
+            }
             ValidationResult::ScopeViolation => {
                 let execution_id = Uuid::new_v4();
                 Some(TaskExecutionResult {
@@ -449,7 +449,7 @@ impl LegacyOrchestratorAdapter {
                     duration_ms: 0,
                     worker_id: None,
                 })
-            },
+            }
             ValidationResult::InvalidRiskTier => {
                 let execution_id = Uuid::new_v4();
                 Some(TaskExecutionResult {
@@ -464,7 +464,7 @@ impl LegacyOrchestratorAdapter {
                     duration_ms: 0,
                     worker_id: None,
                 })
-            },
+            }
         }
     }
 
@@ -479,51 +479,76 @@ impl LegacyOrchestratorAdapter {
         // Build task description from TaskDescriptor and WorkingSpec
         let task_description = format!(
             "Task: {}\nDescription: {}\nScope: {:?}",
-            desc.task_id,
-            desc.description,
-            desc.scope_in
+            desc.task_id, desc.description, desc.scope_in
         );
 
         // Build context from working spec and task descriptor
         let mut context = std::collections::HashMap::new();
         context.insert("task_id".to_string(), serde_json::json!(desc.task_id));
         // Convert acceptance criteria to a serializable format
-        let acceptance_criteria_json: Vec<serde_json::Value> = spec.acceptance_criteria
+        let acceptance_criteria_json: Vec<serde_json::Value> = spec
+            .acceptance_criteria
             .iter()
-            .map(|ac| serde_json::json!({
-                "id": ac.id,
-                "given": ac.given,
-                "when": ac.when,
-                "then": ac.then,
-            }))
+            .map(|ac| {
+                serde_json::json!({
+                    "id": ac.id,
+                    "given": ac.given,
+                    "when": ac.when,
+                    "then": ac.then,
+                })
+            })
             .collect();
-        context.insert("acceptance_criteria".to_string(), serde_json::json!(acceptance_criteria_json));
+        context.insert(
+            "acceptance_criteria".to_string(),
+            serde_json::json!(acceptance_criteria_json),
+        );
         context.insert("risk_tier".to_string(), serde_json::json!(spec.risk_tier));
         // Mode is not available in contracts WorkingSpec - derive from ID prefix if needed
-        let mode = if spec.id.starts_with("FEAT-") { "feature" }
-                   else if spec.id.starts_with("FIX-") { "fix" }
-                   else if spec.id.starts_with("REFACTOR-") { "refactor" }
-                   else { "task" };
+        let mode = if spec.id.starts_with("FEAT-") {
+            "feature"
+        } else if spec.id.starts_with("FIX-") {
+            "fix"
+        } else if spec.id.starts_with("REFACTOR-") {
+            "refactor"
+        } else {
+            "task"
+        };
         context.insert("mode".to_string(), serde_json::json!(mode));
 
         // Execute using the multimodal orchestrator
-        match self.orchestrator.execute_planning_with_audit(
-            &task_description,
-            Some(context),
-        ).await {
+        match self
+            .orchestrator
+            .execute_planning_with_audit(&task_description, Some(context))
+            .await
+        {
             Ok(processing_result) => {
                 // Convert ProcessingResult to ExecutionArtifacts
                 let status = match processing_result.status {
-                    crate::multimodal_orchestration::ProcessingStatus::Completed => ExecutionStatus::Completed,
-                    crate::multimodal_orchestration::ProcessingStatus::Failed => ExecutionStatus::Failed,
-                    crate::multimodal_orchestration::ProcessingStatus::InProgress => ExecutionStatus::Running,
-                    crate::multimodal_orchestration::ProcessingStatus::Running => ExecutionStatus::Running,
-                    crate::multimodal_orchestration::ProcessingStatus::Skipped => ExecutionStatus::Cancelled, // Map Skipped to Cancelled (contracts doesn't have Skipped)
-                    crate::multimodal_orchestration::ProcessingStatus::Pending => ExecutionStatus::Pending,
-                    crate::multimodal_orchestration::ProcessingStatus::Cancelled => ExecutionStatus::Cancelled,
+                    crate::multimodal_orchestration::ProcessingStatus::Completed => {
+                        ExecutionStatus::Completed
+                    }
+                    crate::multimodal_orchestration::ProcessingStatus::Failed => {
+                        ExecutionStatus::Failed
+                    }
+                    crate::multimodal_orchestration::ProcessingStatus::InProgress => {
+                        ExecutionStatus::Running
+                    }
+                    crate::multimodal_orchestration::ProcessingStatus::Running => {
+                        ExecutionStatus::Running
+                    }
+                    crate::multimodal_orchestration::ProcessingStatus::Skipped => {
+                        ExecutionStatus::Cancelled
+                    } // Map Skipped to Cancelled (contracts doesn't have Skipped)
+                    crate::multimodal_orchestration::ProcessingStatus::Pending => {
+                        ExecutionStatus::Pending
+                    }
+                    crate::multimodal_orchestration::ProcessingStatus::Cancelled => {
+                        ExecutionStatus::Cancelled
+                    }
                 };
 
-                let output = if status == ExecutionStatus::Completed {
+                // TODO: Use output in task execution result for v4
+                let _output = if status == ExecutionStatus::Completed {
                     Some(format!(
                         "Task {} processed successfully. Blocks processed: {}, enriched: {}, indexed: {}",
                         desc.task_id,
@@ -538,12 +563,14 @@ impl LegacyOrchestratorAdapter {
                 let mut artifacts = ExecutionArtifacts::default();
                 artifacts.task_id = desc.task_id;
                 artifacts.working_spec_id = "multimodal-processing".to_string();
-                artifacts.metadata = Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata {
-                    compression_applied: None,
-                    storage_location: Some("multimodal-processing".to_string()),
-                    retention_policy: None,
-                    tags: vec!["multimodal".to_string(), "orchestration".to_string()],
-                });
+                artifacts.metadata = Some(
+                    agent_agency_contracts::execution_artifacts::ArtifactMetadata {
+                        compression_applied: None,
+                        storage_location: Some("multimodal-processing".to_string()),
+                        retention_policy: None,
+                        tags: vec!["multimodal".to_string(), "orchestration".to_string()],
+                    },
+                );
                 Ok(vec![artifacts])
             }
             Err(e) => {
@@ -551,19 +578,21 @@ impl LegacyOrchestratorAdapter {
                 let mut artifacts = ExecutionArtifacts::default();
                 artifacts.task_id = desc.task_id;
                 artifacts.working_spec_id = "multimodal-processing".to_string();
-                artifacts.metadata = Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata {
-                    compression_applied: None,
-                    storage_location: Some("multimodal-processing".to_string()),
-                    retention_policy: None,
-                    tags: vec!["multimodal".to_string(), "error".to_string()],
-                });
+                artifacts.metadata = Some(
+                    agent_agency_contracts::execution_artifacts::ArtifactMetadata {
+                        compression_applied: None,
+                        storage_location: Some("multimodal-processing".to_string()),
+                        retention_policy: None,
+                        tags: vec!["multimodal".to_string(), "error".to_string()],
+                    },
+                );
                 Ok(vec![artifacts])
             }
         }
     }
 
     /// Review artifacts with judges
-    /// 
+    ///
     /// Reviews execution artifacts against acceptance criteria and quality requirements.
     /// Uses status-based confidence scoring with adjustments for error presence and
     /// output quality. Future enhancement: Create council session for artifact review
@@ -571,7 +600,7 @@ impl LegacyOrchestratorAdapter {
     async fn review_artifacts(
         &self,
         artifacts: &ExecutionArtifacts,
-        spec: &WorkingSpec,
+        _spec: &WorkingSpec,
         desc: &TaskDescriptor,
     ) -> Result<ArtifactVerdict> {
         debug!("Reviewing artifacts for task: {}", desc.task_id);
@@ -613,9 +642,9 @@ impl LegacyOrchestratorAdapter {
         );
 
         // Determine approval based on quality metrics
-        let approved = artifacts.tests.unit_tests.failed == 0 &&
-                      artifacts.coverage.line_coverage >= 0.7 &&
-                      artifacts.linting.errors == 0;
+        let approved = artifacts.tests.unit_tests.failed == 0
+            && artifacts.coverage.line_coverage >= 0.7
+            && artifacts.linting.errors == 0;
 
         Ok(ArtifactVerdict {
             approved,
@@ -634,9 +663,10 @@ impl LegacyOrchestratorAdapter {
     ) -> TaskExecutionResult {
         use chrono::Utc;
         use uuid::Uuid;
-        
+
         let overall_approved = council_result.approved && artifact_verdict.approved;
-        let overall_confidence = ((council_result.confidence + artifact_verdict.confidence as f64) / 2.0) as f32;
+        let overall_confidence =
+            ((council_result.confidence + artifact_verdict.confidence as f64) / 2.0) as f32;
 
         // Use the first artifact or create a default one
         let execution_artifacts = artifacts.into_iter().next().unwrap_or_else(|| {
@@ -648,27 +678,48 @@ impl LegacyOrchestratorAdapter {
 
         // Create metadata with quality info (artifacts stored separately)
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("quality_score".to_string(), serde_json::json!(overall_confidence));
-        metadata.insert("artifacts_task_id".to_string(), serde_json::json!(execution_artifacts.task_id.to_string()));
-        metadata.insert("artifacts_working_spec_id".to_string(), serde_json::json!(execution_artifacts.working_spec_id));
-        
+        metadata.insert(
+            "quality_score".to_string(),
+            serde_json::json!(overall_confidence),
+        );
+        metadata.insert(
+            "artifacts_task_id".to_string(),
+            serde_json::json!(execution_artifacts.task_id.to_string()),
+        );
+        metadata.insert(
+            "artifacts_working_spec_id".to_string(),
+            serde_json::json!(execution_artifacts.working_spec_id),
+        );
+
         // Get execution_id from artifacts provenance if available
         let execution_id = execution_artifacts.provenance.execution_id;
         let task_id = execution_artifacts.task_id;
-        
+
         // Get worker_id from artifacts provenance (convert String to Uuid if available)
-        let worker_id = execution_artifacts.provenance.worker_id
+        let worker_id = execution_artifacts
+            .provenance
+            .worker_id
             .and_then(|w| Uuid::parse_str(&w).ok());
-        
+
         TaskExecutionResult {
             execution_id,
             task_id,
             success: overall_approved,
             output: artifact_verdict.reasoning.clone(),
-            errors: if overall_approved { vec![] } else { vec![format!("Council approved: {}, Artifacts approved: {}", council_result.approved, artifact_verdict.approved)] },
+            errors: if overall_approved {
+                vec![]
+            } else {
+                vec![format!(
+                    "Council approved: {}, Artifacts approved: {}",
+                    council_result.approved, artifact_verdict.approved
+                )]
+            },
             metadata,
             started_at: execution_artifacts.provenance.started_at,
-            completed_at: execution_artifacts.provenance.completed_at.unwrap_or_else(|| Utc::now()),
+            completed_at: execution_artifacts
+                .provenance
+                .completed_at
+                .unwrap_or_else(|| Utc::now()),
             duration_ms: execution_artifacts.provenance.duration_ms,
             worker_id,
         }
@@ -682,48 +733,86 @@ impl LegacyOrchestratorAdapter {
             description: desc.description.clone(),
             requirements: vec![], // TaskDescriptor doesn't have requirements field yet
             priority: match desc.priority {
-                agent_agency_contracts::types::planning::TaskPriority::Low => crate::council_types::TaskPriority::Low,
-                agent_agency_contracts::types::planning::TaskPriority::Medium => crate::council_types::TaskPriority::Normal, // Medium maps to Normal for compatibility
-                agent_agency_contracts::types::planning::TaskPriority::Normal => crate::council_types::TaskPriority::Normal,
-                agent_agency_contracts::types::planning::TaskPriority::High => crate::council_types::TaskPriority::High,
-                agent_agency_contracts::types::planning::TaskPriority::Critical => crate::council_types::TaskPriority::Critical,
-                agent_agency_contracts::types::planning::TaskPriority::Urgent => crate::council_types::TaskPriority::Critical,
+                agent_agency_contracts::types::planning::TaskPriority::Low => {
+                    crate::council_types::TaskPriority::Low
+                }
+                agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                    crate::council_types::TaskPriority::Normal
+                } // Medium maps to Normal for compatibility
+                agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                    crate::council_types::TaskPriority::Normal
+                }
+                agent_agency_contracts::types::planning::TaskPriority::High => {
+                    crate::council_types::TaskPriority::High
+                }
+                agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                    crate::council_types::TaskPriority::Critical
+                }
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => {
+                    crate::council_types::TaskPriority::Critical
+                }
             },
         }
     }
 
     /// Convert task priority
     #[allow(dead_code)] // Reserved for future use
-    fn convert_priority(&self, priority: TaskPriority) -> agent_agency_contracts::types::data_processing::ProcessingPriority {
+    fn convert_priority(
+        &self,
+        priority: TaskPriority,
+    ) -> agent_agency_contracts::types::data_processing::ProcessingPriority {
         match priority {
-            TaskPriority::Low => agent_agency_contracts::types::data_processing::ProcessingPriority::Low,
-            TaskPriority::Medium => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal, // Medium maps to Normal
-            TaskPriority::Normal => agent_agency_contracts::types::data_processing::ProcessingPriority::Normal,
-            TaskPriority::High => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
-            TaskPriority::Urgent => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
-            TaskPriority::Critical => agent_agency_contracts::types::data_processing::ProcessingPriority::High,
+            TaskPriority::Low => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::Low
+            }
+            TaskPriority::Medium => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::Normal
+            } // Medium maps to Normal
+            TaskPriority::Normal => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::Normal
+            }
+            TaskPriority::High => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::High
+            }
+            TaskPriority::Urgent => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::High
+            }
+            TaskPriority::Critical => {
+                agent_agency_contracts::types::data_processing::ProcessingPriority::High
+            }
         }
     }
 
     /// Convert execution status
     #[allow(dead_code)] // Reserved for future use
-    fn convert_status(&self, status: crate::multimodal_orchestration::ProcessingStatus) -> ExecutionStatus {
+    fn convert_status(
+        &self,
+        status: crate::multimodal_orchestration::ProcessingStatus,
+    ) -> ExecutionStatus {
         match status {
             crate::multimodal_orchestration::ProcessingStatus::Pending => ExecutionStatus::Pending,
-            crate::multimodal_orchestration::ProcessingStatus::InProgress => ExecutionStatus::Running,
+            crate::multimodal_orchestration::ProcessingStatus::InProgress => {
+                ExecutionStatus::Running
+            }
             crate::multimodal_orchestration::ProcessingStatus::Running => ExecutionStatus::Running,
-            crate::multimodal_orchestration::ProcessingStatus::Skipped => ExecutionStatus::Cancelled,
-            crate::multimodal_orchestration::ProcessingStatus::Cancelled => ExecutionStatus::Cancelled,
-            crate::multimodal_orchestration::ProcessingStatus::Completed => ExecutionStatus::Completed,
+            crate::multimodal_orchestration::ProcessingStatus::Skipped => {
+                ExecutionStatus::Cancelled
+            }
+            crate::multimodal_orchestration::ProcessingStatus::Cancelled => {
+                ExecutionStatus::Cancelled
+            }
+            crate::multimodal_orchestration::ProcessingStatus::Completed => {
+                ExecutionStatus::Completed
+            }
             crate::multimodal_orchestration::ProcessingStatus::Failed => ExecutionStatus::Failed,
         }
     }
 
     /// Convert TaskDescriptor to ComplexTask for parallel execution
-    /// 
+    ///
     /// This method is a placeholder for future integration with agent-workers parallel execution.
     /// The agent-workers dependency is currently commented out in Cargo.toml due to circular dependency issues.
-    /// 
+    ///
     /// TODO: Implement TaskDescriptor to ComplexTask conversion
     /// - [ ] Resolve circular dependency with agent-workers crate
     /// - [ ] Extract domains, scope, and quality requirements from TaskDescriptor
@@ -733,19 +822,22 @@ impl LegacyOrchestratorAdapter {
     /// - [ ] Handle conversion errors gracefully
     /// - [ ] Add unit tests with various TaskDescriptor types
     /// - [ ] Add integration tests with real ComplexTask creation
-    /// 
+    ///
     /// When agent-workers is available, this should:
     /// 1. Extract domains, scope, and quality requirements from TaskDescriptor
     /// 2. Calculate complexity score based on task characteristics
     /// 3. Map TaskPriority to agent-workers Priority enum
     /// 4. Create ComplexTask with appropriate metadata
-    /// 
+    ///
     /// Returns: ComplexTask (currently unimplemented due to dependency constraints)
     #[allow(unused_variables)]
-    pub fn convert_to_complex_task(&self, task: &agent_agency_contracts::TaskDescriptor) -> anyhow::Result<()> {
+    pub fn convert_to_complex_task(
+        &self,
+        task: &agent_agency_contracts::TaskDescriptor,
+    ) -> anyhow::Result<()> {
         // This conversion requires agent-workers::ComplexTask which is not available
         // due to circular dependency constraints. See Cargo.toml for details.
-        // 
+        //
         // Future implementation path:
         // 1. Resolve circular dependency between agent-orchestration and agent-workers
         // 2. Add agent-workers as optional dependency with feature flag
@@ -763,10 +855,7 @@ impl LegacyOrchestratorAdapter {
 #[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub enum ValidationResult {
     Valid,
-    BudgetExceeded {
-        files_changed: u32,
-        max_files: u32,
-    },
+    BudgetExceeded { files_changed: u32, max_files: u32 },
     ScopeViolation,
     InvalidRiskTier,
 }

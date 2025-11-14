@@ -1,9 +1,9 @@
 //! Learning system types and data structures
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::{TaskId, WorkerId, WorkerSpecialty};
@@ -21,7 +21,6 @@ pub struct ExecutionRecord {
     pub error_message: Option<String>,
     pub metadata: HashMap<String, serde_json::Value>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -37,8 +36,8 @@ impl<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> for ExecutionRecord {
         let quality_score: f64 = row.try_get("quality_score")?;
         let error_message: Option<String> = row.try_get("error_message")?;
         let metadata: serde_json::Value = row.try_get("metadata")?;
-        let metadata_map: HashMap<String, serde_json::Value> = serde_json::from_value(metadata)
-            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let metadata_map: HashMap<String, serde_json::Value> =
+            serde_json::from_value(metadata).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
         let created_at: DateTime<Utc> = row.try_get("created_at")?;
 
         Ok(ExecutionRecord {
@@ -65,7 +64,6 @@ pub struct WorkerPerformanceProfile {
     pub average_execution_time_ms: f64,
     pub average_quality_score: f64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
     pub performance_trend: PerformanceTrend,
     pub capability_scores: HashMap<String, f64>,
@@ -96,7 +94,6 @@ pub struct SuccessPattern {
     pub average_quality: f64,
     pub frequency: u64,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -111,7 +108,6 @@ pub struct FailurePattern {
     pub common_errors: Vec<String>,
     pub frequency: u64,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -238,7 +234,6 @@ pub struct OptimizationEvent {
     pub config_id: Uuid,
     pub performance_delta: PerformanceMetrics,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
     pub config_before: Option<HashMap<String, serde_json::Value>>,
@@ -266,7 +261,6 @@ pub struct TaskPattern {
     pub characteristics: HashMap<String, serde_json::Value>,
     pub frequency: u64,
     #[schemars(with = "String")]
-
     pub last_seen: DateTime<Utc>,
     pub required_capabilities: Vec<String>,
 }
@@ -305,7 +299,6 @@ pub struct FairnessMetrics {
     pub worker_utilization: HashMap<WorkerId, f64>,
     pub task_distribution: HashMap<WorkerId, u64>,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -317,7 +310,6 @@ pub struct QueueHealthMetrics {
     pub processing_rate: f64,
     pub error_rate: f64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 

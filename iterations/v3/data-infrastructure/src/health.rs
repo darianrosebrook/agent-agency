@@ -3,16 +3,16 @@
 //! Comprehensive health checks, statistics collection, and status monitoring
 //! for database connectivity, performance, and operational health.
 
-use schemars::JsonSchema;
-use crate::database_circuit_breaker::CircuitState;
 use super::database_metrics::DatabaseMetrics;
+use crate::database_circuit_breaker::CircuitState;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, warn};
-use sqlx::{PgPool, Row};
 
 /// Database health status summary
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -27,7 +27,6 @@ pub struct DatabaseHealthStatus {
     pub max_execution_time_ms: u64,
     pub circuit_breaker_trips: u64,
     #[schemars(with = "String")]
-
     pub last_health_check: DateTime<Utc>,
     pub overall_health: HealthStatus,
 }
@@ -75,10 +74,13 @@ impl DatabaseHealthMonitor {
     }
 
     /// Perform comprehensive health check
-    /// 
+    ///
     /// If a pool is provided, performs real database connectivity check.
     /// Otherwise, uses metrics-only health assessment.
-    pub async fn perform_health_check(&self, pool: Option<&PgPool>) -> Result<DatabaseHealthStatus> {
+    pub async fn perform_health_check(
+        &self,
+        pool: Option<&PgPool>,
+    ) -> Result<DatabaseHealthStatus> {
         let start_time = std::time::Instant::now();
 
         // Update last check timestamp
@@ -87,7 +89,8 @@ impl DatabaseHealthMonitor {
 
         // Perform real database connectivity check if pool is available
         let connectivity_ok = if let Some(pool_ref) = pool {
-            self.check_database_connectivity(pool_ref).await
+            self.check_database_connectivity(pool_ref)
+                .await
                 .unwrap_or_else(|e| {
                     warn!("Database connectivity check failed: {}", e);
                     false
@@ -143,25 +146,31 @@ impl DatabaseHealthMonitor {
             .context("Failed to execute database connectivity check")?;
 
         // Verify we got the expected result
-        let value: i32 = result.try_get::<i32, &str>("health_check")
+        let value: i32 = result
+            .try_get::<i32, &str>("health_check")
             .map_err(|e| anyhow::anyhow!("Failed to get health_check value: {}", e))?;
         Ok(value == 1)
     }
 
     /// Determine overall health status based on metrics
-    fn determine_overall_health(&self, metrics: &super::database_metrics::DatabaseMetricsSnapshot) -> HealthStatus {
+    fn determine_overall_health(
+        &self,
+        metrics: &super::database_metrics::DatabaseMetricsSnapshot,
+    ) -> HealthStatus {
         // Critical conditions
         if metrics.success_rate < 0.5 {
             return HealthStatus::Critical;
         }
 
         // Unhealthy conditions
-        if metrics.success_rate < 0.8 || metrics.avg_execution_time_ns > 5_000_000_000 { // 5 seconds
+        if metrics.success_rate < 0.8 || metrics.avg_execution_time_ns > 5_000_000_000 {
+            // 5 seconds
             return HealthStatus::Unhealthy;
         }
 
         // Degraded conditions
-        if metrics.success_rate < 0.95 || metrics.avg_execution_time_ns > 1_000_000_000 { // 1 second
+        if metrics.success_rate < 0.95 || metrics.avg_execution_time_ns > 1_000_000_000 {
+            // 1 second
             return HealthStatus::Degraded;
         }
 
@@ -198,8 +207,12 @@ impl DatabaseHealthMonitor {
             recommendations.push("Investigate frequent connection failures".to_string());
         }
 
-        if matches!(status.overall_health, HealthStatus::Critical | HealthStatus::Unhealthy) {
-            recommendations.push("Immediate attention required - database performance degraded".to_string());
+        if matches!(
+            status.overall_health,
+            HealthStatus::Critical | HealthStatus::Unhealthy
+        ) {
+            recommendations
+                .push("Immediate attention required - database performance degraded".to_string());
         }
 
         recommendations
@@ -230,7 +243,10 @@ impl DatabaseHealthMonitor {
         if status.avg_execution_time_ms > 2000 {
             alerts.push(HealthAlert {
                 level: AlertLevel::Critical,
-                message: format!("High average execution time: {}ms", status.avg_execution_time_ms),
+                message: format!(
+                    "High average execution time: {}ms",
+                    status.avg_execution_time_ms
+                ),
                 timestamp: Utc::now(),
             });
         }
@@ -280,7 +296,6 @@ pub struct HealthAlert {
     pub level: AlertLevel,
     pub message: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 

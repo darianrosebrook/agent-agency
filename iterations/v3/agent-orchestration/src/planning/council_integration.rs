@@ -3,13 +3,13 @@
 //! Unified trait for all council interactions across the orchestration system.
 //! Consolidates council review, presentation, and decision-making interfaces.
 
-use std::sync::Arc;
 use anyhow::Result;
+use std::sync::Arc;
 use uuid::Uuid;
 
-use agent_agency_contracts::WorkingSpec;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
+use agent_agency_contracts::WorkingSpec;
 
 use crate::council::{Council, CouncilConfig};
 use crate::planning::plan_types::ExecutionPlan;
@@ -90,7 +90,10 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         let complexity_mode = if let Some(root) = project_root {
             crate::planning::caws_complexity_mode::CawsComplexityMode::detect(root).ok()
         } else {
-            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(".")).ok()
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(
+                ".",
+            ))
+            .ok()
         };
 
         // Create review context for council with spec and mode information
@@ -112,20 +115,30 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         };
 
         // Conduct council review
-        let session = self.council.conduct_review(working_spec.clone(), review_context).await
+        let session = self
+            .council
+            .conduct_review(working_spec.clone(), review_context)
+            .await
             .map_err(|e| anyhow::anyhow!("Council plan review failed: {:?}", e))?;
 
         // Convert council session result to PlanReviewResult
-        let approved = session.final_decision.as_ref()
+        let approved = session
+            .final_decision
+            .as_ref()
             .map(|d| matches!(d, crate::decision_making::FinalDecision::Proceed { .. }))
             .unwrap_or(false);
 
-        let needs_refinement = session.final_decision.as_ref()
+        let needs_refinement = session
+            .final_decision
+            .as_ref()
             .map(|d| matches!(d, crate::decision_making::FinalDecision::Refine { .. }))
             .unwrap_or(false);
 
         let refinement_reason = match session.final_decision.as_ref() {
-            Some(crate::decision_making::FinalDecision::Refine { refinement_directive, .. }) => {
+            Some(crate::decision_making::FinalDecision::Refine {
+                refinement_directive,
+                ..
+            }) => {
                 format!("Refinement required: {:?}", refinement_directive)
             }
             Some(crate::decision_making::FinalDecision::Reject { reason, .. }) => {
@@ -133,8 +146,16 @@ impl CouncilIntegration for CouncilIntegrationImpl {
             }
             _ => {
                 // Extract reasoning from contributions if available
-                session.contributions.iter()
-                    .find_map(|c| if !c.reasoning.is_empty() { Some(c.reasoning.clone()) } else { None })
+                session
+                    .contributions
+                    .iter()
+                    .find_map(|c| {
+                        if !c.reasoning.is_empty() {
+                            Some(c.reasoning.clone())
+                        } else {
+                            None
+                        }
+                    })
                     .unwrap_or_default()
             }
         };
@@ -143,8 +164,13 @@ impl CouncilIntegration for CouncilIntegrationImpl {
             approved,
             needs_refinement,
             refinement_reason: refinement_reason.clone(),
-            council_feedback: session.contributions.iter()
-                .find_map(|c| if !c.reasoning.is_empty() { Some(c.reasoning.clone()) } else { None }),
+            council_feedback: session.contributions.iter().find_map(|c| {
+                if !c.reasoning.is_empty() {
+                    Some(c.reasoning.clone())
+                } else {
+                    None
+                }
+            }),
         })
     }
 
@@ -161,13 +187,16 @@ impl CouncilIntegration for CouncilIntegrationImpl {
 
         // Use primary artifact to create working spec
         let primary_artifact = &artifacts[0];
-        
+
         // Create working spec from artifact metadata
         let working_spec = WorkingSpec {
             version: "1.0".to_string(),
             id: format!("milestone_{}", milestone_id),
             title: format!("Work presentation for milestone {}", milestone_id),
-            description: format!("Completed work from worker {} for milestone {}", worker_id, milestone_id),
+            description: format!(
+                "Completed work from worker {} for milestone {}",
+                worker_id, milestone_id
+            ),
             goals: vec!["Complete milestone execution".to_string()],
             risk_tier: 2, // Default risk tier
             constraints: agent_agency_contracts::working_spec::WorkingSpecConstraints {
@@ -207,7 +236,10 @@ impl CouncilIntegration for CouncilIntegrationImpl {
             },
             file_changes: vec![],
             coverage_targets: None,
-            overview: format!("Completed work from worker {} for milestone {}", worker_id, milestone_id),
+            overview: format!(
+                "Completed work from worker {} for milestone {}",
+                worker_id, milestone_id
+            ),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -223,20 +255,30 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         };
 
         // Conduct council review
-        let session = self.council.conduct_review(working_spec.clone(), review_context).await
+        let session = self
+            .council
+            .conduct_review(working_spec.clone(), review_context)
+            .await
             .map_err(|e| anyhow::anyhow!("Council review failed: {:?}", e))?;
 
         // Convert council session result to WorkPresentationResult
-        let approved = session.final_decision.as_ref()
+        let approved = session
+            .final_decision
+            .as_ref()
             .map(|d| matches!(d, crate::decision_making::FinalDecision::Proceed { .. }))
             .unwrap_or(false);
 
-        let needs_refinement = session.final_decision.as_ref()
+        let needs_refinement = session
+            .final_decision
+            .as_ref()
             .map(|d| matches!(d, crate::decision_making::FinalDecision::Refine { .. }))
             .unwrap_or(false);
 
         let refinement_reason = match session.final_decision.as_ref() {
-            Some(crate::decision_making::FinalDecision::Refine { refinement_directive, .. }) => {
+            Some(crate::decision_making::FinalDecision::Refine {
+                refinement_directive,
+                ..
+            }) => {
                 format!("Refinement required: {:?}", refinement_directive)
             }
             Some(crate::decision_making::FinalDecision::Reject { reason, .. }) => {
@@ -252,7 +294,10 @@ impl CouncilIntegration for CouncilIntegrationImpl {
                     agent_agency_contracts::final_verdict::FinalDecision::Accept,
                     vec![],
                 ),
-                crate::decision_making::FinalDecision::Refine { refinement_directive, .. } => (
+                crate::decision_making::FinalDecision::Refine {
+                    refinement_directive,
+                    ..
+                } => (
                     agent_agency_contracts::final_verdict::FinalDecision::Modify,
                     vec![format!("Refinement required: {:?}", refinement_directive)],
                 ),
@@ -268,17 +313,22 @@ impl CouncilIntegration for CouncilIntegrationImpl {
 
             FinalVerdictContract {
                 decision,
-                votes: session.contributions.iter()
+                votes: session
+                    .contributions
+                    .iter()
                     .map(|c| agent_agency_contracts::final_verdict::VoteEntry {
                         judge_id: c.judge_id.clone(),
                         weight: c.confidence as f32,
                         verdict: match &c.verdict {
-                            crate::judge_backup::verdicts::JudgeVerdict::Approve { .. } => 
-                                agent_agency_contracts::final_verdict::VoteVerdict::Pass,
-                            crate::judge_backup::verdicts::JudgeVerdict::Reject { .. } => 
-                                agent_agency_contracts::final_verdict::VoteVerdict::Fail,
-                            crate::judge_backup::verdicts::JudgeVerdict::Refine { .. } => 
-                                agent_agency_contracts::final_verdict::VoteVerdict::Uncertain,
+                            crate::judge_backup::verdicts::JudgeVerdict::Approve { .. } => {
+                                agent_agency_contracts::final_verdict::VoteVerdict::Pass
+                            }
+                            crate::judge_backup::verdicts::JudgeVerdict::Reject { .. } => {
+                                agent_agency_contracts::final_verdict::VoteVerdict::Fail
+                            }
+                            crate::judge_backup::verdicts::JudgeVerdict::Refine { .. } => {
+                                agent_agency_contracts::final_verdict::VoteVerdict::Uncertain
+                            }
                         },
                     })
                     .collect(),
@@ -309,20 +359,21 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         // Present work to get verdict
         // ArtifactMetadata doesn't support arbitrary key-value storage, so use working_spec_id as fallback
         let milestone_id = artifacts.working_spec_id.as_str();
-        
-        let worker_id = artifacts.provenance.worker_id.as_ref()
+
+        let worker_id = artifacts
+            .provenance
+            .worker_id
+            .as_ref()
             .and_then(|w| Uuid::parse_str(w).ok())
             .unwrap_or_else(Uuid::new_v4);
 
-        let presentation_result = self.present_work(
-            &[artifacts.clone()],
-            milestone_id,
-            worker_id,
-        ).await?;
+        let presentation_result = self
+            .present_work(&[artifacts.clone()], milestone_id, worker_id)
+            .await?;
 
-        presentation_result.verdict.ok_or_else(|| {
-            anyhow::anyhow!("No verdict returned from council presentation")
-        })
+        presentation_result
+            .verdict
+            .ok_or_else(|| anyhow::anyhow!("No verdict returned from council presentation"))
     }
 
     fn requires_approval(&self, risk_tier: u8) -> bool {
@@ -330,4 +381,3 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         risk_tier == 1
     }
 }
-

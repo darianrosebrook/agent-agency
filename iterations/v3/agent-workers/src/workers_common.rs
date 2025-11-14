@@ -4,8 +4,8 @@
 //! specialized workers with consistent patterns and behaviors.
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{debug, error, info, instrument};
@@ -329,10 +329,12 @@ mod tests {
             params: &serde_json::Value,
             _context: &WorkerContext,
         ) -> Result<WorkerResult, WorkerError> {
-            Ok(WorkerResultBuilder::new(format!("Executed with: {}", params))
-                .execution_time_ms(100)
-                .quality_score(0.9)
-                .build())
+            Ok(
+                WorkerResultBuilder::new(format!("Executed with: {}", params))
+                    .execution_time_ms(100)
+                    .quality_score(0.9)
+                    .build(),
+            )
         }
     }
 
@@ -404,5 +406,3 @@ mod tests {
         assert!(empty.is_empty());
     }
 }
-
-

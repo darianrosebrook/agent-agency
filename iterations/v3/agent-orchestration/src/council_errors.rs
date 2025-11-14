@@ -1,7 +1,7 @@
 //! Council error types and results
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Result type for council operations
 pub type CouncilResult<T> = Result<T, CouncilError>;
@@ -17,7 +17,11 @@ pub enum CouncilError {
     ConsensusFailure { reason: String },
 
     #[error("Workflow transition failed: {from} -> {to} ({reason})")]
-    WorkflowTransition { from: String, to: String, reason: String },
+    WorkflowTransition {
+        from: String,
+        to: String,
+        reason: String,
+    },
 
     #[error("Verdict aggregation failed: {reason}")]
     AggregationFailure { reason: String },
@@ -29,7 +33,10 @@ pub enum CouncilError {
     ConfigurationError { field: String, reason: String },
 
     #[error("Session timeout: {session_id} exceeded {timeout_seconds}s")]
-    SessionTimeout { session_id: String, timeout_seconds: u64 },
+    SessionTimeout {
+        session_id: String,
+        timeout_seconds: u64,
+    },
 
     #[error("Database operation failed: {0}")]
     Database(String),
@@ -61,9 +68,9 @@ impl CouncilError {
     pub fn requires_human_intervention(&self) -> bool {
         matches!(
             self,
-            CouncilError::ConsensusFailure { .. } |
-            CouncilError::UnresolvedDissent { .. } |
-            CouncilError::QuorumFailure { .. }
+            CouncilError::ConsensusFailure { .. }
+                | CouncilError::UnresolvedDissent { .. }
+                | CouncilError::QuorumFailure { .. }
         )
     }
 
@@ -71,9 +78,9 @@ impl CouncilError {
     pub fn is_retryable(&self) -> bool {
         !matches!(
             self,
-            CouncilError::ConfigurationError { .. } |
-            CouncilError::ConsensusFailure { .. } |
-            CouncilError::UnresolvedDissent { .. }
+            CouncilError::ConfigurationError { .. }
+                | CouncilError::ConsensusFailure { .. }
+                | CouncilError::UnresolvedDissent { .. }
         )
     }
 

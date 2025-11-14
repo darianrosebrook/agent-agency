@@ -5,15 +5,15 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use agent_agency_contracts::types::planning::TaskDescriptor;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
-use tracing::{debug, info, warn};
 use thiserror::Error;
+use tracing::{debug, info, warn};
 
 /// Frontier task queue for orchestration
 
@@ -146,7 +146,7 @@ impl Frontier {
         {
             let mut queue = self.queue.write().unwrap();
             let mut registry = self.registry.write().unwrap();
-            
+
             queue.push(task_entry.clone());
             registry.insert(task_entry.descriptor.task_id.to_string(), task_entry);
         }
@@ -211,7 +211,8 @@ impl Frontier {
     pub async fn complete_task(&self, task_id: &str) -> Result<()> {
         debug!("Marking task as completed: {}", task_id);
 
-        self.update_task_status(task_id, TaskStatus::Completed).await?;
+        self.update_task_status(task_id, TaskStatus::Completed)
+            .await?;
 
         // Update statistics
         {
@@ -245,7 +246,8 @@ impl Frontier {
     pub async fn cancel_task(&self, task_id: &str) -> Result<()> {
         debug!("Cancelling task: {}", task_id);
 
-        self.update_task_status(task_id, TaskStatus::Cancelled).await?;
+        self.update_task_status(task_id, TaskStatus::Cancelled)
+            .await?;
 
         // Update statistics
         {
@@ -261,7 +263,7 @@ impl Frontier {
     /// Update task status
     async fn update_task_status(&self, task_id: &str, status: TaskStatus) -> Result<()> {
         let mut registry = self.registry.write().unwrap();
-        
+
         if let Some(task) = registry.get_mut(task_id) {
             task.status = status;
         } else {
@@ -356,7 +358,7 @@ impl Frontier {
     pub fn get_stats(&self) -> FrontierStats {
         let stats = self.stats.read().unwrap();
         let queue_size = self.queue.read().unwrap().len();
-        
+
         FrontierStats {
             current_queue_size: queue_size,
             ..stats.clone()
@@ -384,7 +386,9 @@ impl Frontier {
 impl Ord for TaskEntry {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Higher priority score = higher priority
-        other.priority_score.cmp(&self.priority_score)
+        other
+            .priority_score
+            .cmp(&self.priority_score)
             .then_with(|| {
                 // If priority scores are equal, older tasks have higher priority
                 other.added_at.cmp(&self.added_at)

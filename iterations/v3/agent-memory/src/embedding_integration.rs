@@ -2,15 +2,15 @@
 //! Embedding Integration - Vector embeddings for memory with decay/importance
 
 use crate::memory_types::*;
-use crate::{MemoryResult, MemoryError};
-use std::sync::Arc;
-use chrono::{DateTime, Utc, Duration};
-use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn, error};
-use reqwest::Client;
+use crate::{MemoryError, MemoryResult};
 use anyhow::{Context, Result};
-use std::collections::HashMap;
+use chrono::{DateTime, Duration, Utc};
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
 /// Memory embedding with decay information
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MemoryEmbedding {
@@ -47,16 +47,20 @@ impl HttpEmbeddingService {
     /// Generate embedding via HTTP call to external service
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         let url = format!("{}/api/v1/embeddings", self.base_url);
-        
+
         let payload = serde_json::json!({
             "model": self.model_name,
             "input": text,
             "encoding_format": "float"
         });
 
-        debug!("Generating embedding for text: {}...", &text[..text.len().min(100)]);
+        debug!(
+            "Generating embedding for text: {}...",
+            &text[..text.len().min(100)]
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&payload)
             .timeout(std::time::Duration::from_millis(self.timeout_ms))
@@ -66,11 +70,20 @@ impl HttpEmbeddingService {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Embedding service error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Embedding service error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .context("Failed to parse embedding response")?;
 
         // Extract embedding vector from response
@@ -99,17 +112,23 @@ impl HttpEmbeddingService {
     pub async fn get_stats(&self) -> Result<HashMap<String, serde_json::Value>> {
         let url = format!("{}/api/v1/stats", self.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
             .context("Failed to get embedding service stats")?;
 
         if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Failed to get stats: {}", response.status()));
+            return Err(anyhow::anyhow!(
+                "Failed to get stats: {}",
+                response.status()
+            ));
         }
 
-        let stats: HashMap<String, serde_json::Value> = response.json().await
+        let stats: HashMap<String, serde_json::Value> = response
+            .json()
+            .await
             .context("Failed to parse stats response")?;
 
         Ok(stats)
@@ -129,15 +148,18 @@ impl EmbeddingIntegration {
         // Get embedding service URL from environment or use default
         let embedding_url = std::env::var("EMBEDDING_SERVICE_URL")
             .unwrap_or_else(|_| "http://localhost:11434".to_string());
-        
-        let model_name = std::env::var("EMBEDDING_MODEL_NAME")
-            .unwrap_or_else(|_| "embeddinggemma".to_string());
 
-        info!("Initializing HTTP embedding service at: {} with model: {}", embedding_url, model_name);
+        let model_name =
+            std::env::var("EMBEDDING_MODEL_NAME").unwrap_or_else(|_| "embeddinggemma".to_string());
+
+        info!(
+            "Initializing HTTP embedding service at: {} with model: {}",
+            embedding_url, model_name
+        );
 
         // Create HTTP-based embedding service
         let embedding_service = Arc::new(HttpEmbeddingService::new(embedding_url, model_name));
-        
+
         // Test connection
         if let Err(e) = embedding_service.health_check().await {
             warn!("Embedding service health check failed: {}", e);
@@ -151,7 +173,7 @@ impl EmbeddingIntegration {
         let db_pool = Arc::new(
             sqlx::PgPool::connect(&database_url)
                 .await
-                .context("Failed to connect to database for embedding integration")?
+                .context("Failed to connect to database for embedding integration")?,
         );
 
         Ok(Self {
@@ -162,7 +184,10 @@ impl EmbeddingIntegration {
     }
 
     /// Generate embedding for an agent experience
-    pub async fn generate_experience_embedding(&self, experience: &AgentExperience) -> MemoryResult<Vec<f32>> {
+    pub async fn generate_experience_embedding(
+        &self,
+        experience: &AgentExperience,
+    ) -> MemoryResult<Vec<f32>> {
         // Create a text representation of the experience
         let text_representation = format!(
             "Agent {} performed task '{}': {}. Context: {}. Outcome: {}. Learned: {}",
@@ -175,14 +200,20 @@ impl EmbeddingIntegration {
         );
 
         // Generate embedding via HTTP call
-        let embedding = self.embedding_service.generate_embedding(&text_representation).await
+        let embedding = self
+            .embedding_service
+            .generate_embedding(&text_representation)
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))?;
 
         Ok(embedding)
     }
 
     /// Generate embedding for task context
-    pub async fn generate_context_embedding(&self, context: &TaskContext) -> MemoryResult<Vec<f32>> {
+    pub async fn generate_context_embedding(
+        &self,
+        context: &TaskContext,
+    ) -> MemoryResult<Vec<f32>> {
         let text_representation = format!(
             "Task '{}': {} with keywords: {}. Entities: {}",
             context.task_type,
@@ -192,19 +223,26 @@ impl EmbeddingIntegration {
         );
 
         // Generate embedding via HTTP call
-        let embedding = self.embedding_service.generate_embedding(&text_representation).await
+        let embedding = self
+            .embedding_service
+            .generate_embedding(&text_representation)
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))?;
 
         Ok(embedding)
     }
 
     /// Store embedding with metadata
-    pub async fn store_embedding(&self, memory_id: MemoryId, embedding: Vec<f32>) -> MemoryResult<()> {
+    pub async fn store_embedding(
+        &self,
+        memory_id: MemoryId,
+        embedding: Vec<f32>,
+    ) -> MemoryResult<()> {
         let memory_embedding = MemoryEmbedding {
             memory_id,
             embedding,
             importance_score: 1.0, // Default importance
-            decay_factor: 1.0,      // No decay initially
+            decay_factor: 1.0,     // No decay initially
             last_accessed: Utc::now(),
             access_count: 0,
             created_at: Utc::now(),
@@ -236,7 +274,11 @@ impl EmbeddingIntegration {
     }
 
     /// Semantic search for memories similar to context
-    pub async fn semantic_search_context(&self, context: &TaskContext, limit: usize) -> MemoryResult<Vec<(MemoryId, f32)>> {
+    pub async fn semantic_search_context(
+        &self,
+        context: &TaskContext,
+        limit: usize,
+    ) -> MemoryResult<Vec<(MemoryId, f32)>> {
         let context_embedding = self.generate_context_embedding(context).await?;
 
         // Find similar embeddings using cosine similarity
@@ -279,14 +321,23 @@ impl EmbeddingIntegration {
 
     /// Generate embedding for arbitrary text (for workspace file embeddings)
     pub async fn generate_text_embedding(&self, text: &str) -> MemoryResult<Vec<f32>> {
-        self.embedding_service.generate_embedding(text).await
+        self.embedding_service
+            .generate_embedding(text)
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))
     }
-    
+
     /// Semantic search for general text queries
-    pub async fn semantic_search_text(&self, query: &str, limit: usize) -> MemoryResult<Vec<(MemoryId, f32)>> {
+    pub async fn semantic_search_text(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> MemoryResult<Vec<(MemoryId, f32)>> {
         // Generate embedding via HTTP call
-        let query_embedding = self.embedding_service.generate_embedding(query).await
+        let query_embedding = self
+            .embedding_service
+            .generate_embedding(query)
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))?;
 
         let rows = sqlx::query(
@@ -322,16 +373,21 @@ impl EmbeddingIntegration {
     }
 
     /// Update importance score for a memory
-    pub async fn update_importance(&self, memory_id: MemoryId, new_importance: f32) -> MemoryResult<()> {
-        sqlx::query(
-            "UPDATE memory_embeddings SET importance_score = $2 WHERE memory_id = $1",
-        )
-        .bind(memory_id)
-        .bind(new_importance)
-        .execute(self.db_pool.as_ref())
-        .await?;
+    pub async fn update_importance(
+        &self,
+        memory_id: MemoryId,
+        new_importance: f32,
+    ) -> MemoryResult<()> {
+        sqlx::query("UPDATE memory_embeddings SET importance_score = $2 WHERE memory_id = $1")
+            .bind(memory_id)
+            .bind(new_importance)
+            .execute(self.db_pool.as_ref())
+            .await?;
 
-        debug!("Updated importance score for memory {} to {}", memory_id, new_importance);
+        debug!(
+            "Updated importance score for memory {} to {}",
+            memory_id, new_importance
+        );
         Ok(())
     }
 
@@ -383,7 +439,10 @@ impl EmbeddingIntegration {
         let updated_count = updated.rows_affected() as usize;
 
         if updated_count > 0 {
-            debug!("Boosted importance of {} recently accessed memories", updated_count);
+            debug!(
+                "Boosted importance of {} recently accessed memories",
+                updated_count
+            );
         }
 
         Ok(updated_count)
@@ -426,9 +485,13 @@ impl EmbeddingIntegration {
 
         Ok(EmbeddingStats {
             total_embeddings: row.try_get::<i64, _>("total_embeddings").unwrap_or(0) as usize,
-            avg_importance: row.try_get::<Option<f64>, _>("avg_importance")?.unwrap_or(0.0) as f32,
+            avg_importance: row
+                .try_get::<Option<f64>, _>("avg_importance")?
+                .unwrap_or(0.0) as f32,
             avg_decay: row.try_get::<Option<f64>, _>("avg_decay")?.unwrap_or(0.0) as f32,
-            avg_access_count: row.try_get::<Option<f64>, _>("avg_access_count")?.unwrap_or(0.0) as f32,
+            avg_access_count: row
+                .try_get::<Option<f64>, _>("avg_access_count")?
+                .unwrap_or(0.0) as f32,
             oldest_embedding: row.try_get("oldest_embedding")?,
             newest_access: row.try_get("newest_access")?,
         })
@@ -436,13 +499,17 @@ impl EmbeddingIntegration {
 
     /// Get embedding service statistics
     pub async fn get_service_stats(&self) -> MemoryResult<HashMap<String, serde_json::Value>> {
-        self.embedding_service.get_stats().await
+        self.embedding_service
+            .get_stats()
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))
     }
 
     /// Check embedding service health
     pub async fn health_check(&self) -> MemoryResult<bool> {
-        self.embedding_service.health_check().await
+        self.embedding_service
+            .health_check()
+            .await
             .map_err(|e| MemoryError::Embedding(e.to_string()))
     }
 
@@ -455,40 +522,40 @@ impl EmbeddingIntegration {
         metadata: Option<serde_json::Value>,
     ) -> MemoryResult<()> {
         use uuid::Uuid;
-        
+
         // Generate block_id from file path hash for consistency
         let path_str = file_path.to_string_lossy();
-        let block_id = Uuid::new_v5(
-            &Uuid::NAMESPACE_URL,
-            path_str.as_bytes(),
-        );
-        
+        let block_id = Uuid::new_v5(&Uuid::NAMESPACE_URL, path_str.as_bytes());
+
         // Determine file type/modality
-        let modality = match file_path.extension()
+        let modality = match file_path
+            .extension()
             .and_then(|e| e.to_str())
             .map(|e| e.to_lowercase())
-            .as_deref() {
-            Some("md") | Some("txt") | Some("rs") | Some("ts") | Some("js") | Some("py") | Some("go") | Some("java") | Some("cpp") | Some("c") | Some("h") => "text",
-            Some("png") | Some("jpg") | Some("jpeg") | Some("gif") | Some("svg") | Some("webp") => "image",
+            .as_deref()
+        {
+            Some("md") | Some("txt") | Some("rs") | Some("ts") | Some("js") | Some("py")
+            | Some("go") | Some("java") | Some("cpp") | Some("c") | Some("h") => "text",
+            Some("png") | Some("jpg") | Some("jpeg") | Some("gif") | Some("svg") | Some("webp") => {
+                "image"
+            }
             Some("mp3") | Some("wav") | Some("ogg") | Some("flac") => "audio",
             Some("mp4") | Some("avi") | Some("mov") | Some("webm") => "video",
             _ => "text", // Default to text
         };
-        
-        let embedding_model_id = std::env::var("EMBEDDING_MODEL_NAME")
-            .unwrap_or_else(|_| "embeddinggemma".to_string());
-        
+
+        let embedding_model_id =
+            std::env::var("EMBEDDING_MODEL_NAME").unwrap_or_else(|_| "embeddinggemma".to_string());
+
         let metadata_json = metadata.unwrap_or_else(|| serde_json::json!({}));
-        
+
         // Insert or update embedding in block_vectors
         // First check if block_id exists, then update or insert
-        let existing = sqlx::query(
-            "SELECT id FROM block_vectors WHERE block_id = $1 LIMIT 1"
-        )
-        .bind(block_id)
-        .fetch_optional(self.db_pool.as_ref())
-        .await?;
-        
+        let existing = sqlx::query("SELECT id FROM block_vectors WHERE block_id = $1 LIMIT 1")
+            .bind(block_id)
+            .fetch_optional(self.db_pool.as_ref())
+            .await?;
+
         if existing.is_some() {
             // Update existing
             sqlx::query(
@@ -525,11 +592,11 @@ impl EmbeddingIntegration {
             .execute(self.db_pool.as_ref())
             .await?;
         }
-        
+
         debug!("Stored file embedding for: {}", file_path.display());
         Ok(())
     }
-    
+
     /// Search files by semantic similarity using block_vectors
     pub async fn search_files_by_similarity(
         &self,
@@ -538,7 +605,7 @@ impl EmbeddingIntegration {
     ) -> MemoryResult<Vec<(std::path::PathBuf, f32)>> {
         // Generate query embedding
         let query_embedding = self.generate_text_embedding(query).await?;
-        
+
         // Search block_vectors table
         let rows = sqlx::query(
             r#"
@@ -553,20 +620,19 @@ impl EmbeddingIntegration {
         .bind(limit as i32)
         .fetch_all(self.db_pool.as_ref())
         .await?;
-        
+
         let mut results = Vec::new();
         for row in rows {
             let metadata: serde_json::Value = row.try_get("metadata")?;
             let similarity: f32 = 1.0 - row.try_get::<f64, _>("similarity")? as f32;
-            
+
             // Extract file_path from metadata
-            if let Some(file_path_str) = metadata.get("file_path")
-                .and_then(|v| v.as_str()) {
+            if let Some(file_path_str) = metadata.get("file_path").and_then(|v| v.as_str()) {
                 let file_path = std::path::PathBuf::from(file_path_str);
                 results.push((file_path, similarity));
             }
         }
-        
+
         results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         Ok(results)
     }

@@ -21,9 +21,12 @@
 use std::time::Instant;
 use tracing::info;
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
-use system_quality_security::input_validation::{validate_string_input, validate_sql_safe};
-use system_quality_security::keystore::{Keystore, ProductionKeystore, KeyType, KeyPermission};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
+use system_quality_security::input_validation::{validate_sql_safe, validate_string_input};
+use system_quality_security::keystore::{KeyPermission, KeyType, Keystore, ProductionKeystore};
 
 /// Run the security & privacy E2E test
 pub async fn run_security_test(
@@ -50,7 +53,10 @@ pub async fn run_security_test(
             access_control_checks += result.access_control_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Input validation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Input validation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -67,7 +73,10 @@ pub async fn run_security_test(
             privacy_breaches += result.privacy_breaches;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Data encryption failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Data encryption failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -82,7 +91,10 @@ pub async fn run_security_test(
             audit_log_entries += result.audit_log_entries;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Audit trail failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Audit trail failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -98,7 +110,10 @@ pub async fn run_security_test(
             encryption_operations += result.encryption_operations;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Privacy protection failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Privacy protection failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -129,7 +144,10 @@ pub async fn run_security_test(
 }
 
 /// Test input validation and sanitization
-async fn test_input_validation(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_input_validation(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing input validation and sanitization");
 
     let mut security_violations = 0;
@@ -225,7 +243,9 @@ struct InputValidationResult {
 }
 
 /// Validate and sanitize input using real system-quality-security services
-async fn validate_and_sanitize_input(input: &str) -> Result<InputValidationResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn validate_and_sanitize_input(
+    input: &str,
+) -> Result<InputValidationResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut violations = Vec::new();
 
     // Use real input validation from system-quality-security
@@ -241,7 +261,9 @@ async fn validate_and_sanitize_input(input: &str) -> Result<InputValidationResul
     }
 
     // Get sanitized value from validation result
-    let sanitized = string_validation.sanitized_value.unwrap_or_else(|| input.to_string());
+    let sanitized = string_validation
+        .sanitized_value
+        .unwrap_or_else(|| input.to_string());
 
     Ok(InputValidationResult {
         is_valid: violations.is_empty(),
@@ -251,7 +273,10 @@ async fn validate_and_sanitize_input(input: &str) -> Result<InputValidationResul
 }
 
 /// Test data encryption and access controls
-async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_data_encryption(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing data encryption and access controls");
 
     let mut encryption_operations = 0;
@@ -295,7 +320,8 @@ async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceMa
     }
 
     // Test 3: Access control - unauthorized access attempt
-    let unauthorized_result = check_access("user1".to_string(), "resource_admin".to_string()).await?;
+    let unauthorized_result =
+        check_access("user1".to_string(), "resource_admin".to_string()).await?;
     access_control_checks += 1;
 
     if unauthorized_result.has_access {
@@ -356,24 +382,30 @@ async fn test_data_encryption(_env: &TestEnvironment, _services: &LocalServiceMa
 
 /// Encrypt data using a shared keystore instance
 /// Stores data as a secret in the keystore, which handles encryption internally
-async fn encrypt_data_with_keystore(keystore: &ProductionKeystore, plaintext: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn encrypt_data_with_keystore(
+    keystore: &ProductionKeystore,
+    plaintext: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     // Generate a unique key ID for this data
     use uuid::Uuid;
     let data_id = Uuid::new_v4();
-    
+
     // Store the plaintext data as a secret in the keystore
     // The keystore will encrypt it internally
-    let key_id = keystore.store_key(
-        &format!("encrypted_data_{}", data_id),
-        KeyType::Custom("encrypted_data".to_string()),
-        plaintext.as_bytes(),
-        "test_user",
-        vec![KeyPermission::Read, KeyPermission::Write],
-        Some("Encrypted test data"),
-        vec![],
-        None,
-    ).await.map_err(|e| format!("Failed to store encrypted data: {:?}", e))?;
-    
+    let key_id = keystore
+        .store_key(
+            &format!("encrypted_data_{}", data_id),
+            KeyType::Custom("encrypted_data".to_string()),
+            plaintext.as_bytes(),
+            "test_user",
+            vec![KeyPermission::Read, KeyPermission::Write],
+            Some("Encrypted test data"),
+            vec![],
+            None,
+        )
+        .await
+        .map_err(|e| format!("Failed to store encrypted data: {:?}", e))?;
+
     // Return the key_id as the "encrypted" identifier
     // In production, you would store this key_id separately and retrieve the data when needed
     Ok(key_id.to_string())
@@ -381,20 +413,23 @@ async fn encrypt_data_with_keystore(keystore: &ProductionKeystore, plaintext: &s
 
 /// Decrypt data using a shared keystore instance
 /// Retrieves data from the keystore, which handles decryption internally
-async fn decrypt_data_with_keystore(keystore: &ProductionKeystore, encrypted: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn decrypt_data_with_keystore(
+    keystore: &ProductionKeystore,
+    encrypted: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     // Parse key_id
     use uuid::Uuid;
-    let key_id = Uuid::parse_str(encrypted)
-        .map_err(|e| format!("Invalid key ID format: {}", e))?;
-    
+    let key_id = Uuid::parse_str(encrypted).map_err(|e| format!("Invalid key ID format: {}", e))?;
+
     // Retrieve the data (keystore decrypts it internally)
-    let decrypted_bytes = keystore.get_key(&key_id, "test_user").await
+    let decrypted_bytes = keystore
+        .get_key(&key_id, "test_user")
+        .await
         .map_err(|e| format!("Failed to retrieve encrypted data: {:?}", e))?;
-    
+
     String::from_utf8(decrypted_bytes)
         .map_err(|e| format!("Failed to convert decrypted data to string: {}", e).into())
 }
-
 
 /// Access check result
 struct AccessCheckResult {
@@ -403,7 +438,10 @@ struct AccessCheckResult {
 }
 
 /// Check access permissions
-async fn check_access(user: String, resource: String) -> Result<AccessCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn check_access(
+    user: String,
+    resource: String,
+) -> Result<AccessCheckResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simple role-based access control simulation
     let has_access = match (user.as_str(), resource.as_str()) {
         ("admin", _) => true,
@@ -414,7 +452,11 @@ async fn check_access(user: String, resource: String) -> Result<AccessCheckResul
 
     Ok(AccessCheckResult {
         has_access,
-        reason: if has_access { "Access granted".to_string() } else { "Access denied".to_string() },
+        reason: if has_access {
+            "Access granted".to_string()
+        } else {
+            "Access denied".to_string()
+        },
     })
 }
 
@@ -424,13 +466,17 @@ struct KeyRotationResult {
 }
 
 /// Test encryption key rotation
-async fn test_key_rotation() -> Result<KeyRotationResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_key_rotation() -> Result<KeyRotationResult, Box<dyn std::error::Error + Send + Sync>>
+{
     // Simulate key rotation
     Ok(KeyRotationResult { success: true })
 }
 
 /// Test audit trail integrity using real PostgreSQL database
-async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_audit_trail(
+    _env: &TestEnvironment,
+    services: &LocalServiceManager,
+) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing audit trail integrity with real database");
 
     let mut audit_log_entries = 0;
@@ -443,8 +489,9 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     // Create audit trail table if it doesn't exist
     {
         let postgres = postgres_arc.lock().await;
-        postgres.execute(
-            "CREATE TABLE IF NOT EXISTS audit_trail (
+        postgres
+            .execute(
+                "CREATE TABLE IF NOT EXISTS audit_trail (
                 id SERIAL PRIMARY KEY,
                 action TEXT NOT NULL,
                 user_id TEXT,
@@ -454,8 +501,9 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 hash TEXT
             )",
-            &[],
-        ).await?;
+                &[],
+            )
+            .await?;
     }
 
     _integrity_checks += 1;
@@ -467,7 +515,7 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     let user_id_str = "user123".to_string();
     let resource_type_str = "user".to_string();
     let resource_id_str = "user123".to_string();
-    
+
     let _hash = calculate_audit_entry_hash(
         test_id,
         &action_str,
@@ -475,36 +523,36 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
         Some(&resource_type_str),
         Some(&resource_id_str),
     );
-    
+
     let _metadata_json: serde_json::Value = serde_json::json!({"test": true});
     let _metadata_str = serde_json::to_string(&_metadata_json)
         .map_err(|e| format!("Failed to serialize metadata: {}", e))?;
-    
+
     // Debug: Print the values we're trying to insert
-    info!("Inserting audit entry: action={}, user_id={}, resource_type={}, resource_id={}", 
-          action_str, user_id_str, resource_type_str, resource_id_str);
-    
+    info!(
+        "Inserting audit entry: action={}, user_id={}, resource_type={}, resource_id={}",
+        action_str, user_id_str, resource_type_str, resource_id_str
+    );
+
     // Try with only 3 parameters to see if 4th parameter is the issue
     let insert_result = {
         let postgres = postgres_arc.lock().await;
         let conn = postgres.get_connection().await?;
-        let rows = conn.query(
-            "INSERT INTO audit_trail (action, user_id, resource_type)
+        let rows = conn
+            .query(
+                "INSERT INTO audit_trail (action, user_id, resource_type)
              VALUES ($1, $2, $3) RETURNING id",
-            &[
-                &action_str,
-                &user_id_str,
-                &resource_type_str,
-            ],
-        ).await?;
+                &[&action_str, &user_id_str, &resource_type_str],
+            )
+            .await?;
         rows.len() as u64
     };
-    
+
     if insert_result == 0 {
         return Err("Audit trail insertion failed".into());
     }
     audit_log_entries += 1;
-    
+
     // If first insert succeeds, try the rest
     let test_actions = vec![
         ("file_access", "user123", "file", "file456"),
@@ -528,23 +576,21 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
 
         let _metadata_json: serde_json::Value = serde_json::json!({"test": true});
         let _metadata_str = _metadata_json.to_string();
-        
+
         // Use same pattern as first insert - only 3 parameters for now
         let insert_result = {
             let postgres = postgres_arc.lock().await;
             let conn = postgres.get_connection().await?;
-            let rows = conn.query(
-                "INSERT INTO audit_trail (action, user_id, resource_type)
+            let rows = conn
+                .query(
+                    "INSERT INTO audit_trail (action, user_id, resource_type)
                  VALUES ($1, $2, $3) RETURNING id",
-                &[
-                    &action_str,
-                    &user_id_str,
-                    &resource_type_str,
-                ],
-            ).await?;
+                    &[&action_str, &user_id_str, &resource_type_str],
+                )
+                .await?;
             rows.len() as u64
         };
-        
+
         if insert_result == 0 {
             return Err("Audit trail insertion failed".into());
         }
@@ -557,20 +603,25 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     // Query by user_id - cast timestamp to text for easier deserialization
     let rows = {
         let postgres = postgres_arc.lock().await;
-        postgres.execute_query(
-            "SELECT id, action, user_id, resource_type, created_at::text as created_at_str
+        postgres
+            .execute_query(
+                "SELECT id, action, user_id, resource_type, created_at::text as created_at_str
              FROM audit_trail
              WHERE user_id = $1
              ORDER BY created_at DESC
              LIMIT 10",
-            &[&"user123"],
-        ).await?
+                &[&"user123"],
+            )
+            .await?
     };
 
     if rows.len() < 3 {
         return Ok(SecuritySubResult {
             passed: false,
-            error: Some(format!("Expected at least 3 audit entries, found {}", rows.len())),
+            error: Some(format!(
+                "Expected at least 3 audit entries, found {}",
+                rows.len()
+            )),
             security_violations: 0,
             privacy_breaches: 0,
             encryption_operations: 0,
@@ -587,13 +638,15 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     let mut prev_timestamp_str: Option<String> = None;
     for row in &rows {
         let timestamp_str: String = row.get("created_at_str");
-        
+
         if let Some(prev) = prev_timestamp_str.as_ref() {
             // For DESC order, each timestamp should be <= previous (newer or equal)
             if timestamp_str > *prev {
                 return Ok(SecuritySubResult {
                     passed: false,
-                    error: Some("Audit trail entries not in chronological order (DESC)".to_string()),
+                    error: Some(
+                        "Audit trail entries not in chronological order (DESC)".to_string(),
+                    ),
                     security_violations: 0,
                     privacy_breaches: 0,
                     encryption_operations: 0,
@@ -636,7 +689,12 @@ async fn test_audit_trail(_env: &TestEnvironment, services: &LocalServiceManager
     // Clean up test data
     {
         let postgres = postgres_arc.lock().await;
-        postgres.execute("DELETE FROM audit_trail WHERE id >= $1 AND id <= $2", &[&1000i32, &1005i32]).await?;
+        postgres
+            .execute(
+                "DELETE FROM audit_trail WHERE id >= $1 AND id <= $2",
+                &[&1000i32, &1005i32],
+            )
+            .await?;
     }
 
     Ok(SecuritySubResult {
@@ -671,7 +729,12 @@ impl AuditLog {
         }
     }
 
-    async fn log_operation(&mut self, user: String, action: String, resource: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn log_operation(
+        &mut self,
+        user: String,
+        action: String,
+        resource: String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let entry = AuditEntry {
             user: user.clone(),
             action: action.clone(),
@@ -687,7 +750,9 @@ impl AuditLog {
         self.entries.len()
     }
 
-    async fn verify_integrity(&self) -> Result<IntegrityCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+    async fn verify_integrity(
+        &self,
+    ) -> Result<IntegrityCheckResult, Box<dyn std::error::Error + Send + Sync>> {
         // Verify checksums match
         for entry in &self.entries {
             let expected_checksum = calculate_checksum(&entry.user, &entry.action, &entry.resource);
@@ -698,20 +763,28 @@ impl AuditLog {
         Ok(IntegrityCheckResult { is_valid: true })
     }
 
-    async fn verify_metadata(&self) -> Result<MetadataCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+    async fn verify_metadata(
+        &self,
+    ) -> Result<MetadataCheckResult, Box<dyn std::error::Error + Send + Sync>> {
         // Verify all entries have required fields
         for entry in &self.entries {
-            if entry.user.is_empty() || entry.action.is_empty() || entry.resource.is_empty() || entry.checksum.is_empty() {
+            if entry.user.is_empty()
+                || entry.action.is_empty()
+                || entry.resource.is_empty()
+                || entry.checksum.is_empty()
+            {
                 return Ok(MetadataCheckResult { all_present: false });
             }
         }
         Ok(MetadataCheckResult { all_present: true })
     }
 
-    async fn verify_chronological_order(&self) -> Result<ChronologicalCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+    async fn verify_chronological_order(
+        &self,
+    ) -> Result<ChronologicalCheckResult, Box<dyn std::error::Error + Send + Sync>> {
         // Verify entries are in chronological order
         for i in 1..self.entries.len() {
-            if self.entries[i].timestamp < self.entries[i-1].timestamp {
+            if self.entries[i].timestamp < self.entries[i - 1].timestamp {
                 return Ok(ChronologicalCheckResult { in_order: false });
             }
         }
@@ -751,7 +824,8 @@ fn calculate_audit_entry_hash(
     use ring::digest;
 
     // Create canonical representation of the audit entry
-    let data = format!("{}|{}|{}|{}|{}",
+    let data = format!(
+        "{}|{}|{}|{}|{}",
         id,
         action,
         user_id.unwrap_or(""),
@@ -801,7 +875,10 @@ fn calculate_audit_entry_hash(
 }
 
 /// Test privacy protection measures
-async fn test_privacy_protection(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_privacy_protection(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<SecuritySubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing privacy protection measures");
 
     let mut privacy_breaches = 0;
@@ -813,7 +890,10 @@ async fn test_privacy_protection(_env: &TestEnvironment, _services: &LocalServic
     encryption_operations += 1;
 
     // Verify personal data is removed/anonymized
-    if anonymized.contains("John Doe") || anonymized.contains("john.doe@example.com") || anonymized.contains("555-1234") {
+    if anonymized.contains("John Doe")
+        || anonymized.contains("john.doe@example.com")
+        || anonymized.contains("555-1234")
+    {
         privacy_breaches += 1;
         return Ok(SecuritySubResult {
             passed: false,
@@ -904,7 +984,8 @@ struct RetentionTestResult {
 }
 
 /// Test data retention policy
-async fn test_data_retention() -> Result<RetentionTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_data_retention(
+) -> Result<RetentionTestResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simulate checking data retention policy compliance
     Ok(RetentionTestResult { compliant: true })
 }
@@ -915,7 +996,8 @@ struct DeletionTestResult {
 }
 
 /// Test data deletion
-async fn test_data_deletion() -> Result<DeletionTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_data_deletion() -> Result<DeletionTestResult, Box<dyn std::error::Error + Send + Sync>>
+{
     // Simulate data deletion
     Ok(DeletionTestResult { deleted: true })
 }
@@ -926,7 +1008,8 @@ struct ExposureTestResult {
 }
 
 /// Test data exposure prevention
-async fn test_data_exposure_prevention() -> Result<ExposureTestResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_data_exposure_prevention(
+) -> Result<ExposureTestResult, Box<dyn std::error::Error + Send + Sync>> {
     // Simulate checking for unintended data exposure
     Ok(ExposureTestResult { exposed: false })
 }

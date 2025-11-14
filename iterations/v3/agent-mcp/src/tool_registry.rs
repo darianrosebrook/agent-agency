@@ -3,69 +3,71 @@
 //! Manages registration, execution, and lifecycle of MCP tools.
 
 use crate::mcp_types::*;
-use crate::tools::DocQualityValidator;
+use crate::tools::coreml_ingestion_tools::{
+    CoreMLIngestionExecutor, PlaceholderCoreMLIngestionExecutor,
+};
 use crate::tools::file_editing_tools::FileEditingToolExecutor;
-use crate::tools::coreml_ingestion_tools::{CoreMLIngestionExecutor, PlaceholderCoreMLIngestionExecutor};
 use crate::tools::notification_tools::{execute_notification_tool, NotificationToolConfig};
+use crate::tools::DocQualityValidator;
 // Memory system disabled due to cyclic dependencies
 // #[cfg(feature = "memory")]
 // use agent_memory::MemorySystem;
 use anyhow::Result;
 use dashmap::DashMap;
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
-use std::path::PathBuf;
+use std::sync::RwLock as StdRwLock;
 use tokio::process::Command;
 use tokio::sync::RwLock;
-use std::sync::RwLock as StdRwLock;
 use tracing::{info, warn};
 use uuid::Uuid;
 
 // File operations service - using runtime injection pattern to avoid circular dependencies
 // Real implementations should be injected via ToolRegistry::with_file_ops()
 use system_common_interfaces::{
-    FileOperationsService, FileResult, FileOpsError, Changeset, AllowList, Budgets,
-    Workspace, WorkspaceStatus,
+    AllowList, Budgets, Changeset, FileOperationsService, FileOpsError, FileResult, Workspace,
+    WorkspaceStatus,
 };
 
 /// Helper module for creating real FileOperationsService instances
-/// 
+///
 /// This module provides documentation and examples for creating real FileOperationsService
 /// implementations when data-infrastructure is available. Since there's a circular
 /// dependency between agent-mcp and data-infrastructure, this must be called
 /// from code that has access to both crates.
 pub mod file_ops_helpers {
     /// Documentation helper: Shows how to create real FileOperationsService
-    /// 
+    ///
     /// When both `agent-mcp` and `data-infrastructure` are available in your
     /// project, you can create a real file operations service like this:
-    /// 
+    ///
     /// ```rust,ignore
     /// use data_infrastructure::file_operations_service::create_file_operations_service;
     /// use agent_mcp::tool_registry::ToolRegistry;
     /// use std::env;
-    /// 
+    ///
     /// let repo_path = env::current_dir().unwrap();
     /// let file_ops = create_file_operations_service(repo_path);
     /// let registry = ToolRegistry::with_file_ops(file_ops);
     /// ```
-    /// 
+    ///
     /// This avoids the circular dependency by calling the function from code
     /// that has both crates available (e.g., your application's main binary).
     pub fn _documentation_helper() {}
 }
 
 /// Placeholder file operations service that requires real implementation injection
-/// 
+///
 /// This placeholder returns errors for all operations, encouraging users to inject
 /// a real implementation via `ToolRegistry::with_file_ops()`.
-/// 
+///
 /// To use real file operations:
 /// 1. Ensure `data-infrastructure` crate is available in your project
 /// 2. Create a real FileOperationsService: `data_infrastructure::create_file_operations_service(path)`
 /// 3. Pass it to `ToolRegistry::with_file_ops(file_ops)`
 #[derive(Debug)]
-struct PlaceholderFileOperationsService ;
+struct PlaceholderFileOperationsService;
 
 #[async_trait::async_trait]
 impl FileOperationsService for PlaceholderFileOperationsService {
@@ -118,13 +120,19 @@ impl FileOperationsService for PlaceholderFileOperationsService {
         ))
     }
 
-    async fn get_file_metadata(&self, _file_path: &std::path::Path) -> FileResult<system_common_interfaces::FileMetadata> {
+    async fn get_file_metadata(
+        &self,
+        _file_path: &std::path::Path,
+    ) -> FileResult<system_common_interfaces::FileMetadata> {
         Err(FileOpsError::Validation(
             "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
         ))
     }
 
-    async fn list_directory(&self, _dir_path: &std::path::Path) -> FileResult<Vec<system_common_interfaces::DirectoryEntry>> {
+    async fn list_directory(
+        &self,
+        _dir_path: &std::path::Path,
+    ) -> FileResult<Vec<system_common_interfaces::DirectoryEntry>> {
         Err(FileOpsError::Validation(
             "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
         ))
@@ -171,7 +179,10 @@ pub struct ToolRegistry {
 impl std::fmt::Debug for ToolRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ToolRegistry")
-            .field("registered_tools", &format!("<{} tools>", self.registered_tools.len()))
+            .field(
+                "registered_tools",
+                &format!("<{} tools>", self.registered_tools.len()),
+            )
             .field("statistics", &"<stats>")
             .field("file_ops", &"<FileOperationsService>")
             .field("file_editing_executor", &"<FileEditingToolExecutor>")
@@ -182,11 +193,11 @@ impl std::fmt::Debug for ToolRegistry {
 
 impl ToolRegistry {
     /// Create a new tool registry with a placeholder file operations service
-    /// 
+    ///
     /// **Note**: The placeholder service will return errors for all operations.
     /// To use real file operations, create the registry via `with_file_ops()` and
     /// inject a real `FileOperationsService` implementation (e.g., from `data-infrastructure`).
-    /// 
+    ///
     /// Example:
     /// ```rust,ignore
     /// use data_infrastructure::create_file_operations_service;
@@ -219,7 +230,9 @@ impl ToolRegistry {
             doc_quality_validator: Arc::new(DocQualityValidator::new()),
             file_ops: Arc::new(StdRwLock::new(file_ops)),
             file_editing_executor: Arc::new(StdRwLock::new(file_editing_executor)),
-            coreml_executor: Arc::new(StdRwLock::new(Arc::new(PlaceholderCoreMLIngestionExecutor) as Arc<dyn CoreMLIngestionExecutor>)),
+            coreml_executor: Arc::new(StdRwLock::new(
+                Arc::new(PlaceholderCoreMLIngestionExecutor) as Arc<dyn CoreMLIngestionExecutor>
+            )),
             // memory_system: None, // Disabled due to cyclic dependencies
         }
     }
@@ -241,11 +254,11 @@ impl ToolRegistry {
     pub fn set_file_operations_service(&self, file_ops: Arc<dyn FileOperationsService>) {
         // Update file_ops in the RwLock
         *self.file_ops.write().unwrap() = file_ops.clone();
-        
+
         // Recreate the executor with the new file_ops
         let new_executor = Arc::new(FileEditingToolExecutor::new(file_ops));
         *self.file_editing_executor.write().unwrap() = new_executor;
-        
+
         info!("FileOperationsService updated successfully");
     }
 
@@ -280,7 +293,7 @@ impl ToolRegistry {
                 last_updated: chrono::Utc::now(),
             };
         }
-        
+
         // Register the documentation quality validator tool
         let doc_quality_tool = self.doc_quality_validator.get_tool_definition();
         self.register_tool(doc_quality_tool).await?;
@@ -438,14 +451,14 @@ impl ToolRegistry {
                 source: Some("tool_registry".to_string()),
                 metadata: std::collections::HashMap::new(),
             }],
-                performance_metrics: AgentMcpResourceMetrics {
-                    cpu_usage_percent: 0.0,
-                    memory_usage_mb: 0,
-                    disk_io_bytes: 0,
-                    network_io_bytes: 0,
-                    execution_time_ms: duration_ms,
-                    queue_time_ms: 0,
-                },
+            performance_metrics: AgentMcpResourceMetrics {
+                cpu_usage_percent: 0.0,
+                memory_usage_mb: 0,
+                disk_io_bytes: 0,
+                network_io_bytes: 0,
+                execution_time_ms: duration_ms,
+                queue_time_ms: 0,
+            },
             caws_compliance_result: None,
             started_at,
             completed_at: Some(completed_at),
@@ -505,18 +518,21 @@ impl ToolRegistry {
         if tool.name == "doc_quality_validator" {
             return self.execute_doc_quality_validator(tool, request).await;
         }
-        
+
         // Route based on tool capabilities or name
         // Check for CoreML ingestion tools first (by name)
-        if matches!(tool.name.as_str(), "transcribe_audio" | "detect_objects" | "extract_text_from_image" | "process_video") {
+        if matches!(
+            tool.name.as_str(),
+            "transcribe_audio" | "detect_objects" | "extract_text_from_image" | "process_video"
+        ) {
             return self.execute_coreml_tool(tool, request).await;
         }
-        
+
         // Check for notification tools (by name)
         if tool.name == "send_notification" {
             return self.execute_notification_tool(tool, request).await;
         }
-        
+
         // Route based on tool capabilities
         if tool
             .capabilities
@@ -527,7 +543,9 @@ impl ToolRegistry {
             self.execute_network_tool(tool, request).await
         } else if tool.capabilities.contains(&ToolCapability::FileRead)
             || tool.capabilities.contains(&ToolCapability::FileWrite)
-            || tool.capabilities.contains(&ToolCapability::FileSystemAccess)
+            || tool
+                .capabilities
+                .contains(&ToolCapability::FileSystemAccess)
         {
             self.execute_filesystem_tool(tool, request).await
         } else {
@@ -543,46 +561,46 @@ impl ToolRegistry {
         request: &ToolExecutionRequest,
     ) -> Result<serde_json::Value> {
         info!("Executing documentation quality validator");
-        
+
         // Parse parameters
         let content = request
             .parameters
             .get("content")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing required parameter: content"))?;
-        
+
         let content_type = request
             .parameters
             .get("content_type")
             .and_then(|v| v.as_str())
             .unwrap_or("markdown");
-        
-        let file_path = request
-            .parameters
-            .get("file_path")
-            .and_then(|v| v.as_str());
-        
+
+        let file_path = request.parameters.get("file_path").and_then(|v| v.as_str());
+
         let validation_level = request
             .parameters
             .get("validation_level")
             .and_then(|v| v.as_str())
             .unwrap_or("moderate");
-        
+
         let include_suggestions = request
             .parameters
             .get("include_suggestions")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
-        
+
         // Execute validation
-        let result = self.doc_quality_validator.validate_quality(
-            content,
-            content_type,
-            file_path,
-            validation_level,
-            include_suggestions,
-        ).await?;
-        
+        let result = self
+            .doc_quality_validator
+            .validate_quality(
+                content,
+                content_type,
+                file_path,
+                validation_level,
+                include_suggestions,
+            )
+            .await?;
+
         // Convert result to JSON
         Ok(serde_json::to_value(result)?)
     }
@@ -606,23 +624,26 @@ impl ToolRegistry {
             ));
         }
 
-        use std::time::Instant;
         use std::process::Stdio;
+        use std::time::Instant;
         use tokio::process::Command;
 
         let start_time = Instant::now();
 
         // 1. Sandboxing implementation: Implement proper sandboxing mechanism for command execution
         let sandbox_config = self.create_sandbox_configuration(tool, request).await?;
-        
+
         // 2. Command validation: Validate command execution requests and parameters
         let validated_command = self.validate_command_execution(tool, request).await?;
-        
+
         // 3. Execution monitoring: Monitor command execution performance and security
-        let execution_result = self.execute_sandboxed_command(&validated_command, &sandbox_config).await?;
-        
+        let execution_result = self
+            .execute_sandboxed_command(&validated_command, &sandbox_config)
+            .await?;
+
         // 4. Security compliance: Ensure command execution meets security standards
-        self.audit_command_execution(tool, request, &execution_result, start_time.elapsed()).await?;
+        self.audit_command_execution(tool, request, &execution_result, start_time.elapsed())
+            .await?;
 
         info!(
             "Executing command tool: {} (sandboxed: {})",
@@ -687,53 +708,51 @@ impl ToolRegistry {
         let params = serde_json::to_value(&request.parameters).unwrap_or(serde_json::Value::Null);
         let executor = self.file_editing_executor.read().unwrap().clone();
         match tool.name.as_str() {
-            "file_read" => {
-                executor.execute_file_read(params).await
-                    .map_err(|e| anyhow::anyhow!("File read error: {}", e))
-            },
-            "file_write" => {
-                executor.execute_file_write(params).await
-                    .map_err(|e| anyhow::anyhow!("File write error: {}", e))
-            },
-            "file_edit" => {
-                executor.execute_file_edit(params).await
-                    .map_err(|e| anyhow::anyhow!("File edit error: {}", e))
-            },
-            "workspace_status" => {
-                executor.execute_workspace_status(params).await
-                    .map_err(|e| anyhow::anyhow!("Workspace status error: {}", e))
-            },
-            "file_delete" => {
-                executor.execute_file_delete(params).await
-                    .map_err(|e| anyhow::anyhow!("File delete error: {}", e))
-            },
-            "file_move" => {
-                executor.execute_file_move(params).await
-                    .map_err(|e| anyhow::anyhow!("File move error: {}", e))
-            },
-            "file_copy" => {
-                executor.execute_file_copy(params).await
-                    .map_err(|e| anyhow::anyhow!("File copy error: {}", e))
-            },
-            "list_directory" => {
-                executor.execute_list_directory(params).await
-                    .map_err(|e| anyhow::anyhow!("List directory error: {}", e))
-            },
-            "file_exists" => {
-                executor.execute_file_exists(params).await
-                    .map_err(|e| anyhow::anyhow!("File exists check error: {}", e))
-            },
-            "create_directory" => {
-                executor.execute_create_directory(params).await
-                    .map_err(|e| anyhow::anyhow!("Create directory error: {}", e))
-            },
-            "get_file_metadata" => {
-                executor.execute_get_file_metadata(params).await
-                    .map_err(|e| anyhow::anyhow!("Get file metadata error: {}", e))
-            },
-            _ => {
-                Err(anyhow::anyhow!("Unknown filesystem tool: {}", tool.name))
-            },
+            "file_read" => executor
+                .execute_file_read(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File read error: {}", e)),
+            "file_write" => executor
+                .execute_file_write(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File write error: {}", e)),
+            "file_edit" => executor
+                .execute_file_edit(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File edit error: {}", e)),
+            "workspace_status" => executor
+                .execute_workspace_status(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("Workspace status error: {}", e)),
+            "file_delete" => executor
+                .execute_file_delete(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File delete error: {}", e)),
+            "file_move" => executor
+                .execute_file_move(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File move error: {}", e)),
+            "file_copy" => executor
+                .execute_file_copy(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File copy error: {}", e)),
+            "list_directory" => executor
+                .execute_list_directory(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("List directory error: {}", e)),
+            "file_exists" => executor
+                .execute_file_exists(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("File exists check error: {}", e)),
+            "create_directory" => executor
+                .execute_create_directory(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("Create directory error: {}", e)),
+            "get_file_metadata" => executor
+                .execute_get_file_metadata(params)
+                .await
+                .map_err(|e| anyhow::anyhow!("Get file metadata error: {}", e)),
+            _ => Err(anyhow::anyhow!("Unknown filesystem tool: {}", tool.name)),
         }
     }
 
@@ -745,36 +764,36 @@ impl ToolRegistry {
     ) -> Result<serde_json::Value> {
         info!("Executing CoreML ingestion tool: {}", tool.name);
 
-        let file_path = request.parameters
+        let file_path = request
+            .parameters
             .get("file_path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("file_path parameter required"))?;
-        
-        let content_type = request.parameters
+
+        let content_type = request
+            .parameters
             .get("content_type")
             .and_then(|v| v.as_str());
 
         let executor = self.coreml_executor.read().unwrap().clone();
         match tool.name.as_str() {
-            "transcribe_audio" => {
-                executor.transcribe_audio(file_path, content_type).await
-                    .map_err(|e| anyhow::anyhow!("Audio transcription error: {}", e))
-            },
-            "detect_objects" => {
-                executor.detect_objects(file_path, content_type).await
-                    .map_err(|e| anyhow::anyhow!("Object detection error: {}", e))
-            },
-            "extract_text_from_image" => {
-                executor.extract_text_from_image(file_path, content_type).await
-                    .map_err(|e| anyhow::anyhow!("Text extraction error: {}", e))
-            },
-            "process_video" => {
-                executor.process_video(file_path).await
-                    .map_err(|e| anyhow::anyhow!("Video processing error: {}", e))
-            },
-            _ => {
-                Err(anyhow::anyhow!("Unknown CoreML tool: {}", tool.name))
-            },
+            "transcribe_audio" => executor
+                .transcribe_audio(file_path, content_type)
+                .await
+                .map_err(|e| anyhow::anyhow!("Audio transcription error: {}", e)),
+            "detect_objects" => executor
+                .detect_objects(file_path, content_type)
+                .await
+                .map_err(|e| anyhow::anyhow!("Object detection error: {}", e)),
+            "extract_text_from_image" => executor
+                .extract_text_from_image(file_path, content_type)
+                .await
+                .map_err(|e| anyhow::anyhow!("Text extraction error: {}", e)),
+            "process_video" => executor
+                .process_video(file_path)
+                .await
+                .map_err(|e| anyhow::anyhow!("Video processing error: {}", e)),
+            _ => Err(anyhow::anyhow!("Unknown CoreML tool: {}", tool.name)),
         }
     }
 
@@ -787,7 +806,8 @@ impl ToolRegistry {
         info!("Executing notification tool: {}", tool.name);
 
         // Get dashboard URL from tool metadata or environment
-        let dashboard_url = tool.metadata
+        let dashboard_url = tool
+            .metadata
             .get("dashboard_url")
             .and_then(|v| v.as_str())
             .map(String::from)
@@ -796,9 +816,7 @@ impl ToolRegistry {
                     .unwrap_or_else(|_| "http://localhost:3000".to_string())
             });
 
-        let config = NotificationToolConfig {
-            dashboard_url,
-        };
+        let config = NotificationToolConfig { dashboard_url };
 
         execute_notification_tool(tool, request, Some(config)).await
     }
@@ -860,7 +878,11 @@ impl ToolRegistry {
     }
 
     /// Create sandbox configuration for command execution
-    async fn create_sandbox_configuration(&self, tool: &MCPTool, request: &ToolExecutionRequest) -> Result<SandboxConfig> {
+    async fn create_sandbox_configuration(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<SandboxConfig> {
         use std::path::PathBuf;
         use tempfile::TempDir;
 
@@ -869,18 +891,26 @@ impl ToolRegistry {
             .map_err(|e| anyhow::anyhow!("Failed to create sandbox directory: {}", e))?;
 
         // Get sandbox restrictions from tool metadata
-        let allowed_commands = tool.metadata
+        let allowed_commands = tool
+            .metadata
             .get("allowed_commands")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            })
             .unwrap_or_else(|| vec!["ls".to_string(), "pwd".to_string(), "echo".to_string()]);
 
-        let max_execution_time = tool.metadata
+        let max_execution_time = tool
+            .metadata
             .get("max_execution_time_seconds")
             .and_then(|v| v.as_u64())
             .unwrap_or(30);
 
-        let memory_limit_mb = tool.metadata
+        let memory_limit_mb = tool
+            .metadata
             .get("memory_limit_mb")
             .and_then(|v| v.as_u64())
             .unwrap_or(128);
@@ -897,24 +927,41 @@ impl ToolRegistry {
     }
 
     /// Validate command execution request
-    async fn validate_command_execution(&self, tool: &MCPTool, request: &ToolExecutionRequest) -> Result<ValidatedCommand> {
+    async fn validate_command_execution(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+    ) -> Result<ValidatedCommand> {
         // Extract command and arguments from parameters
-        let command = request.parameters
+        let command = request
+            .parameters
             .get("command")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'command' parameter"))?;
 
-        let args: Vec<String> = request.parameters
+        let args: Vec<String> = request
+            .parameters
             .get("args")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            })
             .unwrap_or_default();
 
         // Validate command is in allowed list
-        let allowed_commands = tool.metadata
+        let allowed_commands = tool
+            .metadata
             .get("allowed_commands")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            })
             .unwrap_or_else(|| vec!["ls".to_string(), "pwd".to_string(), "echo".to_string()]);
 
         if !allowed_commands.contains(&command.to_string()) {
@@ -924,10 +971,16 @@ impl ToolRegistry {
         // Validate arguments for security
         for arg_str in args.iter().map(|s| s.as_str()) {
             if arg_str.contains("..") || arg_str.contains("/") || arg_str.contains("\\") {
-                return Err(anyhow::anyhow!("Invalid path characters in argument: {}", arg_str));
+                return Err(anyhow::anyhow!(
+                    "Invalid path characters in argument: {}",
+                    arg_str
+                ));
             }
             if arg_str.contains("rm") || arg_str.contains("sudo") || arg_str.contains("chmod") {
-                return Err(anyhow::anyhow!("Potentially dangerous argument: {}", arg_str));
+                return Err(anyhow::anyhow!(
+                    "Potentially dangerous argument: {}",
+                    arg_str
+                ));
             }
         }
 
@@ -939,20 +992,24 @@ impl ToolRegistry {
     }
 
     /// Execute command in sandbox
-    async fn execute_sandboxed_command(&self, validated_command: &ValidatedCommand, sandbox_config: &SandboxConfig) -> Result<CommandExecutionResult> {
+    async fn execute_sandboxed_command(
+        &self,
+        validated_command: &ValidatedCommand,
+        sandbox_config: &SandboxConfig,
+    ) -> Result<CommandExecutionResult> {
         use std::time::Duration;
         use tokio::time::timeout;
 
         let mut cmd = Command::new(&validated_command.command);
-        
+
         // Set up command with arguments
         cmd.args(&validated_command.args);
-        
+
         // Set up sandbox environment
         cmd.env("HOME", sandbox_config.temp_dir.path());
         cmd.env("TMPDIR", sandbox_config.temp_dir.path());
         cmd.current_dir(sandbox_config.temp_dir.path());
-        
+
         // Set up stdio
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::piped());
@@ -974,31 +1031,33 @@ impl ToolRegistry {
                     memory_used_mb: 0, // Would need more sophisticated monitoring
                 })
             }
-            Ok(Err(e)) => {
-                Ok(CommandExecutionResult {
-                    success: false,
-                    exit_code: -1,
-                    stdout: String::new(),
-                    stderr: format!("Command execution failed: {}", e),
-                    execution_time: start_time.elapsed(),
-                    memory_used_mb: 0,
-                })
-            }
-            Err(_) => {
-                Ok(CommandExecutionResult {
-                    success: false,
-                    exit_code: -1,
-                    stdout: String::new(),
-                    stderr: "Command execution timeout".to_string(),
-                    execution_time: start_time.elapsed(),
-                    memory_used_mb: 0,
-                })
-            }
+            Ok(Err(e)) => Ok(CommandExecutionResult {
+                success: false,
+                exit_code: -1,
+                stdout: String::new(),
+                stderr: format!("Command execution failed: {}", e),
+                execution_time: start_time.elapsed(),
+                memory_used_mb: 0,
+            }),
+            Err(_) => Ok(CommandExecutionResult {
+                success: false,
+                exit_code: -1,
+                stdout: String::new(),
+                stderr: "Command execution timeout".to_string(),
+                execution_time: start_time.elapsed(),
+                memory_used_mb: 0,
+            }),
         }
     }
 
     /// Audit command execution for security compliance
-    async fn audit_command_execution(&self, tool: &MCPTool, request: &ToolExecutionRequest, result: &CommandExecutionResult, total_time: std::time::Duration) -> Result<()> {
+    async fn audit_command_execution(
+        &self,
+        tool: &MCPTool,
+        request: &ToolExecutionRequest,
+        result: &CommandExecutionResult,
+        total_time: std::time::Duration,
+    ) -> Result<()> {
         // Log security audit trail
         tracing::info!(
             "Command execution audit - Tool: {}, Command: {}, Success: {}, Exit Code: {}, Duration: {:?}",
@@ -1024,18 +1083,30 @@ impl ToolRegistry {
             history.push(ToolExecutionResult {
                 request_id: request.id,
                 tool_id: tool.id,
-                status: if result.success { ExecutionStatus::Completed } else { ExecutionStatus::Failed },
-                output: if result.success { Some(serde_json::json!({"stdout": result.stdout, "stderr": result.stderr})) } else { None },
-                error: if result.success { None } else { Some(result.stderr.clone()) },
+                status: if result.success {
+                    ExecutionStatus::Completed
+                } else {
+                    ExecutionStatus::Failed
+                },
+                output: if result.success {
+                    Some(serde_json::json!({"stdout": result.stdout, "stderr": result.stderr}))
+                } else {
+                    None
+                },
+                error: if result.success {
+                    None
+                } else {
+                    Some(result.stderr.clone())
+                },
                 logs: vec![],
-                    performance_metrics: AgentMcpResourceMetrics {
-                        cpu_usage_percent: 0.0,
-                        memory_usage_mb: 0,
-                        disk_io_bytes: 0,
-                        network_io_bytes: 0,
-                        execution_time_ms: total_time.as_millis() as u64,
-                        queue_time_ms: 0,
-                    },
+                performance_metrics: AgentMcpResourceMetrics {
+                    cpu_usage_percent: 0.0,
+                    memory_usage_mb: 0,
+                    disk_io_bytes: 0,
+                    network_io_bytes: 0,
+                    execution_time_ms: total_time.as_millis() as u64,
+                    queue_time_ms: 0,
+                },
                 caws_compliance_result: None,
                 started_at: chrono::Utc::now() - total_time,
                 completed_at: Some(chrono::Utc::now()),

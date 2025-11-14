@@ -3,9 +3,9 @@
 //! This module provides comprehensive error handling for Apple Neural Engine operations,
 //! including model lifecycle, inference, capability detection, and resource management.
 
+use crate::ane::ane_circuit_breaker::CircuitBreakerError;
 use schemars::JsonSchema;
 use thiserror::Error;
-use crate::ane::ane_circuit_breaker::CircuitBreakerError;
 
 /// Comprehensive error types for ANE operations
 #[derive(Debug, Error, JsonSchema)]
@@ -13,55 +13,55 @@ pub enum ANEError {
     /// ANE is not available on this target platform
     #[error("ANE unavailable on this target")]
     Unavailable,
-    
+
     /// Core ML framework error
     #[error("CoreML error: {0}")]
     CoreMLError(String),
-    
+
     /// Model not found or invalid
     #[error("Model not found: {0}")]
     ModelNotFound(String),
-    
+
     /// Model already loaded (duplicate load attempt)
     #[error("Model already loaded: {0}")]
     ModelAlreadyLoaded(String),
-    
+
     /// Invalid input/output tensor shape
     #[error("Invalid IO shape: {0}")]
     InvalidShape(String),
-    
+
     /// Unsupported precision or data type
     #[error("Unsupported precision: {0}")]
     UnsupportedPrecision(String),
-    
+
     /// Resource limit exceeded (memory, concurrency, etc.)
     #[error("Resource limit exceeded: {0}")]
     ResourceLimit(String),
-    
+
     /// Operation timed out
     #[error("Timeout after {0} ms")]
     Timeout(u64),
-    
+
     /// Internal system error
     #[error("Internal: {0}")]
     Internal(String),
-    
+
     /// Invalid model format or corrupted file
     #[error("Invalid model format: {0}")]
     InvalidModelFormat(String),
-    
+
     /// Model compilation failed
     #[error("Model compilation failed: {0}")]
     CompilationFailed(String),
-    
+
     /// Inference execution failed
     #[error("Inference execution failed: {0}")]
     InferenceFailed(String),
-    
+
     /// Memory allocation failed
     #[error("Memory allocation failed: {0}")]
     MemoryAllocationFailed(String),
-    
+
     /// Insufficient memory available
     #[error("Insufficient memory: {0}")]
     InsufficientMemory(String),
@@ -69,19 +69,19 @@ pub enum ANEError {
     /// Device capability mismatch
     #[error("Device capability mismatch: {0}")]
     CapabilityMismatch(String),
-    
+
     /// Configuration validation failed
     #[error("Configuration validation failed: {0}")]
     ConfigurationError(String),
-    
+
     /// Operation not implemented
     #[error("Not implemented: {0}")]
     NotImplemented(String),
-    
+
     /// Invalid input provided
     #[error("Invalid input: {0}")]
     InvalidInput(String),
-    
+
     /// Model load failed
     #[error("Model load failed: {0}")]
     ModelLoadFailed(String),
@@ -123,8 +123,12 @@ impl From<serde_json::Error> for ANEError {
 impl From<CircuitBreakerError> for ANEError {
     fn from(err: CircuitBreakerError) -> Self {
         match err {
-            CircuitBreakerError::CircuitOpen => ANEError::ResourceLimit("Circuit breaker open".to_string()),
-            CircuitBreakerError::OperationFailed(_e) => ANEError::Internal("Circuit breaker operation failed".to_string()),
+            CircuitBreakerError::CircuitOpen => {
+                ANEError::ResourceLimit("Circuit breaker open".to_string())
+            }
+            CircuitBreakerError::OperationFailed(_e) => {
+                ANEError::Internal("Circuit breaker operation failed".to_string())
+            }
         }
     }
 }
@@ -200,7 +204,7 @@ impl ANEError {
             ANEError::ContextTooLong(_) => ErrorSeverity::Medium,
         }
     }
-    
+
     /// Check if this error is recoverable
     pub fn is_recoverable(&self) -> bool {
         match self {
@@ -210,16 +214,20 @@ impl ANEError {
             _ => false,
         }
     }
-    
+
     /// Get a user-friendly error message
     pub fn user_message(&self) -> String {
         match self {
-            ANEError::Unavailable => "Apple Neural Engine is not available on this system".to_string(),
+            ANEError::Unavailable => {
+                "Apple Neural Engine is not available on this system".to_string()
+            }
             ANEError::CoreMLError(msg) => format!("Core ML error: {}", msg),
             ANEError::ModelNotFound(path) => format!("Model not found at: {}", path),
             ANEError::ModelAlreadyLoaded(path) => format!("Model already loaded: {}", path),
             ANEError::InvalidShape(msg) => format!("Invalid tensor shape: {}", msg),
-            ANEError::UnsupportedPrecision(precision) => format!("Unsupported precision: {}", precision),
+            ANEError::UnsupportedPrecision(precision) => {
+                format!("Unsupported precision: {}", precision)
+            }
             ANEError::ResourceLimit(resource) => format!("Resource limit exceeded: {}", resource),
             ANEError::Timeout(ms) => format!("Operation timed out after {} ms", ms),
             ANEError::Internal(msg) => format!("Internal error: {}", msg),
@@ -246,8 +254,14 @@ mod tests {
     #[test]
     fn test_error_severity() {
         assert_eq!(ANEError::Unavailable.severity(), ErrorSeverity::High);
-        assert_eq!(ANEError::ModelAlreadyLoaded("test".to_string()).severity(), ErrorSeverity::Low);
-        assert_eq!(ANEError::MemoryAllocationFailed("test".to_string()).severity(), ErrorSeverity::Critical);
+        assert_eq!(
+            ANEError::ModelAlreadyLoaded("test".to_string()).severity(),
+            ErrorSeverity::Low
+        );
+        assert_eq!(
+            ANEError::MemoryAllocationFailed("test".to_string()).severity(),
+            ErrorSeverity::Critical
+        );
     }
 
     #[test]
@@ -262,7 +276,7 @@ mod tests {
     fn test_user_messages() {
         let msg = ANEError::Unavailable.user_message();
         assert!(msg.contains("Apple Neural Engine"));
-        
+
         let msg = ANEError::Timeout(5000).user_message();
         assert!(msg.contains("5000"));
     }

@@ -2,7 +2,7 @@
 //!
 //! WebSocket support for real-time communication.
 
-use crate::{WebSocketConfig, InterfaceError};
+use crate::{InterfaceError, WebSocketConfig};
 
 /// WebSocket manager for real-time communication
 #[derive(Debug)]
@@ -18,9 +18,7 @@ pub struct WebSocketConnection {
 
 impl WebSocketManager {
     pub fn new() -> Result<Self, InterfaceError> {
-        Ok(Self {
-            config: None,
-        })
+        Ok(Self { config: None })
     }
 
     pub async fn initialize(&mut self, config: WebSocketConfig) -> Result<(), InterfaceError> {

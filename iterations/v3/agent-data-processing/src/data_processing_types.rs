@@ -3,15 +3,15 @@
 //! These types are shared across all pipeline stages and provide
 //! the data contracts between ingestion, enrichment, indexing, knowledge, and operations.
 
+#[cfg(feature = "memory-integration")]
+use agent_memory::graph_engine::{Relationship, RelationshipType};
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use system_configuration::geometry::BoundingBox;
-#[cfg(feature = "memory-integration")]
-use agent_memory::graph_engine::{Relationship, RelationshipType};
+use uuid::Uuid;
 
 // Stub definitions for when memory integration is not available
 #[cfg(not(feature = "memory-integration"))]
@@ -260,7 +260,9 @@ impl ContentType {
             "application/json" => ContentType::Json,
             "application/xml" | "text/xml" => ContentType::Xml,
             "text/x-markdown" => ContentType::Markdown,
-            m if m.contains("javascript") || m.contains("typescript") || m.contains("rust") => ContentType::Code,
+            m if m.contains("javascript") || m.contains("typescript") || m.contains("rust") => {
+                ContentType::Code
+            }
             _ => ContentType::Unknown,
         }
     }
@@ -351,7 +353,6 @@ pub struct ProcessedContent {
     pub audio_transcript: Option<String>,
 }
 
-
 /// Named entity extracted from content
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Entity {
@@ -377,8 +378,6 @@ pub enum EntityType {
     Event,
     Other(String),
 }
-
-
 
 /// Query for retrieving processed data
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -507,9 +506,18 @@ mod tests {
     #[test]
     fn test_content_type_from_mime_type() {
         assert_eq!(ContentType::from_mime_type("text/plain"), ContentType::Text);
-        assert_eq!(ContentType::from_mime_type("application/pdf"), ContentType::Pdf);
-        assert_eq!(ContentType::from_mime_type("image/jpeg"), ContentType::Image);
-        assert_eq!(ContentType::from_mime_type("unknown/type"), ContentType::Unknown);
+        assert_eq!(
+            ContentType::from_mime_type("application/pdf"),
+            ContentType::Pdf
+        );
+        assert_eq!(
+            ContentType::from_mime_type("image/jpeg"),
+            ContentType::Image
+        );
+        assert_eq!(
+            ContentType::from_mime_type("unknown/type"),
+            ContentType::Unknown
+        );
     }
 
     #[test]

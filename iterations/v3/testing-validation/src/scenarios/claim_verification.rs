@@ -8,10 +8,13 @@
 //! - Factual accuracy validation
 
 use std::time::Instant;
-use tracing::{info, error};
+use tracing::{error, info};
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
-use agent_research::{ClaimExtractionProcessor, AtomicClaim, ProcessingContext};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
+use agent_research::{AtomicClaim, ClaimExtractionProcessor, ProcessingContext};
 // MultiModalVerificationEngine is temporarily disabled in agent-research
 // use agent_research::MultiModalVerificationEngine;
 use uuid::Uuid;
@@ -36,7 +39,10 @@ pub async fn run_claim_verification_test(
             metrics.disambiguations_resolved += result.disambiguations_resolved as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Claim extraction failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Claim extraction failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -52,7 +58,10 @@ pub async fn run_claim_verification_test(
             metrics.evidence_checks += result.evidence_checks as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Evidence verification failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Evidence verification failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -68,7 +77,10 @@ pub async fn run_claim_verification_test(
             metrics.evidence_checks += result.evidence_checks as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Hallucination detection failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Hallucination detection failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -83,7 +95,10 @@ pub async fn run_claim_verification_test(
             metrics.disambiguations_resolved += result.disambiguations_resolved as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Contextual disambiguation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Contextual disambiguation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -147,7 +162,7 @@ async fn test_claim_extraction(
 
     // Test input with verifiable claims
     let test_input = "The system uses PostgreSQL for data persistence and supports connection pooling with a maximum of 100 connections.";
-    
+
     let context = ProcessingContext {
         task_id: Uuid::new_v4(),
         working_spec_id: "test-spec".to_string(),
@@ -159,12 +174,18 @@ async fn test_claim_extraction(
         input_text: test_input.to_string(),
         language: None,
     };
-    
-    let result = processor.run(test_input, &context).await
+
+    let result = processor
+        .run(test_input, &context)
+        .await
         .map_err(|e| format!("Claim extraction failed: {}", e))?;
 
     let claims_count = result.atomic_claims.len() as u64;
-    let disambiguations = if result.disambiguated_sentence != test_input { 1 } else { 0 };
+    let disambiguations = if result.disambiguated_sentence != test_input {
+        1
+    } else {
+        0
+    };
 
     if claims_count == 0 {
         return Ok(ClaimTestResult {
@@ -201,41 +222,40 @@ async fn test_evidence_verification(
     // Create verification engine
     // MultiModalVerificationEngine temporarily disabled
     // For now, create a placeholder verification result since verifier is not available
-    let test_claims = vec![
-        AtomicClaim {
-            id: uuid::Uuid::new_v4(),
-            claim_text: "The system uses PostgreSQL for data persistence".to_string(),
-            claim_type: agent_research::ClaimType::Technical,
-            verifiability: agent_research::VerifiabilityLevel::DirectlyVerifiable,
-            scope: agent_research::ClaimScope {
-                working_spec_id: "test".to_string(),
-                component_boundaries: vec!["data-infrastructure".to_string()],
-                data_impact: agent_research::DataImpact::Write,
-            },
-            confidence: 0.9,
-            contextual_brackets: vec![],
-            subject: Some("system".to_string()),
-            predicate: Some("uses".to_string()),
-            object: Some("PostgreSQL".to_string()),
-            context_brackets: vec![],
-            verification_requirements: vec![],
-            position: (0, 50),
-            sentence_fragment: "system uses PostgreSQL".to_string(),
-            evidence_links: vec![],
-            temporal_context: None,
-            verification_status: agent_research::VerificationStatus::Unverified,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+    let test_claims = vec![AtomicClaim {
+        id: uuid::Uuid::new_v4(),
+        claim_text: "The system uses PostgreSQL for data persistence".to_string(),
+        claim_type: agent_research::ClaimType::Technical,
+        verifiability: agent_research::VerifiabilityLevel::DirectlyVerifiable,
+        scope: agent_research::ClaimScope {
+            working_spec_id: "test".to_string(),
+            component_boundaries: vec!["data-infrastructure".to_string()],
+            data_impact: agent_research::DataImpact::Write,
         },
-    ];
+        confidence: 0.9,
+        contextual_brackets: vec![],
+        subject: Some("system".to_string()),
+        predicate: Some("uses".to_string()),
+        object: Some("PostgreSQL".to_string()),
+        context_brackets: vec![],
+        verification_requirements: vec![],
+        position: (0, 50),
+        sentence_fragment: "system uses PostgreSQL".to_string(),
+        evidence_links: vec![],
+        temporal_context: None,
+        verification_status: agent_research::VerificationStatus::Unverified,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    }];
 
     // TODO: Re-enable when MultiModalVerificationEngine is available
     // For now, create a placeholder verification result
     let verification_result = agent_research::VerificationResult {
         evidence: vec![],
         verification_confidence: 0.9,
-        verified_claims: test_claims.iter().map(|claim| {
-            agent_research::VerifiedClaim {
+        verified_claims: test_claims
+            .iter()
+            .map(|claim| agent_research::VerifiedClaim {
                 original_claim: claim.claim_text.clone(),
                 verification_results: agent_research::VerificationStatus::Verified,
                 overall_confidence: claim.confidence,
@@ -246,8 +266,8 @@ async fn test_evidence_verification(
                 confidence: claim.confidence,
                 evidence: vec![],
                 timestamp: chrono::Utc::now(),
-            }
-        }).collect(),
+            })
+            .collect(),
         council_verification: agent_research::CouncilVerificationResult {
             submitted_claims: test_claims.iter().map(|c| c.id).collect(),
             council_verdict: "Approved".to_string(),
@@ -258,15 +278,24 @@ async fn test_evidence_verification(
     };
 
     let verified_count = verification_result.verified_claims.len() as u64;
-    let evidence_count = verification_result.verified_claims.iter()
+    let evidence_count = verification_result
+        .verified_claims
+        .iter()
         .map(|v| v.evidence.len() as u64)
         .sum::<u64>();
 
-    info!("Verified {} claims with {} evidence items", verified_count, evidence_count);
+    info!(
+        "Verified {} claims with {} evidence items",
+        verified_count, evidence_count
+    );
 
     Ok(ClaimTestResult {
         passed: verified_count > 0,
-        error: if verified_count == 0 { Some("No claims were verified".to_string()) } else { None },
+        error: if verified_count == 0 {
+            Some("No claims were verified".to_string())
+        } else {
+            None
+        },
         claims_extracted: test_claims.len() as u64,
         claims_verified: verified_count,
         hallucinations_detected: 0,
@@ -287,7 +316,8 @@ async fn test_hallucination_detection(
     // For now, create a placeholder verification result since verifier is not available
     let hallucination_claim = AtomicClaim {
         id: uuid::Uuid::new_v4(),
-        claim_text: "The system uses MongoDB for data persistence and runs on Kubernetes clusters".to_string(),
+        claim_text: "The system uses MongoDB for data persistence and runs on Kubernetes clusters"
+            .to_string(),
         claim_type: agent_research::ClaimType::Technical,
         verifiability: agent_research::VerifiabilityLevel::DirectlyVerifiable,
         scope: agent_research::ClaimScope {
@@ -338,12 +368,18 @@ async fn test_hallucination_detection(
     };
 
     // Check if the claim was flagged as unverified or low confidence
-    let hallucinations_detected = verification_result.verified_claims.iter()
+    let hallucinations_detected = verification_result
+        .verified_claims
+        .iter()
         .filter(|v| v.id == hallucination_claim.id && v.confidence < 0.5)
         .count() as u64;
 
     // Also check unverified claims
-    let unverified_count = if verification_result.verified_claims.is_empty() { 1 } else { 0 };
+    let unverified_count = if verification_result.verified_claims.is_empty() {
+        1
+    } else {
+        0
+    };
     let total_hallucinations = hallucinations_detected + unverified_count;
 
     info!("Detected {} potential hallucinations", total_hallucinations);
@@ -371,7 +407,7 @@ async fn test_contextual_disambiguation(
 
     // Test input with ambiguous terms that need disambiguation
     let ambiguous_input = "The agent processes the request and updates the database";
-    
+
     let context = ProcessingContext {
         task_id: Uuid::new_v4(),
         working_spec_id: "test-spec".to_string(),
@@ -383,12 +419,18 @@ async fn test_contextual_disambiguation(
         input_text: ambiguous_input.to_string(),
         language: None,
     };
-    
-    let result = processor.run(ambiguous_input, &context).await
+
+    let result = processor
+        .run(ambiguous_input, &context)
+        .await
         .map_err(|e| format!("Contextual disambiguation failed: {}", e))?;
 
     // Check if disambiguation occurred (disambiguated sentence differs from original)
-    let disambiguations = if result.disambiguated_sentence != ambiguous_input { 1 } else { 0 };
+    let disambiguations = if result.disambiguated_sentence != ambiguous_input {
+        1
+    } else {
+        0
+    };
 
     info!("Disambiguations resolved: {}", disambiguations);
 

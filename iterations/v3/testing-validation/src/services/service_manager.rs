@@ -9,11 +9,11 @@
 //!
 //! @author @darianrosebrook
 
+use reqwest::Client;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn, debug};
-use reqwest::Client;
+use tracing::{debug, info, warn};
 
 /// Service status information
 #[derive(Debug, Clone)]
@@ -49,12 +49,11 @@ impl ServiceManager {
                 .ok()
                 .and_then(|p| p.parse().ok())
                 .unwrap_or(3000),
-            coreml_models_path: std::env::var("COREML_MODELS_PATH")
-                .unwrap_or_else(|_| {
-                    // Default to workspace root models directory
-                    // This will be resolved relative to workspace root in get_possible_model_paths
-                    "models/coreml".to_string()
-                }),
+            coreml_models_path: std::env::var("COREML_MODELS_PATH").unwrap_or_else(|_| {
+                // Default to workspace root models directory
+                // This will be resolved relative to workspace root in get_possible_model_paths
+                "models/coreml".to_string()
+            }),
             http_client: Client::new(),
         }
     }
@@ -100,15 +99,17 @@ impl ServiceManager {
             Duration::from_secs(2),
             sqlx::postgres::PgPoolOptions::new()
                 .max_connections(1)
-                .connect(&self.postgres_url)
-        ).await
+                .connect(&self.postgres_url),
+        )
+        .await
         {
             Ok(Ok(pool)) => {
                 // Test with a simple query
                 match tokio::time::timeout(
                     Duration::from_secs(1),
-                    sqlx::query("SELECT 1").execute(&pool)
-                ).await
+                    sqlx::query("SELECT 1").execute(&pool),
+                )
+                .await
                 {
                     Ok(Ok(_)) => {
                         pool.close().await;
@@ -143,7 +144,8 @@ impl ServiceManager {
 
     /// Check Ollama health via HTTP
     async fn check_ollama_health(&self) -> bool {
-        match self.http_client
+        match self
+            .http_client
             .get(&format!("{}/api/tags", self.ollama_url))
             .timeout(Duration::from_secs(2))
             .send()
@@ -178,7 +180,8 @@ impl ServiceManager {
     /// Check embedding service endpoint
     async fn check_embedding_endpoint(&self) -> bool {
         // Check if embedding endpoint is available
-        match self.http_client
+        match self
+            .http_client
             .get(&format!("{}/api/v1/embeddings", self.embedding_url))
             .timeout(Duration::from_secs(2))
             .send()
@@ -223,7 +226,8 @@ impl ServiceManager {
         ];
 
         for health_url in &health_endpoints {
-            match self.http_client
+            match self
+                .http_client
                 .get(health_url)
                 .timeout(Duration::from_secs(2))
                 .send()
@@ -252,12 +256,15 @@ impl ServiceManager {
             endpoint: Some(found_path.unwrap_or_else(|| self.coreml_models_path.clone())),
             error: if !models_exist {
                 let paths = self.get_possible_model_paths();
-                Some(format!("CoreML models not found. Checked locations:\n  {}", 
-                    paths.iter()
+                Some(format!(
+                    "CoreML models not found. Checked locations:\n  {}",
+                    paths
+                        .iter()
                         .take(5) // Show first 5 paths
                         .map(|p| p.display().to_string())
                         .collect::<Vec<_>>()
-                        .join("\n  ")))
+                        .join("\n  ")
+                ))
             } else {
                 None
             },
@@ -267,16 +274,21 @@ impl ServiceManager {
     /// Check if CoreML models are present
     /// Returns (found, path_where_found)
     async fn check_models_present(&self) -> (bool, Option<String>) {
-
         // Try multiple possible locations for models
         let possible_paths = self.get_possible_model_paths();
-        
+
         for models_path in &possible_paths {
             if models_path.exists() {
                 // Check for expected model files
                 let expected_models = [
-                    ("fastvit/FastViTT8F16.mlpackage.mlmodelc", "FastViTT8F16.mlpackage.mlmodelc"),
-                    ("mistral/StatefulMistral7BInstructFP16.mlpackage.mlmodelc", "StatefulMistral7BInstructFP16.mlpackage.mlmodelc"),
+                    (
+                        "fastvit/FastViTT8F16.mlpackage.mlmodelc",
+                        "FastViTT8F16.mlpackage.mlmodelc",
+                    ),
+                    (
+                        "mistral/StatefulMistral7BInstructFP16.mlpackage.mlmodelc",
+                        "StatefulMistral7BInstructFP16.mlpackage.mlmodelc",
+                    ),
                 ];
 
                 let mut found_count = 0;
@@ -287,21 +299,26 @@ impl ServiceManager {
                         found_count += 1;
                         continue;
                     }
-                    
+
                     // Try direct path
                     let model_path = models_path.join(name);
                     if model_path.exists() {
                         found_count += 1;
                         continue;
                     }
-                    
-                    debug!("Model not found: {} or {}", models_path.join(subpath).display(), models_path.join(name).display());
+
+                    debug!(
+                        "Model not found: {} or {}",
+                        models_path.join(subpath).display(),
+                        models_path.join(name).display()
+                    );
                 }
 
                 if found_count >= 1 {
                     // At least one model found - good enough for now
                     // Normalize path (resolve .. and .)
-                    let normalized_path = models_path.canonicalize()
+                    let normalized_path = models_path
+                        .canonicalize()
                         .unwrap_or_else(|_| models_path.clone())
                         .display()
                         .to_string();
@@ -312,15 +329,15 @@ impl ServiceManager {
 
         (false, None)
     }
-    
+
     /// Get possible model paths to check
     fn get_possible_model_paths(&self) -> Vec<std::path::PathBuf> {
         use std::path::PathBuf;
-        
+
         let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        
+
         let mut paths = Vec::new();
-        
+
         // 1. Use configured path (could be absolute or relative)
         if !self.coreml_models_path.is_empty() {
             let configured = PathBuf::from(&self.coreml_models_path);
@@ -334,27 +351,27 @@ impl ServiceManager {
                 paths.push(current_dir.join("../../../models/coreml"));
             }
         }
-        
+
         // 2. Try common locations relative to workspace root
         paths.push(current_dir.join("../../models/coreml")); // From testing-validation
         paths.push(current_dir.join("../../../models/coreml")); // From testing-validation (alternative)
         paths.push(current_dir.join("models/coreml")); // From workspace root
         paths.push(PathBuf::from("models/coreml")); // Relative to current dir
-        
+
         // 3. Try absolute paths from common project structures
         // (Future: could check HOME directory, but unlikely)
-        
+
         // Remove duplicates
         paths.sort();
         paths.dedup();
-        
+
         paths
     }
 
     /// Start PostgreSQL if not running
     pub async fn ensure_postgres(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.check_postgres().await;
-        
+
         if status.running {
             info!("PostgreSQL is already running");
             return Ok(());
@@ -386,11 +403,16 @@ impl ServiceManager {
     async fn start_postgres_docker(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let output = Command::new("docker")
             .args(&[
-                "run", "-d",
-                "--name", "agent_agency_test_postgres",
-                "-p", "5432:5432",
-                "-e", "POSTGRES_PASSWORD=postgres",
-                "-e", "POSTGRES_USER=postgres",
+                "run",
+                "-d",
+                "--name",
+                "agent_agency_test_postgres",
+                "-p",
+                "5432:5432",
+                "-e",
+                "POSTGRES_PASSWORD=postgres",
+                "-e",
+                "POSTGRES_USER=postgres",
                 "postgres:15",
             ])
             .output()?;
@@ -443,7 +465,7 @@ impl ServiceManager {
     /// Ensure Ollama is running
     pub async fn ensure_ollama(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.check_ollama().await;
-        
+
         if status.running {
             info!("Ollama is already running");
             return Ok(());
@@ -464,7 +486,10 @@ impl ServiceManager {
                 Ok(())
             }
             Err(e) => {
-                warn!("Could not start Ollama: {}. Please start manually: ollama serve", e);
+                warn!(
+                    "Could not start Ollama: {}. Please start manually: ollama serve",
+                    e
+                );
                 Err(format!("Ollama could not be started: {}", e).into())
             }
         }
@@ -482,9 +507,11 @@ impl ServiceManager {
     }
 
     /// Ensure embedding service is available
-    pub async fn ensure_embedding_service(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn ensure_embedding_service(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.check_embedding_service().await;
-        
+
         if status.running {
             info!("Embedding service is already available");
             return Ok(());
@@ -506,7 +533,7 @@ impl ServiceManager {
     /// Ensure API server is running
     pub async fn ensure_api_server(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.check_api_server().await;
-        
+
         if status.running {
             info!("API server is already running");
             return Ok(());
@@ -517,7 +544,7 @@ impl ServiceManager {
         // Find and start API server - check multiple possible locations
         use std::path::PathBuf;
         let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        
+
         // Find workspace root
         let workspace_root = current_dir
             .ancestors()
@@ -526,11 +553,15 @@ impl ServiceManager {
                 let iterations = p.join("iterations");
                 cargo_toml.exists() && iterations.exists()
             })
-            .or_else(|| current_dir.ancestors().find(|p| p.join("Cargo.toml").exists()))
+            .or_else(|| {
+                current_dir
+                    .ancestors()
+                    .find(|p| p.join("Cargo.toml").exists())
+            })
             .unwrap_or_else(|| current_dir.as_path());
-        
+
         let v3_dir = workspace_root.join("iterations/v3");
-        
+
         // Check for binary in common locations (including target-specific directories)
         let possible_binary_paths = [
             v3_dir.join("target/debug/agent-agency-api-server"),
@@ -555,9 +586,12 @@ impl ServiceManager {
     }
 
     /// Build and start API server
-    async fn build_and_start_api_server(&self, v3_dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn build_and_start_api_server(
+        &self,
+        v3_dir: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use tokio::process::Command as TokioCommand;
-        
+
         info!("Building API server (this may take a minute)...");
         let build_output = TokioCommand::new("cargo")
             .arg("build")
@@ -568,49 +602,54 @@ impl ServiceManager {
             .current_dir(v3_dir)
             .output()
             .await?;
-        
+
         if !build_output.status.success() {
             let stderr = String::from_utf8_lossy(&build_output.stderr);
             warn!("API server build failed: {}", stderr);
             return Err(format!("Failed to build API server: {}", stderr).into());
         }
-        
+
         info!("API server built successfully");
-        
+
         // Try to find the binary after build
         let possible_binary_paths = [
             v3_dir.join("target/debug/agent-agency-api-server"),
             v3_dir.join("target/aarch64-apple-darwin/debug/agent-agency-api-server"),
         ];
-        
+
         for binary_path in &possible_binary_paths {
             if binary_path.exists() {
                 return self.start_api_server_binary(binary_path).await;
             }
         }
-        
+
         Err("API server binary not found after build".into())
     }
-    
+
     /// Start API server binary
-    async fn start_api_server_binary(&self, binary_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn start_api_server_binary(
+        &self,
+        binary_path: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use tokio::process::Command as TokioCommand;
-        
+
         info!("Starting API server from: {}", binary_path.display());
-        
+
         // Start the server in the background
         let mut child = TokioCommand::new(binary_path)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()?;
-        
+
         // Give it a moment to start
         sleep(Duration::from_millis(500)).await;
-        
+
         // Check if it's still running
         match child.try_wait() {
             Ok(Some(status)) => {
-                return Err(format!("API server exited immediately with status: {:?}", status).into());
+                return Err(
+                    format!("API server exited immediately with status: {:?}", status).into(),
+                );
             }
             Ok(None) => {
                 info!("API server process started successfully");
@@ -621,7 +660,7 @@ impl ServiceManager {
                 return Err(format!("Failed to check API server status: {}", e).into());
             }
         }
-        
+
         Ok(())
     }
 
@@ -638,9 +677,11 @@ impl ServiceManager {
     }
 
     /// Ensure CoreML models are available
-    pub async fn ensure_coreml_models(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn ensure_coreml_models(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let status = self.check_coreml_models().await;
-        
+
         if status.running {
             info!("CoreML models are available");
             return Ok(());
@@ -652,7 +693,10 @@ impl ServiceManager {
     }
 
     /// Ensure all required services are running
-    pub async fn ensure_all_services(&self, required: &[&str]) -> Result<Vec<ServiceStatus>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn ensure_all_services(
+        &self,
+        required: &[&str],
+    ) -> Result<Vec<ServiceStatus>, Box<dyn std::error::Error + Send + Sync>> {
         info!("Ensuring all required services are running...");
 
         let mut statuses = Vec::new();
@@ -700,4 +744,3 @@ impl Default for ServiceManager {
         Self::new()
     }
 }
-

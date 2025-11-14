@@ -267,7 +267,11 @@ impl SystemMetricsCollector {
     }
 
     /// Analyze metrics and provide recommendations
-    pub fn analyze_metrics(&self, current: &SystemMetrics, previous: Option<&SystemMetrics>) -> MetricsAnalysis {
+    pub fn analyze_metrics(
+        &self,
+        current: &SystemMetrics,
+        previous: Option<&SystemMetrics>,
+    ) -> MetricsAnalysis {
         let cpu_trend = if let Some(prev) = previous {
             if current.cpu.usage_percent > prev.cpu.usage_percent + 5.0 {
                 MetricTrend::Increasing
@@ -290,23 +294,39 @@ impl SystemMetricsCollector {
             MemoryPressure::Low
         };
 
-        let disk_io_intensity = if current.disk.read_bytes_per_sec + current.disk.write_bytes_per_sec > 100_000_000.0 { // 100MB/s
+        let disk_io_intensity = if current.disk.read_bytes_per_sec
+            + current.disk.write_bytes_per_sec
+            > 100_000_000.0
+        {
+            // 100MB/s
             IoIntensity::VeryHigh
-        } else if current.disk.read_bytes_per_sec + current.disk.write_bytes_per_sec > 10_000_000.0 { // 10MB/s
+        } else if current.disk.read_bytes_per_sec + current.disk.write_bytes_per_sec > 10_000_000.0
+        {
+            // 10MB/s
             IoIntensity::High
-        } else if current.disk.read_bytes_per_sec + current.disk.write_bytes_per_sec > 1_000_000.0 { // 1MB/s
+        } else if current.disk.read_bytes_per_sec + current.disk.write_bytes_per_sec > 1_000_000.0 {
+            // 1MB/s
             IoIntensity::Moderate
         } else {
             IoIntensity::Low
         };
 
-        let network_activity = if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 100_000_000.0 { // 100MB/s
+        let network_activity = if current.network.rx_bytes_per_sec
+            + current.network.tx_bytes_per_sec
+            > 100_000_000.0
+        {
+            // 100MB/s
             NetworkActivity::VeryHigh
-        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 10_000_000.0 { // 10MB/s
+        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 10_000_000.0
+        {
+            // 10MB/s
             NetworkActivity::High
-        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 1_000_000.0 { // 1MB/s
+        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 1_000_000.0
+        {
+            // 1MB/s
             NetworkActivity::Moderate
-        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 100_000.0 { // 100KB/s
+        } else if current.network.rx_bytes_per_sec + current.network.tx_bytes_per_sec > 100_000.0 {
+            // 100KB/s
             NetworkActivity::Low
         } else {
             NetworkActivity::Idle
@@ -316,22 +336,42 @@ impl SystemMetricsCollector {
         let health_score = {
             let cpu_score = 1.0 - (current.cpu.usage_percent / 100.0);
             let memory_score = 1.0 - (current.memory.usage_percent / 100.0);
-            let disk_score = if current.disk.usage_by_mount.values().any(|usage| usage.usage_percent > 90.0) { 0.5 } else { 1.0 };
+            let disk_score = if current
+                .disk
+                .usage_by_mount
+                .values()
+                .any(|usage| usage.usage_percent > 90.0)
+            {
+                0.5
+            } else {
+                1.0
+            };
             (cpu_score + memory_score + disk_score) / 3.0
         };
 
         let mut recommendations = Vec::new();
 
         if current.cpu.usage_percent > 80.0 {
-            recommendations.push("High CPU usage detected. Consider optimizing compute-intensive operations.".to_string());
+            recommendations.push(
+                "High CPU usage detected. Consider optimizing compute-intensive operations."
+                    .to_string(),
+            );
         }
 
         if current.memory.usage_percent > 85.0 {
             recommendations.push("High memory usage detected. Consider increasing memory limits or optimizing memory usage.".to_string());
         }
 
-        if current.disk.usage_by_mount.values().any(|usage| usage.usage_percent > 90.0) {
-            recommendations.push("High disk usage detected. Consider cleaning up old data or increasing disk space.".to_string());
+        if current
+            .disk
+            .usage_by_mount
+            .values()
+            .any(|usage| usage.usage_percent > 90.0)
+        {
+            recommendations.push(
+                "High disk usage detected. Consider cleaning up old data or increasing disk space."
+                    .to_string(),
+            );
         }
 
         if health_score < 0.5 {
@@ -361,24 +401,27 @@ impl SystemMetricsCollector {
 
     async fn collect_memory_metrics(&self) -> Result<MemoryMetrics, Box<dyn std::error::Error>> {
         Ok(MemoryMetrics {
-            total_bytes: 16 * 1024 * 1024 * 1024, // 16GB
-            used_bytes: 8 * 1024 * 1024 * 1024,   // 8GB
+            total_bytes: 16 * 1024 * 1024 * 1024,    // 16GB
+            used_bytes: 8 * 1024 * 1024 * 1024,      // 8GB
             available_bytes: 8 * 1024 * 1024 * 1024, // 8GB
             usage_percent: 50.0,
             swap_total_bytes: 4 * 1024 * 1024 * 1024, // 4GB
-            swap_used_bytes: 1 * 1024 * 1024 * 1024,   // 1GB
+            swap_used_bytes: 1 * 1024 * 1024 * 1024,  // 1GB
         })
     }
 
     async fn collect_disk_metrics(&self) -> Result<DiskMetrics, Box<dyn std::error::Error>> {
         let mut usage_by_mount = HashMap::new();
-        usage_by_mount.insert("/".to_string(), DiskUsage {
-            mount_point: "/".to_string(),
-            total_bytes: 500 * 1024 * 1024 * 1024, // 500GB
-            used_bytes: 200 * 1024 * 1024 * 1024,  // 200GB
-            available_bytes: 300 * 1024 * 1024 * 1024, // 300GB
-            usage_percent: 40.0,
-        });
+        usage_by_mount.insert(
+            "/".to_string(),
+            DiskUsage {
+                mount_point: "/".to_string(),
+                total_bytes: 500 * 1024 * 1024 * 1024, // 500GB
+                used_bytes: 200 * 1024 * 1024 * 1024,  // 200GB
+                available_bytes: 300 * 1024 * 1024 * 1024, // 300GB
+                usage_percent: 40.0,
+            },
+        );
 
         Ok(DiskMetrics {
             read_bytes_per_sec: 50.0 * 1024.0 * 1024.0,  // 50MB/s
@@ -390,21 +433,19 @@ impl SystemMetricsCollector {
     }
 
     async fn collect_network_metrics(&self) -> Result<NetworkMetrics, Box<dyn std::error::Error>> {
-        let interfaces = vec![
-            NetworkInterface {
-                name: "eth0".to_string(),
-                mac_address: Some("00:11:22:33:44:55".to_string()),
-                ip_addresses: vec!["192.168.1.100".to_string()],
-                rx_bytes: 1_000_000,
-                tx_bytes: 500_000,
-                rx_packets: 10_000,
-                tx_packets: 8_000,
-            }
-        ];
+        let interfaces = vec![NetworkInterface {
+            name: "eth0".to_string(),
+            mac_address: Some("00:11:22:33:44:55".to_string()),
+            ip_addresses: vec!["192.168.1.100".to_string()],
+            rx_bytes: 1_000_000,
+            tx_bytes: 500_000,
+            rx_packets: 10_000,
+            tx_packets: 8_000,
+        }];
 
         Ok(NetworkMetrics {
-            rx_bytes_per_sec: 50.0 * 1024.0,  // 50KB/s
-            tx_bytes_per_sec: 25.0 * 1024.0,  // 25KB/s
+            rx_bytes_per_sec: 50.0 * 1024.0, // 50KB/s
+            tx_bytes_per_sec: 25.0 * 1024.0, // 25KB/s
             rx_packets_per_sec: 100.0,
             tx_packets_per_sec: 80.0,
             interfaces,
@@ -424,7 +465,9 @@ impl SystemMetricsCollector {
         })
     }
 
-    async fn collect_load_average_metrics(&self) -> Result<LoadAverageMetrics, Box<dyn std::error::Error>> {
+    async fn collect_load_average_metrics(
+        &self,
+    ) -> Result<LoadAverageMetrics, Box<dyn std::error::Error>> {
         Ok(LoadAverageMetrics {
             one_minute: 1.0,
             five_minute: 1.0,

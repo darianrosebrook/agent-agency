@@ -3,17 +3,17 @@
 //! Comprehensive system for validating backup integrity, testing restore procedures,
 //! and ensuring backups are actually usable in disaster scenarios.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sha2::Digest;
+use tempfile;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
-use tempfile;
 
 use crate::simple_client::DatabaseClient;
 
@@ -43,7 +43,7 @@ impl Default for BackupValidationConfig {
             enable_restore_testing: true,
             test_database_url: None,
             max_validation_time_secs: 300, // 5 minutes
-            sample_size_percentage: 10.0, // Test 10% of data
+            sample_size_percentage: 10.0,  // Test 10% of data
             enable_checksum_verification: true,
             min_restore_success_rate: 99.0, // 99% success rate required
         }
@@ -55,7 +55,6 @@ impl Default for BackupValidationConfig {
 pub struct ValidationResult {
     pub backup_id: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub overall_success: bool,
     pub validation_duration_ms: u64,
@@ -133,11 +132,16 @@ impl BackupValidator {
         info!("Starting comprehensive validation of backup: {}", backup_id);
 
         // Step 1: Integrity checks
-        let integrity_results = self.perform_integrity_checks(backup_path, backup_metadata).await?;
+        let integrity_results = self
+            .perform_integrity_checks(backup_path, backup_metadata)
+            .await?;
 
         // Step 2: Restore testing (if enabled)
         let restore_results = if self.config.enable_restore_testing {
-            Some(self.perform_restore_testing(backup_path, backup_metadata).await?)
+            Some(
+                self.perform_restore_testing(backup_path, backup_metadata)
+                    .await?,
+            )
         } else {
             None
         };
@@ -147,10 +151,12 @@ impl BackupValidator {
         let overall_success = risk_assessment != RiskLevel::Critical;
 
         // Step 4: Generate recommendations
-        let recommendations = self.generate_recommendations(&integrity_results, &restore_results, risk_assessment);
+        let recommendations =
+            self.generate_recommendations(&integrity_results, &restore_results, risk_assessment);
 
         // Step 5: Calculate quality score
-        let score = self.calculate_quality_score(&integrity_results, &restore_results, risk_assessment);
+        let score =
+            self.calculate_quality_score(&integrity_results, &restore_results, risk_assessment);
 
         let result = ValidationResult {
             backup_id: backup_id.clone(),
@@ -175,8 +181,10 @@ impl BackupValidator {
             }
         }
 
-        info!("Backup validation completed: {} (success: {}, score: {}, risk: {:?})",
-              backup_id, overall_success, score, risk_assessment);
+        info!(
+            "Backup validation completed: {} (success: {}, score: {}, risk: {:?})",
+            backup_id, overall_success, score, risk_assessment
+        );
 
         Ok(result)
     }
@@ -190,11 +198,14 @@ impl BackupValidator {
         let mut issues = Vec::new();
 
         // Check 1: File existence and accessibility
-        let file_integrity_ok = self.check_file_integrity(backup_path, metadata, &mut issues).await;
+        let file_integrity_ok = self
+            .check_file_integrity(backup_path, metadata, &mut issues)
+            .await;
 
         // Check 2: Checksum verification
         let checksum_verification_ok = if self.config.enable_checksum_verification {
-            self.verify_checksums(backup_path, metadata, &mut issues).await
+            self.verify_checksums(backup_path, metadata, &mut issues)
+                .await
         } else {
             true
         };
@@ -203,10 +214,14 @@ impl BackupValidator {
         let metadata_consistency_ok = self.check_metadata_consistency(metadata, &mut issues);
 
         // Check 4: Data structure validation
-        let data_structure_valid = self.validate_data_structures(backup_path, metadata, &mut issues).await;
+        let data_structure_valid = self
+            .validate_data_structures(backup_path, metadata, &mut issues)
+            .await;
 
         // Check 5: Compression integrity (if applicable)
-        let compression_integrity_ok = self.check_compression_integrity(backup_path, metadata, &mut issues).await;
+        let compression_integrity_ok = self
+            .check_compression_integrity(backup_path, metadata, &mut issues)
+            .await;
 
         Ok(IntegrityCheckResults {
             file_integrity_ok,
@@ -243,12 +258,19 @@ impl BackupValidator {
                     if size == 0 {
                         issues.push(format!("Backup file is empty for table: {}", table));
                         all_files_exist = false;
-                    } else if size > 10 * 1024 * 1024 * 1024 { // 10GB
-                        issues.push(format!("Backup file suspiciously large for table {}: {} bytes", table, size));
+                    } else if size > 10 * 1024 * 1024 * 1024 {
+                        // 10GB
+                        issues.push(format!(
+                            "Backup file suspiciously large for table {}: {} bytes",
+                            table, size
+                        ));
                     }
                 }
                 Err(e) => {
-                    issues.push(format!("Cannot access backup file for table {}: {}", table, e));
+                    issues.push(format!(
+                        "Cannot access backup file for table {}: {}",
+                        table, e
+                    ));
                     all_files_exist = false;
                 }
             }
@@ -299,7 +321,10 @@ impl BackupValidator {
         let stored_checksum = &metadata.checksum;
 
         if calculated_checksum != *stored_checksum {
-            issues.push(format!("Checksum mismatch: calculated={}, stored={}", calculated_checksum, stored_checksum));
+            issues.push(format!(
+                "Checksum mismatch: calculated={}, stored={}",
+                calculated_checksum, stored_checksum
+            ));
             false
         } else {
             true
@@ -340,8 +365,12 @@ impl BackupValidator {
                 issues.push(format!("Negative row count for table {}: {}", table, count));
                 consistent = false;
             }
-            if count > 1_000_000_000 { // 1 billion rows
-                issues.push(format!("Suspiciously high row count for table {}: {}", table, count));
+            if count > 1_000_000_000 {
+                // 1 billion rows
+                issues.push(format!(
+                    "Suspiciously high row count for table {}: {}",
+                    table, count
+                ));
                 consistent = false;
             }
         }
@@ -359,8 +388,13 @@ impl BackupValidator {
         let mut valid = true;
 
         // Sample a few tables for structure validation
-        let sample_tables: Vec<_> = metadata.tables.iter()
-            .take((metadata.tables.len() as f64 * self.config.sample_size_percentage / 100.0) as usize)
+        let sample_tables: Vec<_> = metadata
+            .tables
+            .iter()
+            .take(
+                (metadata.tables.len() as f64 * self.config.sample_size_percentage / 100.0)
+                    as usize,
+            )
             .collect();
 
         for table in sample_tables {
@@ -369,12 +403,18 @@ impl BackupValidator {
             match tokio::fs::read_to_string(&backup_file).await {
                 Ok(content) => {
                     if !self.validate_sql_content(&content, table) {
-                        issues.push(format!("Invalid SQL structure in backup for table: {}", table));
+                        issues.push(format!(
+                            "Invalid SQL structure in backup for table: {}",
+                            table
+                        ));
                         valid = false;
                     }
                 }
                 Err(e) => {
-                    issues.push(format!("Failed to read backup content for table {}: {}", table, e));
+                    issues.push(format!(
+                        "Failed to read backup content for table {}: {}",
+                        table, e
+                    ));
                     valid = false;
                 }
             }
@@ -434,42 +474,54 @@ impl BackupValidator {
         let restore_start = Instant::now();
 
         // Get test database URL
-        let test_db_url = self.config.test_database_url.as_ref()
+        let test_db_url = self
+            .config
+            .test_database_url
+            .as_ref()
             .ok_or("Test database URL not configured for restore testing")?;
 
         // Create temporary test database
-        let temp_db_name = format!("test_restore_{}_{}",
+        let temp_db_name = format!(
+            "test_restore_{}_{}",
             metadata.id,
-            chrono::Utc::now().timestamp());
+            chrono::Utc::now().timestamp()
+        );
 
         info!("Creating temporary test database: {}", temp_db_name);
 
         // Connect to postgres to create temp database
-        let admin_conn = sqlx::PgPool::connect(test_db_url).await
+        let admin_conn = sqlx::PgPool::connect(test_db_url)
+            .await
             .map_err(|e| format!("Failed to connect to test database: {}", e))?;
 
         // Create temporary database
-        sqlx::query(&format!("CREATE DATABASE {} TEMPLATE template0", temp_db_name))
-            .execute(&admin_conn)
-            .await
-            .map_err(|e| format!("Failed to create test database {}: {}", temp_db_name, e))?;
+        sqlx::query(&format!(
+            "CREATE DATABASE {} TEMPLATE template0",
+            temp_db_name
+        ))
+        .execute(&admin_conn)
+        .await
+        .map_err(|e| format!("Failed to create test database {}: {}", temp_db_name, e))?;
 
         admin_conn.close().await;
 
         // Modify connection string to use temp database
         let temp_db_url = if let Some(pos) = test_db_url.rfind('/') {
-            format!("{}{}", &test_db_url[..pos+1], temp_db_name)
+            format!("{}{}", &test_db_url[..pos + 1], temp_db_name)
         } else {
             return Err("Invalid database URL format".into());
         };
 
         // Connect to temporary database
-        let temp_conn = sqlx::PgPool::connect(&temp_db_url).await
+        let temp_conn = sqlx::PgPool::connect(&temp_db_url)
+            .await
             .map_err(|e| format!("Failed to connect to temp database: {}", e))?;
 
         // Restore the backup
         info!("Restoring backup to test database");
-        let restore_result = self.restore_backup_to_database(backup_path, &temp_conn).await;
+        let restore_result = self
+            .restore_backup_to_database(backup_path, &temp_conn)
+            .await;
 
         let mut restore_successful = restore_result.is_ok();
         let mut errors_encountered = Vec::new();
@@ -496,7 +548,8 @@ impl BackupValidator {
             (false, HashMap::new(), 0.0)
         };
 
-        let performance_acceptable = restore_start.elapsed() < Duration::from_secs(self.config.max_validation_time_secs);
+        let performance_acceptable =
+            restore_start.elapsed() < Duration::from_secs(self.config.max_validation_time_secs);
 
         // Clean up temporary database
         info!("Cleaning up temporary test database: {}", temp_db_name);
@@ -544,16 +597,20 @@ impl BackupValidator {
         conn: &sqlx::PgPool,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Read the SQL file
-        let sql_content = tokio::fs::read_to_string(backup_path).await
+        let sql_content = tokio::fs::read_to_string(backup_path)
+            .await
             .map_err(|e| format!("Failed to read SQL dump: {}", e))?;
 
         // Execute SQL commands
         for statement in sql_content.split(';').filter(|s| !s.trim().is_empty()) {
             if !statement.trim().is_empty() {
-                sqlx::query(statement)
-                    .execute(conn)
-                    .await
-                    .map_err(|e| format!("Failed to execute SQL statement: {} - {}", statement.trim(), e))?;
+                sqlx::query(statement).execute(conn).await.map_err(|e| {
+                    format!(
+                        "Failed to execute SQL statement: {} - {}",
+                        statement.trim(),
+                        e
+                    )
+                })?;
             }
         }
 
@@ -566,8 +623,8 @@ impl BackupValidator {
         backup_path: &Path,
         conn: &sqlx::PgPool,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        use std::fs;
         use flate2::read::GzDecoder;
+        use std::fs;
         use tar::Archive;
 
         // Decompress and extract
@@ -619,15 +676,20 @@ impl BackupValidator {
         // Check each table mentioned in metadata
         for (table_name, original_count) in &original_metadata.row_counts {
             let count_query = format!("SELECT COUNT(*) as count FROM {}", table_name);
-            match sqlx::query_scalar::<_, i64>(&count_query).fetch_one(conn).await {
+            match sqlx::query_scalar::<_, i64>(&count_query)
+                .fetch_one(conn)
+                .await
+            {
                 Ok(restored_count) => {
                     records_restored.insert(table_name.clone(), restored_count as u64);
                     total_original_records += original_count;
                     total_restored_records += restored_count as u64;
 
                     if (restored_count as u64) != (*original_count as u64) {
-                        warn!("Record count mismatch for table {}: expected {}, got {}",
-                              table_name, original_count, restored_count);
+                        warn!(
+                            "Record count mismatch for table {}: expected {}, got {}",
+                            table_name, original_count, restored_count
+                        );
                         integrity_ok = false;
                     }
                 }
@@ -660,7 +722,8 @@ impl BackupValidator {
         temp_db_name: &str,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Connect to admin database to drop temp database
-        let admin_conn = sqlx::PgPool::connect(admin_db_url).await
+        let admin_conn = sqlx::PgPool::connect(admin_db_url)
+            .await
             .map_err(|e| format!("Failed to connect to admin database for cleanup: {}", e))?;
 
         // Force disconnect all connections to the temp database
@@ -690,19 +753,36 @@ impl BackupValidator {
         let mut risk_score = 0;
 
         // Integrity issues increase risk
-        if !integrity.file_integrity_ok { risk_score += 30; }
-        if !integrity.checksum_verification_ok { risk_score += 25; }
-        if !integrity.metadata_consistency_ok { risk_score += 20; }
-        if !integrity.data_structure_valid { risk_score += 25; }
-        if !integrity.compression_integrity_ok { risk_score += 15; }
+        if !integrity.file_integrity_ok {
+            risk_score += 30;
+        }
+        if !integrity.checksum_verification_ok {
+            risk_score += 25;
+        }
+        if !integrity.metadata_consistency_ok {
+            risk_score += 20;
+        }
+        if !integrity.data_structure_valid {
+            risk_score += 25;
+        }
+        if !integrity.compression_integrity_ok {
+            risk_score += 15;
+        }
 
         // Restore test issues increase risk
         if let Some(restore_results) = restore {
-            if !restore_results.restore_successful { risk_score += 40; }
-            if !restore_results.data_integrity_ok { risk_score += 30; }
-            if !restore_results.performance_acceptable { risk_score += 20; }
+            if !restore_results.restore_successful {
+                risk_score += 40;
+            }
+            if !restore_results.data_integrity_ok {
+                risk_score += 30;
+            }
+            if !restore_results.performance_acceptable {
+                risk_score += 20;
+            }
 
-            if restore_results.data_consistency_score < self.config.min_restore_success_rate / 100.0 {
+            if restore_results.data_consistency_score < self.config.min_restore_success_rate / 100.0
+            {
                 risk_score += 25;
             }
         }
@@ -728,11 +808,14 @@ impl BackupValidator {
         let mut recommendations = Vec::new();
 
         if !integrity.file_integrity_ok {
-            recommendations.push("Fix backup file creation process - files are missing or corrupted".to_string());
+            recommendations.push(
+                "Fix backup file creation process - files are missing or corrupted".to_string(),
+            );
         }
 
         if !integrity.checksum_verification_ok {
-            recommendations.push("Implement proper checksum verification in backup process".to_string());
+            recommendations
+                .push("Implement proper checksum verification in backup process".to_string());
         }
 
         if !integrity.metadata_consistency_ok {
@@ -745,15 +828,21 @@ impl BackupValidator {
 
         if let Some(restore_results) = restore {
             if !restore_results.restore_successful {
-                recommendations.push("Fix restore procedure - backups cannot be restored successfully".to_string());
+                recommendations.push(
+                    "Fix restore procedure - backups cannot be restored successfully".to_string(),
+                );
             }
 
             if !restore_results.data_integrity_ok {
-                recommendations.push("Investigate data corruption issues in backup/restore pipeline".to_string());
+                recommendations.push(
+                    "Investigate data corruption issues in backup/restore pipeline".to_string(),
+                );
             }
 
             if !restore_results.performance_acceptable {
-                recommendations.push("Optimize backup/restore performance to meet RTO requirements".to_string());
+                recommendations.push(
+                    "Optimize backup/restore performance to meet RTO requirements".to_string(),
+                );
             }
         }
 
@@ -763,13 +852,17 @@ impl BackupValidator {
                 recommendations.push("Implement immediate backup system overhaul".to_string());
             }
             RiskLevel::High => {
-                recommendations.push("HIGH PRIORITY: Address backup issues before next scheduled backup".to_string());
+                recommendations.push(
+                    "HIGH PRIORITY: Address backup issues before next scheduled backup".to_string(),
+                );
             }
             RiskLevel::Medium => {
-                recommendations.push("MEDIUM PRIORITY: Monitor backup issues and plan fixes".to_string());
+                recommendations
+                    .push("MEDIUM PRIORITY: Monitor backup issues and plan fixes".to_string());
             }
             RiskLevel::Low => {
-                recommendations.push("Backups are in good condition - continue monitoring".to_string());
+                recommendations
+                    .push("Backups are in good condition - continue monitoring".to_string());
             }
         }
 
@@ -786,17 +879,33 @@ impl BackupValidator {
         let mut score = 100;
 
         // Deduct points for integrity issues
-        if !integrity.file_integrity_ok { score -= 20; }
-        if !integrity.checksum_verification_ok { score -= 15; }
-        if !integrity.metadata_consistency_ok { score -= 10; }
-        if !integrity.data_structure_valid { score -= 15; }
-        if !integrity.compression_integrity_ok { score -= 5; }
+        if !integrity.file_integrity_ok {
+            score -= 20;
+        }
+        if !integrity.checksum_verification_ok {
+            score -= 15;
+        }
+        if !integrity.metadata_consistency_ok {
+            score -= 10;
+        }
+        if !integrity.data_structure_valid {
+            score -= 15;
+        }
+        if !integrity.compression_integrity_ok {
+            score -= 5;
+        }
 
         // Deduct points for restore issues
         if let Some(restore_results) = restore {
-            if !restore_results.restore_successful { score -= 25; }
-            if !restore_results.data_integrity_ok { score -= 20; }
-            if !restore_results.performance_acceptable { score -= 10; }
+            if !restore_results.restore_successful {
+                score -= 25;
+            }
+            if !restore_results.data_integrity_ok {
+                score -= 20;
+            }
+            if !restore_results.performance_acceptable {
+                score -= 10;
+            }
 
             // Deduct based on consistency score
             let consistency_penalty = ((1.0 - restore_results.data_consistency_score) * 20.0) as u8;
@@ -806,9 +915,15 @@ impl BackupValidator {
         // Deduct points for risk level
         match risk {
             RiskLevel::Low => {}
-            RiskLevel::Medium => { score -= 10; }
-            RiskLevel::High => { score -= 25; }
-            RiskLevel::Critical => { score -= 50; }
+            RiskLevel::Medium => {
+                score -= 10;
+            }
+            RiskLevel::High => {
+                score -= 25;
+            }
+            RiskLevel::Critical => {
+                score -= 50;
+            }
         }
 
         // Deduct points for issues found
@@ -846,10 +961,13 @@ impl BackupValidator {
 
         let mut risk_distribution = HashMap::new();
         for validation in &*history {
-            *risk_distribution.entry(validation.risk_assessment).or_insert(0) += 1;
+            *risk_distribution
+                .entry(validation.risk_assessment)
+                .or_insert(0) += 1;
         }
 
-        let recent_failures = history.iter()
+        let recent_failures = history
+            .iter()
             .rev()
             .take(10)
             .filter(|v| !v.overall_success)
@@ -891,7 +1009,7 @@ mod tests {
                 return;
             }
         };
-        
+
         let config = BackupValidationConfig::default();
         let validator = BackupValidator::new(db_client, config);
 
@@ -909,7 +1027,7 @@ mod tests {
                 return;
             }
         };
-        
+
         let validator = BackupValidator::new(db_client, BackupValidationConfig::default());
 
         let integrity = IntegrityCheckResults {
@@ -935,7 +1053,7 @@ mod tests {
                 return;
             }
         };
-        
+
         let validator = BackupValidator::new(db_client, BackupValidationConfig::default());
 
         let integrity = IntegrityCheckResults {

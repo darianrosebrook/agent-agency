@@ -4,11 +4,11 @@
 //! ConnectionPoolManager implementation. This ensures consistent connection patterns
 //! across all database clients and modules.
 
-use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, postgres::PgConnectOptions};
+use sqlx::{postgres::PgConnectOptions, PgPool};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -99,12 +99,14 @@ impl ConnectionPoolManager {
         if let Some(instance) = INSTANCE.get() {
             return Ok(instance.clone());
         }
-        
+
         let config = Self::load_config_from_env()?;
         let instance = Arc::new(Self::new(config).await?);
-        
-        INSTANCE.set(instance.clone()).map_err(|_| anyhow::anyhow!("Failed to set singleton instance"))?;
-        
+
+        INSTANCE
+            .set(instance.clone())
+            .map_err(|_| anyhow::anyhow!("Failed to set singleton instance"))?;
+
         Ok(instance)
     }
 
@@ -164,7 +166,7 @@ impl ConnectionPoolManager {
     pub async fn get_stats(&self) -> PoolStats {
         let pool_stats = self.pool.size();
         let idle_count = self.pool.num_idle();
-        
+
         PoolStats {
             total_count: pool_stats as u32,
             idle_count: idle_count as u32,
@@ -197,18 +199,14 @@ impl ConnectionPoolManager {
     /// Load configuration from environment variables
     fn load_config_from_env() -> Result<DatabaseConnectionConfig> {
         let config = DatabaseConnectionConfig {
-            host: std::env::var("DATABASE_HOST")
-                .unwrap_or_else(|_| "localhost".to_string()),
+            host: std::env::var("DATABASE_HOST").unwrap_or_else(|_| "localhost".to_string()),
             port: std::env::var("DATABASE_PORT")
                 .unwrap_or_else(|_| "5432".to_string())
                 .parse()
                 .context("Invalid DATABASE_PORT")?,
-            database: std::env::var("DATABASE_NAME")
-                .unwrap_or_else(|_| "agent_agency".to_string()),
-            username: std::env::var("DATABASE_USER")
-                .unwrap_or_else(|_| "postgres".to_string()),
-            password: std::env::var("DATABASE_PASSWORD")
-                .unwrap_or_else(|_| "password".to_string()),
+            database: std::env::var("DATABASE_NAME").unwrap_or_else(|_| "agent_agency".to_string()),
+            username: std::env::var("DATABASE_USER").unwrap_or_else(|_| "postgres".to_string()),
+            password: std::env::var("DATABASE_PASSWORD").unwrap_or_else(|_| "password".to_string()),
             ssl: std::env::var("DATABASE_SSL")
                 .unwrap_or_else(|_| "false".to_string())
                 .parse()
@@ -246,10 +244,10 @@ impl ConnectionPoolManager {
 pub trait PooledDatabaseClient {
     /// Initialize the client with the centralized pool
     async fn initialize(&self) -> Result<()>;
-    
+
     /// Check if the client is available (pool is healthy)
     async fn is_available(&self) -> bool;
-    
+
     /// Get the connection pool manager
     async fn get_pool_manager(&self) -> Arc<ConnectionPoolManager>;
 }

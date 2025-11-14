@@ -2,10 +2,10 @@
 //!
 //! Manages context allocation, hierarchical organization, and budget enforcement.
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::collections::HashMap;
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
@@ -25,7 +25,10 @@ impl HierarchicalContextManager {
     }
 
     /// Allocate context within budget
-    pub async fn allocate_context(&self, budget: &ContextBudget) -> Result<ContextBundle, SelfPromptingAgentError> {
+    pub async fn allocate_context(
+        &self,
+        budget: &ContextBudget,
+    ) -> Result<ContextBundle, SelfPromptingAgentError> {
         // Allocate context based on budget constraints
         // Calculate token usage based on priority and budget limits
         let tokens_used = if budget.priority > 0.8 {
@@ -50,7 +53,10 @@ impl HierarchicalContextManager {
 
         Ok(ContextBundle {
             id: uuid::Uuid::new_v4().to_string(),
-            content: format!("Allocated context with budget: {} tokens (priority: {:.2})", budget.max_tokens, budget.priority),
+            content: format!(
+                "Allocated context with budget: {} tokens (priority: {:.2})",
+                budget.max_tokens, budget.priority
+            ),
             metadata: HashMap::from([
                 ("max_tokens".to_string(), budget.max_tokens.to_string()),
                 ("priority".to_string(), budget.priority.to_string()),
@@ -62,7 +68,12 @@ impl HierarchicalContextManager {
                 source: "hierarchical_manager".to_string(),
             },
             stats: ContextStats {
-                total_tokens: self.contexts.values().map(|c| c.allocation.tokens_used).sum::<usize>() + tokens_used,
+                total_tokens: self
+                    .contexts
+                    .values()
+                    .map(|c| c.allocation.tokens_used)
+                    .sum::<usize>()
+                    + tokens_used,
                 active_contexts: self.contexts.len() + 1,
                 cache_hit_rate,
             },
@@ -80,25 +91,37 @@ impl HierarchicalContextManager {
         self.contexts.insert(id.clone(), bundle);
 
         if let Some(parent) = parent_id {
-            self.hierarchy.entry(parent).or_insert_with(Vec::new).push(id);
+            self.hierarchy
+                .entry(parent)
+                .or_insert_with(Vec::new)
+                .push(id);
         }
     }
 
     /// Get context statistics
     pub fn get_stats(&self) -> ContextStats {
-        let total_tokens = self.contexts.values().map(|c| c.allocation.tokens_used).sum();
+        let total_tokens = self
+            .contexts
+            .values()
+            .map(|c| c.allocation.tokens_used)
+            .sum();
         let active_contexts = self.contexts.len();
-        
+
         // Calculate cache hit rate based on hierarchy depth and context count
         let cache_hit_rate = if active_contexts == 0 {
             0.0
         } else {
             // More contexts with hierarchy = better cache utilization
-            let hierarchy_depth = self.hierarchy.values().map(|children| children.len()).sum::<usize>();
-            let hierarchy_factor = (hierarchy_depth as f64 / active_contexts.max(1) as f64).min(1.0);
+            let hierarchy_depth = self
+                .hierarchy
+                .values()
+                .map(|children| children.len())
+                .sum::<usize>();
+            let hierarchy_factor =
+                (hierarchy_depth as f64 / active_contexts.max(1) as f64).min(1.0);
             (0.5 + hierarchy_factor * 0.45).min(0.95)
         };
-        
+
         ContextStats {
             total_tokens,
             active_contexts,
@@ -109,7 +132,7 @@ impl HierarchicalContextManager {
 
 /// Context bundle with metadata and allocation info
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextBundle {
     pub id: String,
     pub content: String,
@@ -120,7 +143,7 @@ pub struct ContextBundle {
 
 /// Context allocation budget
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextBudget {
     pub max_tokens: usize,
     pub priority: f64,
@@ -129,7 +152,7 @@ pub struct ContextBudget {
 
 /// Allocation information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Allocation {
     pub tokens_used: usize,
     pub priority: f64,
@@ -138,7 +161,7 @@ pub struct Allocation {
 
 /// Context usage statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextStats {
     pub total_tokens: usize,
     pub active_contexts: usize,
@@ -174,7 +197,7 @@ impl ContextProvider for FileContextProvider {
 
         // Parse query - assume it's a file path or pattern
         let query_path = query.trim();
-        
+
         // If query is a direct file path, read it
         let file_path = if Path::new(query_path).is_absolute() {
             Path::new(query_path).to_path_buf()
@@ -184,32 +207,48 @@ impl ContextProvider for FileContextProvider {
         };
 
         // Validate path is within root_path to prevent directory traversal
-        let root_path = Path::new(&self.root_path).canonicalize()
+        let root_path = Path::new(&self.root_path)
+            .canonicalize()
             .map_err(|e| SelfPromptingAgentError::Execution(format!("Invalid root path: {}", e)))?;
-        
-        let canonical_file_path = file_path.canonicalize()
-            .map_err(|e| SelfPromptingAgentError::Execution(format!("File not found: {} - {}", query, e)))?;
+
+        let canonical_file_path = file_path.canonicalize().map_err(|e| {
+            SelfPromptingAgentError::Execution(format!("File not found: {} - {}", query, e))
+        })?;
 
         if !canonical_file_path.starts_with(&root_path) {
-            return Err(SelfPromptingAgentError::Execution(
-                format!("Path traversal detected: {} is outside root {}", query, self.root_path)
-            ));
+            return Err(SelfPromptingAgentError::Execution(format!(
+                "Path traversal detected: {} is outside root {}",
+                query, self.root_path
+            )));
         }
 
         // Check if path exists
         if !canonical_file_path.exists() {
-            return Err(SelfPromptingAgentError::Execution(
-                format!("File not found: {}", canonical_file_path.display())
-            ));
+            return Err(SelfPromptingAgentError::Execution(format!(
+                "File not found: {}",
+                canonical_file_path.display()
+            )));
         }
 
         // Read file content
-        let content = fs::read_to_string(&canonical_file_path).await
-            .map_err(|e| SelfPromptingAgentError::Execution(format!("Failed to read file {}: {}", canonical_file_path.display(), e)))?;
+        let content = fs::read_to_string(&canonical_file_path)
+            .await
+            .map_err(|e| {
+                SelfPromptingAgentError::Execution(format!(
+                    "Failed to read file {}: {}",
+                    canonical_file_path.display(),
+                    e
+                ))
+            })?;
 
         // Get file metadata
-        let metadata_fs = fs::metadata(&canonical_file_path).await
-            .map_err(|e| SelfPromptingAgentError::Execution(format!("Failed to get metadata for {}: {}", canonical_file_path.display(), e)))?;
+        let metadata_fs = fs::metadata(&canonical_file_path).await.map_err(|e| {
+            SelfPromptingAgentError::Execution(format!(
+                "Failed to get metadata for {}: {}",
+                canonical_file_path.display(),
+                e
+            ))
+        })?;
 
         // Estimate token count (rough approximation: 1 token ≈ 4 characters)
         let tokens_used = (content.len() / 4).max(1);
@@ -219,7 +258,10 @@ impl ContextProvider for FileContextProvider {
             content,
             metadata: HashMap::from([
                 ("source".to_string(), "file".to_string()),
-                ("path".to_string(), canonical_file_path.to_string_lossy().to_string()),
+                (
+                    "path".to_string(),
+                    canonical_file_path.to_string_lossy().to_string(),
+                ),
                 ("file_size".to_string(), metadata_fs.len().to_string()),
                 ("query".to_string(), query.to_string()),
             ]),

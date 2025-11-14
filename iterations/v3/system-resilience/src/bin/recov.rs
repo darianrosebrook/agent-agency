@@ -1,16 +1,15 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 use system_resilience::{
     index::RecoveryIndex,
     journal::WriteAheadLog,
     policy::caws_policy::{
-        CawsPolicy, RetentionPolicy,
-        CompressionPolicy, ChunkingPolicy, RedactionPolicy, RedactionRule,
-        ProvenancePolicy, RecoveryPolicy, StoragePolicy, ChunkingMode,
-        RedactionRuleType, CheckpointFrequency
+        CawsPolicy, CheckpointFrequency, ChunkingMode, ChunkingPolicy, CompressionPolicy,
+        ProvenancePolicy, RecoveryPolicy, RedactionPolicy, RedactionRule, RedactionRuleType,
+        RetentionPolicy, StoragePolicy,
     },
     recovery_types::Codec,
 };
-use std::path::PathBuf;
 use tracing::{info, warn};
 
 #[derive(Parser)]
@@ -211,23 +210,21 @@ async fn init_recovery_store(path: &PathBuf, budget_mb: u64) -> anyhow::Result<(
         chunking: ChunkingPolicy {
             mode: ChunkingMode::Cdc,
             target_size: 16 * 1024, // 16 KiB
-            min_size: 4 * 1024,    // 4 KiB
-            max_size: 64 * 1024,   // 64 KiB
+            min_size: 4 * 1024,     // 4 KiB
+            max_size: 64 * 1024,    // 64 KiB
             enable_cdc: true,
         },
         redaction: RedactionPolicy {
             enable_secret_scanning: true,
             enable_pii_scanning: true,
-            custom_rules: vec![
-                RedactionRule {
-                    name: "RSA Keys".to_string(),
-                    rule_type: RedactionRuleType::Secret,
-                    pattern: "BEGIN RSA PRIVATE KEY".to_string(),
-                    case_sensitive: false,
-                    min_length: Some(10),
-                    max_length: None,
-                },
-            ],
+            custom_rules: vec![RedactionRule {
+                name: "RSA Keys".to_string(),
+                rule_type: RedactionRuleType::Secret,
+                pattern: "BEGIN RSA PRIVATE KEY".to_string(),
+                case_sensitive: false,
+                min_length: Some(10),
+                max_length: None,
+            }],
             block_on_secrets: true,
             log_redactions: true,
         },
@@ -258,7 +255,10 @@ async fn init_recovery_store(path: &PathBuf, budget_mb: u64) -> anyhow::Result<(
 }
 
 async fn track_file_changes(session: &str, path: &PathBuf) -> anyhow::Result<()> {
-    info!("Tracking file changes for session {} at {:?}", session, path);
+    info!(
+        "Tracking file changes for session {} at {:?}",
+        session, path
+    );
 
     // TODO: Implement file change tracking
     // This would involve:
@@ -334,7 +334,10 @@ async fn execute_restore(
 }
 
 async fn pack_cold_objects(min_age_hours: u64, max_pack_mb: u64) -> anyhow::Result<()> {
-    info!("Packing cold objects (age >= {}h, max size {}MB)", min_age_hours, max_pack_mb);
+    info!(
+        "Packing cold objects (age >= {}h, max size {}MB)",
+        min_age_hours, max_pack_mb
+    );
 
     // TODO: Implement object packing
     // This would involve:

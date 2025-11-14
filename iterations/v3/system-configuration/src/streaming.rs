@@ -4,10 +4,10 @@
 //! with backpressure handling and multiplexing capabilities.
 
 use crate::{
-    traits::ExecutablePipeline,
     config::StreamingPipelineConfig,
     error::{PipelineError, PipelineResult},
     metrics::PipelineMetrics,
+    traits::ExecutablePipeline,
 };
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
@@ -57,7 +57,7 @@ where
     /// Create a new streaming pipeline
     pub fn new(
         config: StreamingPipelineConfig,
-        processor: Arc<dyn Fn(Input) -> PipelineResult<Output> + Send + Sync>
+        processor: Arc<dyn Fn(Input) -> PipelineResult<Output> + Send + Sync>,
     ) -> Self {
         let (input_sender, input_receiver) = mpsc::unbounded_channel();
         let (output_sender, output_receiver) = mpsc::unbounded_channel();
@@ -80,15 +80,20 @@ where
         let is_running = *self.is_running.read().await;
         tracing::debug!("Pipeline is_running: {}", is_running);
         if !is_running {
-            return Err(PipelineError::Execution("Pipeline is not running".to_string()));
+            return Err(PipelineError::Execution(
+                "Pipeline is not running".to_string(),
+            ));
         }
 
         let sender_guard = self.input_sender.lock().unwrap();
         if let Some(sender) = sender_guard.as_ref() {
-            sender.send(input)
-                .map_err(|e| PipelineError::ChannelSendError(format!("Failed to send data to pipeline: {}", e)))
+            sender.send(input).map_err(|e| {
+                PipelineError::ChannelSendError(format!("Failed to send data to pipeline: {}", e))
+            })
         } else {
-            Err(PipelineError::Execution("Pipeline input channel is closed".to_string()))
+            Err(PipelineError::Execution(
+                "Pipeline input channel is closed".to_string(),
+            ))
         }
     }
 
@@ -99,9 +104,9 @@ where
             match receiver.try_recv() {
                 Ok(output) => Ok(Some(output)),
                 Err(mpsc::error::TryRecvError::Empty) => Ok(None),
-                Err(mpsc::error::TryRecvError::Disconnected) => {
-                    Err(PipelineError::ChannelReceiveError("Output channel disconnected".to_string()))
-                }
+                Err(mpsc::error::TryRecvError::Disconnected) => Err(
+                    PipelineError::ChannelReceiveError("Output channel disconnected".to_string()),
+                ),
             }
         } else {
             Ok(None)
@@ -109,12 +114,17 @@ where
     }
 
     /// Receive processed output with timeout
-    pub async fn recv_timeout(&self, timeout: std::time::Duration) -> PipelineResult<Option<Output>> {
+    pub async fn recv_timeout(
+        &self,
+        timeout: std::time::Duration,
+    ) -> PipelineResult<Option<Output>> {
         let mut receiver_guard = self.output_receiver.lock().unwrap();
         if let Some(receiver) = receiver_guard.as_mut() {
             match tokio::time::timeout(timeout, receiver.recv()).await {
                 Ok(Some(output)) => Ok(Some(output)),
-                Ok(None) => Err(PipelineError::ChannelReceiveError("Output channel closed".to_string())),
+                Ok(None) => Err(PipelineError::ChannelReceiveError(
+                    "Output channel closed".to_string(),
+                )),
                 Err(_) => Ok(None), // Timeout
             }
         } else {
@@ -126,7 +136,7 @@ where
     async fn start_processing(
         &self,
         mut input_receiver: mpsc::UnboundedReceiver<Input>,
-        output_sender: mpsc::UnboundedSender<Output>
+        output_sender: mpsc::UnboundedSender<Output>,
     ) {
         let processor = Arc::clone(&self.processor);
         let metrics = self.metrics.clone();
@@ -139,7 +149,10 @@ where
 
             // Process inputs in a loop
             while let Some(input) = input_receiver.recv().await {
-                info!("Processing input (type: {})", std::any::type_name::<Input>());
+                info!(
+                    "Processing input (type: {})",
+                    std::any::type_name::<Input>()
+                );
                 let start_time = std::time::Instant::now();
 
                 // Check if we should still be running
@@ -230,27 +243,30 @@ where
         let input_queue_size = 0; // UnboundedSender doesn't have capacity tracking
         let output_queue_size = 0; // UnboundedReceiver doesn't expose queue length
         let active_tasks_count = self.active_tasks.read().await.len();
-        
+
         // Calculate total buffer depth including queued messages and active processing
         let total_buffer_depth = input_queue_size + output_queue_size + active_tasks_count;
-        
+
         // Update buffer depth statistics for monitoring
         self.update_buffer_depth_stats(total_buffer_depth).await;
-        
+
         // Check for buffer overflow conditions
         if total_buffer_depth > self.config.buffer_size {
-            warn!("Buffer overflow detected: {} > {}", total_buffer_depth, self.config.buffer_size);
+            warn!(
+                "Buffer overflow detected: {} > {}",
+                total_buffer_depth, self.config.buffer_size
+            );
             self.record_buffer_overflow().await;
         }
-        
+
         total_buffer_depth
     }
-    
+
     /// Update buffer depth statistics
     async fn update_buffer_depth_stats(&self, current_depth: usize) {
         self.metrics.record_buffer_depth(current_depth).await;
     }
-    
+
     /// Record buffer overflow event
     async fn record_buffer_overflow(&self) {
         self.metrics.record_buffer_overflow().await;
@@ -271,15 +287,16 @@ where
     pub async fn start(&mut self) -> PipelineResult<()> {
         let mut is_running = self.is_running.write().await;
         if *is_running {
-            return Err(PipelineError::Execution("Pipeline is already running".to_string()));
+            return Err(PipelineError::Execution(
+                "Pipeline is already running".to_string(),
+            ));
         }
         *is_running = true;
 
         // Start processing if we have the channels
-        if let (Some(input_receiver), Some(output_sender)) = (
-            self.input_receiver.take(),
-            self.output_sender.take(),
-        ) {
+        if let (Some(input_receiver), Some(output_sender)) =
+            (self.input_receiver.take(), self.output_sender.take())
+        {
             self.start_processing(input_receiver, output_sender).await;
         }
 
@@ -329,9 +346,8 @@ where
     }
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
-        futures::executor::block_on(async {
-            self.metrics.to_json().await
-        }).map_err(|e| PipelineError::Metrics(e.to_string()))
+        futures::executor::block_on(async { self.metrics.to_json().await })
+            .map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 
     fn health_status(&self) -> PipelineResult<crate::PipelineHealth> {
@@ -395,10 +411,16 @@ mod tests {
 
         // Receive results
         tracing::debug!("Receiving result1");
-        let result1 = pipeline.recv_timeout(std::time::Duration::from_millis(2000)).await.unwrap();
+        let result1 = pipeline
+            .recv_timeout(std::time::Duration::from_millis(2000))
+            .await
+            .unwrap();
         tracing::debug!("Result1: {:?}", result1);
         tracing::debug!("Receiving result2");
-        let result2 = pipeline.recv_timeout(std::time::Duration::from_millis(2000)).await.unwrap();
+        let result2 = pipeline
+            .recv_timeout(std::time::Duration::from_millis(2000))
+            .await
+            .unwrap();
         tracing::debug!("Result2: {:?}", result2);
 
         assert_eq!(result1, Some("processed-test1".to_string()));
@@ -425,7 +447,10 @@ mod tests {
         pipeline.send("test".to_string()).await.unwrap();
 
         // Should not receive any output due to error
-        let result = pipeline.recv_timeout(std::time::Duration::from_millis(500)).await.unwrap();
+        let result = pipeline
+            .recv_timeout(std::time::Duration::from_millis(500))
+            .await
+            .unwrap();
         assert_eq!(result, None); // No output due to error
 
         pipeline.stop().await.unwrap();

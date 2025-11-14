@@ -1,12 +1,12 @@
 //! Data Transfer Objects for research operations
-//! 
+//!
 //! These types cross crate boundaries and must be serializable.
 //! They do NOT contain runtime types (Arc<dyn Trait>, etc.)
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
 use schemars::JsonSchema;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// Opaque key for entities, can evolve to {ns, id}
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -18,7 +18,7 @@ impl EntityKey {
     pub fn new(key: String) -> Self {
         Self(key)
     }
-    
+
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -42,7 +42,7 @@ pub enum EntityType {
     Money,
     Percent,
     // Additional variants from verification module
-    CodeEntity, // Alias for Code - used in disambiguation
+    CodeEntity,      // Alias for Code - used in disambiguation
     SystemComponent, // System components like APIs, services
     Documentation,
     Data,
@@ -123,7 +123,7 @@ impl Embedding {
     pub fn into_vec(self) -> Vec<f32> {
         self.0
     }
-    
+
     pub fn as_slice(&self) -> &[f32] {
         &self.0
     }
@@ -219,4 +219,3 @@ mod tests {
         }
     }
 }
-

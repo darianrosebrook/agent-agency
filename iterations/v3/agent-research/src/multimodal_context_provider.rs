@@ -7,7 +7,7 @@
 // PURPOSE: This module was designed to provide multimodal evidence enrichment
 // for the Council's decision-making process. It was intended to:
 //
-// 1. Retrieve multimodal evidence (text, images, videos, diagrams, speech) 
+// 1. Retrieve multimodal evidence (text, images, videos, diagrams, speech)
 //    from indexed sources
 // 2. Deduplicate and deduplicate evidence for efficiency
 // 3. Respect context budgets to manage token usage
@@ -33,14 +33,14 @@
 // STATUS: Placeholder implementation maintained for future integration with
 // the multimodal RAG system.
 
-use schemars::JsonSchema;
 use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Result from multimodal context query
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalContext {
     /// Query identifier for tracking
     pub query_id: String,
@@ -65,7 +65,7 @@ pub struct MultimodalContext {
 }
 
 /// Individual evidence item retrieved from multimodal indices
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvidenceItem {
     /// Evidence identifier
     pub id: Uuid,
@@ -93,7 +93,7 @@ pub struct EvidenceItem {
 }
 
 /// Citation information for retrieved evidence
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Citation {
     /// Document URI or file path
     pub source_uri: String,
@@ -112,7 +112,7 @@ pub struct Citation {
 }
 
 /// Metadata for retrieval operation
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetrievalMetadata {
     /// Number of indices queried
     pub indices_queried: usize,
@@ -129,7 +129,7 @@ pub struct RetrievalMetadata {
 
 /// Context budget for controlling evidence volume
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextBudget {
     /// Maximum tokens to use for evidence
     pub max_tokens: usize,
@@ -242,14 +242,14 @@ impl MultimodalContextProvider {
                 id: Uuid::new_v4(),
                 content: result.snippet.clone(),
                 modality: format!("{:?}", result.kind),
-                confidence: 0.8, // Default confidence since it's not available
+                confidence: 0.8,       // Default confidence since it's not available
                 similarity_score: 0.8, // Default score since it's not available
                 citation: Citation {
                     source_uri: format!("ref:{}", result.ref_id),
                     document_id: Uuid::parse_str(&result.ref_id).unwrap_or_else(|_| Uuid::new_v4()),
                     page_number: None, // Not available in the struct
-                    bbox: None, // Not available in the struct
-                    time_range: None, // Not available in the struct
+                    bbox: None,        // Not available in the struct
+                    time_range: None,  // Not available in the struct
                 },
                 is_global,
                 dedup_hash,

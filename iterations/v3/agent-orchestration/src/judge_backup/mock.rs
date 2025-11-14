@@ -3,16 +3,20 @@
 //! Configurable mock judge that returns predetermined verdicts
 //! for testing council workflows and integration scenarios.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use crate::council_errors::CouncilResult;
+use crate::council_errors::CouncilResult;
 use crate::judge_backup::backup_types::JudgeType;
-use crate::judge_backup::traits::Judge;
 use crate::judge_backup::backup_types::{JudgeHealthMetrics, JudgeHealthStatus};
+use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use crate::judge_backup::traits::Judge;
 use crate::judge_backup::types::JudgeConfig;
 use crate::judge_backup::types::ReviewContext;
-use crate::judge_backup::verdicts::{JudgeVerdict, RequiredChange, ChangePriority, EffortEstimate, ComplexityLevel, ChangeCategory, ChangeImpact, CriticalIssue, IssueSeverity};
-use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use crate::judge_backup::verdicts::{
+    ChangeCategory, ChangeImpact, ChangePriority, ComplexityLevel, CriticalIssue, EffortEstimate,
+    IssueSeverity, JudgeVerdict, RequiredChange,
+};
 use rand::Rng;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Verdict strategy for mock judge behavior
 
@@ -120,10 +124,7 @@ impl Judge for MockJudge {
         &self.config
     }
 
-    async fn review_spec(
-        &self,
-        context: &ReviewContext,
-    ) -> CouncilResult<JudgeVerdict> {
+    async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         // Simulate processing time
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
@@ -165,7 +166,10 @@ impl Judge for MockJudge {
                 if quality_score > 0.8 {
                     Ok(JudgeVerdict::Approve {
                         confidence: quality_score,
-                        reasoning: format!("Quality assessment passed with score {:.2}", quality_score),
+                        reasoning: format!(
+                            "Quality assessment passed with score {:.2}",
+                            quality_score
+                        ),
                         quality_score,
                         risk_assessment: RiskAssessment {
                             overall_risk: RiskLevel::Low,
@@ -177,15 +181,16 @@ impl Judge for MockJudge {
                 } else {
                     Ok(JudgeVerdict::Refine {
                         confidence: 0.6,
-                        reasoning: format!("Quality improvements needed, score: {:.2}", quality_score),
-                        required_changes: vec![
-                            RequiredChange {
-                                category: ChangeCategory::Quality,
-                                description: "Improve code quality and documentation".to_string(),
-                                impact: ChangeImpact::Moderate,
-                                rationale: "Current quality score is below threshold".to_string(),
-                            }
-                        ],
+                        reasoning: format!(
+                            "Quality improvements needed, score: {:.2}",
+                            quality_score
+                        ),
+                        required_changes: vec![RequiredChange {
+                            category: ChangeCategory::Quality,
+                            description: "Improve code quality and documentation".to_string(),
+                            impact: ChangeImpact::Moderate,
+                            rationale: "Current quality score is below threshold".to_string(),
+                        }],
                         priority: ChangePriority::High,
                         estimated_effort: EffortEstimate {
                             person_hours: 8.0,
@@ -202,7 +207,10 @@ impl Judge for MockJudge {
                 if security_score > 0.8 {
                     Ok(JudgeVerdict::Approve {
                         confidence: security_score,
-                        reasoning: format!("Security assessment passed with score {:.2}", security_score),
+                        reasoning: format!(
+                            "Security assessment passed with score {:.2}",
+                            security_score
+                        ),
                         quality_score: security_score,
                         risk_assessment: RiskAssessment {
                             overall_risk: RiskLevel::Low,
@@ -214,15 +222,16 @@ impl Judge for MockJudge {
                 } else {
                     Ok(JudgeVerdict::Refine {
                         confidence: 0.6,
-                        reasoning: format!("Security improvements needed, score: {:.2}", security_score),
-                        required_changes: vec![
-                            RequiredChange {
-                                category: ChangeCategory::Security,
-                                description: "Implement security best practices".to_string(),
-                                impact: ChangeImpact::Major,
-                                rationale: "Current security score is below threshold".to_string(),
-                            }
-                        ],
+                        reasoning: format!(
+                            "Security improvements needed, score: {:.2}",
+                            security_score
+                        ),
+                        required_changes: vec![RequiredChange {
+                            category: ChangeCategory::Security,
+                            description: "Implement security best practices".to_string(),
+                            impact: ChangeImpact::Major,
+                            rationale: "Current security score is below threshold".to_string(),
+                        }],
                         priority: ChangePriority::Critical,
                         estimated_effort: EffortEstimate {
                             person_hours: 16.0,
@@ -253,14 +262,12 @@ impl Judge for MockJudge {
                     Ok(JudgeVerdict::Refine {
                         confidence: random_score,
                         reasoning: "Random refinement request".to_string(),
-                        required_changes: vec![
-                            RequiredChange {
-                                category: ChangeCategory::Requirements,
-                                description: "Random improvement needed".to_string(),
-                                impact: ChangeImpact::Minor,
-                                rationale: "Random assessment".to_string(),
-                            }
-                        ],
+                        required_changes: vec![RequiredChange {
+                            category: ChangeCategory::Requirements,
+                            description: "Random improvement needed".to_string(),
+                            impact: ChangeImpact::Minor,
+                            rationale: "Random assessment".to_string(),
+                        }],
                         priority: ChangePriority::Low,
                         estimated_effort: EffortEstimate {
                             person_hours: 2.0,
@@ -272,14 +279,12 @@ impl Judge for MockJudge {
                     Ok(JudgeVerdict::Reject {
                         confidence: random_score,
                         reasoning: "Random rejection".to_string(),
-                        critical_issues: vec![
-                            CriticalIssue {
-                                severity: IssueSeverity::High,
-                                category: "Random".to_string(),
-                                description: "Random critical issue".to_string(),
-                                evidence: vec!["Random assessment".to_string()],
-                            }
-                        ],
+                        critical_issues: vec![CriticalIssue {
+                            severity: IssueSeverity::High,
+                            category: "Random".to_string(),
+                            description: "Random critical issue".to_string(),
+                            evidence: vec!["Random assessment".to_string()],
+                        }],
                         alternative_approaches: vec!["Try a different approach".to_string()],
                     })
                 }
@@ -298,12 +303,15 @@ impl Judge for MockJudge {
         //       Currently uses basic context construction; should construct proper ReviewContext with all required fields and metadata.
         let context = ReviewContext {
             session_id: "mock_session".to_string(),
-            working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),
+            working_spec: format!(
+                r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#,
+                _title, _description
+            ),
             risk_tier: 2, // Medium risk for mock
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
         };
-        
+
         self.review_spec(&context).await
     }
 
@@ -320,8 +328,8 @@ impl Judge for MockJudge {
     fn health_metrics(&self) -> JudgeHealthMetrics {
         JudgeHealthMetrics {
             judge_id: self.config.name.clone(), // Use name instead of judge_id
-            response_time_avg_ms: 150, // Fast mock responses
-            success_rate: 1.0, // Mock judge never fails
+            response_time_avg_ms: 150,          // Fast mock responses
+            success_rate: 1.0,                  // Mock judge never fails
             error_rate: 0.0,
             last_health_check: chrono::Utc::now(),
             consecutive_failures: 0,
@@ -369,4 +377,3 @@ pub fn create_mock_judge_panel() -> Vec<MockJudge> {
         ),
     ]
 }
-

@@ -4,11 +4,11 @@
 //! for all database operations across the system. It provides a unified interface
 //! for database clients to implement consistent CRUD operations.
 
-use schemars::JsonSchema;
 use crate::models::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -41,50 +41,104 @@ pub trait DatabaseOperations {
     async fn create_task_execution(&self, execution: CreateTaskExecution) -> Result<TaskExecution>;
     async fn get_task_execution(&self, id: Uuid) -> Result<Option<TaskExecution>>;
     async fn get_task_executions(&self, task_id: Uuid) -> Result<Vec<TaskExecution>>;
-    async fn update_task_execution(&self, id: Uuid, update: UpdateTaskExecution) -> Result<TaskExecution>;
+    async fn update_task_execution(
+        &self,
+        id: Uuid,
+        update: UpdateTaskExecution,
+    ) -> Result<TaskExecution>;
 
     // Audit trail operations
-    async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<AuditTrailEntry>;
+    async fn create_audit_trail_entry(
+        &self,
+        entry: CreateAuditTrailEntry,
+    ) -> Result<AuditTrailEntry>;
     async fn get_audit_trail_entries(&self, task_id: Uuid) -> Result<Vec<AuditTrailEntry>>;
     async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<AuditTrailEntry>>;
 
     // Council verdict operations
-    async fn create_council_verdict(&self, verdict: CreateCouncilVerdict) -> Result<CouncilVerdict>;
+    async fn create_council_verdict(&self, verdict: CreateCouncilVerdict)
+        -> Result<CouncilVerdict>;
     async fn get_council_verdict(&self, id: Uuid) -> Result<Option<CouncilVerdict>>;
     async fn get_council_verdicts(&self, task_id: Uuid) -> Result<Vec<CouncilVerdict>>;
 
     // Council session operations
-    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<CouncilSession>;
+    async fn create_council_session(&self, session: CreateCouncilSession)
+        -> Result<CouncilSession>;
     async fn get_council_session(&self, session_id: Uuid) -> Result<Option<CouncilSession>>;
     async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<CouncilSession>>;
-    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<CouncilSession>;
+    async fn update_council_session(
+        &self,
+        session_id: Uuid,
+        update: UpdateCouncilSession,
+    ) -> Result<CouncilSession>;
 
     // Judge evaluation operations
-    async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<JudgeEvaluation>;
+    async fn create_judge_evaluation(
+        &self,
+        evaluation: CreateJudgeEvaluation,
+    ) -> Result<JudgeEvaluation>;
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<JudgeEvaluation>>;
 
     // Planning operations
-    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<PlanningTelemetry>;
-    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<PlanningTelemetry>>;
+    async fn create_planning_telemetry(
+        &self,
+        telemetry: CreatePlanningTelemetry,
+    ) -> Result<PlanningTelemetry>;
+    async fn get_planning_telemetry(
+        &self,
+        plan_id: Uuid,
+        metric_type: Option<String>,
+    ) -> Result<Vec<PlanningTelemetry>>;
     async fn create_milestone(&self, milestone: CreateMilestone) -> Result<Milestone>;
-    async fn get_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Option<Milestone>>;
+    async fn get_milestone(&self, plan_id: Uuid, milestone_id: String)
+        -> Result<Option<Milestone>>;
     async fn get_milestones(&self, plan_id: Uuid) -> Result<Vec<Milestone>>;
-    async fn update_milestone(&self, plan_id: Uuid, milestone_id: String, update: UpdateMilestone) -> Result<Milestone>;
+    async fn update_milestone(
+        &self,
+        plan_id: Uuid,
+        milestone_id: String,
+        update: UpdateMilestone,
+    ) -> Result<Milestone>;
     async fn delete_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<()>;
-    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<PlanningSession>;
+    async fn create_planning_session(
+        &self,
+        session: CreatePlanningSession,
+    ) -> Result<PlanningSession>;
     async fn get_planning_session(&self, id: Uuid) -> Result<Option<PlanningSession>>;
     async fn get_planning_sessions(&self, plan_id: Uuid) -> Result<Vec<PlanningSession>>;
-    async fn update_planning_session(&self, id: Uuid, update: UpdatePlanningSession) -> Result<PlanningSession>;
-    async fn create_evidence_artifact(&self, artifact: CreateEvidenceArtifact) -> Result<EvidenceArtifact>;
+    async fn update_planning_session(
+        &self,
+        id: Uuid,
+        update: UpdatePlanningSession,
+    ) -> Result<PlanningSession>;
+    async fn create_evidence_artifact(
+        &self,
+        artifact: CreateEvidenceArtifact,
+    ) -> Result<EvidenceArtifact>;
     async fn get_evidence_artifacts(&self, plan_id: Uuid) -> Result<Vec<EvidenceArtifact>>;
-    async fn get_evidence_artifacts_for_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Vec<EvidenceArtifact>>;
-    async fn update_evidence_artifact(&self, id: Uuid, update: UpdateEvidenceArtifact) -> Result<EvidenceArtifact>;
-    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<PlanningAuditEvent>;
+    async fn get_evidence_artifacts_for_milestone(
+        &self,
+        plan_id: Uuid,
+        milestone_id: String,
+    ) -> Result<Vec<EvidenceArtifact>>;
+    async fn update_evidence_artifact(
+        &self,
+        id: Uuid,
+        update: UpdateEvidenceArtifact,
+    ) -> Result<EvidenceArtifact>;
+    async fn create_planning_audit_event(
+        &self,
+        event: CreatePlanningAuditEvent,
+    ) -> Result<PlanningAuditEvent>;
     async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<PlanningAuditEvent>>;
     async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<ExecutionPlan>;
     async fn get_execution_plan(&self, id: Uuid) -> Result<Option<ExecutionPlan>>;
     async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>>;
-    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<ExecutionPlan>;
+    async fn update_execution_plan(
+        &self,
+        id: Uuid,
+        update: UpdateExecutionPlan,
+    ) -> Result<ExecutionPlan>;
     async fn delete_execution_plan(&self, id: Uuid) -> Result<()>;
 
     // Waiver operations
@@ -95,7 +149,6 @@ pub trait DatabaseOperations {
     // User operations
     async fn create_user(&self, user: CreateUser) -> Result<User>;
     async fn get_user(&self, id: Uuid) -> Result<Option<User>>;
-    async fn get_user_by_email(&self, email: &str) -> Result<Option<User>>;
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>>;
     async fn update_user(&self, id: Uuid, update: UpdateUser) -> Result<User>;
     async fn delete_user(&self, id: Uuid) -> Result<()>;
@@ -104,6 +157,7 @@ pub trait DatabaseOperations {
     async fn create_session(&self, session: CreateSession) -> Result<Session>;
     async fn get_session(&self, id: Uuid) -> Result<Option<Session>>;
     async fn get_session_by_token_hash(&self, token_hash: &str) -> Result<Option<Session>>;
+    async fn get_session_by_refresh_token_hash(&self, refresh_token_hash: &str) -> Result<Option<Session>>;
     async fn get_user_sessions(&self, user_id: Uuid) -> Result<Vec<Session>>;
     async fn update_session(&self, id: Uuid, update: UpdateSession) -> Result<Session>;
     async fn delete_session(&self, id: Uuid) -> Result<()>;
@@ -111,29 +165,60 @@ pub trait DatabaseOperations {
     async fn cleanup_expired_sessions(&self) -> Result<usize>;
 
     // Password reset token operations
-    async fn create_password_reset_token(&self, token: CreatePasswordResetToken) -> Result<PasswordResetToken>;
-    async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<PasswordResetToken>>;
+    async fn create_password_reset_token(
+        &self,
+        token: CreatePasswordResetToken,
+    ) -> Result<PasswordResetToken>;
+    async fn get_password_reset_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<PasswordResetToken>>;
     async fn mark_password_reset_token_used(&self, id: Uuid) -> Result<()>;
     async fn cleanup_expired_password_reset_tokens(&self) -> Result<usize>;
 
     // User settings operations
     async fn create_user_setting(&self, setting: CreateUserSetting) -> Result<UserSetting>;
-    async fn get_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<Option<UserSetting>>;
-    async fn get_user_settings(&self, user_id: Uuid, setting_type: Option<&str>) -> Result<Vec<UserSetting>>;
-    async fn update_user_setting(&self, user_id: Uuid, setting_key: &str, update: UpdateUserSetting) -> Result<UserSetting>;
+    async fn get_user_setting(
+        &self,
+        user_id: Uuid,
+        setting_key: &str,
+    ) -> Result<Option<UserSetting>>;
+    async fn get_user_settings(
+        &self,
+        user_id: Uuid,
+        setting_type: Option<&str>,
+    ) -> Result<Vec<UserSetting>>;
+    async fn update_user_setting(
+        &self,
+        user_id: Uuid,
+        setting_key: &str,
+        update: UpdateUserSetting,
+    ) -> Result<UserSetting>;
     async fn delete_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<()>;
 
     // App settings operations
     async fn create_app_setting(&self, setting: CreateAppSetting) -> Result<AppSetting>;
     async fn get_app_setting(&self, setting_key: &str) -> Result<Option<AppSetting>>;
-    async fn get_app_settings(&self, setting_type: Option<&str>, is_public: Option<bool>) -> Result<Vec<AppSetting>>;
-    async fn update_app_setting(&self, setting_key: &str, update: UpdateAppSetting) -> Result<AppSetting>;
+    async fn get_app_settings(
+        &self,
+        setting_type: Option<&str>,
+        is_public: Option<bool>,
+    ) -> Result<Vec<AppSetting>>;
+    async fn update_app_setting(
+        &self,
+        setting_key: &str,
+        update: UpdateAppSetting,
+    ) -> Result<AppSetting>;
     async fn delete_app_setting(&self, setting_key: &str) -> Result<()>;
 
     // Integration operations
     async fn create_integration(&self, integration: CreateIntegration) -> Result<Integration>;
     async fn get_integration(&self, id: Uuid) -> Result<Option<Integration>>;
-    async fn get_integrations(&self, provider: Option<&str>, is_active: Option<bool>) -> Result<Vec<Integration>>;
+    async fn get_integrations(
+        &self,
+        provider: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<Integration>>;
     async fn update_integration(&self, id: Uuid, update: UpdateIntegration) -> Result<Integration>;
     async fn delete_integration(&self, id: Uuid) -> Result<()>;
 
@@ -141,36 +226,73 @@ pub trait DatabaseOperations {
     async fn create_api_key(&self, api_key: CreateApiKey) -> Result<ApiKey>;
     async fn get_api_key(&self, id: Uuid) -> Result<Option<ApiKey>>;
     async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<ApiKey>>;
-    async fn get_user_api_keys(&self, user_id: Uuid, is_active: Option<bool>) -> Result<Vec<ApiKey>>;
+    async fn get_user_api_keys(
+        &self,
+        user_id: Uuid,
+        is_active: Option<bool>,
+    ) -> Result<Vec<ApiKey>>;
     async fn update_api_key(&self, id: Uuid, update: UpdateApiKey) -> Result<ApiKey>;
     async fn revoke_api_key(&self, id: Uuid, reason: Option<String>) -> Result<()>;
     async fn delete_api_key(&self, id: Uuid) -> Result<()>;
 
     // Two-factor authentication operations
     async fn create_two_factor_auth(&self, two_fa: CreateTwoFactorAuth) -> Result<TwoFactorAuth>;
-    async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<TwoFactorAuth>>;
-    async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: UpdateTwoFactorAuth) -> Result<TwoFactorAuth>;
+    async fn get_two_factor_auth(
+        &self,
+        user_id: Uuid,
+        method: Option<&str>,
+    ) -> Result<Option<TwoFactorAuth>>;
+    async fn update_two_factor_auth(
+        &self,
+        user_id: Uuid,
+        method: &str,
+        update: UpdateTwoFactorAuth,
+    ) -> Result<TwoFactorAuth>;
     async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()>;
 
     // CAWS Rules operations
     async fn create_caws_rule(&self, rule: CreateCawsRule) -> Result<CawsRule>;
     async fn get_caws_rule(&self, id: &str) -> Result<Option<CawsRule>>;
-    async fn get_caws_rules(&self, rule_type: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsRule>>;
+    async fn get_caws_rules(
+        &self,
+        rule_type: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<CawsRule>>;
     async fn update_caws_rule(&self, id: &str, update: UpdateCawsRule) -> Result<CawsRule>;
     async fn delete_caws_rule(&self, id: &str) -> Result<()>;
 
     // CAWS Violations operations
     async fn create_caws_violation(&self, violation: CreateCawsViolation) -> Result<CawsViolation>;
     async fn get_caws_violation(&self, id: Uuid) -> Result<Option<CawsViolation>>;
-    async fn get_caws_violations(&self, task_id: Option<Uuid>, rule_id: Option<&str>, status: Option<&str>) -> Result<Vec<CawsViolation>>;
-    async fn update_caws_violation(&self, id: Uuid, update: UpdateCawsViolation) -> Result<CawsViolation>;
+    async fn get_caws_violations(
+        &self,
+        task_id: Option<Uuid>,
+        rule_id: Option<&str>,
+        status: Option<&str>,
+    ) -> Result<Vec<CawsViolation>>;
+    async fn update_caws_violation(
+        &self,
+        id: Uuid,
+        update: UpdateCawsViolation,
+    ) -> Result<CawsViolation>;
     async fn resolve_caws_violation(&self, id: Uuid) -> Result<()>;
 
     // CAWS Specifications operations
-    async fn create_caws_specification(&self, spec: CreateCawsSpecification) -> Result<CawsSpecification>;
+    async fn create_caws_specification(
+        &self,
+        spec: CreateCawsSpecification,
+    ) -> Result<CawsSpecification>;
     async fn get_caws_specification(&self, id: Uuid) -> Result<Option<CawsSpecification>>;
-    async fn get_caws_specifications(&self, name: Option<&str>, is_active: Option<bool>) -> Result<Vec<CawsSpecification>>;
-    async fn update_caws_specification(&self, id: Uuid, update: UpdateCawsSpecification) -> Result<CawsSpecification>;
+    async fn get_caws_specifications(
+        &self,
+        name: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<CawsSpecification>>;
+    async fn update_caws_specification(
+        &self,
+        id: Uuid,
+        update: UpdateCawsSpecification,
+    ) -> Result<CawsSpecification>;
     async fn delete_caws_specification(&self, id: Uuid) -> Result<()>;
 
     // Rule templates operations
@@ -178,11 +300,21 @@ pub trait DatabaseOperations {
     async fn create_rule_template(&self, template: CreateRuleTemplate) -> Result<RuleTemplate>;
 
     // Rule enforcement status operations
-    async fn get_rule_enforcement_status(&self, rule_id: Option<&str>, task_id: Option<Uuid>) -> Result<Vec<RuleEnforcementStatus>>;
-    async fn update_rule_enforcement_status(&self, rule_id: &str, task_id: Option<Uuid>, status: UpdateRuleEnforcementStatus) -> Result<RuleEnforcementStatus>;
+    async fn get_rule_enforcement_status(
+        &self,
+        rule_id: Option<&str>,
+        task_id: Option<Uuid>,
+    ) -> Result<Vec<RuleEnforcementStatus>>;
+    async fn update_rule_enforcement_status(
+        &self,
+        rule_id: &str,
+        task_id: Option<Uuid>,
+        status: UpdateRuleEnforcementStatus,
+    ) -> Result<RuleEnforcementStatus>;
 
     // Rule history operations
-    async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>) -> Result<Vec<RuleHistory>>;
+    async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>)
+        -> Result<Vec<RuleHistory>>;
 }
 
 /// Input types for database operations
@@ -275,7 +407,6 @@ pub struct CreateTaskExecution {
     #[schemars(with = "String")]
     pub worker_id: Uuid,
     #[schemars(with = "String")]
-
     pub execution_started_at: DateTime<Utc>,
     pub status: String,
     pub worker_output: serde_json::Value,
@@ -366,7 +497,6 @@ pub struct CreateJudgeEvaluation {
     pub evaluation_metadata: serde_json::Value,
     pub evaluation_time_ms: i32,
     #[schemars(with = "String")]
-
     pub evaluation_timestamp: DateTime<Utc>,
 }
 
@@ -526,7 +656,6 @@ pub struct CreateWaiver {
     pub impact_level: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
     pub metadata: Option<serde_json::Value>,
 }
@@ -543,7 +672,6 @@ pub struct UpdateWaiver {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CreateUser {
-    pub email: String,
     pub username: String,
     pub password_hash: String,
     pub name: Option<String>,
@@ -552,7 +680,6 @@ pub struct CreateUser {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateUser {
-    pub email: Option<String>,
     pub username: Option<String>,
     pub password_hash: Option<String>,
     pub name: Option<String>,
@@ -838,33 +965,33 @@ pub struct RuleHistory {
 }
 
 /// Factory function to create a database operations instance
-/// 
+///
 /// This function creates a DatabaseClient and returns it as an Arc<dyn DatabaseOperations>
 /// for dependency injection. The client uses the provided database configuration.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust,ignore
 /// use data_infrastructure::{create_database_operations, DatabaseConfig};
-/// 
+///
 /// let config = DatabaseConfig {
 ///     database_url: "postgresql://localhost/test".to_string(),
 ///     ..Default::default()
 /// };
-/// 
+///
 /// let db_ops = create_database_operations(config).await?;
 /// ```
 pub async fn create_database_operations(
     config: crate::database_config::DatabaseConfig,
 ) -> Result<Arc<dyn DatabaseOperations + Send + Sync>> {
     use crate::client::orchestrator::DatabaseClient;
-    
+
     let client = DatabaseClient::new(config).await?;
     Ok(Arc::new(client))
 }
 
 /// Adapter to implement DatabaseAuditOperations for DatabaseOperations
-/// 
+///
 /// This allows DatabaseOperations implementations to be used where DatabaseAuditOperations
 /// is required, breaking circular dependencies by using the interface from system-common-interfaces.
 pub struct DatabaseAuditOperationsAdapter {
@@ -880,7 +1007,10 @@ impl DatabaseAuditOperationsAdapter {
 
 #[async_trait]
 impl system_common_interfaces::DatabaseAuditOperations for DatabaseAuditOperationsAdapter {
-    async fn create_audit_entry(&self, entry: system_common_interfaces::CreateAuditEntry) -> system_common_interfaces::Result<()> {
+    async fn create_audit_entry(
+        &self,
+        entry: system_common_interfaces::CreateAuditEntry,
+    ) -> system_common_interfaces::Result<()> {
         // Convert from system-common-interfaces type to data-infrastructure type
         let audit_entry = CreateAuditTrailEntry {
             entity_type: entry.entity_type,
@@ -891,31 +1021,38 @@ impl system_common_interfaces::DatabaseAuditOperations for DatabaseAuditOperatio
             ip_address: entry.ip_address,
             timestamp: entry.timestamp,
         };
-        
+
         // Call the underlying DatabaseOperations implementation
-        self.db_ops.create_audit_trail_entry(audit_entry).await
-            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
-        
+        self.db_ops
+            .create_audit_trail_entry(audit_entry)
+            .await
+            .map_err(|e| {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )) as Box<dyn std::error::Error + Send + Sync>
+            })?;
+
         Ok(())
     }
 }
 
 /// Factory function to create a DatabaseAuditOperations adapter
-/// 
+///
 /// This wraps a DatabaseOperations implementation in an adapter that implements
 /// DatabaseAuditOperations, allowing it to be injected into components that need
 /// only audit functionality without creating circular dependencies.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust,ignore
 /// use data_infrastructure::{create_database_audit_operations, DatabaseConfig};
-/// 
+///
 /// let config = DatabaseConfig {
 ///     database_url: "postgresql://localhost/test".to_string(),
 ///     ..Default::default()
 /// };
-/// 
+///
 /// let db_audit_ops = create_database_audit_operations(config).await?;
 /// ```
 pub async fn create_database_audit_operations(

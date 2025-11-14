@@ -1,10 +1,10 @@
 //! Dependency analysis and graph construction for task decomposition
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use crate::error::*;
 use crate::parallel_types::*;
 use crate::worker_types::{SubTaskId, TaskId};
-use crate::error::*;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Dependency analyzer for understanding relationships between subtasks
@@ -46,13 +46,22 @@ impl DependencyAnalyzer {
     fn infer_task_type(&self, description: &str) -> TaskType {
         let desc_lower = description.to_lowercase();
 
-        if desc_lower.contains("compile") || desc_lower.contains("build") || desc_lower.contains("error") {
+        if desc_lower.contains("compile")
+            || desc_lower.contains("build")
+            || desc_lower.contains("error")
+        {
             TaskType::Compilation
-        } else if desc_lower.contains("refactor") || desc_lower.contains("rename") || desc_lower.contains("move") {
+        } else if desc_lower.contains("refactor")
+            || desc_lower.contains("rename")
+            || desc_lower.contains("move")
+        {
             TaskType::Refactoring
         } else if desc_lower.contains("test") || desc_lower.contains("coverage") {
             TaskType::Testing
-        } else if desc_lower.contains("doc") || desc_lower.contains("readme") || desc_lower.contains("comment") {
+        } else if desc_lower.contains("doc")
+            || desc_lower.contains("readme")
+            || desc_lower.contains("comment")
+        {
             TaskType::Documentation
         } else {
             TaskType::General
@@ -60,7 +69,10 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze compilation dependencies
-    fn analyze_compilation_dependencies(&self, task: &ComplexTask) -> DecompositionResult<Vec<Dependency>> {
+    fn analyze_compilation_dependencies(
+        &self,
+        task: &ComplexTask,
+    ) -> DecompositionResult<Vec<Dependency>> {
         let mut dependencies = Vec::new();
 
         // Compilation typically has dependencies based on module structure
@@ -72,7 +84,8 @@ impl DependencyAnalyzer {
         let rust_files = vec!["src/lib.rs".to_string(), "src/main.rs".to_string()];
 
         // Create subtask IDs for each file
-        let subtask_ids: Vec<_> = rust_files.iter()
+        let subtask_ids: Vec<_> = rust_files
+            .iter()
             .enumerate()
             .map(|(i, _)| SubTaskId::new())
             .collect();
@@ -101,7 +114,10 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze refactoring dependencies
-    fn analyze_refactoring_dependencies(&self, task: &ComplexTask) -> DecompositionResult<Vec<Dependency>> {
+    fn analyze_refactoring_dependencies(
+        &self,
+        task: &ComplexTask,
+    ) -> DecompositionResult<Vec<Dependency>> {
         let mut dependencies = Vec::new();
 
         // Refactoring operations often have ordering dependencies
@@ -132,7 +148,10 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze testing dependencies
-    fn analyze_testing_dependencies(&self, task: &ComplexTask) -> DecompositionResult<Vec<Dependency>> {
+    fn analyze_testing_dependencies(
+        &self,
+        task: &ComplexTask,
+    ) -> DecompositionResult<Vec<Dependency>> {
         // Testing usually has minimal dependencies - tests can run in parallel
         // Some integration tests might depend on unit tests passing first
 
@@ -151,16 +170,25 @@ impl DependencyAnalyzer {
     }
 
     /// Analyze documentation dependencies
-    fn analyze_documentation_dependencies(&self, task: &ComplexTask) -> DecompositionResult<Vec<Dependency>> {
+    fn analyze_documentation_dependencies(
+        &self,
+        task: &ComplexTask,
+    ) -> DecompositionResult<Vec<Dependency>> {
         // Documentation usually has no dependencies - can be done in parallel
         Ok(vec![])
     }
 
     /// Find Rust files in the working directory
-    fn find_rust_files(&self, dir: &std::path::Path) -> DecompositionResult<Vec<std::path::PathBuf>> {
+    fn find_rust_files(
+        &self,
+        dir: &std::path::Path,
+    ) -> DecompositionResult<Vec<std::path::PathBuf>> {
         let mut files = Vec::new();
 
-        fn visit_dir(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
+        fn visit_dir(
+            dir: &std::path::Path,
+            files: &mut Vec<std::path::PathBuf>,
+        ) -> std::io::Result<()> {
             if dir.is_dir() {
                 for entry in std::fs::read_dir(dir)? {
                     let entry = entry?;
@@ -189,11 +217,12 @@ impl DependencyAnalyzer {
         file.file_name()
             .unwrap_or_default()
             .to_string_lossy()
-            .starts_with("lib") ||
-        file.file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .starts_with("main")
+            .starts_with("lib")
+            || file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .starts_with("main")
     }
 
     /// Extract refactoring operations from description
@@ -261,24 +290,25 @@ impl DependencyGraph {
 
     /// Add a dependency between subtasks
     pub fn add_dependency(&mut self, dependency: Dependency) {
-        self.edges.entry(dependency.from.clone())
+        self.edges
+            .entry(dependency.from.clone())
             .or_default()
             .push(dependency);
     }
 
     /// Get all subtasks with no dependencies (ready to execute)
     pub fn get_ready_subtasks(&self) -> Vec<SubTaskId> {
-        self.nodes.keys()
-            .filter(|&subtask_id| {
-                self.get_dependencies(subtask_id).is_empty()
-            })
+        self.nodes
+            .keys()
+            .filter(|&subtask_id| self.get_dependencies(subtask_id).is_empty())
             .cloned()
             .collect()
     }
 
     /// Get dependencies for a subtask
     pub fn get_dependencies(&self, subtask_id: &SubTaskId) -> Vec<&Dependency> {
-        self.edges.get(subtask_id)
+        self.edges
+            .get(subtask_id)
             .map(|deps| deps.iter().collect())
             .unwrap_or_default()
     }
@@ -355,9 +385,10 @@ impl DependencyGraph {
 
         for subtask_id in self.nodes.keys() {
             if !visited.contains(subtask_id)
-                && self.has_cycle(subtask_id, &mut visited, &mut visiting) {
-                    return true;
-                }
+                && self.has_cycle(subtask_id, &mut visited, &mut visiting)
+            {
+                return true;
+            }
         }
 
         false

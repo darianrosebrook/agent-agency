@@ -21,22 +21,22 @@ use crate::caws_integration::{CAWSBudgetTracker, ParameterChangeProvenance};
 pub struct OptimizedPlanningAgent {
     /// Core planning agent (from orchestration module)
     // planning_agent: Arc<dyn PlanningAgent>, // Would be imported from orchestration
-    
+
     /// LLM parameter optimizer
     parameter_optimizer: Arc<LLMParameterOptimizer>,
-    
+
     /// Quality gate validator
     quality_validator: Arc<QualityGateValidator>,
-    
+
     /// Reward function for optimization
     reward_function: Arc<RewardFunction>,
-    
+
     /// Rollout manager for safe deployment
     rollout_manager: Arc<RolloutManager>,
-    
+
     /// CAWS budget tracker
     budget_tracker: Arc<CAWSBudgetTracker>,
-    
+
     /// Current task features for context
     current_task_features: Arc<RwLock<Option<TaskFeatures>>>,
 }
@@ -55,15 +55,15 @@ impl OptimizedPlanningAgent {
             quality_validator.clone(),
             budget_tracker.clone(),
         ));
-        
+
         // Initialize reward function
         let reward_function = Arc::new(RewardFunction::new(ObjectiveWeights::default()));
-        
+
         // Initialize rollout manager
         let rollout_manager = Arc::new(RolloutManager::new(
             crate::rollout::SLOMonitor::new(5000, 0.7, chrono::Duration::hours(1))
         ));
-        
+
         Ok(Self {
             // planning_agent,
             parameter_optimizer,
@@ -74,7 +74,7 @@ impl OptimizedPlanningAgent {
             current_task_features: Arc::new(RwLock::new(None)),
         })
     }
-    
+
     /// Generate working spec with optimized LLM parameters
     pub async fn generate_working_spec_optimized(
         &self,
@@ -82,21 +82,21 @@ impl OptimizedPlanningAgent {
         task_features: TaskFeatures,
     ) -> Result<String> {
         tracing::info!("Generating working spec with optimized parameters for task: {}", task_description);
-        
+
         // 1. Set current task features for context
         {
             let mut features = self.current_task_features.write().await;
             *features = Some(task_features.clone());
         }
-        
+
         // 2. Get constraints for this task type
         let constraints = self.get_constraints_for_task(&task_features).await?;
-        
+
         // 3. Check rollout phase and confidence
         let rollout_decision = self.rollout_manager
             .should_apply(&task_features.risk_tier.to_string(), 0.8)
             .await?;
-        
+
         let params = if rollout_decision {
             // 4. Get optimized parameters
             self.parameter_optimizer
@@ -106,11 +106,11 @@ impl OptimizedPlanningAgent {
             // Use baseline parameters
             self.get_baseline_parameters(&task_features).await?
         };
-        
+
         // 5. Execute generation with optimized parameters
         let request_id = Uuid::new_v4();
         let prompt_hash = self.hash_prompt(task_description);
-        
+
         // Create optimized generation request
         let request = crate::orchestration::planning::llm_client::GenerationRequest {
             request_id,
@@ -128,13 +128,13 @@ impl OptimizedPlanningAgent {
             schema_version: Some(1),
             stop_sequences: params.set.stop_sequences.clone(),
         };
-        
+
         // 6. Execute generation and measure performance
         let start = std::time::Instant::now();
         // let response = self.planning_agent.generate_with_request(&request).await?;
         let response_content = "Generated working spec content"; // Placeholder
         let latency = start.elapsed().as_millis() as u64;
-        
+
         // 7. Record outcome for learning
         // TODO: Calculate actual token count from LLM response
         //       Currently uses character length; should calculate actual token count from LLM response metadata.
@@ -178,7 +178,7 @@ impl OptimizedPlanningAgent {
             success: true,
             caws_compliance: self.validate_caws_compliance(&response_content)?,
         };
-        
+
         self.parameter_optimizer
             .record_outcome(
                 request_id,
@@ -202,15 +202,15 @@ impl OptimizedPlanningAgent {
                 params.propensity,
             )
             .await?;
-        
+
         // 8. Check for auto-rollback
         self.rollout_manager
             .check_and_rollback(&task_features.risk_tier.to_string(), &[outcome])
             .await?;
-        
+
         Ok(response_content.to_string())
     }
-    
+
     /// Get constraints for a specific task type
     async fn get_constraints_for_task(&self, task_features: &TaskFeatures) -> Result<crate::reward::OptimizationConstraints> {
         // Define constraints based on risk tier
@@ -240,10 +240,10 @@ impl OptimizedPlanningAgent {
                 max_delta_max_tokens: 500,
             },
         };
-        
+
         Ok(constraints)
     }
-    
+
     /// Get baseline parameters for a task type
     async fn get_baseline_parameters(&self, task_features: &TaskFeatures) -> Result<crate::parameter_optimizer::RecommendedParameters> {
         // Return baseline parameters based on risk tier
@@ -285,7 +285,7 @@ impl OptimizedPlanningAgent {
                 created_at: Utc::now(),
             },
         };
-        
+
         Ok(crate::parameter_optimizer::RecommendedParameters {
             set: baseline_params,
             confidence: 1.0,
@@ -298,7 +298,7 @@ impl OptimizedPlanningAgent {
             deployment_safe: true,
         })
     }
-    
+
     /// Hash prompt for tracking
     fn hash_prompt(&self, prompt: &str) -> u64 {
         use std::collections::hash_map::DefaultHasher;
@@ -307,7 +307,7 @@ impl OptimizedPlanningAgent {
         prompt.hash(&mut hasher);
         hasher.finish()
     }
-    
+
     /// Estimate quality of generated content
     fn estimate_quality(&self, content: &str) -> f64 {
         // TODO: Integrate sophisticated quality assessment model
@@ -349,7 +349,7 @@ impl OptimizedPlanningAgent {
         let structure_score = if content.contains("##") { 0.9 } else { 0.7 }; // Temporary: basic scoring until model integration
         (length_score + structure_score) / 2.0
     }
-    
+
     /// Validate CAWS compliance
     fn validate_caws_compliance(&self, content: &str) -> Result<bool> {
         // TODO: Integrate CAWS compliance validator
@@ -389,14 +389,14 @@ impl OptimizedPlanningAgent {
         // - Reviewer Requirements: CAWS compliance expertise
         Ok(!content.is_empty() && content.len() > 10) // Temporary: basic check until validator integration
     }
-    
+
     /// Get current optimization status
     pub async fn get_optimization_status(&self) -> OptimizationStatus {
         let features = self.current_task_features.read().await;
         let task_type = features.as_ref()
             .map(|f| f.risk_tier.to_string())
             .unwrap_or_else(|| "unknown".to_string());
-        
+
         OptimizationStatus {
             task_type,
             rollout_phase: RolloutPhase::Shadow, // Would get from rollout manager
@@ -421,20 +421,20 @@ pub struct OptimizationStatus {
 pub async fn example_usage() -> Result<()> {
     // Create bandit policy
     let bandit_policy = Box::new(ThompsonGaussian::new());
-    
+
     // Create quality validator
     let quality_validator = QualityGateValidator::new(0.1);
-    
+
     // Create budget tracker
     let budget_tracker = CAWSBudgetTracker::new();
-    
+
     // Create optimized planning agent
     let agent = OptimizedPlanningAgent::new(
         bandit_policy,
         quality_validator,
         budget_tracker,
     ).await?;
-    
+
     // Create task features
     let task_features = TaskFeatures {
         risk_tier: 2,
@@ -450,19 +450,19 @@ pub async fn example_usage() -> Result<()> {
         prompt_tokens: Some(100),
         prior_failures: Some(0),
     };
-    
+
     // Generate working spec with optimized parameters
     let spec = agent.generate_working_spec_optimized(
         "Create a REST API for user management",
         task_features,
     ).await?;
-    
+
     println!("Generated spec: {}", spec);
-    
+
     // Get optimization status
     let status = agent.get_optimization_status().await;
     println!("Optimization status: {:?}", status);
-    
+
     Ok(())
 }
 
@@ -475,13 +475,13 @@ mod tests {
         let bandit_policy = Box::new(ThompsonGaussian::new());
         let quality_validator = QualityGateValidator::new(0.1);
         let budget_tracker = CAWSBudgetTracker::new();
-        
+
         let agent = OptimizedPlanningAgent::new(
             bandit_policy,
             quality_validator,
             budget_tracker,
         ).await;
-        
+
         assert!(agent.is_ok());
     }
 
@@ -501,7 +501,7 @@ mod tests {
             prompt_tokens: Some(100),
             prior_failures: Some(0),
         };
-        
+
         let fingerprint = features.fingerprint();
         assert!(fingerprint > 0);
     }

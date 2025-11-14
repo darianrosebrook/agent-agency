@@ -1,8 +1,8 @@
 use crate::ast_analyzer::ASTAnalyzer;
 use crate::change_classifier::ChangeClassifier;
+use crate::evaluator_types::*;
 use crate::impact_analyzer::ImpactAnalyzer;
 use crate::language_support::LanguageSupport;
-use crate::evaluator_types::*;
 
 use anyhow::Result;
 use chrono::Utc;
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 /// Minimal diff evaluator
@@ -461,7 +461,8 @@ impl MinimalDiffEvaluator {
         if config.max_file_size == 0 {
             return Err(anyhow::anyhow!("Max file size cannot be zero"));
         }
-        if config.max_file_size > 100 * 1024 * 1024 { // 100MB
+        if config.max_file_size > 100 * 1024 * 1024 {
+            // 100MB
             return Err(anyhow::anyhow!("Max file size cannot exceed 100MB"));
         }
 
@@ -469,29 +470,47 @@ impl MinimalDiffEvaluator {
         if config.max_analysis_time == 0 {
             return Err(anyhow::anyhow!("Max analysis time cannot be zero"));
         }
-        if config.max_analysis_time > 300 { // 5 minutes
+        if config.max_analysis_time > 300 {
+            // 5 minutes
             return Err(anyhow::anyhow!("Max analysis time cannot exceed 5 minutes"));
         }
 
         // Validate that at least one analysis type is enabled
-        if !config.enable_ast_analysis && !config.enable_impact_analysis && !config.enable_language_analysis {
-            return Err(anyhow::anyhow!("At least one analysis type must be enabled"));
+        if !config.enable_ast_analysis
+            && !config.enable_impact_analysis
+            && !config.enable_language_analysis
+        {
+            return Err(anyhow::anyhow!(
+                "At least one analysis type must be enabled"
+            ));
         }
 
         // Validate language configurations
         for (language, lang_config) in &config.language_configs {
             if lang_config.complexity_thresholds.max_cyclomatic_complexity == 0 {
-                return Err(anyhow::anyhow!("Cyclomatic complexity threshold cannot be zero for {:?}", language));
+                return Err(anyhow::anyhow!(
+                    "Cyclomatic complexity threshold cannot be zero for {:?}",
+                    language
+                ));
             }
 
-            if lang_config.quality_thresholds.min_comment_density < 0.0 || lang_config.quality_thresholds.min_comment_density > 1.0 {
-                return Err(anyhow::anyhow!("Comment density must be between 0.0 and 1.0 for {:?}", language));
+            if lang_config.quality_thresholds.min_comment_density < 0.0
+                || lang_config.quality_thresholds.min_comment_density > 1.0
+            {
+                return Err(anyhow::anyhow!(
+                    "Comment density must be between 0.0 and 1.0 for {:?}",
+                    language
+                ));
             }
         }
 
         // Validate quality thresholds
-        if config.quality_thresholds.min_comment_density < 0.0 || config.quality_thresholds.min_comment_density > 1.0 {
-            return Err(anyhow::anyhow!("Global comment density must be between 0.0 and 1.0"));
+        if config.quality_thresholds.min_comment_density < 0.0
+            || config.quality_thresholds.min_comment_density > 1.0
+        {
+            return Err(anyhow::anyhow!(
+                "Global comment density must be between 0.0 and 1.0"
+            ));
         }
 
         Ok(())
@@ -513,7 +532,9 @@ impl MinimalDiffEvaluator {
         };
 
         let test_impact_analyzer = if self.config.enable_impact_analysis {
-            Some(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?)
+            Some(crate::impact_analyzer::ImpactAnalyzer::new(
+                self.config.clone(),
+            )?)
         } else {
             None
         };
@@ -521,12 +542,16 @@ impl MinimalDiffEvaluator {
         // If validation fails, restore old config
         if test_ast_analyzer.is_none() && self.config.enable_ast_analysis {
             self.config = old_config;
-            return Err(anyhow::anyhow!("Failed to initialize AST analyzer with new configuration"));
+            return Err(anyhow::anyhow!(
+                "Failed to initialize AST analyzer with new configuration"
+            ));
         }
 
         if test_impact_analyzer.is_none() && self.config.enable_impact_analysis {
             self.config = old_config;
-            return Err(anyhow::anyhow!("Failed to initialize impact analyzer with new configuration"));
+            return Err(anyhow::anyhow!(
+                "Failed to initialize impact analyzer with new configuration"
+            ));
         }
 
         // Log configuration change
@@ -551,14 +576,18 @@ impl MinimalDiffEvaluator {
     async fn reinitialize_components(&mut self) -> Result<()> {
         // Reinitialize AST analyzer if configuration changed
         if self.config.enable_ast_analysis {
-            self.ast_analyzer = Some(Arc::new(crate::ast_analyzer::ASTAnalyzer::new(self.config.clone())?));
+            self.ast_analyzer = Some(Arc::new(crate::ast_analyzer::ASTAnalyzer::new(
+                self.config.clone(),
+            )?));
         } else {
             self.ast_analyzer = None;
         }
 
         // Reinitialize impact analyzer if configuration changed
         if self.config.enable_impact_analysis {
-            self.impact_analyzer = Some(Arc::new(crate::impact_analyzer::ImpactAnalyzer::new(self.config.clone())?));
+            self.impact_analyzer = Some(Arc::new(crate::impact_analyzer::ImpactAnalyzer::new(
+                self.config.clone(),
+            )?));
         } else {
             self.impact_analyzer = None;
         }

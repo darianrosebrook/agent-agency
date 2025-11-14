@@ -4,11 +4,11 @@
 //! These types are used across multiple crates (workers, orchestration, council)
 //! and are defined here to avoid circular dependencies.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use crate::router_decision::WorkerType;
 
@@ -28,7 +28,10 @@ pub enum WorkerSpecialty {
     /// Async patterns and concurrency
     AsyncPatterns { patterns: Vec<String> },
     /// Custom domain expertise
-    Custom { domain: String, capabilities: Vec<String> },
+    Custom {
+        domain: String,
+        capabilities: Vec<String>,
+    },
 }
 
 /// Trait for specialized workers
@@ -38,9 +41,11 @@ pub trait SpecializedWorker: Send + Sync + std::fmt::Debug {
     fn has_specialty(&self, specialty: &WorkerSpecialty) -> bool;
 
     /// Execute a subtask within this worker's specialty
-    async fn execute_subtask(&self, context: WorkerContext) -> Result<WorkerResult, Box<dyn std::error::Error + Send + Sync>>;
+    async fn execute_subtask(
+        &self,
+        context: WorkerContext,
+    ) -> Result<WorkerResult, Box<dyn std::error::Error + Send + Sync>>;
 }
-
 
 /// Context for worker task execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -154,18 +159,16 @@ pub struct WorkerUpdate {
 pub enum WorkerPoolEvent {
     WorkerRegistered {
         #[schemars(with = "String")]
-
         worker_id: Uuid,
         capabilities: Vec<String>,
     },
     WorkerHealthChecked {
         #[schemars(with = "String")]
-
         worker_id: Uuid,
         is_healthy: bool,
         response_time_ms: u64,
         #[schemars(with = "String")]
-    checked_at: DateTime<Utc>,
+        checked_at: DateTime<Utc>,
     },
     WorkerAssigned {
         #[schemars(with = "String")]
@@ -173,24 +176,20 @@ pub enum WorkerPoolEvent {
         #[schemars(with = "String")]
         worker_id: Uuid,
         #[schemars(with = "String")]
-    estimated_completion_time: DateTime<Utc>,
+        estimated_completion_time: DateTime<Utc>,
     },
     WorkerTaskCompleted {
         #[schemars(with = "String")]
-
         task_id: Uuid,
         #[schemars(with = "String")]
-
         worker_id: Uuid,
         success: bool,
         execution_time_ms: u64,
     },
     WorkerTaskFailed {
         #[schemars(with = "String")]
-
         task_id: Uuid,
         #[schemars(with = "String")]
-
         worker_id: Uuid,
         error: String,
         retry_count: u32,

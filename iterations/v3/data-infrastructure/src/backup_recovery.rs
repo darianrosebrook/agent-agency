@@ -2,16 +2,16 @@
 //!
 //! Provides comprehensive backup, recovery, and failover capabilities for production resilience.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use tokio::sync::RwLock;
 use tokio::time;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::simple_client::DatabaseClient;
 
@@ -69,8 +69,8 @@ pub struct RecoveryConfig {
 impl Default for RecoveryConfig {
     fn default() -> Self {
         Self {
-            rto_seconds: 300,    // 5 minutes
-            rpo_seconds: 60,     // 1 minute
+            rto_seconds: 300, // 5 minutes
+            rpo_seconds: 60,  // 1 minute
             max_recovery_attempts: 3,
             enable_verification: true,
             failover_timeout_secs: 30,
@@ -83,7 +83,6 @@ impl Default for RecoveryConfig {
 pub struct BackupMetadata {
     pub id: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub size_bytes: u64,
     pub checksum: String,
@@ -100,7 +99,6 @@ pub struct RecoveryStatus {
     pub operation_id: String,
     pub status: RecoveryState,
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub progress: f64, // 0.0 to 1.0
@@ -153,7 +151,9 @@ impl DisasterRecoveryManager {
     }
 
     /// Start automated backup process
-    pub async fn start_automated_backup(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn start_automated_backup(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Starting automated backup process");
 
         let backup_interval = Duration::from_secs(self.backup_config.backup_interval_secs);
@@ -174,7 +174,9 @@ impl DisasterRecoveryManager {
     }
 
     /// Perform a full database backup
-    pub async fn perform_backup(&self) -> Result<BackupMetadata, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn perform_backup(
+        &self,
+    ) -> Result<BackupMetadata, Box<dyn std::error::Error + Send + Sync>> {
         let start_time = Instant::now();
         let backup_id = format!("backup_{}", Utc::now().format("%Y%m%d_%H%M%S"));
 
@@ -182,7 +184,8 @@ impl DisasterRecoveryManager {
 
         // Create backup directory if it doesn't exist
         let backup_path = Path::new(&self.backup_config.backup_dir);
-        tokio::fs::create_dir_all(backup_path).await
+        tokio::fs::create_dir_all(backup_path)
+            .await
             .map_err(|e| format!("Failed to create backup directory: {}", e))?;
 
         // Get list of tables to backup
@@ -216,7 +219,8 @@ impl DisasterRecoveryManager {
         // Save manifest
         let manifest_path = backup_path.join(format!("{}.manifest.json", backup_id));
         let manifest_json = serde_json::to_string_pretty(&manifest)?;
-        tokio::fs::write(&manifest_path, manifest_json).await
+        tokio::fs::write(&manifest_path, manifest_json)
+            .await
             .map_err(|e| format!("Failed to save manifest: {}", e))?;
 
         // Update backup history
@@ -228,14 +232,20 @@ impl DisasterRecoveryManager {
             self.cleanup_old_backups(&mut history).await?;
         }
 
-        info!("Backup completed successfully: {} ({} bytes, {}ms)",
-              backup_id, total_size, start_time.elapsed().as_millis());
+        info!(
+            "Backup completed successfully: {} ({} bytes, {}ms)",
+            backup_id,
+            total_size,
+            start_time.elapsed().as_millis()
+        );
 
         Ok(manifest)
     }
 
     /// Get tables to include in backup
-    async fn get_backup_tables(&self) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_backup_tables(
+        &self,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             SELECT table_name
             FROM information_schema.tables
@@ -247,15 +257,17 @@ impl DisasterRecoveryManager {
         "#;
 
         let rows = self.db_client.query(query, &[]).await?;
-        let tables = rows.iter()
-            .map(|row| row.get("table_name"))
-            .collect();
+        let tables = rows.iter().map(|row| row.get("table_name")).collect();
 
         Ok(tables)
     }
 
     /// Backup a single table
-    async fn backup_table(&self, table_name: &str, backup_id: &str) -> Result<(String, i64), Box<dyn std::error::Error + Send + Sync>> {
+    async fn backup_table(
+        &self,
+        table_name: &str,
+        backup_id: &str,
+    ) -> Result<(String, i64), Box<dyn std::error::Error + Send + Sync>> {
         let backup_path = Path::new(&self.backup_config.backup_dir);
         let file_path = backup_path.join(format!("{}_{}.sql", backup_id, table_name));
 
@@ -265,28 +277,42 @@ impl DisasterRecoveryManager {
         let row_count: i64 = count_rows[0].get("count");
 
         // Export table data
-        let export_query = format!("COPY {} TO '{}' WITH CSV HEADER", table_name, file_path.display());
-        self.db_client.execute(&export_query, &[]).await
+        let export_query = format!(
+            "COPY {} TO '{}' WITH CSV HEADER",
+            table_name,
+            file_path.display()
+        );
+        self.db_client
+            .execute(&export_query, &[])
+            .await
             .map_err(|e| format!("Failed to export table {}: {}", table_name, e))?;
 
         Ok((file_path.to_string_lossy().to_string(), row_count))
     }
 
     /// Get file size
-    async fn get_file_size(&self, file_path: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let metadata = tokio::fs::metadata(file_path).await
+    async fn get_file_size(
+        &self,
+        file_path: &str,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let metadata = tokio::fs::metadata(file_path)
+            .await
             .map_err(|e| format!("Failed to get file metadata: {}", e))?;
         Ok(metadata.len())
     }
 
     /// Calculate backup checksum
-    async fn calculate_backup_checksum(&self, files: &[String]) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        use sha2::{Sha256, Digest};
+    async fn calculate_backup_checksum(
+        &self,
+        files: &[String],
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
 
         for file in files {
-            let content = tokio::fs::read(file).await
+            let content = tokio::fs::read(file)
+                .await
                 .map_err(|e| format!("Failed to read file for checksum: {}", e))?;
             hasher.update(&content);
         }
@@ -296,7 +322,10 @@ impl DisasterRecoveryManager {
     }
 
     /// Clean up old backups
-    async fn cleanup_old_backups(&self, history: &mut Vec<BackupMetadata>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn cleanup_old_backups(
+        &self,
+        history: &mut Vec<BackupMetadata>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if history.len() <= self.backup_config.max_backups {
             return Ok(());
         }
@@ -316,7 +345,10 @@ impl DisasterRecoveryManager {
             // Delete SQL backup files matching the pattern
             match self.delete_files_by_pattern(&backup_pattern).await {
                 Ok(count) => {
-                    info!("Deleted {} SQL backup files for backup: {}", count, backup.id);
+                    info!(
+                        "Deleted {} SQL backup files for backup: {}",
+                        count, backup.id
+                    );
                 }
                 Err(e) => {
                     warn!("Failed to delete SQL backup files for {}: {}", backup.id, e);
@@ -333,7 +365,10 @@ impl DisasterRecoveryManager {
                 }
             }
 
-            info!("Cleaned up backup: {} ({} bytes)", backup.id, backup.size_bytes);
+            info!(
+                "Cleaned up backup: {} ({} bytes)",
+                backup.id, backup.size_bytes
+            );
         }
 
         info!("Cleaned up {} old backups", removed_backups.len());
@@ -341,7 +376,10 @@ impl DisasterRecoveryManager {
     }
 
     /// Perform database recovery
-    pub async fn perform_recovery(&self, target_time: Option<DateTime<Utc>>) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn perform_recovery(
+        &self,
+        target_time: Option<DateTime<Utc>>,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let recovery_id = format!("recovery_{}", Utc::now().format("%Y%m%d_%H%M%S"));
         let start_time = Utc::now();
 
@@ -373,8 +411,8 @@ impl DisasterRecoveryManager {
             Ok(recovered_tables) => {
                 let end_time = Utc::now();
                 let duration = end_time.signed_duration_since(start_time);
-                let data_loss_seconds = target_time
-                    .map(|t| end_time.signed_duration_since(t).num_seconds() as u64);
+                let data_loss_seconds =
+                    target_time.map(|t| end_time.signed_duration_since(t).num_seconds() as u64);
 
                 // Update recovery status
                 let mut recoveries = self.active_recoveries.write().await;
@@ -386,8 +424,12 @@ impl DisasterRecoveryManager {
                     status.data_loss_seconds = data_loss_seconds;
                 }
 
-                info!("Recovery completed successfully: {} ({} tables, {}ms)",
-                      recovery_id, recovered_tables.len(), duration.num_milliseconds());
+                info!(
+                    "Recovery completed successfully: {} ({} tables, {}ms)",
+                    recovery_id,
+                    recovered_tables.len(),
+                    duration.num_milliseconds()
+                );
 
                 // Verify recovery if enabled
                 if self.recovery_config.enable_verification {
@@ -411,13 +453,17 @@ impl DisasterRecoveryManager {
     }
 
     /// Find appropriate backup for recovery
-    async fn find_recovery_backup(&self, target_time: Option<DateTime<Utc>>) -> Result<BackupMetadata, Box<dyn std::error::Error + Send + Sync>> {
+    async fn find_recovery_backup(
+        &self,
+        target_time: Option<DateTime<Utc>>,
+    ) -> Result<BackupMetadata, Box<dyn std::error::Error + Send + Sync>> {
         let history = self.backup_history.read().await;
 
         let target = target_time.unwrap_or_else(Utc::now);
 
         // Find most recent backup before target time
-        let backup = history.iter()
+        let backup = history
+            .iter()
             .filter(|b| b.timestamp <= target)
             .max_by_key(|b| b.timestamp)
             .cloned()
@@ -427,7 +473,11 @@ impl DisasterRecoveryManager {
     }
 
     /// Execute the actual recovery
-    async fn execute_recovery(&self, backup: &BackupMetadata, target_time: Option<DateTime<Utc>>) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute_recovery(
+        &self,
+        backup: &BackupMetadata,
+        target_time: Option<DateTime<Utc>>,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let backup_path = Path::new(&self.backup_config.backup_dir);
         let mut recovered_tables = Vec::new();
 
@@ -452,30 +502,49 @@ impl DisasterRecoveryManager {
     }
 
     /// Recover a single table
-    async fn recover_table(&self, table_name: &str, backup_file: &Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn recover_table(
+        &self,
+        table_name: &str,
+        backup_file: &Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Recovering table: {}", table_name);
 
         // Truncate existing table
         let truncate_query = format!("TRUNCATE TABLE {}", table_name);
-        self.db_client.execute(&truncate_query, &[]).await
+        self.db_client
+            .execute(&truncate_query, &[])
+            .await
             .map_err(|e| format!("Failed to truncate table {}: {}", table_name, e))?;
 
         // Import data from backup
-        let import_query = format!("COPY {} FROM '{}' WITH CSV HEADER", table_name, backup_file.display());
-        self.db_client.execute(&import_query, &[]).await
+        let import_query = format!(
+            "COPY {} FROM '{}' WITH CSV HEADER",
+            table_name,
+            backup_file.display()
+        );
+        self.db_client
+            .execute(&import_query, &[])
+            .await
             .map_err(|e| format!("Failed to import table {}: {}", table_name, e))?;
 
         Ok(())
     }
 
     /// Apply WAL logs for point-in-time recovery
-    async fn apply_wal_logs(&self, target_time: DateTime<Utc>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Applying WAL logs for point-in-time recovery up to: {}", target_time);
+    async fn apply_wal_logs(
+        &self,
+        target_time: DateTime<Utc>,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!(
+            "Applying WAL logs for point-in-time recovery up to: {}",
+            target_time
+        );
 
         // Get backup timestamp (most recent backup before target_time)
         let backup_time = {
             let history = self.backup_history.read().await;
-            history.iter()
+            history
+                .iter()
                 .filter(|b| b.timestamp <= target_time)
                 .max_by_key(|b| b.timestamp)
                 .map(|b| b.timestamp)
@@ -557,19 +626,17 @@ impl DisasterRecoveryManager {
         let wal_storage = Arc::new(
             crate::wal_storage::WalStorage::new(&database_url, 5)
                 .await
-                .map_err(|e| format!("Failed to create WAL storage: {}", e))?
+                .map_err(|e| format!("Failed to create WAL storage: {}", e))?,
         );
 
         let target_pool = Arc::new(
             sqlx::PgPool::connect(&database_url)
                 .await
-                .map_err(|e| format!("Failed to connect to target database: {}", e))?
+                .map_err(|e| format!("Failed to connect to target database: {}", e))?,
         );
 
-        let replay_engine = crate::wal_replay::WalReplayEngine::new(
-            wal_storage.clone(),
-            target_pool.clone(),
-        );
+        let replay_engine =
+            crate::wal_replay::WalReplayEngine::new(wal_storage.clone(), target_pool.clone());
 
         // Configure replay
         let replay_config = crate::wal_replay::WalReplayConfig {
@@ -582,15 +649,23 @@ impl DisasterRecoveryManager {
         };
 
         // Execute WAL replay
-        match replay_engine.replay_wal_logs(backup_time, replay_config).await {
+        match replay_engine
+            .replay_wal_logs(backup_time, replay_config)
+            .await
+        {
             Ok(status) => {
-                info!("WAL replay completed successfully: {} records applied, {} failed",
-                      status.records_applied, status.records_failed);
-                
+                info!(
+                    "WAL replay completed successfully: {} records applied, {} failed",
+                    status.records_applied, status.records_failed
+                );
+
                 if status.records_failed > 0 {
-                    warn!("WAL replay completed with {} failed records", status.records_failed);
+                    warn!(
+                        "WAL replay completed with {} failed records",
+                        status.records_failed
+                    );
                 }
-                
+
                 Ok(())
             }
             Err(e) => {
@@ -601,7 +676,10 @@ impl DisasterRecoveryManager {
     }
 
     /// Verify recovery integrity
-    async fn verify_recovery(&self, original_backup: &BackupMetadata) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn verify_recovery(
+        &self,
+        original_backup: &BackupMetadata,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Verifying recovery integrity");
 
         for table in &original_backup.tables {
@@ -613,8 +691,10 @@ impl DisasterRecoveryManager {
             let current_count: i64 = rows[0].get("count");
 
             if current_count != original_count {
-                warn!("Row count mismatch for table {}: expected {}, got {}",
-                      table, original_count, current_count);
+                warn!(
+                    "Row count mismatch for table {}: expected {}, got {}",
+                    table, original_count, current_count
+                );
             }
         }
 
@@ -666,7 +746,7 @@ impl DisasterRecoveryManager {
         let historical_rto = sqlx::query(
             r#"
             WITH recovery_times AS (
-                SELECT 
+                SELECT
                     replay_id,
                     EXTRACT(EPOCH FROM (MAX(checkpoint_time) - MIN(checkpoint_time))) as recovery_time_seconds
                 FROM wal_replay_checkpoints
@@ -683,12 +763,11 @@ impl DisasterRecoveryManager {
 
         // Calculate average recovery time from historical data
         let avg_recovery_time = match historical_rto {
-            Ok(Some(row)) => {
-                row.try_get::<Option<f64>, &str>("avg_recovery_time_seconds")
-                    .ok()
-                    .flatten()
-                    .map(|t| t as u64)
-            }
+            Ok(Some(row)) => row
+                .try_get::<Option<f64>, &str>("avg_recovery_time_seconds")
+                .ok()
+                .flatten()
+                .map(|t| t as u64),
             _ => None,
         };
 
@@ -707,7 +786,7 @@ impl DisasterRecoveryManager {
                 // Estimate recovery speed based on backup size
                 // Larger backups may have slower recovery due to complexity
                 let backup_size_mb = backup.size_bytes as f64 / (1024.0 * 1024.0);
-                
+
                 // Adaptive recovery speed: smaller backups recover faster
                 let recovery_speed_mb_per_sec = if backup_size_mb < 100.0 {
                     2.0 // Fast recovery for small backups (<100MB)
@@ -716,7 +795,7 @@ impl DisasterRecoveryManager {
                 } else {
                     1.0 // Slower recovery for large backups (>1GB)
                 };
-                
+
                 let estimated_seconds = (backup_size_mb / recovery_speed_mb_per_sec) as u64;
                 // Add overhead for database initialization and verification
                 estimated_seconds + 60 // Add 1 minute overhead
@@ -728,23 +807,28 @@ impl DisasterRecoveryManager {
     }
 
     /// Delete files matching a pattern from the backup directory
-    async fn delete_files_by_pattern(&self, pattern: &str) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    async fn delete_files_by_pattern(
+        &self,
+        pattern: &str,
+    ) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         let backup_dir = Path::new(&self.backup_config.backup_dir);
         let mut deleted_count = 0;
 
         // Read directory contents
-        let mut entries = tokio::fs::read_dir(backup_dir).await
+        let mut entries = tokio::fs::read_dir(backup_dir)
+            .await
             .map_err(|e| format!("Failed to read backup directory: {}", e))?;
 
         // Collect files to delete first to avoid modifying directory while iterating
         let mut files_to_delete = Vec::new();
 
-        while let Some(entry) = entries.next_entry().await
-            .map_err(|e| format!("Failed to read directory entry: {}", e))? {
-
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| format!("Failed to read directory entry: {}", e))?
+        {
             let file_name = entry.file_name();
-            let file_name_str = file_name.to_str()
-                .ok_or("Invalid UTF-8 in filename")?;
+            let file_name_str = file_name.to_str().ok_or("Invalid UTF-8 in filename")?;
 
             // Check if filename matches the pattern
             if self.matches_pattern(file_name_str, pattern) {
@@ -818,7 +902,6 @@ pub struct RtoRpoStatus {
     pub estimated_rto_seconds: u64,
     pub rto_violation: bool,
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,17 +1,17 @@
 //! Search coordination for vector and keyword search
 
 use schemars::JsonSchema;
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use std::sync::Arc;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::research_types::*;
 use crate::VectorSearchEngine;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 
-use super::index::InvertedIndex;
 use super::events::EventEmitter;
+use super::index::InvertedIndex;
 
 /// Search coordinator for managing different search strategies
 
@@ -67,11 +67,7 @@ impl SearchCoordinator {
         let limit = query.max_results.map(|x| (x * 2) as usize).unwrap_or(20);
         let vector_results = self
             .vector_search
-            .search(
-                &query_embedding,
-                Some(limit),
-                None,
-            )
+            .search(&query_embedding, Some(limit), None)
             .await
             .context("Vector search failed")?;
 
@@ -93,7 +89,10 @@ impl SearchCoordinator {
             research_results.push(result);
         }
 
-        info!("Vector search completed: {} results", research_results.len());
+        info!(
+            "Vector search completed: {} results",
+            research_results.len()
+        );
         Ok(research_results)
     }
 
@@ -128,11 +127,19 @@ impl SearchCoordinator {
     }
 
     /// Calculate V2 confidence score for vector search results (from KnowledgeEntry)
-    fn calculate_v2_confidence_score_from_entry(&self, entry: &KnowledgeEntry, query: &ResearchQuery) -> f32 {
+    fn calculate_v2_confidence_score_from_entry(
+        &self,
+        entry: &KnowledgeEntry,
+        query: &ResearchQuery,
+    ) -> f32 {
         let mut confidence = 0.7; // Base confidence for vector search
 
         // Higher confidence for exact matches in title
-        if entry.title.to_lowercase().contains(&query.query.to_lowercase()) {
+        if entry
+            .title
+            .to_lowercase()
+            .contains(&query.query.to_lowercase())
+        {
             confidence += 0.2;
         }
 

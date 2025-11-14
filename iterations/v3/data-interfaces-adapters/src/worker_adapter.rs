@@ -2,12 +2,10 @@
 //!
 //! Adapts `agent-workers` implementations to `data-interfaces` service traits.
 
+use agent_agency_contracts::{TaskExecutionResult, TaskRequirements, TaskSpec};
 use async_trait::async_trait;
 use data_interfaces::service_contracts::{
-    WorkerService, ServiceError, WorkerPoolStatus, WorkerRegistration,
-};
-use agent_agency_contracts::{
-    TaskSpec, TaskRequirements, TaskExecutionResult,
+    ServiceError, WorkerPoolStatus, WorkerRegistration, WorkerService,
 };
 
 /// Adapter for worker service
@@ -68,7 +66,7 @@ impl WorkerService for WorkerServiceAdapter {
         // We need to integrate with worker pool/discovery to find suitable worker
         Err(ServiceError::Internal("WorkerServiceAdapter::execute_worker_task needs implementation - requires WorkerExecutor integration".to_string()))
     }
-    
+
     async fn get_worker_status(&self) -> Result<WorkerPoolStatus, ServiceError> {
         // TODO: Implement actual status retrieval from executor
         //       Currently returns placeholder status; should implement comprehensive status retrieval that queries the executor for actual worker pool status including total workers, active workers, idle workers, and health status.
@@ -112,13 +110,12 @@ impl WorkerService for WorkerServiceAdapter {
             health_status: "Unknown".to_string(),
         })
     }
-    
-    async fn register_worker(
-        &self,
-        _registration: WorkerRegistration,
-    ) -> Result<(), ServiceError> {
+
+    async fn register_worker(&self, _registration: WorkerRegistration) -> Result<(), ServiceError> {
         // TODO: Implement actual worker registration
         // This should delegate to WorkerExecutor or worker registry
-        Err(ServiceError::Internal("WorkerServiceAdapter::register_worker not yet implemented".to_string()))
+        Err(ServiceError::Internal(
+            "WorkerServiceAdapter::register_worker not yet implemented".to_string(),
+        ))
     }
 }

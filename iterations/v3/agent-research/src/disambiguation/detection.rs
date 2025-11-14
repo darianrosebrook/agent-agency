@@ -1,12 +1,12 @@
 //! Ambiguity detection in text
 
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::collections::HashMap;
-use anyhow::Result;
 use crate::disambiguation::types::*;
 use crate::ProcessingContext;
+use anyhow::Result;
+use regex::Regex;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Detects various types of ambiguities in text
 
@@ -198,23 +198,32 @@ mod tests {
             language: None,
         };
 
-        let ambiguities = detector.detect_pronouns("This system handles it well.").unwrap();
+        let ambiguities = detector
+            .detect_pronouns("This system handles it well.")
+            .unwrap();
 
         assert!(!ambiguities.is_empty());
         assert_eq!(ambiguities[0].ambiguity_type, AmbiguityType::Pronoun);
         // With case-insensitive regex, "This" should match first (appears first in sentence)
         // But regex finds matches in order of appearance, so check that "This" is found
-        assert!(ambiguities.iter().any(|a| a.original_text.eq_ignore_ascii_case("this")));
+        assert!(ambiguities
+            .iter()
+            .any(|a| a.original_text.eq_ignore_ascii_case("this")));
     }
 
     #[test]
     fn test_detect_temporal_references() {
         let detector = AmbiguityDetector::new();
 
-        let ambiguities = detector.detect_temporal_references("It happens before execution.").unwrap();
+        let ambiguities = detector
+            .detect_temporal_references("It happens before execution.")
+            .unwrap();
 
         assert!(!ambiguities.is_empty());
-        assert_eq!(ambiguities[0].ambiguity_type, AmbiguityType::TemporalReference);
+        assert_eq!(
+            ambiguities[0].ambiguity_type,
+            AmbiguityType::TemporalReference
+        );
         assert_eq!(ambiguities[0].original_text, "before");
     }
 

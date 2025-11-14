@@ -1,16 +1,16 @@
 //! Core decomposition functionality
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::debug;
 
 /// Stage 3: Decomposition into atomic claims
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DecompositionStage {
     #[serde(skip)]
     claim_extractor: Arc<RwLock<ClaimExtractor>>,
@@ -68,7 +68,7 @@ impl DecompositionStage {
 
 /// Configuration for decomposition processing
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecompositionConfig {
     /// Maximum number of atomic claims to extract
     pub max_atomic_claims: usize,
@@ -93,7 +93,7 @@ impl Default for DecompositionConfig {
 
 /// Result of decomposition processing
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecompositionResult {
     /// Extracted atomic claims
     pub atomic_claims: Vec<AtomicClaim>,
@@ -109,7 +109,8 @@ impl DecompositionResult {
 
     /// Get claims above confidence threshold
     pub fn high_confidence_claims(&self, threshold: f32) -> Vec<&AtomicClaim> {
-        self.atomic_claims.iter()
+        self.atomic_claims
+            .iter()
             .filter(|c| c.confidence >= threshold as f64)
             .collect()
     }
@@ -134,7 +135,6 @@ impl ClaimExtractor {
         Ok(Vec::new())
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct ContextBracketAdder;

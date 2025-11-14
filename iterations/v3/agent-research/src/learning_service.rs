@@ -6,21 +6,20 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 // Import types from learning_bridge
-use crate::self_prompting_agent::learning_bridge::{
-    LearningService, LearningContext, TaskPerformance, SystemMetrics,
-    LearningInsights, Pattern, Improvement, OptimizationRecommendation, LearningStatistics,
-    OptimizationGoal, RecommendationType, Priority, PatternType, ImprovementType, Difficulty,
-    Experience,
-};
-use crate::reinforcement::QLearning;
 use crate::reflexive_types::AlgorithmConfig;
 use crate::reflexive_types::*;
+use crate::reinforcement::QLearning;
+use crate::self_prompting_agent::learning_bridge::{
+    Difficulty, Experience, Improvement, ImprovementType, LearningContext, LearningInsights,
+    LearningService, LearningStatistics, OptimizationGoal, OptimizationRecommendation, Pattern,
+    PatternType, Priority, RecommendationType, SystemMetrics, TaskPerformance,
+};
 
 /// Learning service implementation using reinforcement learning
 
@@ -76,15 +75,24 @@ impl ReflexiveLearningService {
     /// Calculate reward from task performance
     fn calculate_reward(&self, performance: &TaskPerformance) -> f64 {
         // Reward based on success rate and efficiency
-        let success_reward = if performance.success_rate > 0.8 { 1.0 } else { -1.0 };
-        let efficiency_reward = 1.0 - (performance.avg_execution_time.as_secs_f64() / 300.0).min(1.0); // Penalize slow tasks
+        let success_reward = if performance.success_rate > 0.8 {
+            1.0
+        } else {
+            -1.0
+        };
+        let efficiency_reward =
+            1.0 - (performance.avg_execution_time.as_secs_f64() / 300.0).min(1.0); // Penalize slow tasks
         let quality_reward = performance.quality_score;
 
         success_reward + efficiency_reward + quality_reward
     }
 
     /// Extract patterns from performance data
-    fn extract_patterns(&self, context: &LearningContext, performance: &TaskPerformance) -> Vec<Pattern> {
+    fn extract_patterns(
+        &self,
+        context: &LearningContext,
+        performance: &TaskPerformance,
+    ) -> Vec<Pattern> {
         let mut patterns = Vec::new();
 
         // Resource bottleneck detection
@@ -111,7 +119,8 @@ impl ReflexiveLearningService {
         if context.system_metrics.cpu_usage < 0.3 && performance.quality_score > 0.8 {
             patterns.push(Pattern {
                 pattern_type: PatternType::ComplexityMismatch,
-                description: "Task complexity may be overestimated for available resources".to_string(),
+                description: "Task complexity may be overestimated for available resources"
+                    .to_string(),
                 frequency: 0.5,
                 impact: 0.3,
             });
@@ -121,7 +130,11 @@ impl ReflexiveLearningService {
     }
 
     /// Generate improvement recommendations
-    fn generate_improvements(&self, patterns: &[Pattern], context: &LearningContext) -> Vec<Improvement> {
+    fn generate_improvements(
+        &self,
+        patterns: &[Pattern],
+        context: &LearningContext,
+    ) -> Vec<Improvement> {
         let mut improvements = Vec::new();
 
         for pattern in patterns {
@@ -131,7 +144,8 @@ impl ReflexiveLearningService {
                         improvement_type: ImprovementType::ResourceAllocation,
                         expected_benefit: 0.4,
                         difficulty: Difficulty::Moderate,
-                        description: "Optimize resource allocation for CPU-intensive tasks".to_string(),
+                        description: "Optimize resource allocation for CPU-intensive tasks"
+                            .to_string(),
                     });
                 }
                 PatternType::ModelInefficiency => {
@@ -139,7 +153,8 @@ impl ReflexiveLearningService {
                         improvement_type: ImprovementType::ModelSelection,
                         expected_benefit: 0.6,
                         difficulty: Difficulty::Hard,
-                        description: "Improve model selection algorithm for better performance".to_string(),
+                        description: "Improve model selection algorithm for better performance"
+                            .to_string(),
                     });
                 }
                 PatternType::ComplexityMismatch => {
@@ -158,15 +173,23 @@ impl ReflexiveLearningService {
     }
 
     /// Generate optimization recommendations
-    fn generate_recommendations(&self, patterns: &[Pattern], goal: OptimizationGoal) -> Vec<OptimizationRecommendation> {
+    fn generate_recommendations(
+        &self,
+        patterns: &[Pattern],
+        goal: OptimizationGoal,
+    ) -> Vec<OptimizationRecommendation> {
         let mut recommendations = Vec::new();
 
         match goal {
             OptimizationGoal::MinimizeTime => {
-                if patterns.iter().any(|p| matches!(p.pattern_type, PatternType::ResourceBottleneck)) {
+                if patterns
+                    .iter()
+                    .any(|p| matches!(p.pattern_type, PatternType::ResourceBottleneck))
+                {
                     recommendations.push(OptimizationRecommendation {
                         recommendation_type: RecommendationType::AdjustResources,
-                        description: "Increase CPU allocation for faster task completion".to_string(),
+                        description: "Increase CPU allocation for faster task completion"
+                            .to_string(),
                         expected_improvement: 0.5,
                         confidence: 0.8,
                         priority: Priority::High,
@@ -183,10 +206,14 @@ impl ReflexiveLearningService {
                 });
             }
             OptimizationGoal::MaximizeQuality => {
-                if patterns.iter().any(|p| matches!(p.pattern_type, PatternType::ModelInefficiency)) {
+                if patterns
+                    .iter()
+                    .any(|p| matches!(p.pattern_type, PatternType::ModelInefficiency))
+                {
                     recommendations.push(OptimizationRecommendation {
                         recommendation_type: RecommendationType::ChangeModel,
-                        description: "Switch to higher quality model for better results".to_string(),
+                        description: "Switch to higher quality model for better results"
+                            .to_string(),
                         expected_improvement: 0.4,
                         confidence: 0.9,
                         priority: Priority::High,
@@ -256,14 +283,17 @@ impl LearningService for ReflexiveLearningService {
         let recommendations = self.generate_recommendations(&patterns, OptimizationGoal::Balanced);
 
         // Calculate confidence
-        let confidence = patterns.iter().map(|p| p.frequency * p.impact).sum::<f64>() / patterns.len() as f64;
+        let confidence =
+            patterns.iter().map(|p| p.frequency * p.impact).sum::<f64>() / patterns.len() as f64;
 
         // Update statistics
         let mut stats = self.statistics.write().await;
         stats.total_experiences += 1;
         stats.total_patterns += patterns.len();
         stats.total_improvements += improvements.len();
-        stats.average_confidence = (stats.average_confidence * (stats.total_experiences - 1) as f64 + confidence) / stats.total_experiences as f64;
+        stats.average_confidence =
+            (stats.average_confidence * (stats.total_experiences - 1) as f64 + confidence)
+                / stats.total_experiences as f64;
 
         Ok(LearningInsights {
             patterns,
@@ -291,7 +321,7 @@ impl LearningService for ReflexiveLearningService {
     async fn update_model(&self, experiences: Vec<Experience>) -> Result<(), String> {
         // Process each experience to update the Q-learning model
         let mut q_learning = self.q_learning.write().await;
-        
+
         for experience in &experiences {
             // Update Q-learning with the experience
             q_learning.update(
@@ -301,11 +331,11 @@ impl LearningService for ReflexiveLearningService {
                 &experience.next_state,
             );
         }
-        
+
         // Update statistics
         let mut stats = self.statistics.write().await;
         stats.total_experiences += experiences.len();
-        
+
         Ok(())
     }
 
@@ -317,7 +347,7 @@ impl LearningService for ReflexiveLearningService {
 
 /// Pattern recognition engine for identifying performance patterns
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PatternRecognitionEngine {
     /// Recent patterns identified (stored in LRU-like fashion, keeping most recent)
     recent_patterns: Vec<Pattern>,
@@ -336,7 +366,7 @@ impl PatternRecognitionEngine {
     /// Add patterns to the engine
     pub fn add_patterns(&mut self, patterns: Vec<Pattern>) {
         self.recent_patterns.extend(patterns);
-        
+
         // Keep only the most recent patterns if we exceed max
         if self.recent_patterns.len() > self.max_patterns {
             let excess = self.recent_patterns.len() - self.max_patterns;
@@ -351,7 +381,8 @@ impl PatternRecognitionEngine {
 
     /// Get patterns by type
     pub fn get_patterns_by_type(&self, pattern_type: PatternType) -> Vec<Pattern> {
-        self.recent_patterns.iter()
+        self.recent_patterns
+            .iter()
             .filter(|p| p.pattern_type == pattern_type)
             .cloned()
             .collect()

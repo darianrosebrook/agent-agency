@@ -15,14 +15,14 @@
 //! - Security & Privacy: Safe operation and compliance validation
 
 #[cfg(feature = "full")]
+pub mod autonomous_workflow;
+#[cfg(feature = "full")]
 pub mod scenario_1_refactor;
 #[cfg(feature = "full")]
 pub mod scenario_2_research;
 #[cfg(feature = "full")]
 pub mod scenario_3_mutation;
 pub mod scenario_4_file_editing;
-#[cfg(feature = "full")]
-pub mod autonomous_workflow;
 
 // CAWS Constitutional Authority tests
 pub mod caws_governance;
@@ -63,4 +63,3 @@ pub mod quality_evaluation;
 // Integrated Playground + Quality Evaluation tests
 #[cfg(feature = "full")]
 pub mod integrated_playground_quality;
-

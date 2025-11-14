@@ -120,6 +120,65 @@ impl Default for BenchmarkConfig {
     }
 }
 
+/// Detailed latency breakdown for performance analysis
+#[derive(Debug, Clone, Default)]
+pub struct LatencyBreakdown {
+    /// Input preparation time (tokenization, KV cache prep, etc.) in milliseconds
+    pub input_prep_ms: f64,
+    /// FFI call overhead (Rust -> Swift) in milliseconds
+    pub ffi_overhead_ms: f64,
+    /// CoreML inference time (inside Swift) in milliseconds
+    pub coreml_inference_ms: f64,
+    /// Swift -> Rust return overhead in milliseconds
+    pub return_overhead_ms: f64,
+    /// Output postprocessing time (detokenization, etc.) in milliseconds
+    pub postprocess_ms: f64,
+    /// Total end-to-end latency in milliseconds
+    pub total_ms: f64,
+    /// Compilation time (first-run graph compilation) in milliseconds
+    pub compile_time_ms: Option<f64>,
+    /// First run latency (after compilation) in milliseconds
+    pub first_run_ms: Option<f64>,
+    /// Steady-state average latency (excluding first run) in milliseconds
+    pub steady_state_avg_ms: Option<f64>,
+}
+
+impl LatencyBreakdown {
+    /// Calculate total from components
+    pub fn calculate_total(&mut self) {
+        self.total_ms = self.input_prep_ms
+            + self.ffi_overhead_ms
+            + self.coreml_inference_ms
+            + self.return_overhead_ms
+            + self.postprocess_ms;
+    }
+
+    /// Create a summary string for logging
+    pub fn summary(&self) -> String {
+        format!(
+            "Total: {:.2}ms (input_prep: {:.2}ms, ffi: {:.2}ms, coreml: {:.2}ms, return: {:.2}ms, postprocess: {:.2}ms)",
+            self.total_ms,
+            self.input_prep_ms,
+            self.ffi_overhead_ms,
+            self.coreml_inference_ms,
+            self.return_overhead_ms,
+            self.postprocess_ms
+        )
+    }
+}
+
+/// Timing data returned from inference operations
+/// This is used to accumulate detailed latency breakdowns
+#[derive(Debug, Clone, Default)]
+pub struct InferenceTiming {
+    /// FFI call overhead (Rust -> Swift) in milliseconds
+    pub ffi_overhead_ms: f64,
+    /// CoreML inference time (inside Swift) in milliseconds
+    pub coreml_inference_ms: f64,
+    /// Total inference time (FFI + CoreML) in milliseconds
+    pub total_inference_ms: f64,
+}
+
 /// Core ML performance metrics
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -141,6 +200,14 @@ pub struct PerformanceMetrics {
     pub ane_utilization: Option<f64>,
     /// Memory usage in bytes
     pub memory_usage_bytes: Option<u64>,
+    /// Detailed latency breakdown (if available)
+    pub breakdown: Option<LatencyBreakdown>,
+    /// Compilation time in milliseconds (first-run only)
+    pub compile_time_ms: Option<f64>,
+    /// First run latency in milliseconds
+    pub first_run_ms: Option<f64>,
+    /// Steady-state average latency (excluding first run)
+    pub steady_state_avg_ms: Option<f64>,
 }
 
 /// Benchmark runner for Core ML inference
@@ -173,18 +240,30 @@ where
 
         // Measurement phase
         let mut latencies = Vec::with_capacity(self.config.iterations);
+        let mut first_run_latency: Option<f64> = None;
+        let mut steady_state_latencies = Vec::new();
         let start_time = Instant::now();
 
-        for _ in 0..self.config.iterations {
+        for i in 0..self.config.iterations {
             let inference_start = Instant::now();
 
             match (self.inference_fn)() {
                 Ok(_) => {
-                    let latency = inference_start.elapsed();
-                    latencies.push(latency.as_secs_f64() * 1000.0);
+                    let latency_ms = inference_start.elapsed().as_secs_f64() * 1000.0;
+                    latencies.push(latency_ms);
+                    
+                    // Track first run separately (after warm-up)
+                    if i == 0 {
+                        first_run_latency = Some(latency_ms);
+                    } else {
+                        steady_state_latencies.push(latency_ms);
+                    }
                 }
                 Err(e) => {
-                    return Err(ANEError::Internal(format!("Inference failed during benchmark: {}", e)));
+                    return Err(ANEError::Internal(format!(
+                        "Inference failed during benchmark: {}",
+                        e
+                    )));
                 }
             }
         }
@@ -203,6 +282,13 @@ where
         let p99_latency = latencies[len * 99 / 100];
         let throughput = len as f64 / total_time.as_secs_f64();
 
+        // Calculate steady-state average
+        let steady_state_avg = if !steady_state_latencies.is_empty() {
+            Some(steady_state_latencies.iter().sum::<f64>() / steady_state_latencies.len() as f64)
+        } else {
+            None
+        };
+
         Ok(PerformanceMetrics {
             avg_latency_ms: avg_latency,
             p50_latency_ms: p50_latency,
@@ -213,13 +299,17 @@ where
             throughput_ips: throughput,
             ane_utilization: None, // Would need platform-specific measurement
             memory_usage_bytes: None, // Would need platform-specific measurement
+            breakdown: None, // Detailed breakdown requires instrumentation in inference path
+            compile_time_ms: None, // Compilation time requires separate measurement
+            first_run_ms: first_run_latency,
+            steady_state_avg_ms: steady_state_avg,
         })
     }
 }
 
 /// Test data generation utilities
 pub mod test_data {
-    use crate::ane::compat::types::{MLMultiArray, MLDictionaryFeatureProvider};
+    use crate::ane::compat::types::{MLDictionaryFeatureProvider, MLMultiArray};
     use std::collections::HashMap;
 
     /// Generate random test data for benchmarking
@@ -239,19 +329,30 @@ pub mod test_data {
     }
 
     /// Create a test MLMultiArray with random data
-    pub fn create_test_array(shape: &[i32], seed: u64) -> crate::ane::ane_errors::Result<MLMultiArray> {
+    pub fn create_test_array(
+        shape: &[i32],
+        seed: u64,
+    ) -> crate::ane::ane_errors::Result<MLMultiArray> {
         let data = generate_random_data(shape, seed);
         Ok(MLMultiArray::from_slice(&data, shape)?)
     }
 
     /// Create a test feature provider for inference
-    pub fn create_test_provider(shape: &[i32], seed: u64) -> crate::ane::ane_errors::Result<MLDictionaryFeatureProvider> {
+    pub fn create_test_provider(
+        shape: &[i32],
+        seed: u64,
+    ) -> crate::ane::ane_errors::Result<MLDictionaryFeatureProvider> {
         let array = create_test_array(shape, seed)?;
         let mut features = HashMap::new();
-        features.insert("input".to_string(), super::super::types::MLFeatureValue::MultiArray(array));
+        features.insert(
+            "input".to_string(),
+            super::super::types::MLFeatureValue::MultiArray(array),
+        );
 
         // Test provider doesn't use state features - pass None
-        Ok(MLDictionaryFeatureProvider::from_dictionary(&features, None)?)
+        Ok(MLDictionaryFeatureProvider::from_dictionary(
+            &features, None,
+        )?)
     }
 }
 
@@ -271,44 +372,55 @@ pub struct PerformanceComparison {
 impl PerformanceComparison {
     /// Check if performance meets requirements
     pub fn meets_requirements(&self, max_regression_percent: f64) -> bool {
-        self.latency_regression_percent <= max_regression_percent &&
-        self.throughput_regression_percent <= max_regression_percent
+        self.latency_regression_percent <= max_regression_percent
+            && self.throughput_regression_percent <= max_regression_percent
     }
 }
 
 /// Validation utilities for test results
 pub mod validation {
-    use super::{PerformanceMetrics, PerformanceComparison};
+    use super::{PerformanceComparison, PerformanceMetrics};
 
     /// Validate that performance metrics are within acceptable ranges
-    pub fn validate_metrics(metrics: &PerformanceMetrics, max_latency_ms: f64, min_throughput: f64) -> Result<(), crate::ane::ane_errors::ANEError> {
+    pub fn validate_metrics(
+        metrics: &PerformanceMetrics,
+        max_latency_ms: f64,
+        min_throughput: f64,
+    ) -> Result<(), crate::ane::ane_errors::ANEError> {
         if metrics.p99_latency_ms > max_latency_ms {
-            return Err(crate::ane::ane_errors::ANEError::Internal(
-                format!("P99 latency {:.2}ms exceeds maximum allowed {:.2}ms", metrics.p99_latency_ms, max_latency_ms)
-            ));
+            return Err(crate::ane::ane_errors::ANEError::Internal(format!(
+                "P99 latency {:.2}ms exceeds maximum allowed {:.2}ms",
+                metrics.p99_latency_ms, max_latency_ms
+            )));
         }
 
         if metrics.throughput_ips < min_throughput {
-            return Err(crate::ane::ane_errors::ANEError::Internal(
-                format!("Throughput {:.2} IPS below minimum required {:.2} IPS", metrics.throughput_ips, min_throughput)
-            ));
+            return Err(crate::ane::ane_errors::ANEError::Internal(format!(
+                "Throughput {:.2} IPS below minimum required {:.2} IPS",
+                metrics.throughput_ips, min_throughput
+            )));
         }
 
         Ok(())
     }
 
     /// Compare two sets of performance metrics
-    pub fn compare_metrics(baseline: &PerformanceMetrics, current: &PerformanceMetrics) -> PerformanceComparison {
+    pub fn compare_metrics(
+        baseline: &PerformanceMetrics,
+        current: &PerformanceMetrics,
+    ) -> PerformanceComparison {
         PerformanceComparison {
             latency_improvement_ms: baseline.avg_latency_ms - current.avg_latency_ms,
             throughput_improvement_ips: current.throughput_ips - baseline.throughput_ips,
             latency_regression_percent: if baseline.avg_latency_ms > 0.0 {
-                ((current.avg_latency_ms - baseline.avg_latency_ms) / baseline.avg_latency_ms) * 100.0
+                ((current.avg_latency_ms - baseline.avg_latency_ms) / baseline.avg_latency_ms)
+                    * 100.0
             } else {
                 0.0
             },
             throughput_regression_percent: if baseline.throughput_ips > 0.0 {
-                ((baseline.throughput_ips - current.throughput_ips) / baseline.throughput_ips) * 100.0
+                ((baseline.throughput_ips - current.throughput_ips) / baseline.throughput_ips)
+                    * 100.0
             } else {
                 0.0
             },

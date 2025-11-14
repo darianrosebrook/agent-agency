@@ -2,21 +2,21 @@
 //!
 //! Adaptive resource allocation, lifecycle management, and optimization.
 
-use schemars::JsonSchema;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::{
-    ResourceRequirements, ResourceAllocation, ResourceError,
-    ResourceUtilization,
-};
+use crate::{ResourceAllocation, ResourceError, ResourceRequirements, ResourceUtilization};
 
 /// Trait for resource pools
 #[async_trait]
 pub trait ResourcePool: Send + Sync + std::fmt::Debug {
     /// Allocate resources from this pool
-    async fn allocate(&self, requirements: ResourceRequirements) -> Result<ResourceAllocation, ResourceError>;
+    async fn allocate(
+        &self,
+        requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError>;
 
     /// Release resources back to this pool
     async fn release(&self, allocation_id: &str) -> Result<(), ResourceError>;
@@ -37,16 +37,24 @@ pub trait ResourcePool: Send + Sync + std::fmt::Debug {
     fn active_count(&self) -> usize;
 
     /// Get total memory capacity in MB
-    fn total_memory_mb(&self) -> u64 { 0 }
+    fn total_memory_mb(&self) -> u64 {
+        0
+    }
 
     /// Get total CPU cores capacity
-    fn total_cpu_cores(&self) -> f32 { 0.0 }
+    fn total_cpu_cores(&self) -> f32 {
+        0.0
+    }
 
     /// Get currently allocated memory in MB
-    async fn allocated_memory_mb(&self) -> u64 { 0 }
+    async fn allocated_memory_mb(&self) -> u64 {
+        0
+    }
 
     /// Get currently allocated CPU cores
-    async fn allocated_cpu_cores(&self) -> f32 { 0.0 }
+    async fn allocated_cpu_cores(&self) -> f32 {
+        0.0
+    }
 }
 
 /// Adaptive resource manager
@@ -95,12 +103,15 @@ impl AdaptiveResourceManager {
         for (name, pool) in pools.iter() {
             let utilization = pool.utilization().await;
 
-            pool_utilizations.insert(name.clone(), crate::PoolUtilization {
-                pool_name: name.clone(),
-                utilization_percent: utilization,
-                active_allocations: pool.active_count(),
-                total_capacity: pool.capacity(),
-            });
+            pool_utilizations.insert(
+                name.clone(),
+                crate::PoolUtilization {
+                    pool_name: name.clone(),
+                    utilization_percent: utilization,
+                    active_allocations: pool.active_count(),
+                    total_capacity: pool.capacity(),
+                },
+            );
 
             active_allocations += pool.active_count();
 

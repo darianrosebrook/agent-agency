@@ -7,9 +7,12 @@
 //! - Performing multi-hop reasoning
 //! - Analyzing temporal patterns
 //! - Managing memory decay and importance
+use agent_memory::memory_types::{
+    AgentExperience, ExperienceContext, ExperienceOutcome, MemoryId, ReasoningQuery, TaskContext,
+    TaskPriority, TemporalContext, TimeRange,
+};
 use agent_memory::{MemoryConfig, MemorySystem, MemoryType};
-use agent_memory::memory_types::{AgentExperience, MemoryId, TaskContext, ExperienceOutcome, ReasoningQuery, TimeRange, ExperienceContext, TemporalContext, TaskPriority};
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -38,7 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         task_id: task_id_1.to_string(),
         content: "Review pull request for authentication middleware implementation".to_string(),
         context: ExperienceContext {
-            description: "Review pull request for authentication middleware implementation".to_string(),
+            description: "Review pull request for authentication middleware implementation"
+                .to_string(),
             domain: vec!["security".to_string(), "authentication".to_string()],
             task_type: "code_review".to_string(),
             temporal_context: Some(TemporalContext {
@@ -51,19 +55,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         input: serde_json::json!({
             "files": ["auth_middleware.rs", "tests.rs"],
             "lines_of_code": 150
-        }).to_string(),
+        })
+        .to_string(),
         output: serde_json::json!({
             "issues_found": 2,
             "suggestions": ["Add input validation", "Improve error handling"],
             "approved": true
-        }).to_string(),
+        })
+        .to_string(),
         outcome: ExperienceOutcome {
             quality_score: 0.9,
             error_message: None,
             metadata: HashMap::new(),
             success: true,
             performance_score: Some(0.9),
-            learned_capabilities: vec!["security_review".to_string(), "middleware_patterns".to_string()],
+            learned_capabilities: vec![
+                "security_review".to_string(),
+                "middleware_patterns".to_string(),
+            ],
             execution_time_ms: Some(4500),
         },
         memory_type: MemoryType::Episodic,
@@ -91,19 +100,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         input: serde_json::json!({
             "query_count": 15,
             "slowest_query_time": "2.3s"
-        }).to_string(),
+        })
+        .to_string(),
         output: serde_json::json!({
             "indexes_added": 3,
             "queries_optimized": 12,
             "performance_improvement": "75%"
-        }).to_string(),
+        })
+        .to_string(),
         outcome: ExperienceOutcome {
             quality_score: 0.85,
             error_message: None,
             metadata: HashMap::new(),
             success: true,
             performance_score: Some(0.85),
-            learned_capabilities: vec!["query_optimization".to_string(), "index_strategy".to_string()],
+            learned_capabilities: vec![
+                "query_optimization".to_string(),
+                "index_strategy".to_string(),
+            ],
             execution_time_ms: Some(3200),
         },
         memory_type: MemoryType::Episodic,
@@ -116,8 +130,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let memory_id_2 = memory_system.store_experience(experience_2.clone()).await?;
 
     println!("✅ Stored 2 agent experiences");
-    println!("   - Memory 1: {} ({})", memory_id_1, experience_1.context.task_type);
-    println!("   - Memory 2: {} ({})\n", memory_id_2, experience_2.context.task_type);
+    println!(
+        "   - Memory 1: {} ({})",
+        memory_id_1, experience_1.context.task_type
+    );
+    println!(
+        "   - Memory 2: {} ({})\n",
+        memory_id_2, experience_2.context.task_type
+    );
 
     // 3. Retrieve contextual memories
     println!("3. Retrieving Contextual Memories...");
@@ -132,15 +152,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         timestamp: Utc::now(),
     };
 
-    let contextual_memories = memory_system.retrieve_contextual_memories(&current_context, 5).await?;
+    let contextual_memories = memory_system
+        .retrieve_contextual_memories(&current_context, 5)
+        .await?;
 
-    println!("✅ Found {} contextual memories:", contextual_memories.len());
+    println!(
+        "✅ Found {} contextual memories:",
+        contextual_memories.len()
+    );
     for (i, memory) in contextual_memories.iter().enumerate() {
-        println!("   {}. {} - Relevance: {:.3}, Match: {:?}",
-                i + 1,
-                memory.memory.context.description.chars().take(50).collect::<String>(),
-                memory.relevance_score,
-                memory.context_match);
+        println!(
+            "   {}. {} - Relevance: {:.3}, Match: {:?}",
+            i + 1,
+            memory
+                .memory
+                .context
+                .description
+                .chars()
+                .take(50)
+                .collect::<String>(),
+            memory.relevance_score,
+            memory.context_match
+        );
     }
     println!();
 
@@ -162,14 +195,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Reasoning analysis complete:");
     println!("   - Paths found: {}", reasoning_result.paths.len());
     println!("   - Confidence: {:.3}", reasoning_result.confidence_score);
-    println!("   - Entities discovered: {}", reasoning_result.entities_discovered.len());
+    println!(
+        "   - Entities discovered: {}",
+        reasoning_result.entities_discovered.len()
+    );
 
     for (i, path) in reasoning_result.paths.iter().take(2).enumerate() {
-        println!("   Path {}: {} -> {} (hops: {})",
-                i + 1,
-                path.first().unwrap_or(&"unknown".to_string()),
-                path.last().unwrap_or(&"unknown".to_string()),
-                path.len().saturating_sub(1)); // hops = number of connections
+        println!(
+            "   Path {}: {} -> {} (hops: {})",
+            i + 1,
+            path.first().unwrap_or(&"unknown".to_string()),
+            path.last().unwrap_or(&"unknown".to_string()),
+            path.len().saturating_sub(1)
+        ); // hops = number of connections
     }
     println!();
 
@@ -181,19 +219,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         end: Utc::now(),
     };
 
-    let temporal_analysis = memory_system.analyze_temporal_patterns(agent_id, &time_range).await?;
+    let temporal_analysis = memory_system
+        .analyze_temporal_patterns(agent_id, &time_range)
+        .await?;
 
     println!("✅ Temporal analysis for agent {}:", agent_id);
-    println!("   - Time range: {} to {}", time_range.start.format("%Y-%m-%d"), time_range.end.format("%Y-%m-%d"));
-    println!("   - Performance trends: {}", temporal_analysis.trends.len());
-    println!("   - Change points detected: {}", temporal_analysis.change_points.len());
-    println!("   - Causality links: {}", temporal_analysis.causality_links.len());
+    println!(
+        "   - Time range: {} to {}",
+        time_range.start.format("%Y-%m-%d"),
+        time_range.end.format("%Y-%m-%d")
+    );
+    println!(
+        "   - Performance trends: {}",
+        temporal_analysis.trends.len()
+    );
+    println!(
+        "   - Change points detected: {}",
+        temporal_analysis.change_points.len()
+    );
+    println!(
+        "   - Causality links: {}",
+        temporal_analysis.causality_links.len()
+    );
 
     println!("   Performance Summary:");
-    println!("     - Performance summary: {}", temporal_analysis.performance_summary);
-    println!("     - Performance metrics: {} entries", temporal_analysis.performance_metrics.len());
-    println!("     - Trends identified: {}", temporal_analysis.trends.len());
-    println!("     - Causality links: {}", temporal_analysis.causality_links.len());
+    println!(
+        "     - Performance summary: {}",
+        temporal_analysis.performance_summary
+    );
+    println!(
+        "     - Performance metrics: {} entries",
+        temporal_analysis.performance_metrics.len()
+    );
+    println!(
+        "     - Trends identified: {}",
+        temporal_analysis.trends.len()
+    );
+    println!(
+        "     - Causality links: {}",
+        temporal_analysis.causality_links.len()
+    );
     println!();
 
     // 6. Run memory maintenance
@@ -202,9 +267,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_result = memory_system.run_maintenance().await?;
 
     println!("✅ Memory maintenance completed:");
-    println!("   - Memories decayed: {}", maintenance_result.decayed_memories);
-    println!("   - Memories consolidated: {}", maintenance_result.consolidated_memories);
-    println!("   - Memories cleaned up: {}\n", maintenance_result.cleaned_memories);
+    println!(
+        "   - Memories decayed: {}",
+        maintenance_result.decayed_memories
+    );
+    println!(
+        "   - Memories consolidated: {}",
+        maintenance_result.consolidated_memories
+    );
+    println!(
+        "   - Memories cleaned up: {}\n",
+        maintenance_result.cleaned_memories
+    );
 
     // 7. Get memory system statistics
     println!("7. Memory System Statistics...");
@@ -216,11 +290,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📊 Memory System Health:");
     println!("   Total Memories: {}", memory_stats.total_memories);
     println!("   Unique Agents: {}", memory_stats.unique_agents);
-    println!("   Knowledge Graph: {} entities, {} relationships", graph_stats.entity_count, graph_stats.relationship_count);
+    println!(
+        "   Knowledge Graph: {} entities, {} relationships",
+        graph_stats.entity_count, graph_stats.relationship_count
+    );
 
     #[cfg(feature = "embeddings")]
     {
-        let embedding_stats = memory_system.embedding_integration().get_embedding_stats().await?;
+        let embedding_stats = memory_system
+            .embedding_integration()
+            .get_embedding_stats()
+            .await?;
         println!("   Embeddings: {} stored", embedding_stats.total_embeddings);
     }
     #[cfg(not(feature = "embeddings"))]
@@ -237,11 +317,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("8. Demonstrating Memory Importance Management...");
 
     // Boost the importance of the security-related memory
-    memory_system.decay_engine().boost_memory_importance(memory_id_1, 1.5).await?;
+    memory_system
+        .decay_engine()
+        .boost_memory_importance(memory_id_1, 1.5)
+        .await?;
     println!("✅ Boosted importance of security review memory");
 
     // Protect highly important memories from decay
-    let protected = memory_system.decay_engine().protect_important_memories(1.2).await?;
+    let protected = memory_system
+        .decay_engine()
+        .protect_important_memories(1.2)
+        .await?;
     println!("✅ Protected {} important memories from decay\n", protected);
 
     println!("🎉 Agent Memory System demonstration complete!");

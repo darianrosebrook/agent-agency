@@ -10,9 +10,9 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 use crate::judge_io::{JudgePrompt, JudgeVerdict};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Core trait for judge inference engines
 /// Platform-agnostic interface for LLM inference backends
@@ -53,7 +53,6 @@ pub struct EngineResponse {
     /// Token usage statistics
     pub usage: TokenUsage,
 }
-
 
 /// Engine capabilities and metadata
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

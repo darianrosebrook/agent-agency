@@ -1,13 +1,13 @@
 //! Security scanning evidence collection
 
-use super::common::{EvidenceCollector, CollectorCtx, helpers};
+use super::common::{helpers, CollectorCtx, EvidenceCollector};
 use super::types::*;
-use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, ProcessingContext};
 use anyhow::Result;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Security collector
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,13 +20,19 @@ impl EvidenceCollector for SecurityCollector {
     type Input = AtomicClaim;
     type Output = Vec<Evidence>;
 
-    fn name(&self) -> &'static str { "security" }
+    fn name(&self) -> &'static str {
+        "security"
+    }
 
     fn config(&self) -> &EvidenceCollectorConfig {
         &self.config
     }
 
-    async fn collect(&self, claim: &AtomicClaim, ctx: &CollectorCtx) -> Result<Vec<Evidence>, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    async fn collect(
+        &self,
+        claim: &AtomicClaim,
+        ctx: &CollectorCtx,
+    ) -> Result<Vec<Evidence>, Box<dyn std::error::Error + Send + Sync + 'static>> {
         // Check timeout
         if ctx.should_timeout() {
             return Err(Box::from("Security collection timed out"));
@@ -76,8 +82,10 @@ impl SecurityCollector {
         claim: &AtomicClaim,
         context: &ProcessingContext,
     ) -> Result<Vec<Evidence>> {
-        use crate::evidence::common::{EvidenceCollector as _, CollectorCtx};
+        use crate::evidence::common::{CollectorCtx, EvidenceCollector as _};
         let ctx = CollectorCtx::new(self.config.clone(), context.clone());
-        <Self as EvidenceCollector>::run(self, claim, &ctx).await.map_err(|e| anyhow::anyhow!("{}", e))
+        <Self as EvidenceCollector>::run(self, claim, &ctx)
+            .await
+            .map_err(|e| anyhow::anyhow!("{}", e))
     }
 }

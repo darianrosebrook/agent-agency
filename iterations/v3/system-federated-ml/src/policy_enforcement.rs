@@ -4,14 +4,14 @@
 //! including CAWS validation, task decomposition algorithms, quality gates, reasoning engines,
 //! and workflow logging capabilities.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::warn;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use std::fmt;
 
@@ -20,7 +20,8 @@ pub struct PolicyEnforcementTools {
     /// CAWS validation configuration
     pub caws_config: CawsValidationConfig,
     /// Task decomposition algorithms
-    pub decomposition_algorithms: HashMap<String, Box<dyn TaskDecompositionAlgorithm + Send + Sync>>,
+    pub decomposition_algorithms:
+        HashMap<String, Box<dyn TaskDecompositionAlgorithm + Send + Sync>>,
     /// Quality gate registry
     pub quality_gates: QualityGateRegistry,
     /// Reasoning engine
@@ -37,7 +38,10 @@ impl fmt::Debug for PolicyEnforcementTools {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PolicyEnforcementTools")
             .field("caws_config", &self.caws_config)
-            .field("decomposition_algorithms", &format!("{} algorithms", self.decomposition_algorithms.len()))
+            .field(
+                "decomposition_algorithms",
+                &format!("{} algorithms", self.decomposition_algorithms.len()),
+            )
             .field("quality_gates", &self.quality_gates)
             .field("reasoning_engine", &self.reasoning_engine)
             .field("workflow_logger", &self.workflow_logger)
@@ -260,8 +264,14 @@ impl TaskDecompositionAlgorithm for AdaptiveDecompositionAlgorithm {
     fn decompose(&self, task: &TaskDescriptor) -> Result<Vec<SubTask>> {
         // Adaptive decomposition based on task complexity
         let complexity = task.description.len() as f64 / 100.0;
-        let num_subtasks = if complexity < 1.0 { 2 } else if complexity < 2.0 { 3 } else { 4 };
-        
+        let num_subtasks = if complexity < 1.0 {
+            2
+        } else if complexity < 2.0 {
+            3
+        } else {
+            4
+        };
+
         let mut subtasks = Vec::new();
         for i in 0..num_subtasks {
             subtasks.push(SubTask {
@@ -345,12 +355,16 @@ impl QualityGate for SyntaxValidationGate {
         // Simple syntax validation
         let passed = !context.task.description.is_empty();
         let score = if passed { 1.0 } else { 0.0 };
-        
+
         Ok(QualityGateResult {
             gate_name: self.name().to_string(),
             passed,
             score,
-            error_message: if passed { None } else { Some("Empty task description".to_string()) },
+            error_message: if passed {
+                None
+            } else {
+                Some("Empty task description".to_string())
+            },
             metrics: HashMap::new(),
         })
     }
@@ -370,18 +384,22 @@ pub struct SecurityScanGate;
 impl QualityGate for SecurityScanGate {
     fn run(&self, context: &QualityGateContext) -> Result<QualityGateResult> {
         // Simple security scan
-        let has_security_keywords = context.task.description.to_lowercase().contains("security") ||
-                                  context.task.description.to_lowercase().contains("auth") ||
-                                  context.task.description.to_lowercase().contains("password");
-        
+        let has_security_keywords = context.task.description.to_lowercase().contains("security")
+            || context.task.description.to_lowercase().contains("auth")
+            || context.task.description.to_lowercase().contains("password");
+
         let passed = !has_security_keywords || context.working_spec.risk_tier >= 2;
         let score = if passed { 1.0 } else { 0.5 };
-        
+
         Ok(QualityGateResult {
             gate_name: self.name().to_string(),
             passed,
             score,
-            error_message: if passed { None } else { Some("Security-related task requires higher risk tier".to_string()) },
+            error_message: if passed {
+                None
+            } else {
+                Some("Security-related task requires higher risk tier".to_string())
+            },
             metrics: HashMap::new(),
         })
     }
@@ -403,13 +421,23 @@ impl QualityGate for PerformanceCheckGate {
         // Simple performance check
         let estimated_effort = context.task.estimated_effort;
         let passed = estimated_effort <= 1000; // Reasonable effort limit
-        let score = if estimated_effort <= 500 { 1.0 } else if estimated_effort <= 1000 { 0.8 } else { 0.5 };
-        
+        let score = if estimated_effort <= 500 {
+            1.0
+        } else if estimated_effort <= 1000 {
+            0.8
+        } else {
+            0.5
+        };
+
         Ok(QualityGateResult {
             gate_name: self.name().to_string(),
             passed,
             score,
-            error_message: if passed { None } else { Some("Task effort exceeds performance limits".to_string()) },
+            error_message: if passed {
+                None
+            } else {
+                Some("Task effort exceeds performance limits".to_string())
+            },
             metrics: HashMap::from([
                 ("estimated_effort".to_string(), estimated_effort as f64),
                 ("effort_score".to_string(), score),
@@ -432,18 +460,22 @@ pub struct TestCoverageGate;
 impl QualityGate for TestCoverageGate {
     fn run(&self, context: &QualityGateContext) -> Result<QualityGateResult> {
         // Simple test coverage check
-        let has_test_keywords = context.task.description.to_lowercase().contains("test") ||
-                              context.task.description.to_lowercase().contains("spec") ||
-                              context.task.description.to_lowercase().contains("coverage");
-        
+        let has_test_keywords = context.task.description.to_lowercase().contains("test")
+            || context.task.description.to_lowercase().contains("spec")
+            || context.task.description.to_lowercase().contains("coverage");
+
         let passed = has_test_keywords || context.working_spec.risk_tier <= 2;
         let score = if has_test_keywords { 1.0 } else { 0.7 };
-        
+
         Ok(QualityGateResult {
             gate_name: self.name().to_string(),
             passed,
             score,
-            error_message: if passed { None } else { Some("High-risk task should include testing".to_string()) },
+            error_message: if passed {
+                None
+            } else {
+                Some("High-risk task should include testing".to_string())
+            },
             metrics: HashMap::new(),
         })
     }
@@ -464,13 +496,21 @@ impl QualityGate for MutationTestingGate {
     fn run(&self, context: &QualityGateContext) -> Result<QualityGateResult> {
         // Simple mutation testing check
         let passed = context.working_spec.risk_tier <= 2; // Only required for high-risk tasks
-        let score = if context.working_spec.risk_tier == 1 { 1.0 } else { 0.8 };
-        
+        let score = if context.working_spec.risk_tier == 1 {
+            1.0
+        } else {
+            0.8
+        };
+
         Ok(QualityGateResult {
             gate_name: self.name().to_string(),
             passed,
             score,
-            error_message: if passed { None } else { Some("Mutation testing required for high-risk tasks".to_string()) },
+            error_message: if passed {
+                None
+            } else {
+                Some("Mutation testing required for high-risk tasks".to_string())
+            },
             metrics: HashMap::new(),
         })
     }
@@ -495,7 +535,10 @@ pub struct ReasoningEngine {
 impl fmt::Debug for ReasoningEngine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReasoningEngine")
-            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .field(
+                "algorithms",
+                &format!("{} algorithms", self.algorithms.len()),
+            )
             .field("knowledge_base", &self.knowledge_base)
             .finish()
     }
@@ -540,7 +583,7 @@ impl ReasoningAlgorithm for RuleBasedReasoningAlgorithm {
         } else {
             "Standard processing applicable"
         };
-        
+
         Ok(ReasoningOutput {
             conclusion: conclusion.to_string(),
             confidence: 0.8,
@@ -566,7 +609,7 @@ impl ReasoningAlgorithm for PatternBasedReasoningAlgorithm {
         } else {
             "Simple pattern - standard processing"
         };
-        
+
         Ok(ReasoningOutput {
             conclusion: conclusion.to_string(),
             confidence: 0.7,
@@ -587,7 +630,7 @@ impl ReasoningAlgorithm for MachineLearningReasoningAlgorithm {
     fn reason(&self, _input: &ReasoningInput) -> Result<ReasoningOutput> {
         // Simple ML reasoning (placeholder)
         let conclusion = "ML-based analysis completed";
-        
+
         Ok(ReasoningOutput {
             conclusion: conclusion.to_string(),
             confidence: 0.9,
@@ -610,7 +653,10 @@ pub struct EvidenceSynthesizer {
 impl fmt::Debug for EvidenceSynthesizer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EvidenceSynthesizer")
-            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .field(
+                "algorithms",
+                &format!("{} algorithms", self.algorithms.len()),
+            )
             .finish()
     }
 }
@@ -679,11 +725,18 @@ impl SynthesisAlgorithm for WeightedEvidenceSynthesisAlgorithm {
     fn synthesize(&self, evidence: &[Evidence]) -> Result<SynthesizedEvidence> {
         // Simple weighted synthesis
         let total_weight: f64 = evidence.iter().map(|e| e.confidence).sum();
-        let avg_confidence = if !evidence.is_empty() { total_weight / evidence.len() as f64 } else { 0.0 };
-        
-        let result = format!("Synthesized {} pieces of evidence with average confidence {:.2}", 
-                           evidence.len(), avg_confidence);
-        
+        let avg_confidence = if !evidence.is_empty() {
+            total_weight / evidence.len() as f64
+        } else {
+            0.0
+        };
+
+        let result = format!(
+            "Synthesized {} pieces of evidence with average confidence {:.2}",
+            evidence.len(),
+            avg_confidence
+        );
+
         Ok(SynthesizedEvidence {
             result,
             confidence: avg_confidence,
@@ -704,15 +757,18 @@ impl SynthesisAlgorithm for ConsensusEvidenceSynthesisAlgorithm {
     fn synthesize(&self, evidence: &[Evidence]) -> Result<SynthesizedEvidence> {
         // Simple consensus synthesis
         let consensus_threshold = 0.7;
-        let high_confidence_count = evidence.iter().filter(|e| e.confidence >= consensus_threshold).count();
+        let high_confidence_count = evidence
+            .iter()
+            .filter(|e| e.confidence >= consensus_threshold)
+            .count();
         let consensus_reached = high_confidence_count as f64 / evidence.len() as f64 >= 0.5;
-        
+
         let result = if consensus_reached {
             "Consensus reached on evidence"
         } else {
             "No consensus reached - requires additional evidence"
         };
-        
+
         Ok(SynthesizedEvidence {
             result: result.to_string(),
             confidence: if consensus_reached { 0.8 } else { 0.3 },
@@ -734,11 +790,14 @@ impl SynthesisAlgorithm for BayesianEvidenceSynthesisAlgorithm {
         // Simple Bayesian synthesis
         let prior_probability = 0.5;
         let likelihood: f64 = evidence.iter().map(|e| e.confidence).product();
-        let posterior_probability = (likelihood * prior_probability) / 
-                                  (likelihood * prior_probability + (1.0 - likelihood) * (1.0 - prior_probability));
-        
-        let result = format!("Bayesian synthesis with posterior probability {:.3}", posterior_probability);
-        
+        let posterior_probability = (likelihood * prior_probability)
+            / (likelihood * prior_probability + (1.0 - likelihood) * (1.0 - prior_probability));
+
+        let result = format!(
+            "Bayesian synthesis with posterior probability {:.3}",
+            posterior_probability
+        );
+
         Ok(SynthesizedEvidence {
             result,
             confidence: posterior_probability,
@@ -784,7 +843,6 @@ pub struct LogEntry {
     pub id: Uuid,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Log level
     pub level: LogLevel,
@@ -913,7 +971,6 @@ pub struct ChainExecution {
     pub chain_name: String,
     /// Start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -935,7 +992,6 @@ pub struct ChainStep {
     pub step_name: String,
     /// Start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -1010,7 +1066,10 @@ pub struct ChainAnalyzer {
 impl fmt::Debug for ChainAnalyzer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ChainAnalyzer")
-            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .field(
+                "algorithms",
+                &format!("{} algorithms", self.algorithms.len()),
+            )
             .finish()
     }
 }
@@ -1045,16 +1104,31 @@ impl ChainAnalysisAlgorithm for DependencyAnalysisAlgorithm {
     fn analyze(&self, execution: &ChainExecution) -> Result<ChainAnalysis> {
         // Simple dependency analysis
         let step_count = execution.steps.len();
-        let failed_steps = execution.steps.iter().filter(|s| matches!(s.status, StepStatus::Failed)).count();
-        let success_rate = if step_count > 0 { 1.0 - (failed_steps as f64 / step_count as f64) } else { 0.0 };
-        
-        let result = format!("Chain has {} steps with {:.1}% success rate", step_count, success_rate * 100.0);
+        let failed_steps = execution
+            .steps
+            .iter()
+            .filter(|s| matches!(s.status, StepStatus::Failed))
+            .count();
+        let success_rate = if step_count > 0 {
+            1.0 - (failed_steps as f64 / step_count as f64)
+        } else {
+            0.0
+        };
+
+        let result = format!(
+            "Chain has {} steps with {:.1}% success rate",
+            step_count,
+            success_rate * 100.0
+        );
         let recommendations = if success_rate < 0.8 {
-            vec!["Consider improving error handling".to_string(), "Review failed steps".to_string()]
+            vec![
+                "Consider improving error handling".to_string(),
+                "Review failed steps".to_string(),
+            ]
         } else {
             vec!["Chain execution looks good".to_string()]
         };
-        
+
         Ok(ChainAnalysis {
             analysis_type: "dependency".to_string(),
             result,
@@ -1079,27 +1153,42 @@ pub struct PerformanceAnalysisAlgorithm;
 impl ChainAnalysisAlgorithm for PerformanceAnalysisAlgorithm {
     fn analyze(&self, execution: &ChainExecution) -> Result<ChainAnalysis> {
         // Simple performance analysis
-        let total_duration = execution.end_time
-            .map(|end| end.signed_duration_since(execution.start_time).num_milliseconds())
+        let total_duration = execution
+            .end_time
+            .map(|end| {
+                end.signed_duration_since(execution.start_time)
+                    .num_milliseconds()
+            })
             .unwrap_or(0);
-        
+
         let avg_step_duration = if !execution.steps.is_empty() {
-            execution.steps.iter()
-                .filter_map(|s| s.end_time.map(|end| end.signed_duration_since(s.start_time).num_milliseconds()))
-                .sum::<i64>() as f64 / execution.steps.len() as f64
+            execution
+                .steps
+                .iter()
+                .filter_map(|s| {
+                    s.end_time
+                        .map(|end| end.signed_duration_since(s.start_time).num_milliseconds())
+                })
+                .sum::<i64>() as f64
+                / execution.steps.len() as f64
         } else {
             0.0
         };
-        
-        let result = format!("Total duration: {}ms, Average step duration: {:.1}ms", 
-                           total_duration, avg_step_duration);
-        
+
+        let result = format!(
+            "Total duration: {}ms, Average step duration: {:.1}ms",
+            total_duration, avg_step_duration
+        );
+
         let recommendations = if avg_step_duration > 5000.0 {
-            vec!["Consider optimizing slow steps".to_string(), "Review performance bottlenecks".to_string()]
+            vec![
+                "Consider optimizing slow steps".to_string(),
+                "Review performance bottlenecks".to_string(),
+            ]
         } else {
             vec!["Performance looks acceptable".to_string()]
         };
-        
+
         Ok(ChainAnalysis {
             analysis_type: "performance".to_string(),
             result,
@@ -1123,19 +1212,34 @@ pub struct ReliabilityAnalysisAlgorithm;
 impl ChainAnalysisAlgorithm for ReliabilityAnalysisAlgorithm {
     fn analyze(&self, execution: &ChainExecution) -> Result<ChainAnalysis> {
         // Simple reliability analysis
-        let completed_steps = execution.steps.iter().filter(|s| matches!(s.status, StepStatus::Completed)).count();
+        let completed_steps = execution
+            .steps
+            .iter()
+            .filter(|s| matches!(s.status, StepStatus::Completed))
+            .count();
         let total_steps = execution.steps.len();
-        let reliability_score = if total_steps > 0 { completed_steps as f64 / total_steps as f64 } else { 0.0 };
-        
-        let result = format!("Reliability score: {:.1}% ({}/{} steps completed)", 
-                           reliability_score * 100.0, completed_steps, total_steps);
-        
+        let reliability_score = if total_steps > 0 {
+            completed_steps as f64 / total_steps as f64
+        } else {
+            0.0
+        };
+
+        let result = format!(
+            "Reliability score: {:.1}% ({}/{} steps completed)",
+            reliability_score * 100.0,
+            completed_steps,
+            total_steps
+        );
+
         let recommendations = if reliability_score < 0.9 {
-            vec!["Improve error handling".to_string(), "Add retry mechanisms".to_string()]
+            vec![
+                "Improve error handling".to_string(),
+                "Add retry mechanisms".to_string(),
+            ]
         } else {
             vec!["Reliability looks good".to_string()]
         };
-        
+
         Ok(ChainAnalysis {
             analysis_type: "reliability".to_string(),
             result,
@@ -1166,7 +1270,10 @@ pub struct ComplianceMetrics {
 impl fmt::Debug for ComplianceMetrics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ComplianceMetrics")
-            .field("current_metrics", &format!("{} metrics", self.current_metrics.len()))
+            .field(
+                "current_metrics",
+                &format!("{} metrics", self.current_metrics.len()),
+            )
             .finish()
     }
 }
@@ -1191,7 +1298,6 @@ pub struct Metric {
     pub value: f64,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Tags
     pub tags: HashMap<String, String>,
@@ -1230,7 +1336,10 @@ pub struct MetricsAggregator {
 impl fmt::Debug for MetricsAggregator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MetricsAggregator")
-            .field("algorithms", &format!("{} algorithms", self.algorithms.len()))
+            .field(
+                "algorithms",
+                &format!("{} algorithms", self.algorithms.len()),
+            )
             .finish()
     }
 }
@@ -1238,7 +1347,11 @@ impl fmt::Debug for MetricsAggregator {
 /// Aggregation algorithm trait
 pub trait AggregationAlgorithm: Send + Sync {
     /// Aggregate metrics
-    fn aggregate(&self, metrics: &[Metric], aggregation_type: AggregationType) -> Result<AggregatedMetric>;
+    fn aggregate(
+        &self,
+        metrics: &[Metric],
+        aggregation_type: AggregationType,
+    ) -> Result<AggregatedMetric>;
     /// Get algorithm name
     fn name(&self) -> &str;
 }
@@ -1275,18 +1388,27 @@ pub struct AggregatedMetric {
 pub struct AverageAggregationAlgorithm;
 
 impl AggregationAlgorithm for AverageAggregationAlgorithm {
-    fn aggregate(&self, metrics: &[Metric], aggregation_type: AggregationType) -> Result<AggregatedMetric> {
+    fn aggregate(
+        &self,
+        metrics: &[Metric],
+        aggregation_type: AggregationType,
+    ) -> Result<AggregatedMetric> {
         match aggregation_type {
             AggregationType::Average => {
                 let sum: f64 = metrics.iter().map(|m| m.value).sum();
-                let avg = if !metrics.is_empty() { sum / metrics.len() as f64 } else { 0.0 };
-                
+                let avg = if !metrics.is_empty() {
+                    sum / metrics.len() as f64
+                } else {
+                    0.0
+                };
+
                 Ok(AggregatedMetric {
                     aggregation_type,
                     value: avg,
                     count: metrics.len(),
                     time_range: if !metrics.is_empty() {
-                        let timestamps: Vec<DateTime<Utc>> = metrics.iter().map(|m| m.timestamp).collect();
+                        let timestamps: Vec<DateTime<Utc>> =
+                            metrics.iter().map(|m| m.timestamp).collect();
                         let min_time = timestamps.iter().min().unwrap().clone();
                         let max_time = timestamps.iter().max().unwrap().clone();
                         (min_time, max_time)
@@ -1295,7 +1417,9 @@ impl AggregationAlgorithm for AverageAggregationAlgorithm {
                     },
                 })
             }
-            _ => Err(anyhow::anyhow!("Unsupported aggregation type for average algorithm")),
+            _ => Err(anyhow::anyhow!(
+                "Unsupported aggregation type for average algorithm"
+            )),
         }
     }
 
@@ -1308,17 +1432,22 @@ impl AggregationAlgorithm for AverageAggregationAlgorithm {
 pub struct SumAggregationAlgorithm;
 
 impl AggregationAlgorithm for SumAggregationAlgorithm {
-    fn aggregate(&self, metrics: &[Metric], aggregation_type: AggregationType) -> Result<AggregatedMetric> {
+    fn aggregate(
+        &self,
+        metrics: &[Metric],
+        aggregation_type: AggregationType,
+    ) -> Result<AggregatedMetric> {
         match aggregation_type {
             AggregationType::Sum => {
                 let sum: f64 = metrics.iter().map(|m| m.value).sum();
-                
+
                 Ok(AggregatedMetric {
                     aggregation_type,
                     value: sum,
                     count: metrics.len(),
                     time_range: if !metrics.is_empty() {
-                        let timestamps: Vec<DateTime<Utc>> = metrics.iter().map(|m| m.timestamp).collect();
+                        let timestamps: Vec<DateTime<Utc>> =
+                            metrics.iter().map(|m| m.timestamp).collect();
                         let min_time = timestamps.iter().min().unwrap().clone();
                         let max_time = timestamps.iter().max().unwrap().clone();
                         (min_time, max_time)
@@ -1327,7 +1456,9 @@ impl AggregationAlgorithm for SumAggregationAlgorithm {
                     },
                 })
             }
-            _ => Err(anyhow::anyhow!("Unsupported aggregation type for sum algorithm")),
+            _ => Err(anyhow::anyhow!(
+                "Unsupported aggregation type for sum algorithm"
+            )),
         }
     }
 
@@ -1340,24 +1471,29 @@ impl AggregationAlgorithm for SumAggregationAlgorithm {
 pub struct CountAggregationAlgorithm;
 
 impl AggregationAlgorithm for CountAggregationAlgorithm {
-    fn aggregate(&self, metrics: &[Metric], aggregation_type: AggregationType) -> Result<AggregatedMetric> {
+    fn aggregate(
+        &self,
+        metrics: &[Metric],
+        aggregation_type: AggregationType,
+    ) -> Result<AggregatedMetric> {
         match aggregation_type {
-            AggregationType::Count => {
-                Ok(AggregatedMetric {
-                    aggregation_type,
-                    value: metrics.len() as f64,
-                    count: metrics.len(),
-                    time_range: if !metrics.is_empty() {
-                        let timestamps: Vec<DateTime<Utc>> = metrics.iter().map(|m| m.timestamp).collect();
-                        let min_time = timestamps.iter().min().unwrap().clone();
-                        let max_time = timestamps.iter().max().unwrap().clone();
-                        (min_time, max_time)
-                    } else {
-                        (Utc::now(), Utc::now())
-                    },
-                })
-            }
-            _ => Err(anyhow::anyhow!("Unsupported aggregation type for count algorithm")),
+            AggregationType::Count => Ok(AggregatedMetric {
+                aggregation_type,
+                value: metrics.len() as f64,
+                count: metrics.len(),
+                time_range: if !metrics.is_empty() {
+                    let timestamps: Vec<DateTime<Utc>> =
+                        metrics.iter().map(|m| m.timestamp).collect();
+                    let min_time = timestamps.iter().min().unwrap().clone();
+                    let max_time = timestamps.iter().max().unwrap().clone();
+                    (min_time, max_time)
+                } else {
+                    (Utc::now(), Utc::now())
+                },
+            }),
+            _ => Err(anyhow::anyhow!(
+                "Unsupported aggregation type for count algorithm"
+            )),
         }
     }
 
@@ -1415,7 +1551,6 @@ pub struct TaskDescriptor {
     pub estimated_effort: u32,
     /// Created at
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -1439,7 +1574,6 @@ pub struct SubTask {
     pub worker_specialty: String,
     /// Created at
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -1475,7 +1609,6 @@ pub struct WorkflowExecution {
     pub workflow_name: String,
     /// Start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -1495,7 +1628,6 @@ pub struct WorkflowStep {
     pub step_name: String,
     /// Start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// End time
     pub end_time: Option<DateTime<Utc>>,
@@ -1528,7 +1660,6 @@ pub struct ComplianceReport {
     pub id: Uuid,
     /// Report timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Compliance score
     pub compliance_score: f64,
@@ -1559,35 +1690,94 @@ pub struct AcceptanceCriterion {
 impl PolicyEnforcementTools {
     /// Create new policy enforcement tools
     pub fn new() -> Self {
-        let mut decomposition_algorithms: HashMap<String, Box<dyn TaskDecompositionAlgorithm + Send + Sync>> = HashMap::new();
-        decomposition_algorithms.insert("sequential".to_string(), Box::new(SequentialDecompositionAlgorithm));
-        decomposition_algorithms.insert("parallel".to_string(), Box::new(ParallelDecompositionAlgorithm));
-        decomposition_algorithms.insert("hierarchical".to_string(), Box::new(HierarchicalDecompositionAlgorithm));
-        decomposition_algorithms.insert("adaptive".to_string(), Box::new(AdaptiveDecompositionAlgorithm));
+        let mut decomposition_algorithms: HashMap<
+            String,
+            Box<dyn TaskDecompositionAlgorithm + Send + Sync>,
+        > = HashMap::new();
+        decomposition_algorithms.insert(
+            "sequential".to_string(),
+            Box::new(SequentialDecompositionAlgorithm),
+        );
+        decomposition_algorithms.insert(
+            "parallel".to_string(),
+            Box::new(ParallelDecompositionAlgorithm),
+        );
+        decomposition_algorithms.insert(
+            "hierarchical".to_string(),
+            Box::new(HierarchicalDecompositionAlgorithm),
+        );
+        decomposition_algorithms.insert(
+            "adaptive".to_string(),
+            Box::new(AdaptiveDecompositionAlgorithm),
+        );
 
         let mut quality_gates: HashMap<String, Box<dyn QualityGate + Send + Sync>> = HashMap::new();
-        quality_gates.insert("syntax_validation".to_string(), Box::new(SyntaxValidationGate));
+        quality_gates.insert(
+            "syntax_validation".to_string(),
+            Box::new(SyntaxValidationGate),
+        );
         quality_gates.insert("security_scan".to_string(), Box::new(SecurityScanGate));
-        quality_gates.insert("performance_check".to_string(), Box::new(PerformanceCheckGate));
+        quality_gates.insert(
+            "performance_check".to_string(),
+            Box::new(PerformanceCheckGate),
+        );
         quality_gates.insert("test_coverage".to_string(), Box::new(TestCoverageGate));
-        quality_gates.insert("mutation_testing".to_string(), Box::new(MutationTestingGate));
+        quality_gates.insert(
+            "mutation_testing".to_string(),
+            Box::new(MutationTestingGate),
+        );
 
-        let mut reasoning_algorithms: HashMap<String, Box<dyn ReasoningAlgorithm + Send + Sync>> = HashMap::new();
-        reasoning_algorithms.insert("rule_based".to_string(), Box::new(RuleBasedReasoningAlgorithm));
-        reasoning_algorithms.insert("pattern_based".to_string(), Box::new(PatternBasedReasoningAlgorithm));
-        reasoning_algorithms.insert("ml_based".to_string(), Box::new(MachineLearningReasoningAlgorithm));
+        let mut reasoning_algorithms: HashMap<String, Box<dyn ReasoningAlgorithm + Send + Sync>> =
+            HashMap::new();
+        reasoning_algorithms.insert(
+            "rule_based".to_string(),
+            Box::new(RuleBasedReasoningAlgorithm),
+        );
+        reasoning_algorithms.insert(
+            "pattern_based".to_string(),
+            Box::new(PatternBasedReasoningAlgorithm),
+        );
+        reasoning_algorithms.insert(
+            "ml_based".to_string(),
+            Box::new(MachineLearningReasoningAlgorithm),
+        );
 
-        let mut synthesis_algorithms: HashMap<String, Box<dyn SynthesisAlgorithm + Send + Sync>> = HashMap::new();
-        synthesis_algorithms.insert("weighted".to_string(), Box::new(WeightedEvidenceSynthesisAlgorithm));
-        synthesis_algorithms.insert("consensus".to_string(), Box::new(ConsensusEvidenceSynthesisAlgorithm));
-        synthesis_algorithms.insert("bayesian".to_string(), Box::new(BayesianEvidenceSynthesisAlgorithm));
+        let mut synthesis_algorithms: HashMap<String, Box<dyn SynthesisAlgorithm + Send + Sync>> =
+            HashMap::new();
+        synthesis_algorithms.insert(
+            "weighted".to_string(),
+            Box::new(WeightedEvidenceSynthesisAlgorithm),
+        );
+        synthesis_algorithms.insert(
+            "consensus".to_string(),
+            Box::new(ConsensusEvidenceSynthesisAlgorithm),
+        );
+        synthesis_algorithms.insert(
+            "bayesian".to_string(),
+            Box::new(BayesianEvidenceSynthesisAlgorithm),
+        );
 
-        let mut chain_analysis_algorithms: HashMap<String, Box<dyn ChainAnalysisAlgorithm + Send + Sync>> = HashMap::new();
-        chain_analysis_algorithms.insert("dependency".to_string(), Box::new(DependencyAnalysisAlgorithm));
-        chain_analysis_algorithms.insert("performance".to_string(), Box::new(PerformanceAnalysisAlgorithm));
-        chain_analysis_algorithms.insert("reliability".to_string(), Box::new(ReliabilityAnalysisAlgorithm));
+        let mut chain_analysis_algorithms: HashMap<
+            String,
+            Box<dyn ChainAnalysisAlgorithm + Send + Sync>,
+        > = HashMap::new();
+        chain_analysis_algorithms.insert(
+            "dependency".to_string(),
+            Box::new(DependencyAnalysisAlgorithm),
+        );
+        chain_analysis_algorithms.insert(
+            "performance".to_string(),
+            Box::new(PerformanceAnalysisAlgorithm),
+        );
+        chain_analysis_algorithms.insert(
+            "reliability".to_string(),
+            Box::new(ReliabilityAnalysisAlgorithm),
+        );
 
-        let mut aggregation_algorithms: HashMap<String, Box<dyn AggregationAlgorithm + Send + Sync>> = HashMap::new();
+        let mut aggregation_algorithms: HashMap<
+            String,
+            Box<dyn AggregationAlgorithm + Send + Sync>,
+        > = HashMap::new();
         aggregation_algorithms.insert("average".to_string(), Box::new(AverageAggregationAlgorithm));
         aggregation_algorithms.insert("sum".to_string(), Box::new(SumAggregationAlgorithm));
         aggregation_algorithms.insert("count".to_string(), Box::new(CountAggregationAlgorithm));
@@ -1604,7 +1794,9 @@ impl PolicyEnforcementTools {
                 validation_timeout_seconds: 30,
             },
             decomposition_algorithms,
-            quality_gates: QualityGateRegistry { gates: quality_gates },
+            quality_gates: QualityGateRegistry {
+                gates: quality_gates,
+            },
             reasoning_engine: ReasoningEngine {
                 algorithms: reasoning_algorithms,
                 knowledge_base: KnowledgeBase {
@@ -1628,7 +1820,11 @@ impl PolicyEnforcementTools {
     }
 
     /// Validate task against CAWS policies
-    pub async fn validate_task_against_caws(&self, task: &TaskDescriptor, spec: &WorkingSpec) -> Result<PolicyValidationResult> {
+    pub async fn validate_task_against_caws(
+        &self,
+        task: &TaskDescriptor,
+        spec: &WorkingSpec,
+    ) -> Result<PolicyValidationResult> {
         let mut violations = Vec::new();
         let mut compliance_score = 1.0;
 
@@ -1658,18 +1854,28 @@ impl PolicyEnforcementTools {
     }
 
     /// Decompose task using available algorithms
-    pub async fn decompose_task(&self, task: &TaskDescriptor, algorithm_name: &str) -> Result<Vec<SubTask>> {
+    pub async fn decompose_task(
+        &self,
+        task: &TaskDescriptor,
+        algorithm_name: &str,
+    ) -> Result<Vec<SubTask>> {
         if let Some(algorithm) = self.decomposition_algorithms.get(algorithm_name) {
             algorithm.decompose(task)
         } else {
-            Err(anyhow::anyhow!("Unknown decomposition algorithm: {}", algorithm_name))
+            Err(anyhow::anyhow!(
+                "Unknown decomposition algorithm: {}",
+                algorithm_name
+            ))
         }
     }
 
     /// Run quality gates
-    pub async fn run_quality_gates(&self, context: &QualityGateContext) -> Result<Vec<QualityGateResult>> {
+    pub async fn run_quality_gates(
+        &self,
+        context: &QualityGateContext,
+    ) -> Result<Vec<QualityGateResult>> {
         let mut results = Vec::new();
-        
+
         for (name, gate) in &self.quality_gates.gates {
             match gate.run(context) {
                 Ok(result) => results.push(result),
@@ -1685,16 +1891,23 @@ impl PolicyEnforcementTools {
                 }
             }
         }
-        
+
         Ok(results)
     }
 
     /// Perform reasoning
-    pub async fn perform_reasoning(&self, input: &ReasoningInput, algorithm_name: &str) -> Result<ReasoningOutput> {
+    pub async fn perform_reasoning(
+        &self,
+        input: &ReasoningInput,
+        algorithm_name: &str,
+    ) -> Result<ReasoningOutput> {
         if let Some(algorithm) = self.reasoning_engine.algorithms.get(algorithm_name) {
             algorithm.reason(input)
         } else {
-            Err(anyhow::anyhow!("Unknown reasoning algorithm: {}", algorithm_name))
+            Err(anyhow::anyhow!(
+                "Unknown reasoning algorithm: {}",
+                algorithm_name
+            ))
         }
     }
 
@@ -1712,15 +1925,24 @@ impl PolicyEnforcementTools {
             },
             message: format!("Workflow {} executed", execution.workflow_name),
             context: HashMap::from([
-                ("workflow_name".to_string(), serde_json::Value::String(execution.workflow_name.clone())),
-                ("status".to_string(), serde_json::Value::String(format!("{:?}", execution.status))),
-                ("step_count".to_string(), serde_json::Value::Number(serde_json::Number::from(execution.steps.len()))),
+                (
+                    "workflow_name".to_string(),
+                    serde_json::Value::String(execution.workflow_name.clone()),
+                ),
+                (
+                    "status".to_string(),
+                    serde_json::Value::String(format!("{:?}", execution.status)),
+                ),
+                (
+                    "step_count".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from(execution.steps.len())),
+                ),
             ]),
         };
 
         // Store log entry
         self.workflow_logger.storage.store(log_entry)?;
-        
+
         Ok(())
     }
 }

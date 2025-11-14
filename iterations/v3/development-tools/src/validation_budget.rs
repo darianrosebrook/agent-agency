@@ -3,9 +3,9 @@
 //! Consolidated budget checking logic extracted from self-prompting-agent
 //! and other implementations.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 /// Budget limits for different resource types
@@ -27,7 +27,6 @@ pub struct BudgetState {
     pub memory_used_mb: u64,
     pub cost_used_cents: u64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -78,7 +77,9 @@ impl BudgetChecker {
                 resource_type: "files".to_string(),
                 current_usage: state.files_used as u64,
                 limit: self.limits.max_files as u64,
-                percentage_over: ((state.files_used - self.limits.max_files) as f32 / self.limits.max_files as f32) * 100.0,
+                percentage_over: ((state.files_used - self.limits.max_files) as f32
+                    / self.limits.max_files as f32)
+                    * 100.0,
             });
         }
 
@@ -96,12 +97,15 @@ impl BudgetChecker {
                 resource_type: "loc".to_string(),
                 current_usage: state.loc_used as u64,
                 limit: self.limits.max_loc as u64,
-                percentage_over: ((state.loc_used - self.limits.max_loc) as f32 / self.limits.max_loc as f32) * 100.0,
+                percentage_over: ((state.loc_used - self.limits.max_loc) as f32
+                    / self.limits.max_loc as f32)
+                    * 100.0,
             });
         }
 
         // Check time
-        let time_pct = (state.time_used_seconds as f32 / self.limits.max_time_seconds as f32) * 100.0;
+        let time_pct =
+            (state.time_used_seconds as f32 / self.limits.max_time_seconds as f32) * 100.0;
         utilization.insert("time".to_string(), time_pct);
 
         if state.time_used_seconds > self.limits.max_time_seconds {
@@ -110,7 +114,9 @@ impl BudgetChecker {
                 resource_type: "time".to_string(),
                 current_usage: state.time_used_seconds,
                 limit: self.limits.max_time_seconds,
-                percentage_over: ((state.time_used_seconds - self.limits.max_time_seconds) as f32 / self.limits.max_time_seconds as f32) * 100.0,
+                percentage_over: ((state.time_used_seconds - self.limits.max_time_seconds) as f32
+                    / self.limits.max_time_seconds as f32)
+                    * 100.0,
             });
         }
 
@@ -124,7 +130,9 @@ impl BudgetChecker {
                 resource_type: "memory".to_string(),
                 current_usage: state.memory_used_mb as u64,
                 limit: self.limits.max_memory_mb as u64,
-                percentage_over: ((state.memory_used_mb - self.limits.max_memory_mb) as f32 / self.limits.max_memory_mb as f32) * 100.0,
+                percentage_over: ((state.memory_used_mb - self.limits.max_memory_mb) as f32
+                    / self.limits.max_memory_mb as f32)
+                    * 100.0,
             });
         }
 
@@ -139,7 +147,8 @@ impl BudgetChecker {
                     resource_type: "cost".to_string(),
                     current_usage: state.cost_used_cents,
                     limit: max_cost,
-                    percentage_over: ((state.cost_used_cents - max_cost) as f32 / max_cost as f32) * 100.0,
+                    percentage_over: ((state.cost_used_cents - max_cost) as f32 / max_cost as f32)
+                        * 100.0,
                 });
             }
         }
@@ -152,8 +161,15 @@ impl BudgetChecker {
     }
 
     /// Update budget state with new usage
-    pub fn update_state(&self, mut state: BudgetState, new_files: u32, new_loc: u32,
-                       new_time: u64, new_memory: u64, new_cost: u64) -> BudgetState {
+    pub fn update_state(
+        &self,
+        mut state: BudgetState,
+        new_files: u32,
+        new_loc: u32,
+        new_time: u64,
+        new_memory: u64,
+        new_cost: u64,
+    ) -> BudgetState {
         state.files_used += new_files;
         state.loc_used += new_loc;
         state.time_used_seconds += new_time;
@@ -166,10 +182,19 @@ impl BudgetChecker {
     /// Get warning thresholds (80% utilization)
     pub fn get_warning_thresholds(&self) -> HashMap<String, u64> {
         let mut thresholds = HashMap::new();
-        thresholds.insert("files".to_string(), (self.limits.max_files as f32 * 0.8) as u64);
+        thresholds.insert(
+            "files".to_string(),
+            (self.limits.max_files as f32 * 0.8) as u64,
+        );
         thresholds.insert("loc".to_string(), (self.limits.max_loc as f32 * 0.8) as u64);
-        thresholds.insert("time".to_string(), (self.limits.max_time_seconds as f32 * 0.8) as u64);
-        thresholds.insert("memory".to_string(), (self.limits.max_memory_mb as f32 * 0.8) as u64);
+        thresholds.insert(
+            "time".to_string(),
+            (self.limits.max_time_seconds as f32 * 0.8) as u64,
+        );
+        thresholds.insert(
+            "memory".to_string(),
+            (self.limits.max_memory_mb as f32 * 0.8) as u64,
+        );
 
         if let Some(cost) = self.limits.max_cost_cents {
             thresholds.insert("cost".to_string(), (cost as f32 * 0.8) as u64);
@@ -185,31 +210,48 @@ impl BudgetChecker {
 
         if let Some(threshold) = thresholds.get("files") {
             if u64::from(state.files_used) >= *threshold {
-                warnings.push(format!("Files usage at {}% of budget", (state.files_used as f32 / self.limits.max_files as f32 * 100.0) as u32));
+                warnings.push(format!(
+                    "Files usage at {}% of budget",
+                    (state.files_used as f32 / self.limits.max_files as f32 * 100.0) as u32
+                ));
             }
         }
 
         if let Some(threshold) = thresholds.get("loc") {
             if u64::from(state.loc_used) >= *threshold {
-                warnings.push(format!("LOC usage at {}% of budget", (state.loc_used as f32 / self.limits.max_loc as f32 * 100.0) as u32));
+                warnings.push(format!(
+                    "LOC usage at {}% of budget",
+                    (state.loc_used as f32 / self.limits.max_loc as f32 * 100.0) as u32
+                ));
             }
         }
 
         if let Some(threshold) = thresholds.get("time") {
             if state.time_used_seconds >= *threshold {
-                warnings.push(format!("Time usage at {}% of budget", (state.time_used_seconds as f32 / self.limits.max_time_seconds as f32 * 100.0) as u32));
+                warnings.push(format!(
+                    "Time usage at {}% of budget",
+                    (state.time_used_seconds as f32 / self.limits.max_time_seconds as f32 * 100.0)
+                        as u32
+                ));
             }
         }
 
         if let Some(threshold) = thresholds.get("memory") {
             if u64::from(state.memory_used_mb) >= *threshold {
-                warnings.push(format!("Memory usage at {}% of budget", (state.memory_used_mb as f32 / self.limits.max_memory_mb as f32 * 100.0) as u32));
+                warnings.push(format!(
+                    "Memory usage at {}% of budget",
+                    (state.memory_used_mb as f32 / self.limits.max_memory_mb as f32 * 100.0) as u32
+                ));
             }
         }
 
         if let Some(threshold) = thresholds.get("cost") {
             if state.cost_used_cents >= *threshold {
-                warnings.push(format!("Cost usage at {}% of budget", (state.cost_used_cents as f32 / self.limits.max_cost_cents.unwrap_or(1) as f32 * 100.0) as u32));
+                warnings.push(format!(
+                    "Cost usage at {}% of budget",
+                    (state.cost_used_cents as f32 / self.limits.max_cost_cents.unwrap_or(1) as f32
+                        * 100.0) as u32
+                ));
             }
         }
 

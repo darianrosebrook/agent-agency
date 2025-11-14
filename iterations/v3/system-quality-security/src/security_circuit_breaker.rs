@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Circuit breaker states
 #[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
@@ -83,7 +83,10 @@ impl CircuitBreaker {
                 // Check if timeout has passed to try half-open
                 if let Some(last_failure) = self.last_failure_time {
                     if last_failure.elapsed() >= self.config.timeout_duration {
-                        info!("Circuit breaker for {} transitioning to half-open", self.config.service_name);
+                        info!(
+                            "Circuit breaker for {} transitioning to half-open",
+                            self.config.service_name
+                        );
                         self.state = CircuitState::HalfOpen;
                         self.half_open_requests = 0;
                         self.success_count = 0;
@@ -117,7 +120,10 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => {
                 self.success_count += 1;
                 if self.success_count >= self.config.success_threshold {
-                    info!("Circuit breaker for {} closed - service recovered", self.config.service_name);
+                    info!(
+                        "Circuit breaker for {} closed - service recovered",
+                        self.config.service_name
+                    );
                     self.state = CircuitState::Closed;
                     self.failure_count = 0;
                     self.success_count = 0;
@@ -126,7 +132,10 @@ impl CircuitBreaker {
             }
             CircuitState::Open => {
                 // Should not happen, but log it
-                warn!("Unexpected success recorded for open circuit breaker {}", self.config.service_name);
+                warn!(
+                    "Unexpected success recorded for open circuit breaker {}",
+                    self.config.service_name
+                );
             }
         }
     }
@@ -139,12 +148,18 @@ impl CircuitBreaker {
         match self.state {
             CircuitState::Closed => {
                 if self.failure_count >= self.config.failure_threshold {
-                    warn!("Circuit breaker for {} opened due to {} failures", self.config.service_name, self.failure_count);
+                    warn!(
+                        "Circuit breaker for {} opened due to {} failures",
+                        self.config.service_name, self.failure_count
+                    );
                     self.state = CircuitState::Open;
                 }
             }
             CircuitState::HalfOpen => {
-                error!("Circuit breaker for {} failed in half-open state, returning to open", self.config.service_name);
+                error!(
+                    "Circuit breaker for {} failed in half-open state, returning to open",
+                    self.config.service_name
+                );
                 self.state = CircuitState::Open;
                 self.success_count = 0;
                 self.half_open_requests = 0;
@@ -218,7 +233,10 @@ impl CircuitBreakerRegistry {
             };
             let breaker = CircuitBreaker::new(config.clone());
             breakers.insert(service_name.to_string(), breaker.clone());
-            warn!("Created circuit breaker with default config for unregistered service: {}", service_name);
+            warn!(
+                "Created circuit breaker with default config for unregistered service: {}",
+                service_name
+            );
             breaker
         }
     }
@@ -270,7 +288,8 @@ impl CircuitBreakerRegistry {
     /// Get statistics for all circuit breakers
     pub fn get_all_stats(&self) -> HashMap<String, CircuitBreakerStats> {
         let breakers = self.breakers.lock().unwrap();
-        breakers.iter()
+        breakers
+            .iter()
             .map(|(name, breaker)| (name.clone(), breaker.get_stats()))
             .collect()
     }
@@ -315,7 +334,7 @@ impl CircuitBreakerRegistry {
 
 /// Circuit breaker error types
 #[derive(Debug, thiserror::Error, JsonSchema)]
-pub enum CircuitBreakerError <E> {
+pub enum CircuitBreakerError<E> {
     #[error("Circuit breaker is open for service: {0}")]
     CircuitOpen(String),
     #[error("Operation failed: {0}")]
@@ -335,7 +354,9 @@ pub fn init_circuit_breaker_registry() -> &'static CircuitBreakerRegistry {
 
 /// Get the global circuit breaker registry
 pub fn get_circuit_breaker_registry() -> &'static CircuitBreakerRegistry {
-    CIRCUIT_BREAKER_REGISTRY.get().expect("Circuit breaker registry not initialized")
+    CIRCUIT_BREAKER_REGISTRY
+        .get()
+        .expect("Circuit breaker registry not initialized")
 }
 
 #[cfg(test)]
@@ -437,17 +458,19 @@ mod tests {
         let registry = CircuitBreakerRegistry::new();
 
         // Test successful operation
-        let result = registry.execute_with_circuit_breaker("test-service", || async {
-            Ok::<_, String>("success")
-        }).await;
+        let result = registry
+            .execute_with_circuit_breaker("test-service", || async { Ok::<_, String>("success") })
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
 
         // Test failed operation
-        let result = registry.execute_with_circuit_breaker("test-service", || async {
-            Err::<String, _>("operation failed")
-        }).await;
+        let result = registry
+            .execute_with_circuit_breaker("test-service", || async {
+                Err::<String, _>("operation failed")
+            })
+            .await;
 
         assert!(result.is_err());
         match result.unwrap_err() {

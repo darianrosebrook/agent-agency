@@ -3,12 +3,12 @@
 //! Contains all request/response structs, configuration types, and data models
 //! used throughout the REST API interface.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-use agent_agency_contracts::{WorkingSpec, ExecutionArtifacts, QualityReport};
+use agent_agency_contracts::{ExecutionArtifacts, QualityReport, WorkingSpec};
 
 /// API configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -112,7 +112,6 @@ pub struct DashboardIterationSummary {
     pub stop_reason: String,
     pub file_changes: usize,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub model_used: String,
 }
@@ -129,10 +128,8 @@ pub struct DashboardTaskSummary {
     pub score: Option<f64>,
     pub execution_mode: String,
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub last_update: DateTime<Utc>,
     pub iterations: Vec<DashboardIterationSummary>,
 }
@@ -159,7 +156,6 @@ pub struct WaiverRequest {
     pub impact_level: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
 }
 
@@ -190,7 +186,6 @@ pub struct ProvenanceResponse {
     pub git_trailer: String,
     pub signature: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }

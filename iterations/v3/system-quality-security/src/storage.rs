@@ -11,8 +11,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::provenance_types::*;
 use crate::provenance_service::ProvenanceStorage;
+use crate::provenance_types::*;
 
 /// Database-backed provenance storage
 pub struct DatabaseProvenanceStorage {
@@ -103,8 +103,8 @@ impl ProvenanceStorage for DatabaseProvenanceStorage {
             r#"
             UPDATE provenance_records SET
                 verdict_id = $2, task_id = $3, decision_type = $4, decision_data = $5,
-                consensus_score = $6, judge_verdicts = $7, caws_compliance = $8, 
-                claim_verification = $9, git_commit_hash = $10, git_trailer = $11, 
+                consensus_score = $6, judge_verdicts = $7, caws_compliance = $8,
+                claim_verification = $9, git_commit_hash = $10, git_trailer = $11,
                 signature = $12, timestamp = $13, metadata = $14, updated_at = NOW()
             WHERE id = $1
             "#,
@@ -144,12 +144,12 @@ impl ProvenanceStorage for DatabaseProvenanceStorage {
 
         let row = sqlx::query(
             r#"
-            SELECT 
+            SELECT
                 id, verdict_id, task_id, decision_type, decision_data,
                 consensus_score, judge_verdicts, caws_compliance, claim_verification,
                 git_commit_hash, git_trailer, signature, timestamp, metadata,
                 created_at, updated_at
-            FROM provenance_records 
+            FROM provenance_records
             WHERE id = $1
             "#,
         )
@@ -209,12 +209,12 @@ impl ProvenanceStorage for DatabaseProvenanceStorage {
     async fn query_records(&self, query: &ProvenanceQuery) -> Result<Vec<ProvenanceRecord>> {
         let mut sql = String::from(
             r#"
-            SELECT 
+            SELECT
                 id, verdict_id, task_id, decision_type, decision_data,
                 consensus_score, judge_verdicts, caws_compliance, claim_verification,
                 git_commit_hash, git_trailer, signature, timestamp, metadata,
                 created_at, updated_at
-            FROM provenance_records 
+            FROM provenance_records
             WHERE 1=1
             "#,
         );

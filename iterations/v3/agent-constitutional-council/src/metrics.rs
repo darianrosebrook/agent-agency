@@ -16,7 +16,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use agent_agency_contracts::{JudgeType, VerdictLabel, JudgeVerdict};
+use agent_agency_contracts::{JudgeType, JudgeVerdict, VerdictLabel};
 
 /// Council performance and observability metrics
 #[derive(Debug)]
@@ -71,16 +71,25 @@ impl CouncilMetrics {
     }
 
     /// Record evaluation completion
-    pub fn record_evaluation(&mut self, duration: Duration, judge_verdicts: &[(JudgeType, JudgeVerdict)], final_decision: &crate::FinalDecision) {
+    pub fn record_evaluation(
+        &mut self,
+        duration: Duration,
+        judge_verdicts: &[(JudgeType, JudgeVerdict)],
+        final_decision: &crate::FinalDecision,
+    ) {
         let duration_ms = duration.as_millis() as u64;
         self.evaluation_latency_ms.push(duration_ms);
 
         // Record verdict distribution
-        *self.verdicts_by_label.entry(final_decision.label.clone()).or_insert(0) += 1;
+        *self
+            .verdicts_by_label
+            .entry(final_decision.label.clone())
+            .or_insert(0) += 1;
 
         // Record judge metrics
         for (judge_type, verdict) in judge_verdicts {
-            self.judge_score_distributions.entry(judge_type.clone())
+            self.judge_score_distributions
+                .entry(judge_type.clone())
                 .or_insert_with(Vec::new)
                 .push(verdict.score);
         }
@@ -91,9 +100,12 @@ impl CouncilMetrics {
         }
 
         // Track non-waivable violations
-        let total_non_waivable = judge_verdicts.iter()
+        let total_non_waivable = judge_verdicts
+            .iter()
             .flat_map(|(_, verdict)| &verdict.violations)
-            .filter(|v| !v.waivable && v.severity == agent_agency_contracts::judge_io::Severity::Critical)
+            .filter(|v| {
+                !v.waivable && v.severity == agent_agency_contracts::judge_io::Severity::Critical
+            })
             .count();
         self.non_waivable_violations += total_non_waivable as u64;
 
@@ -102,7 +114,8 @@ impl CouncilMetrics {
 
     /// Record judge latency
     pub fn record_judge_latency(&mut self, judge_type: JudgeType, latency_ms: u64) {
-        self.judge_latency_ms.entry(judge_type)
+        self.judge_latency_ms
+            .entry(judge_type)
             .or_insert_with(Vec::new)
             .push(latency_ms);
     }
@@ -112,7 +125,10 @@ impl CouncilMetrics {
         if self.evaluation_latency_ms.is_empty() {
             None
         } else {
-            Some(self.evaluation_latency_ms.iter().sum::<u64>() as f64 / self.evaluation_latency_ms.len() as f64)
+            Some(
+                self.evaluation_latency_ms.iter().sum::<u64>() as f64
+                    / self.evaluation_latency_ms.len() as f64,
+            )
         }
     }
 
@@ -184,7 +200,8 @@ impl CouncilMetrics {
             average_judge_scores: self.average_judge_scores(),
             consensus_failure_rate: self.consensus_failure_rate(),
             non_waivable_violation_rate: self.non_waivable_violation_rate(),
-            last_evaluation_minutes_ago: self.last_evaluation
+            last_evaluation_minutes_ago: self
+                .last_evaluation
                 .map(|t| t.elapsed().as_secs() / 60)
                 .unwrap_or(u64::MAX),
         }
@@ -257,10 +274,13 @@ mod tests {
         };
 
         // Record evaluation - create tuples of (JudgeType, JudgeVerdict)
-        let judge_verdicts_with_types: Vec<(JudgeType, agent_agency_contracts::JudgeVerdict)> = vec![
-            (JudgeType::Constitutional, verdict.clone()),
-        ];
-        metrics.record_evaluation(Duration::from_millis(150), &judge_verdicts_with_types, &final_decision);
+        let judge_verdicts_with_types: Vec<(JudgeType, agent_agency_contracts::JudgeVerdict)> =
+            vec![(JudgeType::Constitutional, verdict.clone())];
+        metrics.record_evaluation(
+            Duration::from_millis(150),
+            &judge_verdicts_with_types,
+            &final_decision,
+        );
 
         assert_eq!(metrics.evaluation_latency_ms, vec![150]);
         assert_eq!(metrics.verdicts_by_label[&VerdictLabel::Pass], 1);

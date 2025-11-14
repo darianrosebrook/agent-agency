@@ -9,7 +9,12 @@ pub fn cosine_similarity(a: &EmbeddingVector, b: &EmbeddingVector) -> Result<f32
         return Err(anyhow::anyhow!("Vector dimensions must match"));
     }
 
-    let dot_product: f32 = a.values.iter().zip(b.values.iter()).map(|(x, y)| x * y).sum();
+    let dot_product: f32 = a
+        .values
+        .iter()
+        .zip(b.values.iter())
+        .map(|(x, y)| x * y)
+        .sum();
     let norm_a: f32 = a.values.iter().map(|x| x * x).sum::<f32>().sqrt();
     let norm_b: f32 = b.values.iter().map(|x| x * x).sum::<f32>().sqrt();
 

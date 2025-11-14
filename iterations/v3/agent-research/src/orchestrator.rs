@@ -1,24 +1,25 @@
 //! Learning orchestrator for coordinating algorithm selection and execution
 
-use schemars::JsonSchema;
-use crate::reflexive_types::{
-    LearningAlgorithmType, ProblemCharacteristics, AlgorithmPerformanceTracker, AlgorithmPerformance,
-    LearningDataPoint, LearningOutput, LearningFeedback
+use crate::learning_algorithms::ensemble::{
+    EnsembleAnalytics, LearningAlgorithm, ProblemCharacteristicsAnalyzer,
 };
-use crate::learning_algorithms::ensemble::{LearningAlgorithm, EnsembleAnalytics, ProblemCharacteristicsAnalyzer};
 use crate::learning_algorithms::supervised::*;
 use crate::learning_algorithms::unsupervised::*;
+use crate::reflexive_types::{
+    AlgorithmPerformance, AlgorithmPerformanceTracker, LearningAlgorithmType, LearningDataPoint,
+    LearningFeedback, LearningOutput, ProblemCharacteristics,
+};
 use crate::reinforcement::*;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 /// Learning orchestrator that coordinates algorithm selection and execution
-
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize)]
 pub struct LearningOrchestrator {
     /// Available learning algorithms
     #[serde(skip)]
@@ -64,7 +65,10 @@ impl LearningOrchestrator {
     ) -> Result<(), String> {
         let algorithm_type = algorithm.algorithm_type();
         if self.algorithms.contains_key(&algorithm_type) {
-            return Err(format!("Algorithm type {:?} already registered", algorithm_type));
+            return Err(format!(
+                "Algorithm type {:?} already registered",
+                algorithm_type
+            ));
         }
 
         self.algorithms.insert(algorithm_type, Box::new(algorithm));
@@ -72,7 +76,10 @@ impl LearningOrchestrator {
     }
 
     /// Select the best algorithm for a given problem
-    pub fn select_algorithm(&self, problem: &ProblemCharacteristics) -> Option<LearningAlgorithmType> {
+    pub fn select_algorithm(
+        &self,
+        problem: &ProblemCharacteristics,
+    ) -> Option<LearningAlgorithmType> {
         // TODO: Implement ML-based algorithm selection
         //       Currently uses simple heuristics; should use ML model to select the best algorithm based on problem characteristics and historical performance.
         //
@@ -126,12 +133,17 @@ impl LearningOrchestrator {
         data_point: &LearningDataPoint,
     ) -> Result<LearningOutput, String> {
         let problem_id = format!("{:?}_{:?}", data_point.input, data_point.expected_output);
-        let characteristics = self.characteristics_analyzer.analyze(&problem_id, data_point);
+        let characteristics = self
+            .characteristics_analyzer
+            .analyze(&problem_id, data_point);
 
-        let algorithm_type = self.select_algorithm(&characteristics)
+        let algorithm_type = self
+            .select_algorithm(&characteristics)
             .ok_or_else(|| "No suitable algorithm found".to_string())?;
 
-        let algorithm = self.algorithms.get_mut(&algorithm_type)
+        let algorithm = self
+            .algorithms
+            .get_mut(&algorithm_type)
             .ok_or_else(|| format!("Algorithm {:?} not registered", algorithm_type))?;
 
         // TODO: Implement batch training for learning algorithms
@@ -182,10 +194,15 @@ impl LearningOrchestrator {
     }
 
     /// Get performance metrics for all algorithms
-    pub fn get_performance_metrics(&self) -> HashMap<LearningAlgorithmType, Option<AlgorithmPerformance>> {
-        self.algorithms.keys()
+    pub fn get_performance_metrics(
+        &self,
+    ) -> HashMap<LearningAlgorithmType, Option<AlgorithmPerformance>> {
+        self.algorithms
+            .keys()
             .map(|algorithm_type| {
-                let performance = self.performance_tracker.get_average_performance(algorithm_type);
+                let performance = self
+                    .performance_tracker
+                    .get_average_performance(algorithm_type);
                 (algorithm_type.clone(), performance)
             })
             .collect()
@@ -215,7 +232,7 @@ impl Default for LearningOrchestrator {
 
 /// Learning system health monitor
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningSystemHealth {
     pub algorithm_count: usize,
     pub total_training_sessions: u64,
@@ -240,9 +257,8 @@ impl LearningSystemHealth {
 
     /// Check if the system is healthy
     pub fn is_healthy(&self) -> bool {
-        self.algorithm_count > 0 &&
-        self.average_performance > 0.5 &&
-        self.memory_usage_mb < 1000.0 // Less than 1GB
+        self.algorithm_count > 0 && self.average_performance > 0.5 && self.memory_usage_mb < 1000.0
+        // Less than 1GB
     }
 
     /// Get health score (0.0 to 1.0)
@@ -275,7 +291,11 @@ impl LearningSystemHealth {
     }
 
     /// Update health metrics
-    pub fn update_metrics(&mut self, algorithm_count: usize, performance_tracker: &AlgorithmPerformanceTracker) {
+    pub fn update_metrics(
+        &mut self,
+        algorithm_count: usize,
+        performance_tracker: &AlgorithmPerformanceTracker,
+    ) {
         self.algorithm_count = algorithm_count;
         self.total_training_sessions += 1;
         self.last_health_check = chrono::Utc::now();
@@ -289,7 +309,9 @@ impl LearningSystemHealth {
             LearningAlgorithmType::SupervisedLearning,
             LearningAlgorithmType::UnsupervisedLearning,
             LearningAlgorithmType::EnsembleLearning,
-        ].iter() {
+        ]
+        .iter()
+        {
             if let Some(performance) = performance_tracker.get_average_performance(algorithm_type) {
                 total_performance += performance.accuracy;
                 count += 1;
@@ -304,7 +326,7 @@ impl LearningSystemHealth {
 
 /// Meta-learning coordinator for algorithm improvement
 
-#[derive(Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize)]
 pub struct MetaLearningCoordinator {
     #[serde(skip)]
     orchestrator: Arc<RwLock<LearningOrchestrator>>,
@@ -329,7 +351,10 @@ impl MetaLearningCoordinator {
     }
 
     /// Learn from algorithm performance to improve selection
-    pub async fn learn_from_performance(&mut self, performance_data: &[AlgorithmPerformance]) -> Result<(), String> {
+    pub async fn learn_from_performance(
+        &mut self,
+        performance_data: &[AlgorithmPerformance],
+    ) -> Result<(), String> {
         // Meta-learning: analyze which algorithms work best for different problem types
         // This would train a meta-model to predict algorithm performance
 
@@ -343,15 +368,20 @@ impl MetaLearningCoordinator {
             // - [ ] Add integration tests with real meta-learning
             // Update meta-learning model
             // This is a placeholder - real implementation would train a model
-            info!("Meta-learning update: {:?} achieved {:.3} accuracy",
-                  performance.algorithm_type, performance.accuracy);
+            info!(
+                "Meta-learning update: {:?} achieved {:.3} accuracy",
+                performance.algorithm_type, performance.accuracy
+            );
         }
 
         Ok(())
     }
 
     /// Predict the best algorithm for a new problem
-    pub async fn predict_best_algorithm(&self, problem: &ProblemCharacteristics) -> Result<LearningAlgorithmType, String> {
+    pub async fn predict_best_algorithm(
+        &self,
+        problem: &ProblemCharacteristics,
+    ) -> Result<LearningAlgorithmType, String> {
         // TODO: Use trained meta-learning model for prediction
         // - [ ] Load trained meta-learning model
         // - [ ] Extract problem features from ProblemCharacteristics
@@ -374,7 +404,11 @@ impl MetaLearningCoordinator {
     }
 
     /// Adapt algorithm parameters based on meta-learning insights
-    pub async fn adapt_algorithm_parameters(&mut self, algorithm_type: &LearningAlgorithmType, performance_history: &[AlgorithmPerformance]) -> Result<(), String> {
+    pub async fn adapt_algorithm_parameters(
+        &mut self,
+        algorithm_type: &LearningAlgorithmType,
+        performance_history: &[AlgorithmPerformance],
+    ) -> Result<(), String> {
         // OPTIONAL: Implement real parameter optimization (deferred - advanced research feature)
         // - [ ] Analyze performance history to identify optimal parameter ranges
         // - [ ] Use optimization algorithms (e.g., Bayesian optimization, grid search)
@@ -385,13 +419,14 @@ impl MetaLearningCoordinator {
         // Analyze performance history to suggest parameter adjustments
         // This is a placeholder - real implementation would use optimization algorithms
 
-        let avg_performance = performance_history.iter()
-            .map(|p| p.accuracy)
-            .sum::<f64>() / performance_history.len() as f64;
+        let avg_performance = performance_history.iter().map(|p| p.accuracy).sum::<f64>()
+            / performance_history.len() as f64;
 
         if avg_performance < 0.6 {
-            info!("Meta-learning suggests parameter tuning for {:?} (current performance: {:.3})",
-                  algorithm_type, avg_performance);
+            info!(
+                "Meta-learning suggests parameter tuning for {:?} (current performance: {:.3})",
+                algorithm_type, avg_performance
+            );
         }
 
         Ok(())
@@ -416,17 +451,23 @@ mod tests {
     #[test]
     fn test_orchestrator_algorithm_selection_golden() {
         // Load golden input fixture
-        let fixture_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../../test-fixtures/duplication-baselines/orchestrator-input.json");
+        let fixture_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../../../test-fixtures/duplication-baselines/orchestrator-input.json"
+        );
         let fixture_content = match std::fs::read_to_string(fixture_path) {
             Ok(content) => content,
             Err(_) => {
-                eprintln!("Skipping test: Golden fixture not found at {}", fixture_path);
+                eprintln!(
+                    "Skipping test: Golden fixture not found at {}",
+                    fixture_path
+                );
                 return;
             }
         };
 
-        let task_spec: serde_json::Value = serde_json::from_str(&fixture_content)
-            .expect("Failed to parse golden fixture");
+        let task_spec: serde_json::Value =
+            serde_json::from_str(&fixture_content).expect("Failed to parse golden fixture");
 
         // Create orchestrator with deterministic state
         let orchestrator = LearningOrchestrator::new();
@@ -434,7 +475,8 @@ mod tests {
         // Extract test parameters from fixture
         let task_id = task_spec["task_spec"]["task_id"].as_str().unwrap();
         let requirements = task_spec["task_spec"]["requirements"]
-            .as_array().unwrap()
+            .as_array()
+            .unwrap()
             .iter()
             .map(|v| v.as_str().unwrap().to_string())
             .collect::<Vec<_>>();

@@ -6,7 +6,6 @@ pub mod ane_optimizer;
 
 // Re-export main types
 pub use ane_optimizer::{
-    ANEOptimizer, ANEOptimizationStrategy, ANEOptimizationParams,
-    PrecisionMode, MemoryStrategy, ComputeUnitPreference,
-    ANEMemoryOptimizer, BatchOptimizer, PerformanceStats
+    ANEMemoryOptimizer, ANEOptimizationParams, ANEOptimizationStrategy, ANEOptimizer,
+    BatchOptimizer, ComputeUnitPreference, MemoryStrategy, PerformanceStats, PrecisionMode,
 };

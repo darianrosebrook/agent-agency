@@ -1,5 +1,5 @@
 //! System and Monitoring API handlers
-//! 
+//!
 //! This module contains all API handlers related to system monitoring,
 //! metrics, dashboard data, and proxy operations.
 
@@ -18,24 +18,26 @@ pub async fn get_task_provenance(
     State(state): State<ApiState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let task_uuid = uuid::Uuid::parse_str(&task_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let task_uuid = uuid::Uuid::parse_str(&task_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     match state.api.db_client.get_task_provenance(&task_uuid).await {
         Ok(provenance_records) => {
-            let provenance_list: Vec<serde_json::Value> = provenance_records.into_iter().map(|record| {
-                serde_json::json!({
-                    "id": record.id,
-                    "task_id": record.task_id,
-                    "action": record.action,
-                    "timestamp": record.timestamp,
-                    "actor": record.actor,
-                    "resource_id": record.resource_id,
-                    "resource_type": record.resource_type,
-                    "change_summary": record.change_summary,
-                    "metadata": record.metadata
+            let provenance_list: Vec<serde_json::Value> = provenance_records
+                .into_iter()
+                .map(|record| {
+                    serde_json::json!({
+                        "id": record.id,
+                        "task_id": record.task_id,
+                        "action": record.action,
+                        "timestamp": record.timestamp,
+                        "actor": record.actor,
+                        "resource_id": record.resource_id,
+                        "resource_type": record.resource_type,
+                        "change_summary": record.change_summary,
+                        "metadata": record.metadata
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "task_id": task_id,
@@ -56,15 +58,18 @@ pub async fn proxy_handler(
     State(_state): State<ApiState>,
     Json(request_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let target_url = request_data.get("url")
+    let target_url = request_data
+        .get("url")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let method = request_data.get("method")
+
+    let method = request_data
+        .get("method")
         .and_then(|v| v.as_str())
         .unwrap_or("GET");
-    
-    let headers = request_data.get("headers")
+
+    let headers = request_data
+        .get("headers")
         .and_then(|v| v.as_object())
         .map(|obj| {
             obj.iter()
@@ -72,13 +77,12 @@ pub async fn proxy_handler(
                 .collect::<std::collections::HashMap<String, String>>()
         })
         .unwrap_or_default();
-    
+
     let body = request_data.get("body");
 
     // Validate URL for security (prevent SSRF attacks)
-    let url = reqwest::Url::parse(target_url)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let url = reqwest::Url::parse(target_url).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     // Only allow HTTP/HTTPS protocols
     if url.scheme() != "http" && url.scheme() != "https" {
         error!("Invalid URL scheme: {}", url.scheme());
@@ -125,12 +129,15 @@ pub async fn proxy_handler(
     match request_builder.send().await {
         Ok(response) => {
             let status_code = response.status().as_u16();
-            
+
             // Read response headers
-            let response_headers: serde_json::Value = response.headers()
+            let response_headers: serde_json::Value = response
+                .headers()
                 .iter()
                 .filter_map(|(k, v)| {
-                    v.to_str().ok().map(|val| (k.to_string(), serde_json::Value::String(val.to_string())))
+                    v.to_str()
+                        .ok()
+                        .map(|val| (k.to_string(), serde_json::Value::String(val.to_string())))
                 })
                 .collect();
 
@@ -215,15 +222,18 @@ pub async fn get_diff_summary(
     State(_state): State<ApiState>,
     Json(diff_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let _old_content = diff_data.get("old_content")
+    let _old_content = diff_data
+        .get("old_content")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let _new_content = diff_data.get("new_content")
+
+    let _new_content = diff_data
+        .get("new_content")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let context = diff_data.get("context")
+
+    let context = diff_data
+        .get("context")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
@@ -286,8 +296,11 @@ pub async fn get_diff_summary(
     // - CAWS Tier: 2 (AI integration functionality)
     // - Change Budget: ~250 LOC
     // - Reviewer Requirements: AI service integration and prompt engineering expertise
-    error!("Diff summary generation requested but AI service not available. Context: {}", context.chars().take(100).collect::<String>());
-    
+    error!(
+        "Diff summary generation requested but AI service not available. Context: {}",
+        context.chars().take(100).collect::<String>()
+    );
+
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -304,7 +317,12 @@ pub async fn create_chat_session(
         VALUES ($1, 'active', NOW(), NOW())
     "#;
 
-    match state.api.db_client.execute(insert_query, &[&session_id]).await {
+    match state
+        .api
+        .db_client
+        .execute(insert_query, &[&session_id])
+        .await
+    {
         Ok(_) => {
             // TODO: Log chat session creation using log_audit_event
 

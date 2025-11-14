@@ -1,22 +1,22 @@
 //! Query orchestration and execution coordination
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::{timeout, Duration};
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use tracing::{info, error, warn};
 
 use crate::research_types::*;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 
 use super::core::KnowledgeSeeker;
-use super::search::SearchCoordinator;
-use super::scraping::ScrapingCoordinator;
-use super::synthesis::ContextSynthesizer;
-use super::processing::ContentProcessorManager;
-use super::knowledge_metrics::MetricsCollector;
 use super::events::EventEmitter;
+use super::knowledge_metrics::MetricsCollector;
+use super::processing::ContentProcessorManager;
+use super::scraping::ScrapingCoordinator;
+use super::search::SearchCoordinator;
+use super::synthesis::ContextSynthesizer;
 use super::ResearchEvent;
 
 /// Query orchestrator for coordinating research execution
@@ -56,7 +56,9 @@ impl QueryOrchestrator {
         );
 
         // Emit query started event
-        self.event_emitter.emit(ResearchEvent::QueryStarted(query.id)).await;
+        self.event_emitter
+            .emit(ResearchEvent::QueryStarted(query.id))
+            .await;
 
         // Set timeout for the entire query
         let timeout_duration = Duration::from_secs(self.config.web_scraping.timeout_seconds as u64);
@@ -68,25 +70,36 @@ impl QueryOrchestrator {
                     "Research query completed successfully: {} results",
                     results.len()
                 );
-                self.event_emitter.emit(ResearchEvent::QueryCompleted(query.id, results.len())).await;
+                self.event_emitter
+                    .emit(ResearchEvent::QueryCompleted(query.id, results.len()))
+                    .await;
                 results
             }
             Ok(Err(e)) => {
                 error!("Research query failed: {}", e);
-                self.event_emitter.emit(ResearchEvent::QueryFailed(query.id, e.to_string())).await;
+                self.event_emitter
+                    .emit(ResearchEvent::QueryFailed(query.id, e.to_string()))
+                    .await;
                 return Err(e);
             }
             Err(_) => {
-                let error_msg = format!("Query timed out after {} seconds", timeout_duration.as_secs());
+                let error_msg = format!(
+                    "Query timed out after {} seconds",
+                    timeout_duration.as_secs()
+                );
                 error!("{}", error_msg);
-                self.event_emitter.emit(ResearchEvent::QueryFailed(query.id, error_msg.clone())).await;
+                self.event_emitter
+                    .emit(ResearchEvent::QueryFailed(query.id, error_msg.clone()))
+                    .await;
                 return Err(anyhow::anyhow!(error_msg));
             }
         };
 
         // Record metrics
         let duration_ms = start_time.elapsed().as_millis() as u64;
-        self.metrics_collector.record_query_execution(duration_ms, results.len() as u64, true).await;
+        self.metrics_collector
+            .record_query_execution(duration_ms, results.len() as u64, true)
+            .await;
 
         Ok(results)
     }
@@ -113,7 +126,10 @@ impl QueryOrchestrator {
 
         // If web scraping is enabled and we have web sources, scrape additional content
         if self.config.web_scraping.enabled && self.should_scrape_web(&query) {
-            let web_results = self.scraping_coordinator.scrape_web_sources(&query, &all_results).await?;
+            let web_results = self
+                .scraping_coordinator
+                .scrape_web_sources(&query, &all_results)
+                .await?;
             all_results.extend(web_results);
         }
 
@@ -121,7 +137,9 @@ impl QueryOrchestrator {
         let processed_results = self.process_and_rank_results(all_results, &query).await?;
 
         // Limit results if specified
-        let max_results = query.max_results.unwrap_or(self.config.vector_search.max_results) as usize;
+        let max_results = query
+            .max_results
+            .unwrap_or(self.config.vector_search.max_results) as usize;
         let final_results = processed_results.into_iter().take(max_results).collect();
 
         Ok(final_results)
@@ -133,11 +151,18 @@ impl QueryOrchestrator {
         query_id: Uuid,
         results: Vec<ResearchResult>,
     ) -> Result<SynthesizedContext> {
-        self.event_emitter.emit(ResearchEvent::ContextSynthesisStarted(query_id)).await;
+        self.event_emitter
+            .emit(ResearchEvent::ContextSynthesisStarted(query_id))
+            .await;
 
-        let context = self.context_synthesizer.synthesize(query_id, results).await?;
+        let context = self
+            .context_synthesizer
+            .synthesize(query_id, results)
+            .await?;
 
-        self.event_emitter.emit(ResearchEvent::ContextSynthesisCompleted(query_id)).await;
+        self.event_emitter
+            .emit(ResearchEvent::ContextSynthesisCompleted(query_id))
+            .await;
 
         Ok(context)
     }
@@ -145,10 +170,12 @@ impl QueryOrchestrator {
     /// Determine if web scraping should be performed for this query
     fn should_scrape_web(&self, query: &ResearchQuery) -> bool {
         // Scrape for research queries or when we have few local results
-        matches!(query.query_type, QueryType::Knowledge | QueryType::Technical) ||
-        query.query.contains("web") ||
-        query.query.contains("online") ||
-        query.query.contains("current")
+        matches!(
+            query.query_type,
+            QueryType::Knowledge | QueryType::Technical
+        ) || query.query.contains("web")
+            || query.query.contains("online")
+            || query.query.contains("current")
     }
 
     /// Process and rank research results
@@ -161,7 +188,11 @@ impl QueryOrchestrator {
 
         for mut result in results {
             // Process content if needed
-            if let Some(processed) = self.content_processor.process_content(&result.content).await? {
+            if let Some(processed) = self
+                .content_processor
+                .process_content(&result.content)
+                .await?
+            {
                 result.content = processed.processed_content;
                 if let Some(summary) = processed.summary {
                     result.summary = Some(summary);
@@ -177,14 +208,20 @@ impl QueryOrchestrator {
 
         // Sort by relevance score (highest first)
         processed_results.sort_by(|a, b| {
-            b.relevance_score.partial_cmp(&a.relevance_score).unwrap_or(std::cmp::Ordering::Equal)
+            b.relevance_score
+                .partial_cmp(&a.relevance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(processed_results)
     }
 
     /// Calculate relevance score for a result
-    fn calculate_relevance_score(&self, result: &ResearchResult, query: &ResearchQuery) -> Result<f32> {
+    fn calculate_relevance_score(
+        &self,
+        result: &ResearchResult,
+        query: &ResearchQuery,
+    ) -> Result<f32> {
         // Simple relevance calculation based on content match
         let query_lower = query.query.to_lowercase();
         let content_lower = result.content.to_lowercase();
@@ -222,7 +259,11 @@ impl QueryOrchestrator {
     }
 
     /// Calculate confidence score for a result
-    fn calculate_confidence_score(&self, result: &ResearchResult, query: &ResearchQuery) -> Result<f32> {
+    fn calculate_confidence_score(
+        &self,
+        result: &ResearchResult,
+        query: &ResearchQuery,
+    ) -> Result<f32> {
         let mut confidence: f32 = 0.5; // Base confidence
 
         // Higher confidence for structured content
@@ -232,7 +273,10 @@ impl QueryOrchestrator {
 
         // Higher confidence for official sources
         if let Some(url) = &result.url {
-            if url.contains("github.com") || url.contains("docs.rs") || url.contains("wikipedia.org") {
+            if url.contains("github.com")
+                || url.contains("docs.rs")
+                || url.contains("wikipedia.org")
+            {
                 confidence += 0.2;
             }
         }

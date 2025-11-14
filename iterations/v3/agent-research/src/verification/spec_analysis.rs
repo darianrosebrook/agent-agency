@@ -2,15 +2,19 @@
 //!
 //! This module handles specification analysis and relevance assessment.
 
-use anyhow::Result;
 use crate::verification::types::*;
+use anyhow::Result;
 
 /// Specification analyzer
 pub struct SpecAnalyzer;
 
 impl SpecAnalyzer {
     /// Analyze specification coverage and relevance
-    pub async fn analyze_specification(&self, _content: &str, _specs: &[String]) -> Result<SpecAnalysisResult> {
+    pub async fn analyze_specification(
+        &self,
+        _content: &str,
+        _specs: &[String],
+    ) -> Result<SpecAnalysisResult> {
         // TODO: Implement specification analysis
         Ok(SpecAnalysisResult {
             coverage_score: 0.5,

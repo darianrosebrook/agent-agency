@@ -3,8 +3,8 @@
 //! Provides APIs for creating chat sessions, sending messages,
 //! and retrieving conversation history.
 
-use crate::simple_client::DatabaseClient;
 use crate::database_metrics::DatabaseMetrics;
+use crate::simple_client::DatabaseClient;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -98,7 +98,7 @@ impl ChatService {
                 id, workspace_id, tenant_id, title, created_at, updated_at,
                 message_count, metadata, archived
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            "#
+            "#,
         )
         .bind(session_id)
         .bind(workspace_id)
@@ -106,13 +106,13 @@ impl ChatService {
         .bind(&title)
         .bind(now)
         .bind(now)
-            .bind(0)
-            .bind(metadata)
-            .bind(false)
-            .bind(false) // pinned
-            .bind(None::<Uuid>) // folder_id
-            .execute(self.db_client.pool())
-            .await?;
+        .bind(0)
+        .bind(metadata)
+        .bind(false)
+        .bind(false) // pinned
+        .bind(None::<Uuid>) // folder_id
+        .execute(self.db_client.pool())
+        .await?;
 
         Ok(ChatSession {
             id: session_id,
@@ -141,19 +141,17 @@ impl ChatService {
         model_used: Option<String>,
     ) -> Result<ChatMessage> {
         let start = Instant::now();
-        
+
         // Get next sequence number using optimized function
         // This uses the database function which is more efficient than MAX()
-        let next_sequence: i32 = sqlx::query_scalar(
-            "SELECT get_next_sequence_number($1)"
-        )
-        .bind(session_id)
-        .fetch_one(self.db_client.pool())
-        .await
-        .map_err(|e| {
-            self.record_query_time(start, false);
-            e
-        })?;
+        let next_sequence: i32 = sqlx::query_scalar("SELECT get_next_sequence_number($1)")
+            .bind(session_id)
+            .fetch_one(self.db_client.pool())
+            .await
+            .map_err(|e| {
+                self.record_query_time(start, false);
+                e
+            })?;
 
         let message_id = Uuid::new_v4();
         let now = Utc::now();
@@ -164,7 +162,7 @@ impl ChatService {
                 id, session_id, role, content, metadata, created_at,
                 token_count, model_used, sequence_number
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            "#
+            "#,
         )
         .bind(message_id)
         .bind(session_id)
@@ -217,7 +215,7 @@ impl ChatService {
             WHERE session_id = $1
             ORDER BY sequence_number ASC
             LIMIT $2 OFFSET $3
-            "#
+            "#,
         )
         .bind(session_id)
         .bind(limit)
@@ -266,7 +264,7 @@ impl ChatService {
             SELECT id, session_id, role, content, metadata, created_at,
                    edited_at, token_count, model_used, sequence_number
             FROM get_chat_messages_cursor($1, $2, $3)
-            "#
+            "#,
         )
         .bind(session_id)
         .bind(cursor)
@@ -325,7 +323,7 @@ impl ChatService {
             SELECT id, workspace_id, tenant_id, title, created_at, updated_at,
                    last_message_at, message_count, metadata, archived, pinned, folder_id
             FROM chat_sessions WHERE id = $1
-            "#
+            "#,
         )
         .bind(session_id)
         .fetch_optional(self.db_client.pool())
@@ -375,7 +373,7 @@ impl ChatService {
             WHERE workspace_id = $1 AND archived = $2
             ORDER BY updated_at DESC
             LIMIT $3 OFFSET $4
-            "#
+            "#,
         )
         .bind(workspace_id)
         .bind(archived_filter)
@@ -420,17 +418,15 @@ impl ChatService {
         let start = Instant::now();
         let archived_filter = archived.unwrap_or(false);
 
-        let count: i32 = sqlx::query_scalar(
-            "SELECT get_chat_sessions_count($1, $2)"
-        )
-        .bind(workspace_id)
-        .bind(archived_filter)
-        .fetch_one(self.db_client.pool())
-        .await
-        .map_err(|e| {
-            self.record_query_time(start, false);
-            e
-        })?;
+        let count: i32 = sqlx::query_scalar("SELECT get_chat_sessions_count($1, $2)")
+            .bind(workspace_id)
+            .bind(archived_filter)
+            .fetch_one(self.db_client.pool())
+            .await
+            .map_err(|e| {
+                self.record_query_time(start, false);
+                e
+            })?;
 
         self.record_query_time(start, true);
         Ok(count)
@@ -474,7 +470,7 @@ impl ChatService {
             SELECT id, workspace_id, tenant_id, title, created_at, updated_at,
                    last_message_at, message_count, metadata, archived, pinned, folder_id
             FROM search_chat_sessions($1, $2, $3, $4, $5)
-            "#
+            "#,
         )
         .bind(workspace_id)
         .bind(search_text)
@@ -528,7 +524,7 @@ impl ChatService {
             SELECT id, session_id, role, content, created_at,
                    edited_at, token_count, model_used, sequence_number
             FROM search_chat_messages($1, $2, $3, $4)
-            "#
+            "#,
         )
         .bind(session_id)
         .bind(search_text)
@@ -566,17 +562,15 @@ impl ChatService {
     pub async fn pin_session(&self, session_id: Uuid, pinned: bool) -> Result<()> {
         let start = Instant::now();
 
-        sqlx::query(
-            "UPDATE chat_sessions SET pinned = $1, updated_at = NOW() WHERE id = $2"
-        )
-        .bind(pinned)
-        .bind(session_id)
-        .execute(self.db_client.pool())
-        .await
-        .map_err(|e| {
-            self.record_query_time(start, false);
-            e
-        })?;
+        sqlx::query("UPDATE chat_sessions SET pinned = $1, updated_at = NOW() WHERE id = $2")
+            .bind(pinned)
+            .bind(session_id)
+            .execute(self.db_client.pool())
+            .await
+            .map_err(|e| {
+                self.record_query_time(start, false);
+                e
+            })?;
 
         self.record_query_time(start, true);
         Ok(())
@@ -586,16 +580,14 @@ impl ChatService {
     pub async fn bulk_archive_sessions(&self, session_ids: &[Uuid]) -> Result<i32> {
         let start = Instant::now();
 
-        let count: i32 = sqlx::query_scalar(
-            "SELECT bulk_archive_sessions($1)"
-        )
-        .bind(session_ids)
-        .fetch_one(self.db_client.pool())
-        .await
-        .map_err(|e| {
-            self.record_query_time(start, false);
-            e
-        })?;
+        let count: i32 = sqlx::query_scalar("SELECT bulk_archive_sessions($1)")
+            .bind(session_ids)
+            .fetch_one(self.db_client.pool())
+            .await
+            .map_err(|e| {
+                self.record_query_time(start, false);
+                e
+            })?;
 
         self.record_query_time(start, true);
         Ok(count)
@@ -605,16 +597,14 @@ impl ChatService {
     pub async fn bulk_delete_sessions(&self, session_ids: &[Uuid]) -> Result<i32> {
         let start = Instant::now();
 
-        let count: i32 = sqlx::query_scalar(
-            "SELECT bulk_delete_sessions($1)"
-        )
-        .bind(session_ids)
-        .fetch_one(self.db_client.pool())
-        .await
-        .map_err(|e| {
-            self.record_query_time(start, false);
-            e
-        })?;
+        let count: i32 = sqlx::query_scalar("SELECT bulk_delete_sessions($1)")
+            .bind(session_ids)
+            .fetch_one(self.db_client.pool())
+            .await
+            .map_err(|e| {
+                self.record_query_time(start, false);
+                e
+            })?;
 
         self.record_query_time(start, true);
         Ok(count)

@@ -74,10 +74,12 @@ priority-queue = "1.3"
 # Local crates
 # agent-orchestration = { path = "../agent-orchestration", optional = true }  # Removed to break circular dependency - not actually used
 # # agent-workers = { path = "../agent-workers", optional = true }  # Removed to break circular dependency - only used in feature-gated code  # Commented out to break circular dependency - only used behind feature flag
-agent-memory = { path = "../agent-memory" }
+# Memory without CoreML embeddings (for tests) - disable defaults, enable only what's needed explicitly
+agent-memory = { path = "../agent-memory", default-features = false, features = ["graph-reasoning", "database", "embeddings", "contracts"] }
 system-acceleration = { path = "../system-acceleration", optional = true }
 # embedding-service now consolidated into data-infrastructure
-data-infrastructure = { path = "../data-infrastructure" }
+# CoreML can be disabled for tests - disable defaults, enable via features
+data-infrastructure = { path = "../data-infrastructure", default-features = false }
 # # agent-data-processing = { path = "../agent-data-processing", optional = true }  # Removed to break circular dependency cycle  # Commented out to break circular dependency - not actually used 
 agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
@@ -87,7 +89,7 @@ development-tools = { path = "../development-tools" }
 
 [features]
 default = []
-coreml = ["system-acceleration"]
+coreml = ["system-acceleration", "data-infrastructure/coreml"]  # Enable CoreML in both system-acceleration and data-infrastructure
 # legacy_orchestrator feature removed - orchestrator consolidated to crate::orchestrator
 # # workers = ["agent-workers"]  # Removed feature since dependency removed  # Feature removed since dependency removed
 # orchestration = ["agent-orchestration"]  # Removed feature since dependency removed

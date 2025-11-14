@@ -1,21 +1,21 @@
 //! Council types - Re-export types from contracts for backward compatibility
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Re-export types for backward compatibility
-#[allow(ambiguous_glob_reexports)]
-pub use agent_agency_contracts::types::prelude::*;  // Includes TaskPriority and RiskTier
-pub use agent_agency_contracts::working_spec::{
-    WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, TestPlan, RollbackPlan
-};
-pub use agent_agency_contracts::refinement_decision::{CouncilDecision, JudgeType};
 pub use agent_agency_contracts::final_verdict::FinalVerdictContract;
-pub use agent_agency_contracts::planning_io::ChangeBudget; // Use contracts ChangeBudget
+pub use agent_agency_contracts::planning_io::ChangeBudget;
+pub use agent_agency_contracts::refinement_decision::{CouncilDecision, JudgeType};
+#[allow(ambiguous_glob_reexports)]
+pub use agent_agency_contracts::types::prelude::*; // Includes TaskPriority and RiskTier
+pub use agent_agency_contracts::working_spec::{
+    RollbackPlan, TestPlan, WorkingSpec, WorkingSpecConstraints, WorkingSpecContext,
+}; // Use contracts ChangeBudget
 
 /// Consensus result from council decision making
-/// 
+///
 /// This type represents the result of a council consensus process,
 /// indicating whether a task was approved and the confidence level.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

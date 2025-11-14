@@ -57,7 +57,8 @@ impl BoundingBox {
         let intersection_x2 = (self.x + self.width).min(other.x + other.width);
         let intersection_y2 = (self.y + self.height).min(other.y + other.height);
 
-        let intersection_area = (intersection_x2 - intersection_x1) * (intersection_y2 - intersection_y1);
+        let intersection_area =
+            (intersection_x2 - intersection_x1) * (intersection_y2 - intersection_y1);
         let union_area = self.area() + other.area() - intersection_area;
 
         if union_area > 0.0 {

@@ -5,8 +5,10 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::memory::{MemoryId, TemporalContext, ExperienceOutcome, TemporalQuery, Experience};
 use crate::errors::MemoryResult;
+use crate::types::memory::{
+    Experience, ExperienceOutcome, MemoryId, TemporalContext, TemporalQuery,
+};
 
 /// Core memory system interface
 /// Implementations provide memory storage and retrieval capabilities
@@ -28,7 +30,10 @@ pub trait MemorySystem: Send + Sync {
     ///
     /// # Returns
     /// Vector of matching temporal contexts, or an error if retrieval fails
-    async fn retrieve_temporal_context(&self, query: TemporalQuery) -> MemoryResult<Vec<TemporalContext>>;
+    async fn retrieve_temporal_context(
+        &self,
+        query: TemporalQuery,
+    ) -> MemoryResult<Vec<TemporalContext>>;
 
     /// Record the outcome of an experience
     ///
@@ -38,7 +43,11 @@ pub trait MemorySystem: Send + Sync {
     ///
     /// # Returns
     /// Unit result indicating success, or an error if recording fails
-    async fn record_outcome(&self, memory_id: MemoryId, outcome: ExperienceOutcome) -> MemoryResult<()>;
+    async fn record_outcome(
+        &self,
+        memory_id: MemoryId,
+        outcome: ExperienceOutcome,
+    ) -> MemoryResult<()>;
 
     /// Retrieve a specific experience by ID
     ///

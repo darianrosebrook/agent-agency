@@ -2,10 +2,10 @@
 //!
 //! Handles LRU caching and persistent cache storage for vector search operations.
 
-use schemars::JsonSchema;
 use crate::research_types::*;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use lru::LruCache;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::ErrorKind;
@@ -22,7 +22,7 @@ const DEFAULT_PERSISTENT_CACHE_DIR: &str = "cache/vector_search";
 const DEFAULT_PERSISTENT_CACHE_LIMIT: usize = 10_000;
 
 /// Persistent embedding record for disk storage
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersistentEmbeddingRecord {
     pub embedding: Vec<f32>,
     pub last_updated: i64,
@@ -41,7 +41,12 @@ impl CacheManager {
     /// Create a new cache manager with default settings
     pub async fn new(search_cache_size: usize, embedding_cache_size: usize) -> Result<Self> {
         let persistent_cache_dir = Self::resolve_persistent_cache_dir();
-        Self::new_with_cache_dir(search_cache_size, embedding_cache_size, persistent_cache_dir).await
+        Self::new_with_cache_dir(
+            search_cache_size,
+            embedding_cache_size,
+            persistent_cache_dir,
+        )
+        .await
     }
 
     /// Create a new cache manager with custom cache directory
@@ -53,7 +58,8 @@ impl CacheManager {
         let persistent_cache_dir = cache_dir.into();
 
         // Ensure cache directory exists
-        tokio::fs::create_dir_all(&persistent_cache_dir).await
+        tokio::fs::create_dir_all(&persistent_cache_dir)
+            .await
             .unwrap_or_else(|e| debug!("Failed to create cache directory: {}", e));
 
         Ok(Self {
@@ -119,7 +125,11 @@ impl CacheManager {
     }
 
     /// Store embedding in persistent cache
-    pub async fn store_embedding_persistent(&self, text_hash: String, embedding: Vec<f32>) -> Result<()> {
+    pub async fn store_embedding_persistent(
+        &self,
+        text_hash: String,
+        embedding: Vec<f32>,
+    ) -> Result<()> {
         let _lock = self.persistent_cache_lock.lock().await;
 
         let mut persistent_cache = self.read_persistent_cache().await?;
@@ -137,7 +147,9 @@ impl CacheManager {
         let _lock = self.persistent_cache_lock.lock().await;
 
         let persistent_cache = self.read_persistent_cache().await?;
-        Ok(persistent_cache.get(text_hash).map(|record| record.embedding.clone()))
+        Ok(persistent_cache
+            .get(text_hash)
+            .map(|record| record.embedding.clone()))
     }
 
     fn resolve_persistent_cache_dir() -> PathBuf {

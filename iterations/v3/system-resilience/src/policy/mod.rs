@@ -2,12 +2,12 @@
 //!
 //! @author @darianrosebrook
 
-pub mod redaction;
-pub mod content_strategy;
 pub mod caws_policy;
+pub mod content_strategy;
 pub mod enforcement;
+pub mod redaction;
 
-pub use redaction::*;
-pub use content_strategy::*;
 pub use caws_policy::*;
+pub use content_strategy::*;
 pub use enforcement::*;
+pub use redaction::*;

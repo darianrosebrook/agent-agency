@@ -776,8 +776,8 @@ async fn validate_table(
     let table_exists = sqlx::query(
         r#"
         SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public'
             AND table_name = $1
         )
         "#,
@@ -797,7 +797,7 @@ async fn validate_table(
     // Get actual table schema
     let actual_fields = sqlx::query(
         r#"
-        SELECT 
+        SELECT
             column_name,
             data_type,
             is_nullable
@@ -966,6 +966,7 @@ pub async fn validate_all_schemas(pool: &PgPool) -> Result<bool> {
 
     Ok(all_valid)
 }
+
 
 
 

@@ -9,8 +9,8 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Core planning domain errors
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -21,11 +21,19 @@ pub enum PlanningError {
     /// Planning constraints violated
     ConstraintViolation { constraint: String, details: String },
     /// Resource allocation failed
-    ResourceAllocationFailed { resource: String, required: u32, available: u32 },
+    ResourceAllocationFailed {
+        resource: String,
+        required: u32,
+        available: u32,
+    },
     /// Dependency cycle detected
     DependencyCycle { nodes: Vec<String> },
     /// Quality gate failed
-    QualityGateFailed { gate: String, actual: String, required: String },
+    QualityGateFailed {
+        gate: String,
+        actual: String,
+        required: String,
+    },
     /// Execution plan generation failed
     PlanGenerationFailed { reason: String },
 }
@@ -39,7 +47,10 @@ pub enum ModelError {
     /// Model inference failed
     InferenceFailed { model_id: String, reason: String },
     /// Invalid input format for model
-    InvalidInput { expected_format: String, provided_format: String },
+    InvalidInput {
+        expected_format: String,
+        provided_format: String,
+    },
     /// Model resource exhausted (memory, compute)
     ResourceExhausted { resource: String, limit: String },
     /// Model initialization failed
@@ -53,7 +64,11 @@ pub enum DatabaseError {
     /// Connection to database failed
     ConnectionFailed { host: String, reason: String },
     /// Query execution failed
-    QueryFailed { table: String, operation: String, reason: String },
+    QueryFailed {
+        table: String,
+        operation: String,
+        reason: String,
+    },
     /// Record not found
     NotFound { resource: String, id: String },
     /// Data integrity constraint violated
@@ -75,7 +90,10 @@ pub enum SecurityError {
     /// Token expired or invalid
     TokenInvalid { token_type: String },
     /// Rate limit exceeded
-    RateLimitExceeded { limit: String, reset_in_seconds: u32 },
+    RateLimitExceeded {
+        limit: String,
+        reset_in_seconds: u32,
+    },
 }
 
 /// Configuration domain errors
@@ -85,7 +103,11 @@ pub enum ConfigError {
     /// Required configuration missing
     MissingConfig { key: String },
     /// Configuration value invalid
-    InvalidConfig { key: String, value: String, expected: String },
+    InvalidConfig {
+        key: String,
+        value: String,
+        expected: String,
+    },
     /// Configuration file not found
     ConfigFileNotFound { path: String },
     /// Environment variable not set
@@ -99,11 +121,21 @@ pub enum ServiceError {
     /// External service unavailable
     ServiceUnavailable { service: String, reason: String },
     /// Service request timeout
-    Timeout { service: String, timeout_seconds: u32 },
+    Timeout {
+        service: String,
+        timeout_seconds: u32,
+    },
     /// Invalid response from service
-    InvalidResponse { service: String, status_code: u16, reason: String },
+    InvalidResponse {
+        service: String,
+        status_code: u16,
+        reason: String,
+    },
     /// Service rate limit exceeded
-    ServiceRateLimited { service: String, retry_after_seconds: u32 },
+    ServiceRateLimited {
+        service: String,
+        retry_after_seconds: u32,
+    },
 }
 
 /// Memory system domain errors
@@ -129,11 +161,19 @@ pub enum ValidationError {
     /// Required field missing
     RequiredFieldMissing { field: String },
     /// Field value invalid
-    InvalidFieldValue { field: String, value: String, reason: String },
+    InvalidFieldValue {
+        field: String,
+        value: String,
+        reason: String,
+    },
     /// Data format invalid
     InvalidFormat { expected: String, provided: String },
     /// Size limit exceeded
-    SizeLimitExceeded { field: String, max_size: usize, actual_size: usize },
+    SizeLimitExceeded {
+        field: String,
+        max_size: usize,
+        actual_size: usize,
+    },
 }
 
 /// Generic operational errors
@@ -145,9 +185,15 @@ pub enum OperationalError {
     /// Feature not implemented
     NotImplemented { feature: String },
     /// System resource exhausted
-    SystemOverload { resource: String, current_usage: String },
+    SystemOverload {
+        resource: String,
+        current_usage: String,
+    },
     /// Maintenance mode active
-    MaintenanceMode { reason: String, estimated_completion: Option<String> },
+    MaintenanceMode {
+        reason: String,
+        estimated_completion: Option<String>,
+    },
 }
 
 // Council domain errors
@@ -155,32 +201,61 @@ pub enum OperationalError {
 #[serde(tag = "type", content = "data")]
 pub enum CouncilError {
     /// Session creation or management failed
-    SessionError { session_id: Option<String>, reason: String },
+    SessionError {
+        session_id: Option<String>,
+        reason: String,
+    },
     /// Task review process failed
     ReviewError { session_id: String, reason: String },
     /// Judge selection or coordination failed
-    JudgeError { judge_id: Option<String>, reason: String },
+    JudgeError {
+        judge_id: Option<String>,
+        reason: String,
+    },
     /// Verdict aggregation failed
     AggregationError { reason: String },
     /// Decision making process failed
     DecisionError { reason: String },
     /// Session timeout occurred
-    Timeout { session_id: String, timeout_seconds: u64 },
+    Timeout {
+        session_id: String,
+        timeout_seconds: u64,
+    },
     /// Invalid session state for requested operation
-    InvalidState { session_id: String, current_state: String, required_state: String },
+    InvalidState {
+        session_id: String,
+        current_state: String,
+        required_state: String,
+    },
 }
 
 impl std::fmt::Display for CouncilError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CouncilError::SessionError { session_id, reason } => {
-                write!(f, "Session error{}: {}", session_id.as_ref().map(|id| format!(" (session {})", id)).unwrap_or_default(), reason)
+                write!(
+                    f,
+                    "Session error{}: {}",
+                    session_id
+                        .as_ref()
+                        .map(|id| format!(" (session {})", id))
+                        .unwrap_or_default(),
+                    reason
+                )
             }
             CouncilError::ReviewError { session_id, reason } => {
                 write!(f, "Review error for session {}: {}", session_id, reason)
             }
             CouncilError::JudgeError { judge_id, reason } => {
-                write!(f, "Judge error{}: {}", judge_id.as_ref().map(|id| format!(" (judge {})", id)).unwrap_or_default(), reason)
+                write!(
+                    f,
+                    "Judge error{}: {}",
+                    judge_id
+                        .as_ref()
+                        .map(|id| format!(" (judge {})", id))
+                        .unwrap_or_default(),
+                    reason
+                )
             }
             CouncilError::AggregationError { reason } => {
                 write!(f, "Verdict aggregation error: {}", reason)
@@ -188,11 +263,26 @@ impl std::fmt::Display for CouncilError {
             CouncilError::DecisionError { reason } => {
                 write!(f, "Decision error: {}", reason)
             }
-            CouncilError::Timeout { session_id, timeout_seconds } => {
-                write!(f, "Session {} timed out after {} seconds", session_id, timeout_seconds)
+            CouncilError::Timeout {
+                session_id,
+                timeout_seconds,
+            } => {
+                write!(
+                    f,
+                    "Session {} timed out after {} seconds",
+                    session_id, timeout_seconds
+                )
             }
-            CouncilError::InvalidState { session_id, current_state, required_state } => {
-                write!(f, "Invalid state for session {}: current={}, required={}", session_id, current_state, required_state)
+            CouncilError::InvalidState {
+                session_id,
+                current_state,
+                required_state,
+            } => {
+                write!(
+                    f,
+                    "Invalid state for session {}: current={}, required={}",
+                    session_id, current_state, required_state
+                )
             }
         }
     }
@@ -209,7 +299,11 @@ pub enum DataProcessingError {
     /// Processing operation failed
     ProcessingFailed { operation: String, reason: String },
     /// File system operation failed
-    FileOperationFailed { operation: String, path: String, reason: String },
+    FileOperationFailed {
+        operation: String,
+        path: String,
+        reason: String,
+    },
     /// Resource exhausted during processing
     ResourceExhausted { resource: String, limit: String },
     /// External service unavailable

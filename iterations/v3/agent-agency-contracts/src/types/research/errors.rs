@@ -4,9 +4,9 @@
 //! Keep thiserror and any tracing deps OUT of contracts.
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
 use schemars::JsonSchema;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", derive(JsonSchema))]
@@ -57,4 +57,3 @@ pub struct KnowledgeError {
     pub transient: bool,
     pub hint: Option<RetryHint>,
 }
-

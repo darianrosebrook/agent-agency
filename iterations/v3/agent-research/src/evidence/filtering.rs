@@ -1,15 +1,14 @@
 //! Evidence filtering and ranking logic
 
 use super::types::*;
-use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
+use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType};
 use std::collections::HashMap;
 
-/// Evidence filter and ranking engine
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+/// Evidence filter and ranking engine
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceFilter {
     config: EvidenceCollectorConfig,
 }
@@ -26,12 +25,17 @@ impl EvidenceFilter {
     }
 
     /// Filter and rank evidence based on quality and relevance
-    pub fn filter_and_rank_evidence(&self, evidence: Vec<Evidence>, claim: &AtomicClaim) -> Vec<Evidence> {
+    pub fn filter_and_rank_evidence(
+        &self,
+        evidence: Vec<Evidence>,
+        claim: &AtomicClaim,
+    ) -> Vec<Evidence> {
         // Filter out low-quality evidence
-        let filtered: Vec<Evidence> = evidence.into_iter()
+        let filtered: Vec<Evidence> = evidence
+            .into_iter()
             .filter(|e| {
-                e.confidence >= self.config.min_credibility_threshold &&
-                e.relevance >= self.config.min_relevance_threshold
+                e.confidence >= self.config.min_credibility_threshold
+                    && e.relevance >= self.config.min_relevance_threshold
             })
             .take(self.config.max_evidence_per_claim)
             .collect();
@@ -41,7 +45,9 @@ impl EvidenceFilter {
         ranked.sort_by(|a, b| {
             let score_a = self.calculate_evidence_score(a);
             let score_b = self.calculate_evidence_score(b);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         ranked

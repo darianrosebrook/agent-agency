@@ -3,13 +3,13 @@
 //! Enables runtime discovery of tool capabilities, automatic registration,
 //! and intelligent tool selection based on task requirements.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug, warn};
+use tracing::{debug, info, warn};
 
 use crate::tool_registry::ToolCategory;
 
@@ -242,7 +242,8 @@ impl ToolDiscoveryEngine {
         let interval = self.discovery_interval_secs;
 
         let handle = tokio::spawn(async move {
-            let mut interval_timer = tokio::time::interval(tokio::time::Duration::from_secs(interval));
+            let mut interval_timer =
+                tokio::time::interval(tokio::time::Duration::from_secs(interval));
 
             loop {
                 interval_timer.tick().await;
@@ -255,10 +256,18 @@ impl ToolDiscoveryEngine {
                                 for cap in new_capabilities {
                                     caps.insert(cap.name.clone(), cap);
                                 }
-                                debug!("Discovered {} tools from source {}", caps.len(), source.source_name());
+                                debug!(
+                                    "Discovered {} tools from source {}",
+                                    caps.len(),
+                                    source.source_name()
+                                );
                             }
                             Err(e) => {
-                                warn!("Failed to discover tools from source {}: {}", source.source_name(), e);
+                                warn!(
+                                    "Failed to discover tools from source {}: {}",
+                                    source.source_name(),
+                                    e
+                                );
                             }
                         }
                     }
@@ -296,10 +305,18 @@ impl ToolDiscoveryEngine {
                         }
 
                         all_capabilities.extend(capabilities);
-                        debug!("Discovered {} tools from {}", all_capabilities.len(), source.source_name());
+                        debug!(
+                            "Discovered {} tools from {}",
+                            all_capabilities.len(),
+                            source.source_name()
+                        );
                     }
                     Err(e) => {
-                        warn!("Failed to discover from source {}: {}", source.source_name(), e);
+                        warn!(
+                            "Failed to discover from source {}: {}",
+                            source.source_name(),
+                            e
+                        );
                     }
                 }
             } else {
@@ -322,22 +339,30 @@ impl ToolDiscoveryEngine {
     }
 
     /// Recommend tools for task requirements
-    pub async fn recommend_tools(&self, requirements: &TaskRequirements) -> Result<Vec<ToolRecommendation>> {
+    pub async fn recommend_tools(
+        &self,
+        requirements: &TaskRequirements,
+    ) -> Result<Vec<ToolRecommendation>> {
         let capabilities = self.get_cached_capabilities().await;
         let mut recommendations = Vec::new();
 
         // Collect capabilities that meet minimum threshold first
         let mut candidate_capabilities = Vec::new();
         for (_name, capability) in &capabilities {
-            let match_score = self.calculate_match_score(&capability, requirements).await?;
-            if match_score > 0.3 { // Minimum threshold for consideration
+            let match_score = self
+                .calculate_match_score(&capability, requirements)
+                .await?;
+            if match_score > 0.3 {
+                // Minimum threshold for consideration
                 candidate_capabilities.push((capability.clone(), match_score));
             }
         }
 
         for (capability, match_score) in candidate_capabilities {
             let risk_assessment = self.assess_risks(&capability, requirements).await?;
-            let reasons = self.generate_recommendation_reasons(&capability, requirements, match_score).await;
+            let reasons = self
+                .generate_recommendation_reasons(&capability, requirements, match_score)
+                .await;
 
             // Find alternatives
             let alternatives = self.find_alternatives(&capability, &capabilities).await;
@@ -361,23 +386,30 @@ impl ToolDiscoveryEngine {
     }
 
     /// Calculate match score between capability and requirements
-    async fn calculate_match_score(&self, capability: &ToolCapability, requirements: &TaskRequirements) -> Result<f64> {
+    async fn calculate_match_score(
+        &self,
+        capability: &ToolCapability,
+        requirements: &TaskRequirements,
+    ) -> Result<f64> {
         let mut score = 0.0;
         let mut total_weight = 0.0;
 
         // Operation matching (weight: 0.4)
-        let operation_matches = requirements.required_operations.iter()
+        let operation_matches = requirements
+            .required_operations
+            .iter()
             .filter(|&req_op| capability.operations.contains(req_op))
             .count();
-        let operation_score = operation_matches as f64 / requirements.required_operations.len() as f64;
+        let operation_score =
+            operation_matches as f64 / requirements.required_operations.len() as f64;
         score += operation_score * 0.4;
         total_weight += 0.4;
 
         // Quality matching (weight: 0.3)
-        let quality_score = (
-            capability.quality_metrics.accuracy >= requirements.quality_thresholds.min_accuracy &&
-            capability.quality_metrics.reliability >= requirements.quality_thresholds.min_reliability
-        ) as u8 as f64;
+        let quality_score =
+            (capability.quality_metrics.accuracy >= requirements.quality_thresholds.min_accuracy
+                && capability.quality_metrics.reliability
+                    >= requirements.quality_thresholds.min_reliability) as u8 as f64;
         score += quality_score * 0.3;
         total_weight += 0.3;
 
@@ -397,16 +429,26 @@ impl ToolDiscoveryEngine {
         total_weight += 0.2;
 
         // CAWS compliance (weight: 0.1)
-        let caws_compliant = requirements.caws_requirements.iter()
+        let caws_compliant = requirements
+            .caws_requirements
+            .iter()
             .all(|req| capability.operations.contains(req));
         score += caws_compliant as u8 as f64 * 0.1;
         total_weight += 0.1;
 
-        Ok(if total_weight > 0.0 { score / total_weight } else { 0.0 })
+        Ok(if total_weight > 0.0 {
+            score / total_weight
+        } else {
+            0.0
+        })
     }
 
     /// Assess risks for tool usage
-    async fn assess_risks(&self, capability: &ToolCapability, requirements: &TaskRequirements) -> Result<RiskAssessment> {
+    async fn assess_risks(
+        &self,
+        capability: &ToolCapability,
+        requirements: &TaskRequirements,
+    ) -> Result<RiskAssessment> {
         let mut risk_factors = Vec::new();
         let mut mitigations = Vec::new();
         let mut risk_score = 0.0;
@@ -426,8 +468,10 @@ impl ToolDiscoveryEngine {
         }
 
         // Experimental tool risk
-        if !requirements.quality_thresholds.allow_experimental &&
-           capability.quality_metrics.last_assessed < chrono::Utc::now() - chrono::Duration::days(30) {
+        if !requirements.quality_thresholds.allow_experimental
+            && capability.quality_metrics.last_assessed
+                < chrono::Utc::now() - chrono::Duration::days(30)
+        {
             risk_factors.push("Recently assessed tool".to_string());
             risk_score += 0.1;
             mitigations.push("Monitor outputs closely".to_string());
@@ -496,12 +540,17 @@ impl ToolDiscoveryEngine {
         }
 
         // Add specific operation matches
-        let matching_ops: Vec<_> = requirements.required_operations.iter()
+        let matching_ops: Vec<_> = requirements
+            .required_operations
+            .iter()
             .filter(|&op| capability.operations.contains(op))
             .collect();
 
         if !matching_ops.is_empty() {
-            reasons.push(format!("Supports {} required operations", matching_ops.len()));
+            reasons.push(format!(
+                "Supports {} required operations",
+                matching_ops.len()
+            ));
         }
 
         // Quality reasons
@@ -513,8 +562,13 @@ impl ToolDiscoveryEngine {
     }
 
     /// Find alternative tools
-    async fn find_alternatives(&self, primary: &ToolCapability, all_capabilities: &HashMap<String, ToolCapability>) -> Vec<ToolCapability> {
-        all_capabilities.values()
+    async fn find_alternatives(
+        &self,
+        primary: &ToolCapability,
+        all_capabilities: &HashMap<String, ToolCapability>,
+    ) -> Vec<ToolCapability> {
+        all_capabilities
+            .values()
             .filter(|cap| cap.name != primary.name && cap.category == primary.category)
             .take(3)
             .cloned()
@@ -781,4 +835,3 @@ impl DiscoverySource for PluginSource {
         "plugin"
     }
 }
-

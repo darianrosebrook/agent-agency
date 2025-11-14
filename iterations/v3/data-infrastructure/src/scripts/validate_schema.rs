@@ -778,8 +778,8 @@ async fn validate_table(
     let table_exists = sqlx::query(
         r#"
         SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public'
             AND table_name = $1
         )
         "#,
@@ -799,7 +799,7 @@ async fn validate_table(
     // Get actual table schema
     let actual_fields = sqlx::query(
         r#"
-        SELECT 
+        SELECT
             column_name,
             data_type,
             is_nullable
@@ -859,7 +859,10 @@ async fn validate_table(
 
     // Check for unexpected fields (warn but don't fail)
     for (field_name, _) in &field_map {
-        if !expected_fields.iter().any(|f| f.name == field_name.as_str()) {
+        if !expected_fields
+            .iter()
+            .any(|f| f.name == field_name.as_str())
+        {
             warn!(
                 "Table {} has unexpected field: {} (not in model definition)",
                 table_name, field_name
@@ -894,7 +897,12 @@ pub async fn validate_foreign_keys(pool: &PgPool) -> Result<bool> {
         ("task_executions", "worker_id", "workers", "id"),
         ("council_verdicts", "task_id", "tasks", "id"),
         ("judge_evaluations", "judge_id", "judges", "id"),
-        ("judge_evaluations", "verdict_id", "council_verdicts", "verdict_id"),
+        (
+            "judge_evaluations",
+            "verdict_id",
+            "council_verdicts",
+            "verdict_id",
+        ),
         ("debate_sessions", "task_id", "tasks", "id"),
         ("provenance_entries", "task_id", "tasks", "id"),
     ];
@@ -968,4 +976,3 @@ pub async fn validate_all_schemas(pool: &PgPool) -> Result<bool> {
 
     Ok(all_valid)
 }
-

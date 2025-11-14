@@ -10,23 +10,23 @@
 //!
 //! NO MOCKS - All operations use real Git worktrees and file system operations.
 
-use std::time::Instant;
 use std::path::PathBuf;
+use std::time::Instant;
+use tempfile::TempDir;
 use tokio::process::Command;
 use tracing::error;
-use tempfile::TempDir;
 
 #[cfg(feature = "full")]
 use agent_orchestration::{
+    autonomous_file_editor::{ChangeType, FileChange},
     AutonomousFileEditor,
-    autonomous_file_editor::{FileChange, ChangeType},
 };
 #[cfg(feature = "full")]
-use system_common_interfaces::file_operations::{AllowList, Budgets};
-#[cfg(feature = "full")]
 use data_infrastructure::file_operations_service::create_file_operations_service;
+#[cfg(feature = "full")]
+use system_common_interfaces::file_operations::{AllowList, Budgets};
 
-use crate::{TestResult, TestMetrics};
+use crate::{TestMetrics, TestResult};
 
 /// Scenario enum variant for file editing
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,7 +39,7 @@ pub enum FileEditingScenario {
 pub async fn run_file_editing_e2e_test() -> TestResult {
     let start_time = Instant::now();
     info!("Starting Scenario 4: Autonomous File Editing E2E test");
-    
+
     // Set environment variable to keep worktrees alive for verification
     // This must be set before any workspace creation
     std::env::set_var("CAWS_KEEP_WORKTREES", "1");
@@ -71,9 +71,10 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
     info!("Created AutonomousFileEditor");
 
     // Step 4: Create initial test files
-    let test_file_content = "// Initial test file\npub fn hello() -> &'static str {\n    \"Hello, World!\"\n}\n";
+    let test_file_content =
+        "// Initial test file\npub fn hello() -> &'static str {\n    \"Hello, World!\"\n}\n";
     let test_file_path = repo_path.join("src").join("lib.rs");
-    
+
     if let Err(e) = fs::create_dir_all(test_file_path.parent().unwrap()).await {
         error!("Failed to create src directory: {}", e);
         return create_error_result(start_time, format!("Directory creation failed: {}", e));
@@ -112,9 +113,12 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
     let preview = match file_editor.preview_changes(file_changes.clone()).await {
         Ok(preview) => {
             info!("Successfully previewed changes");
-            info!("Risk assessment: score={:.2}, level={:?}", preview.risk_assessment.score, preview.risk_assessment.level);
+            info!(
+                "Risk assessment: score={:.2}, level={:?}",
+                preview.risk_assessment.score, preview.risk_assessment.level
+            );
             preview
-        },
+        }
         Err(e) => {
             error!("Failed to preview changes: {}", e);
             return create_error_result(start_time, format!("Preview failed: {}", e));
@@ -122,14 +126,16 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
     };
 
     // Verify preview contains expected changes
-    assert_eq!(preview.changeset.patches.len(), 2, "Preview should contain 2 patches");
+    assert_eq!(
+        preview.changeset.patches.len(),
+        2,
+        "Preview should contain 2 patches"
+    );
     info!("Preview validation passed");
 
     // Step 6: Apply changes with allowlist and budgets
     let allowlist = AllowList {
-        allowed_patterns: vec![
-            "src/**/*.rs".to_string(),
-        ],
+        allowed_patterns: vec!["src/**/*.rs".to_string()],
         blocked_patterns: vec![],
         max_file_size: None,
         max_changeset_size: None,
@@ -141,12 +147,18 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
         max_time_seconds: Some(60),
     };
 
-    let task_id = format!("file-editing-test-{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap());
-    let changeset_id = match file_editor.apply_changes(&task_id, file_changes.clone(), &allowlist, &budgets).await {
+    let task_id = format!(
+        "file-editing-test-{}",
+        uuid::Uuid::new_v4().to_string().split('-').next().unwrap()
+    );
+    let changeset_id = match file_editor
+        .apply_changes(&task_id, file_changes.clone(), &allowlist, &budgets)
+        .await
+    {
         Ok(id) => {
             info!("Successfully applied changeset: {}", id.0);
             id
-        },
+        }
         Err(e) => {
             error!("Failed to apply changes: {}", e);
             return create_error_result(start_time, format!("Apply failed: {}", e));
@@ -156,14 +168,14 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
     // Step 7: Verify files were actually modified in the worktree
     // Set environment variable to keep worktree alive for verification
     std::env::set_var("CAWS_KEEP_WORKTREES", "1");
-    
+
     // Find the actual worktree path using git worktree list
     let worktree_list_output = Command::new("git")
         .args(&["worktree", "list"])
         .current_dir(&repo_path)
         .output()
         .await;
-    
+
     let worktree_path = if let Ok(output) = worktree_list_output {
         if output.status.success() {
             let worktree_list = String::from_utf8_lossy(&output.stdout);
@@ -171,7 +183,7 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
             // Find the worktree that contains our branch name
             let branch_name = format!("caws/{}", task_id);
             let mut found_worktree: Option<PathBuf> = None;
-            
+
             for line in worktree_list.lines() {
                 if line.contains(&branch_name) {
                     // Extract path (first field) - handle both absolute and relative paths
@@ -181,7 +193,7 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
                         if !found_path.is_absolute() {
                             found_path = repo_path.join(&found_path);
                         }
-                        // Canonicalize to resolve .. and . 
+                        // Canonicalize to resolve .. and .
                         if let Ok(canonical) = found_path.canonicalize() {
                             if canonical.exists() {
                                 info!("Found worktree at: {:?}", canonical);
@@ -196,43 +208,67 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
                     }
                 }
             }
-            
+
             found_worktree.unwrap_or_else(|| {
                 // Fallback: construct path using same logic as GitWorktreeWorkspace
-                let constructed = repo_path.join("..").join(format!("caws-worktree-{}", task_id));
-                // Canonicalize to resolve .. 
+                let constructed = repo_path
+                    .join("..")
+                    .join(format!("caws-worktree-{}", task_id));
+                // Canonicalize to resolve ..
                 if let Ok(canonical) = constructed.canonicalize() {
-                    info!("No worktree found in list, using constructed canonicalized path: {:?}", canonical);
+                    info!(
+                        "No worktree found in list, using constructed canonicalized path: {:?}",
+                        canonical
+                    );
                     canonical
                 } else {
-                    info!("No worktree found in list, using constructed path: {:?}", constructed);
+                    info!(
+                        "No worktree found in list, using constructed path: {:?}",
+                        constructed
+                    );
                     constructed
                 }
             })
         } else {
-            let constructed = repo_path.join("..").join(format!("caws-worktree-{}", task_id));
+            let constructed = repo_path
+                .join("..")
+                .join(format!("caws-worktree-{}", task_id));
             if let Ok(canonical) = constructed.canonicalize() {
-                info!("git worktree list failed, using constructed canonicalized path: {:?}", canonical);
+                info!(
+                    "git worktree list failed, using constructed canonicalized path: {:?}",
+                    canonical
+                );
                 canonical
             } else {
-                info!("git worktree list failed, using constructed path: {:?}", constructed);
+                info!(
+                    "git worktree list failed, using constructed path: {:?}",
+                    constructed
+                );
                 constructed
             }
         }
     } else {
-        let constructed = repo_path.join("..").join(format!("caws-worktree-{}", task_id));
+        let constructed = repo_path
+            .join("..")
+            .join(format!("caws-worktree-{}", task_id));
         if let Ok(canonical) = constructed.canonicalize() {
-            info!("Failed to run git worktree list, using constructed canonicalized path: {:?}", canonical);
+            info!(
+                "Failed to run git worktree list, using constructed canonicalized path: {:?}",
+                canonical
+            );
             canonical
         } else {
-            info!("Failed to run git worktree list, using constructed path: {:?}", constructed);
+            info!(
+                "Failed to run git worktree list, using constructed path: {:?}",
+                constructed
+            );
             constructed
         }
     };
-    
+
     info!("Checking worktree path: {:?}", worktree_path);
     info!("Worktree exists: {}", worktree_path.exists());
-    
+
     // List worktree contents for debugging
     if worktree_path.exists() {
         if let Ok(entries) = std::fs::read_dir(&worktree_path) {
@@ -242,17 +278,20 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
             }
         }
     }
-    
+
     let worktree_test_file_path = worktree_path.join("src").join("lib.rs");
     info!("Looking for file at: {:?}", worktree_test_file_path);
-    
+
     let updated_content = match fs::read_to_string(&worktree_test_file_path).await {
         Ok(content) => {
             info!("Successfully read from worktree");
             content
         }
         Err(e) => {
-            error!("Failed to read updated file from worktree {:?}: {}", worktree_test_file_path, e);
+            error!(
+                "Failed to read updated file from worktree {:?}: {}",
+                worktree_test_file_path, e
+            );
             // Try reading from main repo as fallback (might have been promoted)
             match fs::read_to_string(&test_file_path).await {
                 Ok(content) => {
@@ -266,10 +305,14 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
         }
     };
 
-    assert!(updated_content.contains("Hello, Autonomous File Editor!"), 
-            "File should contain updated content");
-    assert!(updated_content.contains("// Updated test file"), 
-            "File should contain updated comment");
+    assert!(
+        updated_content.contains("Hello, Autonomous File Editor!"),
+        "File should contain updated content"
+    );
+    assert!(
+        updated_content.contains("// Updated test file"),
+        "File should contain updated comment"
+    );
 
     let worktree_utils_file_path = worktree_path.join("src").join("utils.rs");
     let utils_content = if worktree_utils_file_path.exists() {
@@ -288,15 +331,24 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
             match fs::read_to_string(&main_utils_path).await {
                 Ok(content) => content,
                 Err(e) => {
-                    return create_error_result(start_time, format!("Utils file read failed: {}", e));
+                    return create_error_result(
+                        start_time,
+                        format!("Utils file read failed: {}", e),
+                    );
                 }
             }
         } else {
-            return create_error_result(start_time, "Utils.rs file not found in worktree or main repo".to_string());
+            return create_error_result(
+                start_time,
+                "Utils.rs file not found in worktree or main repo".to_string(),
+            );
         }
     };
 
-    assert!(utils_content.contains("pub fn add"), "Utils file should contain add function");
+    assert!(
+        utils_content.contains("pub fn add"),
+        "Utils file should contain add function"
+    );
     info!("File modifications verified in worktree");
 
     // Step 8: Test rollback capability
@@ -313,11 +365,14 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
     // Step 9: Test promote changes (merge to main branch)
     info!("Testing promote changes functionality");
     // First, apply changes again since we may have rolled back
-    let _changeset_id_2 = match file_editor.apply_changes(&task_id, file_changes.clone(), &allowlist, &budgets).await {
+    let _changeset_id_2 = match file_editor
+        .apply_changes(&task_id, file_changes.clone(), &allowlist, &budgets)
+        .await
+    {
         Ok(id) => {
             info!("Re-applied changeset for promotion test: {}", id.0);
             id
-        },
+        }
         Err(e) => {
             error!("Failed to re-apply changes for promotion: {}", e);
             return create_error_result(start_time, format!("Re-apply failed: {}", e));
@@ -351,7 +406,7 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
 
     // Success!
     info!("✅ File editing E2E test passed successfully");
-    
+
     TestResult {
         scenario: crate::Scenario::Scenario1Refactor, // Placeholder
         passed: true,
@@ -398,7 +453,11 @@ async fn create_test_git_repo() -> Result<TempDir, Box<dyn std::error::Error + S
 }
 
 /// Commit files to Git repository
-async fn commit_file(repo_path: &PathBuf, message: &str, files: &[&str]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn commit_file(
+    repo_path: &PathBuf,
+    message: &str,
+    files: &[&str],
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Add files
     Command::new("git")
         .args(&["add"])
@@ -423,7 +482,9 @@ async fn commit_file(repo_path: &PathBuf, message: &str, files: &[&str]) -> Resu
 }
 
 /// Get Git log entries
-async fn get_git_log(repo_path: &PathBuf) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+async fn get_git_log(
+    repo_path: &PathBuf,
+) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
     let output = Command::new("git")
         .args(&["log", "--oneline"])
         .current_dir(repo_path)
@@ -435,10 +496,7 @@ async fn get_git_log(repo_path: &PathBuf) -> Result<Vec<String>, Box<dyn std::er
     }
 
     let log_output = String::from_utf8(output.stdout)?;
-    let entries: Vec<String> = log_output
-        .lines()
-        .map(|s| s.to_string())
-        .collect();
+    let entries: Vec<String> = log_output.lines().map(|s| s.to_string()).collect();
 
     Ok(entries)
 }
@@ -466,4 +524,3 @@ pub async fn run_file_editing_e2e_test() -> TestResult {
         metrics: TestMetrics::default(),
     }
 }
-

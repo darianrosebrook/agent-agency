@@ -3,16 +3,15 @@
 //! The refinement engine analyzes validation issues and applies
 //! automated improvements to working specifications.
 
-use schemars::JsonSchema;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 
 use crate::planning_agent::planning_errors::PlanningResult;
 use agent_agency_contracts::types::validation::ValidationIssue;
 
 /// Refinement suggestion from the engine
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefinementSuggestion {
     /// Actions that were applied
     pub applied_actions: Vec<String>,
@@ -93,7 +92,10 @@ impl DefaultRefinementEngine {
             "schema" => self.refine_schema(working_spec, issue),
             "risk_assessment" => self.refine_risk_assessment(working_spec, issue),
             "dependencies" => self.refine_dependencies(working_spec, issue),
-            _ => Err(format!("Cannot auto-fix issue in category '{}': {}", issue.category, issue.description)),
+            _ => Err(format!(
+                "Cannot auto-fix issue in category '{}': {}",
+                issue.category, issue.description
+            )),
         }
     }
 
@@ -122,19 +124,21 @@ impl DefaultRefinementEngine {
             msg if msg.contains("is both allowed and blocked") => {
                 // Remove conflicting paths
                 if let Some(scope) = &mut working_spec.constraints.scope_restrictions {
-                    let conflicting_path = msg
-                        .split("'")
-                        .nth(1)
-                        .unwrap_or("")
-                        .to_string();
+                    let conflicting_path = msg.split("'").nth(1).unwrap_or("").to_string();
 
                     scope.allowed_paths.retain(|p| p != &conflicting_path);
-                    Ok(format!("Removed conflicting path '{}' from allowed paths", conflicting_path))
+                    Ok(format!(
+                        "Removed conflicting path '{}' from allowed paths",
+                        conflicting_path
+                    ))
                 } else {
                     Err("Cannot fix scope restrictions - no scope configuration".to_string())
                 }
             }
-            _ => Err(format!("Cannot auto-fix constraint issue: {}", issue.description)),
+            _ => Err(format!(
+                "Cannot auto-fix constraint issue: {}",
+                issue.description
+            )),
         }
     }
 
@@ -147,7 +151,12 @@ impl DefaultRefinementEngine {
             // Fix acceptance criteria ID format
             for criterion in &mut working_spec.acceptance_criteria {
                 if !criterion.id.starts_with('A') {
-                    let new_id = format!("A{}", criterion.id.trim_start_matches(|c: char| !c.is_ascii_digit()));
+                    let new_id = format!(
+                        "A{}",
+                        criterion
+                            .id
+                            .trim_start_matches(|c: char| !c.is_ascii_digit())
+                    );
                     criterion.id = new_id;
                     return Ok(format!("Fixed acceptance criterion ID format"));
                 }
@@ -169,7 +178,10 @@ impl DefaultRefinementEngine {
             }
             Ok("Filled empty acceptance criterion fields".to_string())
         } else {
-            Err(format!("Cannot auto-fix acceptance criteria issue: {}", issue.description))
+            Err(format!(
+                "Cannot auto-fix acceptance criteria issue: {}",
+                issue.description
+            ))
         }
     }
 
@@ -190,7 +202,7 @@ impl DefaultRefinementEngine {
                                 "invalid_input".to_string(),
                                 "edge_cases".to_string(),
                             ],
-                        }
+                        },
                     );
                     Ok("Added basic unit test specification".to_string())
                 } else {
@@ -198,17 +210,30 @@ impl DefaultRefinementEngine {
                 }
             }
             "T2 tasks should have 80%+ line coverage" | "T1 tasks require 90%+ line coverage" => {
-                let target_coverage = if working_spec.risk_tier == 1 { 0.9 } else { 0.8 };
-                working_spec.test_plan.coverage_targets = Some(
-                    agent_agency_contracts::working_spec::CoverageTargets {
+                let target_coverage = if working_spec.risk_tier == 1 {
+                    0.9
+                } else {
+                    0.8
+                };
+                working_spec.test_plan.coverage_targets =
+                    Some(agent_agency_contracts::working_spec::CoverageTargets {
                         line_coverage: Some(target_coverage),
                         branch_coverage: Some(target_coverage - 0.1),
-                        mutation_score: Some(if working_spec.risk_tier == 1 { 0.7 } else { 0.5 }),
-                    }
-                );
-                Ok(format!("Set coverage targets to {}% line coverage", (target_coverage * 100.0) as u32))
+                        mutation_score: Some(if working_spec.risk_tier == 1 {
+                            0.7
+                        } else {
+                            0.5
+                        }),
+                    });
+                Ok(format!(
+                    "Set coverage targets to {}% line coverage",
+                    (target_coverage * 100.0) as u32
+                ))
             }
-            _ => Err(format!("Cannot auto-fix test plan issue: {}", issue.description)),
+            _ => Err(format!(
+                "Cannot auto-fix test plan issue: {}",
+                issue.description
+            )),
         }
     }
 
@@ -219,7 +244,10 @@ impl DefaultRefinementEngine {
     ) -> Result<String, String> {
         // Schema issues are usually structural and hard to auto-fix
         // Most should be caught by validation before reaching here
-        Err(format!("Schema issues require manual review: {}", issue.description))
+        Err(format!(
+            "Schema issues require manual review: {}",
+            issue.description
+        ))
     }
 
     fn refine_risk_assessment(
@@ -235,10 +263,15 @@ impl DefaultRefinementEngine {
                         agent_agency_contracts::working_spec::AcceptanceCriterion {
                             id,
                             given: "Given the system is properly configured".to_string(),
-                            when: format!("When the {} functionality is executed", working_spec.title.to_lowercase()),
+                            when: format!(
+                                "When the {} functionality is executed",
+                                working_spec.title.to_lowercase()
+                            ),
                             then: "Then it behaves according to specifications".to_string(),
-                            priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
-                        }
+                            priority: Some(
+                                agent_agency_contracts::working_spec::MoSCoWPriority::Should,
+                            ),
+                        },
                     );
                 }
                 Ok("Added acceptance criteria to meet T1 requirements".to_string())
@@ -252,8 +285,10 @@ impl DefaultRefinementEngine {
                             given: "Given valid preconditions".to_string(),
                             when: "When the task is performed".to_string(),
                             then: "Then expected outcomes occur".to_string(),
-                            priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should),
-                        }
+                            priority: Some(
+                                agent_agency_contracts::working_spec::MoSCoWPriority::Should,
+                            ),
+                        },
                     );
                 }
                 Ok("Added acceptance criteria to meet T2 recommendations".to_string())
@@ -266,15 +301,20 @@ impl DefaultRefinementEngine {
                             given: "Given the task is properly set up".to_string(),
                             when: format!("When {}", working_spec.description.to_lowercase()),
                             then: "Then the task completes successfully".to_string(),
-                            priority: Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must),
-                        }
+                            priority: Some(
+                                agent_agency_contracts::working_spec::MoSCoWPriority::Must,
+                            ),
+                        },
                     );
                     Ok("Added basic acceptance criterion".to_string())
                 } else {
                     Ok("Acceptance criteria already present".to_string())
                 }
             }
-            _ => Err(format!("Cannot auto-fix risk assessment issue: {}", issue.description)),
+            _ => Err(format!(
+                "Cannot auto-fix risk assessment issue: {}",
+                issue.description
+            )),
         }
     }
 
@@ -285,10 +325,7 @@ impl DefaultRefinementEngine {
     ) -> Result<String, String> {
         if issue.description.contains("has empty version") {
             // Try to set a reasonable default version
-            let dep_name = issue.description
-                .split("'")
-                .nth(1)
-                .unwrap_or("");
+            let dep_name = issue.description.split("'").nth(1).unwrap_or("");
 
             if let Some(version) = working_spec.context.dependencies.get_mut(dep_name) {
                 if version.trim().is_empty() {
@@ -299,7 +336,10 @@ impl DefaultRefinementEngine {
         }
 
         // For version conflicts, we can't easily auto-resolve
-        Err(format!("Dependency issues require manual resolution: {}", issue.description))
+        Err(format!(
+            "Dependency issues require manual resolution: {}",
+            issue.description
+        ))
     }
 }
 

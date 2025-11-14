@@ -37,7 +37,11 @@ impl RedisSessionManager {
     }
 
     /// Register a session for a user
-    pub async fn register_session(&self, user_id: &str, session_id: &str) -> Result<(), redis::RedisError> {
+    pub async fn register_session(
+        &self,
+        user_id: &str,
+        session_id: &str,
+    ) -> Result<(), redis::RedisError> {
         // Update local cache
         {
             let mut sessions = self.local_sessions.write().await;
@@ -51,10 +55,16 @@ impl RedisSessionManager {
         if let Some(ref _client) = self.redis_client {
             match self.register_session_redis(user_id, session_id).await {
                 Ok(_) => {
-                    info!("Registered session {} for user {} in Redis", session_id, user_id);
+                    info!(
+                        "Registered session {} for user {} in Redis",
+                        session_id, user_id
+                    );
                 }
                 Err(e) => {
-                    warn!("Failed to register session in Redis: {}. Using local cache only.", e);
+                    warn!(
+                        "Failed to register session in Redis: {}. Using local cache only.",
+                        e
+                    );
                     // Continue with local cache only
                 }
             }
@@ -63,7 +73,11 @@ impl RedisSessionManager {
         Ok(())
     }
 
-    async fn register_session_redis(&self, user_id: &str, session_id: &str) -> Result<(), redis::RedisError> {
+    async fn register_session_redis(
+        &self,
+        user_id: &str,
+        session_id: &str,
+    ) -> Result<(), redis::RedisError> {
         if let Some(ref client) = self.redis_client {
             let mut conn = client.get_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
@@ -72,14 +86,19 @@ impl RedisSessionManager {
             conn.sadd::<_, _, ()>(&key, session_id).await?;
 
             // Set expiration (24 hours)
-            conn.expire::<_, ()>(&key, self.session_ttl_seconds as i64).await?;
+            conn.expire::<_, ()>(&key, self.session_ttl_seconds as i64)
+                .await?;
         }
 
         Ok(())
     }
 
     /// Unregister a session for a user
-    pub async fn unregister_session(&self, user_id: &str, session_id: &str) -> Result<(), redis::RedisError> {
+    pub async fn unregister_session(
+        &self,
+        user_id: &str,
+        session_id: &str,
+    ) -> Result<(), redis::RedisError> {
         // Update local cache
         {
             let mut sessions = self.local_sessions.write().await;
@@ -95,10 +114,16 @@ impl RedisSessionManager {
         if let Some(ref _client) = self.redis_client {
             match self.unregister_session_redis(user_id, session_id).await {
                 Ok(_) => {
-                    info!("Unregistered session {} for user {} from Redis", session_id, user_id);
+                    info!(
+                        "Unregistered session {} for user {} from Redis",
+                        session_id, user_id
+                    );
                 }
                 Err(e) => {
-                    warn!("Failed to unregister session from Redis: {}. Using local cache only.", e);
+                    warn!(
+                        "Failed to unregister session from Redis: {}. Using local cache only.",
+                        e
+                    );
                     // Continue with local cache only
                 }
             }
@@ -107,7 +132,11 @@ impl RedisSessionManager {
         Ok(())
     }
 
-    async fn unregister_session_redis(&self, user_id: &str, session_id: &str) -> Result<(), redis::RedisError> {
+    async fn unregister_session_redis(
+        &self,
+        user_id: &str,
+        session_id: &str,
+    ) -> Result<(), redis::RedisError> {
         if let Some(ref client) = self.redis_client {
             let mut conn = client.get_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
@@ -141,7 +170,10 @@ impl RedisSessionManager {
                     return Ok(sessions);
                 }
                 Err(e) => {
-                    warn!("Failed to get sessions from Redis: {}. Using local cache only.", e);
+                    warn!(
+                        "Failed to get sessions from Redis: {}. Using local cache only.",
+                        e
+                    );
                 }
             }
         }
@@ -150,7 +182,10 @@ impl RedisSessionManager {
         Ok(Vec::new())
     }
 
-    async fn get_user_sessions_redis(&self, user_id: &str) -> Result<Vec<String>, redis::RedisError> {
+    async fn get_user_sessions_redis(
+        &self,
+        user_id: &str,
+    ) -> Result<Vec<String>, redis::RedisError> {
         if let Some(ref client) = self.redis_client {
             let mut conn = client.get_async_connection().await?;
             let key = format!("user_sessions:{}", user_id);
@@ -166,12 +201,10 @@ impl RedisSessionManager {
     /// This is a helper method that returns the session IDs.
     /// Actual message sending is handled by the WebSocket manager.
     pub async fn get_user_session_ids(&self, user_id: &str) -> Vec<String> {
-        self.get_user_sessions(user_id)
-            .await
-            .unwrap_or_else(|e| {
-                error!("Failed to get user sessions: {}", e);
-                Vec::new()
-            })
+        self.get_user_sessions(user_id).await.unwrap_or_else(|e| {
+            error!("Failed to get user sessions: {}", e);
+            Vec::new()
+        })
     }
 
     /// Check if Redis is available
@@ -194,7 +227,7 @@ mod tests {
     #[tokio::test]
     async fn test_local_session_management() {
         let manager = RedisSessionManager::new(None).await.unwrap();
-        
+
         // Register sessions
         manager.register_session("user1", "session1").await.unwrap();
         manager.register_session("user1", "session2").await.unwrap();
@@ -207,10 +240,12 @@ mod tests {
         assert!(user1_sessions.contains(&"session2".to_string()));
 
         // Unregister session
-        manager.unregister_session("user1", "session1").await.unwrap();
+        manager
+            .unregister_session("user1", "session1")
+            .await
+            .unwrap();
         let user1_sessions = manager.get_user_sessions("user1").await.unwrap();
         assert_eq!(user1_sessions.len(), 1);
         assert_eq!(user1_sessions[0], "session2");
     }
 }
-

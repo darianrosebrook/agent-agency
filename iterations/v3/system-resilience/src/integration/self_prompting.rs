@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, ChangeId, ChangeSource, SessionMeta, SessionRef};
 use crate::cas::{ConcurrencyManager, ConcurrencyResult, ConflictInfo, ConflictResolution};
-use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree, AuthorInfo};
 use crate::journal::WriteAheadLog;
+use crate::merkle::{AuthorInfo, Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};
+use crate::recovery_types::{ChangeId, ChangeSource, Digest, SessionMeta, SessionRef};
 
 /// Integration between recovery system and self-prompting loop
 pub struct SelfPromptingRecovery {
@@ -66,7 +66,7 @@ impl SelfPromptingRecovery {
         let concurrency_manager = ConcurrencyManager::new();
         let policy_enforcer = PolicyEnforcer::new(CawsPolicy::new());
         let wal = WriteAheadLog::new(config.recovery_dir.join("journal.wal"))?;
-        
+
         Ok(Self {
             concurrency_manager,
             policy_enforcer,
@@ -125,9 +125,10 @@ impl SelfPromptingRecovery {
                 // - Change Budget: ~100 LOC
                 // - Reviewer Requirements: Concurrency management expertise
                 // Store session metadata (Temporary: separate tracking until concurrency manager integration)
-                self.session_metadata.insert(session_id.clone(), session_meta);
+                self.session_metadata
+                    .insert(session_id.clone(), session_meta);
                 self.current_session = Some(session_ref.clone());
-                
+
                 // Note: Session registration in policy_enforcer.sessions is handled
                 // by allowing deletion even if session not found (see end_session and check_session_deletion)
 
@@ -148,15 +149,18 @@ impl SelfPromptingRecovery {
         if let Some(session_ref) = self.current_session.take() {
             // Check if session deletion is allowed
             // If session not found in policy enforcer (not registered), allow deletion
-            match self.policy_enforcer.check_session_deletion(&session_ref.id)? {
+            match self
+                .policy_enforcer
+                .check_session_deletion(&session_ref.id)?
+            {
                 crate::policy::SessionDeletionCheckResult::Allowed => {
                     // Remove session from concurrency manager
                     // TODO: Remove session from concurrency manager
-                    
+
                     if self.config.enable_logging {
                         println!("Ended recovery session: {}", session_ref.id);
                     }
-                    
+
                     Ok(())
                 }
                 crate::policy::SessionDeletionCheckResult::Rejected(reason) => {
@@ -175,15 +179,17 @@ impl SelfPromptingRecovery {
         content: &[u8],
         change_source: ChangeSource,
     ) -> Result<ChangeResult> {
-        let session_ref = self.current_session.as_ref()
+        let session_ref = self
+            .current_session
+            .as_ref()
             .ok_or_else(|| anyhow!("No active session"))?;
 
         // Compute content digest
         let digest = self.compute_content_digest(content);
-        
+
         // Get precondition digest for optimistic concurrency
         let precondition = self.get_file_precondition(path)?;
-        
+
         // Record change with concurrency control
         match self.concurrency_manager.record_change(
             path,
@@ -198,7 +204,7 @@ impl SelfPromptingRecovery {
                 if self.config.enable_logging {
                     println!("Recorded change for {} in session {}", path, session_ref.id);
                 }
-                
+
                 Ok(ChangeResult::Success)
             }
             ConcurrencyResult::Conflict(conflict) => {
@@ -209,28 +215,30 @@ impl SelfPromptingRecovery {
                     Ok(ChangeResult::Conflict(conflict))
                 }
             }
-            ConcurrencyResult::Rejected => {
-                Ok(ChangeResult::Rejected)
-            }
-            ConcurrencyResult::Branched(branch_name) => {
-                Ok(ChangeResult::Branched(branch_name))
-            }
+            ConcurrencyResult::Rejected => Ok(ChangeResult::Rejected),
+            ConcurrencyResult::Branched(branch_name) => Ok(ChangeResult::Branched(branch_name)),
         }
     }
 
     /// Create a checkpoint
     pub fn create_checkpoint(&mut self, label: Option<String>) -> Result<CheckpointResult> {
-        let session_ref = self.current_session.as_ref()
+        let session_ref = self
+            .current_session
+            .as_ref()
             .ok_or_else(|| anyhow!("No active session"))?;
 
         // Create commit from current state
         let commit = self.create_commit_from_session(session_ref, label)?;
-        
+
         // Write to WAL
-        self.wal.record_commit(&ChangeId(commit.id.to_string()), commit.tree())?;
+        self.wal
+            .record_commit(&ChangeId(commit.id.to_string()), commit.tree())?;
 
         if self.config.enable_logging {
-            println!("Created checkpoint: {} for session {}", commit.id, session_ref.id);
+            println!(
+                "Created checkpoint: {} for session {}",
+                commit.id, session_ref.id
+            );
         }
 
         Ok(CheckpointResult {
@@ -241,13 +249,19 @@ impl SelfPromptingRecovery {
     }
 
     /// Auto-checkpoint if needed
-    pub fn auto_checkpoint_if_needed(&mut self, iteration: u32) -> Result<Option<CheckpointResult>> {
+    pub fn auto_checkpoint_if_needed(
+        &mut self,
+        iteration: u32,
+    ) -> Result<Option<CheckpointResult>> {
         if !self.config.auto_checkpoint {
             return Ok(None);
         }
 
         if iteration % self.config.checkpoint_frequency == 0 {
-            Ok(Some(self.create_checkpoint(Some(format!("auto-checkpoint-{}", iteration)))?))
+            Ok(Some(self.create_checkpoint(Some(format!(
+                "auto-checkpoint-{}",
+                iteration
+            )))?))
         } else {
             Ok(None)
         }
@@ -325,7 +339,10 @@ impl SelfPromptingRecovery {
 
     /// Create a conflict branch
     fn create_conflict_branch(&mut self, conflict: &ConflictInfo) -> Result<ChangeResult> {
-        let branch_name = format!("conflict-{}-{}", conflict.timestamp, conflict.conflicting_session);
+        let branch_name = format!(
+            "conflict-{}-{}",
+            conflict.timestamp, conflict.conflicting_session
+        );
         Ok(ChangeResult::Branched(branch_name))
     }
 
@@ -356,7 +373,11 @@ impl SelfPromptingRecovery {
     }
 
     /// Create commit from session
-    fn create_commit_from_session(&self, session_ref: &SessionRef, label: Option<String>) -> Result<MerkleCommit> {
+    fn create_commit_from_session(
+        &self,
+        session_ref: &SessionRef,
+        label: Option<String>,
+    ) -> Result<MerkleCommit> {
         // TODO: Implement commit creation from session state
         // This would involve creating a Merkle tree from the current file state
         let tree = MerkleTree::empty(); // Placeholder
@@ -394,7 +415,7 @@ impl SelfPromptingRecovery {
         RecoveryStats {
             active_session: self.current_session.is_some(),
             total_sessions: self.session_metadata.len(),
-            conflicts_resolved: 0, // TODO: Track conflicts
+            conflicts_resolved: 0,  // TODO: Track conflicts
             checkpoints_created: 0, // TODO: Track checkpoints
             last_checkpoint: None,
         }
@@ -458,7 +479,7 @@ mod tests {
     fn test_recovery_integration() {
         let config = RecoveryConfig::default();
         let recovery = SelfPromptingRecovery::new(config).unwrap();
-        
+
         assert!(!recovery.get_current_session().is_some());
         assert_eq!(recovery.get_stats().total_sessions, 0);
     }
@@ -467,18 +488,18 @@ mod tests {
     fn test_session_management() {
         let config = RecoveryConfig::default();
         let mut recovery = SelfPromptingRecovery::new(config).unwrap();
-        
+
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
             task_id: "task1".to_string(),
             user_id: Some("user1".to_string()),
         };
-        
+
         let session_ref = recovery.start_session(session_meta).unwrap();
         assert_eq!(session_ref.meta.agent_id, Some("agent1".to_string()));
         assert_eq!(session_ref.meta.iteration, 1);
-        
+
         recovery.end_session().unwrap();
         assert!(!recovery.get_current_session().is_some());
     }
@@ -487,23 +508,25 @@ mod tests {
     fn test_change_recording() {
         let config = RecoveryConfig::default();
         let mut recovery = SelfPromptingRecovery::new(config).unwrap();
-        
+
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
             task_id: "task1".to_string(),
             user_id: Some("user1".to_string()),
         };
-        
+
         recovery.start_session(session_meta).unwrap();
-        
+
         let content = b"Hello, world!";
         let change_source = ChangeSource::AgentIteration {
             iteration: 1,
             agent_id: "agent1".to_string(),
         };
-        
-        let result = recovery.record_change("test.txt", content, change_source).unwrap();
+
+        let result = recovery
+            .record_change("test.txt", content, change_source)
+            .unwrap();
         assert!(matches!(result, ChangeResult::Success));
     }
 
@@ -511,17 +534,22 @@ mod tests {
     fn test_checkpoint_creation() {
         let config = RecoveryConfig::default();
         let mut recovery = SelfPromptingRecovery::new(config).unwrap();
-        
+
         let session_meta = SessionMeta {
             agent_id: Some("agent1".to_string()),
             iteration: 1,
             task_id: "task1".to_string(),
             user_id: Some("user1".to_string()),
         };
-        
+
         recovery.start_session(session_meta).unwrap();
-        
-        let result = recovery.create_checkpoint(Some("test-checkpoint".to_string())).unwrap();
-        assert_eq!(result.session_id, recovery.get_current_session().unwrap().id);
+
+        let result = recovery
+            .create_checkpoint(Some("test-checkpoint".to_string()))
+            .unwrap();
+        assert_eq!(
+            result.session_id,
+            recovery.get_current_session().unwrap().id
+        );
     }
 }

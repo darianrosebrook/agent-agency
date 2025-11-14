@@ -2,11 +2,11 @@
 //!
 //! Provides isolated execution environment for testing and validation.
 
+use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 use schemars::JsonSchema;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
 use serde::{Deserialize, Serialize};
 /// Sandbox environment for isolated execution
@@ -25,52 +25,59 @@ impl SandboxEnvironment {
 
         Ok(Self {
             root_path,
-            allowed_paths: vec![
-                PathBuf::from("/tmp"),
-                PathBuf::from("/var/tmp"),
-            ],
+            allowed_paths: vec![PathBuf::from("/tmp"), PathBuf::from("/var/tmp")],
             max_execution_time: std::time::Duration::from_secs(30),
             temp_files: Arc::new(RwLock::new(Vec::new())),
         })
     }
 
     /// Execute operation in sandbox
-    pub async fn execute_in_sandbox(&self, operation: &str) -> Result<String, SelfPromptingAgentError> {
+    pub async fn execute_in_sandbox(
+        &self,
+        operation: &str,
+    ) -> Result<String, SelfPromptingAgentError> {
         // Validate operation is safe to execute
         // Check for dangerous operations
         let operation_lower = operation.to_lowercase();
-        
+
         // Block dangerous operations
         let dangerous_patterns = [
-            "rm -rf", "delete all", "format", "shutdown", "kill",
-            "sudo", "su ", "exec(", "eval(", "system(",
+            "rm -rf",
+            "delete all",
+            "format",
+            "shutdown",
+            "kill",
+            "sudo",
+            "su ",
+            "exec(",
+            "eval(",
+            "system(",
         ];
-        
+
         for pattern in &dangerous_patterns {
             if operation_lower.contains(pattern) {
-                return Err(SelfPromptingAgentError::Sandbox(
-                    format!("Dangerous operation not allowed: {}", pattern)
-                ));
+                return Err(SelfPromptingAgentError::Sandbox(format!(
+                    "Dangerous operation not allowed: {}",
+                    pattern
+                )));
             }
         }
-        
+
         // Check if we have a root path for sandbox execution
-        let sandbox_root = self.root_path.as_ref()
-            .ok_or_else(|| SelfPromptingAgentError::Sandbox(
-                "Sandbox root path not configured".to_string()
-            ))?;
-        
+        let sandbox_root = self.root_path.as_ref().ok_or_else(|| {
+            SelfPromptingAgentError::Sandbox("Sandbox root path not configured".to_string())
+        })?;
+
         // Validate sandbox root exists and is accessible
         if !sandbox_root.exists() {
-            tokio::fs::create_dir_all(sandbox_root).await
-                .map_err(|e| SelfPromptingAgentError::Sandbox(
-                    format!("Failed to create sandbox root: {}", e)
-                ))?;
+            tokio::fs::create_dir_all(sandbox_root).await.map_err(|e| {
+                SelfPromptingAgentError::Sandbox(format!("Failed to create sandbox root: {}", e))
+            })?;
         }
-        
+
         // Create a temporary file for operation output
         let output_file = self.create_temp_file(operation).await?;
-        
+
         // In a full implementation, this would:
         // 1. Spawn a child process with restricted permissions
         // TODO: Implement real sandbox execution with process isolation
@@ -86,7 +93,7 @@ impl SandboxEnvironment {
         // 3. Capture stdout/stderr
         // 4. Enforce resource limits
         // 5. Return the result
-        
+
         // TODO: Implement process isolation for sandbox execution
         //       Currently validates operation only; should implement process isolation using platform-specific APIs or libraries like `isolate` or Docker.
         //
@@ -122,41 +129,49 @@ impl SandboxEnvironment {
         // - CAWS Tier: 1 (security-critical feature)
         // - Change Budget: ~150 LOC
         // - Reviewer Requirements: Security and process isolation expertise
-        
+
         tracing::info!(
             "Sandbox execution requested: {} (executed in sandbox root: {:?})",
             operation,
             sandbox_root
         );
-        
+
         Ok(format!("Operation executed in sandbox: {}", operation))
     }
 
     /// Validate path is within sandbox bounds
     pub fn validate_path(&self, path: &std::path::Path) -> Result<(), SelfPromptingAgentError> {
         // Check if path is within allowed paths
-        let allowed = self.allowed_paths.iter().any(|allowed_path| {
-            path.starts_with(allowed_path)
-        });
+        let allowed = self
+            .allowed_paths
+            .iter()
+            .any(|allowed_path| path.starts_with(allowed_path));
 
         if !allowed {
-            return Err(SelfPromptingAgentError::Sandbox(format!("Path not allowed: {:?}", path)));
+            return Err(SelfPromptingAgentError::Sandbox(format!(
+                "Path not allowed: {:?}",
+                path
+            )));
         }
 
         Ok(())
     }
 
     /// Create temporary file in sandbox
-    pub async fn create_temp_file(&self, content: &str) -> Result<PathBuf, SelfPromptingAgentError> {
+    pub async fn create_temp_file(
+        &self,
+        content: &str,
+    ) -> Result<PathBuf, SelfPromptingAgentError> {
         // Use system temp directory with UUID for uniqueness
         let temp_path = std::env::temp_dir().join(format!("sandbox_{}", uuid::Uuid::new_v4()));
-        
+
         // Validate path is within allowed sandbox paths
         self.validate_path(&temp_path)?;
-        
+
         // Create the file
-        tokio::fs::write(&temp_path, content).await
-            .map_err(|e| SelfPromptingAgentError::Sandbox(format!("Failed to create temp file: {}", e)))?;
+        tokio::fs::write(&temp_path, content).await.map_err(|e| {
+            SelfPromptingAgentError::Sandbox(format!("Failed to create temp file: {}", e))
+        })?;
 
         // Track the file for cleanup
         {
@@ -170,11 +185,11 @@ impl SandboxEnvironment {
     /// Cleanup sandbox resources
     pub async fn cleanup(&self) -> Result<(), SelfPromptingAgentError> {
         tracing::info!("Cleaning up sandbox resources");
-        
+
         // Remove all tracked temporary files
         let mut files = self.temp_files.write().await;
         let mut cleanup_errors = Vec::new();
-        
+
         for file_path in files.iter() {
             if file_path.exists() {
                 match tokio::fs::remove_file(file_path).await {
@@ -188,9 +203,9 @@ impl SandboxEnvironment {
                 }
             }
         }
-        
+
         files.clear();
-        
+
         if !cleanup_errors.is_empty() {
             Err(SelfPromptingAgentError::Sandbox(format!(
                 "Some cleanup operations failed: {}",
@@ -219,7 +234,7 @@ impl SandboxEnvironment {
 
 /// Sandbox status information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxStatus {
     pub active: bool,
     pub root_path: Option<PathBuf>,
@@ -229,7 +244,7 @@ pub struct SandboxStatus {
 
 /// Security levels for sandbox
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SecurityLevel {
     Low,
     Medium,
@@ -239,7 +254,7 @@ pub enum SecurityLevel {
 
 /// Sandbox configuration
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxConfig {
     pub max_memory_mb: usize,
     pub max_cpu_percent: f64,
@@ -255,11 +270,7 @@ impl Default for SandboxConfig {
             max_cpu_percent: 50.0,
             network_access: false,
             file_system_access: true,
-            allowed_commands: vec![
-                "cat".to_string(),
-                "grep".to_string(),
-                "ls".to_string(),
-            ],
+            allowed_commands: vec!["cat".to_string(), "grep".to_string(), "ls".to_string()],
         }
     }
 }
@@ -278,7 +289,7 @@ impl ResourceMonitor {
     /// Check if resource usage is within limits
     pub async fn check_limits(&self) -> Result<(), SelfPromptingAgentError> {
         let usage = self.get_usage().await;
-        
+
         // Check memory limit
         if usage.memory_mb > self.config.max_memory_mb {
             return Err(SelfPromptingAgentError::Sandbox(format!(
@@ -286,7 +297,7 @@ impl ResourceMonitor {
                 usage.memory_mb, self.config.max_memory_mb
             )));
         }
-        
+
         // Check CPU limit
         if usage.cpu_percent > self.config.max_cpu_percent {
             return Err(SelfPromptingAgentError::Sandbox(format!(
@@ -294,7 +305,7 @@ impl ResourceMonitor {
                 usage.cpu_percent, self.config.max_cpu_percent
             )));
         }
-        
+
         Ok(())
     }
 
@@ -353,18 +364,18 @@ impl ResourceMonitor {
         let memory_mb = self.config.max_memory_mb / 4; // Temporary: conservative estimate until sysinfo integration
         let cpu_percent = self.config.max_cpu_percent / 2.0; // Temporary: conservative estimate until sysinfo integration
         let active_processes = 1; // Temporary: basic count until sysinfo integration
-        
+
         ResourceUsage {
             memory_mb,
             cpu_percent,
             active_processes,
         }
     }
-    
+
     /// Check resource limits with detailed error reporting
     pub async fn check_limits_detailed(&self) -> Result<ResourceUsage, SelfPromptingAgentError> {
         let usage = self.get_usage().await;
-        
+
         // Check memory limit
         if usage.memory_mb > self.config.max_memory_mb {
             return Err(SelfPromptingAgentError::Sandbox(format!(
@@ -372,7 +383,7 @@ impl ResourceMonitor {
                 usage.memory_mb, self.config.max_memory_mb
             )));
         }
-        
+
         // Check CPU limit
         if usage.cpu_percent > self.config.max_cpu_percent {
             return Err(SelfPromptingAgentError::Sandbox(format!(
@@ -380,14 +391,14 @@ impl ResourceMonitor {
                 usage.cpu_percent, self.config.max_cpu_percent
             )));
         }
-        
+
         Ok(usage)
     }
 }
 
 /// Resource usage information
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceUsage {
     pub memory_mb: usize,
     pub cpu_percent: f64,

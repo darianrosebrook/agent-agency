@@ -3,9 +3,9 @@
 //! Graph-based indexing for diagrams, knowledge graphs, and
 //! relational data with adjacency lists and property management.
 
-use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -151,12 +151,18 @@ impl GraphIndexer {
 
     /// Get neighbors of a node
     pub fn get_neighbors(&self, node_id: Uuid) -> Vec<Uuid> {
-        self.graph_adjacency.get(&node_id).cloned().unwrap_or_default()
+        self.graph_adjacency
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Get nodes that reference this node
     pub fn get_references(&self, node_id: Uuid) -> Vec<Uuid> {
-        self.reverse_adjacency.get(&node_id).cloned().unwrap_or_default()
+        self.reverse_adjacency
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Find shortest path between two nodes
@@ -202,7 +208,11 @@ impl GraphIndexer {
     }
 
     /// Find nodes by property value
-    pub fn find_nodes_by_property(&self, property_key: &str, property_value: &PropertyValue) -> Vec<Uuid> {
+    pub fn find_nodes_by_property(
+        &self,
+        property_key: &str,
+        property_value: &PropertyValue,
+    ) -> Vec<Uuid> {
         self.node_properties
             .iter()
             .filter_map(|(id, props)| {
@@ -247,14 +257,20 @@ impl GraphIndexer {
         let total_nodes = self.node_properties.len();
         let total_edges = self.edges.len();
 
-        let node_types = self.node_properties.values()
+        let node_types = self
+            .node_properties
+            .values()
             .fold(HashMap::new(), |mut acc, props| {
                 *acc.entry(format!("{:?}", props.node_type)).or_insert(0) += 1;
                 acc
             });
 
         let avg_degree = if total_nodes > 0 {
-            self.graph_adjacency.values().map(|neighbors| neighbors.len()).sum::<usize>() as f64 / total_nodes as f64
+            self.graph_adjacency
+                .values()
+                .map(|neighbors| neighbors.len())
+                .sum::<usize>() as f64
+                / total_nodes as f64
         } else {
             0.0
         };
@@ -277,16 +293,31 @@ impl GraphIndexer {
         // Add node definitions
         for (id, properties) in &self.node_properties {
             xml.push_str(&format!("  <node id=\"{}\">\n", id));
-            xml.push_str(&format!("    <data key=\"label\">{}</data>\n", properties.label));
-            xml.push_str(&format!("    <data key=\"type\">{:?}</data>\n", properties.node_type));
+            xml.push_str(&format!(
+                "    <data key=\"label\">{}</data>\n",
+                properties.label
+            ));
+            xml.push_str(&format!(
+                "    <data key=\"type\">{:?}</data>\n",
+                properties.node_type
+            ));
             xml.push_str("  </node>\n");
         }
 
         // Add edge definitions
         for ((source, target), edge) in &self.edges {
-            xml.push_str(&format!("  <edge source=\"{}\" target=\"{}\">\n", source, target));
-            xml.push_str(&format!("    <data key=\"type\">{:?}</data>\n", edge.edge_type));
-            xml.push_str(&format!("    <data key=\"weight\">{}</data>\n", edge.weight));
+            xml.push_str(&format!(
+                "  <edge source=\"{}\" target=\"{}\">\n",
+                source, target
+            ));
+            xml.push_str(&format!(
+                "    <data key=\"type\">{:?}</data>\n",
+                edge.edge_type
+            ));
+            xml.push_str(&format!(
+                "    <data key=\"weight\">{}</data>\n",
+                edge.weight
+            ));
             xml.push_str("  </edge>\n");
         }
 
@@ -391,19 +422,22 @@ impl GraphQueryBuilder {
 
     /// Real graph traversal implementation with filters
     pub fn execute(&self, indexer: &GraphIndexer) -> Vec<Uuid> {
-        use tracing::{info, debug, warn};
         use std::collections::{HashSet, VecDeque};
-        
-        info!("Executing graph traversal with {} filters", self.filters.len());
-        
+        use tracing::{debug, info, warn};
+
+        info!(
+            "Executing graph traversal with {} filters",
+            self.filters.len()
+        );
+
         if let Some(start) = self.start_node {
             let mut visited = HashSet::new();
             let mut queue = VecDeque::new();
             let mut results = Vec::new();
-            
+
             queue.push_back((start, 0)); // (node_id, depth)
             visited.insert(start);
-            
+
             while let Some((current_node, depth)) = queue.pop_front() {
                 // Check depth limit
                 if let Some(max_depth) = self.max_depth {
@@ -411,13 +445,13 @@ impl GraphQueryBuilder {
                         continue;
                     }
                 }
-                
+
                 // Apply filters
                 if self.passes_filters(current_node, indexer) {
                     results.push(current_node);
                     debug!("Node {} passed filters at depth {}", current_node, depth);
                 }
-                
+
                 // Get neighbors and add to queue
                 let neighbors = indexer.get_neighbors(current_node);
                 for neighbor in neighbors {
@@ -427,7 +461,7 @@ impl GraphQueryBuilder {
                     }
                 }
             }
-            
+
             info!("Graph traversal completed: {} nodes found", results.len());
             results
         } else {

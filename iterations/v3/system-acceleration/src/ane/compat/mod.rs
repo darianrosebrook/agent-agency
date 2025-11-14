@@ -3,8 +3,8 @@
 //! This module provides compatibility layers for Core ML and IOKit integration
 //! with proper platform detection and fallback implementations.
 
-pub mod coreml_direct;
 pub mod coreml;
+pub mod coreml_direct;
 pub mod coreml_module;
 pub mod hardening;
 pub mod integration;
@@ -18,4 +18,4 @@ pub mod tokenizer;
 pub mod types;
 
 // Note: CoreML safe API types are available in coreml module
-pub use iokit::{ThermalStatus, PowerStatus, DeviceInfo, ThermalCapabilities};
+pub use iokit::{DeviceInfo, PowerStatus, ThermalCapabilities, ThermalStatus};

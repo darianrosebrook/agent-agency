@@ -10,7 +10,7 @@ use clap::Parser;
 struct Args {
     #[arg(long, default_value = "localhost")]
     host: String,
-    
+
     #[arg(long, default_value = "3000")]
     port: u16,
 }
@@ -18,12 +18,12 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    
+
     println!("Data Infrastructure Service");
     println!("Host: {}", args.host);
     println!("Port: {}", args.port);
     println!("Service is running...");
-    
+
     // Simple server loop
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

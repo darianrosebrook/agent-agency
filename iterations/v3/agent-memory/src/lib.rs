@@ -31,19 +31,19 @@ pub mod temporal_reasoning;
 //   1. Import from agent-research: `use agent_research::self_prompting_agent::prompting_types::*;`
 //   2. Create its own prompting_types module if memory-specific types are needed
 // pub mod prompting_types; // TODO: Create this module or import from agent-research
-pub mod workspace_registry;
 pub mod memory_service_adapter;
 #[cfg(feature = "contracts")]
 pub mod memory_system_adapter;
+pub mod workspace_registry;
 
 // Re-export adapter when contracts feature is enabled
 #[cfg(feature = "contracts")]
 pub use memory_system_adapter::MemorySystemAdapter;
 
 // New feature modules for enhanced memory capabilities
-pub mod vector_search;
 pub mod consolidation;
 pub mod long_term_management;
+pub mod vector_search;
 
 // Enhanced memory system with new capabilities
 pub struct EnhancedMemorySystem {
@@ -62,13 +62,13 @@ pub mod context_offloading;
 #[cfg(feature = "provenance-tracking")]
 pub mod provenance;
 
-use std::sync::Arc;
 use anyhow::{Context, Result};
+use std::sync::Arc;
 // Import types from memory_types
 // Note: ContextualMemory is re-exported via pub use below, so we use the full path internally
 use crate::memory_types::{
-    AgentExperience, MemoryId, TaskContext,
-    ContextMatch, ReasoningQuery, ReasoningResult, TimeRange, TemporalAnalysis
+    AgentExperience, ContextMatch, MemoryId, ReasoningQuery, ReasoningResult, TaskContext,
+    TemporalAnalysis, TimeRange,
 };
 
 #[cfg(feature = "observability-integration")]
@@ -78,13 +78,16 @@ pub mod observability;
 mod tests;
 
 // Re-exports for public API
-pub use context_management::{MemoryContextManager};
+pub use context_management::MemoryContextManager;
 // pub use context_management::{FoldedContext, ContextSummary, ArchivedContext}; // TODO: Implement these types
-pub use decay::{MemoryDecayEngine, DecayStats};
-pub use graph_engine::{KnowledgeGraphEngine, Entity, Relationship, GraphQuery, GraphStats};
+pub use decay::{DecayStats, MemoryDecayEngine};
+pub use graph_engine::{Entity, GraphQuery, GraphStats, KnowledgeGraphEngine, Relationship};
 pub use memory_manager::{MemoryManager, MemoryStats};
-pub use temporal_reasoning::{TemporalReasoningEngine};
-pub use memory_types::{MemoryConfig, MemoryType, TemporalContext, TaskPriority, ExperienceOutcome, AgentFeedback, ExperienceContext, ContextualMemory};
+pub use memory_types::{
+    AgentFeedback, ContextualMemory, ExperienceContext, ExperienceOutcome, MemoryConfig,
+    MemoryType, TaskPriority, TemporalContext,
+};
+pub use temporal_reasoning::TemporalReasoningEngine;
 // NOTE: prompting_types exists in agent-research crate. See note above for import options.
 // pub use prompting_types::*; // TODO: Uncomment when module is created or imported from agent-research
 
@@ -187,7 +190,7 @@ impl MemorySystem {
         let db_pool = Arc::new(
             sqlx::PgPool::connect(&database_url)
                 .await
-                .context("Failed to connect to database for memory system")?
+                .context("Failed to connect to database for memory system")?,
         );
         let workspace_registry = Arc::new(workspace_registry::WorkspaceRegistry::new(
             config.workspace_config.access_config.clone(),
@@ -198,8 +201,9 @@ impl MemorySystem {
         let manager = MemoryManager::new_with_registry(
             config.clone(),
             (*db_pool).clone(),
-            Arc::clone(&workspace_registry)
-        ).await?;
+            Arc::clone(&workspace_registry),
+        )
+        .await?;
         let graph_engine = KnowledgeGraphEngine::new(&config.graph_config).await?;
 
         #[cfg(feature = "embeddings")]
@@ -209,12 +213,14 @@ impl MemorySystem {
         let decay_engine = MemoryDecayEngine::new_with_workspace_registry(
             &config.decay_config,
             (*db_pool).clone(),
-            Arc::clone(&workspace_registry)
-        ).await?;
+            Arc::clone(&workspace_registry),
+        )
+        .await?;
         let context_manager = MemoryContextManager::new_with_db(
             config.context_config.clone(),
-            Some((*db_pool).clone())
-        ).await?;
+            Some((*db_pool).clone()),
+        )
+        .await?;
 
         Ok(Self {
             manager,
@@ -271,13 +277,24 @@ impl MemorySystem {
         #[cfg(feature = "embeddings")]
         {
             // Generate embedding for the experience
-            let embedding = self.embedding_integration.generate_experience_embedding(&experience).await?;
-            self.embedding_integration.store_embedding(memory_id, embedding).await?;
+            let embedding = self
+                .embedding_integration
+                .generate_experience_embedding(&experience)
+                .await?;
+            self.embedding_integration
+                .store_embedding(memory_id, embedding)
+                .await?;
         }
 
         // Extract entities and relationships for knowledge graph
-        let entities = self.graph_engine.extract_entities_from_experience(&experience).await?;
-        let relationships = self.graph_engine.extract_relationships_from_experience(&experience, &entities).await?;
+        let entities = self
+            .graph_engine
+            .extract_entities_from_experience(&experience)
+            .await?;
+        let relationships = self
+            .graph_engine
+            .extract_relationships_from_experience(&experience, &entities)
+            .await?;
 
         // Store in knowledge graph
         for entity in entities {
@@ -292,13 +309,20 @@ impl MemorySystem {
     }
 
     /// Retrieve contextual memories based on current context
-    pub async fn retrieve_contextual_memories(&self, context: &TaskContext, limit: usize) -> MemoryResult<Vec<crate::memory_types::ContextualMemory>> {
+    pub async fn retrieve_contextual_memories(
+        &self,
+        context: &TaskContext,
+        limit: usize,
+    ) -> MemoryResult<Vec<crate::memory_types::ContextualMemory>> {
         let mut all_memories = Vec::new();
 
         #[cfg(feature = "embeddings")]
         {
             // Get semantic matches via embeddings
-            let semantic_matches = self.embedding_integration.semantic_search_context(context, limit).await?;
+            let semantic_matches = self
+                .embedding_integration
+                .semantic_search_context(context, limit)
+                .await?;
 
             // Add semantic matches
             for (memory_id, similarity) in semantic_matches {
@@ -314,7 +338,10 @@ impl MemorySystem {
         }
 
         // Get graph-based matches
-        let graph_matches = self.graph_engine.find_related_entities(context, limit).await?;
+        let graph_matches = self
+            .graph_engine
+            .find_related_entities(context, limit)
+            .await?;
 
         // Add graph matches
         for (memory_id, path) in graph_matches {
@@ -329,10 +356,16 @@ impl MemorySystem {
         }
 
         // Apply temporal weighting and decay
-        self.decay_engine.apply_temporal_weighting(&mut all_memories).await?;
+        self.decay_engine
+            .apply_temporal_weighting(&mut all_memories)
+            .await?;
 
         // Sort by relevance and return top results
-        all_memories.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap_or(std::cmp::Ordering::Equal));
+        all_memories.sort_by(|a, b| {
+            b.relevance_score
+                .partial_cmp(&a.relevance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         all_memories.truncate(limit);
 
         Ok(all_memories)
@@ -344,8 +377,14 @@ impl MemorySystem {
     }
 
     /// Analyze temporal patterns in agent performance
-    pub async fn analyze_temporal_patterns(&self, agent_id: &str, time_range: &TimeRange) -> MemoryResult<TemporalAnalysis> {
-        self.temporal_engine.analyze_agent_performance(agent_id, time_range).await
+    pub async fn analyze_temporal_patterns(
+        &self,
+        agent_id: &str,
+        time_range: &TimeRange,
+    ) -> MemoryResult<TemporalAnalysis> {
+        self.temporal_engine
+            .analyze_agent_performance(agent_id, time_range)
+            .await
     }
 
     /// Run memory maintenance (decay, consolidation, cleanup)

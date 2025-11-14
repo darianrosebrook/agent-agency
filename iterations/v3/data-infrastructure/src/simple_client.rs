@@ -3,11 +3,11 @@
 //! This provides a simple interface to the complex DatabaseClient
 //! for backwards compatibility with existing code.
 
-use schemars::JsonSchema;
 use crate::client::orchestrator::DatabaseClient as ComplexDatabaseClient;
 use crate::database_config::DatabaseConfig;
 use crate::database_operations::DatabaseOperations;
 use anyhow::Result;
+use schemars::JsonSchema;
 use sqlx::postgres::PgPool;
 use sqlx::Row;
 use std::sync::Arc;
@@ -108,7 +108,8 @@ impl DatabaseClient {
         let mut waivers = Vec::new();
         for row in rows {
             let gates_json: serde_json::Value = row.try_get("gates")?;
-            let gates: Vec<String> = gates_json.as_array()
+            let gates: Vec<String> = gates_json
+                .as_array()
                 .unwrap_or(&vec![])
                 .iter()
                 .filter_map(|v| v.as_str())
@@ -139,12 +140,12 @@ impl DatabaseClient {
     /// Create a new waiver
     pub async fn create_waiver(&self, waiver: &crate::models::Waiver) -> Result<Uuid> {
         let gates_json = serde_json::to_value(&waiver.gates)?;
-        
+
         self.execute(
             r#"
             INSERT INTO waivers (
-                id, title, reason, description, gates, approved_by, 
-                impact_level, mitigation_plan, expires_at, created_at, 
+                id, title, reason, description, gates, approved_by,
+                impact_level, mitigation_plan, expires_at, created_at,
                 updated_at, status, metadata
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             "#,
@@ -162,8 +163,9 @@ impl DatabaseClient {
                 &waiver.updated_at,
                 &waiver.status,
                 &waiver.metadata,
-            ]
-        ).await?;
+            ],
+        )
+        .await?;
 
         Ok(waiver.id)
     }
@@ -178,7 +180,8 @@ impl DatabaseClient {
         match row {
             Some(row) => {
                 let gates_json: serde_json::Value = row.try_get("gates")?;
-                let gates: Vec<String> = gates_json.as_array()
+                let gates: Vec<String> = gates_json
+                    .as_array()
                     .unwrap_or(&vec![])
                     .iter()
                     .filter_map(|v| v.as_str())
@@ -202,28 +205,27 @@ impl DatabaseClient {
                 };
                 Ok(Some(waiver))
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
     /// Approve a waiver
     pub async fn approve_waiver(&self, waiver_id: &Uuid) -> Result<()> {
         let now = chrono::Utc::now();
-        
+
         self.execute(
             "UPDATE waivers SET status = $1, updated_at = $2 WHERE id = $3",
-            &[&"approved".to_string(), &now, waiver_id]
-        ).await?;
+            &[&"approved".to_string(), &now, waiver_id],
+        )
+        .await?;
 
         Ok(())
     }
 
     /// Delete a waiver
     pub async fn delete_waiver(&self, waiver_id: &Uuid) -> Result<()> {
-        self.execute(
-            "DELETE FROM waivers WHERE id = $1",
-            &[waiver_id]
-        ).await?;
+        self.execute("DELETE FROM waivers WHERE id = $1", &[waiver_id])
+            .await?;
 
         Ok(())
     }
@@ -263,7 +265,10 @@ impl DatabaseClient {
     }
 
     /// Get task provenance
-    pub async fn get_task_provenance(&self, task_id: &Uuid) -> Result<Vec<crate::models::ProvenanceEntry>> {
+    pub async fn get_task_provenance(
+        &self,
+        task_id: &Uuid,
+    ) -> Result<Vec<crate::models::ProvenanceEntry>> {
         let rows = self.query(
             "SELECT id, task_id, action, actor, resource_id, resource_type, change_summary, timestamp, created_at, metadata FROM provenance_entries WHERE task_id = $1 ORDER BY created_at DESC",
             &[task_id]
@@ -307,13 +312,16 @@ impl DatabaseClient {
             deadline: task.deadline,
             metadata: task.metadata.clone(),
         };
-        
+
         let created_task = self.inner.create_task(create_task).await?;
         Ok(created_task.id)
     }
 
     /// Create a task from CreateTask struct
-    pub async fn create_task_from_create(&self, create_task: crate::database_operations::CreateTask) -> Result<crate::models::Task> {
+    pub async fn create_task_from_create(
+        &self,
+        create_task: crate::database_operations::CreateTask,
+    ) -> Result<crate::models::Task> {
         let task = self.inner.create_task(create_task).await?;
         Ok(crate::models::Task {
             id: task.id,
@@ -361,7 +369,11 @@ impl DatabaseClient {
     }
 
     /// Update a task
-    pub async fn update_task(&self, id: Uuid, update: crate::database_operations::UpdateTask) -> Result<crate::models::Task> {
+    pub async fn update_task(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateTask,
+    ) -> Result<crate::models::Task> {
         let task = self.inner.update_task(id, update).await?;
         Ok(crate::models::Task {
             id: task.id,
@@ -392,31 +404,39 @@ impl DatabaseClient {
     /// Get all tasks
     pub async fn get_tasks(&self) -> Result<Vec<crate::models::Task>> {
         let tasks = self.inner.get_tasks().await?;
-        Ok(tasks.into_iter().map(|t| crate::models::Task {
-            id: t.id,
-            title: t.title,
-            description: t.description,
-            risk_tier: t.risk_tier,
-            scope: t.scope,
-            acceptance_criteria: t.acceptance_criteria,
-            context: t.context,
-            caws_spec: t.caws_spec,
-            status: t.status,
-            assigned_worker_id: t.assigned_worker_id,
-            project_id: t.project_id,
-            priority: t.priority,
-            deadline: t.deadline,
-            metadata: t.metadata,
-            created_at: t.created_at,
-            updated_at: t.updated_at,
-            completed_at: t.completed_at,
-        }).collect())
+        Ok(tasks
+            .into_iter()
+            .map(|t| crate::models::Task {
+                id: t.id,
+                title: t.title,
+                description: t.description,
+                risk_tier: t.risk_tier,
+                scope: t.scope,
+                acceptance_criteria: t.acceptance_criteria,
+                context: t.context,
+                caws_spec: t.caws_spec,
+                status: t.status,
+                assigned_worker_id: t.assigned_worker_id,
+                project_id: t.project_id,
+                priority: t.priority,
+                deadline: t.deadline,
+                metadata: t.metadata,
+                created_at: t.created_at,
+                updated_at: t.updated_at,
+                completed_at: t.completed_at,
+            })
+            .collect())
     }
 
     /// Revoke a waiver
-    pub async fn revoke_waiver(&self, waiver_id: &Uuid, revoked_by: &str, revocation_reason: &str) -> Result<()> {
+    pub async fn revoke_waiver(
+        &self,
+        waiver_id: &Uuid,
+        revoked_by: &str,
+        revocation_reason: &str,
+    ) -> Result<()> {
         let now = chrono::Utc::now();
-        
+
         self.execute(
             "UPDATE waivers SET status = $1, updated_at = $2, metadata = jsonb_set(COALESCE(metadata, '{}'), '{revocation}', $3) WHERE id = $4",
             &[&"revoked".to_string(), &now, &serde_json::json!({
@@ -451,9 +471,14 @@ impl DatabaseClient {
     }
 
     /// Acknowledge SLO alert
-    pub async fn acknowledge_slo_alert(&self, alert_id: &Uuid, acknowledged_by: &str, acknowledgment_notes: &str) -> Result<()> {
+    pub async fn acknowledge_slo_alert(
+        &self,
+        alert_id: &Uuid,
+        acknowledged_by: &str,
+        acknowledgment_notes: &str,
+    ) -> Result<()> {
         let now = chrono::Utc::now();
-        
+
         self.execute(
             "UPDATE slo_alerts SET status = $1, acknowledged_by = $2, acknowledged_at = $3, acknowledgment_notes = $4 WHERE id = $5",
             &[&"acknowledged".to_string(), &acknowledged_by, &now, &acknowledgment_notes, alert_id]
@@ -508,7 +533,7 @@ impl DatabaseClient {
                 });
                 Ok(Some(slo))
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
@@ -587,7 +612,11 @@ impl DatabaseClient {
     }
 
     /// Link provenance to commit
-    pub async fn link_provenance_to_commit(&self, provenance_id: &Uuid, commit_hash: &str) -> Result<()> {
+    pub async fn link_provenance_to_commit(
+        &self,
+        provenance_id: &Uuid,
+        commit_hash: &str,
+    ) -> Result<()> {
         self.execute(
             "UPDATE provenance_entries SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{commit_hash}', $1) WHERE id = $2",
             &[&serde_json::Value::String(commit_hash.to_string()), provenance_id]
@@ -628,7 +657,10 @@ impl DatabaseClient {
     }
 
     /// Get provenance by commit
-    pub async fn get_provenance_by_commit(&self, commit_hash: &str) -> Result<Vec<crate::models::ProvenanceEntry>> {
+    pub async fn get_provenance_by_commit(
+        &self,
+        commit_hash: &str,
+    ) -> Result<Vec<crate::models::ProvenanceEntry>> {
         let rows = self.query(
             "SELECT id, task_id, action, actor, resource_id, resource_type, change_summary, timestamp, created_at, metadata FROM provenance_entries WHERE metadata->>'commit_hash' = $1 ORDER BY timestamp DESC",
             &[&commit_hash]
@@ -657,20 +689,20 @@ impl DatabaseClient {
     /// Get system metrics
     pub async fn get_system_metrics(&self) -> Result<serde_json::Value> {
         // Get basic system metrics
-        let task_count = self.query_one(
-            "SELECT COUNT(*) as count FROM tasks",
-            &[]
-        ).await?;
+        let task_count = self
+            .query_one("SELECT COUNT(*) as count FROM tasks", &[])
+            .await?;
 
-        let active_task_count = self.query_one(
-            "SELECT COUNT(*) as count FROM tasks WHERE status = 'running'",
-            &[]
-        ).await?;
+        let active_task_count = self
+            .query_one(
+                "SELECT COUNT(*) as count FROM tasks WHERE status = 'running'",
+                &[],
+            )
+            .await?;
 
-        let waiver_count = self.query_one(
-            "SELECT COUNT(*) as count FROM waivers",
-            &[]
-        ).await?;
+        let waiver_count = self
+            .query_one("SELECT COUNT(*) as count FROM waivers", &[])
+            .await?;
 
         Ok(serde_json::json!({
             "total_tasks": task_count.map(|r| r.try_get::<i64, _>("count").unwrap_or(0)).unwrap_or(0),
@@ -683,11 +715,13 @@ impl DatabaseClient {
     /// Get dashboard data
     pub async fn get_dashboard_data(&self) -> Result<serde_json::Value> {
         let metrics = self.get_system_metrics().await?;
-        
-        let recent_tasks = self.query(
-            "SELECT id, title, status, created_at FROM tasks ORDER BY created_at DESC LIMIT 10",
-            &[]
-        ).await?;
+
+        let recent_tasks = self
+            .query(
+                "SELECT id, title, status, created_at FROM tasks ORDER BY created_at DESC LIMIT 10",
+                &[],
+            )
+            .await?;
 
         let recent_waivers = self.query(
             "SELECT id, title, status, created_at FROM waivers ORDER BY created_at DESC LIMIT 10",
@@ -761,33 +795,54 @@ impl DatabaseClient {
         self.inner.get_user(id).await
     }
 
-    pub async fn get_user_by_email(&self, email: &str) -> Result<Option<crate::models::User>> {
-        self.inner.get_user_by_email(email).await
-    }
-
-    pub async fn get_user_by_username(&self, username: &str) -> Result<Option<crate::models::User>> {
+    pub async fn get_user_by_username(
+        &self,
+        username: &str,
+    ) -> Result<Option<crate::models::User>> {
         self.inner.get_user_by_username(username).await
     }
 
-    pub async fn update_user(&self, id: Uuid, update: crate::database_operations::UpdateUser) -> Result<crate::models::User> {
+    pub async fn update_user(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateUser,
+    ) -> Result<crate::models::User> {
         self.inner.update_user(id, update).await
     }
 
     // User settings operations
-    pub async fn get_user_settings(&self, user_id: Uuid, setting_type: Option<&str>) -> Result<Vec<crate::models::UserSetting>> {
+    pub async fn get_user_settings(
+        &self,
+        user_id: Uuid,
+        setting_type: Option<&str>,
+    ) -> Result<Vec<crate::models::UserSetting>> {
         self.inner.get_user_settings(user_id, setting_type).await
     }
 
-    pub async fn get_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<Option<crate::models::UserSetting>> {
+    pub async fn get_user_setting(
+        &self,
+        user_id: Uuid,
+        setting_key: &str,
+    ) -> Result<Option<crate::models::UserSetting>> {
         self.inner.get_user_setting(user_id, setting_key).await
     }
 
-    pub async fn create_user_setting(&self, setting: crate::database_operations::CreateUserSetting) -> Result<crate::models::UserSetting> {
+    pub async fn create_user_setting(
+        &self,
+        setting: crate::database_operations::CreateUserSetting,
+    ) -> Result<crate::models::UserSetting> {
         self.inner.create_user_setting(setting).await
     }
 
-    pub async fn update_user_setting(&self, user_id: Uuid, setting_key: &str, update: crate::database_operations::UpdateUserSetting) -> Result<crate::models::UserSetting> {
-        self.inner.update_user_setting(user_id, setting_key, update).await
+    pub async fn update_user_setting(
+        &self,
+        user_id: Uuid,
+        setting_key: &str,
+        update: crate::database_operations::UpdateUserSetting,
+    ) -> Result<crate::models::UserSetting> {
+        self.inner
+            .update_user_setting(user_id, setting_key, update)
+            .await
     }
 
     pub async fn delete_user_setting(&self, user_id: Uuid, setting_key: &str) -> Result<()> {
@@ -795,19 +850,33 @@ impl DatabaseClient {
     }
 
     // App settings operations
-    pub async fn get_app_settings(&self, setting_type: Option<&str>, is_public: Option<bool>) -> Result<Vec<crate::models::AppSetting>> {
+    pub async fn get_app_settings(
+        &self,
+        setting_type: Option<&str>,
+        is_public: Option<bool>,
+    ) -> Result<Vec<crate::models::AppSetting>> {
         self.inner.get_app_settings(setting_type, is_public).await
     }
 
-    pub async fn get_app_setting(&self, setting_key: &str) -> Result<Option<crate::models::AppSetting>> {
+    pub async fn get_app_setting(
+        &self,
+        setting_key: &str,
+    ) -> Result<Option<crate::models::AppSetting>> {
         self.inner.get_app_setting(setting_key).await
     }
 
-    pub async fn create_app_setting(&self, setting: crate::database_operations::CreateAppSetting) -> Result<crate::models::AppSetting> {
+    pub async fn create_app_setting(
+        &self,
+        setting: crate::database_operations::CreateAppSetting,
+    ) -> Result<crate::models::AppSetting> {
         self.inner.create_app_setting(setting).await
     }
 
-    pub async fn update_app_setting(&self, setting_key: &str, update: crate::database_operations::UpdateAppSetting) -> Result<crate::models::AppSetting> {
+    pub async fn update_app_setting(
+        &self,
+        setting_key: &str,
+        update: crate::database_operations::UpdateAppSetting,
+    ) -> Result<crate::models::AppSetting> {
         self.inner.update_app_setting(setting_key, update).await
     }
 
@@ -816,7 +885,11 @@ impl DatabaseClient {
     }
 
     // Integration operations
-    pub async fn get_integrations(&self, provider: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::Integration>> {
+    pub async fn get_integrations(
+        &self,
+        provider: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<crate::models::Integration>> {
         self.inner.get_integrations(provider, is_active).await
     }
 
@@ -824,11 +897,18 @@ impl DatabaseClient {
         self.inner.get_integration(id).await
     }
 
-    pub async fn create_integration(&self, integration: crate::database_operations::CreateIntegration) -> Result<crate::models::Integration> {
+    pub async fn create_integration(
+        &self,
+        integration: crate::database_operations::CreateIntegration,
+    ) -> Result<crate::models::Integration> {
         self.inner.create_integration(integration).await
     }
 
-    pub async fn update_integration(&self, id: Uuid, update: crate::database_operations::UpdateIntegration) -> Result<crate::models::Integration> {
+    pub async fn update_integration(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateIntegration,
+    ) -> Result<crate::models::Integration> {
         self.inner.update_integration(id, update).await
     }
 
@@ -837,7 +917,11 @@ impl DatabaseClient {
     }
 
     // API key operations
-    pub async fn get_user_api_keys(&self, user_id: Uuid, is_active: Option<bool>) -> Result<Vec<crate::models::ApiKey>> {
+    pub async fn get_user_api_keys(
+        &self,
+        user_id: Uuid,
+        is_active: Option<bool>,
+    ) -> Result<Vec<crate::models::ApiKey>> {
         self.inner.get_user_api_keys(user_id, is_active).await
     }
 
@@ -845,15 +929,25 @@ impl DatabaseClient {
         self.inner.get_api_key(id).await
     }
 
-    pub async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<crate::models::ApiKey>> {
+    pub async fn get_api_key_by_hash(
+        &self,
+        key_hash: &str,
+    ) -> Result<Option<crate::models::ApiKey>> {
         self.inner.get_api_key_by_hash(key_hash).await
     }
 
-    pub async fn create_api_key(&self, api_key: crate::database_operations::CreateApiKey) -> Result<crate::models::ApiKey> {
+    pub async fn create_api_key(
+        &self,
+        api_key: crate::database_operations::CreateApiKey,
+    ) -> Result<crate::models::ApiKey> {
         self.inner.create_api_key(api_key).await
     }
 
-    pub async fn update_api_key(&self, id: Uuid, update: crate::database_operations::UpdateApiKey) -> Result<crate::models::ApiKey> {
+    pub async fn update_api_key(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateApiKey,
+    ) -> Result<crate::models::ApiKey> {
         self.inner.update_api_key(id, update).await
     }
 
@@ -866,7 +960,10 @@ impl DatabaseClient {
     }
 
     // CAWS Rules operations
-    pub async fn create_caws_rule(&self, rule: crate::database_operations::CreateCawsRule) -> Result<crate::models::CawsRule> {
+    pub async fn create_caws_rule(
+        &self,
+        rule: crate::database_operations::CreateCawsRule,
+    ) -> Result<crate::models::CawsRule> {
         self.inner.create_caws_rule(rule).await
     }
 
@@ -874,11 +971,19 @@ impl DatabaseClient {
         self.inner.get_caws_rule(id).await
     }
 
-    pub async fn get_caws_rules(&self, rule_type: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::CawsRule>> {
+    pub async fn get_caws_rules(
+        &self,
+        rule_type: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<crate::models::CawsRule>> {
         self.inner.get_caws_rules(rule_type, is_active).await
     }
 
-    pub async fn update_caws_rule(&self, id: &str, update: crate::database_operations::UpdateCawsRule) -> Result<crate::models::CawsRule> {
+    pub async fn update_caws_rule(
+        &self,
+        id: &str,
+        update: crate::database_operations::UpdateCawsRule,
+    ) -> Result<crate::models::CawsRule> {
         self.inner.update_caws_rule(id, update).await
     }
 
@@ -887,19 +992,36 @@ impl DatabaseClient {
     }
 
     // CAWS Violations operations
-    pub async fn create_caws_violation(&self, violation: crate::database_operations::CreateCawsViolation) -> Result<crate::models::CawsViolation> {
+    pub async fn create_caws_violation(
+        &self,
+        violation: crate::database_operations::CreateCawsViolation,
+    ) -> Result<crate::models::CawsViolation> {
         self.inner.create_caws_violation(violation).await
     }
 
-    pub async fn get_caws_violation(&self, id: Uuid) -> Result<Option<crate::models::CawsViolation>> {
+    pub async fn get_caws_violation(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::models::CawsViolation>> {
         self.inner.get_caws_violation(id).await
     }
 
-    pub async fn get_caws_violations(&self, task_id: Option<Uuid>, rule_id: Option<&str>, status: Option<&str>) -> Result<Vec<crate::models::CawsViolation>> {
-        self.inner.get_caws_violations(task_id, rule_id, status).await
+    pub async fn get_caws_violations(
+        &self,
+        task_id: Option<Uuid>,
+        rule_id: Option<&str>,
+        status: Option<&str>,
+    ) -> Result<Vec<crate::models::CawsViolation>> {
+        self.inner
+            .get_caws_violations(task_id, rule_id, status)
+            .await
     }
 
-    pub async fn update_caws_violation(&self, id: Uuid, update: crate::database_operations::UpdateCawsViolation) -> Result<crate::models::CawsViolation> {
+    pub async fn update_caws_violation(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateCawsViolation,
+    ) -> Result<crate::models::CawsViolation> {
         self.inner.update_caws_violation(id, update).await
     }
 
@@ -908,19 +1030,33 @@ impl DatabaseClient {
     }
 
     // CAWS Specifications operations
-    pub async fn create_caws_specification(&self, spec: crate::database_operations::CreateCawsSpecification) -> Result<crate::models::CawsSpecification> {
+    pub async fn create_caws_specification(
+        &self,
+        spec: crate::database_operations::CreateCawsSpecification,
+    ) -> Result<crate::models::CawsSpecification> {
         self.inner.create_caws_specification(spec).await
     }
 
-    pub async fn get_caws_specification(&self, id: Uuid) -> Result<Option<crate::models::CawsSpecification>> {
+    pub async fn get_caws_specification(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::models::CawsSpecification>> {
         self.inner.get_caws_specification(id).await
     }
 
-    pub async fn get_caws_specifications(&self, name: Option<&str>, is_active: Option<bool>) -> Result<Vec<crate::models::CawsSpecification>> {
+    pub async fn get_caws_specifications(
+        &self,
+        name: Option<&str>,
+        is_active: Option<bool>,
+    ) -> Result<Vec<crate::models::CawsSpecification>> {
         self.inner.get_caws_specifications(name, is_active).await
     }
 
-    pub async fn update_caws_specification(&self, id: Uuid, update: crate::database_operations::UpdateCawsSpecification) -> Result<crate::models::CawsSpecification> {
+    pub async fn update_caws_specification(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateCawsSpecification,
+    ) -> Result<crate::models::CawsSpecification> {
         self.inner.update_caws_specification(id, update).await
     }
 
@@ -929,30 +1065,56 @@ impl DatabaseClient {
     }
 
     // Rule templates operations
-    pub async fn get_rule_templates(&self, rule_type: Option<&str>) -> Result<Vec<crate::database_operations::RuleTemplate>> {
+    pub async fn get_rule_templates(
+        &self,
+        rule_type: Option<&str>,
+    ) -> Result<Vec<crate::database_operations::RuleTemplate>> {
         self.inner.get_rule_templates(rule_type).await
     }
 
-    pub async fn create_rule_template(&self, template: crate::database_operations::CreateRuleTemplate) -> Result<crate::database_operations::RuleTemplate> {
+    pub async fn create_rule_template(
+        &self,
+        template: crate::database_operations::CreateRuleTemplate,
+    ) -> Result<crate::database_operations::RuleTemplate> {
         self.inner.create_rule_template(template).await
     }
 
     // Rule enforcement status operations
-    pub async fn get_rule_enforcement_status(&self, rule_id: Option<&str>, task_id: Option<Uuid>) -> Result<Vec<crate::database_operations::RuleEnforcementStatus>> {
-        self.inner.get_rule_enforcement_status(rule_id, task_id).await
+    pub async fn get_rule_enforcement_status(
+        &self,
+        rule_id: Option<&str>,
+        task_id: Option<Uuid>,
+    ) -> Result<Vec<crate::database_operations::RuleEnforcementStatus>> {
+        self.inner
+            .get_rule_enforcement_status(rule_id, task_id)
+            .await
     }
 
-    pub async fn update_rule_enforcement_status(&self, rule_id: &str, task_id: Option<Uuid>, status: crate::database_operations::UpdateRuleEnforcementStatus) -> Result<crate::database_operations::RuleEnforcementStatus> {
-        self.inner.update_rule_enforcement_status(rule_id, task_id, status).await
+    pub async fn update_rule_enforcement_status(
+        &self,
+        rule_id: &str,
+        task_id: Option<Uuid>,
+        status: crate::database_operations::UpdateRuleEnforcementStatus,
+    ) -> Result<crate::database_operations::RuleEnforcementStatus> {
+        self.inner
+            .update_rule_enforcement_status(rule_id, task_id, status)
+            .await
     }
 
     // Rule history operations
-    pub async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>) -> Result<Vec<crate::database_operations::RuleHistory>> {
+    pub async fn get_rule_history(
+        &self,
+        rule_id: &str,
+        limit: Option<u32>,
+    ) -> Result<Vec<crate::database_operations::RuleHistory>> {
         self.inner.get_rule_history(rule_id, limit).await
     }
 
     // Session operations
-    pub async fn create_session(&self, session: crate::database_operations::CreateSession) -> Result<crate::models::Session> {
+    pub async fn create_session(
+        &self,
+        session: crate::database_operations::CreateSession,
+    ) -> Result<crate::models::Session> {
         self.inner.create_session(session).await
     }
 
@@ -960,20 +1122,40 @@ impl DatabaseClient {
         self.inner.get_session(id).await
     }
 
-    pub async fn get_session_by_token_hash(&self, token_hash: &str) -> Result<Option<crate::models::Session>> {
+    pub async fn get_session_by_token_hash(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<crate::models::Session>> {
         self.inner.get_session_by_token_hash(token_hash).await
     }
 
-    pub async fn update_session(&self, id: Uuid, update: crate::database_operations::UpdateSession) -> Result<crate::models::Session> {
+    pub async fn get_session_by_refresh_token_hash(
+        &self,
+        refresh_token_hash: &str,
+    ) -> Result<Option<crate::models::Session>> {
+        self.inner.get_session_by_refresh_token_hash(refresh_token_hash).await
+    }
+
+    pub async fn update_session(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateSession,
+    ) -> Result<crate::models::Session> {
         self.inner.update_session(id, update).await
     }
 
     // Password reset token operations
-    pub async fn create_password_reset_token(&self, token: crate::database_operations::CreatePasswordResetToken) -> Result<crate::models::PasswordResetToken> {
+    pub async fn create_password_reset_token(
+        &self,
+        token: crate::database_operations::CreatePasswordResetToken,
+    ) -> Result<crate::models::PasswordResetToken> {
         self.inner.create_password_reset_token(token).await
     }
 
-    pub async fn get_password_reset_token(&self, token_hash: &str) -> Result<Option<crate::models::PasswordResetToken>> {
+    pub async fn get_password_reset_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<crate::models::PasswordResetToken>> {
         self.inner.get_password_reset_token(token_hash).await
     }
 
@@ -982,11 +1164,17 @@ impl DatabaseClient {
     }
 
     // Execution plan operations
-    pub async fn create_execution_plan(&self, plan: crate::database_operations::CreateExecutionPlan) -> Result<crate::models::ExecutionPlan> {
+    pub async fn create_execution_plan(
+        &self,
+        plan: crate::database_operations::CreateExecutionPlan,
+    ) -> Result<crate::models::ExecutionPlan> {
         self.inner.create_execution_plan(plan).await
     }
 
-    pub async fn get_execution_plan(&self, id: Uuid) -> Result<Option<crate::models::ExecutionPlan>> {
+    pub async fn get_execution_plan(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<crate::models::ExecutionPlan>> {
         self.inner.get_execution_plan(id).await
     }
 
@@ -994,7 +1182,11 @@ impl DatabaseClient {
         self.inner.get_execution_plans().await
     }
 
-    pub async fn update_execution_plan(&self, id: Uuid, update: crate::database_operations::UpdateExecutionPlan) -> Result<crate::models::ExecutionPlan> {
+    pub async fn update_execution_plan(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateExecutionPlan,
+    ) -> Result<crate::models::ExecutionPlan> {
         self.inner.update_execution_plan(id, update).await
     }
 
@@ -1003,11 +1195,18 @@ impl DatabaseClient {
     }
 
     // Milestone operations
-    pub async fn create_milestone(&self, milestone: crate::database_operations::CreateMilestone) -> Result<crate::models::Milestone> {
+    pub async fn create_milestone(
+        &self,
+        milestone: crate::database_operations::CreateMilestone,
+    ) -> Result<crate::models::Milestone> {
         self.inner.create_milestone(milestone).await
     }
 
-    pub async fn get_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<Option<crate::models::Milestone>> {
+    pub async fn get_milestone(
+        &self,
+        plan_id: Uuid,
+        milestone_id: String,
+    ) -> Result<Option<crate::models::Milestone>> {
         self.inner.get_milestone(plan_id, milestone_id).await
     }
 
@@ -1015,8 +1214,15 @@ impl DatabaseClient {
         self.inner.get_milestones(plan_id).await
     }
 
-    pub async fn update_milestone(&self, plan_id: Uuid, milestone_id: String, update: crate::database_operations::UpdateMilestone) -> Result<crate::models::Milestone> {
-        self.inner.update_milestone(plan_id, milestone_id, update).await
+    pub async fn update_milestone(
+        &self,
+        plan_id: Uuid,
+        milestone_id: String,
+        update: crate::database_operations::UpdateMilestone,
+    ) -> Result<crate::models::Milestone> {
+        self.inner
+            .update_milestone(plan_id, milestone_id, update)
+            .await
     }
 
     pub async fn delete_milestone(&self, plan_id: Uuid, milestone_id: String) -> Result<()> {
@@ -1024,7 +1230,10 @@ impl DatabaseClient {
     }
 
     // Worker operations
-    pub async fn create_worker(&self, worker: crate::database_operations::CreateWorker) -> Result<crate::models::Worker> {
+    pub async fn create_worker(
+        &self,
+        worker: crate::database_operations::CreateWorker,
+    ) -> Result<crate::models::Worker> {
         self.inner.create_worker(worker).await
     }
 
@@ -1036,7 +1245,11 @@ impl DatabaseClient {
         self.inner.get_workers().await
     }
 
-    pub async fn update_worker(&self, id: Uuid, update: crate::database_operations::UpdateWorker) -> Result<crate::models::Worker> {
+    pub async fn update_worker(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateWorker,
+    ) -> Result<crate::models::Worker> {
         self.inner.update_worker(id, update).await
     }
 
@@ -1045,7 +1258,10 @@ impl DatabaseClient {
     }
 
     /// Get task executions by worker_id
-    pub async fn get_task_executions_by_worker(&self, worker_id: Uuid) -> Result<Vec<crate::models::TaskExecution>> {
+    pub async fn get_task_executions_by_worker(
+        &self,
+        worker_id: Uuid,
+    ) -> Result<Vec<crate::models::TaskExecution>> {
         let rows = self.query(
             "SELECT id, task_id, worker_id, execution_started_at, execution_completed_at, execution_time_ms, status, worker_output, self_assessment, metadata, error_message, tokens_used, created_at, updated_at, execution_metadata, result_data FROM task_executions WHERE worker_id = $1 ORDER BY execution_started_at DESC",
             &[&worker_id]
@@ -1078,7 +1294,10 @@ impl DatabaseClient {
     }
 
     // Judge operations
-    pub async fn create_judge(&self, judge: crate::database_operations::CreateJudge) -> Result<crate::models::Judge> {
+    pub async fn create_judge(
+        &self,
+        judge: crate::database_operations::CreateJudge,
+    ) -> Result<crate::models::Judge> {
         self.inner.create_judge(judge).await
     }
 
@@ -1090,7 +1309,11 @@ impl DatabaseClient {
         self.inner.get_judges().await
     }
 
-    pub async fn update_judge(&self, id: Uuid, update: crate::database_operations::UpdateJudge) -> Result<crate::models::Judge> {
+    pub async fn update_judge(
+        &self,
+        id: Uuid,
+        update: crate::database_operations::UpdateJudge,
+    ) -> Result<crate::models::Judge> {
         self.inner.update_judge(id, update).await
     }
 
@@ -1099,16 +1322,30 @@ impl DatabaseClient {
     }
 
     // Two-factor authentication operations
-    pub async fn get_two_factor_auth(&self, user_id: Uuid, method: Option<&str>) -> Result<Option<crate::models::TwoFactorAuth>> {
+    pub async fn get_two_factor_auth(
+        &self,
+        user_id: Uuid,
+        method: Option<&str>,
+    ) -> Result<Option<crate::models::TwoFactorAuth>> {
         self.inner.get_two_factor_auth(user_id, method).await
     }
 
-    pub async fn create_two_factor_auth(&self, two_fa: crate::database_operations::CreateTwoFactorAuth) -> Result<crate::models::TwoFactorAuth> {
+    pub async fn create_two_factor_auth(
+        &self,
+        two_fa: crate::database_operations::CreateTwoFactorAuth,
+    ) -> Result<crate::models::TwoFactorAuth> {
         self.inner.create_two_factor_auth(two_fa).await
     }
 
-    pub async fn update_two_factor_auth(&self, user_id: Uuid, method: &str, update: crate::database_operations::UpdateTwoFactorAuth) -> Result<crate::models::TwoFactorAuth> {
-        self.inner.update_two_factor_auth(user_id, method, update).await
+    pub async fn update_two_factor_auth(
+        &self,
+        user_id: Uuid,
+        method: &str,
+        update: crate::database_operations::UpdateTwoFactorAuth,
+    ) -> Result<crate::models::TwoFactorAuth> {
+        self.inner
+            .update_two_factor_auth(user_id, method, update)
+            .await
     }
 
     pub async fn delete_two_factor_auth(&self, user_id: Uuid, method: &str) -> Result<()> {
@@ -1116,7 +1353,10 @@ impl DatabaseClient {
     }
 
     /// Get judge evaluations by judge_id
-    pub async fn get_judge_evaluations_by_judge(&self, judge_id: Uuid) -> Result<Vec<crate::models::JudgeEvaluation>> {
+    pub async fn get_judge_evaluations_by_judge(
+        &self,
+        judge_id: Uuid,
+    ) -> Result<Vec<crate::models::JudgeEvaluation>> {
         let rows = self.query(
             "SELECT id, verdict_id, judge_id, judge_verdict, evaluation_time_ms, tokens_used, confidence, evaluation_score, confidence_score, reasoning, evidence_used, evaluation_metadata, verdict_decision, risk_assessment, created_at, updated_at FROM judge_evaluations WHERE judge_id = $1 ORDER BY created_at DESC",
             &[&judge_id]
@@ -1204,19 +1444,24 @@ impl ProvenanceClientAdapter {
         metadata: serde_json::Value,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Use the real DatabaseClient implementation
-        self.client.create_provenance_entry(
-            task_id,
-            action,
-            actor,
-            change_summary,
-            resource_id,
-            resource_type,
-            metadata,
-        ).await
-        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-            Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
-        })?;
-        
+        self.client
+            .create_provenance_entry(
+                task_id,
+                action,
+                actor,
+                change_summary,
+                resource_id,
+                resource_type,
+                metadata,
+            )
+            .await
+            .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
+
         Ok(())
     }
 }

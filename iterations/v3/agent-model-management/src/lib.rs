@@ -22,19 +22,18 @@
 //!
 //! @author @darianrosebrook
 
-pub mod types;
-pub mod models;
-pub mod inference;
 pub mod deployment;
+pub mod inference;
+pub mod models;
 pub mod monitoring;
+pub mod types;
 
 // Export specific types to avoid registry naming conflicts
-pub use models::ModelRegistry;
+pub use deployment::{DeploymentInfo, DeploymentRegistry, LoadBalancer};
 pub use inference::*;
-pub use deployment::{DeploymentRegistry, DeploymentInfo, LoadBalancer};
+pub use models::ModelRegistry;
 pub use monitoring::*;
 pub use types::*;
-
 
 /// Main model management orchestrator
 ///
@@ -71,16 +70,28 @@ impl ModelManager {
     }
 
     /// Load and prepare a model for inference
-    pub async fn load_model(&self, model_id: &str, _config: ModelConfig) -> Result<ModelHandle, ModelManagementError> {
+    pub async fn load_model(
+        &self,
+        model_id: &str,
+        _config: ModelConfig,
+    ) -> Result<ModelHandle, ModelManagementError> {
         // Load model metadata
-        let model_info = self.model_registry.get_model(model_id).await?
+        let model_info = self
+            .model_registry
+            .get_model(model_id)
+            .await?
             .ok_or_else(|| ModelManagementError::ModelNotFound(model_id.to_string()))?;
 
         // Prepare inference backend
-        let backend = self.inference_manager.get_or_create_backend(&model_info.model_type).await?;
+        let backend = self
+            .inference_manager
+            .get_or_create_backend(&model_info.model_type)
+            .await?;
 
         // Register with deployment system
-        self.deployment_orchestrator.register_model(model_id, model_info.clone()).await?;
+        self.deployment_orchestrator
+            .register_model(model_id, model_info.clone())
+            .await?;
 
         Ok(ModelHandle {
             model_id: model_id.to_string(),
@@ -95,16 +106,21 @@ impl ModelManager {
         input: InferenceInput,
     ) -> Result<InferenceOutput, ModelManagementError> {
         // Route through deployment system for A/B testing, load balancing, etc.
-        let routed_request = self.deployment_orchestrator.route_inference_request(
-            &model_handle.model_id,
-            input,
-        ).await?;
+        let routed_request = self
+            .deployment_orchestrator
+            .route_inference_request(&model_handle.model_id, input)
+            .await?;
 
         // Execute inference
-        let result = self.inference_manager.execute_inference(&routed_request).await?;
+        let result = self
+            .inference_manager
+            .execute_inference(&routed_request)
+            .await?;
 
         // Record performance metrics
-        self.performance_monitor.record_inference(&model_handle.model_id, &result, true).await?;
+        self.performance_monitor
+            .record_inference(&model_handle.model_id, &result, true)
+            .await?;
 
         Ok(result)
     }
@@ -116,21 +132,31 @@ impl ModelManager {
         new_version: &str,
         strategy: HotSwapStrategy,
     ) -> Result<HotSwapResult, ModelManagementError> {
-        self.deployment_orchestrator.perform_hot_swap(model_id, new_version, strategy).await
+        self.deployment_orchestrator
+            .perform_hot_swap(model_id, new_version, strategy)
+            .await
     }
 
     /// Get model performance metrics
-    pub async fn get_model_metrics(&self, model_id: &str) -> Result<ModelMetrics, ModelManagementError> {
+    pub async fn get_model_metrics(
+        &self,
+        model_id: &str,
+    ) -> Result<ModelMetrics, ModelManagementError> {
         self.performance_monitor.get_model_metrics(model_id).await
     }
 
     /// Get deployment status for a model
-    pub async fn get_deployment_status(&self, model_id: &str) -> Result<DeploymentStatus, ModelManagementError> {
-        self.deployment_orchestrator.get_deployment_status(model_id).await
+    pub async fn get_deployment_status(
+        &self,
+        model_id: &str,
+    ) -> Result<DeploymentStatus, ModelManagementError> {
+        self.deployment_orchestrator
+            .get_deployment_status(model_id)
+            .await
     }
 
     /// Tune model parameters for improved performance
-    /// 
+    ///
     /// Updates inference parameters (temperature, top_p, top_k, etc.) based on tuning request
     /// and validates performance improvements before applying changes.
     pub async fn tune_parameters(
@@ -140,15 +166,21 @@ impl ModelManager {
     ) -> Result<TuningResult, ModelManagementError> {
         use tracing::info;
         // Verify model exists
-        let _model_info = self.model_registry.get_model(model_id).await?
+        let _model_info = self
+            .model_registry
+            .get_model(model_id)
+            .await?
             .ok_or_else(|| ModelManagementError::ModelNotFound(model_id.to_string()))?;
-        
-        info!("Tuning parameters for model {}: {:?}", model_id, tuning_params.parameters);
-        
+
+        info!(
+            "Tuning parameters for model {}: {:?}",
+            model_id, tuning_params.parameters
+        );
+
         // If validation criteria specified, perform test run
         if let Some(ref _validation) = tuning_params.validation_criteria {
             info!("Running validation test for parameter tuning");
-            
+
             // TODO: Implement real parameter tuning validation
             // - [ ] Create test model instance with new parameters
             // - [ ] Run test inference requests with validation dataset
@@ -230,14 +262,14 @@ impl ModelManager {
             // - Change Budget: ~300 LOC
             // - Reviewer Requirements: ML model management expertise
             let validation_passed = true; // Would check actual performance
-            
+
             if !validation_passed {
                 return Err(ModelManagementError::InvalidConfiguration(
-                    "Parameter tuning validation failed - performance criteria not met".to_string()
+                    "Parameter tuning validation failed - performance criteria not met".to_string(),
                 ));
             }
         }
-        
+
         // Apply parameter tuning
         // TODO: Implement model inference parameter updates
         //       Currently placeholder; should update model's inference parameters stored in registry or backend configuration.
@@ -273,17 +305,20 @@ impl ModelManager {
         // - CAWS Tier: 2 (model management feature)
         // - Change Budget: ~200 LOC
         // - Reviewer Requirements: Model registry expertise
-        
+
         // Record performance metrics
         let performance_delta = PerformanceDelta {
-            latency_delta_ms: -5.0, // Assume 5ms improvement
+            latency_delta_ms: -5.0,  // Assume 5ms improvement
             throughput_delta: 10.0,  // 10% throughput increase
             error_rate_delta: -0.01, // 1% error rate reduction
             significance: 0.90,
         };
-        
-        info!("Parameter tuning completed for model {}: success=true", model_id);
-        
+
+        info!(
+            "Parameter tuning completed for model {}: success=true",
+            model_id
+        );
+
         Ok(TuningResult {
             model_id: model_id.to_string(),
             success: true,

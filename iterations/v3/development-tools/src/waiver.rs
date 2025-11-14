@@ -3,9 +3,9 @@
 //! Consolidated waiver generation and approval logic
 //! extracted from self-prompting-agent implementations.
 
+use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, Duration};
 use std::collections::HashMap;
 
 /// Waiver request
@@ -19,10 +19,8 @@ pub struct Waiver {
     pub risk_assessment: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub requested_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
     pub status: WaiverStatus,
     pub approver: Option<String>,
@@ -97,7 +95,11 @@ impl WaiverManager {
 
     /// Generate waiver for violations
     pub fn generate_waiver(&mut self, context: WaiverContext) -> Waiver {
-        let id = format!("waiver-{}-{}", context.task_id, chrono::Utc::now().timestamp());
+        let id = format!(
+            "waiver-{}-{}",
+            context.task_id,
+            chrono::Utc::now().timestamp()
+        );
         let expires_at = Utc::now() + Duration::days(7); // Default 7 days
 
         let justification = self.generate_justification(&context);
@@ -126,11 +128,16 @@ impl WaiverManager {
 
     /// Process waiver approval/rejection
     pub fn process_approval(&mut self, request: WaiverApprovalRequest) -> Result<(), String> {
-        let waiver = self.waivers.get_mut(&request.waiver_id)
+        let waiver = self
+            .waivers
+            .get_mut(&request.waiver_id)
             .ok_or_else(|| format!("Waiver {} not found", request.waiver_id))?;
 
         if waiver.status != WaiverStatus::Pending {
-            return Err(format!("Waiver {} is not in pending status", request.waiver_id));
+            return Err(format!(
+                "Waiver {} is not in pending status",
+                request.waiver_id
+            ));
         }
 
         waiver.approver = Some(request.approver.clone());
@@ -155,8 +162,7 @@ impl WaiverManager {
     /// Check if waiver is valid and approved
     pub fn is_waiver_valid(&self, waiver_id: &str) -> bool {
         if let Some(waiver) = self.waivers.get(waiver_id) {
-            waiver.status == WaiverStatus::Approved
-                && waiver.expires_at > Utc::now()
+            waiver.status == WaiverStatus::Approved && waiver.expires_at > Utc::now()
         } else {
             false
         }
@@ -169,7 +175,8 @@ impl WaiverManager {
 
     /// List waivers with optional filtering
     pub fn list_waivers(&self, status_filter: Option<WaiverStatus>) -> Vec<&Waiver> {
-        self.waivers.values()
+        self.waivers
+            .values()
             .filter(|w| status_filter.as_ref().map_or(true, |s| w.status == *s))
             .collect()
     }
@@ -177,7 +184,9 @@ impl WaiverManager {
     /// Clean up expired waivers
     pub fn cleanup_expired(&mut self) -> Vec<String> {
         let now = Utc::now();
-        let expired_ids: Vec<String> = self.waivers.iter()
+        let expired_ids: Vec<String> = self
+            .waivers
+            .iter()
             .filter(|(_, w)| w.expires_at <= now && w.status == WaiverStatus::Pending)
             .map(|(id, _)| id.clone())
             .collect();
@@ -208,12 +217,11 @@ impl WaiverManager {
             ));
         }
 
-        justification.push_str(&format!(
-            "Risk tier: {}\n",
-            context.risk_tier
-        ));
+        justification.push_str(&format!("Risk tier: {}\n", context.risk_tier));
 
-        justification.push_str("This waiver is necessary because: [auto-generated justification based on context]");
+        justification.push_str(
+            "This waiver is necessary because: [auto-generated justification based on context]",
+        );
 
         justification
     }

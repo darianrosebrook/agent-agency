@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tracing::Level;
 
-use crate::{Result, HealthStatus};
+use crate::{HealthStatus, Result};
 
 /// Metric value types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,10 +52,20 @@ pub trait ObservabilityInterface: Send + Sync {
     async fn gauge(&self, name: &str, value: f64, labels: HashMap<String, String>) -> Result<()>;
 
     /// Record a histogram observation
-    async fn histogram(&self, name: &str, value: f64, labels: HashMap<String, String>) -> Result<()>;
+    async fn histogram(
+        &self,
+        name: &str,
+        value: f64,
+        labels: HashMap<String, String>,
+    ) -> Result<()>;
 
     /// Record timing for an operation
-    async fn timing(&self, name: &str, duration: Duration, labels: HashMap<String, String>) -> Result<()>;
+    async fn timing(
+        &self,
+        name: &str,
+        duration: Duration,
+        labels: HashMap<String, String>,
+    ) -> Result<()>;
 
     /// Time a future and record its duration
     async fn time_future<F, Fut, T>(
@@ -91,10 +101,19 @@ pub trait TracingInterface: Send + Sync {
     async fn child_span(&self, parent: &SpanHandle, name: &str) -> Result<SpanHandle>;
 
     /// Set attributes on a span
-    async fn set_attributes(&self, span: &SpanHandle, attributes: HashMap<String, ObsValue>) -> Result<()>;
+    async fn set_attributes(
+        &self,
+        span: &SpanHandle,
+        attributes: HashMap<String, ObsValue>,
+    ) -> Result<()>;
 
     /// Record an event in a span
-    async fn record_event(&self, span: &SpanHandle, event: &str, attributes: HashMap<String, ObsValue>) -> Result<()>;
+    async fn record_event(
+        &self,
+        span: &SpanHandle,
+        event: &str,
+        attributes: HashMap<String, ObsValue>,
+    ) -> Result<()>;
 
     /// Set span status
     async fn set_status(&self, span: &SpanHandle, status: SpanStatus) -> Result<()>;

@@ -21,19 +21,18 @@ mod tests {
     use agent_data_processing::ingestion::FileWatcher as DataProcessingFileWatcher;
     use agent_memory::embedding_integration::EmbeddingIntegration;
     use agent_memory::memory_types::MemoryConfig;
-    use data_infrastructure::DatabaseClient;
     use data_infrastructure::database_config::DatabaseConfig;
+    use data_infrastructure::DatabaseClient;
+    use system_resilience::workspace_state::{
+        ContextGenerationConfig, FileWatchConfig, MetricsConfig, UnifiedWorkspaceConfig,
+        UnifiedWorkspaceStateManagerBuilder, WorkspaceStateEvent,
+    };
     #[cfg(feature = "evaluation")]
     use testing_validation::database_lifecycle::TestDatabaseManager;
-    use system_resilience::workspace_state::{
-        UnifiedWorkspaceStateManagerBuilder, UnifiedWorkspaceConfig,
-        FileWatchConfig, ContextGenerationConfig, MetricsConfig,
-        WorkspaceStateEvent,
-    };
 
     use agent_orchestration::workspace_integration::{
-        FileWatcherBridge, EmbeddingServiceAdapter,
-        UnifiedWorkspaceSetupConfig, setup_unified_workspace,
+        setup_unified_workspace, EmbeddingServiceAdapter, FileWatcherBridge,
+        UnifiedWorkspaceSetupConfig,
     };
 
     /// Helper to create a test database with automatic setup and cleanup
@@ -49,19 +48,20 @@ mod tests {
                 }
             })
             .unwrap_or_else(|_| "postgresql://postgres@localhost:5432".to_string());
-        
+
         let admin_url = format!("{}/postgres", base_url);
-        
+
         // Create isolated test database
         let test_db = TestDatabaseManager::new(&admin_url, None)
             .await
             .expect("Failed to create test database");
-        
+
         // Initialize schema (applies all migrations)
-        test_db.initialize_schema()
+        test_db
+            .initialize_schema()
             .await
             .expect("Failed to initialize test database schema");
-        
+
         // Create database client for the test database
         let config = DatabaseConfig {
             database_url: test_db.database_url(),
@@ -70,10 +70,11 @@ mod tests {
             query_timeout: Some(60),
             ..Default::default()
         };
-        
-        let db_client = DatabaseClient::new(config).await
+
+        let db_client = DatabaseClient::new(config)
+            .await
             .expect("Failed to create test database client");
-        
+
         (test_db, db_client)
     }
 
@@ -89,7 +90,7 @@ mod tests {
     async fn create_test_db_client() -> DatabaseClient {
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
-        
+
         let config = DatabaseConfig {
             database_url: database_url.clone(),
             pool_max: Some(5),
@@ -97,15 +98,16 @@ mod tests {
             query_timeout: Some(60),
             ..Default::default()
         };
-        
-        DatabaseClient::new(config).await
+
+        DatabaseClient::new(config)
+            .await
             .expect("Failed to create test database client")
     }
 
     /// Helper to create a test EmbeddingIntegration
     async fn create_test_embedding_integration() -> Arc<EmbeddingIntegration> {
         let db_client = create_test_db_client().await;
-        
+
         // Use a mock embedding service URL for testing
         // In real tests, this would point to a test embedding service
         let embedding_config = agent_memory::memory_types::EmbeddingConfig {
@@ -115,14 +117,17 @@ mod tests {
             dimensions: 768,
             timeout_ms: 30000,
         };
-        
+
         let memory_config = MemoryConfig {
             embedding_config,
             ..Default::default()
         };
-        
-        Arc::new(EmbeddingIntegration::new(&memory_config.embedding_config).await
-            .expect("Failed to create EmbeddingIntegration"))
+
+        Arc::new(
+            EmbeddingIntegration::new(&memory_config.embedding_config)
+                .await
+                .expect("Failed to create EmbeddingIntegration"),
+        )
     }
 
     /// Helper to create test files in a temporary directory
@@ -132,15 +137,14 @@ mod tests {
             ("README.md", "# Test Project\n\nThis is a test project."),
             ("config.json", r#"{"name": "test", "version": "1.0.0"}"#),
         ];
-        
+
         let mut created_files = Vec::new();
         for (filename, content) in files {
             let file_path = temp_dir.join(filename);
-            std::fs::write(&file_path, content)
-                .expect("Failed to write test file");
+            std::fs::write(&file_path, content).expect("Failed to write test file");
             created_files.push(file_path);
         }
-        
+
         created_files
     }
 
@@ -148,18 +152,16 @@ mod tests {
     async fn test_file_watcher_bridge_creation() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let watch_path = temp_dir.path().to_path_buf();
-        
+
         // Create file watcher
-        let file_watcher = DataProcessingFileWatcher::new(
-            vec![watch_path.clone()],
-            vec!["**/*".to_string()],
-        ).expect("Failed to create FileWatcher");
-        
+        let file_watcher =
+            DataProcessingFileWatcher::new(vec![watch_path.clone()], vec!["**/*".to_string()])
+                .expect("Failed to create FileWatcher");
+
         // Create event handler (from unified manager)
-        let event_handler = Arc::new(
-            system_resilience::workspace_state::FileWatcherEventHandler::new()
-        );
-        
+        let event_handler =
+            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
+
         // Create bridge
         let bridge_result = FileWatcherBridge::new(file_watcher, event_handler);
         assert!(bridge_result.is_ok(), "Failed to create FileWatcherBridge");
@@ -169,28 +171,26 @@ mod tests {
     async fn test_file_watcher_bridge_start_stop() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let watch_path = temp_dir.path().to_path_buf();
-        
+
         // Create file watcher
-        let file_watcher = DataProcessingFileWatcher::new(
-            vec![watch_path.clone()],
-            vec!["**/*".to_string()],
-        ).expect("Failed to create FileWatcher");
-        
+        let file_watcher =
+            DataProcessingFileWatcher::new(vec![watch_path.clone()], vec!["**/*".to_string()])
+                .expect("Failed to create FileWatcher");
+
         // Create event handler
-        let event_handler = Arc::new(
-            system_resilience::workspace_state::FileWatcherEventHandler::new()
-        );
-        
+        let event_handler =
+            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
+
         // Create and start bridge
         let mut bridge = FileWatcherBridge::new(file_watcher, event_handler)
             .expect("Failed to create FileWatcherBridge");
-        
+
         let start_result = bridge.start().await;
         assert!(start_result.is_ok(), "Failed to start FileWatcherBridge");
-        
+
         // Give it a moment to start
         sleep(Duration::from_millis(100)).await;
-        
+
         // Stop bridge
         let stop_result = bridge.stop().await;
         assert!(stop_result.is_ok(), "Failed to stop FileWatcherBridge");
@@ -200,36 +200,33 @@ mod tests {
     async fn test_file_watcher_bridge_file_events() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let watch_path = temp_dir.path().to_path_buf();
-        
+
         // Create file watcher
-        let file_watcher = DataProcessingFileWatcher::new(
-            vec![watch_path.clone()],
-            vec!["**/*".to_string()],
-        ).expect("Failed to create FileWatcher");
-        
+        let file_watcher =
+            DataProcessingFileWatcher::new(vec![watch_path.clone()], vec!["**/*".to_string()])
+                .expect("Failed to create FileWatcher");
+
         // Create event handler with event receiver
-        let event_handler = Arc::new(
-            system_resilience::workspace_state::FileWatcherEventHandler::new()
-        );
+        let event_handler =
+            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
         let mut event_receiver = event_handler.event_sender.subscribe();
-        
+
         // Create and start bridge
         let mut bridge = FileWatcherBridge::new(file_watcher, Arc::clone(&event_handler))
             .expect("Failed to create FileWatcherBridge");
-        
+
         bridge.start().await.expect("Failed to start bridge");
-        
+
         // Wait for watcher to initialize
         sleep(Duration::from_millis(500)).await;
-        
+
         // Create a test file
         let test_file = watch_path.join("test_event.rs");
-        std::fs::write(&test_file, "fn test() {}")
-            .expect("Failed to write test file");
-        
+        std::fs::write(&test_file, "fn test() {}").expect("Failed to write test file");
+
         // Wait for event to be processed
         sleep(Duration::from_millis(1000)).await;
-        
+
         // TODO: Implement comprehensive event verification in integration test
         //       Currently verifies bridge is running only; should implement comprehensive event verification that uses timeout mechanisms and validates event type and content for proper integration testing.
         //
@@ -265,7 +262,7 @@ mod tests {
         // - CAWS Tier: 3 (test infrastructure enhancement)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Integration testing and event handling expertise
-        
+
         bridge.stop().await.expect("Failed to stop bridge");
     }
 
@@ -273,7 +270,7 @@ mod tests {
     async fn test_embedding_service_adapter_creation() {
         let embedding_integration = create_test_embedding_integration().await;
         let adapter = EmbeddingServiceAdapter::new(embedding_integration);
-        
+
         // Verify adapter was created
         assert!(true, "EmbeddingServiceAdapter created successfully");
     }
@@ -283,14 +280,17 @@ mod tests {
     async fn test_embedding_service_adapter_generate_embedding() {
         let embedding_integration = create_test_embedding_integration().await;
         let adapter = EmbeddingServiceAdapter::new(embedding_integration);
-        
+
         // Generate embedding
         let result = adapter.generate_embedding("test text").await;
-        
+
         match result {
             Ok(embedding) => {
                 assert_eq!(embedding.len(), 768, "Embedding should be 768 dimensions");
-                assert!(!embedding.iter().all(|&x| x == 0.0), "Embedding should not be all zeros");
+                assert!(
+                    !embedding.iter().all(|&x| x == 0.0),
+                    "Embedding should not be all zeros"
+                );
             }
             Err(e) => {
                 // If embedding service is not available, skip test
@@ -304,19 +304,21 @@ mod tests {
     async fn test_embedding_service_adapter_store_file_embedding() {
         let embedding_integration = create_test_embedding_integration().await;
         let adapter = EmbeddingServiceAdapter::new(embedding_integration);
-        
+
         let test_file = PathBuf::from("test.rs");
         let content = "fn main() {}";
         let embedding = vec![0.1; 768]; // Mock embedding
-        
+
         // Store embedding
-        let result = adapter.store_file_embedding(
-            test_file.clone(),
-            content,
-            embedding.clone(),
-            Some(serde_json::json!({"test": true})),
-        ).await;
-        
+        let result = adapter
+            .store_file_embedding(
+                test_file.clone(),
+                content,
+                embedding.clone(),
+                Some(serde_json::json!({"test": true})),
+            )
+            .await;
+
         match result {
             Ok(_) => {
                 // Verify we can search for it
@@ -332,7 +334,7 @@ mod tests {
     #[tokio::test]
     async fn test_unified_workspace_setup_config_default() {
         let config = UnifiedWorkspaceSetupConfig::default();
-        
+
         assert_eq!(config.workspace_root, PathBuf::from("."));
         assert!(!config.watch_paths.is_empty());
         assert!(!config.file_patterns.is_empty());
@@ -344,7 +346,7 @@ mod tests {
     async fn test_setup_unified_workspace() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let watch_path = temp_dir.path().to_path_buf();
-        
+
         let config = UnifiedWorkspaceSetupConfig {
             workspace_root: watch_path.clone(),
             watch_paths: vec![watch_path.clone()],
@@ -357,24 +359,27 @@ mod tests {
             enable_metrics: true,
             memory_config: None, // Will use default
         };
-        
+
         // Create test files
         create_test_files(temp_dir.path());
-        
+
         // Setup unified workspace
         let result = setup_unified_workspace(config).await;
-        
+
         match result {
             Ok((manager, mut bridge)) => {
                 // Manager is already initialized by setup_unified_workspace
                 // Verify manager is initialized
                 assert!(true, "Unified workspace manager initialized");
-                
+
                 // Stop bridge
                 bridge.stop().await.expect("Failed to stop bridge");
             }
             Err(e) => {
-                eprintln!("Failed to setup unified workspace (may need database/service): {}", e);
+                eprintln!(
+                    "Failed to setup unified workspace (may need database/service): {}",
+                    e
+                );
             }
         }
     }
@@ -383,10 +388,10 @@ mod tests {
     async fn test_unified_workspace_state_capture() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let workspace_root = temp_dir.path().to_path_buf();
-        
+
         // Create test files
         create_test_files(temp_dir.path());
-        
+
         // Build unified manager without file watching
         let context_config = ContextGenerationConfig {
             enabled: true,
@@ -398,7 +403,7 @@ mod tests {
             docs_context_enabled: true,
             config_context_enabled: true,
         };
-        
+
         let config = UnifiedWorkspaceConfig {
             watch_config: None,
             context_config: Some(context_config),
@@ -408,19 +413,19 @@ mod tests {
             },
             ..Default::default()
         };
-        
+
         let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
             .with_config(config)
             .build()
             .expect("Failed to build unified manager");
-        
+
         // Initialize
         manager.initialize().await.expect("Failed to initialize");
-        
+
         // Capture state
         let state_result = manager.capture_state().await;
         assert!(state_result.is_ok(), "Failed to capture workspace state");
-        
+
         let state = state_result.unwrap();
         assert!(!state.files.is_empty(), "State should contain files");
     }
@@ -429,10 +434,10 @@ mod tests {
     async fn test_unified_workspace_context_generation() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let workspace_root = temp_dir.path().to_path_buf();
-        
+
         // Create test files
         create_test_files(temp_dir.path());
-        
+
         // Build unified manager
         let context_config = ContextGenerationConfig {
             enabled: true,
@@ -444,7 +449,7 @@ mod tests {
             docs_context_enabled: true,
             config_context_enabled: true,
         };
-        
+
         let config = UnifiedWorkspaceConfig {
             watch_config: None,
             context_config: Some(context_config),
@@ -454,32 +459,35 @@ mod tests {
             },
             ..Default::default()
         };
-        
+
         let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
             .with_config(config)
             .build()
             .expect("Failed to build unified manager");
-        
+
         manager.initialize().await.expect("Failed to initialize");
-        
+
         // Generate code context
-        let code_context = manager.generate_code_context(
-            Some("rust"),
-            None,
-        ).await;
-        
+        let code_context = manager.generate_code_context(Some("rust"), None).await;
+
         assert!(code_context.is_ok(), "Failed to generate code context");
         let context = code_context.unwrap();
-        assert!(!context.files.is_empty(), "Code context should contain files");
-        
+        assert!(
+            !context.files.is_empty(),
+            "Code context should contain files"
+        );
+
         // Generate documentation context
         let doc_context = manager.generate_documentation_context().await;
-        
-        assert!(doc_context.is_ok(), "Failed to generate documentation context");
-        
+
+        assert!(
+            doc_context.is_ok(),
+            "Failed to generate documentation context"
+        );
+
         // Generate config context
         let config_context = manager.generate_config_context().await;
-        
+
         assert!(config_context.is_ok(), "Failed to generate config context");
     }
 
@@ -487,24 +495,24 @@ mod tests {
     async fn test_unified_workspace_event_broadcasting() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let workspace_root = temp_dir.path().to_path_buf();
-        
+
         // Build unified manager
         let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
             .with_config(UnifiedWorkspaceConfig::default())
             .build()
             .expect("Failed to build unified manager");
-        
+
         manager.initialize().await.expect("Failed to initialize");
-        
+
         // Subscribe to events
         let mut event_receiver = manager.subscribe_to_events();
-        
+
         // Capture state (should trigger event)
         let _ = manager.capture_state().await;
-        
+
         // Wait a bit for event
         sleep(Duration::from_millis(100)).await;
-        
+
         // TODO: Implement comprehensive event subscription verification
         //       Currently verifies subscription works only; should implement comprehensive verification that validates event type and content for proper integration testing of event subscription functionality.
         //
@@ -547,7 +555,7 @@ mod tests {
     async fn test_unified_workspace_metrics() {
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
         let workspace_root = temp_dir.path().to_path_buf();
-        
+
         // Build unified manager with metrics enabled
         let config = UnifiedWorkspaceConfig {
             metrics_config: MetricsConfig {
@@ -556,20 +564,22 @@ mod tests {
             },
             ..Default::default()
         };
-        
+
         let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
             .with_config(config)
             .build()
             .expect("Failed to build unified manager");
-        
+
         manager.initialize().await.expect("Failed to initialize");
-        
+
         // Wait for metrics to update
         sleep(Duration::from_millis(1500)).await;
-        
+
         // Get metrics
         let metrics = manager.get_metrics().await;
-        assert!(metrics.total_state_captures >= 0, "Metrics should be available");
+        assert!(
+            metrics.total_state_captures >= 0,
+            "Metrics should be available"
+        );
     }
 }
-

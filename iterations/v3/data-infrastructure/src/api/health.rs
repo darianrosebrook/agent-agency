@@ -2,10 +2,10 @@
 //!
 //! Provides health monitoring for database, orchestrator, and worker services.
 
-use axum::response::Json;
-use serde_json::json;
 use crate::health::HealthStatus;
 use crate::WorkerPoolHealth;
+use axum::response::Json;
+use serde_json::json;
 
 /// Health check endpoint
 pub async fn health_check(
@@ -39,20 +39,19 @@ async fn check_database_health(db_client: &crate::DatabaseClient) -> Result<(), 
     // Use the DatabaseHealthMonitor if available, otherwise perform basic connectivity check
     if let Some(health_monitor) = db_client.health_monitor() {
         // Pass the pool reference for real connectivity check
-        match health_monitor.perform_health_check(Some(db_client.pool())).await {
+        match health_monitor
+            .perform_health_check(Some(db_client.pool()))
+            .await
+        {
             Ok(status) => {
                 match status.overall_health {
                     HealthStatus::Healthy => Ok(()),
                     HealthStatus::Degraded => {
                         println!("⚠️  Database health is degraded");
                         Ok(()) // Still functional
-                    },
-                    HealthStatus::Unhealthy => {
-                        Err("Database is unhealthy".to_string())
-                    },
-                    HealthStatus::Critical => {
-                        Err("Database is in critical state".to_string())
-                    },
+                    }
+                    HealthStatus::Unhealthy => Err("Database is unhealthy".to_string()),
+                    HealthStatus::Critical => Err("Database is in critical state".to_string()),
                 }
             }
             Err(e) => {
@@ -118,6 +117,8 @@ async fn check_orchestrator_health() -> Result<(), String> {
 }
 
 /// Check workers health by verifying worker pool status
-async fn check_workers_health(worker_pool: &std::sync::Arc<dyn WorkerPoolHealth>) -> Result<(), String> {
+async fn check_workers_health(
+    worker_pool: &std::sync::Arc<dyn WorkerPoolHealth>,
+) -> Result<(), String> {
     worker_pool.health_check().await
 }

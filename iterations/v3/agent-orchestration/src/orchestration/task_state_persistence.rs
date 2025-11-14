@@ -5,18 +5,18 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
 use tracing::debug;
+use uuid::Uuid;
 
-use agent_agency_contracts::WorkingSpec;
-use agent_agency_contracts::planning_io::ExecutionPlan;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+use agent_agency_contracts::planning_io::ExecutionPlan;
+use agent_agency_contracts::WorkingSpec;
 
 use data_infrastructure::simple_client::DatabaseClient;
 use sqlx::Row;
@@ -78,22 +78,22 @@ pub enum ExecutionStateStatus {
 pub trait TaskStatePersistence: Send + Sync {
     /// Save execution state
     async fn save_state(&self, state: &TaskExecutionState) -> Result<()>;
-    
+
     /// Load execution state for a task
     async fn load_state(&self, task_id: Uuid) -> Result<Option<TaskExecutionState>>;
-    
+
     /// List all resumable tasks (Paused, Crashed, or Running)
     async fn list_resumable_tasks(&self) -> Result<Vec<Uuid>>;
-    
+
     /// Delete state for a task
     async fn delete_state(&self, task_id: Uuid) -> Result<()>;
-    
+
     /// Check if a task has resumable state
     async fn has_resumable_state(&self, task_id: Uuid) -> Result<bool>;
-    
+
     /// Create a checkpoint for a task
     async fn create_checkpoint(&self, task_id: Uuid, state: &TaskExecutionState) -> Result<()>;
-    
+
     /// List all checkpoints for a task
     async fn list_checkpoints(&self, task_id: Uuid) -> Result<Vec<DateTime<Utc>>>;
 }
@@ -138,11 +138,16 @@ impl TaskStatePersistence for InMemoryTaskStatePersistence {
 
     async fn list_resumable_tasks(&self) -> Result<Vec<Uuid>> {
         let storage = self.state_storage.read().await;
-        Ok(storage.values()
-            .filter(|state| matches!(
-                state.status,
-                ExecutionStateStatus::Paused | ExecutionStateStatus::Crashed | ExecutionStateStatus::Running
-            ))
+        Ok(storage
+            .values()
+            .filter(|state| {
+                matches!(
+                    state.status,
+                    ExecutionStateStatus::Paused
+                        | ExecutionStateStatus::Crashed
+                        | ExecutionStateStatus::Running
+                )
+            })
             .map(|state| state.task_id)
             .collect())
     }
@@ -150,38 +155,43 @@ impl TaskStatePersistence for InMemoryTaskStatePersistence {
     async fn delete_state(&self, task_id: Uuid) -> Result<()> {
         let mut storage = self.state_storage.write().await;
         storage.remove(&task_id);
-        
+
         let mut checkpoints = self.checkpoint_storage.write().await;
         checkpoints.remove(&task_id);
-        
+
         Ok(())
     }
 
     async fn has_resumable_state(&self, task_id: Uuid) -> Result<bool> {
         let storage = self.state_storage.read().await;
-        Ok(storage.get(&task_id)
-            .map(|state| matches!(
-                state.status,
-                ExecutionStateStatus::Paused | ExecutionStateStatus::Crashed | ExecutionStateStatus::Running
-            ))
+        Ok(storage
+            .get(&task_id)
+            .map(|state| {
+                matches!(
+                    state.status,
+                    ExecutionStateStatus::Paused
+                        | ExecutionStateStatus::Crashed
+                        | ExecutionStateStatus::Running
+                )
+            })
             .unwrap_or(false))
     }
 
     async fn create_checkpoint(&self, task_id: Uuid, state: &TaskExecutionState) -> Result<()> {
         // Save state
         self.save_state(state).await?;
-        
+
         // Record checkpoint timestamp
         let mut checkpoints = self.checkpoint_storage.write().await;
         let checkpoint_list = checkpoints.entry(task_id).or_insert_with(Vec::new);
         checkpoint_list.push(Utc::now());
-        
+
         // Update state checkpoint timestamp
         let mut storage = self.state_storage.write().await;
         if let Some(state) = storage.get_mut(&task_id) {
             state.checkpoint_at = Some(Utc::now());
         }
-        
+
         Ok(())
     }
 
@@ -266,7 +276,10 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
         .await
         .context("Failed to save task execution state to database")?;
 
-        debug!("Successfully saved task execution state for task {}", state.task_id);
+        debug!(
+            "Successfully saved task execution state for task {}",
+            state.task_id
+        );
         Ok(())
     }
 
@@ -288,14 +301,18 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
 
         match row {
             Some(row) => {
-                let state_json: serde_json::Value = row.try_get("state_data")
+                let state_json: serde_json::Value = row
+                    .try_get("state_data")
                     .context("Failed to get state_data from database row")?;
 
                 // Deserialize JSON to TaskExecutionState
                 let state: TaskExecutionState = serde_json::from_value(state_json)
                     .context("Failed to deserialize TaskExecutionState from JSON")?;
 
-                debug!("Successfully loaded task execution state for task {}", task_id);
+                debug!(
+                    "Successfully loaded task execution state for task {}",
+                    task_id
+                );
                 Ok(Some(state))
             }
             None => {
@@ -323,7 +340,8 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
 
         let mut task_ids = Vec::new();
         for row in rows {
-            let task_id: Uuid = row.try_get("task_id")
+            let task_id: Uuid = row
+                .try_get("task_id")
                 .context("Failed to get task_id from database row")?;
             task_ids.push(task_id);
         }
@@ -350,7 +368,10 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
             .await
             .context("Failed to delete task execution state from database")?;
 
-        debug!("Successfully deleted task execution state for task {}", task_id);
+        debug!(
+            "Successfully deleted task execution state for task {}",
+            task_id
+        );
         Ok(())
     }
 
@@ -425,12 +446,17 @@ impl TaskStatePersistence for DatabaseTaskStatePersistence {
 
         let mut checkpoints = Vec::new();
         for row in rows {
-            let timestamp: DateTime<Utc> = row.try_get("checkpoint_timestamp")
+            let timestamp: DateTime<Utc> = row
+                .try_get("checkpoint_timestamp")
                 .context("Failed to get checkpoint_timestamp from database row")?;
             checkpoints.push(timestamp);
         }
 
-        debug!("Found {} checkpoints for task {}", checkpoints.len(), task_id);
+        debug!(
+            "Found {} checkpoints for task {}",
+            checkpoints.len(),
+            task_id
+        );
         Ok(checkpoints)
     }
 }
@@ -487,7 +513,8 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 file_changes: vec![],
                 coverage_targets: None,
@@ -536,4 +563,3 @@ mod tests {
         assert!(!persistence.has_resumable_state(task_id).await.unwrap());
     }
 }
-

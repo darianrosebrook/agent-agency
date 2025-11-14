@@ -3,7 +3,6 @@
 //! Implements JWS signing per ADR-003 requirements for cryptographic integrity
 //! of provenance records.
 
-use schemars::JsonSchema;
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use base64::{
@@ -15,6 +14,7 @@ use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, 
 use pkcs8::der::Decode;
 use pkcs8::{ObjectIdentifier, PrivateKeyInfo};
 use ring::signature::{Ed25519KeyPair, KeyPair, UnparsedPublicKey, ED25519};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::ffi::OsStr;

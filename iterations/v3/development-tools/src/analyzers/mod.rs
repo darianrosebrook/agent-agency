@@ -4,17 +4,17 @@
 //! extracted from workers/src/caws_checker.rs to provide centralized
 //! language analysis capabilities for the CAWS runtime validator.
 
+pub mod javascript;
 pub mod rust;
 pub mod typescript;
-pub mod javascript;
 
 #[cfg(test)]
 mod test;
 
 // Re-export analyzers
+pub use javascript::JavaScriptAnalyzer;
 pub use rust::RustAnalyzer;
 pub use typescript::TypeScriptAnalyzer;
-pub use javascript::JavaScriptAnalyzer;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -114,15 +114,16 @@ pub enum ViolationSeverity {
 pub trait LanguageAnalyzer: Send + Sync + std::fmt::Debug {
     /// Analyze code for violations and complexity
     fn analyze(&self, code: &str, file_path: &str) -> LanguageAnalysisResult;
-    
+
     /// Get the programming language this analyzer handles
     fn language(&self) -> ProgrammingLanguage;
-    
+
     /// Check if the analyzer supports the given file extension
     fn supports_extension(&self, ext: &str) -> bool;
 
     /// Calculate change complexity for a diff
-    fn calculate_change_complexity(&self, diff: &str, content: Option<&str>) -> Result<f32, String>;
+    fn calculate_change_complexity(&self, diff: &str, content: Option<&str>)
+        -> Result<f32, String>;
 }
 
 /// Registry for managing language analyzers
@@ -135,18 +136,26 @@ impl LanguageAnalyzerRegistry {
     /// Create a new registry with default analyzers
     pub fn new() -> Self {
         let mut analyzers: HashMap<ProgrammingLanguage, Box<dyn LanguageAnalyzer>> = HashMap::new();
-        
+
         // Register default analyzers
         analyzers.insert(ProgrammingLanguage::Rust, Box::new(RustAnalyzer::new()));
-        analyzers.insert(ProgrammingLanguage::TypeScript, Box::new(TypeScriptAnalyzer::new()));
-        analyzers.insert(ProgrammingLanguage::JavaScript, Box::new(JavaScriptAnalyzer::new()));
+        analyzers.insert(
+            ProgrammingLanguage::TypeScript,
+            Box::new(TypeScriptAnalyzer::new()),
+        );
+        analyzers.insert(
+            ProgrammingLanguage::JavaScript,
+            Box::new(JavaScriptAnalyzer::new()),
+        );
 
         Self { analyzers }
     }
 
     /// Get analyzer for a specific language
     pub fn get_analyzer(&self, language: &ProgrammingLanguage) -> Option<&dyn LanguageAnalyzer> {
-        self.analyzers.get(language).map(|analyzer| analyzer.as_ref())
+        self.analyzers
+            .get(language)
+            .map(|analyzer| analyzer.as_ref())
     }
 
     /// Get analyzer for a file extension
@@ -156,7 +165,11 @@ impl LanguageAnalyzerRegistry {
     }
 
     /// Register a custom analyzer
-    pub fn register_analyzer(&mut self, language: ProgrammingLanguage, analyzer: Box<dyn LanguageAnalyzer>) {
+    pub fn register_analyzer(
+        &mut self,
+        language: ProgrammingLanguage,
+        analyzer: Box<dyn LanguageAnalyzer>,
+    ) {
         self.analyzers.insert(language, analyzer);
     }
 }

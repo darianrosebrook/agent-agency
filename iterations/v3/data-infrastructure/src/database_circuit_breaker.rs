@@ -83,7 +83,9 @@ impl CircuitBreaker {
             CircuitState::Open => {
                 // Check if recovery timeout has elapsed
                 if let Some(last_failure) = *self.last_failure.read().await {
-                    if last_failure.elapsed() > StdDuration::from_secs(self.recovery_timeout.num_seconds() as u64) {
+                    if last_failure.elapsed()
+                        > StdDuration::from_secs(self.recovery_timeout.num_seconds() as u64)
+                    {
                         drop(state);
                         self.transition_to_half_open().await;
                         Ok(())
@@ -167,7 +169,10 @@ impl CircuitBreaker {
 
     async fn transition_to_open(&self) {
         *self.state.write().await = CircuitState::Open;
-        warn!("Circuit breaker opened after {} failures", self.failure_threshold);
+        warn!(
+            "Circuit breaker opened after {} failures",
+            self.failure_threshold
+        );
     }
 
     async fn transition_to_half_open(&self) {
@@ -193,5 +198,3 @@ pub enum CircuitBreakerError {
     #[error("Circuit breaker operation failed: {0}")]
     OperationFailed(String),
 }
-
-

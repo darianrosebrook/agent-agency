@@ -73,7 +73,9 @@ mod tests {
     fn test_template_rendering() {
         let manager = TemplateManager::new().unwrap();
 
-        if let Some(rendered) = manager.render_template("lib.rs", &HashMap::from([("crate_name", "test_crate")])) {
+        if let Some(rendered) =
+            manager.render_template("lib.rs", &HashMap::from([("crate_name", "test_crate")]))
+        {
             assert!(rendered.contains("test_crate"));
         }
     }

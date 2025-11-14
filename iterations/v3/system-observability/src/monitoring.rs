@@ -2,12 +2,12 @@
 //!
 //! Real-time monitoring, alerting, and health checks.
 
+use crate::{TelemetryCollector, TelemetryData, TelemetryDataType, TelemetryError};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::{TelemetryCollector, TelemetryData, TelemetryError, TelemetryDataType};
 
 /// Health monitor for system components
 pub struct HealthMonitor {
@@ -59,7 +59,14 @@ impl HealthMonitor {
     }
 
     /// Update component health status
-    pub async fn update_health(&self, component_name: String, status: HealthStatus, response_time_ms: Option<u64>, error_message: Option<String>, metadata: serde_json::Value) {
+    pub async fn update_health(
+        &self,
+        component_name: String,
+        status: HealthStatus,
+        response_time_ms: Option<u64>,
+        error_message: Option<String>,
+        metadata: serde_json::Value,
+    ) {
         let health = ComponentHealth {
             component_name: component_name.clone(),
             status,
@@ -74,7 +81,10 @@ impl HealthMonitor {
     }
 
     /// Perform health check on a component
-    pub async fn check_component_health(&self, component_name: &str) -> Result<HealthStatus, TelemetryError> {
+    pub async fn check_component_health(
+        &self,
+        component_name: &str,
+    ) -> Result<HealthStatus, TelemetryError> {
         // Mock health check - in real implementation, this would actually check the component
         let status = match component_name {
             "database" => HealthStatus::Healthy,
@@ -88,8 +98,9 @@ impl HealthMonitor {
             status,
             Some(150), // Mock response time
             None,
-            serde_json::json!({"mock": true})
-        ).await;
+            serde_json::json!({"mock": true}),
+        )
+        .await;
 
         Ok(status)
     }
@@ -248,7 +259,13 @@ impl AlertManager {
     }
 
     /// Create a new alert
-    pub async fn create_alert(&self, severity: AlertSeverity, title: String, description: String, source: String) {
+    pub async fn create_alert(
+        &self,
+        severity: AlertSeverity,
+        title: String,
+        description: String,
+        source: String,
+    ) {
         let alert = Alert {
             id: format!("alert_{}", chrono::Utc::now().timestamp_millis()),
             severity,
@@ -267,7 +284,8 @@ impl AlertManager {
     /// Get active alerts
     pub async fn get_active_alerts(&self) -> Vec<Alert> {
         let alerts = self.alerts.read().await;
-        alerts.iter()
+        alerts
+            .iter()
             .filter(|alert| !alert.resolved)
             .cloned()
             .collect()

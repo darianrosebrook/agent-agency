@@ -11,7 +11,12 @@
 
 #![deny(unused_imports, unused_must_use)]
 #![warn(unused_variables, dead_code)]
-#![allow(ambiguous_glob_reexports, unused_variables, dead_code, unused_assignments)]
+#![allow(
+    ambiguous_glob_reexports,
+    unused_variables,
+    dead_code,
+    unused_assignments
+)]
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -55,18 +60,18 @@ pub struct FsckReport {
     pub refs_dangling: u64,
 }
 
-pub mod recovery_api;
 pub mod cas;
-pub mod merkle;
-pub mod journal;
-pub mod refs;
-pub mod policy;
-pub mod gc;
 pub mod fsck;
+pub mod gc;
 pub mod index;
-pub mod recovery_types;
 pub mod integration;
+pub mod journal;
+pub mod merkle;
+pub mod policy;
+pub mod recovery_api;
 pub mod recovery_metrics;
+pub mod recovery_types;
+pub mod refs;
 pub mod resilience_circuit_breaker;
 pub mod retry;
 
@@ -77,10 +82,10 @@ pub mod workspace_state;
 pub mod memory;
 
 // Re-export key types for convenience
-pub use recovery_api::*;
-pub use recovery_types::*;
 pub use integration::*;
-pub use recovery_metrics::{*, MetricsBackend};
+pub use recovery_api::*;
+pub use recovery_metrics::{MetricsBackend, *};
+pub use recovery_types::*;
 pub use resilience_circuit_breaker::*;
 pub use retry::*;
 // pub use source_integrity::{Digest, StreamingHasher, MerkleTree};  // Temporarily disabled

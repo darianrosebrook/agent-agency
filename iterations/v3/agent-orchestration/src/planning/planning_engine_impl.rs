@@ -5,15 +5,15 @@
 //!
 //! @author @darianrosebrook
 
-use async_trait::async_trait;
-use anyhow::Result;
-use std::sync::Arc;
 use agent_agency_contracts::{
-    PlanningEngine, ExecutionContext, TaskDescriptor, ExecutionPlan as ContractExecutionPlan,
-    PlanningError,
     types::planning::RiskTier,
-    working_spec::{TestPlan, CoverageTargets, UnitTestSpec, IntegrationTestSpec, E2eScenario},
+    working_spec::{CoverageTargets, E2eScenario, IntegrationTestSpec, TestPlan, UnitTestSpec},
+    ExecutionContext, ExecutionPlan as ContractExecutionPlan, PlanningEngine, PlanningError,
+    TaskDescriptor,
 };
+use anyhow::Result;
+use async_trait::async_trait;
+use std::sync::Arc;
 
 use crate::planning::{
     plan_generator::PlanGenerator,
@@ -32,7 +32,10 @@ pub struct PlanningEngineImpl {
 impl PlanningEngineImpl {
     /// Create new planning engine implementation
     pub fn new(plan_generator: PlanGenerator, db_ops: Arc<dyn DatabaseOperations>) -> Self {
-        Self { plan_generator, db_ops }
+        Self {
+            plan_generator,
+            db_ops,
+        }
     }
 }
 
@@ -44,15 +47,19 @@ impl PlanningEngine for PlanningEngineImpl {
         task: &TaskDescriptor,
     ) -> agent_agency_contracts::errors::PlanningResult<ContractExecutionPlan> {
         // TaskDescriptor is already a contract type, no conversion needed
-        let local_ctx = self.create_plan_generation_context(ctx, task)
+        let local_ctx = self
+            .create_plan_generation_context(ctx, task)
             .map_err(|e| PlanningError::PlanGenerationFailed {
-                reason: format!("Context creation failed: {:?}", e)
+                reason: format!("Context creation failed: {:?}", e),
             })?;
 
         // Generate plan using existing PlanGenerator
-        let local_plan = self.plan_generator.generate(&local_ctx).await
+        let local_plan = self
+            .plan_generator
+            .generate(&local_ctx)
+            .await
             .map_err(|e| PlanningError::PlanGenerationFailed {
-                reason: format!("Plan generation failed: {}", e)
+                reason: format!("Plan generation failed: {}", e),
             })?;
 
         // Convert back to contract types
@@ -74,23 +81,27 @@ impl PlanningEngineImpl {
 
         // Build resource inventory from execution context planning_metadata
         // Extract resource information from metadata or use defaults
-        let available_cpu_cores = execution_ctx.planning_metadata
+        let available_cpu_cores = execution_ctx
+            .planning_metadata
             .get("available_cpu_cores")
             .and_then(|v| v.as_u64())
             .unwrap_or(4) as usize;
-        let available_memory_mb = execution_ctx.planning_metadata
+        let available_memory_mb = execution_ctx
+            .planning_metadata
             .get("available_memory_mb")
             .and_then(|v| v.as_u64())
             .unwrap_or(8192) as usize;
-        let available_disk_mb = execution_ctx.planning_metadata
+        let available_disk_mb = execution_ctx
+            .planning_metadata
             .get("available_disk_mb")
             .and_then(|v| v.as_u64())
             .unwrap_or(102400) as usize;
-        let available_network_mbps = execution_ctx.planning_metadata
+        let available_network_mbps = execution_ctx
+            .planning_metadata
             .get("available_network_mbps")
             .and_then(|v| v.as_f64())
             .unwrap_or(100.0);
-        
+
         // Count workers from worker_assignments in metadata if available
         let mut worker_counts: HashMap<String, usize> = HashMap::new();
         if let Some(assignments_json) = execution_ctx.planning_metadata.get("worker_assignments") {
@@ -102,7 +113,7 @@ impl PlanningEngineImpl {
                 }
             }
         }
-        
+
         let resource_inventory = ResourceInventory {
             available_cpu_cores,
             available_memory_mb,
@@ -121,21 +132,21 @@ impl PlanningEngineImpl {
         // Determine quality requirements based on risk tier
         let quality_requirements = match task_descriptor.risk_tier {
             Some(RiskTier::Tier1) => QualityRequirements {
-                min_coverage: 0.9, // 90% for Tier 1
+                min_coverage: 0.9,       // 90% for Tier 1
                 min_mutation_score: 0.7, // 70% for Tier 1
                 security_scan_required: true,
                 manual_review_required: true,
                 council_approval_required: true,
             },
             Some(RiskTier::Tier2) => QualityRequirements {
-                min_coverage: 0.8, // 80% for Tier 2
+                min_coverage: 0.8,       // 80% for Tier 2
                 min_mutation_score: 0.5, // 50% for Tier 2
                 security_scan_required: true,
                 manual_review_required: false,
                 council_approval_required: false,
             },
             Some(RiskTier::Tier3) | None => QualityRequirements {
-                min_coverage: 0.7, // 70% for Tier 3
+                min_coverage: 0.7,       // 70% for Tier 3
                 min_mutation_score: 0.3, // 30% for Tier 3
                 security_scan_required: false,
                 manual_review_required: false,
@@ -161,14 +172,14 @@ impl PlanningEngineImpl {
         // Determine max complexity based on change budget
         let max_complexity = if task_descriptor.change_budget.max_files > 0 {
             // Complexity roughly correlates with number of files and LOC
-            (task_descriptor.change_budget.max_files as usize * 10)
-                .min(1000) // Cap at 1000
+            (task_descriptor.change_budget.max_files as usize * 10).min(1000) // Cap at 1000
         } else {
             100 // Default complexity
         };
 
         // Determine parallel preferences based on task priority and blast radius
-        let worker_count = execution_ctx.planning_metadata
+        let worker_count = execution_ctx
+            .planning_metadata
             .get("worker_assignments")
             .and_then(|v| v.as_array())
             .map(|arr| arr.len())
@@ -180,13 +191,13 @@ impl PlanningEngineImpl {
             // Limited blast radius - reduce parallelism
             task_descriptor.blast_radius.modules.len().min(2)
         };
-        
+
         let prefer_parallel = matches!(
             task_descriptor.priority,
             agent_agency_contracts::types::planning::TaskPriority::Low
                 | agent_agency_contracts::types::planning::TaskPriority::Normal
         );
-        
+
         let parallel_preferences = ParallelPreferences {
             max_parallelism,
             prefer_parallel,
@@ -215,8 +226,14 @@ impl PlanningEngineImpl {
         };
 
         Ok(PlanGenerationContext {
-            working_spec_provider: Box::new(RealWorkingSpecProvider::new(task_descriptor.clone(), self.db_ops.clone())),
-            task_descriptor: Box::new(RealTaskDescriptorProvider::new(task_descriptor.clone(), self.db_ops.clone())),
+            working_spec_provider: Box::new(RealWorkingSpecProvider::new(
+                task_descriptor.clone(),
+                self.db_ops.clone(),
+            )),
+            task_descriptor: Box::new(RealTaskDescriptorProvider::new(
+                task_descriptor.clone(),
+                self.db_ops.clone(),
+            )),
             resource_inventory,
             constraints: constraints.clone(),
             historical_data: None, // Historical data would require database queries - can be enhanced later
@@ -266,14 +283,37 @@ impl PlanningEngineImpl {
             additional_metadata: {
                 let mut additional = contract_plan.metadata.additional_metadata.clone();
                 // Add orchestration metadata to additional_metadata
-                additional.insert("orchestrator_id".to_string(), serde_json::json!(local_plan.orchestration_meta.orchestrator_id));
-                additional.insert("worker_pool_id".to_string(), serde_json::json!(local_plan.orchestration_meta.worker_pool_id));
-                if let Some(ref council_session_id) = local_plan.orchestration_meta.council_session_id {
-                    additional.insert("council_session_id".to_string(), serde_json::json!(council_session_id));
+                additional.insert(
+                    "orchestrator_id".to_string(),
+                    serde_json::json!(local_plan.orchestration_meta.orchestrator_id),
+                );
+                additional.insert(
+                    "worker_pool_id".to_string(),
+                    serde_json::json!(local_plan.orchestration_meta.worker_pool_id),
+                );
+                if let Some(ref council_session_id) =
+                    local_plan.orchestration_meta.council_session_id
+                {
+                    additional.insert(
+                        "council_session_id".to_string(),
+                        serde_json::json!(council_session_id),
+                    );
                 }
-                additional.insert("audit_correlation_id".to_string(), serde_json::json!(local_plan.orchestration_meta.audit_correlation_id.to_string()));
-                additional.insert("planning_engine".to_string(), serde_json::json!(local_plan.orchestration_meta.planning_engine));
-                additional.insert("planning_version".to_string(), serde_json::json!(local_plan.orchestration_meta.planning_version));
+                additional.insert(
+                    "audit_correlation_id".to_string(),
+                    serde_json::json!(local_plan
+                        .orchestration_meta
+                        .audit_correlation_id
+                        .to_string()),
+                );
+                additional.insert(
+                    "planning_engine".to_string(),
+                    serde_json::json!(local_plan.orchestration_meta.planning_engine),
+                );
+                additional.insert(
+                    "planning_version".to_string(),
+                    serde_json::json!(local_plan.orchestration_meta.planning_version),
+                );
                 additional
             },
         };
@@ -281,47 +321,114 @@ impl PlanningEngineImpl {
         // Map execution context to contract execution context
         // Note: ContractExecutionPlan has an optional execution_context field of type ExecutionContext
         // Convert local ExecutionContext to contract ExecutionContext format
-        contract_plan.execution_context = Some(agent_agency_contracts::types::execution::ExecutionContext {
-            session_id: contract_plan.session_id,
-            planning_engine: local_plan.orchestration_meta.planning_engine.clone(),
-            engine_version: local_plan.orchestration_meta.planning_version.clone(),
-            planning_metadata: {
-                let mut metadata = std::collections::HashMap::new();
-                metadata.insert("working_directory".to_string(), serde_json::json!(local_plan.execution_context.working_directory));
-                metadata.insert("session_start".to_string(), serde_json::json!(local_plan.execution_context.session_start.to_rfc3339()));
-                metadata.insert("available_cpu_cores".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_cpu_cores));
-                metadata.insert("available_memory_mb".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_memory_mb));
-                metadata.insert("available_disk_mb".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_disk_mb));
-                metadata.insert("available_network_mbps".to_string(), serde_json::json!(local_plan.execution_context.available_resources.available_network_mbps));
-                metadata.insert("orchestrator_id".to_string(), serde_json::json!(local_plan.orchestration_meta.orchestrator_id));
-                metadata.insert("worker_pool_id".to_string(), serde_json::json!(local_plan.orchestration_meta.worker_pool_id));
-                if let Some(ref council_session_id) = local_plan.orchestration_meta.council_session_id {
-                    metadata.insert("council_session_id".to_string(), serde_json::json!(council_session_id));
-                }
-                metadata.insert("audit_correlation_id".to_string(), serde_json::json!(local_plan.orchestration_meta.audit_correlation_id.to_string()));
-                // Add worker assignments as JSON
-                let worker_assignments_json: Vec<_> = local_plan.execution_context.worker_assignments.iter()
-                    .map(|(k, v)| serde_json::json!({
-                        "milestone_id": k,
-                        "worker_id": v.worker_id.to_string(),
-                        "assigned_at": v.assigned_at.to_rfc3339(),
-                        "status": format!("{:?}", v.status),
-                    }))
-                    .collect();
-                metadata.insert("worker_assignments".to_string(), serde_json::json!(worker_assignments_json));
-                metadata
-            },
-        });
+        contract_plan.execution_context =
+            Some(agent_agency_contracts::types::execution::ExecutionContext {
+                session_id: contract_plan.session_id,
+                planning_engine: local_plan.orchestration_meta.planning_engine.clone(),
+                engine_version: local_plan.orchestration_meta.planning_version.clone(),
+                planning_metadata: {
+                    let mut metadata = std::collections::HashMap::new();
+                    metadata.insert(
+                        "working_directory".to_string(),
+                        serde_json::json!(local_plan.execution_context.working_directory),
+                    );
+                    metadata.insert(
+                        "session_start".to_string(),
+                        serde_json::json!(local_plan.execution_context.session_start.to_rfc3339()),
+                    );
+                    metadata.insert(
+                        "available_cpu_cores".to_string(),
+                        serde_json::json!(
+                            local_plan
+                                .execution_context
+                                .available_resources
+                                .available_cpu_cores
+                        ),
+                    );
+                    metadata.insert(
+                        "available_memory_mb".to_string(),
+                        serde_json::json!(
+                            local_plan
+                                .execution_context
+                                .available_resources
+                                .available_memory_mb
+                        ),
+                    );
+                    metadata.insert(
+                        "available_disk_mb".to_string(),
+                        serde_json::json!(
+                            local_plan
+                                .execution_context
+                                .available_resources
+                                .available_disk_mb
+                        ),
+                    );
+                    metadata.insert(
+                        "available_network_mbps".to_string(),
+                        serde_json::json!(
+                            local_plan
+                                .execution_context
+                                .available_resources
+                                .available_network_mbps
+                        ),
+                    );
+                    metadata.insert(
+                        "orchestrator_id".to_string(),
+                        serde_json::json!(local_plan.orchestration_meta.orchestrator_id),
+                    );
+                    metadata.insert(
+                        "worker_pool_id".to_string(),
+                        serde_json::json!(local_plan.orchestration_meta.worker_pool_id),
+                    );
+                    if let Some(ref council_session_id) =
+                        local_plan.orchestration_meta.council_session_id
+                    {
+                        metadata.insert(
+                            "council_session_id".to_string(),
+                            serde_json::json!(council_session_id),
+                        );
+                    }
+                    metadata.insert(
+                        "audit_correlation_id".to_string(),
+                        serde_json::json!(local_plan
+                            .orchestration_meta
+                            .audit_correlation_id
+                            .to_string()),
+                    );
+                    // Add worker assignments as JSON
+                    let worker_assignments_json: Vec<_> = local_plan
+                        .execution_context
+                        .worker_assignments
+                        .iter()
+                        .map(|(k, v)| {
+                            serde_json::json!({
+                                "milestone_id": k,
+                                "worker_id": v.worker_id.to_string(),
+                                "assigned_at": v.assigned_at.to_rfc3339(),
+                                "status": format!("{:?}", v.status),
+                            })
+                        })
+                        .collect();
+                    metadata.insert(
+                        "worker_assignments".to_string(),
+                        serde_json::json!(worker_assignments_json),
+                    );
+                    metadata
+                },
+            });
 
         // Update plan state based on execution state if available
         if let Some(ref execution_state) = local_plan.execution_state {
             // Map execution state to contract plan state
             let has_failures = !execution_state.failed_milestones.is_empty();
-            let all_completed = execution_state.completed_milestones.len() == contract_plan.milestones.len();
+            let all_completed =
+                execution_state.completed_milestones.len() == contract_plan.milestones.len();
             let has_executing = !execution_state.executing_milestones.is_empty();
 
             contract_plan.state = if has_failures {
-                agent_agency_contracts::planning_io::PlanState::Failed { reason: "One or more milestones failed".to_string() }
+                agent_agency_contracts::planning_io::PlanState::Failed {
+                    reason: "One or more milestones failed".to_string(),
+                }
             } else if all_completed {
                 agent_agency_contracts::planning_io::PlanState::Completed
             } else if has_executing {
@@ -354,52 +461,67 @@ struct RealWorkingSpecProvider {
 
 impl RealWorkingSpecProvider {
     fn new(task_descriptor: TaskDescriptor, db_ops: Arc<dyn DatabaseOperations>) -> Self {
-        Self { task_descriptor, db_ops }
+        Self {
+            task_descriptor,
+            db_ops,
+        }
     }
 
     /// Try to load an existing working spec from the database, or create a new one
     async fn load_or_create_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec> {
         use tracing::debug;
-        
+
         // Generate expected working_spec_id from task descriptor
         let expected_working_spec_id = format!("ws-{}", self.task_descriptor.task_id);
-        
+
         // Query execution plans to find existing plan with matching working_spec_id
         match self.db_ops.get_execution_plans().await {
             Ok(plans) => {
                 // Find plan with matching working_spec_id
-                if let Some(existing_plan) = plans.iter().find(|plan| plan.working_spec_id == expected_working_spec_id).cloned() {
+                if let Some(existing_plan) = plans
+                    .iter()
+                    .find(|plan| plan.working_spec_id == expected_working_spec_id)
+                    .cloned()
+                {
                     debug!(
                         "Found existing execution plan for working_spec_id: {}",
                         expected_working_spec_id
                     );
-                    
+
                     // Reconstruct working spec from execution plan and task descriptor
                     // The execution plan contains derived information (milestones, quality_gates, etc.)
                     // but we reconstruct the working spec from the task descriptor to ensure consistency
                     let mut working_spec = self.create_working_spec_from_task().await?;
-                    
+
                     // Enhance working spec with data from execution plan if available
                     // Try to extract quality gates from plan metadata
                     if let Some(quality_gates_json) = existing_plan.metadata.get("quality_gates") {
-                        if let Ok(quality_gates) = serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(quality_gates_json.clone()) {
+                        if let Ok(quality_gates) =
+                            serde_json::from_value::<
+                                agent_agency_contracts::planning_io::QualityGates,
+                            >(quality_gates_json.clone())
+                        {
                             working_spec.quality_gates = Some(quality_gates);
                         }
                     }
-                    
+
                     // Also try to extract from quality_gates field directly
-                    if let Ok(quality_gates) = serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(existing_plan.quality_gates.clone()) {
+                    if let Ok(quality_gates) =
+                        serde_json::from_value::<agent_agency_contracts::planning_io::QualityGates>(
+                            existing_plan.quality_gates.clone(),
+                        )
+                    {
                         working_spec.quality_gates = Some(quality_gates);
                     }
-                    
+
                     // Use the existing working_spec_id to maintain consistency
                     working_spec.id = existing_plan.working_spec_id.clone();
-                    
+
                     debug!(
                         "Reconstructed working spec from existing execution plan: {}",
                         working_spec.id
                     );
-                    
+
                     return Ok(working_spec);
                 }
             }
@@ -411,13 +533,13 @@ impl RealWorkingSpecProvider {
                 );
             }
         }
-        
+
         // No existing plan found, create new working spec
         debug!(
             "No existing execution plan found for working_spec_id: {}. Creating new working spec.",
             expected_working_spec_id
         );
-        
+
         self.create_working_spec_from_task().await
     }
 
@@ -426,14 +548,19 @@ impl RealWorkingSpecProvider {
         use agent_agency_contracts::*;
 
         // Generate acceptance criteria from task requirements
-        let acceptance_criteria = self.task_descriptor.acceptance.clone()
-            .map(|acceptance| vec![working_spec::AcceptanceCriterion {
-                id: "A1".to_string(),
-                given: "Task is submitted and validated".to_string(),
-                when: "Planning engine processes the task".to_string(),
-                then: acceptance,
-                priority: Some(working_spec::CriterionPriority::Must),
-            }])
+        let acceptance_criteria = self
+            .task_descriptor
+            .acceptance
+            .clone()
+            .map(|acceptance| {
+                vec![working_spec::AcceptanceCriterion {
+                    id: "A1".to_string(),
+                    given: "Task is submitted and validated".to_string(),
+                    when: "Planning engine processes the task".to_string(),
+                    then: acceptance,
+                    priority: Some(working_spec::CriterionPriority::Must),
+                }]
+            })
             .unwrap_or_default();
 
         // Generate test plan based on task complexity and risk
@@ -503,11 +630,12 @@ impl RealWorkingSpecProvider {
                     ]),
                     required_controls: vec!["authentication".to_string()],
                 },
-                performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
-                    max_regressions: 0,
-                    required_benchmarks: vec!["response_time".to_string()],
-                    slas: vec![],
-                },
+                performance_requirements:
+                    agent_agency_contracts::planning_io::PerformanceRequirements {
+                        max_regressions: 0,
+                        required_benchmarks: vec!["response_time".to_string()],
+                        slas: vec![],
+                    },
                 documentation_requirements: DocumentationRequirements {
                     api_docs_required: true,
                     code_docs_required: true,
@@ -524,53 +652,51 @@ impl RealWorkingSpecProvider {
             }),
             scope: vec![],
             metadata: None,
-            milestones: vec![
-                Milestone {
-                    id: "M1".to_string(),
-                    objective: "Analyze task requirements and constraints".to_string(),
-                    scope: MilestoneScope {
-                        files: vec![],
-                        directories: vec![],
-                        included_paths: vec![],
-                        excluded_paths: vec![],
-                        will_modify: false,
-                        allowed_operations: vec!["read".to_string()],
-                        parallelism: Some(1),
-                        resource_requirements: std::collections::HashMap::new(),
-                    },
-                    interfaces: vec![],
-                    tests: vec![],
-                    evidence_gate: EvidenceGate {
-                        min_coverage: 0.8,
-                        min_branch_coverage: 0.75,
-                        min_mutation_score: 0.5,
-                        security_scan_required: true,
-                        performance_budget: None,
-                        required_artifacts: vec!["requirements_doc".to_string()],
-                        custom_validations: vec![],
-                    },
-                    quality_gates: vec![],
-                    dependencies: vec![],
-                    estimated_duration: None,
-                    rollback_plan: "Revert analysis changes".to_string(),
-                    state: agent_agency_contracts::planning_io::MilestoneState::Pending,
-                    assigned_workers: vec![],
-                    estimated_effort: 0.5,
-                    priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
-                    risk_tier: 2,
-                    is_blocking: false,
-                    blocking_reason: None,
-                    metrics: Some(MilestoneMetrics {
-                        worker_performance: std::collections::HashMap::new(),
-                        execution_time_ms: 0,
-                        resources_used: std::collections::HashMap::new(),
-                        quality_metrics: std::collections::HashMap::new(),
-                        evidence_results: vec![],
-                        execution_events: vec![],
-                    }),
-                    metadata: std::collections::HashMap::new(),
+            milestones: vec![Milestone {
+                id: "M1".to_string(),
+                objective: "Analyze task requirements and constraints".to_string(),
+                scope: MilestoneScope {
+                    files: vec![],
+                    directories: vec![],
+                    included_paths: vec![],
+                    excluded_paths: vec![],
+                    will_modify: false,
+                    allowed_operations: vec!["read".to_string()],
+                    parallelism: Some(1),
+                    resource_requirements: std::collections::HashMap::new(),
                 },
-            ],
+                interfaces: vec![],
+                tests: vec![],
+                evidence_gate: EvidenceGate {
+                    min_coverage: 0.8,
+                    min_branch_coverage: 0.75,
+                    min_mutation_score: 0.5,
+                    security_scan_required: true,
+                    performance_budget: None,
+                    required_artifacts: vec!["requirements_doc".to_string()],
+                    custom_validations: vec![],
+                },
+                quality_gates: vec![],
+                dependencies: vec![],
+                estimated_duration: None,
+                rollback_plan: "Revert analysis changes".to_string(),
+                state: agent_agency_contracts::planning_io::MilestoneState::Pending,
+                assigned_workers: vec![],
+                estimated_effort: 0.5,
+                priority: agent_agency_contracts::planning_io::MilestonePriority::Normal,
+                risk_tier: 2,
+                is_blocking: false,
+                blocking_reason: None,
+                metrics: Some(MilestoneMetrics {
+                    worker_performance: std::collections::HashMap::new(),
+                    execution_time_ms: 0,
+                    resources_used: std::collections::HashMap::new(),
+                    quality_metrics: std::collections::HashMap::new(),
+                    evidence_results: vec![],
+                    execution_events: vec![],
+                }),
+                metadata: std::collections::HashMap::new(),
+            }],
             change_budget: self.task_descriptor.change_budget.clone(),
             file_changes: vec![],
             coverage_targets: Some(CoverageTargets {
@@ -578,7 +704,10 @@ impl RealWorkingSpecProvider {
                 branch_coverage: Some(0.9),
                 mutation_score: Some(0.5),
             }),
-            overview: format!("Working spec for task: {}", self.task_descriptor.description),
+            overview: format!(
+                "Working spec for task: {}",
+                self.task_descriptor.description
+            ),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         })
@@ -586,7 +715,10 @@ impl RealWorkingSpecProvider {
 
     /// Generate a test plan based on task characteristics
     fn generate_test_plan(&self) -> TestPlan {
-        let risk_tier = self.task_descriptor.risk_tier.clone()
+        let risk_tier = self
+            .task_descriptor
+            .risk_tier
+            .clone()
             .unwrap_or(RiskTier::Tier2);
 
         match risk_tier {
@@ -618,12 +750,14 @@ impl RealWorkingSpecProvider {
                 e2e_scenarios: vec![
                     E2eScenario {
                         description: "complete-user-journey".to_string(),
-                        user_journey: "Complete user journey from registration to task completion".to_string(),
+                        user_journey: "Complete user journey from registration to task completion"
+                            .to_string(),
                         expected_outcomes: vec![],
                     },
                     E2eScenario {
                         description: "failure-recovery".to_string(),
-                        user_journey: "User journey with failure scenarios and recovery".to_string(),
+                        user_journey: "User journey with failure scenarios and recovery"
+                            .to_string(),
                         expected_outcomes: vec![],
                     },
                 ],
@@ -646,20 +780,16 @@ impl RealWorkingSpecProvider {
                         test_cases: vec![],
                     },
                 ],
-                integration_tests: vec![
-                    IntegrationTestSpec {
-                        description: "api-integration-tests".to_string(),
-                        components: vec![],
-                        test_cases: vec![],
-                    },
-                ],
-                e2e_scenarios: vec![
-                    E2eScenario {
-                        description: "happy-path-scenario".to_string(),
-                        user_journey: "Happy path user journey".to_string(),
-                        expected_outcomes: vec![],
-                    },
-                ],
+                integration_tests: vec![IntegrationTestSpec {
+                    description: "api-integration-tests".to_string(),
+                    components: vec![],
+                    test_cases: vec![],
+                }],
+                e2e_scenarios: vec![E2eScenario {
+                    description: "happy-path-scenario".to_string(),
+                    user_journey: "Happy path user journey".to_string(),
+                    expected_outcomes: vec![],
+                }],
                 coverage_targets: Some(CoverageTargets {
                     line_coverage: Some(0.8),
                     branch_coverage: Some(0.9),
@@ -667,13 +797,11 @@ impl RealWorkingSpecProvider {
                 }),
             },
             RiskTier::Tier3 => TestPlan {
-                unit_tests: vec![
-                    UnitTestSpec {
-                        description: "basic-functionality-tests".to_string(),
-                        target_function: None,
-                        test_cases: vec![],
-                    },
-                ],
+                unit_tests: vec![UnitTestSpec {
+                    description: "basic-functionality-tests".to_string(),
+                    target_function: None,
+                    test_cases: vec![],
+                }],
                 integration_tests: vec![],
                 e2e_scenarios: vec![],
                 coverage_targets: Some(CoverageTargets {
@@ -702,13 +830,18 @@ struct RealTaskDescriptorProvider {
 
 impl RealTaskDescriptorProvider {
     fn new(task_descriptor: TaskDescriptor, db_ops: Arc<dyn DatabaseOperations>) -> Self {
-        Self { task_descriptor, db_ops }
+        Self {
+            task_descriptor,
+            db_ops,
+        }
     }
 
     /// Enhance the task descriptor with additional information from database or external sources
-    async fn enhance_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
+    async fn enhance_task_descriptor(
+        &self,
+    ) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
         let mut enhanced = self.task_descriptor.clone();
-        
+
         // Query execution plans for similar tasks (by description similarity or scope overlap)
         let all_plans = match self.db_ops.get_execution_plans().await {
             Ok(plans) => plans,
@@ -721,15 +854,20 @@ impl RealTaskDescriptorProvider {
                 return Ok(enhanced); // Return unenhanced descriptor on error
             }
         };
-        
+
         // Find similar plans based on description keywords or scope overlap
-        let similar_plans: Vec<_> = all_plans.iter()
+        let similar_plans: Vec<_> = all_plans
+            .iter()
             .filter(|plan| {
                 // Check if plan title or overview contains keywords from task description
                 let desc_lower = enhanced.description.to_lowercase();
                 let title_lower = plan.title.to_lowercase();
-                let overview_lower = plan.overview.as_ref().map(|o| o.to_lowercase()).unwrap_or_default();
-                
+                let overview_lower = plan
+                    .overview
+                    .as_ref()
+                    .map(|o| o.to_lowercase())
+                    .unwrap_or_default();
+
                 // Simple keyword matching (could be enhanced with more sophisticated similarity)
                 desc_lower.split_whitespace().any(|word| {
                     word.len() > 3 && (title_lower.contains(word) || overview_lower.contains(word))
@@ -737,12 +875,12 @@ impl RealTaskDescriptorProvider {
             })
             .take(5) // Limit to 5 most similar plans
             .collect();
-        
+
         // Query execution results for historical performance data
         let mut historical_avg_duration_ms = 0u64;
         let mut historical_success_rate = 0.0f64;
         let mut similar_results_count = 0usize;
-        
+
         for plan in &similar_plans {
             if let Ok(Some(result)) = self.db_ops.get_execution_result(plan.id).await {
                 historical_avg_duration_ms += result.total_duration_ms as u64;
@@ -751,11 +889,11 @@ impl RealTaskDescriptorProvider {
                 }
             }
         }
-        
+
         if !similar_plans.is_empty() {
             historical_avg_duration_ms /= similar_plans.len() as u64;
             historical_success_rate = similar_results_count as f64 / similar_plans.len() as f64;
-            
+
             tracing::debug!(
                 task_id = %enhanced.task_id,
                 similar_plans_count = similar_plans.len(),
@@ -764,17 +902,18 @@ impl RealTaskDescriptorProvider {
                 "Found similar historical plans for task descriptor enhancement"
             );
         }
-        
+
         // Validate task requirements against available resources
         // Check if change budget is reasonable based on historical data
         if historical_avg_duration_ms > 0 {
             // Estimate if change budget is reasonable (heuristic: if historical avg is much higher than budget, warn)
-            let budget_max_files = enhanced.change_budget.max_files;
-            let budget_max_loc = enhanced.change_budget.max_loc;
-            
+            let _budget_max_files = enhanced.change_budget.max_files;
+            let _budget_max_loc = enhanced.change_budget.max_loc;
+
             // Simple validation: if we have historical data suggesting longer execution, adjust expectations
             // This is a heuristic - actual validation would require more sophisticated analysis
-            if historical_avg_duration_ms > 300_000 { // 5 minutes
+            if historical_avg_duration_ms > 300_000 {
+                // 5 minutes
                 tracing::debug!(
                     task_id = %enhanced.task_id,
                     historical_avg_duration_ms = historical_avg_duration_ms,
@@ -782,42 +921,43 @@ impl RealTaskDescriptorProvider {
                 );
             }
         }
-        
+
         // Enrich descriptor with historical metadata
         // Note: TaskDescriptor doesn't have a metadata field, so we can't directly add metadata
         // Instead, we can enhance the description or use the acceptance criteria field
-        
+
         // Enhance acceptance criteria with historical insights if available
         if historical_success_rate > 0.0 && !enhanced.acceptance.is_some() {
             let mut acceptance_criteria = format!(
                 "Task completion based on historical success rate: {:.1}%",
                 historical_success_rate * 100.0
             );
-            
+
             if historical_avg_duration_ms > 0 {
                 acceptance_criteria.push_str(&format!(
                     "\nEstimated duration based on similar tasks: {}ms",
                     historical_avg_duration_ms
                 ));
             }
-            
+
             enhanced.acceptance = Some(acceptance_criteria);
         }
-        
+
         // Validate risk tier if not set, infer from historical data
         if enhanced.risk_tier.is_none() {
             // Infer risk tier from historical success rate
             // Lower success rate suggests higher risk (Tier1 = highest risk)
-            let inferred_risk_tier = if historical_success_rate > 0.0 && historical_success_rate < 0.7 {
-                agent_agency_contracts::types::planning::RiskTier::Tier1 // High risk
-            } else if historical_success_rate >= 0.7 && historical_success_rate < 0.9 {
-                agent_agency_contracts::types::planning::RiskTier::Tier2 // Medium risk
-            } else {
-                agent_agency_contracts::types::planning::RiskTier::Tier3 // Low risk
-            };
-            
+            let inferred_risk_tier =
+                if historical_success_rate > 0.0 && historical_success_rate < 0.7 {
+                    agent_agency_contracts::types::planning::RiskTier::Tier1 // High risk
+                } else if historical_success_rate >= 0.7 && historical_success_rate < 0.9 {
+                    agent_agency_contracts::types::planning::RiskTier::Tier2 // Medium risk
+                } else {
+                    agent_agency_contracts::types::planning::RiskTier::Tier3 // Low risk
+                };
+
             enhanced.risk_tier = Some(inferred_risk_tier.clone());
-            
+
             tracing::debug!(
                 task_id = %enhanced.task_id,
                 inferred_risk_tier = ?inferred_risk_tier,
@@ -825,9 +965,10 @@ impl RealTaskDescriptorProvider {
                 "Inferred risk tier from historical data"
             );
         }
-        
+
         // Check for conflicts with other tasks (tasks with overlapping scope)
-        let conflicting_plans: Vec<_> = all_plans.iter()
+        let conflicting_plans: Vec<_> = all_plans
+            .iter()
             .filter(|plan| {
                 // Check if plan is in progress and has overlapping scope
                 plan.state == "InProgress" || plan.state == "Approved"
@@ -836,23 +977,23 @@ impl RealTaskDescriptorProvider {
                 // Simple overlap check: if titles share significant keywords
                 let plan_title_lower = plan.title.to_lowercase();
                 let task_desc_lower = enhanced.description.to_lowercase();
-                
+
                 // Count shared significant words (length > 3)
                 let task_words: std::collections::HashSet<&str> = task_desc_lower
                     .split_whitespace()
                     .filter(|w| w.len() > 3)
                     .collect();
-                
+
                 let plan_words: std::collections::HashSet<&str> = plan_title_lower
                     .split_whitespace()
                     .filter(|w| w.len() > 3)
                     .collect();
-                
+
                 let overlap = task_words.intersection(&plan_words).count();
                 overlap >= 2 // At least 2 shared significant words suggests potential conflict
             })
             .collect();
-        
+
         if !conflicting_plans.is_empty() {
             tracing::warn!(
                 task_id = %enhanced.task_id,
@@ -860,7 +1001,7 @@ impl RealTaskDescriptorProvider {
                 "Found potentially conflicting tasks in progress"
             );
         }
-        
+
         tracing::debug!(
             task_id = %enhanced.task_id,
             similar_plans_found = similar_plans.len(),
@@ -869,14 +1010,16 @@ impl RealTaskDescriptorProvider {
             historical_success_rate = %historical_success_rate,
             "Enhanced task descriptor with database context and historical data"
         );
-        
+
         Ok(enhanced)
     }
 }
 
 #[async_trait::async_trait]
 impl crate::planning::plan_types::TaskDescriptorProvider for RealTaskDescriptorProvider {
-    async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
+    async fn get_task_descriptor(
+        &self,
+    ) -> Result<agent_agency_contracts::types::planning::TaskDescriptor> {
         self.enhance_task_descriptor().await
     }
 }

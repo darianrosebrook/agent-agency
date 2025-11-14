@@ -3,11 +3,11 @@
 //! Provides integration with git repositories for linking provenance records
 //! to git commits via CAWS-VERDICT-ID trailers.
 
-use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use git2::{Repository, Signature};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Mutex;
@@ -23,7 +23,6 @@ pub struct CommitInfo {
     pub message: String,
     pub author: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub trailer: String,
 }

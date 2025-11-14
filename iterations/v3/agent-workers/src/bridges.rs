@@ -1,17 +1,17 @@
 //! Quality and monitoring bridges for orchestration
-//! 
+//!
 //! This module contains bridge implementations that connect the orchestration
 //! system with quality gates and monitoring systems.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::{TaskId, QualityRequirements, Progress};
-use agent_agency_contracts::task_executor::ExecutionStatus;
-use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use crate::error::ParallelError;
-use std::collections::HashMap;
+use crate::{Progress, QualityRequirements, TaskId};
+use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+use agent_agency_contracts::task_executor::ExecutionStatus;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_json;
-use tracing::{info, error};
+use std::collections::HashMap;
+use tracing::{error, info};
 
 /// Real implementation of orchestration quality bridge
 
@@ -27,7 +27,7 @@ impl OrchestrationQualityBridge {
             quality_thresholds: QualityRequirements::default(),
         }
     }
-    
+
     /// Validate execution artifacts against orchestration quality gates
     pub async fn validate_with_orchestration_gates(
         &self,
@@ -35,8 +35,11 @@ impl OrchestrationQualityBridge {
         artifacts: &ExecutionArtifacts,
         requirements: &QualityRequirements,
     ) -> Result<bool, ParallelError> {
-        tracing::info!("Running orchestration quality gates for task: {}", task_id.0);
-        
+        tracing::info!(
+            "Running orchestration quality gates for task: {}",
+            task_id.0
+        );
+
         // Check test coverage if available
         let coverage = artifacts.coverage.line_coverage;
         if let Some(min_coverage) = requirements.min_coverage {
@@ -47,7 +50,7 @@ impl OrchestrationQualityBridge {
                 });
             }
         }
-        
+
         // Check linting results if available
         if artifacts.linting.errors > 0 {
             return Err(ParallelError::Validation {
@@ -55,7 +58,7 @@ impl OrchestrationQualityBridge {
                 source: None,
             });
         }
-        
+
         // OPTIONAL: Implement complexity requirement checking (deferred - task validation feature)
         // - [ ] Define complexity field structure in task schema
         // - [ ] Implement complexity calculation algorithm
@@ -102,12 +105,12 @@ impl OrchestrationQualityBridge {
         tracing::info!("Quality gates passed for task: {}", task_id.0);
         Ok(true)
     }
-    
+
     /// Get current quality thresholds
     pub fn get_quality_thresholds(&self) -> &QualityRequirements {
         &self.quality_thresholds
     }
-    
+
     /// Update quality thresholds
     pub fn update_quality_thresholds(&mut self, thresholds: QualityRequirements) {
         self.quality_thresholds = thresholds;
@@ -121,7 +124,6 @@ pub struct OrchestrationMonitoringBridge {
     /// Event storage for monitoring
     events: std::sync::Arc<std::sync::RwLock<Vec<MonitoringEvent>>>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct MonitoringEvent {
@@ -137,7 +139,7 @@ impl OrchestrationMonitoringBridge {
             events: std::sync::Arc::new(std::sync::RwLock::new(Vec::new())),
         }
     }
-    
+
     /// Publish an event to the monitoring system
     pub async fn publish_event(
         &self,
@@ -152,21 +154,21 @@ impl OrchestrationMonitoringBridge {
             timestamp: chrono::Utc::now(),
             data,
         };
-        
+
         {
             let mut events = self.events.write().unwrap();
             events.push(event);
-            
+
             // Keep only last 1000 events to prevent memory growth
             if events.len() > 1000 {
                 events.remove(0);
             }
         }
-        
+
         tracing::info!("Published monitoring event for task: {}", task_id_clone.0);
         Ok(())
     }
-    
+
     /// Update task progress in monitoring system
     pub async fn update_task_progress(
         &self,
@@ -182,39 +184,37 @@ impl OrchestrationMonitoringBridge {
             "message": message,
             "metadata": metadata,
         });
-        
+
         self.publish_event(
             task_id.clone(),
             "progress_update".to_string(),
             progress_data,
-        ).await?;
-        
+        )
+        .await?;
+
         Ok(())
     }
-    
+
     /// Get recent events for a task
     pub fn get_task_events(&self, task_id: &TaskId, limit: Option<usize>) -> Vec<MonitoringEvent> {
         let limit = limit.unwrap_or(50);
         let events = self.events.read().unwrap();
-        
-        events.iter()
+
+        events
+            .iter()
             .filter(|event| event.task_id == *task_id)
             .rev()
             .take(limit)
             .cloned()
             .collect()
     }
-    
+
     /// Get all recent events
     pub fn get_recent_events(&self, limit: Option<usize>) -> Vec<MonitoringEvent> {
         let limit = limit.unwrap_or(100);
         let events = self.events.read().unwrap();
-        
-        events.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+
+        events.iter().rev().take(limit).cloned().collect()
     }
 }
 
@@ -225,7 +225,6 @@ pub struct CouncilLearningBridge {
     /// Learning events storage
     learning_events: std::sync::Arc<std::sync::RwLock<Vec<LearningEvent>>>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct LearningEvent {
@@ -240,7 +239,7 @@ impl CouncilLearningBridge {
             learning_events: std::sync::Arc::new(std::sync::RwLock::new(Vec::new())),
         }
     }
-    
+
     /// Send learning signal to council
     pub async fn send_learning_signal(
         &self,
@@ -252,39 +251,40 @@ impl CouncilLearningBridge {
             timestamp: chrono::Utc::now(),
             data,
         };
-        
+
         {
             let mut events = self.learning_events.write().unwrap();
             events.push(event);
-            
+
             // Keep only last 500 learning events
             if events.len() > 500 {
                 events.remove(0);
             }
         }
-        
+
         tracing::info!("Sent learning signal: {}", signal_type);
         Ok(())
     }
-    
+
     /// Get learning events
     pub fn get_learning_events(&self, limit: Option<usize>) -> Vec<LearningEvent> {
         let limit = limit.unwrap_or(50);
         let events = self.learning_events.read().unwrap();
-        
-        events.iter()
-            .rev()
-            .take(limit)
-            .cloned()
-            .collect()
+
+        events.iter().rev().take(limit).cloned().collect()
     }
-    
+
     /// Get learning events by type
-    pub fn get_learning_events_by_type(&self, event_type: &str, limit: Option<usize>) -> Vec<LearningEvent> {
+    pub fn get_learning_events_by_type(
+        &self,
+        event_type: &str,
+        limit: Option<usize>,
+    ) -> Vec<LearningEvent> {
         let limit = limit.unwrap_or(50);
         let events = self.learning_events.read().unwrap();
-        
-        events.iter()
+
+        events
+            .iter()
             .filter(|event| event.event_type == event_type)
             .rev()
             .take(limit)

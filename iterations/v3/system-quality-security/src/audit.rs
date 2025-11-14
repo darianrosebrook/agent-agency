@@ -5,8 +5,8 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -69,7 +69,6 @@ pub struct AuditRecord {
     pub id: Uuid,
     /// Timestamp of the event
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Event type classification
     pub event_type: AuditEventType,
@@ -192,9 +191,16 @@ impl AuditLogger {
     pub async fn new(config: AuditLoggerConfig) -> Result<Self> {
         let db_pool = if config.enable_database_logging {
             if let Some(url) = &config.database_url {
-                Some(sqlx::PgPool::connect(url).await.map_err(|e| anyhow::Error::from(e))?)
+                Some(
+                    sqlx::PgPool::connect(url)
+                        .await
+                        .map_err(|e| anyhow::Error::from(e))?,
+                )
             } else {
-                return Err(anyhow::anyhow!("Database logging enabled but no database URL provided").into());
+                return Err(anyhow::anyhow!(
+                    "Database logging enabled but no database URL provided"
+                )
+                .into());
             }
         } else {
             None
@@ -389,21 +395,36 @@ impl AuditLogger {
                     return AuditStats {
                         total_events: stats.total_events as u64,
                         events_by_type: [
-                            (AuditEventType::Authentication, stats.authentication_events as u64),
-                            (AuditEventType::Authorization, stats.authorization_events as u64),
+                            (
+                                AuditEventType::Authentication,
+                                stats.authentication_events as u64,
+                            ),
+                            (
+                                AuditEventType::Authorization,
+                                stats.authorization_events as u64,
+                            ),
                             (AuditEventType::DataAccess, stats.data_access_events as u64),
-                            (AuditEventType::PolicyViolation, stats.policy_violations as u64),
+                            (
+                                AuditEventType::PolicyViolation,
+                                stats.policy_violations as u64,
+                            ),
                             (AuditEventType::Administrative, 0),
                             (AuditEventType::Configuration, 0),
                             (AuditEventType::SystemIntegrity, 0),
                             (AuditEventType::ResourceUsage, 0),
-                        ].into_iter().filter(|(_, count)| *count > 0).collect(),
+                        ]
+                        .into_iter()
+                        .filter(|(_, count)| *count > 0)
+                        .collect(),
                         events_by_severity: [
                             (AuditSeverity::Critical, stats.critical_events as u64),
                             (AuditSeverity::Error, stats.error_events as u64),
                             (AuditSeverity::Warning, 0),
                             (AuditSeverity::Info, 0),
-                        ].into_iter().filter(|(_, count)| *count > 0).collect(),
+                        ]
+                        .into_iter()
+                        .filter(|(_, count)| *count > 0)
+                        .collect(),
                         failed_operations: stats.failed_operations as u64,
                         last_flush: None,
                     };
@@ -438,7 +459,10 @@ impl AuditLogger {
                 ..Default::default()
             };
 
-            match storage.query_records(filters, limit.map(|l| l as i64), None).await {
+            match storage
+                .query_records(filters, limit.map(|l| l as i64), None)
+                .await
+            {
                 Ok(records) => return records,
                 Err(e) => {
                     tracing::error!("Failed to query audit records from storage: {}", e);
@@ -491,7 +515,9 @@ impl AuditLogger {
     /// Get recent audit activity (if enhanced storage is available)
     pub async fn get_recent_activity(&self, limit: Option<usize>) -> Result<Vec<AuditRecord>> {
         if let Some(storage) = &self.audit_storage {
-            storage.get_recent_activity(limit.map(|l| l as i64)).await
+            storage
+                .get_recent_activity(limit.map(|l| l as i64))
+                .await
                 .map_err(|e| format!("Failed to get recent audit activity: {}", e).into())
         } else {
             Err("Enhanced audit storage not available".into())
@@ -520,7 +546,10 @@ impl AuditLogger {
     fn should_log_severity(&self, severity: &AuditSeverity) -> bool {
         match (&self.config.min_severity, severity) {
             (AuditSeverity::Info, _) => true,
-            (AuditSeverity::Warning, AuditSeverity::Warning | AuditSeverity::Error | AuditSeverity::Critical) => true,
+            (
+                AuditSeverity::Warning,
+                AuditSeverity::Warning | AuditSeverity::Error | AuditSeverity::Critical,
+            ) => true,
             (AuditSeverity::Error, AuditSeverity::Error | AuditSeverity::Critical) => true,
             (AuditSeverity::Critical, AuditSeverity::Critical) => true,
             _ => false,
@@ -530,8 +559,14 @@ impl AuditLogger {
     async fn update_stats(&self, record: &AuditRecord) {
         let mut stats = self.stats.write().await;
         stats.total_events += 1;
-        *stats.events_by_type.entry(record.event_type.clone()).or_insert(0) += 1;
-        *stats.events_by_severity.entry(record.severity.clone()).or_insert(0) += 1;
+        *stats
+            .events_by_type
+            .entry(record.event_type.clone())
+            .or_insert(0) += 1;
+        *stats
+            .events_by_severity
+            .entry(record.severity.clone())
+            .or_insert(0) += 1;
 
         if matches!(record.result, AuditResult::Failure(_) | AuditResult::Denied) {
             stats.failed_operations += 1;
@@ -585,7 +620,10 @@ impl AuditLogger {
             }
 
             // Create audit log directory if it doesn't exist
-            let log_dir = self.config.log_directory.clone()
+            let log_dir = self
+                .config
+                .log_directory
+                .clone()
                 .unwrap_or_else(|| "audit_logs".to_string());
 
             std::fs::create_dir_all(&log_dir)
@@ -624,7 +662,10 @@ impl AuditLogger {
             if let Some(storage) = &self.audit_storage {
                 // Use enhanced audit storage for batch operations
                 if let Err(e) = storage.store_batch(&records).await {
-                    tracing::error!("Failed to store audit records using enhanced storage: {}", e);
+                    tracing::error!(
+                        "Failed to store audit records using enhanced storage: {}",
+                        e
+                    );
                     // Fall back to individual insertions if batch fails
                     for record in &records {
                         if let Err(e) = storage.store_record(record).await {
@@ -650,14 +691,22 @@ impl AuditLogger {
             let mut stats = self.stats.write().await;
             stats.last_flush = Some(now);
 
-            tracing::debug!("Flushed {} audit records to {} and database", flushed_count, log_path.display());
+            tracing::debug!(
+                "Flushed {} audit records to {} and database",
+                flushed_count,
+                log_path.display()
+            );
         }
 
         Ok(())
     }
 
     /// Insert a single audit record into the database
-    async fn insert_record_to_database(&self, pool: &sqlx::PgPool, record: &AuditRecord) -> Result<()> {
+    async fn insert_record_to_database(
+        &self,
+        pool: &sqlx::PgPool,
+        record: &AuditRecord,
+    ) -> Result<()> {
         let event_type_str = record.event_type_str();
         let severity_str = match record.severity {
             AuditSeverity::Info => "info",
@@ -674,12 +723,12 @@ impl AuditLogger {
         };
 
         // Convert context to JSON
-        let context_json = serde_json::to_string(&record.context)
-            .unwrap_or_else(|_| "{}".to_string());
+        let context_json =
+            serde_json::to_string(&record.context).unwrap_or_else(|_| "{}".to_string());
 
         // Convert metadata to JSON
-        let metadata_json = serde_json::to_string(&record.metadata)
-            .unwrap_or_else(|_| "{}".to_string());
+        let metadata_json =
+            serde_json::to_string(&record.metadata).unwrap_or_else(|_| "{}".to_string());
 
         sqlx::query(
             r#"
@@ -756,27 +805,38 @@ mod tests {
         let logger = AuditLogger::default();
 
         // Test authentication logging
-        logger.log_authentication(
-            "user123",
-            "login",
-            AuditResult::Success,
-            HashMap::new(),
-        ).await;
+        logger
+            .log_authentication("user123", "login", AuditResult::Success, HashMap::new())
+            .await;
 
         // Test authorization logging
-        logger.log_authorization(
-            "user123",
-            "secret:key1",
-            "read",
-            AuditResult::Success,
-            HashMap::new(),
-        ).await;
+        logger
+            .log_authorization(
+                "user123",
+                "secret:key1",
+                "read",
+                AuditResult::Success,
+                HashMap::new(),
+            )
+            .await;
 
         // Check stats
         let stats = logger.get_stats().await;
         assert_eq!(stats.total_events, 2);
-        assert_eq!(stats.events_by_type.get(&AuditEventType::Authentication).unwrap_or(&0), &1);
-        assert_eq!(stats.events_by_type.get(&AuditEventType::Authorization).unwrap_or(&0), &1);
+        assert_eq!(
+            stats
+                .events_by_type
+                .get(&AuditEventType::Authentication)
+                .unwrap_or(&0),
+            &1
+        );
+        assert_eq!(
+            stats
+                .events_by_type
+                .get(&AuditEventType::Authorization)
+                .unwrap_or(&0),
+            &1
+        );
     }
 
     #[tokio::test]
@@ -784,39 +844,30 @@ mod tests {
         let logger = AuditLogger::default();
 
         // Add some test records
-        logger.log_authentication(
-            "user1",
-            "login",
-            AuditResult::Success,
-            HashMap::new(),
-        ).await;
+        logger
+            .log_authentication("user1", "login", AuditResult::Success, HashMap::new())
+            .await;
 
-        logger.log_authentication(
-            "user2",
-            "login",
-            AuditResult::Failure("invalid password".to_string()),
-            HashMap::new(),
-        ).await;
+        logger
+            .log_authentication(
+                "user2",
+                "login",
+                AuditResult::Failure("invalid password".to_string()),
+                HashMap::new(),
+            )
+            .await;
 
         // Query by event type
-        let auth_records = logger.query_records(
-            Some(AuditEventType::Authentication),
-            None,
-            None,
-            None,
-            None,
-        ).await;
+        let auth_records = logger
+            .query_records(Some(AuditEventType::Authentication), None, None, None, None)
+            .await;
 
         assert_eq!(auth_records.len(), 2);
 
         // Query by actor
-        let user1_records = logger.query_records(
-            None,
-            Some("user1".to_string()),
-            None,
-            None,
-            None,
-        ).await;
+        let user1_records = logger
+            .query_records(None, Some("user1".to_string()), None, None, None)
+            .await;
 
         assert_eq!(user1_records.len(), 1);
         assert_eq!(user1_records[0].actor, "user1");

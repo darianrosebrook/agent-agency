@@ -5,30 +5,30 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
 use std::sync::Arc;
 use std::time::Instant;
-use anyhow::Result;
-use uuid::Uuid;
 use tracing::{debug, warn};
+use uuid::Uuid;
 
-use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
+use agent_agency_contracts::planning_io::Milestone;
 
 /// Task classification result
 #[derive(Debug, Clone)]
 pub struct TaskClassification {
     /// Task complexity level
     pub complexity: TaskComplexity,
-    
+
     /// Estimated execution time in milliseconds
     pub estimated_time_ms: u64,
-    
+
     /// Required capabilities
     pub required_capabilities: Vec<String>,
-    
+
     /// Classification confidence (0.0 - 1.0)
     pub confidence: f64,
-    
+
     /// Classification latency in milliseconds
     pub classification_latency_ms: u64,
 }
@@ -51,16 +51,16 @@ pub enum TaskComplexity {
 pub struct WorkerSelectionResult {
     /// Selected worker ID
     pub worker_id: Uuid,
-    
+
     /// Alternative worker IDs (for dual-execution)
     pub alternative_workers: Vec<Uuid>,
-    
+
     /// Selection confidence
     pub confidence: f64,
-    
+
     /// Selection latency in milliseconds
     pub selection_latency_ms: u64,
-    
+
     /// Whether dual-execution is recommended
     pub dual_execution_recommended: bool,
 }
@@ -70,10 +70,10 @@ pub struct WorkerSelectionResult {
 pub struct DualExecutionConfig {
     /// Enable dual-execution
     pub enabled: bool,
-    
+
     /// Maximum time difference for dual-execution (ms)
     pub max_time_diff_ms: u64,
-    
+
     /// Minimum confidence threshold for dual-execution
     pub min_confidence: f64,
 }
@@ -105,16 +105,16 @@ pub enum PipelineStageResult {
 pub struct MultiStagePipeline {
     /// Worker assignment strategy
     worker_assignment_strategy: Arc<WorkerAssignmentStrategy>,
-    
+
     /// Fast-path classification threshold (ms)
     fast_path_threshold_ms: u64,
-    
+
     /// Dual-execution configuration
     dual_execution_config: DualExecutionConfig,
-    
+
     /// Backpressure threshold (concurrent tasks)
     backpressure_threshold: usize,
-    
+
     /// Current concurrent task count
     concurrent_tasks: Arc<tokio::sync::RwLock<usize>>,
 }
@@ -137,15 +137,12 @@ impl MultiStagePipeline {
     }
 
     /// Process milestone through multi-stage pipeline
-    pub async fn process_milestone(
-        &self,
-        milestone: &Milestone,
-    ) -> Result<PipelineStageResult> {
+    pub async fn process_milestone(&self, milestone: &Milestone) -> Result<PipelineStageResult> {
         let start_time = Instant::now();
 
         // Stage 1: Fast-path classification (<50ms target)
         let classification = self.classify_task_fast(milestone).await?;
-        
+
         let classification_latency = start_time.elapsed().as_millis() as u64;
         debug!(
             "Task classification completed in {}ms: {:?}",
@@ -157,13 +154,15 @@ impl MultiStagePipeline {
             && matches!(classification.complexity, TaskComplexity::Simple)
         {
             // Fast-path: Simple task, quick worker selection
-            let worker_id = self.select_worker_fast(milestone, &classification).await?;
-            
+            let _worker_id = self.select_worker_fast(milestone, &classification).await?;
+
             return Ok(PipelineStageResult::FastPath(classification));
         }
 
         // Stage 2: Standard path - full worker selection optimization
-        let selection_result = self.optimize_worker_selection(milestone, &classification).await?;
+        let selection_result = self
+            .optimize_worker_selection(milestone, &classification)
+            .await?;
 
         // Stage 3: Dual-execution decision
         if self.should_use_dual_execution(&selection_result, &classification) {
@@ -181,7 +180,7 @@ impl MultiStagePipeline {
         let complexity = self.estimate_complexity_fast(milestone);
         let estimated_time_ms = self.estimate_time_fast(milestone);
         let required_capabilities = milestone.scope.allowed_operations.clone();
-        
+
         // Simple confidence calculation based on milestone metadata
         let confidence = if milestone.objective.len() > 100 {
             0.8 // Longer objectives are more reliable
@@ -213,15 +212,9 @@ impl MultiStagePipeline {
         let estimated_duration = milestone.estimated_duration.unwrap_or(60);
 
         // Simple heuristic: short description + few dependencies + short duration = simple
-        if description_length < 200
-            && dependency_count == 0
-            && estimated_duration < 300
-        {
+        if description_length < 200 && dependency_count == 0 && estimated_duration < 300 {
             TaskComplexity::Simple
-        } else if description_length < 500
-            && dependency_count < 3
-            && estimated_duration < 1800
-        {
+        } else if description_length < 500 && dependency_count < 3 && estimated_duration < 1800 {
             TaskComplexity::Medium
         } else {
             TaskComplexity::Complex
@@ -238,7 +231,7 @@ impl MultiStagePipeline {
         // Fallback: estimate based on description length
         let base_time_ms = 5000; // 5 seconds base
         let description_factor = milestone.objective.len() as u64 * 10; // 10ms per character
-        
+
         base_time_ms + description_factor
     }
 
@@ -246,11 +239,13 @@ impl MultiStagePipeline {
     async fn select_worker_fast(
         &self,
         milestone: &Milestone,
-        classification: &TaskClassification,
+        _classification: &TaskClassification,
     ) -> Result<Uuid> {
         // TODO: Implement comprehensive worker evaluation
         //       Currently uses basic evaluation; should implement comprehensive evaluation considering all worker capabilities and constraints.
-        self.worker_assignment_strategy.assign_worker(milestone).await
+        self.worker_assignment_strategy
+            .assign_worker(milestone)
+            .await
     }
 
     /// Optimize worker selection with full evaluation
@@ -328,8 +323,10 @@ impl MultiStagePipeline {
         }
 
         // Use dual-execution for complex tasks with high confidence
-        matches!(classification.complexity, TaskComplexity::Complex | TaskComplexity::Critical)
-            && selection_result.confidence >= 0.8
+        matches!(
+            classification.complexity,
+            TaskComplexity::Complex | TaskComplexity::Critical
+        ) && selection_result.confidence >= 0.8
     }
 
     /// Check if pipeline is backpressured
@@ -357,4 +354,3 @@ impl MultiStagePipeline {
         *self.concurrent_tasks.read().await
     }
 }
-

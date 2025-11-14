@@ -3,19 +3,16 @@
 //! Demonstrates how to use the documentation quality validator
 //! in the V3 Rust architecture.
 
-use schemars::JsonSchema;
 use agent_mcp::{
-    tools::DocQualityValidator,
+    tools::DocQualityValidator, ExecutionContext, ExecutionPriority, ToolExecutionRequest,
     ToolRegistry,
-    ToolExecutionRequest,
-    ExecutionContext,
-    ExecutionPriority,
 };
 use anyhow::Result;
+use chrono::Utc;
+use schemars::JsonSchema;
 use serde_json::json;
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -60,7 +57,12 @@ This is a **revolutionary breakthrough** in AI technology! Our system is **produ
             "content_type": "markdown",
             "validation_level": "strict",
             "include_suggestions": true
-        }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+        })
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect(),
         context: Some(ExecutionContext {
             working_directory: Some("/tmp".to_string()),
             environment_variables: std::collections::HashMap::new(),
@@ -86,26 +88,36 @@ This is a **revolutionary breakthrough** in AI technology! Our system is **produ
 
     if let Some(output) = result.output {
         let quality_result: DocQualityResult = serde_json::from_value(output)?;
-        
+
         println!("\n📊 Quality Results");
         println!("==================");
         println!("Quality Score: {:.2}", quality_result.quality_score);
         println!("Issues Found: {}", quality_result.issues.len());
-        
+
         println!("\n📈 Metrics");
         println!("----------");
-        println!("Superiority Claims: {}", quality_result.metrics.superiority_claims);
-        println!("Unfounded Achievements: {}", quality_result.metrics.unfounded_achievements);
-        println!("Marketing Language: {}", quality_result.metrics.marketing_language);
+        println!(
+            "Superiority Claims: {}",
+            quality_result.metrics.superiority_claims
+        );
+        println!(
+            "Unfounded Achievements: {}",
+            quality_result.metrics.unfounded_achievements
+        );
+        println!(
+            "Marketing Language: {}",
+            quality_result.metrics.marketing_language
+        );
         println!("Temporal Docs: {}", quality_result.metrics.temporal_docs);
         println!("Emoji Usage: {}", quality_result.metrics.emoji_usage);
-        
+
         if !quality_result.issues.is_empty() {
             println!("\n🚨 Issues Found");
             println!("---------------");
             for (i, issue) in quality_result.issues.iter().enumerate() {
-                println!("{}. [{}] {}: {}", 
-                    i + 1, 
+                println!(
+                    "{}. [{}] {}: {}",
+                    i + 1,
                     format!("{:?}", issue.severity).to_lowercase(),
                     issue.rule_id,
                     issue.message
@@ -115,7 +127,7 @@ This is a **revolutionary breakthrough** in AI technology! Our system is **produ
                 }
             }
         }
-        
+
         if !quality_result.recommendations.is_empty() {
             println!("\n💡 Recommendations");
             println!("------------------");
@@ -162,7 +174,12 @@ The system uses a modular architecture with:
             "content_type": "markdown",
             "validation_level": "strict",
             "include_suggestions": true
-        }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect::<HashMap<String, serde_json::Value>>(),
+        })
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect::<HashMap<String, serde_json::Value>>(),
         context: Some(ExecutionContext {
             working_directory: Some("/tmp".to_string()),
             environment_variables: std::collections::HashMap::new(),
@@ -180,11 +197,11 @@ The system uses a modular architecture with:
 
     if let Some(output) = improved_result.output {
         let quality_result: DocQualityResult = serde_json::from_value(output)?;
-        
+
         println!("✅ Improved Content Validation");
         println!("Quality Score: {:.2}", quality_result.quality_score);
         println!("Issues Found: {}", quality_result.issues.len());
-        
+
         if quality_result.quality_score > 0.8 {
             println!("🎉 Excellent! This content meets quality standards.");
         } else if quality_result.quality_score > 0.6 {
@@ -199,7 +216,9 @@ The system uses a modular architecture with:
     println!("=====================================");
 
     let agent_workflow = AgentWorkflowExample::new(tool_registry);
-    agent_workflow.demonstrate_autonomous_documentation_creation().await?;
+    agent_workflow
+        .demonstrate_autonomous_documentation_creation()
+        .await?;
 
     Ok(())
 }
@@ -216,7 +235,7 @@ impl AgentWorkflowExample {
 
     async fn demonstrate_autonomous_documentation_creation(&self) -> Result<()> {
         println!("🤖 Agent: Creating documentation autonomously...");
-        
+
         // Simulate agent creating documentation
         let mut documentation = r#"# My New Feature
 
@@ -225,14 +244,18 @@ This is a **revolutionary** new feature that will **change everything**!
 ## Status: **Production Ready**
 
 We have **100% complete** implementation with **enterprise-grade** quality.
-"#.to_string();
+"#
+        .to_string();
 
         let mut iterations = 0;
         let max_iterations = 3;
 
         while iterations < max_iterations {
-            println!("🔄 Agent: Validating documentation (iteration {})", iterations + 1);
-            
+            println!(
+                "🔄 Agent: Validating documentation (iteration {})",
+                iterations + 1
+            );
+
             let request = ToolExecutionRequest {
                 id: Uuid::new_v4(),
                 tool_id: Uuid::new_v4(),
@@ -241,7 +264,12 @@ We have **100% complete** implementation with **enterprise-grade** quality.
                     "content_type": "markdown",
                     "validation_level": "moderate",
                     "include_suggestions": true
-                }).as_object().unwrap().iter().map(|(k, v)| (k.clone(), v.clone())).collect::<HashMap<String, serde_json::Value>>(),
+                })
+                .as_object()
+                .unwrap()
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect::<HashMap<String, serde_json::Value>>(),
                 context: Some(ExecutionContext {
                     working_directory: Some("/tmp".to_string()),
                     environment_variables: std::collections::HashMap::new(),
@@ -259,20 +287,21 @@ We have **100% complete** implementation with **enterprise-grade** quality.
 
             if let Some(output) = result.output {
                 let quality_result: DocQualityResult = serde_json::from_value(output)?;
-                
+
                 println!("📊 Quality Score: {:.2}", quality_result.quality_score);
-                
+
                 if quality_result.quality_score >= 0.8 {
                     println!("✅ Agent: Documentation quality is acceptable!");
                     break;
                 } else {
                     println!("🔧 Agent: Improving documentation based on feedback...");
-                    
+
                     // Simulate agent applying suggestions
-                    documentation = self.apply_quality_suggestions(&documentation, &quality_result.issues);
+                    documentation =
+                        self.apply_quality_suggestions(&documentation, &quality_result.issues);
                 }
             }
-            
+
             iterations += 1;
         }
 
@@ -285,15 +314,18 @@ We have **100% complete** implementation with **enterprise-grade** quality.
 
     fn apply_quality_suggestions(&self, content: &str, issues: &[QualityIssue]) -> String {
         let mut improved = content.to_string();
-        
+
         // Apply common fixes
         improved = improved.replace("revolutionary", "innovative");
         improved = improved.replace("Production Ready", "Implemented");
         improved = improved.replace("100% complete", "implemented");
         improved = improved.replace("enterprise-grade", "robust");
-        
-        println!("🔧 Applied quality improvements based on {} issues", issues.len());
-        
+
+        println!(
+            "🔧 Applied quality improvements based on {} issues",
+            issues.len()
+        );
+
         improved
     }
 }

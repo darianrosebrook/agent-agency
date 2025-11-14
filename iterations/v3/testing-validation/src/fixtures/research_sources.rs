@@ -2,8 +2,8 @@
 //!
 //! Provides test research sources and helper functions for creating research test data.
 
-use std::path::PathBuf;
 use anyhow::Result;
+use std::path::PathBuf;
 
 /// Research source structure
 #[derive(Debug, Clone)]
@@ -15,9 +15,9 @@ pub struct ResearchSource {
 /// Create research source files in the workspace
 pub async fn create_source_files(workspace_path: &PathBuf) -> Result<()> {
     use tokio::fs;
-    
+
     let sources = get_research_sources();
-    
+
     for source in sources {
         let file_path = workspace_path.join(&source.filename);
         if let Some(parent) = file_path.parent() {
@@ -25,7 +25,7 @@ pub async fn create_source_files(workspace_path: &PathBuf) -> Result<()> {
         }
         fs::write(&file_path, source.content).await?;
     }
-    
+
     Ok(())
 }
 
@@ -58,7 +58,8 @@ Homomorphic encryption allows computation on encrypted data without decryption.
 - Computational overhead
 - Key management complexity
 - Standardization efforts
-"#.to_string(),
+"#
+            .to_string(),
         },
         ResearchSource {
             filename: "cloud_computing.md".to_string(),
@@ -76,7 +77,8 @@ Cloud providers use encryption at rest and in transit.
 - Performance impact
 - Cost implications
 - Integration complexity
-"#.to_string(),
+"#
+            .to_string(),
         },
         ResearchSource {
             filename: "privacy_technologies.md".to_string(),
@@ -99,7 +101,8 @@ Various technologies enable privacy-preserving computation.
 - Healthcare data analysis
 - Financial services
 - Machine learning on sensitive data
-"#.to_string(),
+"#
+            .to_string(),
         },
     ]
 }

@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
+use crate::{FsckReport, FsckScope, FsckStatus};
 use anyhow::Result;
-use crate::{FsckScope, FsckReport, FsckStatus};
 
 /// Filesystem checker implementation
 pub struct Fsck {

@@ -4,12 +4,12 @@
 //! Implements storage for telemetry data points and batches.
 
 use anyhow::{Context, Result};
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::{TelemetryData, TelemetryDataType, TelemetryBatch, TelemetryError};
+use crate::{TelemetryBatch, TelemetryData, TelemetryDataType, TelemetryError};
 
 /// Database storage for telemetry data
 #[derive(Clone)]
@@ -54,8 +54,8 @@ impl TelemetryDatabaseStorage {
             TelemetryDataType::Custom => "Custom",
         };
 
-        let tags_json = serde_json::to_value(&data.tags)
-            .map_err(|e| TelemetryError::ConfigurationError {
+        let tags_json =
+            serde_json::to_value(&data.tags).map_err(|e| TelemetryError::ConfigurationError {
                 message: format!("Failed to serialize tags: {}", e),
             })?;
 
@@ -65,7 +65,7 @@ impl TelemetryDatabaseStorage {
             r#"
             INSERT INTO telemetry_data (id, timestamp, source, data_type, payload, tags)
             VALUES ($1, $2, $3, $4, $5, $6)
-            "#
+            "#,
         )
         .bind(id)
         .bind(data.timestamp.clone())
@@ -85,9 +85,13 @@ impl TelemetryDatabaseStorage {
 
     /// Store multiple telemetry data points in a batch
     pub async fn store_batch(&self, batch: &TelemetryBatch) -> Result<(), TelemetryError> {
-        let mut tx = self.pool.begin().await.map_err(|e| TelemetryError::ConnectionError {
-            message: format!("Failed to begin transaction: {}", e),
-        })?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| TelemetryError::ConnectionError {
+                message: format!("Failed to begin transaction: {}", e),
+            })?;
 
         // Store batch metadata
         sqlx::query(
@@ -97,7 +101,7 @@ impl TelemetryDatabaseStorage {
             ON CONFLICT (id) DO UPDATE
             SET data_count = EXCLUDED.data_count,
                 timestamp = EXCLUDED.timestamp
-            "#
+            "#,
         )
         .bind(batch.id.clone())
         .bind(batch.timestamp.clone())
@@ -118,10 +122,11 @@ impl TelemetryDatabaseStorage {
                 TelemetryDataType::Custom => "Custom",
             };
 
-            let tags_json = serde_json::to_value(&data.tags)
-                .map_err(|e| TelemetryError::ConfigurationError {
+            let tags_json = serde_json::to_value(&data.tags).map_err(|e| {
+                TelemetryError::ConfigurationError {
                     message: format!("Failed to serialize tags: {}", e),
-                })?;
+                }
+            })?;
 
             let id = Uuid::new_v4();
 
@@ -129,7 +134,7 @@ impl TelemetryDatabaseStorage {
                 r#"
                 INSERT INTO telemetry_data (id, timestamp, source, data_type, payload, tags)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                "#
+                "#,
             )
             .bind(id)
             .bind(data.timestamp.clone())
@@ -150,7 +155,7 @@ impl TelemetryDatabaseStorage {
             UPDATE telemetry_batches
             SET processing_status = 'completed', processed_at = NOW()
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(batch.id.clone())
         .execute(&mut *tx)
@@ -159,11 +164,17 @@ impl TelemetryDatabaseStorage {
             message: format!("Failed to update batch status: {}", e),
         })?;
 
-        tx.commit().await.map_err(|e| TelemetryError::ConnectionError {
-            message: format!("Failed to commit transaction: {}", e),
-        })?;
+        tx.commit()
+            .await
+            .map_err(|e| TelemetryError::ConnectionError {
+                message: format!("Failed to commit transaction: {}", e),
+            })?;
 
-        debug!("Stored telemetry batch: {} with {} data points", batch.id, batch.data_points.len());
+        debug!(
+            "Stored telemetry batch: {} with {} data points",
+            batch.id,
+            batch.data_points.len()
+        );
         Ok(())
     }
 
@@ -178,7 +189,9 @@ impl TelemetryDatabaseStorage {
     ) -> Result<Vec<TelemetryData>, TelemetryError> {
         use sqlx::Row;
 
-        let mut query_builder = sqlx::QueryBuilder::new("SELECT id, timestamp, source, data_type, payload, tags FROM telemetry_data WHERE 1=1");
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "SELECT id, timestamp, source, data_type, payload, tags FROM telemetry_data WHERE 1=1",
+        );
         let mut separated = query_builder.separated(" AND ");
 
         if let Some(src) = source {
@@ -233,15 +246,19 @@ impl TelemetryDatabaseStorage {
                 "Trace" => TelemetryDataType::Trace,
                 "Event" => TelemetryDataType::Event,
                 "Custom" => TelemetryDataType::Custom,
-                _ => return Err(TelemetryError::ConfigurationError {
-                    message: format!("Unknown data type: {}", data_type_str),
-                }),
+                _ => {
+                    return Err(TelemetryError::ConfigurationError {
+                        message: format!("Unknown data type: {}", data_type_str),
+                    })
+                }
             };
 
             let tags_value: serde_json::Value = row.get("tags");
-            let tags: std::collections::HashMap<String, String> = serde_json::from_value(tags_value)
-                .map_err(|e| TelemetryError::ConfigurationError {
-                    message: format!("Failed to deserialize tags: {}", e),
+            let tags: std::collections::HashMap<String, String> =
+                serde_json::from_value(tags_value).map_err(|e| {
+                    TelemetryError::ConfigurationError {
+                        message: format!("Failed to deserialize tags: {}", e),
+                    }
                 })?;
 
             results.push(TelemetryData {
@@ -258,17 +275,19 @@ impl TelemetryDatabaseStorage {
 
     /// Clean up old telemetry data
     pub async fn cleanup_old_data(&self, retention_days: i32) -> Result<i64, TelemetryError> {
-        let deleted_count: Option<i64> = sqlx::query_scalar::<_, Option<i64>>(
-            "SELECT cleanup_old_telemetry_data($1)"
-        )
-        .bind(retention_days)
-        .fetch_one(&*self.pool)
-        .await
-        .map_err(|e| TelemetryError::ConnectionError {
-            message: format!("Failed to cleanup old telemetry data: {}", e),
-        })?;
+        let deleted_count: Option<i64> =
+            sqlx::query_scalar::<_, Option<i64>>("SELECT cleanup_old_telemetry_data($1)")
+                .bind(retention_days)
+                .fetch_one(&*self.pool)
+                .await
+                .map_err(|e| TelemetryError::ConnectionError {
+                    message: format!("Failed to cleanup old telemetry data: {}", e),
+                })?;
 
-        debug!("Cleaned up {} old telemetry data points", deleted_count.unwrap_or(0));
+        debug!(
+            "Cleaned up {} old telemetry data points",
+            deleted_count.unwrap_or(0)
+        );
         Ok(deleted_count.unwrap_or(0))
     }
 
@@ -277,4 +296,3 @@ impl TelemetryDatabaseStorage {
         &self.pool
     }
 }
-

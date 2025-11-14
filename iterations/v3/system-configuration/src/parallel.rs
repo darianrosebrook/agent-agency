@@ -4,10 +4,10 @@
 //! and aggregate their results according to configurable strategies.
 
 use crate::{
-    traits::{ExecutablePipeline, PipelineStage},
-    config::{ParallelPipelineConfig, AggregationStrategy},
+    config::{AggregationStrategy, ParallelPipelineConfig},
     error::{PipelineError, PipelineResult},
     metrics::PipelineMetrics,
+    traits::{ExecutablePipeline, PipelineStage},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use tracing::{debug, info, warn};
 
 /// Parallel pipeline that executes stages concurrently
 #[derive(Debug)]
-pub struct ParallelPipeline <Input, Output> {
+pub struct ParallelPipeline<Input, Output> {
     config: ParallelPipelineConfig,
     stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Output>>>>>,
     metrics: PipelineMetrics,
@@ -40,7 +40,10 @@ where
     pub async fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Output>>) {
         let mut stages = self.stages.write().await;
         stages.push(stage);
-        debug!("Added stage to parallel pipeline, total stages: {}", stages.len());
+        debug!(
+            "Added stage to parallel pipeline, total stages: {}",
+            stages.len()
+        );
     }
 
     /// Execute stages in parallel
@@ -52,49 +55,64 @@ where
         }
 
         // Implement true parallel execution with proper async handling
-        let stage_futures: Vec<_> = stages.iter().enumerate().map(|(index, stage)| {
-            let stage_name = stage.name().to_string();
-            let input_clone = input.clone();
-            let timeout = self.config.parallel_timeout;
-            let metrics = self.metrics.clone();
-            
-            async move {
-                let start_time = std::time::Instant::now();
-                
-                let result = tokio::time::timeout(timeout, stage.process(input_clone)).await;
-                
-                match result {
-                    Ok(Ok(output)) => {
-                        let duration = start_time.elapsed().as_millis() as u64;
-                        metrics.record_stage_execution(&stage_name, duration, true).await;
-                        debug!("Stage {} (index {}) completed successfully in {}ms",
-                               stage_name, index, duration);
-                        Ok((index, output))
-                    }
-                    Ok(Err(e)) => {
-                        let duration = start_time.elapsed().as_millis() as u64;
-                        metrics.record_stage_execution(&stage_name, duration, false).await;
-                        metrics.record_error(&format!("stage_{}", stage_name)).await;
-                        warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
-                        Err((index, e))
-                    }
-                    Err(_) => {
-                        let duration = start_time.elapsed().as_millis() as u64;
-                        metrics.record_stage_execution(&stage_name, duration, false).await;
-                        metrics.record_error("stage_timeout").await;
-                        warn!("Stage {} (index {}) timed out", stage_name, index);
-                        Err((index, PipelineError::timeout(format!("Stage {} timed out", stage_name))))
+        let stage_futures: Vec<_> = stages
+            .iter()
+            .enumerate()
+            .map(|(index, stage)| {
+                let stage_name = stage.name().to_string();
+                let input_clone = input.clone();
+                let timeout = self.config.parallel_timeout;
+                let metrics = self.metrics.clone();
+
+                async move {
+                    let start_time = std::time::Instant::now();
+
+                    let result = tokio::time::timeout(timeout, stage.process(input_clone)).await;
+
+                    match result {
+                        Ok(Ok(output)) => {
+                            let duration = start_time.elapsed().as_millis() as u64;
+                            metrics
+                                .record_stage_execution(&stage_name, duration, true)
+                                .await;
+                            debug!(
+                                "Stage {} (index {}) completed successfully in {}ms",
+                                stage_name, index, duration
+                            );
+                            Ok((index, output))
+                        }
+                        Ok(Err(e)) => {
+                            let duration = start_time.elapsed().as_millis() as u64;
+                            metrics
+                                .record_stage_execution(&stage_name, duration, false)
+                                .await;
+                            metrics.record_error(&format!("stage_{}", stage_name)).await;
+                            warn!("Stage {} (index {}) failed: {}", stage_name, index, e);
+                            Err((index, e))
+                        }
+                        Err(_) => {
+                            let duration = start_time.elapsed().as_millis() as u64;
+                            metrics
+                                .record_stage_execution(&stage_name, duration, false)
+                                .await;
+                            metrics.record_error("stage_timeout").await;
+                            warn!("Stage {} (index {}) timed out", stage_name, index);
+                            Err((
+                                index,
+                                PipelineError::timeout(format!("Stage {} timed out", stage_name)),
+                            ))
+                        }
                     }
                 }
-            }
-        }).collect();
+            })
+            .collect();
 
         // Execute all stages in parallel
         let results = futures::future::join_all(stage_futures).await;
-        
+
         let mut successful_results = Vec::new();
         let mut failures = Vec::new();
-        
+
         for result in results {
             match result {
                 Ok((_index, output)) => successful_results.push(output),
@@ -103,21 +121,23 @@ where
         }
 
         // Apply aggregation strategy
-        self.apply_aggregation_strategy(successful_results, failures).await
+        self.apply_aggregation_strategy(successful_results, failures)
+            .await
     }
 
     /// Apply the configured aggregation strategy
     async fn apply_aggregation_strategy(
         &self,
         successful_results: Vec<Output>,
-        failures: Vec<PipelineError>
+        failures: Vec<PipelineError>,
     ) -> PipelineResult<Vec<Output>> {
         match self.config.aggregation_strategy {
             AggregationStrategy::AllRequired => {
                 if !failures.is_empty() {
-                    return Err(PipelineError::Execution(
-                        format!("{} stages failed, all required to succeed", failures.len())
-                    ));
+                    return Err(PipelineError::Execution(format!(
+                        "{} stages failed, all required to succeed",
+                        failures.len()
+                    )));
                 }
                 Ok(successful_results)
             }
@@ -134,10 +154,11 @@ where
                 let majority_threshold = (total_stages + 1) / 2;
 
                 if successful_results.len() < majority_threshold {
-                    return Err(PipelineError::Execution(
-                        format!("Only {}/{} stages succeeded, majority required",
-                                successful_results.len(), total_stages)
-                    ));
+                    return Err(PipelineError::Execution(format!(
+                        "Only {}/{} stages succeeded, majority required",
+                        successful_results.len(),
+                        total_stages
+                    )));
                 }
                 Ok(successful_results)
             }
@@ -179,7 +200,9 @@ where
                 // - Change Budget: ~200 LOC
                 // - Reviewer Requirements: Aggregation algorithms and weighted scoring expertise
                 if !failures.is_empty() {
-                    return Err(PipelineError::Execution("Weighted aggregation not implemented".to_string()));
+                    return Err(PipelineError::Execution(
+                        "Weighted aggregation not implemented".to_string(),
+                    ));
                 }
                 Ok(successful_results)
             }
@@ -196,8 +219,10 @@ where
     async fn execute(&self, input: Input) -> PipelineResult<Vec<Output>> {
         let start_time = std::time::Instant::now();
 
-        info!("Starting parallel pipeline execution with {} stages",
-              self.stages.read().await.len());
+        info!(
+            "Starting parallel pipeline execution with {} stages",
+            self.stages.read().await.len()
+        );
 
         let result = self.execute_parallel(input).await;
         let duration = start_time.elapsed().as_millis() as u64;
@@ -207,8 +232,11 @@ where
 
         match &result {
             Ok(results) => {
-                info!("Parallel pipeline completed successfully in {}ms with {} results",
-                      duration, results.len());
+                info!(
+                    "Parallel pipeline completed successfully in {}ms with {} results",
+                    duration,
+                    results.len()
+                );
             }
             Err(e) => {
                 self.metrics.record_error("pipeline_execution").await;
@@ -220,9 +248,8 @@ where
     }
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
-        futures::executor::block_on(async {
-            self.metrics.to_json().await
-        }).map_err(|e| PipelineError::Metrics(e.to_string()))
+        futures::executor::block_on(async { self.metrics.to_json().await })
+            .map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 
     fn health_status(&self) -> PipelineResult<crate::PipelineHealth> {
@@ -264,7 +291,7 @@ mod tests {
 
     // Mock stage for testing
     #[derive(Debug)]
-struct MockStage {
+    struct MockStage {
         name: String,
         delay_ms: u64,
         should_fail: bool,
@@ -291,7 +318,10 @@ struct MockStage {
             tokio::time::sleep(std::time::Duration::from_millis(self.delay_ms)).await;
 
             if self.should_fail {
-                return Err(PipelineError::Execution(format!("Mock stage {} failed", self.name)));
+                return Err(PipelineError::Execution(format!(
+                    "Mock stage {} failed",
+                    self.name
+                )));
             }
 
             Ok(format!("{}-{}", input, self.name))

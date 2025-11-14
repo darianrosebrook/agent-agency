@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Device identifier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct DeviceId (pub u32);
+pub struct DeviceId(pub u32);
 
 /// Device kinds for resource management
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

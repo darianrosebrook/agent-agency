@@ -2,12 +2,14 @@
 //!
 //! Provides comprehensive evaluation of task results against quality criteria.
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::sync::Arc;
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-use crate::self_prompting_agent::prompting_types::{TaskResult, EvalReport, EvalStatus, SelfPromptingAgentError, ArtifactType};
+use crate::self_prompting_agent::prompting_types::{
+    ArtifactType, EvalReport, EvalStatus, SelfPromptingAgentError, TaskResult,
+};
 
 /// Evaluation orchestrator
 pub struct EvaluationOrchestrator {
@@ -16,7 +18,7 @@ pub struct EvaluationOrchestrator {
 
 /// Evaluation result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvaluationResult {
     pub score: f64,
     pub status: EvalStatus,
@@ -28,13 +30,18 @@ pub struct EvaluationResult {
 #[async_trait]
 pub trait Evaluator: Send + Sync {
     /// Evaluate a task result
-    async fn evaluate(&self, result: &TaskResult) -> Result<EvaluationResult, SelfPromptingAgentError>;
+    async fn evaluate(
+        &self,
+        result: &TaskResult,
+    ) -> Result<EvaluationResult, SelfPromptingAgentError>;
 
     /// Get evaluator name
     fn name(&self) -> &str;
 
     /// Get evaluator priority (higher = run first)
-    fn priority(&self) -> i32 { 0 }
+    fn priority(&self) -> i32 {
+        0
+    }
 }
 
 impl EvaluationOrchestrator {
@@ -48,18 +55,24 @@ impl EvaluationOrchestrator {
     /// Add an evaluator
     pub fn add_evaluator(&mut self, evaluator: Box<dyn Evaluator>) {
         self.evaluators.push(evaluator);
-        self.evaluators.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        self.evaluators
+            .sort_by(|a, b| b.priority().cmp(&a.priority()));
     }
 
     /// Evaluate a task result
-    pub async fn evaluate_result(&self, result: &TaskResult) -> Result<EvaluationResult, SelfPromptingAgentError> {
+    pub async fn evaluate_result(
+        &self,
+        result: &TaskResult,
+    ) -> Result<EvaluationResult, SelfPromptingAgentError> {
         if self.evaluators.is_empty() {
             // Default evaluation
             return Ok(EvaluationResult {
                 score: result.final_report.score,
                 status: result.final_report.status.clone(),
                 issues: result.final_report.failed_criteria.clone(),
-                recommendations: vec!["Add more evaluators for comprehensive evaluation".to_string()],
+                recommendations: vec![
+                    "Add more evaluators for comprehensive evaluation".to_string()
+                ],
             });
         }
 
@@ -76,7 +89,9 @@ impl EvaluationOrchestrator {
             all_recommendations.extend(eval_result.recommendations);
 
             // Use the worst status
-            if matches!(eval_result.status, EvalStatus::Fail) || matches!(status, EvalStatus::Partial) {
+            if matches!(eval_result.status, EvalStatus::Fail)
+                || matches!(status, EvalStatus::Partial)
+            {
                 status = EvalStatus::Fail;
             } else if matches!(eval_result.status, EvalStatus::Partial) {
                 status = EvalStatus::Partial;
@@ -99,7 +114,10 @@ pub struct CodeQualityEvaluator;
 
 #[async_trait]
 impl Evaluator for CodeQualityEvaluator {
-    async fn evaluate(&self, result: &TaskResult) -> Result<EvaluationResult, SelfPromptingAgentError> {
+    async fn evaluate(
+        &self,
+        result: &TaskResult,
+    ) -> Result<EvaluationResult, SelfPromptingAgentError> {
         let mut score: f64 = 0.5; // Base score
         let mut issues = Vec::new();
 
@@ -142,7 +160,11 @@ impl Evaluator for CodeQualityEvaluator {
 
         Ok(EvaluationResult {
             score,
-            status: if score >= 0.7 { EvalStatus::Pass } else { EvalStatus::Partial },
+            status: if score >= 0.7 {
+                EvalStatus::Pass
+            } else {
+                EvalStatus::Partial
+            },
             issues,
             recommendations: vec![
                 "Add comprehensive error handling".to_string(),
@@ -166,7 +188,10 @@ pub struct PerformanceEvaluator;
 
 #[async_trait]
 impl Evaluator for PerformanceEvaluator {
-    async fn evaluate(&self, result: &TaskResult) -> Result<EvaluationResult, SelfPromptingAgentError> {
+    async fn evaluate(
+        &self,
+        result: &TaskResult,
+    ) -> Result<EvaluationResult, SelfPromptingAgentError> {
         let execution_time = result.execution_time_ms as f64;
 
         let score: f64 = if execution_time < 100.0 {
@@ -189,7 +214,11 @@ impl Evaluator for PerformanceEvaluator {
 
         Ok(EvaluationResult {
             score,
-            status: if score >= 0.6 { EvalStatus::Pass } else { EvalStatus::Partial },
+            status: if score >= 0.6 {
+                EvalStatus::Pass
+            } else {
+                EvalStatus::Partial
+            },
             issues,
             recommendations: vec![
                 "Optimize algorithm complexity".to_string(),

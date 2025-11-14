@@ -5,21 +5,21 @@
 //!
 //! @author @darianrosebrook
 
+use crate::file_operations::{
+    AllowList as DataInfraAllowList, Budgets as DataInfraBudgets, ChangeSet, ChangeSetId,
+    GitWorktreeWorkspace, Hunk as DataInfraHunk, Patch as DataInfraPatch, TempMirrorWorkspace,
+    Workspace as DataInfraWorkspace,
+};
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use tokio::fs;
 use system_common_interfaces::{
-    FileOperationsService, Workspace as SystemWorkspace, WorkspaceFactory, WorkspaceStatus, WorkspaceState,
-    FileResult, FileOpsError, Changeset, AllowList, Budgets, ChangesetId,
-    FileMetadata, DirectoryEntry,
+    AllowList, Budgets, Changeset, ChangesetId, DirectoryEntry, FileMetadata,
+    FileOperationsService, FileOpsError, FileResult, Workspace as SystemWorkspace,
+    WorkspaceFactory, WorkspaceState, WorkspaceStatus,
 };
-use crate::file_operations::{
-    Workspace as DataInfraWorkspace, GitWorktreeWorkspace, TempMirrorWorkspace,
-    ChangeSet, ChangeSetId, Patch as DataInfraPatch, Hunk as DataInfraHunk,
-    AllowList as DataInfraAllowList, Budgets as DataInfraBudgets,
-};
+use tokio::fs;
+use tokio::sync::RwLock;
 
 /// Adapter wrapper that bridges data-infrastructure Workspace to system-common-interfaces Workspace
 struct WorkspaceAdapter {
@@ -40,21 +40,26 @@ impl WorkspaceAdapter {
     }
 
     /// Convert system-common-interfaces Changeset to data-infrastructure ChangeSet
-    fn convert_changeset(&self, changeset: &Changeset) -> std::result::Result<ChangeSet, FileOpsError> {
-        let patches: Vec<DataInfraPatch> = changeset.patches.iter()
+    fn convert_changeset(
+        &self,
+        changeset: &Changeset,
+    ) -> std::result::Result<ChangeSet, FileOpsError> {
+        let patches: Vec<DataInfraPatch> = changeset
+            .patches
+            .iter()
             .map(|p| {
-                let hunks: Vec<DataInfraHunk> = p.hunks.iter()
-                    .map(|h| {
-                        DataInfraHunk {
-                            old_start: h.old_start as u32,
-                            old_lines: h.old_lines as u32,
-                            new_start: h.new_start as u32,
-                            new_lines: h.new_lines as u32,
-                            lines: h.lines.clone(),
-                        }
+                let hunks: Vec<DataInfraHunk> = p
+                    .hunks
+                    .iter()
+                    .map(|h| DataInfraHunk {
+                        old_start: h.old_start as u32,
+                        old_lines: h.old_lines as u32,
+                        new_start: h.new_start as u32,
+                        new_lines: h.new_lines as u32,
+                        lines: h.lines.clone(),
                     })
                     .collect();
-                
+
                 Ok(DataInfraPatch {
                     path: p.path.clone(),
                     hunks,
@@ -70,7 +75,9 @@ impl WorkspaceAdapter {
     fn convert_allowlist(&self, allowlist: &AllowList) -> DataInfraAllowList {
         // Map allowed_patterns to globs
         // Note: system-common-interfaces uses allowed_patterns, data-infrastructure uses globs
-        DataInfraAllowList { globs: allowlist.allowed_patterns.clone() }
+        DataInfraAllowList {
+            globs: allowlist.allowed_patterns.clone(),
+        }
     }
 
     /// Convert system-common-interfaces Budgets to data-infrastructure Budgets
@@ -103,7 +110,10 @@ impl SystemWorkspace for WorkspaceAdapter {
         let data_allowlist = self.convert_allowlist(allowlist);
         let data_budgets = self.convert_budgets(budgets);
 
-        let data_id = self.inner.apply(&data_changeset, &data_allowlist, &data_budgets).await
+        let data_id = self
+            .inner
+            .apply(&data_changeset, &data_allowlist, &data_budgets)
+            .await
             .map_err(|e| FileOpsError::Changeset(format!("Apply failed: {}", e)))?;
 
         Ok(self.convert_changeset_id(&data_id))
@@ -111,12 +121,16 @@ impl SystemWorkspace for WorkspaceAdapter {
 
     async fn revert(&self, changeset_id: &ChangesetId) -> FileResult<()> {
         let data_id = ChangeSetId(changeset_id.0.clone());
-        self.inner.revert(&data_id).await
+        self.inner
+            .revert(&data_id)
+            .await
             .map_err(|e| FileOpsError::Changeset(format!("Revert failed: {}", e)))
     }
 
     async fn promote(&self) -> FileResult<()> {
-        self.inner.promote().await
+        self.inner
+            .promote()
+            .await
             .map_err(|e| FileOpsError::Changeset(format!("Promote failed: {}", e)))
     }
 }
@@ -124,7 +138,8 @@ impl SystemWorkspace for WorkspaceAdapter {
 /// File operations service that implements the shared interface
 pub struct DataInfrastructureFileOperationsService {
     /// Workspace registry for tracking active workspaces
-    workspace_registry: Arc<RwLock<std::collections::HashMap<String, Arc<dyn DataInfraWorkspace + Send + Sync>>>>,
+    workspace_registry:
+        Arc<RwLock<std::collections::HashMap<String, Arc<dyn DataInfraWorkspace + Send + Sync>>>>,
     /// Default repository path for Git operations
     default_repo_path: PathBuf,
 }
@@ -164,11 +179,14 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         // Convert types and use the existing validate_changeset function
         let adapter = WorkspaceAdapter {
             inner: Arc::new(
-                TempMirrorWorkspace::new(&self.default_repo_path, "validation").await
-                    .map_err(|e| FileOpsError::Validation(format!("Workspace creation failed: {}", e)))?
+                TempMirrorWorkspace::new(&self.default_repo_path, "validation")
+                    .await
+                    .map_err(|e| {
+                        FileOpsError::Validation(format!("Workspace creation failed: {}", e))
+                    })?,
             ),
         };
-        
+
         let data_changeset = adapter.convert_changeset(changeset)?;
         let data_allowlist = adapter.convert_allowlist(allowlist);
         let data_budgets = adapter.convert_budgets(budgets);
@@ -194,11 +212,21 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
 
         // Create underlying workspace
         let inner_workspace: Arc<dyn DataInfraWorkspace> = if repo_path.join(".git").exists() {
-            Arc::new(GitWorktreeWorkspace::new(repo_path, task_id).await
-                .map_err(|e| FileOpsError::Path(format!("Git workspace creation failed: {}", e)))?)
+            Arc::new(
+                GitWorktreeWorkspace::new(repo_path, task_id)
+                    .await
+                    .map_err(|e| {
+                        FileOpsError::Path(format!("Git workspace creation failed: {}", e))
+                    })?,
+            )
         } else {
-            Arc::new(TempMirrorWorkspace::new(repo_path, task_id).await
-                .map_err(|e| FileOpsError::Path(format!("Temp workspace creation failed: {}", e)))?)
+            Arc::new(
+                TempMirrorWorkspace::new(repo_path, task_id)
+                    .await
+                    .map_err(|e| {
+                        FileOpsError::Path(format!("Temp workspace creation failed: {}", e))
+                    })?,
+            )
         };
 
         // Register the workspace
@@ -227,11 +255,7 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         }
     }
 
-    async fn read_file(
-        &self,
-        file_path: &Path,
-        max_size: Option<u64>,
-    ) -> FileResult<Vec<u8>> {
+    async fn read_file(&self, file_path: &Path, max_size: Option<u64>) -> FileResult<Vec<u8>> {
         // Resolve path relative to default repo path
         let full_path = if file_path.is_absolute() {
             file_path.to_path_buf()
@@ -240,20 +264,22 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         };
 
         // Check file size before reading
-        let metadata = fs::metadata(&full_path).await
+        let metadata = fs::metadata(&full_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))?;
-        
+
         if let Some(max) = max_size {
             if metadata.len() > max {
-                return Err(FileOpsError::Validation(
-                    format!("File size {} exceeds maximum allowed size {}", metadata.len(), max)
-                ));
+                return Err(FileOpsError::Validation(format!(
+                    "File size {} exceeds maximum allowed size {}",
+                    metadata.len(),
+                    max
+                )));
             }
         }
 
         // Read file content
-        fs::read(&full_path).await
-            .map_err(|e| FileOpsError::Io(e))
+        fs::read(&full_path).await.map_err(|e| FileOpsError::Io(e))
     }
 
     async fn file_exists(&self, file_path: &Path) -> FileResult<bool> {
@@ -277,10 +303,12 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             self.default_repo_path.join(file_path)
         };
 
-        let metadata = fs::metadata(&full_path).await
+        let metadata = fs::metadata(&full_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))?;
 
-        let modified = metadata.modified()
+        let modified = metadata
+            .modified()
             .ok()
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
@@ -311,15 +339,15 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         };
 
         let mut entries = Vec::new();
-        let mut dir = fs::read_dir(&full_path).await
+        let mut dir = fs::read_dir(&full_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))?;
 
-        while let Some(entry) = dir.next_entry().await
-            .map_err(|e| FileOpsError::Io(e))? {
-            let metadata = entry.metadata().await
-                .map_err(|e| FileOpsError::Io(e))?;
+        while let Some(entry) = dir.next_entry().await.map_err(|e| FileOpsError::Io(e))? {
+            let metadata = entry.metadata().await.map_err(|e| FileOpsError::Io(e))?;
 
-            let modified = metadata.modified()
+            let modified = metadata
+                .modified()
                 .ok()
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| chrono::DateTime::from_timestamp(d.as_secs() as i64, 0))
@@ -344,7 +372,8 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             self.default_repo_path.join(dir_path)
         };
 
-        fs::create_dir_all(&full_path).await
+        fs::create_dir_all(&full_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))
     }
 
@@ -355,7 +384,8 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             self.default_repo_path.join(file_path)
         };
 
-        let metadata = fs::metadata(&full_path).await
+        let metadata = fs::metadata(&full_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))?;
 
         if metadata.is_dir() {
@@ -381,11 +411,13 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
 
         // Ensure parent directory exists
         if let Some(parent) = to_path.parent() {
-            fs::create_dir_all(parent).await
+            fs::create_dir_all(parent)
+                .await
                 .map_err(|e| FileOpsError::Io(e))?;
         }
 
-        fs::rename(&from_path, &to_path).await
+        fs::rename(&from_path, &to_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))
     }
 
@@ -404,11 +436,13 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
 
         // Ensure parent directory exists
         if let Some(parent) = to_path.parent() {
-            fs::create_dir_all(parent).await
+            fs::create_dir_all(parent)
+                .await
                 .map_err(|e| FileOpsError::Io(e))?;
         }
 
-        let metadata = fs::metadata(&from_path).await
+        let metadata = fs::metadata(&from_path)
+            .await
             .map_err(|e| FileOpsError::Io(e))?;
 
         if metadata.is_dir() {
@@ -416,7 +450,8 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
             self.copy_directory_recursive(&from_path, &to_path).await?;
         } else {
             // Copy single file
-            fs::copy(&from_path, &to_path).await
+            fs::copy(&from_path, &to_path)
+                .await
                 .map_err(|e| FileOpsError::Io(e))?;
         }
 
@@ -429,38 +464,42 @@ impl DataInfrastructureFileOperationsService {
     /// Uses iterative approach to avoid recursive async function limitations
     async fn copy_directory_recursive(&self, from: &Path, to: &Path) -> FileResult<()> {
         use std::collections::VecDeque;
-        
+
         // Stack of (source_path, dest_path) pairs to process
         let mut stack = VecDeque::new();
         stack.push_back((from.to_path_buf(), to.to_path_buf()));
 
         while let Some((src_path, dst_path)) = stack.pop_front() {
             // Create destination directory if it doesn't exist
-            fs::create_dir_all(&dst_path).await
+            fs::create_dir_all(&dst_path)
+                .await
                 .map_err(|e| FileOpsError::Io(e))?;
 
             // Read source directory entries
-            let mut entries = fs::read_dir(&src_path).await
+            let mut entries = fs::read_dir(&src_path)
+                .await
                 .map_err(|e| FileOpsError::Io(e))?;
 
             // Process each entry in the directory
-            while let Some(entry) = entries.next_entry().await
-                .map_err(|e| FileOpsError::Io(e))? {
-                
+            while let Some(entry) = entries
+                .next_entry()
+                .await
+                .map_err(|e| FileOpsError::Io(e))?
+            {
                 let entry_path = entry.path();
                 let entry_name = entry.file_name();
                 let dest_path = dst_path.join(&entry_name);
 
                 // Get entry metadata to determine if it's a directory or file
-                let entry_metadata = entry.metadata().await
-                    .map_err(|e| FileOpsError::Io(e))?;
+                let entry_metadata = entry.metadata().await.map_err(|e| FileOpsError::Io(e))?;
 
                 if entry_metadata.is_dir() {
                     // Add subdirectory to stack for processing
                     stack.push_back((entry_path, dest_path));
                 } else {
                     // Copy file
-                    fs::copy(&entry_path, &dest_path).await
+                    fs::copy(&entry_path, &dest_path)
+                        .await
                         .map_err(|e| FileOpsError::Io(e))?;
                 }
             }
@@ -478,7 +517,9 @@ pub struct DataInfrastructureWorkspaceFactory {
 
 impl DataInfrastructureWorkspaceFactory {
     pub fn new(default_repo_path: PathBuf) -> Self {
-        Self { _default_repo_path: default_repo_path }
+        Self {
+            _default_repo_path: default_repo_path,
+        }
     }
 }
 
@@ -490,11 +531,21 @@ impl WorkspaceFactory for DataInfrastructureWorkspaceFactory {
         repo_path: &Path,
     ) -> FileResult<Box<dyn SystemWorkspace>> {
         let inner: Arc<dyn DataInfraWorkspace> = if repo_path.join(".git").exists() {
-            Arc::new(GitWorktreeWorkspace::new(repo_path, task_id).await
-                .map_err(|e| FileOpsError::Path(format!("Git workspace creation failed: {}", e)))?)
+            Arc::new(
+                GitWorktreeWorkspace::new(repo_path, task_id)
+                    .await
+                    .map_err(|e| {
+                        FileOpsError::Path(format!("Git workspace creation failed: {}", e))
+                    })?,
+            )
         } else {
-            Arc::new(TempMirrorWorkspace::new(repo_path, task_id).await
-                .map_err(|e| FileOpsError::Path(format!("Temp workspace creation failed: {}", e)))?)
+            Arc::new(
+                TempMirrorWorkspace::new(repo_path, task_id)
+                    .await
+                    .map_err(|e| {
+                        FileOpsError::Path(format!("Temp workspace creation failed: {}", e))
+                    })?,
+            )
         };
 
         Ok(Box::new(WorkspaceAdapter::new(inner)))
@@ -502,8 +553,12 @@ impl WorkspaceFactory for DataInfrastructureWorkspaceFactory {
 }
 
 /// Helper function to create a file operations service instance
-pub fn create_file_operations_service(default_repo_path: PathBuf) -> Arc<dyn FileOperationsService> {
-    Arc::new(DataInfrastructureFileOperationsService::new(default_repo_path))
+pub fn create_file_operations_service(
+    default_repo_path: PathBuf,
+) -> Arc<dyn FileOperationsService> {
+    Arc::new(DataInfrastructureFileOperationsService::new(
+        default_repo_path,
+    ))
 }
 
 /// Helper function to create a workspace factory instance

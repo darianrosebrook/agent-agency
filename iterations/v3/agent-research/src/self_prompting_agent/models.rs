@@ -2,11 +2,11 @@
 //!
 //! Supports multiple model providers (Ollama, CoreML, etc.) with unified interface.
 
+use async_trait::async_trait;
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 
@@ -14,17 +14,23 @@ use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 #[async_trait]
 pub trait ModelProvider: Send + Sync {
     /// Generate text from a prompt
-    async fn generate(&self, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError>;
+    async fn generate(
+        &self,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError>;
 
     /// Get provider name
     fn name(&self) -> &str;
 
     /// Check if provider is available
-    async fn is_available(&self) -> bool { true }
+    async fn is_available(&self) -> bool {
+        true
+    }
 }
 
 /// Generation options
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationOptions {
     pub max_tokens: Option<usize>,
     pub temperature: Option<f64>,
@@ -75,7 +81,8 @@ impl ModelRegistry {
 
     /// Get the default provider
     pub fn get_default_provider(&self) -> Option<Arc<dyn ModelProvider>> {
-        self.default_provider.as_ref()
+        self.default_provider
+            .as_ref()
             .and_then(|name| self.providers.get(name).cloned())
     }
 
@@ -85,17 +92,31 @@ impl ModelRegistry {
     }
 
     /// Generate text using the default provider
-    pub async fn generate(&self, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError> {
-        let provider = self.get_default_provider()
-            .ok_or_else(|| SelfPromptingAgentError::ModelProvider("No default provider configured".to_string()))?;
+    pub async fn generate(
+        &self,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError> {
+        let provider = self.get_default_provider().ok_or_else(|| {
+            SelfPromptingAgentError::ModelProvider("No default provider configured".to_string())
+        })?;
 
         provider.generate(prompt, options).await
     }
 
     /// Generate text using a specific provider
-    pub async fn generate_with_provider(&self, provider_name: &str, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError> {
-        let provider = self.get_provider(provider_name)
-            .ok_or_else(|| SelfPromptingAgentError::ModelProvider(format!("Provider '{}' not found", provider_name)))?;
+    pub async fn generate_with_provider(
+        &self,
+        provider_name: &str,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError> {
+        let provider = self.get_provider(provider_name).ok_or_else(|| {
+            SelfPromptingAgentError::ModelProvider(format!(
+                "Provider '{}' not found",
+                provider_name
+            ))
+        })?;
 
         provider.generate(prompt, options).await
     }
@@ -121,9 +142,12 @@ impl OllamaProvider {
 
 #[async_trait]
 impl ModelProvider for OllamaProvider {
-    async fn generate(&self, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError> {
-        let model_name = options.model_name.as_ref()
-            .unwrap_or(&self.default_model);
+    async fn generate(
+        &self,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError> {
+        let model_name = options.model_name.as_ref().unwrap_or(&self.default_model);
 
         let request_body = serde_json::json!({
             "model": model_name,
@@ -138,24 +162,33 @@ impl ModelProvider for OllamaProvider {
         });
 
         let url = format!("{}/api/generate", self.base_url);
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| SelfPromptingAgentError::ModelProvider(format!("HTTP request failed: {}", e)))?;
+            .map_err(|e| {
+                SelfPromptingAgentError::ModelProvider(format!("HTTP request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
-            return Err(SelfPromptingAgentError::ModelProvider(format!("HTTP error: {}", response.status())));
+            return Err(SelfPromptingAgentError::ModelProvider(format!(
+                "HTTP error: {}",
+                response.status()
+            )));
         }
 
-        let response_json: serde_json::Value = response.json().await
-            .map_err(|e| SelfPromptingAgentError::ModelProvider(format!("Failed to parse response: {}", e)))?;
+        let response_json: serde_json::Value = response.json().await.map_err(|e| {
+            SelfPromptingAgentError::ModelProvider(format!("Failed to parse response: {}", e))
+        })?;
 
         response_json["response"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| SelfPromptingAgentError::ModelProvider("Invalid response format".to_string()))
+            .ok_or_else(|| {
+                SelfPromptingAgentError::ModelProvider("Invalid response format".to_string())
+            })
     }
 
     fn name(&self) -> &str {
@@ -164,7 +197,10 @@ impl ModelProvider for OllamaProvider {
 
     async fn is_available(&self) -> bool {
         let url = format!("{}/api/tags", self.base_url);
-        self.client.get(&url).send().await
+        self.client
+            .get(&url)
+            .send()
+            .await
             .map(|resp| resp.status().is_success())
             .unwrap_or(false)
     }
@@ -181,7 +217,10 @@ impl ExpertSelectionRouter {
         Self { registry }
     }
 
-    pub async fn select_expert(&self, task_description: &str) -> Result<String, SelfPromptingAgentError> {
+    pub async fn select_expert(
+        &self,
+        task_description: &str,
+    ) -> Result<String, SelfPromptingAgentError> {
         // TODO: Implement intelligent model selection with acceptance criteria:
         // - [ ] Analyze task description for required capabilities (reasoning, creativity, analysis)
         // - [ ] Evaluate model performance metrics and historical success rates
@@ -189,8 +228,9 @@ impl ExpertSelectionRouter {
         // - [ ] Implement A/B testing framework for model selection optimization
         // - [ ] Add fallback logic when preferred models are unavailable
         let providers = self.registry.list_providers();
-        providers.into_iter().next()
-            .ok_or_else(|| SelfPromptingAgentError::ModelProvider("No providers available".to_string()))
+        providers.into_iter().next().ok_or_else(|| {
+            SelfPromptingAgentError::ModelProvider("No providers available".to_string())
+        })
     }
 }
 
@@ -202,10 +242,17 @@ pub struct ConsensusBuilder {
 
 impl ConsensusBuilder {
     pub fn new(registry: Arc<ModelRegistry>, num_models: usize) -> Self {
-        Self { registry, num_models }
+        Self {
+            registry,
+            num_models,
+        }
     }
 
-    pub async fn build_consensus(&self, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError> {
+    pub async fn build_consensus(
+        &self,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError> {
         // Stub implementation - would generate with multiple models and combine results
         self.registry.generate(prompt, options).await
     }
@@ -219,7 +266,11 @@ pub struct ShadowRouter {
 }
 
 impl ShadowRouter {
-    pub fn new(registry: Arc<ModelRegistry>, shadow_provider: String, shadow_percentage: f64) -> Self {
+    pub fn new(
+        registry: Arc<ModelRegistry>,
+        shadow_provider: String,
+        shadow_percentage: f64,
+    ) -> Self {
         Self {
             registry,
             shadow_provider,
@@ -227,7 +278,11 @@ impl ShadowRouter {
         }
     }
 
-    pub async fn route_with_shadow(&self, prompt: &str, options: &GenerationOptions) -> Result<String, SelfPromptingAgentError> {
+    pub async fn route_with_shadow(
+        &self,
+        prompt: &str,
+        options: &GenerationOptions,
+    ) -> Result<String, SelfPromptingAgentError> {
         // Stub implementation - would route some traffic to shadow model
         self.registry.generate(prompt, options).await
     }
@@ -243,7 +298,11 @@ impl OfflineEvaluator {
         Self {}
     }
 
-    pub async fn evaluate_model(&self, model_name: &str, test_cases: Vec<(String, String)>) -> Result<f64, SelfPromptingAgentError> {
+    pub async fn evaluate_model(
+        &self,
+        model_name: &str,
+        test_cases: Vec<(String, String)>,
+    ) -> Result<f64, SelfPromptingAgentError> {
         // Stub implementation - would run evaluation on test cases
         Ok(0.85) // Mock score
     }

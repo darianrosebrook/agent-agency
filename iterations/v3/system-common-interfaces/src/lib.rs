@@ -27,31 +27,59 @@
 //!
 //! @author @darianrosebrook
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-pub mod database;
-pub mod observability;
-pub mod health;
-pub mod config;
-pub mod types;
-pub mod file_operations;
-pub mod learning;
-pub mod model_orchestration;
-pub mod memory;
 pub mod common;
+pub mod config;
+pub mod database;
+pub mod file_operations;
+pub mod health;
+pub mod learning;
+pub mod memory;
+pub mod model_orchestration;
+pub mod observability;
+pub mod types;
 
-pub use database::*;
-pub use observability::{ObservabilityInterface, TracingInterface, LoggingInterface, HealthMonitoringInterface, PerformanceMonitoringInterface, MetricValue, MetricType, ObsValue, SpanHandle, SpanStatus, PerformanceMetrics as ObsPerformanceMetrics, PerformanceMetric, SystemPerformanceStats, HealthReport as ObsHealthReport, ComponentHealth};
-pub use health::{HealthCheck, HealthCheckRegistry, HealthCheckExecutor, HealthCheckResult, HealthCheckInfo, HealthReport, HealthSummary, HealthCheckScheduler, ScheduledCheckStatus, DependencyHealthCheck, DependencyHealth, DatabaseHealthCheck, HttpHealthCheck};
-pub use config::*;
-pub use types::{TaskId, TaskPriority, TaskStatus, TaskResult, PerformanceMetrics, AuditLogEntry, MessageEnvelope, SystemEvent, EventMetadata, EventSeverity, Pagination, Sorting, SortDirection, Filter, FilterOperator, QueryParams, ApiResponse, ResponseMetadata, RateLimitInfo, ErrorResponse, ErrorDetails, VersionInfo, HealthCheckResponse, HealthCheckStatus, MetricDataPoint, MetricsSnapshot, ServiceInfo, CircuitBreakerState, CircuitBreakerStats, RetryConfig, TimeoutConfig};
-pub use file_operations::*;
-pub use learning::{LearningError, AlgorithmConfig, QTable, AlgorithmStatistics, Experience, LearningContext, TaskPerformance, OptimizationGoal, LearningInsights, Pattern, PatternType, Improvement, ImprovementType, Difficulty, OptimizationRecommendation, RecommendationType, Priority, LearningStatistics};
-pub use model_orchestration::{ModelOrchestrator, InferenceRequest as OrchestratorInferenceRequest, InferenceResponse, RoutingDecision, RoutingStrategy, ModelInstance, ModelCapabilities, PerformanceCharacteristics, ModelStatistics, OrchestrationStatistics, OrchestrationError, OrchestrationResult, Priority as OrchestratorPriority, PerformanceRequirements as OrchestratorPerformanceRequirements, QualityRequirements as OrchestratorQualityRequirements};
-pub use memory::*;
 pub use common::*;
+pub use config::*;
+pub use database::*;
+pub use file_operations::*;
+pub use health::{
+    DatabaseHealthCheck, DependencyHealth, DependencyHealthCheck, HealthCheck, HealthCheckExecutor,
+    HealthCheckInfo, HealthCheckRegistry, HealthCheckResult, HealthCheckScheduler, HealthReport,
+    HealthSummary, HttpHealthCheck, ScheduledCheckStatus,
+};
+pub use learning::{
+    AlgorithmConfig, AlgorithmStatistics, Difficulty, Experience, Improvement, ImprovementType,
+    LearningContext, LearningError, LearningInsights, LearningStatistics, OptimizationGoal,
+    OptimizationRecommendation, Pattern, PatternType, Priority, QTable, RecommendationType,
+    TaskPerformance,
+};
+pub use memory::*;
+pub use model_orchestration::{
+    InferenceRequest as OrchestratorInferenceRequest, InferenceResponse, ModelCapabilities,
+    ModelInstance, ModelOrchestrator, ModelStatistics, OrchestrationError, OrchestrationResult,
+    OrchestrationStatistics, PerformanceCharacteristics,
+    PerformanceRequirements as OrchestratorPerformanceRequirements,
+    Priority as OrchestratorPriority, QualityRequirements as OrchestratorQualityRequirements,
+    RoutingDecision, RoutingStrategy,
+};
+pub use observability::{
+    ComponentHealth, HealthMonitoringInterface, HealthReport as ObsHealthReport, LoggingInterface,
+    MetricType, MetricValue, ObsValue, ObservabilityInterface, PerformanceMetric,
+    PerformanceMetrics as ObsPerformanceMetrics, PerformanceMonitoringInterface, SpanHandle,
+    SpanStatus, SystemPerformanceStats, TracingInterface,
+};
+pub use types::{
+    ApiResponse, AuditLogEntry, CircuitBreakerState, CircuitBreakerStats, ErrorDetails,
+    ErrorResponse, EventMetadata, EventSeverity, Filter, FilterOperator, HealthCheckResponse,
+    HealthCheckStatus, MessageEnvelope, MetricDataPoint, MetricsSnapshot, Pagination,
+    PerformanceMetrics, QueryParams, RateLimitInfo, ResponseMetadata, RetryConfig, ServiceInfo,
+    SortDirection, Sorting, SystemEvent, TaskId, TaskPriority, TaskResult, TaskStatus,
+    TimeoutConfig, VersionInfo,
+};
 
 /// Common result type
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -120,4 +148,3 @@ pub enum OrderDirection {
     Asc,
     Desc,
 }
-

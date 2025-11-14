@@ -1,13 +1,13 @@
 //! Communication hub that orchestrates message passing
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::parallel_types::*;
-use crate::worker_types::{WorkerId, SubTaskId};
-use crate::WorkerMessage;
-use crate::error::*;
-use crate::communication::{MessageBroker, ChannelRegistry, ChannelConfig};
 use super::channels::BidirectionalChannel;
+use crate::communication::{ChannelConfig, ChannelRegistry, MessageBroker};
+use crate::error::*;
+use crate::parallel_types::*;
+use crate::worker_types::{SubTaskId, WorkerId};
+use crate::WorkerMessage;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Central communication hub for the parallel worker system
 pub struct CommunicationHub {
@@ -49,8 +49,14 @@ impl CommunicationHub {
     }
 
     /// Send a message to a specific worker
-    pub async fn send_to_worker(&self, worker_id: &WorkerId, message: WorkerMessage) -> CommunicationResult<()> {
-        self.channel_registry.send_to_worker(worker_id, message).await
+    pub async fn send_to_worker(
+        &self,
+        worker_id: &WorkerId,
+        message: WorkerMessage,
+    ) -> CommunicationResult<()> {
+        self.channel_registry
+            .send_to_worker(worker_id, message)
+            .await
     }
 
     /// Broadcast a message to all active workers
@@ -82,7 +88,8 @@ impl CommunicationHub {
 
     /// Clean up channels for completed workers
     pub fn cleanup_completed_workers(&self, completed_workers: &[WorkerId]) {
-        self.channel_registry.cleanup_completed_workers(completed_workers);
+        self.channel_registry
+            .cleanup_completed_workers(completed_workers);
     }
 
     /// Get all active worker IDs
@@ -141,7 +148,10 @@ impl MessageRouter {
         message_type: MessageType,
         handler: H,
     ) {
-        self.routes.entry(message_type).or_default().push(Box::new(handler));
+        self.routes
+            .entry(message_type)
+            .or_default()
+            .push(Box::new(handler));
     }
 
     /// Route a message to all registered handlers for its type

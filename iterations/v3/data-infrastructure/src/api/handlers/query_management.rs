@@ -1,26 +1,34 @@
 //! Query Management API handlers
-//! 
+//!
 //! This module contains all API handlers related to query management,
 //! including saved queries and query execution.
 
 use serde_json;
 use sqlx::Row;
 
-
 /// List saved queries
 pub async fn list_saved_queries(
     axum::extract::State(state): axum::extract::State<crate::AppState>,
-    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let limit = params.get("limit").and_then(|l| l.parse::<i64>().ok()).unwrap_or(50);
-    let offset = params.get("offset").and_then(|o| o.parse::<i64>().ok()).unwrap_or(0);
+    let limit = params
+        .get("limit")
+        .and_then(|l| l.parse::<i64>().ok())
+        .unwrap_or(50);
+    let offset = params
+        .get("offset")
+        .and_then(|o| o.parse::<i64>().ok())
+        .unwrap_or(0);
     let user_id = params.get("user_id");
 
     // Build query with optional user filter
     let _limit_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &limit;
     let _offset_ref: &(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync) = &offset;
 
-    let (query, params_vec): (String, Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>>) = if let Some(user_id) = user_id {
+    let (query, params_vec): (
+        String,
+        Vec<Box<dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync>>,
+    ) = if let Some(user_id) = user_id {
         let user_id_str = user_id.as_str().to_string();
         (r#"
             SELECT id, name, description, query_sql, parameters, created_by, created_at, updated_at, is_public
@@ -40,7 +48,8 @@ pub async fn list_saved_queries(
     };
 
     // Convert Vec<Box<dyn ...>> to slice of references
-    let params_refs: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> = params_vec.iter().map(|b| b.as_ref()).collect();
+    let params_refs: Vec<&(dyn sqlx::Encode<'_, sqlx::Postgres> + Send + Sync)> =
+        params_vec.iter().map(|b| b.as_ref()).collect();
 
     match state.db_client.query(&query, &params_refs).await {
         Ok(rows) => {
@@ -78,22 +87,28 @@ pub async fn list_saved_queries(
 /// Save a query
 pub async fn save_query(
     axum::extract::State(state): axum::extract::State<crate::AppState>,
-    axum::extract::Json(query_data): axum::extract::Json<serde_json::Value>
+    axum::extract::Json(query_data): axum::extract::Json<serde_json::Value>,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
     // Validate required fields
-    let name = query_data.get("name")
+    let name = query_data
+        .get("name")
         .and_then(|n| n.as_str())
         .ok_or(axum::http::StatusCode::BAD_REQUEST)?;
-    let query_sql = query_data.get("query_sql")
+    let query_sql = query_data
+        .get("query_sql")
         .and_then(|q| q.as_str())
         .ok_or(axum::http::StatusCode::BAD_REQUEST)?;
-    let created_by = query_data.get("created_by")
+    let created_by = query_data
+        .get("created_by")
         .and_then(|c| c.as_str())
         .unwrap_or("unknown");
 
     let description = query_data.get("description").and_then(|d| d.as_str());
     let parameters = query_data.get("parameters").and_then(|p| p.as_str());
-    let is_public = query_data.get("is_public").and_then(|p| p.as_bool()).unwrap_or(false);
+    let is_public = query_data
+        .get("is_public")
+        .and_then(|p| p.as_bool())
+        .unwrap_or(false);
 
     // Validate query SQL (basic check)
     if query_sql.trim().is_empty() {
@@ -109,7 +124,22 @@ pub async fn save_query(
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
     "#;
 
-    match state.db_client.execute(insert_query, &[&query_id, &name, &description, &query_sql, &parameters, &created_by, &is_public]).await {
+    match state
+        .db_client
+        .execute(
+            insert_query,
+            &[
+                &query_id,
+                &name,
+                &description,
+                &query_sql,
+                &parameters,
+                &created_by,
+                &is_public,
+            ],
+        )
+        .await
+    {
         Ok(_) => {
             // TODO: Log the query save operation using log_audit_event
 
@@ -131,7 +161,7 @@ pub async fn save_query(
 /// Delete a saved query
 pub async fn delete_saved_query(
     axum::extract::State(state): axum::extract::State<crate::AppState>,
-    axum::extract::Path(query_id): axum::extract::Path<String>
+    axum::extract::Path(query_id): axum::extract::Path<String>,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
     // Validate query ID format
     if let Err(_) = uuid::Uuid::parse_str(&query_id) {

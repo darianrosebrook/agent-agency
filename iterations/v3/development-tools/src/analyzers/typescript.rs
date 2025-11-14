@@ -4,12 +4,15 @@
 //! complexity calculation, violation detection, and best practices checking.
 //! Extracted from workers/src/caws/analyzers/typescript.rs.
 
-use super::{LanguageAnalyzer, LanguageAnalysisResult, ProgrammingLanguage, ViolationSeverity, LanguageViolation, LanguageWarning, SourceLocation};
+use super::{
+    LanguageAnalysisResult, LanguageAnalyzer, LanguageViolation, LanguageWarning,
+    ProgrammingLanguage, SourceLocation, ViolationSeverity,
+};
 use std::collections::HashMap;
 
 /// TypeScript-specific analyzer
 #[derive(Debug)]
-pub struct TypeScriptAnalyzer ;
+pub struct TypeScriptAnalyzer;
 
 impl TypeScriptAnalyzer {
     /// Create a new TypeScript analyzer
@@ -25,7 +28,8 @@ impl TypeScriptAnalyzer {
 
         // Calculate basic complexity metrics
         let lines_of_code = code.lines().count() as f32;
-        let function_count = code.matches("function ").count() as f32 + code.matches("=>").count() as f32;
+        let function_count =
+            code.matches("function ").count() as f32 + code.matches("=>").count() as f32;
         let class_count = code.matches("class ").count() as f32;
         let interface_count = code.matches("interface ").count() as f32;
         let type_count = code.matches("type ").count() as f32;
@@ -92,7 +96,13 @@ impl TypeScriptAnalyzer {
     }
 
     /// Check for common TypeScript violations and warnings
-    fn check_typescript_violations(&self, code: &str, file_path: &str, violations: &mut Vec<LanguageViolation>, warnings: &mut Vec<LanguageWarning>) {
+    fn check_typescript_violations(
+        &self,
+        code: &str,
+        file_path: &str,
+        violations: &mut Vec<LanguageViolation>,
+        warnings: &mut Vec<LanguageWarning>,
+    ) {
         let lines: Vec<&str> = code.lines().collect();
 
         for (line_num, line) in lines.iter().enumerate() {
@@ -142,7 +152,9 @@ impl TypeScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use proper logging library instead of console.log".to_string()),
+                    suggestion: Some(
+                        "Use proper logging library instead of console.log".to_string(),
+                    ),
                 });
             }
 
@@ -158,7 +170,9 @@ impl TypeScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use environment variables or configuration for URLs".to_string()),
+                    suggestion: Some(
+                        "Use environment variables or configuration for URLs".to_string(),
+                    ),
                 });
             }
 
@@ -183,7 +197,8 @@ impl TypeScriptAnalyzer {
                 violations.push(LanguageViolation {
                     rule_id: "NON_NULL_ASSERTION".to_string(),
                     severity: ViolationSeverity::Medium,
-                    message: "Non-null assertion operator (!) found - ensure null safety".to_string(),
+                    message: "Non-null assertion operator (!) found - ensure null safety"
+                        .to_string(),
                     location: SourceLocation {
                         file_path: file_path.to_string(),
                         line: line_number,
@@ -191,7 +206,9 @@ impl TypeScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use proper null checking instead of non-null assertion".to_string()),
+                    suggestion: Some(
+                        "Use proper null checking instead of non-null assertion".to_string(),
+                    ),
                 });
             }
 
@@ -244,7 +261,11 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
         matches!(ext, "ts" | "tsx")
     }
 
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<f32, String> {
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<f32, String> {
         // Calculate complexity based on diff content
         let added_lines = diff.lines().filter(|line| line.starts_with('+')).count() as f32;
         let removed_lines = diff.lines().filter(|line| line.starts_with('-')).count() as f32;
@@ -253,7 +274,11 @@ impl LanguageAnalyzer for TypeScriptAnalyzer {
         let mut complexity = (added_lines + removed_lines) * 0.5;
 
         // Higher complexity for structural changes
-        if diff.contains("function ") || diff.contains("class ") || diff.contains("interface ") || diff.contains("type ") {
+        if diff.contains("function ")
+            || diff.contains("class ")
+            || diff.contains("interface ")
+            || diff.contains("type ")
+        {
             complexity *= 2.0;
         }
 

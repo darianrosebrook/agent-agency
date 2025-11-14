@@ -9,21 +9,21 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
 use anyhow::Result;
+use std::sync::Arc;
+use tracing::{debug, info};
 use uuid::Uuid;
-use tracing::{info, debug};
 
-use agent_agency_contracts::WorkingSpec;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
 use agent_agency_contracts::planning_io::ExecutionPlan as ContractExecutionPlan;
+use agent_agency_contracts::WorkingSpec;
 
 use crate::council::Council;
-use crate::planning::council_integration::CouncilIntegration;
 use crate::planning::caws_debate_scorer::CawsDebateScorer;
-use crate::planning::worktree_manager::WorktreeManager;
 use crate::planning::caws_quality_gates::CawsQualityGateExecutor;
+use crate::planning::council_integration::CouncilIntegration;
+use crate::planning::worktree_manager::WorktreeManager;
 
 /// CAWS Adjudication Cycle stages
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,7 +71,7 @@ pub struct CawsAdjudicationCycle {
     #[cfg(not(feature = "mcp"))]
     #[allow(dead_code)] // Reserved for future use
     tool_registry: Option<()>, // Placeholder when mcp feature disabled
-    
+
     /// CAWS quality gates executor for waiver-aware gate checking
     quality_gates_executor: Option<CawsQualityGateExecutor>,
 }
@@ -83,12 +83,7 @@ impl CawsAdjudicationCycle {
         council_integration: Arc<dyn CouncilIntegration>,
         debate_scorer: Arc<CawsDebateScorer>,
     ) -> Self {
-        Self::with_worktree_manager(
-            council,
-            council_integration,
-            debate_scorer,
-            None,
-        )
+        Self::with_worktree_manager(council, council_integration, debate_scorer, None)
     }
 
     /// Create new CAWS adjudication cycle with worktree manager
@@ -145,7 +140,8 @@ impl CawsAdjudicationCycle {
             council_integration,
             debate_scorer,
             worktree_manager,
-            claim_extractor: claim_extractor.or_else(|| Some(Arc::new(agent_research::ClaimExtractionProcessor::new()))),
+            claim_extractor: claim_extractor
+                .or_else(|| Some(Arc::new(agent_research::ClaimExtractionProcessor::new()))),
             #[cfg(feature = "mcp")]
             tool_registry: None,
             #[cfg(not(feature = "mcp"))]
@@ -165,23 +161,34 @@ impl CawsAdjudicationCycle {
 
         // Stage 1: Pleading - Worker presents completed work
         info!("Stage 1: Pleading - Presenting work to council");
-        let pleading_result = self.stage_pleading(artifacts).await?;
+        let _pleading_result = self.stage_pleading(artifacts).await?;
 
         // Stage 2: Examination - Council reviews evidence
         info!("Stage 2: Examination - Council reviewing evidence");
-        let (examination_result, quality_gate_result) = self.stage_examination(execution_plan, working_spec, artifacts).await?;
+        let (examination_result, quality_gate_result) = self
+            .stage_examination(execution_plan, working_spec, artifacts)
+            .await?;
 
         // Stage 3: Deliberation - Council debates
         info!("Stage 3: Deliberation - Council deliberating");
-        let deliberation_result = self.stage_deliberation(artifacts, working_spec, &examination_result, quality_gate_result.as_ref()).await?;
+        let _deliberation_result = self
+            .stage_deliberation(
+                artifacts,
+                working_spec,
+                &examination_result,
+                quality_gate_result.as_ref(),
+            )
+            .await?;
 
         // Stage 4: Verdict - Council reaches decision
         info!("Stage 4: Verdict - Council reaching decision");
-        let verdict_result = self.stage_verdict(artifacts, working_spec, &examination_result).await?;
+        let verdict_result = self
+            .stage_verdict(artifacts, working_spec, &examination_result)
+            .await?;
 
         // Stage 5: Publication - Publish verdict and merge
         info!("Stage 5: Publication - Publishing verdict");
-        let publication_result = self.stage_publication(&verdict_result, artifacts).await?;
+        let _publication_result = self.stage_publication(&verdict_result, artifacts).await?;
 
         Ok(AdjudicationResult {
             stage: AdjudicationStage::Publication,
@@ -193,15 +200,18 @@ impl CawsAdjudicationCycle {
                     dissent: String::new(),
                     remediation: vec![],
                     constitutional_refs: vec![],
-                    verification_summary: agent_agency_contracts::final_verdict::VerificationSummary {
-                        claims_total: examination_result.total_claims as u32,
-                        claims_verified: examination_result.verified_claims as u32,
-                        coverage_pct: if examination_result.total_claims > 0 {
-                            (examination_result.verified_claims as f32 / examination_result.total_claims as f32) * 100.0
-                        } else {
-                            0.0
+                    verification_summary:
+                        agent_agency_contracts::final_verdict::VerificationSummary {
+                            claims_total: examination_result.total_claims as u32,
+                            claims_verified: examination_result.verified_claims as u32,
+                            coverage_pct: if examination_result.total_claims > 0 {
+                                (examination_result.verified_claims as f32
+                                    / examination_result.total_claims as f32)
+                                    * 100.0
+                            } else {
+                                0.0
+                            },
                         },
-                    },
                 }
             }),
             approved: verdict_result.approved,
@@ -216,26 +226,23 @@ impl CawsAdjudicationCycle {
     }
 
     /// Stage 1: Pleading - Worker presents completed work
-    async fn stage_pleading(
-        &self,
-        artifacts: &[ExecutionArtifacts],
-    ) -> Result<()> {
+    async fn stage_pleading(&self, artifacts: &[ExecutionArtifacts]) -> Result<()> {
         // Present each artifact to council
         for artifact in artifacts {
             // Extract milestone ID from artifact metadata
             // ArtifactMetadata doesn't support arbitrary key-value storage, so use task_id as fallback
             let milestone_id = artifact.task_id.to_string();
-            
-            let worker_id = artifact.provenance.worker_id
+
+            let worker_id = artifact
+                .provenance
+                .worker_id
                 .as_ref()
                 .and_then(|w| Uuid::parse_str(w).ok())
                 .unwrap_or_else(Uuid::new_v4);
 
-            self.council_integration.present_work(
-                &[artifact.clone()],
-                milestone_id.as_str(),
-                worker_id,
-            ).await?;
+            self.council_integration
+                .present_work(&[artifact.clone()], milestone_id.as_str(), worker_id)
+                .await?;
         }
 
         Ok(())
@@ -247,7 +254,10 @@ impl CawsAdjudicationCycle {
         execution_plan: &ContractExecutionPlan,
         working_spec: &WorkingSpec,
         artifacts: &[ExecutionArtifacts],
-    ) -> Result<(ClaimExtractionResults, Option<crate::planning::caws_quality_gates::CawsQualityGateResult>)> {
+    ) -> Result<(
+        ClaimExtractionResults,
+        Option<crate::planning::caws_quality_gates::CawsQualityGateResult>,
+    )> {
         // Convert ContractExecutionPlan to ExecutionPlan for review
         use crate::planning::plan_types::ExecutionPlan as PlanningExecutionPlan;
         let planning_execution_plan = PlanningExecutionPlan {
@@ -264,24 +274,32 @@ impl CawsAdjudicationCycle {
         } else {
             None
         };
-        
-        let review_result = self.council_integration.review_plan(
-            &planning_execution_plan,
-            working_spec,
-            spec_id,
-            Some(std::path::Path::new(".")),
-        ).await?;
+
+        let review_result = self
+            .council_integration
+            .review_plan(
+                &planning_execution_plan,
+                working_spec,
+                spec_id,
+                Some(std::path::Path::new(".")),
+            )
+            .await?;
 
         // If plan needs refinement, that's okay - it will be handled in Phase 5 refinement loop
         // Only reject if council explicitly rejected (not just requesting refinement)
         if !review_result.approved && !review_result.needs_refinement {
-            return Err(anyhow::anyhow!("Plan rejected during examination: {}", 
-                review_result.refinement_reason));
+            return Err(anyhow::anyhow!(
+                "Plan rejected during examination: {}",
+                review_result.refinement_reason
+            ));
         }
-        
+
         // If refinement is needed, log it but continue - refinement happens in Phase 5
         if review_result.needs_refinement {
-            tracing::info!("Plan requires refinement during examination: {}", review_result.refinement_reason);
+            tracing::info!(
+                "Plan requires refinement during examination: {}",
+                review_result.refinement_reason
+            );
         }
 
         // Extract and verify claims from artifacts if claim extractor is available
@@ -295,7 +313,7 @@ impl CawsAdjudicationCycle {
         {
             if let Some(ref registry) = self.tool_registry {
                 debug!("Discovering CAWS tools for examination stage");
-                
+
                 // Discover tools from MCP registry
                 if let Err(e) = registry.discover_tools().await {
                     debug!("Tool discovery failed: {}", e);
@@ -303,12 +321,16 @@ impl CawsAdjudicationCycle {
 
                 // Get compliance checking tools
                 let compliance_tools = registry
-                    .get_tools_by_category(&crate::planning::caws_tool_registry::CawsToolCategory::ComplianceChecking)
+                    .get_tools_by_category(
+                        &crate::planning::caws_tool_registry::CawsToolCategory::ComplianceChecking,
+                    )
                     .await;
 
                 // Get quality gate tools
                 let quality_tools = registry
-                    .get_tools_by_category(&crate::planning::caws_tool_registry::CawsToolCategory::QualityGates)
+                    .get_tools_by_category(
+                        &crate::planning::caws_tool_registry::CawsToolCategory::QualityGates,
+                    )
                     .await;
 
                 debug!(
@@ -320,13 +342,22 @@ impl CawsAdjudicationCycle {
                 // Invoke compliance checking tools for validation
                 for tool in &compliance_tools {
                     debug!("Invoking compliance tool: {} ({})", tool.name, tool.tool_id);
-                    
+
                     // Prepare tool parameters from execution plan and artifacts
                     let mut parameters = std::collections::HashMap::new();
-                    parameters.insert("working_spec_id".to_string(), serde_json::json!(working_spec.id));
-                    parameters.insert("execution_plan_id".to_string(), serde_json::json!(execution_plan.id.to_string()));
-                    parameters.insert("artifact_count".to_string(), serde_json::json!(artifacts.len()));
-                    
+                    parameters.insert(
+                        "working_spec_id".to_string(),
+                        serde_json::json!(working_spec.id),
+                    );
+                    parameters.insert(
+                        "execution_plan_id".to_string(),
+                        serde_json::json!(execution_plan.id.to_string()),
+                    );
+                    parameters.insert(
+                        "artifact_count".to_string(),
+                        serde_json::json!(artifacts.len()),
+                    );
+
                     // Invoke tool
                     match registry.invoke_tool(&tool.tool_id, parameters).await {
                         Ok(result) => {
@@ -350,14 +381,26 @@ impl CawsAdjudicationCycle {
 
                 // Invoke quality gate tools for validation
                 for tool in &quality_tools {
-                    debug!("Invoking quality gate tool: {} ({})", tool.name, tool.tool_id);
-                    
+                    debug!(
+                        "Invoking quality gate tool: {} ({})",
+                        tool.name, tool.tool_id
+                    );
+
                     // Prepare tool parameters
                     let mut parameters = std::collections::HashMap::new();
-                    parameters.insert("working_spec_id".to_string(), serde_json::json!(working_spec.id));
-                    parameters.insert("risk_tier".to_string(), serde_json::json!(working_spec.risk_tier));
-                    parameters.insert("artifact_count".to_string(), serde_json::json!(artifacts.len()));
-                    
+                    parameters.insert(
+                        "working_spec_id".to_string(),
+                        serde_json::json!(working_spec.id),
+                    );
+                    parameters.insert(
+                        "risk_tier".to_string(),
+                        serde_json::json!(working_spec.risk_tier),
+                    );
+                    parameters.insert(
+                        "artifact_count".to_string(),
+                        serde_json::json!(artifacts.len()),
+                    );
+
                     // Invoke tool
                     match registry.invoke_tool(&tool.tool_id, parameters).await {
                         Ok(result) => {
@@ -382,16 +425,26 @@ impl CawsAdjudicationCycle {
         }
 
         // Execute CAWS quality gates with waiver recognition and complexity mode
-        let mut quality_gate_result: Option<crate::planning::caws_quality_gates::CawsQualityGateResult> = None;
-        
+        let mut quality_gate_result: Option<
+            crate::planning::caws_quality_gates::CawsQualityGateResult,
+        > = None;
+
         // Detect complexity mode for quality gates
-        let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
-            .unwrap_or_default();
-        
+        let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(
+            std::path::Path::new("."),
+        )
+        .unwrap_or_default();
+
         if let Some(ref executor) = self.quality_gates_executor {
-            debug!("Executing CAWS quality gates with waiver recognition and mode: {:?}", complexity_mode);
-            
-            match executor.execute_quality_gates_with_mode("ci", Some(complexity_mode)).await {
+            debug!(
+                "Executing CAWS quality gates with waiver recognition and mode: {:?}",
+                complexity_mode
+            );
+
+            match executor
+                .execute_quality_gates_with_mode("ci", Some(complexity_mode))
+                .await
+            {
                 Ok(gate_result) => {
                     quality_gate_result = Some(gate_result.clone());
                     info!(
@@ -400,14 +453,17 @@ impl CawsAdjudicationCycle {
                         gate_result.waived_violations,
                         gate_result.blocking_violations
                     );
-                    
+
                     if gate_result.active_waivers > 0 {
                         info!("Active waivers: {}", gate_result.active_waivers);
                         for waiver in &gate_result.waivers {
-                            debug!("  - {}: {} (expires: {})", waiver.id, waiver.title, waiver.expires_at);
+                            debug!(
+                                "  - {}: {} (expires: {})",
+                                waiver.id, waiver.title, waiver.expires_at
+                            );
                         }
                     }
-                    
+
                     // If there are blocking violations, this will be considered in deliberation
                     if !gate_result.passed {
                         warn!(
@@ -425,7 +481,10 @@ impl CawsAdjudicationCycle {
             // Try to initialize quality gates executor if not already set
             if let Ok(executor) = CawsQualityGateExecutor::new(".") {
                 debug!("Initialized quality gates executor");
-                match executor.execute_quality_gates_with_mode("ci", Some(complexity_mode)).await {
+                match executor
+                    .execute_quality_gates_with_mode("ci", Some(complexity_mode))
+                    .await
+                {
                     Ok(gate_result) => {
                         quality_gate_result = Some(gate_result.clone());
                         info!(
@@ -445,13 +504,13 @@ impl CawsAdjudicationCycle {
         }
 
         // Claim extraction is always-on (research feature is in default features)
-        if let Some(ref claim_extractor) = self.claim_extractor {
+        if let Some(ref _claim_extractor) = self.claim_extractor {
             debug!("Running claim extraction on artifacts");
-            
+
             for artifact in artifacts {
                 // Extract text content from artifact for claim extraction
                 let text_content = self.extract_text_from_artifact(artifact);
-                
+
                 if !text_content.is_empty() {
                     let processing_context = agent_research::ProcessingContext {
                         task_id: artifact.task_id,
@@ -460,22 +519,35 @@ impl CawsAdjudicationCycle {
                         line_number: None,
                         surrounding_context: String::new(),
                         domain_hints: vec![],
-                        metadata: artifact.metadata.as_ref().map(|m| {
-                            let mut map = std::collections::HashMap::new();
-                            if let Some(compression) = m.compression_applied {
-                                map.insert("compression_applied".to_string(), serde_json::json!(compression));
-                            }
-                            if let Some(location) = &m.storage_location {
-                                map.insert("storage_location".to_string(), serde_json::json!(location));
-                            }
-                            if let Some(policy) = &m.retention_policy {
-                                map.insert("retention_policy".to_string(), serde_json::json!(policy));
-                            }
-                            for tag in &m.tags {
-                                map.insert(format!("tag:{}", tag), serde_json::json!(true));
-                            }
-                            map
-                        }).unwrap_or_default(),
+                        metadata: artifact
+                            .metadata
+                            .as_ref()
+                            .map(|m| {
+                                let mut map = std::collections::HashMap::new();
+                                if let Some(compression) = m.compression_applied {
+                                    map.insert(
+                                        "compression_applied".to_string(),
+                                        serde_json::json!(compression),
+                                    );
+                                }
+                                if let Some(location) = &m.storage_location {
+                                    map.insert(
+                                        "storage_location".to_string(),
+                                        serde_json::json!(location),
+                                    );
+                                }
+                                if let Some(policy) = &m.retention_policy {
+                                    map.insert(
+                                        "retention_policy".to_string(),
+                                        serde_json::json!(policy),
+                                    );
+                                }
+                                for tag in &m.tags {
+                                    map.insert(format!("tag:{}", tag), serde_json::json!(true));
+                                }
+                                map
+                            })
+                            .unwrap_or_default(),
                         input_text: text_content.clone(),
                         language: None,
                     };
@@ -486,21 +558,34 @@ impl CawsAdjudicationCycle {
                     match extractor.run(&text_content, &processing_context).await {
                         Ok(extraction_result) => {
                             total_claims += extraction_result.atomic_claims.len();
-                            verified_claims += extraction_result.atomic_claims.iter()
-                                .filter(|c| matches!(c.verification_status, agent_research::VerificationStatus::Verified))
+                            verified_claims += extraction_result
+                                .atomic_claims
+                                .iter()
+                                .filter(|c| {
+                                    matches!(
+                                        c.verification_status,
+                                        agent_research::VerificationStatus::Verified
+                                    )
+                                })
                                 .count();
                             evidence_count += extraction_result.verification_evidence.len();
-                            
+
                             // Calculate average confidence
                             if !extraction_result.atomic_claims.is_empty() {
-                                let avg_confidence = extraction_result.atomic_claims.iter()
+                                let avg_confidence = extraction_result
+                                    .atomic_claims
+                                    .iter()
                                     .map(|c| c.confidence)
-                                    .sum::<f64>() / extraction_result.atomic_claims.len() as f64;
+                                    .sum::<f64>()
+                                    / extraction_result.atomic_claims.len() as f64;
                                 total_confidence += avg_confidence;
                             }
                         }
                         Err(e) => {
-                            debug!("Claim extraction failed for artifact {}: {}", artifact.task_id, e);
+                            debug!(
+                                "Claim extraction failed for artifact {}: {}",
+                                artifact.task_id, e
+                            );
                             // Continue with other artifacts even if one fails
                         }
                     }
@@ -580,7 +665,8 @@ impl CawsAdjudicationCycle {
             if !diff.diff_content.is_empty() {
                 // Extract context lines from diff (non-code lines)
                 for line in &diff.diff_content.lines().collect::<Vec<_>>() {
-                    if line.starts_with("+++") || line.starts_with("---") || line.starts_with("@@") {
+                    if line.starts_with("+++") || line.starts_with("---") || line.starts_with("@@")
+                    {
                         text_parts.push(line.to_string());
                     }
                 }
@@ -613,11 +699,14 @@ impl CawsAdjudicationCycle {
         // If multiple artifacts present, use CAWS Debate methodology to score competing solutions
         if artifacts.len() > 1 {
             info!("Multiple artifacts present - conducting CAWS Debate");
-            
+
             // Extract worker IDs from artifacts
-            let solutions: Vec<(ExecutionArtifacts, Uuid)> = artifacts.iter()
+            let solutions: Vec<(ExecutionArtifacts, Uuid)> = artifacts
+                .iter()
                 .map(|artifact| {
-                    let worker_id = artifact.provenance.worker_id
+                    let worker_id = artifact
+                        .provenance
+                        .worker_id
                         .as_ref()
                         .and_then(|w| Uuid::parse_str(w).ok())
                         .unwrap_or_else(Uuid::new_v4);
@@ -626,7 +715,10 @@ impl CawsAdjudicationCycle {
                 .collect();
 
             // Detect complexity mode for mode-aware scoring
-            let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+            let complexity_mode =
+                crate::planning::caws_complexity_mode::CawsComplexityMode::detect(
+                    std::path::Path::new("."),
+                )
                 .ok();
 
             // Score debate and determine winner (claim verification and quality gate results passed to scorer)
@@ -635,89 +727,112 @@ impl CawsAdjudicationCycle {
                 // Score with quality gates (waiver-aware) and complexity mode
                 let mut solution_scores = Vec::new();
                 for (artifact, worker_id) in &solutions {
-                    let score = self.debate_scorer.score_solution_with_claims_gates_and_mode(
-                        artifact, *worker_id, working_spec, claim_results, Some(gate_result), complexity_mode
-                    ).await?;
+                    let score = self
+                        .debate_scorer
+                        .score_solution_with_claims_gates_and_mode(
+                            artifact,
+                            *worker_id,
+                            working_spec,
+                            claim_results,
+                            Some(gate_result),
+                            complexity_mode,
+                        )
+                        .await?;
                     solution_scores.push(score);
                 }
-                
+
                 // Find winner
-                let winner = solution_scores.iter()
-                    .max_by(|a, b| a.total_score.partial_cmp(&b.total_score).unwrap_or(std::cmp::Ordering::Equal))
+                let winner = solution_scores
+                    .iter()
+                    .max_by(|a, b| {
+                        a.total_score
+                            .partial_cmp(&b.total_score)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
                     .ok_or_else(|| anyhow::anyhow!("Failed to determine debate winner"))?;
-                
+
                 // Calculate confidence
                 let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
                 scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-                
+
                 let confidence = if scores.len() >= 2 {
                     let gap = scores[0] - scores[1];
                     (gap * 2.0).min(1.0).max(0.5)
                 } else {
                     0.8
                 };
-                
+
                 crate::planning::caws_debate_scorer::DebateScoringResult {
                     winner_solution_id: winner.solution_id.clone(),
                     winner_worker_id: winner.worker_id,
                     winning_score: winner.total_score,
                     confidence,
                     solution_scores: solution_scores.clone(),
-                    judge_notes: self.debate_scorer.generate_judge_notes_with_claims(&solution_scores, winner, claim_results),
+                    judge_notes: self.debate_scorer.generate_judge_notes_with_claims(
+                        &solution_scores,
+                        winner,
+                        claim_results,
+                    ),
                 }
             } else {
                 // Fallback to scoring without quality gates
-                self.debate_scorer.score_debate_with_claims(
-                    solutions, 
-                    working_spec,
-                    claim_results,
-                ).await?
+                self.debate_scorer
+                    .score_debate_with_claims(solutions, working_spec, claim_results)
+                    .await?
             };
-            
+
             info!(
                 "CAWS Debate concluded: Winner is solution {} from worker {} with score {:.3}",
                 debate_result.winner_solution_id,
                 debate_result.winner_worker_id,
                 debate_result.winning_score
             );
-            
+
             // Log judge notes for audit trail
             info!("Debate judge notes: {}", debate_result.judge_notes);
         } else {
             // Single artifact - score it for consistency
-            let worker_id = artifacts[0].provenance.worker_id
+            let worker_id = artifacts[0]
+                .provenance
+                .worker_id
                 .as_ref()
                 .and_then(|w| Uuid::parse_str(w).ok())
                 .unwrap_or_else(Uuid::new_v4);
-            
+
             // Detect complexity mode for mode-aware scoring
-            let complexity_mode = crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new("."))
+            let complexity_mode =
+                crate::planning::caws_complexity_mode::CawsComplexityMode::detect(
+                    std::path::Path::new("."),
+                )
                 .ok();
 
             // Score with quality gates if available, using mode-aware scoring
             let score = if let Some(gate_result) = quality_gate_result {
-                self.debate_scorer.score_solution_with_claims_gates_and_mode(
-                    &artifacts[0],
-                    worker_id,
-                    working_spec,
-                    claim_results,
-                    Some(gate_result),
-                    complexity_mode,
-                ).await?
+                self.debate_scorer
+                    .score_solution_with_claims_gates_and_mode(
+                        &artifacts[0],
+                        worker_id,
+                        working_spec,
+                        claim_results,
+                        Some(gate_result),
+                        complexity_mode,
+                    )
+                    .await?
             } else {
                 // Fallback to claims-only scoring (backward compatibility)
-                self.debate_scorer.score_solution_with_claims(
-                    &artifacts[0],
-                    worker_id,
-                    working_spec,
-                    claim_results,
-                ).await?
+                self.debate_scorer
+                    .score_solution_with_claims(
+                        &artifacts[0],
+                        worker_id,
+                        working_spec,
+                        claim_results,
+                    )
+                    .await?
             };
-            
+
             info!(
                 "Single artifact scored: Worker {} with total score {:.3}",
-                score.worker_id,
-                score.total_score
+                score.worker_id, score.total_score
             );
         }
 
@@ -733,25 +848,29 @@ impl CawsAdjudicationCycle {
     ) -> Result<WorkPresentationResult> {
         // Get verdict from council for primary artifact
         if let Some(primary_artifact) = artifacts.first() {
-            let mut verdict = self.council_integration.get_verdict(
-                primary_artifact,
-                working_spec,
-            ).await?;
+            let mut verdict = self
+                .council_integration
+                .get_verdict(primary_artifact, working_spec)
+                .await?;
 
             // Update verification summary with claim extraction results
-            verdict.verification_summary = agent_agency_contracts::final_verdict::VerificationSummary {
-                claims_total: claim_results.total_claims as u32,
-                claims_verified: claim_results.verified_claims as u32,
-                coverage_pct: if claim_results.total_claims > 0 {
-                    (claim_results.verified_claims as f32 / claim_results.total_claims as f32) * 100.0
-                } else {
-                    0.0f32
-                },
-            };
+            verdict.verification_summary =
+                agent_agency_contracts::final_verdict::VerificationSummary {
+                    claims_total: claim_results.total_claims as u32,
+                    claims_verified: claim_results.verified_claims as u32,
+                    coverage_pct: if claim_results.total_claims > 0 {
+                        (claim_results.verified_claims as f32 / claim_results.total_claims as f32)
+                            * 100.0
+                    } else {
+                        0.0f32
+                    },
+                };
 
             Ok(WorkPresentationResult {
-                approved: matches!(verdict.decision, 
-                    agent_agency_contracts::final_verdict::FinalDecision::Accept),
+                approved: matches!(
+                    verdict.decision,
+                    agent_agency_contracts::final_verdict::FinalDecision::Accept
+                ),
                 needs_refinement: !verdict.remediation.is_empty(),
                 refinement_reason: if verdict.remediation.is_empty() {
                     String::new()
@@ -771,35 +890,44 @@ impl CawsAdjudicationCycle {
         verdict_result: &WorkPresentationResult,
         artifacts: &[ExecutionArtifacts],
     ) -> Result<()> {
-        use tracing::{warn, error};
         use std::process::Command;
-        
+        use tracing::{error, warn};
+
         if verdict_result.approved {
             info!("Verdict approved - merging work");
-            
+
             // Merge worktrees if worktree manager is available
             if let Some(ref worktree_manager) = self.worktree_manager {
                 // Get all active worktrees
                 let active_worktrees = worktree_manager.list_worktrees().await;
-                
+
                 // Match artifacts to worktrees by worker_id
                 for artifact in artifacts {
                     let worker_id_str = artifact.provenance.worker_id.as_ref();
                     if let Some(worker_id_str) = worker_id_str {
                         if let Ok(worker_id) = Uuid::parse_str(worker_id_str) {
                             // Find worktree for this worker
-                            if let Some(worktree_info) = active_worktrees.iter()
-                                .find(|wt| wt.worker_id == worker_id) {
-                                
-                                info!("Merging worktree {} for worker {}", worktree_info.worktree_id, worker_id);
-                                
+                            if let Some(worktree_info) =
+                                active_worktrees.iter().find(|wt| wt.worker_id == worker_id)
+                            {
+                                info!(
+                                    "Merging worktree {} for worker {}",
+                                    worktree_info.worktree_id, worker_id
+                                );
+
                                 // Merge worktree
-                                match worktree_manager.merge_worktree(worktree_info.worktree_id).await {
+                                match worktree_manager
+                                    .merge_worktree(worktree_info.worktree_id)
+                                    .await
+                                {
                                     Ok(merge_result) => {
                                         if !merge_result.conflicts.is_empty() {
-                                            warn!("Merge conflicts detected in {} files: {:?}", 
-                                                merge_result.conflicts.len(), merge_result.conflicts);
-                                            
+                                            warn!(
+                                                "Merge conflicts detected in {} files: {:?}",
+                                                merge_result.conflicts.len(),
+                                                merge_result.conflicts
+                                            );
+
                                             // TODO: Implement council resolution request for merge conflicts
                                             //       Currently logs conflicts and continues; should implement automatic council resolution request workflow for merge conflict handling.
                                             //
@@ -837,12 +965,15 @@ impl CawsAdjudicationCycle {
                                             // - Reviewer Requirements: Council integration and workflow expertise
                                             info!("Merge conflicts will require manual resolution");
                                         } else {
-                                            info!("Successfully merged worktree {} ({} files changed)", 
+                                            info!("Successfully merged worktree {} ({} files changed)",
                                                 worktree_info.worktree_id, merge_result.files_changed);
                                         }
                                     }
                                     Err(e) => {
-                                        error!("Failed to merge worktree {}: {}", worktree_info.worktree_id, e);
+                                        error!(
+                                            "Failed to merge worktree {}: {}",
+                                            worktree_info.worktree_id, e
+                                        );
                                         // Continue with other worktrees even if one fails
                                     }
                                 }
@@ -851,7 +982,7 @@ impl CawsAdjudicationCycle {
                     }
                 }
             }
-            
+
             // Commit verdict to git with CAWS-VERDICT-ID trailer
             if let Some(ref verdict) = verdict_result.verdict {
                 let verdict_id = Uuid::new_v4();
@@ -863,7 +994,7 @@ impl CawsAdjudicationCycle {
                     verdict.votes.len(),
                     verdict.dissent
                 );
-                
+
                 // Commit verdict as a git note or annotation
                 // Using git notes for verdict storage (non-intrusive)
                 let note_output = Command::new("git")
@@ -873,7 +1004,7 @@ impl CawsAdjudicationCycle {
                     .arg(&commit_message)
                     .arg("HEAD")
                     .output();
-                
+
                 match note_output {
                     Ok(output) if output.status.success() => {
                         info!("Committed CAWS verdict {} to git notes", verdict_id);
@@ -889,23 +1020,31 @@ impl CawsAdjudicationCycle {
             }
         } else {
             info!("Verdict rejected - work will not be merged");
-            
+
             // Cleanup worktrees if verdict is rejected
             if let Some(ref worktree_manager) = self.worktree_manager {
                 let active_worktrees = worktree_manager.list_worktrees().await;
-                
+
                 for artifact in artifacts {
                     let worker_id_str = artifact.provenance.worker_id.as_ref();
                     if let Some(worker_id_str) = worker_id_str {
                         if let Ok(worker_id) = Uuid::parse_str(worker_id_str) {
-                            if let Some(worktree_info) = active_worktrees.iter()
-                                .find(|wt| wt.worker_id == worker_id) {
-                                
-                                info!("Cleaning up rejected worktree {} for worker {}", 
-                                    worktree_info.worktree_id, worker_id);
-                                
-                                if let Err(e) = worktree_manager.cleanup_worktree(worktree_info.worktree_id).await {
-                                    warn!("Failed to cleanup rejected worktree {}: {}", worktree_info.worktree_id, e);
+                            if let Some(worktree_info) =
+                                active_worktrees.iter().find(|wt| wt.worker_id == worker_id)
+                            {
+                                info!(
+                                    "Cleaning up rejected worktree {} for worker {}",
+                                    worktree_info.worktree_id, worker_id
+                                );
+
+                                if let Err(e) = worktree_manager
+                                    .cleanup_worktree(worktree_info.worktree_id)
+                                    .await
+                                {
+                                    warn!(
+                                        "Failed to cleanup rejected worktree {}: {}",
+                                        worktree_info.worktree_id, e
+                                    );
                                 }
                             }
                         }
@@ -920,4 +1059,3 @@ impl CawsAdjudicationCycle {
 
 // Re-export WorkPresentationResult from council_integration
 use crate::planning::council_integration::WorkPresentationResult;
-

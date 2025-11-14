@@ -2,10 +2,10 @@
 //!
 //! Main MCP server implementation for handling tool requests and responses.
 
-use schemars::JsonSchema;
+use crate::mcp_caws_integration::McpCawsIntegration;
 use crate::mcp_types::*;
 use crate::{CawsIntegration, ToolDiscovery, ToolRegistry};
-use crate::mcp_caws_integration::McpCawsIntegration;
+use schemars::JsonSchema;
 // use caws_runtime_validator::integration::McpCawsIntegration;
 #[cfg(feature = "memory")]
 use agent_memory::MemorySystem;
@@ -18,16 +18,20 @@ use jsonrpc_ws_server::ServerBuilder as WsServerBuilder;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
-use tokio::sync::{Mutex as TokioMutex, RwLock, oneshot};
 use std::sync::Mutex;
+use std::time::{Duration, Instant, SystemTime};
+use tokio::sync::{oneshot, Mutex as TokioMutex, RwLock};
 use tokio::time::timeout;
 // Using council package for security functionality
 // Real circuit breaker implementation using system-resilience
-use system_resilience::{CircuitBreaker as ResilienceCircuitBreaker, CircuitBreakerConfig as ResilienceCircuitBreakerConfig, CircuitBreakerStats as ResilienceCircuitBreakerStats, CircuitState};
+use system_resilience::{
+    CircuitBreaker as ResilienceCircuitBreaker,
+    CircuitBreakerConfig as ResilienceCircuitBreakerConfig,
+    CircuitBreakerStats as ResilienceCircuitBreakerStats, CircuitState,
+};
 // Real audit logger implementation using system-quality-security
-use system_quality_security::{AuditLogger, AuditLoggerConfig};
 use system_quality_security::audit::{AuditResult, AuditSeverity};
+use system_quality_security::{AuditLogger, AuditLoggerConfig};
 
 #[derive(Debug, Clone, Default, JsonSchema)]
 pub struct CircuitBreakerStats {
@@ -44,7 +48,11 @@ impl From<ResilienceCircuitBreakerStats> for CircuitBreakerStats {
             total_requests: stats.total_requests,
             successful_requests: stats.success_count,
             failed_requests: stats.failure_count,
-            circuit_open_count: if stats.state == CircuitState::Open { 1 } else { 0 },
+            circuit_open_count: if stats.state == CircuitState::Open {
+                1
+            } else {
+                0
+            },
             last_failure_time: stats.last_failure,
         }
     }
@@ -77,10 +85,12 @@ impl CircuitBreaker {
         Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
     {
         let mut stats = self.stats.lock().unwrap();
-        
+
         // Check if circuit is open
         if let Some(last_failure) = stats.last_failure_time {
-            if last_failure.elapsed().unwrap_or_default() < Duration::from_millis(self.config.recovery_timeout_ms) {
+            if last_failure.elapsed().unwrap_or_default()
+                < Duration::from_millis(self.config.recovery_timeout_ms)
+            {
                 stats.circuit_open_count += 1;
                 tracing::warn!(
                     circuit_open_count = %stats.circuit_open_count,
@@ -88,21 +98,24 @@ impl CircuitBreaker {
                     "Circuit breaker is open, rejecting request"
                 );
                 return Err(Box::new(security::CircuitBreakerError::CircuitOpen(
-                    format!("Circuit is open, last failure {}ms ago", last_failure.elapsed().unwrap_or_default().as_millis())
+                    format!(
+                        "Circuit is open, last failure {}ms ago",
+                        last_failure.elapsed().unwrap_or_default().as_millis()
+                    ),
                 )));
             }
         }
-        
+
         // Drop the lock before executing the function
         drop(stats);
-        
+
         // Execute with timeout protection
         let result = timeout(Duration::from_secs(30), f()).await;
-        
+
         // Re-acquire lock to update stats
         let mut stats = self.stats.lock().unwrap();
         stats.total_requests += 1;
-        
+
         match result {
             Ok(Ok(value)) => {
                 stats.successful_requests += 1;
@@ -141,7 +154,9 @@ impl CircuitBreaker {
                         "Circuit breaker opened due to timeout"
                     );
                 }
-                Err(Box::new(security::CircuitBreakerError::Timeout(Duration::from_secs(30))))
+                Err(Box::new(security::CircuitBreakerError::Timeout(
+                    Duration::from_secs(30),
+                )))
             }
         }
     }
@@ -169,7 +184,7 @@ fn get_circuit_breaker_registry() -> Arc<CircuitBreakerRegistry> {
 // Database client for rate limiting persistence
 // Implemented locally to avoid circular dependency with agent-data-processing
 
-use sqlx::{PgPool, postgres::PgPoolOptions, Row, Postgres, Encode, Type};
+use sqlx::{postgres::PgPoolOptions, Encode, PgPool, Postgres, Row, Type};
 
 /// Query parameter wrapper for type-safe parameterized queries
 #[derive(Debug, Clone)]
@@ -186,16 +201,23 @@ pub enum QueryParam {
 }
 
 impl<'q> Encode<'q, Postgres> for QueryParam {
-    fn encode_by_ref(&self, buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
         match self {
             QueryParam::String(s) => <String as Encode<'q, Postgres>>::encode_by_ref(s, buf),
             QueryParam::I32(i) => <i32 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
             QueryParam::I64(i) => <i64 as Encode<'q, Postgres>>::encode_by_ref(i, buf),
             QueryParam::Uuid(u) => <uuid::Uuid as Encode<'q, Postgres>>::encode_by_ref(u, buf),
             QueryParam::Bool(b) => <bool as Encode<'q, Postgres>>::encode_by_ref(b, buf),
-            QueryParam::Json(j) => <serde_json::Value as Encode<'q, Postgres>>::encode_by_ref(j, buf),
+            QueryParam::Json(j) => {
+                <serde_json::Value as Encode<'q, Postgres>>::encode_by_ref(j, buf)
+            }
             QueryParam::Bytes(b) => <Vec<u8> as Encode<'q, Postgres>>::encode_by_ref(b, buf),
-            QueryParam::Timestamp(t) => <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf),
+            QueryParam::Timestamp(t) => {
+                <chrono::DateTime<chrono::Utc> as Encode<'q, Postgres>>::encode_by_ref(t, buf)
+            }
             QueryParam::Null => sqlx::encode::IsNull::Yes,
         }
     }
@@ -218,13 +240,17 @@ impl DatabaseClient {
             .max_connections(10)
             .connect(database_url)
             .await?;
-        
+
         Ok(Self {
             pool: Arc::new(pool),
         })
     }
 
-    pub async fn execute_with_params(&self, query: &str, params: &[QueryParam]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute_with_params(
+        &self,
+        query: &str,
+        params: &[QueryParam],
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut query_builder = sqlx::query(query);
         for param in params {
             query_builder = match param {
@@ -243,7 +269,11 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub async fn query_with_params(&self, query: &str, params: &[QueryParam]) -> Result<Vec<sqlx::postgres::PgRow>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn query_with_params(
+        &self,
+        query: &str,
+        params: &[QueryParam],
+    ) -> Result<Vec<sqlx::postgres::PgRow>, Box<dyn std::error::Error + Send + Sync>> {
         let mut query_builder = sqlx::query(query);
         for param in params {
             query_builder = match param {
@@ -286,9 +316,11 @@ impl system_observability::slo::SloDatabaseClient for McpDatabaseClientAdapter {
         // Note: sqlx doesn't support binding trait objects directly
         // We use a workaround: execute queries through the pool with manual parameter handling
         // This matches the pattern used in data-infrastructure::DatabaseClient
-        
+
         if params.is_empty() {
-            let result = sqlx::query(query).execute(self.client.pool.as_ref()).await?;
+            let result = sqlx::query(query)
+                .execute(self.client.pool.as_ref())
+                .await?;
             Ok(result)
         } else {
             // For parameterized queries, we need to use a different approach
@@ -301,7 +333,8 @@ impl system_observability::slo::SloDatabaseClient for McpDatabaseClientAdapter {
                 Query: {}, Parameters: {}",
                 query.chars().take(100).collect::<String>(),
                 params.len()
-            ).into())
+            )
+            .into())
         }
     }
 
@@ -312,9 +345,11 @@ impl system_observability::slo::SloDatabaseClient for McpDatabaseClientAdapter {
     ) -> Result<Vec<sqlx::postgres::PgRow>, Box<dyn std::error::Error + Send + Sync>> {
         // Note: sqlx doesn't support binding trait objects directly
         // We use a workaround similar to data-infrastructure::DatabaseClient
-        
+
         if params.is_empty() {
-            let rows = sqlx::query(query).fetch_all(self.client.pool.as_ref()).await?;
+            let rows = sqlx::query(query)
+                .fetch_all(self.client.pool.as_ref())
+                .await?;
             Ok(rows)
         } else {
             // For parameterized queries, return error indicating limitation
@@ -324,7 +359,8 @@ impl system_observability::slo::SloDatabaseClient for McpDatabaseClientAdapter {
                 Query: {}, Parameters: {}",
                 query.chars().take(100).collect::<String>(),
                 params.len()
-            ).into())
+            )
+            .into())
         }
     }
 }
@@ -337,14 +373,13 @@ pub enum SLOStatus {
     Unknown,
 }
 
-
 // Using CircuitBreakerConfig from council crate
 
 pub mod security {
     use super::*;
 
     #[derive(Debug)]
-pub enum CircuitBreakerError {
+    pub enum CircuitBreakerError {
         CircuitOpen(String),
         OperationFailed(String),
         Timeout(std::time::Duration),
@@ -353,9 +388,13 @@ pub enum CircuitBreakerError {
     impl std::fmt::Display for CircuitBreakerError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                CircuitBreakerError::CircuitOpen(msg) => write!(f, "Circuit breaker is open: {}", msg),
+                CircuitBreakerError::CircuitOpen(msg) => {
+                    write!(f, "Circuit breaker is open: {}", msg)
+                }
                 CircuitBreakerError::OperationFailed(msg) => write!(f, "Operation failed: {}", msg),
-                CircuitBreakerError::Timeout(duration) => write!(f, "Operation timed out after {:?}", duration),
+                CircuitBreakerError::Timeout(duration) => {
+                    write!(f, "Operation timed out after {:?}", duration)
+                }
             }
         }
     }
@@ -363,7 +402,7 @@ pub enum CircuitBreakerError {
     impl std::error::Error for CircuitBreakerError {}
 
     #[derive(Debug, Clone, JsonSchema)]
-pub struct CircuitBreakerStats {
+    pub struct CircuitBreakerStats {
         pub total_requests: u64,
         pub successful_requests: u64,
         pub failed_requests: u64,
@@ -408,8 +447,11 @@ pub struct RateLimitMiddleware {
 }
 
 impl RateLimitMiddleware {
-    pub fn new(global_config: Option<RateLimitConfig>, endpoint_configs: Vec<RateLimitConfig>) -> Self {
-        Self { 
+    pub fn new(
+        global_config: Option<RateLimitConfig>,
+        endpoint_configs: Vec<RateLimitConfig>,
+    ) -> Self {
+        Self {
             config: global_config.unwrap_or_else(RateLimitConfig::default),
             endpoint_configs,
             ip_tracking: Arc::new(TokioMutex::new(HashMap::new())),
@@ -420,24 +462,26 @@ impl RateLimitMiddleware {
     pub async fn should_allow(&self, endpoint: &str, ip: &str) -> bool {
         let now = Instant::now();
         let window_duration = Duration::from_secs(60); // 1 minute window
-        
+
         // Get endpoint-specific config or use global config
-        let endpoint_config = self.endpoint_configs.iter()
+        let endpoint_config = self
+            .endpoint_configs
+            .iter()
             .find(|config| endpoint.contains(&config.endpoint_pattern))
             .unwrap_or(&self.config);
-        
+
         // Check burst limit first (short-term protection)
         {
             let mut burst_tracking = self.burst_tracking.lock().await;
             let burst_key = format!("{}:{}", ip, endpoint);
             let burst_entry = burst_tracking.entry(burst_key.clone()).or_insert((now, 0));
-            
+
             // Reset burst window if expired (10 second burst window)
             if now.duration_since(burst_entry.0) >= Duration::from_secs(10) {
                 burst_entry.0 = now;
                 burst_entry.1 = 0;
             }
-            
+
             // Check burst limit
             if burst_entry.1 >= endpoint_config.burst_limit {
                 tracing::warn!(
@@ -449,21 +493,23 @@ impl RateLimitMiddleware {
                 );
                 return false;
             }
-            
+
             burst_entry.1 += 1;
         }
-        
+
         // Check per-minute rate limit
         {
             let mut ip_tracking = self.ip_tracking.lock().await;
-            let ip_entry = ip_tracking.entry(format!("{}:{}", ip, endpoint)).or_insert((now, 0));
-            
+            let ip_entry = ip_tracking
+                .entry(format!("{}:{}", ip, endpoint))
+                .or_insert((now, 0));
+
             // Reset window if expired
             if now.duration_since(ip_entry.0) >= window_duration {
                 ip_entry.0 = now;
                 ip_entry.1 = 0;
             }
-            
+
             // Check rate limit
             if ip_entry.1 >= endpoint_config.max_requests_per_minute {
                 tracing::warn!(
@@ -475,10 +521,10 @@ impl RateLimitMiddleware {
                 );
                 return false;
             }
-            
+
             ip_entry.1 += 1;
         }
-        
+
         true
     }
 
@@ -486,7 +532,7 @@ impl RateLimitMiddleware {
         let mut stats = HashMap::new();
         let now = Instant::now();
         let window_duration = Duration::from_secs(60);
-        
+
         // Clean up expired entries and collect stats
         {
             let rt = tokio::runtime::Handle::current();
@@ -500,7 +546,7 @@ impl RateLimitMiddleware {
                 }
             });
         }
-        
+
         stats
     }
 }
@@ -515,16 +561,16 @@ fn validate_api_input(input: &serde_json::Value, field: &str) -> Result<(), Stri
 
 fn validate_tool_input(input: &serde_json::Value) -> Result<(), String> {
     let obj = input.as_object().ok_or("Input must be a JSON object")?;
-    
+
     // Validate required fields
     if !obj.contains_key("name") {
         return Err("Tool name is required".to_string());
     }
-    
+
     if !obj.contains_key("id") {
         return Err("Tool ID is required".to_string());
     }
-    
+
     // Validate name field
     if let Some(name) = obj.get("name") {
         let name_str = name.as_str().ok_or("Tool name must be a string")?;
@@ -539,7 +585,7 @@ fn validate_tool_input(input: &serde_json::Value) -> Result<(), String> {
             return Err("Tool name contains potentially malicious content".to_string());
         }
     }
-    
+
     // Validate ID field
     if let Some(id) = obj.get("id") {
         let id_str = id.as_str().ok_or("Tool ID must be a string")?;
@@ -550,22 +596,27 @@ fn validate_tool_input(input: &serde_json::Value) -> Result<(), String> {
             return Err("Tool ID too long (max 50 characters)".to_string());
         }
         // Validate ID format (alphanumeric, hyphens, underscores only)
-        if !id_str.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+        if !id_str
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        {
             return Err("Tool ID contains invalid characters".to_string());
         }
     }
-    
+
     // Validate parameters if present
     if let Some(params) = obj.get("parameters") {
         validate_parameters(params)?;
     }
-    
+
     Ok(())
 }
 
 fn validate_auth_input(input: &serde_json::Value) -> Result<(), String> {
-    let obj = input.as_object().ok_or("Auth input must be a JSON object")?;
-    
+    let obj = input
+        .as_object()
+        .ok_or("Auth input must be a JSON object")?;
+
     if let Some(api_key) = obj.get("api_key") {
         let key_str = api_key.as_str().ok_or("API key must be a string")?;
         if key_str.is_empty() {
@@ -578,7 +629,7 @@ fn validate_auth_input(input: &serde_json::Value) -> Result<(), String> {
             return Err("API key too long (maximum 256 characters)".to_string());
         }
     }
-    
+
     Ok(())
 }
 
@@ -587,11 +638,11 @@ fn validate_metrics_input(input: &serde_json::Value) -> Result<(), String> {
     if input.is_null() {
         return Ok(()); // Null is acceptable for metrics
     }
-    
+
     if !input.is_object() && !input.is_array() {
         return Err("Metrics input must be an object or array".to_string());
     }
-    
+
     Ok(())
 }
 
@@ -612,8 +663,7 @@ fn validate_generic_input(input: &serde_json::Value) -> Result<(), String> {
                 return Err("Array too large (max 1000 elements)".to_string());
             }
             for (i, item) in arr.iter().enumerate() {
-                validate_generic_input(item)
-                    .map_err(|e| format!("Array element {}: {}", i, e))?;
+                validate_generic_input(item).map_err(|e| format!("Array element {}: {}", i, e))?;
             }
         }
         serde_json::Value::Object(obj) => {
@@ -630,23 +680,23 @@ fn validate_generic_input(input: &serde_json::Value) -> Result<(), String> {
         }
         _ => {} // Numbers, booleans, null are generally safe
     }
-    
+
     Ok(())
 }
 
 fn validate_parameters(params: &serde_json::Value) -> Result<(), String> {
     let param_obj = params.as_object().ok_or("Parameters must be an object")?;
-    
+
     for (param_name, param_value) in param_obj.iter() {
         if param_name.len() > 50 {
             return Err(format!("Parameter name too long: {}", param_name));
         }
-        
+
         // Validate parameter value
         validate_generic_input(param_value)
             .map_err(|e| format!("Parameter '{}': {}", param_name, e))?;
     }
-    
+
     Ok(())
 }
 
@@ -669,14 +719,12 @@ fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("&", "&amp;");
-            
+
             serde_json::Value::String(sanitized)
         }
         serde_json::Value::Array(arr) => {
-            let sanitized_arr: Vec<serde_json::Value> = arr
-                .iter()
-                .map(sanitize_api_input)
-                .collect();
+            let sanitized_arr: Vec<serde_json::Value> =
+                arr.iter().map(sanitize_api_input).collect();
             serde_json::Value::Array(sanitized_arr)
         }
         serde_json::Value::Object(obj) => {
@@ -707,16 +755,16 @@ impl CircuitBreakerRegistry {
             name: Some(service_name.to_string()),
             failure_threshold: config.failure_threshold as u64,
             success_threshold: config.success_threshold as u64,
-            timeout_ms: None, // Use default timeout
+            timeout_ms: None,        // Use default timeout
             failure_window_ms: None, // Use default window
             reset_timeout_ms: config.recovery_timeout_ms,
         };
-        
+
         let breaker = Arc::new(ResilienceCircuitBreaker::new(resilience_config));
-        
+
         let mut breakers = self.breakers.write().await;
         breakers.insert(service_name.to_string(), breaker);
-        
+
         tracing::info!(
             service_name = %service_name,
             failure_threshold = config.failure_threshold,
@@ -728,15 +776,15 @@ impl CircuitBreakerRegistry {
     async fn get_all_stats(&self) -> HashMap<String, CircuitBreakerStats> {
         let breakers = self.breakers.read().await;
         let mut stats_map = HashMap::new();
-        
+
         for (service_name, breaker) in breakers.iter() {
             let resilience_stats = breaker.get_stats().await;
             stats_map.insert(service_name.clone(), resilience_stats.into());
         }
-        
+
         stats_map
     }
-    
+
     async fn get_breaker(&self, service_name: &str) -> Option<Arc<ResilienceCircuitBreaker>> {
         let breakers = self.breakers.read().await;
         breakers.get(service_name).cloned()
@@ -782,12 +830,9 @@ impl McpAuditLoggerAdapter {
             AuditResult::Failure("Authentication failed".to_string())
         };
 
-        self.logger.log_authentication(
-            &user_id,
-            "authenticate",
-            result,
-            context,
-        ).await;
+        self.logger
+            .log_authentication(&user_id, "authenticate", result, context)
+            .await;
 
         Ok(())
     }
@@ -804,8 +849,14 @@ impl McpAuditLoggerAdapter {
         if let Some(ip) = ip_address {
             context.insert("source_ip".to_string(), serde_json::Value::String(ip));
         }
-        context.insert("event_type".to_string(), serde_json::Value::String(event_type.clone()));
-        context.insert("description".to_string(), serde_json::Value::String(description.clone()));
+        context.insert(
+            "event_type".to_string(),
+            serde_json::Value::String(event_type.clone()),
+        );
+        context.insert(
+            "description".to_string(),
+            serde_json::Value::String(description.clone()),
+        );
 
         // Map string severity to AuditSeverity
         let audit_severity = match severity.as_str() {
@@ -817,11 +868,9 @@ impl McpAuditLoggerAdapter {
         };
 
         // Use log_policy_violation for security events
-        self.logger.log_policy_violation(
-            "system",
-            &description,
-            context,
-        ).await;
+        self.logger
+            .log_policy_violation("system", &description, context)
+            .await;
 
         Ok(())
     }
@@ -836,17 +885,30 @@ impl McpAuditLoggerAdapter {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut metadata = HashMap::new();
         metadata.insert("endpoint".to_string(), serde_json::Value::String(endpoint));
-        metadata.insert("limit_type".to_string(), serde_json::Value::String(limit_type));
-        metadata.insert("attempts".to_string(), serde_json::Value::Number(serde_json::Number::from(attempts)));
-        metadata.insert("limit".to_string(), serde_json::Value::Number(serde_json::Number::from(limit)));
+        metadata.insert(
+            "limit_type".to_string(),
+            serde_json::Value::String(limit_type),
+        );
+        metadata.insert(
+            "attempts".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(attempts)),
+        );
+        metadata.insert(
+            "limit".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(limit)),
+        );
 
         self.log_security_event(
             "rate_limit_exceeded".to_string(),
             "medium".to_string(),
-            format!("Rate limit exceeded: {} attempts (limit: {})", attempts, limit),
+            format!(
+                "Rate limit exceeded: {} attempts (limit: {})",
+                attempts, limit
+            ),
             Some(ip_address),
             metadata,
-        ).await
+        )
+        .await
     }
 
     async fn log_circuit_breaker_trip(
@@ -856,24 +918,36 @@ impl McpAuditLoggerAdapter {
         threshold: u32,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut metadata = HashMap::new();
-        metadata.insert("service_name".to_string(), serde_json::Value::String(service_name.clone()));
-        metadata.insert("failure_count".to_string(), serde_json::Value::Number(serde_json::Number::from(failure_count)));
-        metadata.insert("threshold".to_string(), serde_json::Value::Number(serde_json::Number::from(threshold)));
+        metadata.insert(
+            "service_name".to_string(),
+            serde_json::Value::String(service_name.clone()),
+        );
+        metadata.insert(
+            "failure_count".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(failure_count)),
+        );
+        metadata.insert(
+            "threshold".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(threshold)),
+        );
 
         self.log_security_event(
             "circuit_breaker_trip".to_string(),
             "high".to_string(),
-            format!("Circuit breaker tripped for service '{}': {} failures (threshold: {})", 
-                service_name, failure_count, threshold),
+            format!(
+                "Circuit breaker tripped for service '{}': {} failures (threshold: {})",
+                service_name, failure_count, threshold
+            ),
             None,
             metadata,
-        ).await
+        )
+        .await
     }
 }
 
 /// Global audit logger instance
 lazy_static! {
-    static ref AUDIT_LOGGER: Arc<Mutex<Option<Arc<McpAuditLoggerAdapter>>>> = 
+    static ref AUDIT_LOGGER: Arc<Mutex<Option<Arc<McpAuditLoggerAdapter>>>> =
         Arc::new(Mutex::new(None));
 }
 
@@ -934,14 +1008,17 @@ fn get_audit_logger() -> Result<Arc<McpAuditLoggerAdapter>, String> {
         Err("Audit logger not initialized. Call init_audit_logger() first.".to_string())
     }
 }
-use system_observability::slo::{SLOTracker, SLODefinition, create_default_slos};
 use std::net::SocketAddr;
+use system_observability::slo::{create_default_slos, SLODefinition, SLOTracker};
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 // Prometheus metrics
-use prometheus::{Encoder, TextEncoder, register_counter, register_histogram, register_gauge, Counter, Histogram, Gauge};
 use lazy_static::lazy_static;
+use prometheus::{
+    register_counter, register_gauge, register_histogram, Counter, Encoder, Gauge, Histogram,
+    TextEncoder,
+};
 
 lazy_static! {
     static ref HTTP_REQUESTS_TOTAL: Counter = register_counter!(
@@ -1124,7 +1201,12 @@ impl AuthRateLimiter {
     }
 
     /// Create with database client for persistent storage
-    fn new_with_db(global_limit: u32, per_ip_limit: u32, window_duration: u64, db_client: Arc<DatabaseClient>) -> Self {
+    fn new_with_db(
+        global_limit: u32,
+        per_ip_limit: u32,
+        window_duration: u64,
+        db_client: Arc<DatabaseClient>,
+    ) -> Self {
         Self {
             global_limit,
             per_ip_limit,
@@ -1140,7 +1222,7 @@ impl AuthRateLimiter {
     async fn load_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ref db_client) = self.db_client {
             tracing::info!("Loading persistent authentication rate limit data from database");
-            
+
             // Load blocked IPs and their block expiration times
             let blocked_ips_query = "SELECT ip, blocked_until, risk_score FROM rate_limit_blocks WHERE blocked_until > NOW()";
             match db_client.query_with_params(blocked_ips_query, &[]).await {
@@ -1148,28 +1230,62 @@ impl AuthRateLimiter {
                     let mut attempts = self.ip_attempts.lock().await;
                     let now = Instant::now();
                     let current_time = chrono::Utc::now();
-                    
+
                     for row in rows {
-                        let ip: String = row.try_get("ip")
-                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get ip from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
-                        let blocked_until_dt: chrono::DateTime<chrono::Utc> = row.try_get("blocked_until")
-                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get blocked_until from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
-                        let risk_score: i32 = row.try_get("risk_score")
-                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get risk_score from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
-                        
+                        let ip: String = row.try_get("ip").map_err(|e| {
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to get ip from row: {}", e),
+                            ))
+                                as Box<dyn std::error::Error + Send + Sync>
+                        })?;
+                        let blocked_until_dt: chrono::DateTime<chrono::Utc> =
+                            row.try_get("blocked_until").map_err(|e| {
+                                Box::new(std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    format!("Failed to get blocked_until from row: {}", e),
+                                ))
+                                    as Box<dyn std::error::Error + Send + Sync>
+                            })?;
+                        let risk_score: i32 = row.try_get("risk_score").map_err(|e| {
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to get risk_score from row: {}", e),
+                            ))
+                                as Box<dyn std::error::Error + Send + Sync>
+                        })?;
+
                         // Convert DateTime to Instant
-                        let duration_until_block = blocked_until_dt.signed_duration_since(current_time);
+                        let duration_until_block =
+                            blocked_until_dt.signed_duration_since(current_time);
                         if duration_until_block.num_seconds() > 0 {
-                            let blocked_until_instant = now + Duration::from_secs(duration_until_block.num_seconds() as u64);
-                            
+                            let blocked_until_instant = now
+                                + Duration::from_secs(duration_until_block.num_seconds() as u64);
+
                             // Update or insert blocked IP
                             if let Some(entry) = attempts.get(&ip) {
                                 // Update existing entry - preserve count
                                 let (_, count, _, _) = *entry;
-                                attempts.insert(ip.clone(), (Instant::now(), count, Some(blocked_until_instant), risk_score as u32));
+                                attempts.insert(
+                                    ip.clone(),
+                                    (
+                                        Instant::now(),
+                                        count,
+                                        Some(blocked_until_instant),
+                                        risk_score as u32,
+                                    ),
+                                );
                             } else {
                                 // Insert new entry
-                                attempts.insert(ip.clone(), (Instant::now(), 0, Some(blocked_until_instant), risk_score as u32));
+                                attempts.insert(
+                                    ip.clone(),
+                                    (
+                                        Instant::now(),
+                                        0,
+                                        Some(blocked_until_instant),
+                                        risk_score as u32,
+                                    ),
+                                );
                             }
                         }
                     }
@@ -1180,29 +1296,42 @@ impl AuthRateLimiter {
                     // Continue execution - rate limiting will work without persistence
                 }
             }
-            
+
             // Load suspicious IPs and their risk scores
             let suspicious_query = "SELECT ip, risk_score FROM rate_limit_suspicious";
             match db_client.query_with_params(suspicious_query, &[]).await {
                 Ok(rows) => {
                     let mut suspicious_map = self.suspicious_ips.lock().await;
-                    
+
                     for row in rows {
-                        let ip: String = row.try_get("ip")
-                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get ip from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
-                        let risk_score: i32 = row.try_get("risk_score")
-                            .map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to get risk_score from row: {}", e))) as Box<dyn std::error::Error + Send + Sync>)?;
-                        
+                        let ip: String = row.try_get("ip").map_err(|e| {
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to get ip from row: {}", e),
+                            ))
+                                as Box<dyn std::error::Error + Send + Sync>
+                        })?;
+                        let risk_score: i32 = row.try_get("risk_score").map_err(|e| {
+                            Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Failed to get risk_score from row: {}", e),
+                            ))
+                                as Box<dyn std::error::Error + Send + Sync>
+                        })?;
+
                         suspicious_map.insert(ip, (Instant::now(), risk_score as u32));
                     }
-                    tracing::info!("Loaded {} suspicious IPs from database", suspicious_map.len());
+                    tracing::info!(
+                        "Loaded {} suspicious IPs from database",
+                        suspicious_map.len()
+                    );
                 }
                 Err(e) => {
                     tracing::warn!("Failed to load suspicious IPs from database: {}", e);
                     // Continue execution - rate limiting will work without persistence
                 }
             }
-            
+
             tracing::info!("Loaded persistent authentication rate limit data from database");
         }
         Ok(())
@@ -1212,12 +1341,12 @@ impl AuthRateLimiter {
     async fn save_persistent_data(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ref db_client) = self.db_client {
             tracing::debug!("Saving persistent authentication rate limit data to database");
-            
+
             // Save blocked IPs
             let ip_attempts = self.ip_attempts.lock().await;
             let now = Instant::now();
             let mut blocked_ips = Vec::new();
-            
+
             for (ip, (_, _, blocked_until, risk_score)) in ip_attempts.iter() {
                 if let Some(until) = blocked_until {
                     if until > &now {
@@ -1226,18 +1355,22 @@ impl AuthRateLimiter {
                         let remaining_duration = until.duration_since(now);
                         let current_system_time = SystemTime::now();
                         let blocked_system_time = current_system_time + remaining_duration;
-                        let blocked_until_dt = chrono::DateTime::<chrono::Utc>::from(blocked_system_time);
-                        
+                        let blocked_until_dt =
+                            chrono::DateTime::<chrono::Utc>::from(blocked_system_time);
+
                         blocked_ips.push((ip.clone(), blocked_until_dt, *risk_score));
                     }
                 }
             }
-            
+
             // Save blocked IPs to database
             let blocked_ips_count = blocked_ips.len();
             if !blocked_ips.is_empty() {
                 // Clear existing blocks and insert current ones
-                match db_client.execute_with_params("DELETE FROM rate_limit_blocks", &[]).await {
+                match db_client
+                    .execute_with_params("DELETE FROM rate_limit_blocks", &[])
+                    .await
+                {
                     Ok(_) => {
                         for (ip, blocked_until, risk_score) in blocked_ips {
                             let insert_query = "INSERT INTO rate_limit_blocks (ip, blocked_until, risk_score) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET blocked_until = $2, risk_score = $3, updated_at = NOW()";
@@ -1246,9 +1379,15 @@ impl AuthRateLimiter {
                                 QueryParam::Timestamp(blocked_until),
                                 QueryParam::I32(risk_score as i32),
                             ];
-                            
-                            if let Err(e) = db_client.execute_with_params(insert_query, &params).await {
-                                tracing::warn!("Failed to save blocked IP {} to database: {}", ip, e);
+
+                            if let Err(e) =
+                                db_client.execute_with_params(insert_query, &params).await
+                            {
+                                tracing::warn!(
+                                    "Failed to save blocked IP {} to database: {}",
+                                    ip,
+                                    e
+                                );
                             }
                         }
                         tracing::debug!("Saved {} blocked IPs to database", blocked_ips_count);
@@ -1259,11 +1398,14 @@ impl AuthRateLimiter {
                 }
             } else {
                 // No blocked IPs - clear the table
-                if let Err(e) = db_client.execute_with_params("DELETE FROM rate_limit_blocks", &[]).await {
+                if let Err(e) = db_client
+                    .execute_with_params("DELETE FROM rate_limit_blocks", &[])
+                    .await
+                {
                     tracing::warn!("Failed to clear rate_limit_blocks table: {}", e);
                 }
             }
-            
+
             // Save suspicious IPs
             let suspicious_ips = self.suspicious_ips.lock().await;
             let mut suspicious_vec = Vec::new();
@@ -1272,10 +1414,13 @@ impl AuthRateLimiter {
             }
             let suspicious_count = suspicious_vec.len();
             drop(suspicious_ips); // Release lock early
-            
+
             if !suspicious_vec.is_empty() {
                 // Clear existing suspicious IPs and insert current ones
-                match db_client.execute_with_params("DELETE FROM rate_limit_suspicious", &[]).await {
+                match db_client
+                    .execute_with_params("DELETE FROM rate_limit_suspicious", &[])
+                    .await
+                {
                     Ok(_) => {
                         for (ip, risk_score) in suspicious_vec {
                             let insert_query = "INSERT INTO rate_limit_suspicious (ip, risk_score) VALUES ($1, $2) ON CONFLICT (ip) DO UPDATE SET risk_score = $2, updated_at = NOW(), last_seen = NOW()";
@@ -1283,9 +1428,15 @@ impl AuthRateLimiter {
                                 QueryParam::String(ip.clone()),
                                 QueryParam::I32(risk_score as i32),
                             ];
-                            
-                            if let Err(e) = db_client.execute_with_params(insert_query, &params).await {
-                                tracing::warn!("Failed to save suspicious IP {} to database: {}", ip, e);
+
+                            if let Err(e) =
+                                db_client.execute_with_params(insert_query, &params).await
+                            {
+                                tracing::warn!(
+                                    "Failed to save suspicious IP {} to database: {}",
+                                    ip,
+                                    e
+                                );
                             }
                         }
                         tracing::debug!("Saved {} suspicious IPs to database", suspicious_count);
@@ -1296,11 +1447,14 @@ impl AuthRateLimiter {
                 }
             } else {
                 // No suspicious IPs - clear the table
-                if let Err(e) = db_client.execute_with_params("DELETE FROM rate_limit_suspicious", &[]).await {
+                if let Err(e) = db_client
+                    .execute_with_params("DELETE FROM rate_limit_suspicious", &[])
+                    .await
+                {
                     tracing::warn!("Failed to clear rate_limit_suspicious table: {}", e);
                 }
             }
-            
+
             tracing::debug!("Saved persistent authentication rate limit data to database");
         }
         Ok(())
@@ -1341,15 +1495,18 @@ impl AuthRateLimiter {
         // Check per-IP rate limit with enhanced risk scoring
         {
             let mut ip_attempts = self.ip_attempts.lock().await;
-            let entry = ip_attempts.entry(ip.to_string()).or_insert((now, 0, None, 0));
+            let entry = ip_attempts
+                .entry(ip.to_string())
+                .or_insert((now, 0, None, 0));
 
             // Check if IP is currently blocked
             if let Some(blocked_until) = entry.2 {
                 if now < blocked_until {
                     let remaining = blocked_until.duration_since(now).as_secs();
-                    return AuthRateLimitResult::Blocked(
-                        format!("IP temporarily blocked for {} more seconds", remaining)
-                    );
+                    return AuthRateLimitResult::Blocked(format!(
+                        "IP temporarily blocked for {} more seconds",
+                        remaining
+                    ));
                 } else {
                     // Block period expired, reset
                     entry.2 = None;
@@ -1391,9 +1548,10 @@ impl AuthRateLimiter {
                     "IP authentication rate limit exceeded, blocking temporarily"
                 );
 
-                return AuthRateLimitResult::Blocked(
-                    format!("Rate limit exceeded, blocked for {} seconds", block_duration.as_secs())
-                );
+                return AuthRateLimitResult::Blocked(format!(
+                    "Rate limit exceeded, blocked for {} seconds",
+                    block_duration.as_secs()
+                ));
             }
 
             entry.1 += 1;
@@ -1419,12 +1577,12 @@ impl AuthRateLimiter {
         if ip.is_empty() || ip.len() > 45 {
             return false;
         }
-        
+
         // Check for obviously invalid patterns
         if ip.contains("..") || ip.starts_with('.') || ip.ends_with('.') {
             return false;
         }
-        
+
         // Allow IPv4, IPv6, and localhost patterns
         ip.parse::<std::net::IpAddr>().is_ok() || ip == "unknown"
     }
@@ -1458,14 +1616,16 @@ impl AuthRateLimiter {
         let base_duration = 300; // 5 minutes base
         let risk_multiplier = 1 + risk_score as u64;
         let attempt_multiplier = 1 + (attempts / self.per_ip_limit) as u64;
-        
+
         Duration::from_secs(base_duration * risk_multiplier * attempt_multiplier)
     }
 
     /// Record a failed authentication attempt
     async fn record_failed_attempt(&self, ip: &str) {
         let mut ip_attempts = self.ip_attempts.lock().await;
-        let entry = ip_attempts.entry(ip.to_string()).or_insert((Instant::now(), 0, None, 0));
+        let entry = ip_attempts
+            .entry(ip.to_string())
+            .or_insert((Instant::now(), 0, None, 0));
         entry.1 += 1; // Extra penalty for failed attempts
         entry.3 += 1; // Increase risk score for failed attempts
 
@@ -1483,10 +1643,9 @@ impl AuthRateLimiter {
         let global = self.global_attempts.lock().await;
 
         let now = Instant::now();
-        let active_blocks = ip_attempts.values()
-            .filter(|(_, _, blocked_until, _)| {
-                blocked_until.map_or(false, |until| now < until)
-            })
+        let active_blocks = ip_attempts
+            .values()
+            .filter(|(_, _, blocked_until, _)| blocked_until.map_or(false, |until| now < until))
             .count();
 
         AuthRateLimitStats {
@@ -1550,10 +1709,12 @@ impl MCPServer {
             .requests_per_minute
             .map(|limit| Arc::new(AuthRateLimiter::new(limit, limit, 60000))); // limit, limit, 60 seconds
 
-        let api_rate_limiter = config
-            .server
-            .requests_per_minute
-            .map(|limit| Arc::new(RateLimitMiddleware::new(Some(RateLimitConfig::default()), vec![])));
+        let api_rate_limiter = config.server.requests_per_minute.map(|limit| {
+            Arc::new(RateLimitMiddleware::new(
+                Some(RateLimitConfig::default()),
+                vec![],
+            ))
+        });
 
         // Create real SLOTracker using adapter pattern to avoid circular dependency
         let slo_db_adapter = Arc::new(McpDatabaseClientAdapter::new(db_client.clone()));
@@ -1563,11 +1724,10 @@ impl MCPServer {
         #[cfg(feature = "file-operations")]
         let file_ops = {
             use data_infrastructure::file_operations_service::create_file_operations_service;
-            let repo_path = std::env::current_dir()
-                .unwrap_or_else(|_| PathBuf::from("."));
+            let repo_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             create_file_operations_service(repo_path)
         };
-        
+
         // Create tool registry without memory system
         #[cfg(feature = "file-operations")]
         let tool_registry = ToolRegistry::with_file_ops(file_ops);
@@ -1596,7 +1756,11 @@ impl MCPServer {
 
     /// Create a new MCP server with memory system
     #[cfg(feature = "memory")]
-    pub fn new_with_memory(config: MCPConfig, db_client: Arc<DatabaseClient>, memory_system: Option<Arc<MemorySystem>>) -> Self {
+    pub fn new_with_memory(
+        config: MCPConfig,
+        db_client: Arc<DatabaseClient>,
+        memory_system: Option<Arc<MemorySystem>>,
+    ) -> Self {
         let rate_limiter = config
             .server
             .requests_per_minute
@@ -1636,7 +1800,7 @@ impl MCPServer {
         // Initialize real SLO tracker using adapter pattern to avoid circular dependency
         let slo_db_adapter = Arc::new(McpDatabaseClientAdapter::new(db_client.clone()));
         let slo_tracker = Arc::new(SLOTracker::new(slo_db_adapter));
-        
+
         // Register default SLOs for the multimodal RAG system
         let default_slos = create_default_slos();
         for slo_def in default_slos {
@@ -1648,7 +1812,7 @@ impl MCPServer {
         // Create tool registry with memory system if provided
         // FileOperationsService will be injected via set_file_operations_service() if needed
         let mut tool_registry = ToolRegistry::new();
-        
+
         #[cfg(feature = "memory")]
         if let Some(ref memory_system) = memory_system {
             tool_registry.set_memory_system(Arc::clone(memory_system));
@@ -1678,7 +1842,10 @@ impl MCPServer {
 
     /// Update SLO metrics from real tracker
     async fn update_slo_metrics(&self) -> Result<()> {
-        let slo_statuses = self.slo_tracker.get_all_slo_statuses().await
+        let slo_statuses = self
+            .slo_tracker
+            .get_all_slo_statuses()
+            .await
             .map_err(|e| anyhow!("Failed to get SLO statuses: {}", e))?;
 
         let mut overall_compliance = 1.0;
@@ -1686,7 +1853,8 @@ impl MCPServer {
 
         for slo_target in slo_statuses {
             let compliance = slo_target.compliance_percentage;
-            overall_compliance = (overall_compliance * slo_count as f64 + compliance) / (slo_count + 1) as f64;
+            overall_compliance =
+                (overall_compliance * slo_count as f64 + compliance) / (slo_count + 1) as f64;
             slo_count += 1;
 
             match slo_target.slo_name.as_str() {
@@ -1743,22 +1911,32 @@ impl MCPServer {
         let registry = get_circuit_breaker_registry();
 
         // Register circuit breakers for external services
-        registry.register("caws-integration", CircuitBreakerConfig {
-            failure_threshold: 3,
-            success_threshold: 2,
-            recovery_timeout_ms: 30000, // 30 seconds in milliseconds
-        }).await;
+        registry
+            .register(
+                "caws-integration",
+                CircuitBreakerConfig {
+                    failure_threshold: 3,
+                    success_threshold: 2,
+                    recovery_timeout_ms: 30000, // 30 seconds in milliseconds
+                },
+            )
+            .await;
 
-        registry.register("tool-discovery", CircuitBreakerConfig {
-            failure_threshold: 5,
-            success_threshold: 3,
-            recovery_timeout_ms: 60000, // 60 seconds in milliseconds
-        }).await;
+        registry
+            .register(
+                "tool-discovery",
+                CircuitBreakerConfig {
+                    failure_threshold: 5,
+                    success_threshold: 3,
+                    recovery_timeout_ms: 60000, // 60 seconds in milliseconds
+                },
+            )
+            .await;
 
         // Initialize audit logger
-        init_audit_logger(true, "info".to_string(), false).await.map_err(|e| {
-            anyhow!("Failed to initialize audit logger: {}", e)
-        })?;
+        init_audit_logger(true, "info".to_string(), false)
+            .await
+            .map_err(|e| anyhow!("Failed to initialize audit logger: {}", e))?;
 
         // Start SLO metrics update task
         let slo_tracker_clone = Arc::clone(&self.slo_tracker);
@@ -1786,7 +1964,7 @@ impl MCPServer {
         self.tool_registry.initialize().await?;
         // DEPRECATED: Initialize legacy CAWS integration for backward compatibility
         self.caws_integration.initialize().await?;
-        
+
         // NEW: Runtime-validator CAWS integration is ready to use immediately
         // No initialization needed as it's stateless
 
@@ -1812,7 +1990,6 @@ impl MCPServer {
         );
         Ok(())
     }
-
 
     /// Spawn the MCP HTTP server and return a readiness receiver plus handle.
     async fn spawn_http_server(&self) -> Result<(oneshot::Receiver<()>, HttpServerHandle)> {
@@ -2072,14 +2249,16 @@ impl MCPServer {
                 // Sanitize the input
                 let sanitized_value = sanitize_api_input(&v);
 
-                let tool: crate::mcp_types::MCPTool =
-                    serde_json::from_value(sanitized_value).map_err(|e| JsonRpcError {
+                let tool: crate::mcp_types::MCPTool = serde_json::from_value(sanitized_value)
+                    .map_err(|e| JsonRpcError {
                         code: jsonrpc_core::ErrorCode::InvalidParams,
                         message: "Invalid tool format after sanitization".to_string(),
                         data: Some(serde_json::Value::String(e.to_string())),
                     })?;
                 // Execute CAWS validation with circuit breaker protection
-                let res = caws_validate.validate_tool(&tool).await
+                let res = caws_validate
+                    .validate_tool(&tool)
+                    .await
                     .map_err(|e| JsonRpcError {
                         code: jsonrpc_core::ErrorCode::InternalError,
                         message: "Tool validation failed".to_string(),
@@ -2100,7 +2279,10 @@ impl MCPServer {
                     Err(e) => {
                         tracing::warn!("Failed to get SLO statuses: {}", e);
                         // Fallback to default SLO definitions
-                        Ok(serde_json::to_value(system_observability::slo::create_default_slos()).unwrap())
+                        Ok(
+                            serde_json::to_value(system_observability::slo::create_default_slos())
+                                .unwrap(),
+                        )
                     }
                 }
             }
@@ -2183,9 +2365,10 @@ impl MCPServer {
                 let client_ip = req
                     .header("x-forwarded-for")
                     .and_then(|value| std::str::from_utf8(value).ok())
-                    .or_else(|| req
-                        .header("x-real-ip")
-                        .and_then(|value| std::str::from_utf8(value).ok()))
+                    .or_else(|| {
+                        req.header("x-real-ip")
+                            .and_then(|value| std::str::from_utf8(value).ok())
+                    })
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| "unknown".to_string());
 
@@ -2217,17 +2400,25 @@ impl MCPServer {
                         // Log failed WebSocket authentication
                         if let Ok(logger) = get_audit_logger() {
                             let mut metadata = HashMap::new();
-                            metadata.insert("provided_key".to_string(), serde_json::Value::String(provided.unwrap_or("none").to_string()));
-                            metadata.insert("endpoint".to_string(), serde_json::Value::String("websocket".to_string()));
+                            metadata.insert(
+                                "provided_key".to_string(),
+                                serde_json::Value::String(provided.unwrap_or("none").to_string()),
+                            );
+                            metadata.insert(
+                                "endpoint".to_string(),
+                                serde_json::Value::String("websocket".to_string()),
+                            );
 
                             tokio::spawn(async move {
-                                let _ = logger.log_authentication(
-                                    "websocket_client".to_string(),
-                                    false,
-                                    Some(client_ip.to_string()),
-                                    None,
-                                    metadata,
-                                ).await;
+                                let _ = logger
+                                    .log_authentication(
+                                        "websocket_client".to_string(),
+                                        false,
+                                        Some(client_ip.to_string()),
+                                        None,
+                                        metadata,
+                                    )
+                                    .await;
                             });
                         }
 
@@ -2236,16 +2427,21 @@ impl MCPServer {
                         // Log successful WebSocket authentication
                         if let Ok(logger) = get_audit_logger() {
                             let mut metadata = HashMap::new();
-                            metadata.insert("endpoint".to_string(), serde_json::Value::String("websocket".to_string()));
+                            metadata.insert(
+                                "endpoint".to_string(),
+                                serde_json::Value::String("websocket".to_string()),
+                            );
 
                             tokio::spawn(async move {
-                                let _ = logger.log_authentication(
-                                    "websocket_client".to_string(),
-                                    true,
-                                    Some(client_ip.to_string()),
-                                    None,
-                                    metadata,
-                                ).await;
+                                let _ = logger
+                                    .log_authentication(
+                                        "websocket_client".to_string(),
+                                        true,
+                                        Some(client_ip.to_string()),
+                                        None,
+                                        metadata,
+                                    )
+                                    .await;
                             });
                         }
 
@@ -2308,7 +2504,7 @@ impl MCPServer {
         self.tool_registry.shutdown().await?;
         // DEPRECATED: Shutdown legacy CAWS integration for backward compatibility
         self.caws_integration.shutdown().await?;
-        
+
         // NEW: Runtime-validator CAWS integration is stateless, no shutdown needed
 
         if let Some(handle) = self.http_handle.write().await.take() {
@@ -2366,7 +2562,9 @@ impl MCPServer {
 
     /// Get API rate limiting statistics
     pub async fn get_api_rate_limit_stats(&self) -> Option<HashMap<String, (u32, u32)>> {
-        self.api_rate_limiter.as_ref().map(|limiter| limiter.get_stats())
+        self.api_rate_limiter
+            .as_ref()
+            .map(|limiter| limiter.get_stats())
     }
 
     /// Execute a tool
@@ -2388,16 +2586,18 @@ impl MCPServer {
             // NEW: Use runtime-validator for primary CAWS validation
             let manifest_value = serde_json::to_value(&tool.manifest)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize manifest: {}", e))?;
-            let runtime_result = self.caws_runtime_validator
+            let runtime_result = self
+                .caws_runtime_validator
                 .validate_tool_manifest(&manifest_value)
                 .await
                 .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
-            
+
             // DEPRECATED: Also run legacy validation for comparison during migration
-            let _legacy_result = self.caws_integration
+            let _legacy_result = self
+                .caws_integration
                 .validate_tool_execution(&tool, &request)
                 .await?;
-            
+
             Some(runtime_result)
         } else {
             None
@@ -2433,12 +2633,16 @@ impl MCPServer {
         // Convert from tool_discovery::core::ToolDiscoveryResult to mcp_types::ToolDiscoveryResult
         let converted_result = crate::mcp_types::ToolDiscoveryResult {
             discovered_tools: result.discovered_tools,
-            errors: result.errors.into_iter().map(|e| crate::mcp_types::DiscoveryError {
-                path: e.path,
-                error_type: crate::mcp_types::DiscoveryErrorType::ValidationError,
-                message: e.message.clone(),
-                details: Some(serde_json::Value::String(e.message)),
-            }).collect(),
+            errors: result
+                .errors
+                .into_iter()
+                .map(|e| crate::mcp_types::DiscoveryError {
+                    path: e.path,
+                    error_type: crate::mcp_types::DiscoveryErrorType::ValidationError,
+                    message: e.message.clone(),
+                    details: Some(serde_json::Value::String(e.message)),
+                })
+                .collect(),
             discovery_time_ms: result.discovery_time_ms,
             discovered_at: result.discovered_at,
         };
@@ -2474,10 +2678,10 @@ impl MCPServer {
     }
 
     /// Set the CoreML ingestion executor for CoreML tools
-    /// 
+    ///
     /// This allows wiring up real CoreML enrichers from agent-data-processing
     /// to enable CoreML-powered MCP tools (transcribe_audio, detect_objects, etc.)
-    /// 
+    ///
     /// Note: These tools are ONLY available via MCP protocol, NOT via REST API
     pub fn set_coreml_executor(&self, executor: Arc<dyn crate::tools::CoreMLIngestionExecutor>) {
         self.tool_registry.set_coreml_executor(executor);

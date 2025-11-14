@@ -2,23 +2,30 @@
 //!
 //! Bridges the gap between self-prompting agent and external learning algorithms.
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::sync::Arc;
-use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
 use crate::learning_service::create_learning_service;
+use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 // Learning service trait for reflexive learning integration
 // This provides the interface for learning algorithms to analyze execution data
 #[async_trait::async_trait]
 pub trait LearningService: Send + Sync {
-    async fn learn_from_execution(&self, context: &LearningContext, performance: &TaskPerformance) -> Result<LearningInsights, String>;
-    async fn get_optimization_recommendations(&self, context: &LearningContext, goal: OptimizationGoal) -> Result<Vec<OptimizationRecommendation>, String>;
+    async fn learn_from_execution(
+        &self,
+        context: &LearningContext,
+        performance: &TaskPerformance,
+    ) -> Result<LearningInsights, String>;
+    async fn get_optimization_recommendations(
+        &self,
+        context: &LearningContext,
+        goal: OptimizationGoal,
+    ) -> Result<Vec<OptimizationRecommendation>, String>;
     async fn update_model(&self, experiences: Vec<Experience>) -> Result<(), String>;
     async fn get_statistics(&self) -> Result<LearningStatistics, String>;
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningContext {
     pub task_id: String,
     pub state: String,
@@ -26,16 +33,14 @@ pub struct LearningContext {
     pub available_actions: Vec<String>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskPerformance {
     pub success_rate: f64,
     pub avg_execution_time: std::time::Duration,
     pub quality_score: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemMetrics {
     pub cpu_usage: f64,
     pub memory_usage: f64,
@@ -44,8 +49,7 @@ pub struct SystemMetrics {
     pub queue_depth: usize,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningInsights {
     pub patterns: Vec<Pattern>,
     pub improvements: Vec<Improvement>,
@@ -53,8 +57,7 @@ pub struct LearningInsights {
     pub confidence: f64,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pattern {
     pub pattern_type: PatternType,
     pub description: String,
@@ -62,16 +65,14 @@ pub struct Pattern {
     pub impact: f64,
 }
 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PatternType {
     ResourceBottleneck,
     ModelInefficiency,
     ComplexityMismatch,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Improvement {
     pub improvement_type: ImprovementType,
     pub expected_benefit: f64,
@@ -79,24 +80,21 @@ pub struct Improvement {
     pub description: String,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImprovementType {
     ResourceAllocation,
     ModelSelection,
     AlgorithmOptimization,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Difficulty {
     Easy,
     Moderate,
     Hard,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationRecommendation {
     pub recommendation_type: RecommendationType,
     pub description: String,
@@ -105,8 +103,7 @@ pub struct OptimizationRecommendation {
     pub priority: Priority,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RecommendationType {
     AdjustResources,
     ExecutionStrategy,
@@ -114,16 +111,14 @@ pub enum RecommendationType {
     TuneParameters,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Priority {
     Low,
     Medium,
     High,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationGoal {
     MinimizeTime,
     MinimizeResources,
@@ -131,8 +126,7 @@ pub enum OptimizationGoal {
     Balanced,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Experience {
     pub state: String,
     pub action: String,
@@ -140,8 +134,7 @@ pub struct Experience {
     pub next_state: String,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningStatistics {
     pub total_experiences: usize,
     pub total_patterns: usize,
@@ -166,9 +159,12 @@ impl LearningBridge {
     }
 
     /// Process a learning signal
-    pub async fn process_signal(&self, signal: LearningSignal) -> Result<(), SelfPromptingAgentError> {
+    pub async fn process_signal(
+        &self,
+        signal: LearningSignal,
+    ) -> Result<(), SelfPromptingAgentError> {
         tracing::info!("Processing learning signal: {:?}", signal.signal_type);
-        
+
         // Convert LearningSignal to LearningContext and TaskPerformance
         let context = LearningContext {
             task_id: signal.context.clone(),
@@ -190,21 +186,34 @@ impl LearningBridge {
         };
 
         // Forward to learning service
-        match self.learning_service.learn_from_execution(&context, &performance).await {
+        match self
+            .learning_service
+            .learn_from_execution(&context, &performance)
+            .await
+        {
             Ok(insights) => {
-                tracing::debug!("Learning insights generated: {} patterns, {} recommendations", 
-                    insights.patterns.len(), insights.recommendations.len());
+                tracing::debug!(
+                    "Learning insights generated: {} patterns, {} recommendations",
+                    insights.patterns.len(),
+                    insights.recommendations.len()
+                );
                 Ok(())
             }
             Err(e) => {
                 tracing::warn!("Failed to process learning signal: {}", e);
-                Err(SelfPromptingAgentError::Learning(format!("Learning service error: {}", e)))
+                Err(SelfPromptingAgentError::Learning(format!(
+                    "Learning service error: {}",
+                    e
+                )))
             }
         }
     }
 
     /// Get learning recommendations
-    pub async fn get_recommendations(&self, context: &str) -> Result<Vec<String>, SelfPromptingAgentError> {
+    pub async fn get_recommendations(
+        &self,
+        context: &str,
+    ) -> Result<Vec<String>, SelfPromptingAgentError> {
         let learning_context = LearningContext {
             task_id: context.to_string(),
             state: context.to_string(),
@@ -219,16 +228,15 @@ impl LearningBridge {
         };
 
         // Query learning system for optimization recommendations
-        match self.learning_service
+        match self
+            .learning_service
             .get_optimization_recommendations(&learning_context, OptimizationGoal::Balanced)
             .await
         {
-            Ok(recommendations) => {
-                Ok(recommendations
-                    .iter()
-                    .map(|r| r.description.clone())
-                    .collect())
-            }
+            Ok(recommendations) => Ok(recommendations
+                .iter()
+                .map(|r| r.description.clone())
+                .collect()),
             Err(e) => {
                 tracing::warn!("Failed to get learning recommendations: {}", e);
                 // Fallback to default recommendations
@@ -243,7 +251,7 @@ impl LearningBridge {
 
 /// Learning signal for RL feedback
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningSignal {
     pub signal_type: String,
     pub value: f64,
@@ -266,7 +274,10 @@ impl ReflexiveLearningSystem {
     }
 
     /// Process learning signal
-    pub async fn process_signal(&self, signal: LearningSignal) -> Result<(), SelfPromptingAgentError> {
+    pub async fn process_signal(
+        &self,
+        signal: LearningSignal,
+    ) -> Result<(), SelfPromptingAgentError> {
         // Delegate to learning bridge for processing
         let bridge = LearningBridge::new();
         bridge.process_signal(signal).await
@@ -278,32 +289,47 @@ impl ReflexiveLearningSystem {
         match self.learning_service.get_statistics().await {
             Ok(stats) => {
                 let mut insights = Vec::new();
-                
+
                 if stats.total_experiences > 0 {
-                    insights.push(format!("Learning system has processed {} experiences", stats.total_experiences));
+                    insights.push(format!(
+                        "Learning system has processed {} experiences",
+                        stats.total_experiences
+                    ));
                 }
-                
+
                 if stats.total_patterns > 0 {
-                    insights.push(format!("Identified {} patterns from execution data", stats.total_patterns));
+                    insights.push(format!(
+                        "Identified {} patterns from execution data",
+                        stats.total_patterns
+                    ));
                 }
-                
+
                 if stats.total_improvements > 0 {
-                    insights.push(format!("Generated {} improvement recommendations", stats.total_improvements));
+                    insights.push(format!(
+                        "Generated {} improvement recommendations",
+                        stats.total_improvements
+                    ));
                 }
-                
+
                 if stats.average_confidence > 0.0 {
-                    insights.push(format!("Average confidence: {:.2}", stats.average_confidence));
+                    insights.push(format!(
+                        "Average confidence: {:.2}",
+                        stats.average_confidence
+                    ));
                 }
-                
+
                 if insights.is_empty() {
                     insights.push("Learning system operational".to_string());
                 }
-                
+
                 Ok(insights)
             }
             Err(e) => {
                 tracing::warn!("Failed to get learning statistics: {}", e);
-                Err(SelfPromptingAgentError::Learning(format!("Failed to generate insights: {}", e)))
+                Err(SelfPromptingAgentError::Learning(format!(
+                    "Failed to generate insights: {}",
+                    e
+                )))
             }
         }
     }

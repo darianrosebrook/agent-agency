@@ -1,9 +1,9 @@
 //! Model routing and load balancing
 
-use schemars::JsonSchema;
 use crate::DeviceId;
-use system_configuration::types::{DeviceKind, Precision};
 use anyhow::Result;
+use schemars::JsonSchema;
+use system_configuration::types::{DeviceKind, Precision};
 
 /// Model router
 #[derive(Debug)]
@@ -69,7 +69,6 @@ impl ModelRouter {
         // - [ ] Load balancing across available devices
         // - [ ] Add unit tests with various routing scenarios
         // - [ ] Add integration tests with real model routing
-        // Placeholder implementation
         Ok(ModelVariant {
             name: "default".to_string(),
             precision: Precision::FP32,

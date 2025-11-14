@@ -20,21 +20,21 @@
 
 #![allow(dead_code)] // Test code often has unused variables for future test cases
 
-pub mod fixtures;
-pub mod harness;
-pub mod services;
-pub mod scenarios;
-pub mod test_helpers;
 pub mod database_lifecycle;
 pub mod e2e_orchestration_test;
-pub mod worker_registry;
+pub mod fixtures;
+pub mod harness;
 pub mod quality_analyzers;
+pub mod scenarios;
+pub mod services;
+pub mod test_helpers;
+pub mod worker_registry;
 
 use tracing::{error, info};
 
-use harness::{TestEnvironment, LocalServiceManager};
+use harness::{LocalServiceManager, TestEnvironment};
 #[cfg(feature = "full")]
-use services::{OrchestratorService, OllamaService, PostgresService};
+use services::{OllamaService, OrchestratorService, PostgresService};
 
 /// Main E2E test runner
 pub struct E2ETestRunner {
@@ -86,12 +86,20 @@ impl E2ETestRunner {
             }
             // CAWS Constitutional Authority tests
             Scenario::CawsGovernance => {
-                scenarios::caws_governance::run_caws_governance_test(&self.environment, &self.services).await
+                scenarios::caws_governance::run_caws_governance_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             // Self-Prompting Loop tests
             #[cfg(feature = "full")]
             Scenario::SelfPromptingLoops => {
-                scenarios::self_prompting_loops::run_self_prompting_test(&self.environment, &self.services).await
+                scenarios::self_prompting_loops::run_self_prompting_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             #[cfg(not(feature = "full"))]
             Scenario::SelfPromptingLoops => {
@@ -100,35 +108,45 @@ impl E2ETestRunner {
                     scenario: Scenario::SelfPromptingLoops,
                     passed: false,
                     duration_ms: 0,
-                    error_message: Some("Self-Prompting Loop test requires 'full' feature".to_string()),
+                    error_message: Some(
+                        "Self-Prompting Loop test requires 'full' feature".to_string(),
+                    ),
                     metrics: TestMetrics::default(),
                 }
             }
             // Human Intervention tests
             Scenario::HumanIntervention => {
-                scenarios::human_intervention::run_human_intervention_test(&self.environment, &self.services).await
+                scenarios::human_intervention::run_human_intervention_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
-    // Reflexive Learning tests
-    #[cfg(feature = "full")]
-    Scenario::ReflexiveLearning => {
-        scenarios::reflexive_learning::run_reflexive_learning_test(&self.environment, &self.services).await
-    }
-    // Worker Evolution tests
-    #[cfg(feature = "full")]
-    Scenario::WorkerEvolution => {
-        let result = scenarios::worker_evolution_test::run_worker_evolution_test().await;
-        TestResult {
-            scenario: Scenario::WorkerEvolution,
-            passed: result.passed,
-            duration_ms: result.duration_ms,
-            error_message: result.error_message,
-            metrics: TestMetrics {
-                learning_iterations: result.proposals_generated,
-                model_improvements: result.workers_created + result.workers_refined,
-                ..Default::default()
-            },
-        }
-    }
+            // Reflexive Learning tests
+            #[cfg(feature = "full")]
+            Scenario::ReflexiveLearning => {
+                scenarios::reflexive_learning::run_reflexive_learning_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
+            }
+            // Worker Evolution tests
+            #[cfg(feature = "full")]
+            Scenario::WorkerEvolution => {
+                let result = scenarios::worker_evolution_test::run_worker_evolution_test().await;
+                TestResult {
+                    scenario: Scenario::WorkerEvolution,
+                    passed: result.passed,
+                    duration_ms: result.duration_ms,
+                    error_message: result.error_message,
+                    metrics: TestMetrics {
+                        learning_iterations: result.proposals_generated,
+                        model_improvements: result.workers_created + result.workers_refined,
+                        ..Default::default()
+                    },
+                }
+            }
             #[cfg(not(feature = "full"))]
             Scenario::ReflexiveLearning => {
                 error!("Reflexive Learning test requires 'full' feature");
@@ -136,14 +154,20 @@ impl E2ETestRunner {
                     scenario: Scenario::ReflexiveLearning,
                     passed: false,
                     duration_ms: 0,
-                    error_message: Some("Reflexive Learning test requires 'full' feature".to_string()),
+                    error_message: Some(
+                        "Reflexive Learning test requires 'full' feature".to_string(),
+                    ),
                     metrics: TestMetrics::default(),
                 }
             }
             // Multi-Agent Coordination tests
             #[cfg(feature = "full")]
             Scenario::MultiAgentCoordination => {
-                scenarios::multi_agent_coordination::run_multi_agent_test(&self.environment, &self.services).await
+                scenarios::multi_agent_coordination::run_multi_agent_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             #[cfg(not(feature = "full"))]
             Scenario::MultiAgentCoordination => {
@@ -152,14 +176,20 @@ impl E2ETestRunner {
                     scenario: Scenario::MultiAgentCoordination,
                     passed: false,
                     duration_ms: 0,
-                    error_message: Some("Multi-Agent Coordination test requires 'full' feature".to_string()),
+                    error_message: Some(
+                        "Multi-Agent Coordination test requires 'full' feature".to_string(),
+                    ),
                     metrics: TestMetrics::default(),
                 }
             }
             // Claim Extraction & Verification tests
             #[cfg(feature = "full")]
             Scenario::ClaimVerification => {
-                scenarios::claim_verification::run_claim_verification_test(&self.environment, &self.services).await
+                scenarios::claim_verification::run_claim_verification_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             #[cfg(not(feature = "full"))]
             Scenario::ClaimVerification => {
@@ -168,21 +198,32 @@ impl E2ETestRunner {
                     scenario: Scenario::ClaimVerification,
                     passed: false,
                     duration_ms: 0,
-                    error_message: Some("Claim Verification test requires 'full' feature".to_string()),
+                    error_message: Some(
+                        "Claim Verification test requires 'full' feature".to_string(),
+                    ),
                     metrics: TestMetrics::default(),
                 }
             }
             // Performance & Scalability tests
             Scenario::PerformanceScalability => {
-                scenarios::performance_scalability::run_performance_test(&self.environment, &self.services).await
+                scenarios::performance_scalability::run_performance_test(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             // Security & Privacy tests
             Scenario::SecurityPrivacy => {
-                scenarios::security_privacy::run_security_test(&self.environment, &self.services).await
+                scenarios::security_privacy::run_security_test(&self.environment, &self.services)
+                    .await
             }
             // API Integration tests
             Scenario::ApiIntegration => {
-                scenarios::api_integration::run_api_integration_tests(&self.environment, &self.services).await
+                scenarios::api_integration::run_api_integration_tests(
+                    &self.environment,
+                    &self.services,
+                )
+                .await
             }
             #[cfg(not(feature = "full"))]
             _ => {
@@ -336,4 +377,89 @@ pub enum E2ETestError {
 
     #[error("Environment setup failed: {0}")]
     Environment(String),
+}
+
+/// Simple database connectivity and functionality test
+#[cfg(test)]
+mod database_tests {
+    use super::*;
+    use sqlx::postgres::PgPoolOptions;
+
+    #[tokio::test]
+    async fn test_database_connectivity() {
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://test_user:test_password@localhost:5433/test_db".to_string());
+
+        // Test database connection
+        let pool = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to test database");
+
+        // Test basic query
+        let result: (i32,) = sqlx::query_as("SELECT 42 as answer")
+            .fetch_one(&pool)
+            .await
+            .expect("Basic query failed");
+
+        assert_eq!(result.0, 42);
+    }
+
+    #[tokio::test]
+    async fn test_database_crud_operations() {
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgresql://test_user:test_password@localhost:5433/test_db".to_string());
+
+        let pool = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to test database");
+
+        // Create test table
+        sqlx::query("CREATE TABLE IF NOT EXISTS test_crud (id SERIAL PRIMARY KEY, name TEXT, value INTEGER)")
+            .execute(&pool)
+            .await
+            .expect("Failed to create test table");
+
+        // Insert
+        let insert_result = sqlx::query("INSERT INTO test_crud (name, value) VALUES ('test_entry', 123)")
+            .execute(&pool)
+            .await
+            .expect("Insert failed");
+
+        assert_eq!(insert_result.rows_affected(), 1);
+
+        // Select
+        let select_result: (i32, String, i32) = sqlx::query_as("SELECT id, name, value FROM test_crud WHERE name = 'test_entry'")
+            .fetch_one(&pool)
+            .await
+            .expect("Select failed");
+
+        assert_eq!(select_result.1, "test_entry");
+        assert_eq!(select_result.2, 123);
+
+        // Update
+        let update_result = sqlx::query("UPDATE test_crud SET value = 456 WHERE name = 'test_entry'")
+            .execute(&pool)
+            .await
+            .expect("Update failed");
+
+        assert_eq!(update_result.rows_affected(), 1);
+
+        // Delete
+        let delete_result = sqlx::query("DELETE FROM test_crud WHERE name = 'test_entry'")
+            .execute(&pool)
+            .await
+            .expect("Delete failed");
+
+        assert_eq!(delete_result.rows_affected(), 1);
+
+        // Clean up
+        sqlx::query("DROP TABLE test_crud")
+            .execute(&pool)
+            .await
+            .expect("Cleanup failed");
+    }
 }

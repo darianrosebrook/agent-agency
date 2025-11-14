@@ -3,8 +3,8 @@
 //! Defines the response contract for task execution status, progress tracking,
 //! and real-time updates during autonomous task processing.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Task response with execution status and tracking information
@@ -179,7 +179,9 @@ pub struct TaskExecutionMetadata {
 }
 
 /// Validate a task response value against the JSON schema
-pub fn validate_task_response_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_task_response_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::TASK_RESPONSE_SCHEMA;
 

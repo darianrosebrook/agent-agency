@@ -7,11 +7,11 @@
 //! - Council evaluation processes
 //! - End-to-end orchestration traces
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Decision types for orchestration decisions
 #[non_exhaustive]
@@ -344,9 +344,15 @@ pub enum ChainOfThoughtPhase {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ProgressIndicator {
     Percentage(f64),
-    Steps { current: usize, total: usize },
+    Steps {
+        current: usize,
+        total: usize,
+    },
     Phase(String),
-    WaitingFor { resource: String, timeout: Option<u64> },
+    WaitingFor {
+        resource: String,
+        timeout: Option<u64>,
+    },
 }
 
 /// Error link in error propagation chain
@@ -379,13 +385,19 @@ pub enum StuckState {
     NoProgress {
         duration_ms: u64,
         #[schemars(with = "String")]
-        last_activity: DateTime<Utc>
+        last_activity: DateTime<Utc>,
     },
-    WaitingForResource { resource: String, wait_duration_ms: u64 },
+    WaitingForResource {
+        resource: String,
+        wait_duration_ms: u64,
+    },
     DeadlockDetected {
         resources: Vec<String>,
         #[schemars(with = "Vec<String>")]
-        participants: Vec<Uuid>
+        participants: Vec<Uuid>,
     },
-    TimeoutImminent { elapsed_ms: u64, threshold_ms: u64 },
+    TimeoutImminent {
+        elapsed_ms: u64,
+        threshold_ms: u64,
+    },
 }

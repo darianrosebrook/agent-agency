@@ -3,9 +3,9 @@
 //! Comprehensive audit trail for database operations, security events,
 //! and compliance monitoring with structured logging and retention.
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -20,7 +20,6 @@ pub struct TaskAuditEvent {
     #[schemars(with = "String")]
     pub task_id: Uuid,
     #[schemars(with = "String")]
-
     pub ts: DateTime<Utc>,
     pub category: String,
     pub actor: String,
@@ -35,7 +34,6 @@ pub struct DatabaseAuditEvent {
     #[schemars(with = "String")]
     pub id: Uuid,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub event_type: AuditEventType,
     pub actor: String,
@@ -73,14 +71,17 @@ impl DatabaseAuditLogger {
     pub fn new() -> Self {
         Self {
             events: std::sync::RwLock::new(Vec::new()),
-            max_events: 10000, // Keep last 10k events in memory
+            max_events: 10000,  // Keep last 10k events in memory
             retention_days: 90, // Retain for 90 days
         }
     }
 
     /// Log a database operation
     pub async fn log_operation(&self, event: DatabaseAuditEvent) {
-        debug!("Logging audit event: {:?} on {}", event.event_type, event.resource);
+        debug!(
+            "Logging audit event: {:?} on {}",
+            event.event_type, event.resource
+        );
 
         let mut events = self.events.write().unwrap();
 
@@ -184,7 +185,7 @@ impl DatabaseAuditLogger {
     /// Get audit events within a time range
     pub async fn get_events(
         &self,
-    start_time: DateTime<Utc>,
+        start_time: DateTime<Utc>,
         end_time: Option<DateTime<Utc>>,
         event_type: Option<AuditEventType>,
         actor: Option<String>,
@@ -196,10 +197,12 @@ impl DatabaseAuditLogger {
         events
             .iter()
             .filter(|event| {
-                event.timestamp >= start_time &&
-                event.timestamp <= end_time &&
-                event_type.as_ref().map_or(true, |et| std::mem::discriminant(et) == std::mem::discriminant(&event.event_type)) &&
-                actor.as_ref().map_or(true, |a| event.actor.contains(a))
+                event.timestamp >= start_time
+                    && event.timestamp <= end_time
+                    && event_type.as_ref().map_or(true, |et| {
+                        std::mem::discriminant(et) == std::mem::discriminant(&event.event_type)
+                    })
+                    && actor.as_ref().map_or(true, |a| event.actor.contains(a))
             })
             .take(limit)
             .cloned()
@@ -217,7 +220,9 @@ impl DatabaseAuditLogger {
         let mut execution_time_count = 0u64;
 
         for event in events.iter() {
-            *event_counts.entry(format!("{:?}", event.event_type)).or_insert(0) += 1;
+            *event_counts
+                .entry(format!("{:?}", event.event_type))
+                .or_insert(0) += 1;
 
             if event.success {
                 success_count += 1;
@@ -243,7 +248,11 @@ impl DatabaseAuditLogger {
             success_count,
             failure_count,
             avg_execution_time_ms,
-            success_rate: if events.is_empty() { 0.0 } else { success_count as f64 / events.len() as f64 },
+            success_rate: if events.is_empty() {
+                0.0
+            } else {
+                success_count as f64 / events.len() as f64
+            },
         }
     }
 
@@ -260,7 +269,10 @@ impl DatabaseAuditLogger {
         events.retain(|event| event.timestamp > cutoff);
 
         if events.len() < self.events.read().unwrap().len() {
-            debug!("Cleaned up {} old audit events", self.events.read().unwrap().len() - events.len());
+            debug!(
+                "Cleaned up {} old audit events",
+                self.events.read().unwrap().len() - events.len()
+            );
         }
     }
 }
@@ -275,5 +287,3 @@ pub struct AuditStatistics {
     pub avg_execution_time_ms: u64,
     pub success_rate: f64,
 }
-
-

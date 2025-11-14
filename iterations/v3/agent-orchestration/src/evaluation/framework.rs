@@ -4,14 +4,14 @@
 //! agent behavior, focusing on process quality, adaptability, and learning rather
 //! than just binary success/failure outcomes.
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use crate::chain_of_thought::{DecisionPoint, CoordinationEvent, CoordinationEventType};
 use crate::audit_trail::AuditEvent;
+use crate::chain_of_thought::{CoordinationEvent, CoordinationEventType, DecisionPoint};
 use crate::evaluation::metrics;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Overall evaluation score combining multiple dimensions
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -90,13 +90,11 @@ pub struct ProcessQualityMetrics {
 impl ProcessQualityMetrics {
     /// Calculate overall quality score
     pub fn overall_quality(&self) -> f64 {
-        (
-            self.reasoning_depth * 0.25 +
-            self.decision_quality * 0.25 +
-            self.risk_assessment * 0.2 +
-            self.coordination_quality * 0.15 +
-            self.iterative_improvement * 0.15
-        )
+        (self.reasoning_depth * 0.25
+            + self.decision_quality * 0.25
+            + self.risk_assessment * 0.2
+            + self.coordination_quality * 0.15
+            + self.iterative_improvement * 0.15)
     }
 }
 
@@ -132,13 +130,11 @@ pub struct AdaptabilityMetrics {
 impl AdaptabilityMetrics {
     /// Calculate overall adaptability score
     pub fn overall_score(&self) -> f64 {
-        (
-            self.uncertainty_management * 0.25 +
-            self.failure_recovery * 0.25 +
-            self.resource_adaptation * 0.2 +
-            self.strategy_flexibility * 0.15 +
-            self.learning_velocity * 0.15
-        )
+        (self.uncertainty_management * 0.25
+            + self.failure_recovery * 0.25
+            + self.resource_adaptation * 0.2
+            + self.strategy_flexibility * 0.15
+            + self.learning_velocity * 0.15)
     }
 }
 
@@ -174,13 +170,11 @@ pub struct SafetyAssessment {
 impl SafetyAssessment {
     /// Calculate overall safety score
     pub fn overall_safety(&self) -> f64 {
-        (
-            self.risk_avoidance * 0.25 +
-            self.error_handling * 0.25 +
-            self.boundary_compliance * 0.2 +
-            self.recovery_safety * 0.15 +
-            self.audit_completeness * 0.15
-        )
+        (self.risk_avoidance * 0.25
+            + self.error_handling * 0.25
+            + self.boundary_compliance * 0.2
+            + self.recovery_safety * 0.15
+            + self.audit_completeness * 0.15)
     }
 }
 
@@ -270,10 +264,10 @@ pub struct ExpectedBehavior {
 /// Importance levels for behaviors
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum BehaviorImportance {
-    Critical,    // Must demonstrate this behavior
-    Important,   // Should demonstrate this behavior
-    Beneficial,  // Good to see but not required
-    Optional,    // Nice to have
+    Critical,   // Must demonstrate this behavior
+    Important,  // Should demonstrate this behavior
+    Beneficial, // Good to see but not required
+    Optional,   // Nice to have
 }
 
 /// Evaluation criteria for scoring
@@ -340,7 +334,8 @@ impl EvaluationEngine {
 
     /// Add an evaluation scenario
     pub fn add_scenario(&mut self, scenario: EvaluationScenario) {
-        self.scenarios.insert(scenario.scenario_id.clone(), scenario);
+        self.scenarios
+            .insert(scenario.scenario_id.clone(), scenario);
     }
 
     /// Set baseline score for comparison
@@ -356,7 +351,9 @@ impl EvaluationEngine {
         coordination_events: &[CoordinationEvent],
         audit_trail: &[AuditEvent],
     ) -> Result<AgentEvaluation, String> {
-        let scenario = self.scenarios.get(scenario_id)
+        let scenario = self
+            .scenarios
+            .get(scenario_id)
             .ok_or_else(|| format!("Unknown scenario: {}", scenario_id))?;
 
         let evaluation = self.perform_evaluation(
@@ -381,7 +378,8 @@ impl EvaluationEngine {
         let reasoning_metrics = self.analyze_reasoning_quality(decisions, events);
 
         // Analyze adaptability and learning (with audit entries for resource adaptation)
-        let adaptability_metrics = self.analyze_adaptability_with_audit(decisions, events, audit_entries);
+        let adaptability_metrics =
+            self.analyze_adaptability_with_audit(decisions, events, audit_entries);
 
         // Analyze safety and compliance (with events for recovery safety)
         let safety_metrics = self.analyze_safety_compliance_with_events(events, audit_entries);
@@ -396,13 +394,11 @@ impl EvaluationEngine {
         };
 
         // Calculate overall score (weighted average)
-        let overall_score = (
-            dimensions.functional_correctness * 0.3 +
-            dimensions.process_quality * 0.25 +
-            dimensions.adaptability * 0.2 +
-            dimensions.efficiency * 0.15 +
-            dimensions.safety * 0.1
-        );
+        let overall_score = (dimensions.functional_correctness * 0.3
+            + dimensions.process_quality * 0.25
+            + dimensions.adaptability * 0.2
+            + dimensions.efficiency * 0.15
+            + dimensions.safety * 0.1);
 
         AgentEvaluation {
             evaluation_id: Uuid::new_v4(),
@@ -413,29 +409,46 @@ impl EvaluationEngine {
             process_quality: reasoning_metrics,
             adaptability_metrics,
             safety_assessment: safety_metrics,
-            learning_indicators: self.analyze_learning_indicators_with_events(decisions, events, scenario),
+            learning_indicators: self
+                .analyze_learning_indicators_with_events(decisions, events, scenario),
         }
     }
 
     /// Analyze quality of reasoning process
-    fn analyze_reasoning_quality(&self, decisions: &[DecisionPoint], events: &[CoordinationEvent]) -> ProcessQualityMetrics {
+    fn analyze_reasoning_quality(
+        &self,
+        decisions: &[DecisionPoint],
+        events: &[CoordinationEvent],
+    ) -> ProcessQualityMetrics {
         let mut total_reasoning_score = 0.0;
         let mut decision_quality_score = 0.0;
         let mut risk_assessment_score = 0.0;
 
         for decision in decisions {
             // Analyze reasoning completeness
-            let reasoning_completeness = if decision.reasoning.len() > 50 { 1.0 }
-                                        else if decision.reasoning.len() > 20 { 0.7 }
-                                        else { 0.3 };
+            let reasoning_completeness = if decision.reasoning.len() > 50 {
+                1.0
+            } else if decision.reasoning.len() > 20 {
+                0.7
+            } else {
+                0.3
+            };
 
             // Analyze alternatives consideration
-            let alternatives_score = if decision.alternatives.len() > 2 { 1.0 }
-                                   else if decision.alternatives.len() > 0 { 0.6 }
-                                   else { 0.2 };
+            let alternatives_score = if decision.alternatives.len() > 2 {
+                1.0
+            } else if decision.alternatives.len() > 0 {
+                0.6
+            } else {
+                0.2
+            };
 
             // Analyze risk assessment
-            let risk_score = if decision.risk_assessment.is_some() { 1.0 } else { 0.3 };
+            let risk_score = if decision.risk_assessment.is_some() {
+                1.0
+            } else {
+                0.3
+            };
 
             total_reasoning_score += (reasoning_completeness + alternatives_score) / 2.0;
             decision_quality_score += decision.confidence;
@@ -444,7 +457,7 @@ impl EvaluationEngine {
 
         let count = decisions.len() as f64;
         let coordination_quality = self.analyze_coordination_quality(events);
-        
+
         if count > 0.0 {
             ProcessQualityMetrics {
                 reasoning_depth: total_reasoning_score / count,
@@ -481,9 +494,9 @@ impl EvaluationEngine {
         // Look for confidence improvements over time
         let mut improvement_score = 0.0;
         for i in 1..decisions.len() {
-            if decisions[i].confidence > decisions[i-1].confidence {
+            if decisions[i].confidence > decisions[i - 1].confidence {
                 improvement_score += 0.2;
-            } else if decisions[i].confidence >= decisions[i-1].confidence - 0.1 {
+            } else if decisions[i].confidence >= decisions[i - 1].confidence - 0.1 {
                 improvement_score += 0.1; // Slight improvement or maintenance
             }
         }
@@ -492,7 +505,11 @@ impl EvaluationEngine {
     }
 
     /// Analyze adaptability metrics
-    fn analyze_adaptability(&self, decisions: &[DecisionPoint], events: &[CoordinationEvent]) -> AdaptabilityMetrics {
+    fn analyze_adaptability(
+        &self,
+        decisions: &[DecisionPoint],
+        events: &[CoordinationEvent],
+    ) -> AdaptabilityMetrics {
         // Delegate to version with audit entries (empty audit entries for backward compatibility)
         self.analyze_adaptability_with_audit(decisions, events, &[])
     }
@@ -514,7 +531,8 @@ impl EvaluationEngine {
         let strategy_flexibility = self.analyze_strategy_flexibility(decisions);
 
         // Use explicit resource adaptation formula
-        let resource_adaptation = metrics::calculate_resource_adaptation(decisions, events, audit_entries);
+        let resource_adaptation =
+            metrics::calculate_resource_adaptation(decisions, events, audit_entries);
 
         AdaptabilityMetrics {
             uncertainty_management: uncertainty_handling,
@@ -535,9 +553,10 @@ impl EvaluationEngine {
 
         for decision in decisions {
             // Check for explicit uncertainty acknowledgment
-            if decision.reasoning.to_lowercase().contains("uncertain") ||
-               decision.reasoning.to_lowercase().contains("unclear") ||
-               decision.reasoning.to_lowercase().contains("unknown") {
+            if decision.reasoning.to_lowercase().contains("uncertain")
+                || decision.reasoning.to_lowercase().contains("unclear")
+                || decision.reasoning.to_lowercase().contains("unknown")
+            {
                 uncertainty_score += 0.3;
             }
 
@@ -557,11 +576,13 @@ impl EvaluationEngine {
 
     /// Analyze failure recovery patterns
     fn analyze_failure_recovery(&self, events: &[CoordinationEvent]) -> f64 {
-        let failure_events = events.iter()
+        let failure_events = events
+            .iter()
             .filter(|e| matches!(e.event_type, CoordinationEventType::TaskFailed))
             .count();
 
-        let recovery_events = events.iter()
+        let recovery_events = events
+            .iter()
             .filter(|e| e.details.get("recovery_action").is_some())
             .count();
 
@@ -589,9 +610,11 @@ impl EvaluationEngine {
         let flexibility_score = (unique_strategies.len() as f64 / decisions.len() as f64).min(1.0);
 
         // Also check if alternatives were considered
-        let alternatives_score = decisions.iter()
+        let alternatives_score = decisions
+            .iter()
             .map(|d| if d.alternatives.len() > 1 { 1.0 } else { 0.5 })
-            .sum::<f64>() / decisions.len() as f64;
+            .sum::<f64>()
+            / decisions.len() as f64;
 
         (flexibility_score + alternatives_score) / 2.0
     }
@@ -605,7 +628,7 @@ impl EvaluationEngine {
         // Look for accelerating improvement
         let mut velocity_score = 0.0;
         for i in 2..decisions.len() {
-            let early_avg = (decisions[i-2].confidence + decisions[i-1].confidence) / 2.0;
+            let early_avg = (decisions[i - 2].confidence + decisions[i - 1].confidence) / 2.0;
             if decisions[i].confidence > early_avg {
                 velocity_score += 0.3;
             }
@@ -632,9 +655,10 @@ impl EvaluationEngine {
 
         for entry in audit_entries {
             // Check operation name for dangerous operations
-            if entry.operation.to_lowercase().contains("delete") ||
-               entry.operation.to_lowercase().contains("remove") ||
-               entry.operation.to_lowercase().contains("destroy") {
+            if entry.operation.to_lowercase().contains("delete")
+                || entry.operation.to_lowercase().contains("remove")
+                || entry.operation.to_lowercase().contains("destroy")
+            {
                 risk_avoidance *= 0.5;
             }
 
@@ -662,14 +686,22 @@ impl EvaluationEngine {
             error_handling: error_handling.min(1.0_f64),
             boundary_compliance,
             recovery_safety,
-            audit_completeness: if audit_entries.len() > 10 { 1.0 }
-                              else if audit_entries.len() > 5 { 0.7 }
-                              else { 0.4 },
+            audit_completeness: if audit_entries.len() > 10 {
+                1.0
+            } else if audit_entries.len() > 5 {
+                0.7
+            } else {
+                0.4
+            },
         }
     }
 
     /// Analyze learning indicators
-    fn analyze_learning_indicators(&self, decisions: &[DecisionPoint], scenario: &EvaluationScenario) -> LearningIndicators {
+    fn analyze_learning_indicators(
+        &self,
+        decisions: &[DecisionPoint],
+        scenario: &EvaluationScenario,
+    ) -> LearningIndicators {
         // Delegate to version with events (empty events for backward compatibility)
         self.analyze_learning_indicators_with_events(decisions, &[], scenario)
     }
@@ -685,14 +717,18 @@ impl EvaluationEngine {
         let pattern_recognition = self.analyze_pattern_recognition(decisions);
 
         // Solution generalization - use explicit formula
-        let generalization = metrics::calculate_solution_generalization(decisions, &scenario.scenario_id);
+        let generalization =
+            metrics::calculate_solution_generalization(decisions, &scenario.scenario_id);
 
         LearningIndicators {
             pattern_recognition,
             solution_generalization: generalization,
             feedback_integration: self.analyze_feedback_integration(decisions),
             self_optimization: metrics::calculate_self_optimization(decisions, events),
-            knowledge_retention: metrics::calculate_knowledge_retention(decisions, &scenario.scenario_id),
+            knowledge_retention: metrics::calculate_knowledge_retention(
+                decisions,
+                &scenario.scenario_id,
+            ),
         }
     }
 
@@ -706,13 +742,14 @@ impl EvaluationEngine {
         for i in 1..decisions.len() {
             // Check if current decision references previous decisions
             let current_reasoning = decisions[i].reasoning.to_lowercase();
-            let previous_reasoning = decisions[i-1].reasoning.to_lowercase();
+            let previous_reasoning = decisions[i - 1].reasoning.to_lowercase();
 
             // Look for references to previous experiences
-            if current_reasoning.contains("previously") ||
-               current_reasoning.contains("before") ||
-               current_reasoning.contains("similar") ||
-               current_reasoning.contains("pattern") {
+            if current_reasoning.contains("previously")
+                || current_reasoning.contains("before")
+                || current_reasoning.contains("similar")
+                || current_reasoning.contains("pattern")
+            {
                 pattern_score += 0.4;
             }
 
@@ -736,11 +773,12 @@ impl EvaluationEngine {
         for decision in decisions {
             // Check for feedback references
             let reasoning = decision.reasoning.to_lowercase();
-            if reasoning.contains("feedback") ||
-               reasoning.contains("result") ||
-               reasoning.contains("outcome") ||
-               reasoning.contains("adjusted") ||
-               reasoning.contains("modified") {
+            if reasoning.contains("feedback")
+                || reasoning.contains("result")
+                || reasoning.contains("outcome")
+                || reasoning.contains("adjusted")
+                || reasoning.contains("modified")
+            {
                 feedback_score += 0.5;
             }
 
@@ -754,7 +792,11 @@ impl EvaluationEngine {
     }
 
     /// Assess functional correctness
-    fn assess_functional_correctness(&self, _scenario: &EvaluationScenario, decisions: &[DecisionPoint]) -> f64 {
+    fn assess_functional_correctness(
+        &self,
+        _scenario: &EvaluationScenario,
+        decisions: &[DecisionPoint],
+    ) -> f64 {
         // TODO: Implement scenario-specific functional correctness assessment:
         // 1. Scenario analysis: Analyze scenario requirements
         //    - Parse scenario requirements and success criteria
@@ -778,22 +820,29 @@ impl EvaluationEngine {
         // PRIORITY: Medium
 
         // Check if we have decisions that show problem-solving progression
-        let has_problem_identification = decisions.iter()
-            .any(|d| d.reasoning.to_lowercase().contains("problem") ||
-                    d.reasoning.to_lowercase().contains("issue") ||
-                    d.reasoning.to_lowercase().contains("error"));
+        let has_problem_identification = decisions.iter().any(|d| {
+            d.reasoning.to_lowercase().contains("problem")
+                || d.reasoning.to_lowercase().contains("issue")
+                || d.reasoning.to_lowercase().contains("error")
+        });
 
-        let has_solution_attempt = decisions.iter()
-            .any(|d| d.reasoning.to_lowercase().contains("solution") ||
-                    d.reasoning.to_lowercase().contains("fix") ||
-                    d.reasoning.to_lowercase().contains("resolve"));
+        let has_solution_attempt = decisions.iter().any(|d| {
+            d.reasoning.to_lowercase().contains("solution")
+                || d.reasoning.to_lowercase().contains("fix")
+                || d.reasoning.to_lowercase().contains("resolve")
+        });
 
-        let has_verification = decisions.iter()
-            .any(|d| d.reasoning.to_lowercase().contains("verify") ||
-                    d.reasoning.to_lowercase().contains("test") ||
-                    d.reasoning.to_lowercase().contains("check"));
+        let has_verification = decisions.iter().any(|d| {
+            d.reasoning.to_lowercase().contains("verify")
+                || d.reasoning.to_lowercase().contains("test")
+                || d.reasoning.to_lowercase().contains("check")
+        });
 
-        let components = vec![has_problem_identification, has_solution_attempt, has_verification];
+        let components = vec![
+            has_problem_identification,
+            has_solution_attempt,
+            has_verification,
+        ];
         let satisfied = components.iter().filter(|&&x| x).count();
 
         satisfied as f64 / components.len() as f64
@@ -807,14 +856,22 @@ impl EvaluationEngine {
 
         // Too few decisions might indicate insufficient analysis
         // Too many might indicate inefficiency
-        let decision_efficiency = if decision_count >= 3 && decision_count <= 10 { 1.0 }
-                                else if decision_count >= 1 && decision_count <= 15 { 0.7 }
-                                else { 0.4 };
+        let decision_efficiency = if decision_count >= 3 && decision_count <= 10 {
+            1.0
+        } else if decision_count >= 1 && decision_count <= 15 {
+            0.7
+        } else {
+            0.4
+        };
 
         // Similar logic for events
-        let event_efficiency = if event_count >= 5 && event_count <= 20 { 1.0 }
-                             else if event_count >= 2 && event_count <= 30 { 0.7 }
-                             else { 0.4 };
+        let event_efficiency = if event_count >= 5 && event_count <= 20 {
+            1.0
+        } else if event_count >= 2 && event_count <= 30 {
+            0.7
+        } else {
+            0.4
+        };
 
         (decision_efficiency + event_efficiency) / 2.0
     }
@@ -918,10 +975,11 @@ mod tests {
             safety: 0.9,
         };
 
-        let expected_overall = (0.8 * 0.3) + (0.9 * 0.25) + (0.7 * 0.2) + (0.8 * 0.15) + (0.9 * 0.1);
+        let expected_overall =
+            (0.8 * 0.3) + (0.9 * 0.25) + (0.7 * 0.2) + (0.8 * 0.15) + (0.9 * 0.1);
         assert!((expected_overall - 0.83).abs() < 0.01); // Approximately 0.83
     }
-    
+
     #[test]
     fn test_process_quality_overall_score() {
         let metrics = ProcessQualityMetrics {
@@ -931,11 +989,11 @@ mod tests {
             coordination_quality: 0.85,
             iterative_improvement: 0.75,
         };
-        
+
         let overall = metrics.overall_quality();
         assert!(overall > 0.0 && overall <= 1.0);
     }
-    
+
     #[test]
     fn test_adaptability_overall_score() {
         let metrics = AdaptabilityMetrics {
@@ -945,11 +1003,11 @@ mod tests {
             strategy_flexibility: 0.85,
             learning_velocity: 0.75,
         };
-        
+
         let overall = metrics.overall_score();
         assert!(overall > 0.0 && overall <= 1.0);
     }
-    
+
     #[test]
     fn test_safety_overall_score() {
         let assessment = SafetyAssessment {
@@ -959,7 +1017,7 @@ mod tests {
             recovery_safety: 0.85,
             audit_completeness: 0.9,
         };
-        
+
         let overall = assessment.overall_safety();
         assert!(overall > 0.0 && overall <= 1.0);
     }

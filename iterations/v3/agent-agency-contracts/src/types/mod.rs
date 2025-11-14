@@ -6,15 +6,14 @@
 //!
 //! @author @darianrosebrook
 
-pub mod planning;
-pub mod execution;
-pub mod data;
 pub mod council;
-pub mod memory;
-pub mod research;
-pub mod validation;
-pub mod tool_chain;
+pub mod data;
 pub mod data_processing;
+pub mod execution;
 pub mod learning;
+pub mod memory;
+pub mod planning;
 pub mod prelude;
-
+pub mod research;
+pub mod tool_chain;
+pub mod validation;

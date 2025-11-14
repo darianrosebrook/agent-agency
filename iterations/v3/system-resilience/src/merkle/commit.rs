@@ -2,11 +2,11 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
+use crate::recovery_types::{Digest, StreamingHasher};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::recovery_types::{Digest, StreamingHasher};
 
 use crate::recovery_types::*;
 // use super::tree::FileTree; // Unused
@@ -16,13 +16,12 @@ use crate::recovery_types::*;
 pub struct Commit {
     pub id: Digest,
     pub parent: Option<Digest>,
-    pub tree: Digest,                   // Merkle root (trees are authoritative)
+    pub tree: Digest, // Merkle root (trees are authoritative)
     pub session_id: String,
     pub caws_verdict_id: Option<String>,
     pub message: Option<String>,
-    pub stats: ChangeStats,             // Observability
+    pub stats: ChangeStats, // Observability
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub author: AuthorInfo,
 }
@@ -76,8 +75,9 @@ impl Commit {
         stats: ChangeStats,
     ) -> Self {
         let timestamp = Utc::now();
-        let id = Self::calculate_commit_id(parent, tree, session_id.clone(), author.clone(), timestamp);
-        
+        let id =
+            Self::calculate_commit_id(parent, tree, session_id.clone(), author.clone(), timestamp);
+
         Self {
             id,
             parent,
@@ -92,10 +92,7 @@ impl Commit {
     }
 
     /// Create a commit with CAWS verdict
-    pub fn with_verdict(
-        mut self,
-        verdict_id: String,
-    ) -> Self {
+    pub fn with_verdict(mut self, verdict_id: String) -> Self {
         self.caws_verdict_id = Some(verdict_id);
         self
     }
@@ -109,30 +106,30 @@ impl Commit {
         timestamp: DateTime<Utc>,
     ) -> Digest {
         let mut hasher = StreamingHasher::new();
-        
+
         // Hash parent commit (or zero if root)
         if let Some(parent) = parent {
             hasher.update(parent.as_bytes());
         } else {
             hasher.update(&[0u8; 32]);
         }
-        
+
         // Hash tree root
         hasher.update(tree.as_bytes());
-        
+
         // Hash session ID
         hasher.update(session_id.as_bytes());
-        
+
         // Hash author info
         hasher.update(author.name.as_bytes());
         hasher.update(author.email.as_bytes());
         if let Some(agent_id) = &author.agent_id {
             hasher.update(agent_id.as_bytes());
         }
-        
+
         // Hash timestamp
         hasher.update(&timestamp.timestamp().to_le_bytes());
-        
+
         hasher.finalize()
     }
 
@@ -254,9 +251,15 @@ impl CommitBuilder {
     /// Build the commit
     pub fn build(self) -> Result<Commit> {
         let parent = self.parent;
-        let tree = self.tree.ok_or_else(|| anyhow::anyhow!("Tree root is required"))?;
-        let session_id = self.session_id.ok_or_else(|| anyhow::anyhow!("Session ID is required"))?;
-        let author = self.author.ok_or_else(|| anyhow::anyhow!("Author is required"))?;
+        let tree = self
+            .tree
+            .ok_or_else(|| anyhow::anyhow!("Tree root is required"))?;
+        let session_id = self
+            .session_id
+            .ok_or_else(|| anyhow::anyhow!("Session ID is required"))?;
+        let author = self
+            .author
+            .ok_or_else(|| anyhow::anyhow!("Author is required"))?;
         let message = self.message;
         let stats = self.stats.unwrap_or(ChangeStats {
             files_added: 0,
@@ -269,7 +272,9 @@ impl CommitBuilder {
             dedupe_ratio: 0.0,
             timestamp: None,
         });
-        Ok(Commit::new(parent, tree, session_id, author, message, stats))
+        Ok(Commit::new(
+            parent, tree, session_id, author, message, stats,
+        ))
     }
 }
 
@@ -395,10 +400,12 @@ mod tests {
             bytes_added: 100,
             bytes_changed: 0,
             dedupe_ratio: 0.5,
-            timestamp: Some(std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()),
+            timestamp: Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+            ),
         };
 
         let commit = Commit::new(
@@ -419,10 +426,7 @@ mod tests {
     fn test_commit_builder() {
         let tree_digest = Digest::from_bytes([1u8; 32]);
         let session_id = "session-123".to_string();
-        let author = AuthorInfo::human(
-            "Test User".to_string(),
-            "user@test.com".to_string(),
-        );
+        let author = AuthorInfo::human("Test User".to_string(), "user@test.com".to_string());
 
         let commit = CommitBuilder::new()
             .tree(tree_digest)
@@ -464,4 +468,3 @@ mod tests {
         assert!(chain.root().is_some());
     }
 }
-

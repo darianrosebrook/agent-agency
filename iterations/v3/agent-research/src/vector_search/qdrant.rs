@@ -5,8 +5,8 @@
 use crate::research_types::*;
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    vectors_config::Config, CreateCollection, Distance, PointStruct, ScrollPoints, SearchPoints,
-    VectorParams, VectorsConfig, WithPayloadSelector, UpsertPoints, DeletePoints,
+    vectors_config::Config, CreateCollection, DeletePoints, Distance, PointStruct, ScrollPoints,
+    SearchPoints, UpsertPoints, VectorParams, VectorsConfig, WithPayloadSelector,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
@@ -36,7 +36,8 @@ impl QdrantClient {
 
         // Check if collection exists
         let collections = self.client.list_collections().await?;
-        let collection_exists = collections.collections
+        let collection_exists = collections
+            .collections
             .iter()
             .any(|c| c.name == self.collection_name);
 
@@ -69,7 +70,8 @@ impl QdrantClient {
         limit: u32,
         score_threshold: f32,
     ) -> Result<Vec<SearchResult>> {
-        let search_result = self.client
+        let search_result = self
+            .client
             .search_points(SearchPoints {
                 collection_name: self.collection_name.clone(),
                 vector: query_embedding.to_vec(),
@@ -77,7 +79,7 @@ impl QdrantClient {
                 score_threshold: Some(score_threshold),
                 with_payload: Some(WithPayloadSelector {
                     selector_options: Some(
-                        qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true)
+                        qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true),
                     ),
                 }),
                 ..Default::default()
@@ -95,7 +97,11 @@ impl QdrantClient {
     }
 
     /// Add knowledge entry to the vector database
-    pub async fn add_knowledge_entry(&self, entry: &KnowledgeEntry, embedding: &[f32]) -> Result<()> {
+    pub async fn add_knowledge_entry(
+        &self,
+        entry: &KnowledgeEntry,
+        embedding: &[f32],
+    ) -> Result<()> {
         let point = PointStruct {
             id: Some(entry.id.to_string().into()),
             vectors: Some(embedding.to_vec().into()),
@@ -116,7 +122,11 @@ impl QdrantClient {
     }
 
     /// Update existing knowledge entry
-    pub async fn update_knowledge_entry(&self, entry: &KnowledgeEntry, embedding: &[f32]) -> Result<()> {
+    pub async fn update_knowledge_entry(
+        &self,
+        entry: &KnowledgeEntry,
+        embedding: &[f32],
+    ) -> Result<()> {
         // For updates, we delete and re-insert
         self.delete_knowledge_entry(&entry.id).await?;
         self.add_knowledge_entry(entry, embedding).await
@@ -124,8 +134,8 @@ impl QdrantClient {
 
     /// Delete knowledge entry from vector database
     pub async fn delete_knowledge_entry(&self, entry_id: &Uuid) -> Result<()> {
-        use qdrant_client::qdrant::{PointsSelector, PointsIdsList, PointId};
-        
+        use qdrant_client::qdrant::{PointId, PointsIdsList, PointsSelector};
+
         self.client
             .delete_points(DeletePoints {
                 collection_name: self.collection_name.clone(),
@@ -136,13 +146,13 @@ impl QdrantClient {
                                 ids: vec![PointId {
                                     point_id_options: Some(
                                         qdrant_client::qdrant::point_id::PointIdOptions::Uuid(
-                                            entry_id.to_string()
-                                        )
-                                    )
-                                }]
-                            }
-                        )
-                    )
+                                            entry_id.to_string(),
+                                        ),
+                                    ),
+                                }],
+                            },
+                        ),
+                    ),
                 }),
                 ..Default::default()
             })
@@ -160,14 +170,17 @@ impl QdrantClient {
         let mut offset = None;
 
         loop {
-            let scroll_result = self.client
+            let scroll_result = self
+                .client
                 .scroll(ScrollPoints {
                     collection_name: self.collection_name.clone(),
                     limit: Some(batch_size),
                     offset,
                     with_payload: Some(WithPayloadSelector {
                         selector_options: Some(
-                            qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(true)
+                            qdrant_client::qdrant::with_payload_selector::SelectorOptions::Enable(
+                                true,
+                            ),
                         ),
                     }),
                     ..Default::default()
@@ -198,7 +211,10 @@ impl QdrantClient {
     }
 
     /// Convert KnowledgeEntry to Qdrant payload
-    fn knowledge_entry_to_payload(&self, entry: &KnowledgeEntry) -> HashMap<String, qdrant_client::qdrant::Value> {
+    fn knowledge_entry_to_payload(
+        &self,
+        entry: &KnowledgeEntry,
+    ) -> HashMap<String, qdrant_client::qdrant::Value> {
         let mut payload = HashMap::new();
 
         payload.insert("id".to_string(), json!(entry.id).into());
@@ -218,21 +234,29 @@ impl QdrantClient {
     }
 
     /// Convert Qdrant payload to KnowledgeEntry
-    fn convert_payload_to_qdrant(&self, payload: &HashMap<String, qdrant_client::qdrant::Value>) -> Result<KnowledgeEntry> {
-        let id = self.extract_string_value(payload.get("id"))
+    fn convert_payload_to_qdrant(
+        &self,
+        payload: &HashMap<String, qdrant_client::qdrant::Value>,
+    ) -> Result<KnowledgeEntry> {
+        let id = self
+            .extract_string_value(payload.get("id"))
             .and_then(|s| Uuid::parse_str(&s).ok())
             .context("Missing or invalid id")?;
 
-        let content = self.extract_string_value(payload.get("content"))
+        let content = self
+            .extract_string_value(payload.get("content"))
             .context("Missing content")?;
 
-        let title = self.extract_string_value(payload.get("title"))
+        let title = self
+            .extract_string_value(payload.get("title"))
             .unwrap_or_default();
 
-        let source = self.extract_string_value(payload.get("source"))
+        let source = self
+            .extract_string_value(payload.get("source"))
             .unwrap_or_default();
 
-        let content_type_str = self.extract_string_value(payload.get("content_type"))
+        let content_type_str = self
+            .extract_string_value(payload.get("content_type"))
             .unwrap_or_else(|| "text".to_string());
 
         let content_type = match content_type_str.as_str() {
@@ -242,19 +266,22 @@ impl QdrantClient {
             _ => ContentType::Text,
         };
 
-        let tags = payload.get("tags")
+        let tags = payload
+            .get("tags")
             .and_then(|v| v.kind.as_ref())
             .and_then(|kind| match kind {
-                qdrant_client::qdrant::value::Kind::ListValue(list) => {
-                    Some(list.values.iter()
+                qdrant_client::qdrant::value::Kind::ListValue(list) => Some(
+                    list.values
+                        .iter()
                         .filter_map(|v| self.extract_string_value(Some(v)))
-                        .collect::<Vec<String>>())
-                },
+                        .collect::<Vec<String>>(),
+                ),
                 _ => None,
             })
             .unwrap_or_default();
 
-        let metadata = payload.get("metadata")
+        let metadata = payload
+            .get("metadata")
             .and_then(|v| serde_json::from_str(&serde_json::to_string(v).unwrap_or_default()).ok())
             .unwrap_or_default();
 
@@ -289,7 +316,10 @@ impl QdrantClient {
     }
 
     /// Convert Qdrant point to SearchResult
-    fn qdrant_point_to_search_result(&self, point: qdrant_client::qdrant::ScoredPoint) -> Result<SearchResult> {
+    fn qdrant_point_to_search_result(
+        &self,
+        point: qdrant_client::qdrant::ScoredPoint,
+    ) -> Result<SearchResult> {
         // Extract the point from ScoredPoint
         let retrieved_point = qdrant_client::qdrant::RetrievedPoint {
             id: point.id.clone(),
@@ -299,7 +329,7 @@ impl QdrantClient {
             order_value: point.order_value.clone(),
         };
         let entry = self.qdrant_point_to_knowledge_entry(retrieved_point)?;
-        
+
         let score = point.score as f64;
 
         // Convert KnowledgeSource enum to string
@@ -317,7 +347,9 @@ impl QdrantClient {
             id: entry.id,
             title: entry.title.clone(),
             content: entry.content.clone(),
-            url: entry.metadata.get("url")
+            url: entry
+                .metadata
+                .get("url")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
             source: source_str,
@@ -328,7 +360,10 @@ impl QdrantClient {
     }
 
     /// Convert Qdrant point to KnowledgeEntry
-    fn qdrant_point_to_knowledge_entry(&self, point: qdrant_client::qdrant::RetrievedPoint) -> Result<KnowledgeEntry> {
+    fn qdrant_point_to_knowledge_entry(
+        &self,
+        point: qdrant_client::qdrant::RetrievedPoint,
+    ) -> Result<KnowledgeEntry> {
         let payload = point.payload;
         self.convert_payload_to_qdrant(&payload)
     }

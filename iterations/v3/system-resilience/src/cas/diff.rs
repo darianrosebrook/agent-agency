@@ -109,7 +109,8 @@ impl DiffGenerator {
         };
 
         // Generate the unified diff
-        let diff_content = self.create_unified_diff(&base_normalized, &after_normalized, file_path)?;
+        let diff_content =
+            self.create_unified_diff(&base_normalized, &after_normalized, file_path)?;
 
         // Check if diff is too large
         if diff_content.len() > self.config.max_diff_size {
@@ -149,7 +150,7 @@ impl DiffGenerator {
 
         // Convert to bytes
         let mut diff_bytes = Vec::new();
-        
+
         if self.config.include_file_headers {
             // Add file header
             diff_bytes.extend_from_slice(b"--- a/");
@@ -265,7 +266,7 @@ impl DiffGenerator {
 
         while diff_index < diff_lines.len() {
             let line = diff_lines[diff_index];
-            
+
             if line.starts_with("@@") {
                 // Parse hunk header
                 let hunk_info = self.parse_hunk_header(line)?;
@@ -280,13 +281,13 @@ impl DiffGenerator {
                         base_index += 1;
                     }
                 }
-                
+
                 let mut hunk_base_line = hunk_info.base_start;
                 let mut hunk_after_line = hunk_info.after_start;
 
                 while diff_index < diff_lines.len() && !diff_lines[diff_index].starts_with("@@") {
                     let diff_line = diff_lines[diff_index];
-                    
+
                     match diff_line.chars().next() {
                         Some(' ') => {
                             // Context line - copy from base
@@ -321,7 +322,7 @@ impl DiffGenerator {
                     }
                     diff_index += 1;
                 }
-                
+
                 // Update base_index to after this hunk
                 base_index = hunk_base_line - 1;
             } else {
@@ -364,7 +365,7 @@ impl DiffGenerator {
     fn parse_line_range(&self, range: &str) -> Result<(usize, usize)> {
         let range = range.trim_start_matches('-').trim_start_matches('+');
         let parts: Vec<&str> = range.split(',').collect();
-        
+
         let start = parts[0].parse::<usize>()?;
         let count = if parts.len() > 1 {
             parts[1].parse::<usize>()?
@@ -456,7 +457,7 @@ mod tests {
         let generator = DiffGenerator::new();
         let base_content = b"line1\nline2\nline3\n";
         let after_content = b"line1\nline2_modified\nline3\nline4\n";
-        
+
         let base_digest = Digest::from_bytes([10; 32]);
         let after_digest = Digest::from_bytes([11; 32]);
 
@@ -483,7 +484,7 @@ mod tests {
         let generator = DiffGenerator::new();
         let base_content = b"line1\nline2\nline3\n";
         let after_content = b"line1\nline2_modified\nline3\nline4\n";
-        
+
         let base_digest = Digest::from_bytes([10; 32]);
         let after_digest = Digest::from_bytes([11; 32]);
 

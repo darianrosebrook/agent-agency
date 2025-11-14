@@ -19,7 +19,9 @@ impl OllamaService {
     }
 
     /// Create a new Ollama service with specified default model
-    pub async fn with_model(default_model: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn with_model(
+        default_model: &str,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Self {
             base_url: "http://localhost:11434".to_string(),
             default_model: default_model.to_string(),
@@ -52,9 +54,7 @@ impl OllamaService {
                 self.wait_for_startup().await?;
                 Ok(())
             }
-            Err(e) => {
-                Err(format!("Failed to start Ollama service: {}", e).into())
-            }
+            Err(e) => Err(format!("Failed to start Ollama service: {}", e).into()),
         }
     }
 
@@ -81,7 +81,10 @@ impl OllamaService {
     }
 
     /// Pull a model if not available
-    pub async fn ensure_model(&self, model_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn ensure_model(
+        &self,
+        model_name: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Ensuring model {} is available", model_name);
 
         // Check if model is available
@@ -106,13 +109,19 @@ impl OllamaService {
     }
 
     /// Check if a model is available
-    pub async fn is_model_available(&self, model_name: &str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn is_model_available(
+        &self,
+        model_name: &str,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let response = reqwest::get(&format!("{}/api/tags", self.base_url)).await?;
         let tags: serde_json::Value = response.json().await?;
 
         if let Some(models) = tags["models"].as_array() {
             Ok(models.iter().any(|model| {
-                model["name"].as_str().map(|name| name == model_name).unwrap_or(false)
+                model["name"]
+                    .as_str()
+                    .map(|name| name == model_name)
+                    .unwrap_or(false)
             }))
         } else {
             Ok(false)
@@ -120,12 +129,19 @@ impl OllamaService {
     }
 
     /// Generate text using the default model
-    pub async fn generate(&self, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn generate(
+        &self,
+        prompt: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         self.generate_with_model(&self.default_model, prompt).await
     }
 
     /// Generate text using a specific model
-    pub async fn generate_with_model(&self, model: &str, prompt: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn generate_with_model(
+        &self,
+        model: &str,
+        prompt: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let client = reqwest::Client::new();
         let request_body = serde_json::json!({
             "model": model,
@@ -163,12 +179,15 @@ impl OllamaService {
     }
 
     /// Get available models
-    pub async fn list_models(&self) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn list_models(
+        &self,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let response = reqwest::get(&format!("{}/api/tags", self.base_url)).await?;
         let tags: serde_json::Value = response.json().await?;
 
         if let Some(models) = tags["models"].as_array() {
-            let model_names = models.iter()
+            let model_names = models
+                .iter()
                 .filter_map(|model| model["name"].as_str())
                 .map(|name| name.to_string())
                 .collect();

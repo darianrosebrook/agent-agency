@@ -161,7 +161,7 @@ impl CircuitBreaker {
     }
 
     /// Get current circuit state
-    /// 
+    ///
     /// This method checks if the circuit breaker should transition from Open to HalfOpen
     /// based on the timeout, ensuring the state is always up-to-date.
     pub fn state(&self) -> CircuitState {
@@ -178,12 +178,12 @@ impl CircuitBreaker {
                 false
             }
         };
-        
+
         // If timeout elapsed, transition to HalfOpen
         if should_transition {
             self.transition_to_half_open();
         }
-        
+
         // Return current state
         *self.state.lock().unwrap()
     }
@@ -203,7 +203,9 @@ impl CircuitBreaker {
         if self.is_open() {
             return Err(CircuitBreakerError::CircuitOpen);
         }
-        Ok(CircuitBreakerPermit { circuit_breaker: self })
+        Ok(CircuitBreakerPermit {
+            circuit_breaker: self,
+        })
     }
 }
 

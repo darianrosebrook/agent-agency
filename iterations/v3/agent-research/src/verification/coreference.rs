@@ -2,33 +2,66 @@
 //!
 //! This module handles pronoun resolution, entity linking, and coreference chains.
 
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use anyhow::Result;
 use lru::LruCache;
 use md5;
-use regex::Regex;
 use once_cell::sync::Lazy;
-use anyhow::Result;
+use regex::Regex;
 use serde_json::Value;
+use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
-use crate::verification::verification_types::{Entity, EntityType, CoreferenceChain, CoreferenceType, CoreferenceResolution};
+use crate::verification::verification_types::{
+    CoreferenceChain, CoreferenceResolution, CoreferenceType, Entity, EntityType,
+};
 
 /// Static patterns for coreference resolution
 static PRONOUNS: Lazy<HashMap<&'static str, Vec<&'static str>>> = Lazy::new(|| {
     HashMap::from([
-        ("personal", vec!["i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she", "her", "hers", "it", "its", "we", "us", "our", "ours", "they", "them", "their", "theirs"]),
+        (
+            "personal",
+            vec![
+                "i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she", "her",
+                "hers", "it", "its", "we", "us", "our", "ours", "they", "them", "their", "theirs",
+            ],
+        ),
         ("demonstrative", vec!["this", "that", "these", "those"]),
-        ("relative", vec!["who", "whom", "whose", "which", "that", "what"]),
+        (
+            "relative",
+            vec!["who", "whom", "whose", "which", "that", "what"],
+        ),
     ])
 });
 
 /// Common code/system entities for disambiguation
 static CODE_ENTITIES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     vec![
-        "function", "method", "class", "struct", "module", "package", "library",
-        "api", "endpoint", "service", "database", "table", "column", "query",
-        "algorithm", "model", "component", "system", "application", "server",
-        "client", "user", "admin", "developer", "code", "implementation",
+        "function",
+        "method",
+        "class",
+        "struct",
+        "module",
+        "package",
+        "library",
+        "api",
+        "endpoint",
+        "service",
+        "database",
+        "table",
+        "column",
+        "query",
+        "algorithm",
+        "model",
+        "component",
+        "system",
+        "application",
+        "server",
+        "client",
+        "user",
+        "admin",
+        "developer",
+        "code",
+        "implementation",
     ]
 });
 
@@ -99,11 +132,15 @@ impl CoreferenceResolver {
                         id: format!("entity_{}", entities.len()),
                         name: capture_text.clone(),
                         text: capture_text.clone(),
-                        entity_type: crate::verification::verification_types::EntityType::CodeEntity,
+                        entity_type:
+                            crate::verification::verification_types::EntityType::CodeEntity,
                         confidence: 0.8,
                         context: None,
                         position: Some((capture.start(), capture.end())),
-                        metadata: Some(HashMap::from([("source".to_string(), serde_json::Value::String("pattern_match".to_string()))])),
+                        metadata: Some(HashMap::from([(
+                            "source".to_string(),
+                            serde_json::Value::String("pattern_match".to_string()),
+                        )])),
                     });
                 }
             }
@@ -127,7 +164,10 @@ impl CoreferenceResolver {
                         confidence: 0.7,
                         context: None,
                         position: Some((capture.start(), capture.end())),
-                        metadata: Some(HashMap::from([("source".to_string(), serde_json::Value::String("pattern_match".to_string()))])),
+                        metadata: Some(HashMap::from([(
+                            "source".to_string(),
+                            serde_json::Value::String("pattern_match".to_string()),
+                        )])),
                     });
                 }
             }
@@ -146,10 +186,7 @@ impl CoreferenceResolver {
                 let pattern = format!(r"\b{}\b", pronoun);
                 if let Ok(regex) = Regex::new(&pattern) {
                     for capture in regex.find_iter(&text_lower) {
-                        pronouns.push((
-                            pronoun.to_string(),
-                            (capture.start(), capture.end())
-                        ));
+                        pronouns.push((pronoun.to_string(), (capture.start(), capture.end())));
                     }
                 }
             }
@@ -170,7 +207,10 @@ impl CoreferenceResolver {
         for (pronoun, pronoun_pos) in pronouns {
             // Find potential antecedents within reasonable distance
             let antecedent_candidates = self.find_antecedent_candidates(
-                text, entities, pronoun_pos, 500 // 500 chars window
+                text,
+                entities,
+                pronoun_pos,
+                500, // 500 chars window
             );
 
             if let Some(best_match) = self.select_best_antecedent(pronoun, &antecedent_candidates) {
@@ -186,7 +226,10 @@ impl CoreferenceResolver {
                             confidence: 0.6,
                             context: None,
                             position: Some(*pronoun_pos),
-                            metadata: Some(HashMap::from([("antecedent".to_string(), serde_json::Value::String(best_match.text.clone()))])),
+                            metadata: Some(HashMap::from([(
+                                "antecedent".to_string(),
+                                serde_json::Value::String(best_match.text.clone()),
+                            )])),
                         });
                         chain.confidence = (chain.confidence + 0.6) / 2.0;
                         found_chain = true;
@@ -205,7 +248,10 @@ impl CoreferenceResolver {
                             confidence: 0.6,
                             context: None,
                             position: Some(*pronoun_pos),
-                            metadata: Some(HashMap::from([("antecedent".to_string(), serde_json::Value::String(best_match.text.clone()))])),
+                            metadata: Some(HashMap::from([(
+                                "antecedent".to_string(),
+                                serde_json::Value::String(best_match.text.clone()),
+                            )])),
                         }],
                         confidence: 0.7,
                         chain_type: CoreferenceType::Anaphoric,
@@ -228,7 +274,8 @@ impl CoreferenceResolver {
         let pronoun_start = pronoun_pos.0;
         let window_start = pronoun_start.saturating_sub(window_size);
 
-        entities.iter()
+        entities
+            .iter()
             .filter(|entity| {
                 if let Some(pos) = entity.position {
                     let entity_end = pos.1;
@@ -241,7 +288,11 @@ impl CoreferenceResolver {
     }
 
     /// Select best antecedent based on pronoun type and entity characteristics
-    fn select_best_antecedent<'a>(&self, pronoun: &str, candidates: &[&'a Entity]) -> Option<&'a Entity> {
+    fn select_best_antecedent<'a>(
+        &self,
+        pronoun: &str,
+        candidates: &[&'a Entity],
+    ) -> Option<&'a Entity> {
         if candidates.is_empty() {
             return None;
         }
@@ -256,12 +307,19 @@ impl CoreferenceResolver {
             // Boost score for semantic matches
             match pronoun {
                 "it" | "this" | "that" => {
-                    if matches!(candidate.entity_type, crate::verification::verification_types::EntityType::CodeEntity | crate::verification::verification_types::EntityType::SystemComponent) {
+                    if matches!(
+                        candidate.entity_type,
+                        crate::verification::verification_types::EntityType::CodeEntity
+                            | crate::verification::verification_types::EntityType::SystemComponent
+                    ) {
                         score *= 1.5;
                     }
                 }
                 "they" | "them" => {
-                    if matches!(candidate.entity_type, crate::verification::verification_types::EntityType::Organization) {
+                    if matches!(
+                        candidate.entity_type,
+                        crate::verification::verification_types::EntityType::Organization
+                    ) {
                         score *= 1.3;
                     }
                 }
@@ -287,7 +345,10 @@ impl CoreferenceResolver {
             return 1.0;
         }
 
-        let resolved_count = chains.iter().map(|chain| chain.mentions.len()).sum::<usize>();
+        let resolved_count = chains
+            .iter()
+            .map(|chain| chain.mentions.len())
+            .sum::<usize>();
         let total_pronouns = pronouns.len();
 
         resolved_count as f64 / total_pronouns as f64
@@ -299,11 +360,13 @@ impl CoreferenceResolver {
         pronouns: &[(String, (usize, usize))],
         chains: &[CoreferenceChain],
     ) -> Vec<String> {
-        let resolved_positions: HashSet<_> = chains.iter()
+        let resolved_positions: HashSet<_> = chains
+            .iter()
             .flat_map(|chain| chain.mentions.iter().filter_map(|mention| mention.position))
             .collect();
 
-        pronouns.iter()
+        pronouns
+            .iter()
             .filter(|(_, pos)| !resolved_positions.contains(pos))
             .map(|(pronoun, _)| pronoun.clone())
             .collect()

@@ -26,7 +26,10 @@ impl MetricsRegistry {
     pub async fn counter(&self, name: &str, description: &str) -> CounterHandle {
         let mut counters = self.counters.write().await;
         if !counters.contains_key(name) {
-            counters.insert(name.to_string(), Counter::new(name.to_string(), description.to_string()));
+            counters.insert(
+                name.to_string(),
+                Counter::new(name.to_string(), description.to_string()),
+            );
         }
 
         CounterHandle {
@@ -39,7 +42,10 @@ impl MetricsRegistry {
     pub async fn gauge(&self, name: &str, description: &str) -> GaugeHandle {
         let mut gauges = self.gauges.write().await;
         if !gauges.contains_key(name) {
-            gauges.insert(name.to_string(), Gauge::new(name.to_string(), description.to_string()));
+            gauges.insert(
+                name.to_string(),
+                Gauge::new(name.to_string(), description.to_string()),
+            );
         }
 
         GaugeHandle {
@@ -49,10 +55,18 @@ impl MetricsRegistry {
     }
 
     /// Create or get a histogram
-    pub async fn histogram(&self, name: &str, description: &str, buckets: Vec<f64>) -> HistogramHandle {
+    pub async fn histogram(
+        &self,
+        name: &str,
+        description: &str,
+        buckets: Vec<f64>,
+    ) -> HistogramHandle {
         let mut histograms = self.histograms.write().await;
         if !histograms.contains_key(name) {
-            histograms.insert(name.to_string(), Histogram::new(name.to_string(), description.to_string(), buckets));
+            histograms.insert(
+                name.to_string(),
+                Histogram::new(name.to_string(), description.to_string(), buckets),
+            );
         }
 
         HistogramHandle {

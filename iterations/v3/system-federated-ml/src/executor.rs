@@ -3,20 +3,20 @@
 //! Tokio-based executor with bounded queues, semaphores, and CancellationToken
 //! for safe, concurrent tool chain execution with circuit breakers.
 
-use schemars::JsonSchema;
 use petgraph::graph::NodeIndex;
-use petgraph::visit::{Topo, EdgeRef};
+use petgraph::visit::{EdgeRef, Topo};
+use schemars::JsonSchema;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info, warn, error};
-use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 
+use crate::schema_registry::SchemaRegistry;
 use crate::tool_chain_planner::{ToolChain, ToolNode};
 use crate::tool_execution::{ToolExecutor, ToolInvocation};
-use crate::schema_registry::SchemaRegistry;
 
 /// Chain execution result
 #[derive(Clone, Debug, JsonSchema)]
@@ -82,7 +82,10 @@ impl ChainExecutor {
             }
 
             // Acquire concurrency permit
-            let permit = self.semaphore.acquire().await
+            let permit = self
+                .semaphore
+                .acquire()
+                .await
                 .map_err(|_| ChainExecutionError::ConcurrencyError)?;
 
             let node = &chain.dag[node_idx];
@@ -94,7 +97,10 @@ impl ChainExecutor {
             let inputs = self.gather_inputs(&chain, node_idx, &results).await?;
 
             // Execute the step
-            match self.execute_step(node, inputs.clone(), cancel.clone()).await {
+            match self
+                .execute_step(node, inputs.clone(), cancel.clone())
+                .await
+            {
                 Ok(result) => {
                     debug!("Step {} completed successfully", node_name);
                     results.insert(node_idx, result);
@@ -106,7 +112,10 @@ impl ChainExecutor {
                     // Check if we should continue with fallback
                     if let Some(fallback) = &node.fallback {
                         warn!("Attempting fallback to tool: {}", fallback);
-                        if let Ok(fallback_result) = self.execute_fallback(fallback, node, inputs, cancel.clone()).await {
+                        if let Ok(fallback_result) = self
+                            .execute_fallback(fallback, node, inputs, cancel.clone())
+                            .await
+                        {
                             results.insert(node_idx, fallback_result);
                             continue;
                         }
@@ -133,8 +142,10 @@ impl ChainExecutor {
             cancelled_steps,
         };
 
-        info!("Chain execution completed in {}ms (success: {})",
-              execution_time, success);
+        info!(
+            "Chain execution completed in {}ms (success: {})",
+            execution_time, success
+        );
 
         Ok(result)
     }
@@ -149,20 +160,28 @@ impl ChainExecutor {
         let mut inputs = serde_json::Map::new();
 
         // Get all incoming edges
-        for edge in chain.dag.edges_directed(node_idx, petgraph::Direction::Incoming) {
+        for edge in chain
+            .dag
+            .edges_directed(node_idx, petgraph::Direction::Incoming)
+        {
             let (from_idx, _) = (edge.source(), edge.target());
             let from_node = &chain.dag[from_idx];
             let edge_meta = edge.weight();
 
             // Get result from predecessor
-            let predecessor_result = results.get(&from_idx)
-                .ok_or_else(|| ChainExecutionError::MissingDependency(
-                    self.node_name(from_node)
-                ))?;
+            let predecessor_result = results
+                .get(&from_idx)
+                .ok_or_else(|| ChainExecutionError::MissingDependency(self.node_name(from_node)))?;
 
             // Apply codec if specified
             let processed_value = if let Some(codec) = &edge_meta.codec {
-                self.apply_codec(codec, &edge_meta.from_port, &edge_meta.to_port, predecessor_result.clone()).await?
+                self.apply_codec(
+                    codec,
+                    &edge_meta.from_port,
+                    &edge_meta.to_port,
+                    predecessor_result.clone(),
+                )
+                .await?
             } else {
                 predecessor_result.clone()
             };
@@ -171,7 +190,8 @@ impl ChainExecutor {
             let to_port = &edge_meta.to_port;
             let node = &chain.dag[node_idx];
             if let Some(target_port) = node.inputs.iter().find(|p| p.name == *to_port) {
-                self.schema_registry.validate(&target_port.schema.registry_key, &processed_value)?;
+                self.schema_registry
+                    .validate(&target_port.schema.registry_key, &processed_value)?;
             }
 
             inputs.insert(to_port.clone(), processed_value);
@@ -209,7 +229,8 @@ impl ChainExecutor {
 
         // Validate output schema
         for output in &node.outputs {
-            self.schema_registry.validate(&output.schema.registry_key, &result.result)
+            self.schema_registry
+                .validate(&output.schema.registry_key, &result.result)
                 .map_err(|e| ChainExecutionError::SchemaValidation(e.to_string()))?;
         }
 
@@ -230,8 +251,8 @@ impl ChainExecutor {
             inputs: original_node.inputs.clone(),
             outputs: original_node.outputs.clone(),
             params: original_node.params.clone(),
-            fallback: None, // No fallback for fallback
-            sla_ms: original_node.sla_ms * 2, // Give more time
+            fallback: None,                           // No fallback for fallback
+            sla_ms: original_node.sla_ms * 2,         // Give more time
             cost_hint: original_node.cost_hint * 1.5, // Allow higher cost
             retry_policy: original_node.retry_policy.clone(),
         };
@@ -251,7 +272,8 @@ impl ChainExecutor {
         let from_schema = format!("codec_input_{}", from_port);
         let to_schema = format!("codec_output_{}", to_port);
 
-        self.schema_registry.convert(&from_schema, &to_schema, value)
+        self.schema_registry
+            .convert(&from_schema, &to_schema, value)
             .map_err(|e| ChainExecutionError::CodecError(e.to_string()))
     }
 
@@ -348,12 +370,16 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => {
                 // Failure in half-open, go back to open
                 let next_attempt = Instant::now() + self.recovery_timeout;
-                self.state = CircuitState::Open { until: next_attempt };
+                self.state = CircuitState::Open {
+                    until: next_attempt,
+                };
             }
             CircuitState::Open { .. } => {
                 // Already open, extend timeout
                 let next_attempt = Instant::now() + self.recovery_timeout;
-                self.state = CircuitState::Open { until: next_attempt };
+                self.state = CircuitState::Open {
+                    until: next_attempt,
+                };
             }
         }
     }
@@ -397,16 +423,22 @@ impl ResourceLimiter {
     }
 
     pub fn check_limits(&self, required_memory_mb: usize, required_cpu_percent: usize) -> bool {
-        let current_mem = self.current_memory_mb.load(std::sync::atomic::Ordering::Relaxed);
-        let current_cpu = self.current_cpu_percent.load(std::sync::atomic::Ordering::Relaxed);
+        let current_mem = self
+            .current_memory_mb
+            .load(std::sync::atomic::Ordering::Relaxed);
+        let current_cpu = self
+            .current_cpu_percent
+            .load(std::sync::atomic::Ordering::Relaxed);
 
-        current_mem + required_memory_mb <= self.memory_limit_mb &&
-        current_cpu + required_cpu_percent <= self.cpu_limit_percent
+        current_mem + required_memory_mb <= self.memory_limit_mb
+            && current_cpu + required_cpu_percent <= self.cpu_limit_percent
     }
 
     pub fn allocate_resources(&self, memory_mb: usize, cpu_percent: usize) -> ResourceGuard<'_> {
-        self.current_memory_mb.fetch_add(memory_mb, std::sync::atomic::Ordering::Relaxed);
-        self.current_cpu_percent.fetch_add(cpu_percent, std::sync::atomic::Ordering::Relaxed);
+        self.current_memory_mb
+            .fetch_add(memory_mb, std::sync::atomic::Ordering::Relaxed);
+        self.current_cpu_percent
+            .fetch_add(cpu_percent, std::sync::atomic::Ordering::Relaxed);
 
         ResourceGuard {
             limiter: self,
@@ -425,7 +457,11 @@ pub struct ResourceGuard<'a> {
 
 impl<'a> Drop for ResourceGuard<'a> {
     fn drop(&mut self) {
-        self.limiter.current_memory_mb.fetch_sub(self.memory_mb, std::sync::atomic::Ordering::Relaxed);
-        self.limiter.current_cpu_percent.fetch_sub(self.cpu_percent, std::sync::atomic::Ordering::Relaxed);
+        self.limiter
+            .current_memory_mb
+            .fetch_sub(self.memory_mb, std::sync::atomic::Ordering::Relaxed);
+        self.limiter
+            .current_cpu_percent
+            .fetch_sub(self.cpu_percent, std::sync::atomic::Ordering::Relaxed);
     }
 }

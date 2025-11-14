@@ -2,45 +2,37 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use async_trait::async_trait;
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use crate::recovery_types::*;
+use anyhow::Result;
+use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Main recovery store trait
 #[async_trait]
 pub trait RecoveryStore {
     /// Begin a new recovery session
     async fn begin_session(&self, meta: SessionMeta) -> Result<SessionRef>;
-    
+
     /// Record a file change in the session
-    async fn record_change(
-        &self, 
-        session: &SessionRef, 
-        change: FileChange
-    ) -> Result<ChangeId>;
-    
+    async fn record_change(&self, session: &SessionRef, change: FileChange) -> Result<ChangeId>;
+
     /// Create a checkpoint from the current session
-    async fn checkpoint(
-        &self, 
-        session: &SessionRef, 
-        label: Option<String>
-    ) -> Result<CommitId>;
-    
+    async fn checkpoint(&self, session: &SessionRef, label: Option<String>) -> Result<CommitId>;
+
     /// Plan a restore operation
     async fn plan_restore(
-        &self, 
-        target: &str,  // Ref or commit
-        filters: Option<RestoreFilters>
+        &self,
+        target: &str, // Ref or commit
+        filters: Option<RestoreFilters>,
     ) -> Result<RestorePlan>;
-    
+
     /// Apply a restore plan
     async fn apply_restore(&self, plan: RestorePlan) -> Result<RestoreResult>;
-    
+
     /// Run filesystem check
     async fn fsck(&self, scope: FsckScope) -> Result<FsckReport>;
-    
+
     /// Get recovery metrics
     async fn get_metrics(&self) -> Result<RecoveryMetrics>;
 }
@@ -57,9 +49,9 @@ pub struct RestoreFilters {
 /// Filesystem check scope
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum FsckScope {
-    Quick,      // Basic integrity check
-    Full,       // Complete verification
-    Reindex,    // Rebuild SQLite index from Merkle trees
+    Quick,   // Basic integrity check
+    Full,    // Complete verification
+    Reindex, // Rebuild SQLite index from Merkle trees
 }
 
 /// Filesystem check report
@@ -112,11 +104,11 @@ pub struct GcReport {
 /// Content policy for strategy decisions
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ContentPolicy {
-    pub small_full_max: usize,      // 2 KiB default
-    pub diff_ratio_max: f64,        // 0.45 default
-    pub cdc_target: usize,          // 16 KiB default
-    pub cdc_min: usize,             // 4 KiB default
-    pub cdc_max: usize,             // 64 KiB default
+    pub small_full_max: usize, // 2 KiB default
+    pub diff_ratio_max: f64,   // 0.45 default
+    pub cdc_target: usize,     // 16 KiB default
+    pub cdc_min: usize,        // 4 KiB default
+    pub cdc_max: usize,        // 64 KiB default
     pub overrides: Vec<ContentOverride>,
 }
 
@@ -130,9 +122,9 @@ pub struct ContentOverride {
 /// Override strategy for content handling
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum OverrideStrategy {
-    Full,       // Always store as full content
-    Diff,       // Always use unified diff
-    Chunk,      // Always use CDC chunking
+    Full,  // Always store as full content
+    Diff,  // Always use unified diff
+    Chunk, // Always use CDC chunking
 }
 
 /// Secret redaction result

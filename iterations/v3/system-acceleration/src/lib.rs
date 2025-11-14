@@ -20,15 +20,15 @@ use serde::{Deserialize, Serialize};
 pub mod ane;
 // pub mod metal; // TODO: Implement Metal GPU acceleration
 // pub mod coreml; // TODO: Implement Core ML acceleration
-pub mod model_router;
 pub mod buffer_pool;
+pub mod model_router;
 pub mod quantization;
 pub mod telemetry;
 
 // Re-export main types
 pub use ane::ANEManager;
-pub use model_router::ModelRouter;
 pub use buffer_pool::BufferPool;
+pub use model_router::ModelRouter;
 pub use quantization::QuantizationConfig;
 
 /// ANE capabilities structure

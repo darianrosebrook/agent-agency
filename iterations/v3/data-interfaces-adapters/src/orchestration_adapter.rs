@@ -22,9 +22,9 @@ use chrono::Utc;
 use anyhow::Result;
 use tracing::warn;
 use tokio::sync::RwLock;
-use sqlx::Row;
 
 /// Adapter for orchestration service using UnifiedOrchestrator
+#[derive(Clone)]
 pub struct UnifiedOrchestratorAdapter {
     orchestrator: Arc<UnifiedOrchestrator>,
     /// Mapping of task_id -> plan_id for status queries

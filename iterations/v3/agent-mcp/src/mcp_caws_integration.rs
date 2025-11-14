@@ -3,16 +3,16 @@
 //! Integrates CAWS compliance checking with MCP tools and execution.
 //! Uses development-tools CAWS validator for real validation.
 
-use schemars::JsonSchema;
 use crate::mcp_types::*;
 use anyhow::Result;
-use std::sync::Arc;
-use std::path::Path;
-use std::fs;
-use development_tools::validator::{CawsValidator, ValidationContext, DiffStats};
 use development_tools::policy::CawsPolicy;
-use tracing::{info, warn, debug};
+use development_tools::validator::{CawsValidator, DiffStats, ValidationContext};
+use schemars::JsonSchema;
+use std::fs;
+use std::path::Path;
+use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// CAWS runtime validator integration for MCP
@@ -32,28 +32,30 @@ impl McpCawsIntegration {
     pub fn new() -> Self {
         let policy = Arc::new(CawsPolicy::default());
         let validator = Arc::new(CawsValidator::new((*policy).clone()));
-        
-        Self {
-            validator,
-            policy,
-        }
+
+        Self { validator, policy }
     }
 
-    pub async fn validate_tool_manifest(&self, manifest: &serde_json::Value) -> Result<CawsComplianceResult> {
+    pub async fn validate_tool_manifest(
+        &self,
+        manifest: &serde_json::Value,
+    ) -> Result<CawsComplianceResult> {
         info!("Validating tool manifest for CAWS compliance");
-        
+
         // Extract tool information from manifest
-        let tool_name = manifest.get("name")
+        let tool_name = manifest
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
-        
+
         // Extract risk tier from manifest or default to medium
-        let risk_tier = manifest.get("risk_tier")
+        let risk_tier = manifest
+            .get("risk_tier")
             .and_then(|v| v.as_str())
             .unwrap_or("medium")
             .to_string();
-        
+
         // Build validation context from manifest
         let validation_context = ValidationContext {
             task_id: tool_name.clone(),
@@ -68,21 +70,26 @@ impl McpCawsIntegration {
             test_results: None,
             security_scan: None,
         };
-        
+
         // Perform validation
         let validation_result = self.validator.validate(validation_context).await;
-        
+
         // Convert validation result to CawsComplianceResult
-        let violations: Vec<CawsViolation> = validation_result.violations
+        let violations: Vec<CawsViolation> = validation_result
+            .violations
             .into_iter()
             .map(|v| CawsViolation {
                 rule_id: v.rule_id,
                 rule_name: v.message.clone(),
                 severity: match v.severity {
                     development_tools::policy::ViolationSeverity::Info => ViolationSeverity::Info,
-                    development_tools::policy::ViolationSeverity::Warning => ViolationSeverity::Warning,
+                    development_tools::policy::ViolationSeverity::Warning => {
+                        ViolationSeverity::Warning
+                    }
                     development_tools::policy::ViolationSeverity::Error => ViolationSeverity::Error,
-                    development_tools::policy::ViolationSeverity::Critical => ViolationSeverity::Critical,
+                    development_tools::policy::ViolationSeverity::Critical => {
+                        ViolationSeverity::Critical
+                    }
                 },
                 description: v.message,
                 suggestion: v.remediation,
@@ -91,18 +98,18 @@ impl McpCawsIntegration {
                 file_path: v.location.as_ref().and_then(|l| l.file.clone()),
             })
             .collect();
-        
+
         // Calculate compliance score (already calculated in validation_result)
         let compliance_score = validation_result.compliance_score;
         let is_compliant = validation_result.passed;
-        
+
         info!(
             "Tool manifest validation completed: compliant={}, score={:.2}, violations={}",
             is_compliant,
             compliance_score,
             violations.len()
         );
-        
+
         Ok(CawsComplianceResult {
             is_compliant,
             violations,
@@ -240,7 +247,9 @@ impl CawsIntegration {
     }
 
     /// Validate tool for CAWS compliance
-    #[deprecated(note = "Use caws_runtime_validator::integration::McpCawsIntegration::validate_tool_manifest")]
+    #[deprecated(
+        note = "Use caws_runtime_validator::integration::McpCawsIntegration::validate_tool_manifest"
+    )]
     pub async fn validate_tool(&self, tool: &MCPTool) -> Result<CawsComplianceResult> {
         info!("Validating tool for CAWS compliance: {}", tool.name);
 
@@ -258,11 +267,15 @@ impl CawsIntegration {
         });
 
         // DEPRECATED: Delegate to runtime-validator implementation
-        let runtime_result = self.inner.validate_tool_manifest(&manifest).await
+        let runtime_result = self
+            .inner
+            .validate_tool_manifest(&manifest)
+            .await
             .map_err(|e| anyhow::anyhow!("Runtime validator error: {}", e))?;
 
         // Convert runtime-validator result to legacy format
-        let violations: Vec<crate::mcp_types::CawsViolation> = runtime_result.violations
+        let violations: Vec<crate::mcp_types::CawsViolation> = runtime_result
+            .violations
             .into_iter()
             .map(|v| crate::mcp_types::CawsViolation {
                 rule_id: "RUNTIME-VALIDATOR".to_string(),
@@ -280,7 +293,11 @@ impl CawsIntegration {
             })
             .collect();
 
-        let compliance_score = if runtime_result.is_compliant { 1.0 } else { 0.5 };
+        let compliance_score = if runtime_result.is_compliant {
+            1.0
+        } else {
+            0.5
+        };
 
         let result = CawsComplianceResult {
             is_compliant: runtime_result.is_compliant,
@@ -359,12 +376,12 @@ impl CawsIntegration {
         let content = fs::read_to_string(p)?;
         // Try JSON first, then YAML
         #[derive(serde::Deserialize)]
-struct RawRulebook {
+        struct RawRulebook {
             version: String,
             rules: Vec<RawRule>,
         }
         #[derive(serde::Deserialize)]
-struct RawRule {
+        struct RawRule {
             id: String,
             name: String,
             description: String,

@@ -26,12 +26,12 @@ pub struct ChunkingConfig {
 impl Default for ChunkingConfig {
     fn default() -> Self {
         Self {
-            min_size: 4 * 1024,     // 4KB
-            avg_size: 16 * 1024,    // 16KB
-            max_size: 64 * 1024,    // 64KB
+            min_size: 4 * 1024,  // 4KB
+            avg_size: 16 * 1024, // 16KB
+            max_size: 64 * 1024, // 64KB
             use_gear_hash: true,
             gear_polynomial: 0x9e3779b97f4a7c15, // Golden ratio
-            gear_mask: 0x1fffffffffffffff,        // 60-bit mask
+            gear_mask: 0x1fffffffffffffff,       // 60-bit mask
         }
     }
 }
@@ -128,7 +128,11 @@ impl CdcChunker {
     }
 
     /// Create a chunk from chunk data
-    fn create_chunk(&mut self, chunk_data: &fastcdc::v2020::Chunk, content: &[u8]) -> Result<Chunk> {
+    fn create_chunk(
+        &mut self,
+        chunk_data: &fastcdc::v2020::Chunk,
+        content: &[u8],
+    ) -> Result<Chunk> {
         let offset = chunk_data.offset;
         let length = chunk_data.length;
         let data = content[offset..offset + length].to_vec();
@@ -168,7 +172,7 @@ impl CdcChunker {
     /// Reconstruct content from chunks
     pub fn reconstruct_content(&self, chunk_list: &ChunkList) -> Result<Vec<u8>> {
         let mut content = Vec::with_capacity(chunk_list.total_length);
-        
+
         // Sort chunks by offset
         let mut sorted_chunks = chunk_list.chunks.clone();
         sorted_chunks.sort_by_key(|chunk| chunk.offset);
@@ -192,7 +196,13 @@ impl CdcChunker {
         }
 
         // Verify file digest
-        let reconstructed_digest = self.compute_file_digest(&chunk_list.chunks.iter().map(|c| c.digest).collect::<Vec<_>>())?;
+        let reconstructed_digest = self.compute_file_digest(
+            &chunk_list
+                .chunks
+                .iter()
+                .map(|c| c.digest)
+                .collect::<Vec<_>>(),
+        )?;
         if reconstructed_digest != chunk_list.file_digest {
             return Err(anyhow!("File digest mismatch during reconstruction"));
         }
@@ -214,7 +224,7 @@ impl CdcChunker {
     pub fn get_chunk_stats(&self, chunk_list: &ChunkList) -> ChunkStats {
         let chunk_sizes: Vec<usize> = chunk_list.chunks.iter().map(|c| c.length).collect();
         let total_chunks = chunk_list.chunks.len();
-        
+
         let min_size = chunk_sizes.iter().min().copied().unwrap_or(0);
         let max_size = chunk_sizes.iter().max().copied().unwrap_or(0);
         let avg_size = if total_chunks > 0 {
@@ -398,7 +408,7 @@ impl ChunkStore {
 
         let chunk_sizes: Vec<usize> = self.chunks.values().map(|c| c.length).collect();
         let total_chunks = self.chunks.len();
-        
+
         let min_size = chunk_sizes.iter().min().copied().unwrap_or(0);
         let max_size = chunk_sizes.iter().max().copied().unwrap_or(0);
         let avg_size = if total_chunks > 0 {
@@ -426,12 +436,12 @@ mod tests {
     fn test_cdc_chunking() {
         let mut chunker = CdcChunker::new();
         let content = b"Hello, world! This is a test content for chunking.";
-        
+
         let chunk_list = chunker.chunk_content(content).unwrap();
-        
+
         assert!(!chunk_list.chunks.is_empty());
         assert_eq!(chunk_list.total_length, content.len());
-        
+
         // Verify reconstruction
         let reconstructed = chunker.reconstruct_content(&chunk_list).unwrap();
         assert_eq!(reconstructed, content);
@@ -441,9 +451,9 @@ mod tests {
     fn test_chunk_deduplication() {
         // Create chunker with appropriate chunk sizes for testing
         let config = ChunkingConfig {
-            min_size: 1024,   // 1KB minimum (FastCDC requirement)
-            avg_size: 2048,   // 2KB average (FastCDC requirement)
-            max_size: 4096,   // 4KB maximum
+            min_size: 1024, // 1KB minimum (FastCDC requirement)
+            avg_size: 2048, // 2KB average (FastCDC requirement)
+            max_size: 4096, // 4KB maximum
             use_gear_hash: true,
             gear_polynomial: 0x9e3779b97f4a7c15,
             gear_mask: 0x1fffffffffffffff,
@@ -457,36 +467,45 @@ mod tests {
         let base_content = b"Hello, world! This is a test content that should produce multiple chunks when chunked. We need enough content to create several chunks for testing deduplication. ";
         let repeated_base = base_content.repeat(100); // Repeat many times to make it large
         let content1 = [repeated_base.as_slice(), b" First version of the document."].concat();
-        let content2 = [repeated_base.as_slice(), b" Second version of the document."].concat();
-        
+        let content2 = [
+            repeated_base.as_slice(),
+            b" Second version of the document.",
+        ]
+        .concat();
+
         let chunk_list1 = chunker.chunk_content(&content1).unwrap();
         let chunk_list2 = chunker.chunk_content(&content2).unwrap();
-        
+
         // Should have some shared chunks from the common base content
-        let chunks1: std::collections::HashSet<Digest> = chunk_list1.chunks.iter().map(|c| c.digest).collect();
-        let chunks2: std::collections::HashSet<Digest> = chunk_list2.chunks.iter().map(|c| c.digest).collect();
-        
+        let chunks1: std::collections::HashSet<Digest> =
+            chunk_list1.chunks.iter().map(|c| c.digest).collect();
+        let chunks2: std::collections::HashSet<Digest> =
+            chunk_list2.chunks.iter().map(|c| c.digest).collect();
+
         let intersection: std::collections::HashSet<_> = chunks1.intersection(&chunks2).collect();
-        assert!(!intersection.is_empty(), "Expected shared chunks between similar content, but found none");
+        assert!(
+            !intersection.is_empty(),
+            "Expected shared chunks between similar content, but found none"
+        );
     }
 
     #[test]
     fn test_gear_hash() {
         let mut gear_hash = GearHash::new(0x9e3779b97f4a7c15, 0x1fffffffffffffff, 4);
-        
+
         // Test rolling hash
         for &byte in b"Hello" {
             gear_hash.update(byte);
         }
-        
+
         let hash1 = gear_hash.hash();
-        
+
         // Reset and hash again
         gear_hash.reset();
         for &byte in b"Hello" {
             gear_hash.update(byte);
         }
-        
+
         let hash2 = gear_hash.hash();
         assert_eq!(hash1, hash2);
     }
@@ -494,18 +513,18 @@ mod tests {
     #[test]
     fn test_chunk_store() {
         let mut store = ChunkStore::new();
-        
+
         let chunk = Chunk {
             digest: Digest::from_bytes([7; 32]),
             offset: 0,
             length: 10,
             data: b"Hello, world!".to_vec(),
         };
-        
+
         let digest = store.store_chunk(chunk.clone());
         assert!(store.has_chunk(&digest));
         assert_eq!(store.get_chunk(&digest).unwrap().length, 10);
-        
+
         let stats = store.stats();
         assert_eq!(stats.total_chunks, 1);
         assert_eq!(stats.total_size, 10);
@@ -515,7 +534,7 @@ mod tests {
     fn test_empty_content() {
         let mut chunker = CdcChunker::new();
         let content = b"";
-        
+
         let chunk_list = chunker.chunk_content(content).unwrap();
         assert!(chunk_list.chunks.is_empty());
         assert_eq!(chunk_list.total_length, 0);
@@ -525,7 +544,7 @@ mod tests {
     fn test_small_content() {
         let mut chunker = CdcChunker::new();
         let content = b"Hi";
-        
+
         let chunk_list = chunker.chunk_content(content).unwrap();
         assert_eq!(chunk_list.chunks.len(), 1);
         assert_eq!(chunk_list.total_length, content.len());

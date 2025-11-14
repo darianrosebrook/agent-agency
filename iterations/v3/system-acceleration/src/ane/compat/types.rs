@@ -4,8 +4,8 @@
 //! including models, configurations, arrays, and feature providers.
 
 use schemars::JsonSchema;
-use std::ptr::NonNull;
 use std::collections::HashMap;
+use std::ptr::NonNull;
 
 // Import functions needed for method implementations
 use super::model::{coreml_runtime_available, coreml_unavailable_error};
@@ -13,11 +13,9 @@ use super::model::{coreml_runtime_available, coreml_unavailable_error};
 
 // Import FFI functions needed for implementations
 use super::model::{
-    agentbridge_array_create_float32,
+    agentbridge_array_create_float32, agentbridge_dict_provider_create,
+    agentbridge_dict_provider_destroy, agentbridge_dict_provider_set_feature_multiarray,
     agentbridge_free_string,
-    agentbridge_dict_provider_create,
-    agentbridge_dict_provider_set_feature_multiarray,
-    agentbridge_dict_provider_destroy,
 };
 
 // FFI declaration for setting state features
@@ -34,7 +32,7 @@ extern "C" {
 
 /// Opaque handle to a Core ML model managed by the BridgesFFI framework
 #[derive(Debug, Clone, PartialEq, Eq, Hash, JsonSchema)]
-pub struct MLModel (u64);
+pub struct MLModel(u64);
 
 impl MLModel {
     /// Create a new MLModel from a raw handle value
@@ -118,7 +116,8 @@ impl MLMultiArray {
         if total_elements != data.len() {
             return Err(format!(
                 "Data length {} doesn't match shape product {}",
-                data.len(), total_elements
+                data.len(),
+                total_elements
             ));
         }
 
@@ -226,7 +225,7 @@ impl MLDictionaryFeatureProvider {
     }
 
     /// Create a dictionary feature provider from a map of feature values
-    /// 
+    ///
     /// For state features, a model reference is required. Pass `Some(model_ref)` if the dictionary
     /// contains State features, otherwise `None` is sufficient.
     pub fn from_dictionary(
@@ -242,12 +241,7 @@ impl MLDictionaryFeatureProvider {
         let mut provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_dict_provider_create(
-                &mut provider_ref,
-                &mut error_ptr,
-            )
-        };
+        let result = unsafe { agentbridge_dict_provider_create(&mut provider_ref, &mut error_ptr) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -383,7 +377,10 @@ impl MLDictionaryFeatureProvider {
                 _ => {
                     // Clean up the provider we created
                     unsafe { agentbridge_dict_provider_destroy(provider_ref) };
-                    return Err(format!("Unsupported feature type for '{}': {:?}", name, value));
+                    return Err(format!(
+                        "Unsupported feature type for '{}': {:?}",
+                        name, value
+                    ));
                 }
             }
         }

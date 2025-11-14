@@ -5,22 +5,19 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use async_trait::async_trait;
 use anyhow::{anyhow, Result};
-use uuid::Uuid;
+use async_trait::async_trait;
 use chrono::Utc;
-use tracing::{warn, info};
 use sqlx::{self, Row};
+use std::sync::Arc;
+use tracing::{info, warn};
+use uuid::Uuid;
 
 use agent_orchestration::planning::data_infrastructure_types::{
-    DatabaseOperations, CreateExecutionPlan, UpdateExecutionPlan,
-    CreateAuditTrailEntry, CreatePlanningSession, UpdatePlanningSession,
-    CreatePlanningTelemetry, CreatePlanningAuditEvent,
-    CreateJudge, CreateJudgeEvaluation, CreateWaiver, UpdateWaiver,
-    CreateExecutionResult, CreateWorker, UpdateWorker,
-    CreateCouncilSession, UpdateCouncilSession,
-    models,
+    models, CreateAuditTrailEntry, CreateCouncilSession, CreateExecutionPlan,
+    CreateExecutionResult, CreateJudge, CreateJudgeEvaluation, CreatePlanningAuditEvent,
+    CreatePlanningSession, CreatePlanningTelemetry, CreateWaiver, CreateWorker, DatabaseOperations,
+    UpdateCouncilSession, UpdateExecutionPlan, UpdatePlanningSession, UpdateWaiver, UpdateWorker,
 };
 use data_infrastructure::DatabaseClient;
 
@@ -40,7 +37,7 @@ impl DatabaseOperationsAdapter {
 impl DatabaseOperations for DatabaseOperationsAdapter {
     async fn get_workers(&self) -> Result<Vec<models::Worker>> {
         use data_infrastructure::models::Worker as DbWorker;
-        
+
         // Query workers directly from database using sqlx
         let pool = self.db_client.pool();
         let rows = sqlx::query_as::<_, DbWorker>(
@@ -49,51 +46,56 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    capabilities, performance_history, is_active, created_at, updated_at
             FROM workers
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query workers from database: {}", e))?;
-        
+
         // Convert database Worker model to agent-orchestration Worker model
-        let workers: Vec<models::Worker> = rows.into_iter().map(|db_worker| {
-            // Extract capabilities from JSON value
-            let capabilities = if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities {
-                serde_json::json!(caps_obj)
-            } else {
-                db_worker.capabilities.clone()
-            };
-            
-            // Extract performance_history from JSON value
-            let performance_history = if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
-                serde_json::json!(perf_obj)
-            } else {
-                db_worker.performance_history.clone()
-            };
-            
-            models::Worker {
-                id: db_worker.id,
-                name: db_worker.name,
-                worker_type: db_worker.worker_type,
-                specialty: db_worker.specialty,
-                model_name: db_worker.model_name,
-                endpoint: db_worker.endpoint,
-                capabilities,
-                performance_history,
-                is_active: db_worker.is_active,
-                metadata: std::collections::HashMap::new(), // Database model doesn't have metadata field
-                created_at: db_worker.created_at,
-                updated_at: db_worker.updated_at,
-            }
-        }).collect();
-        
+        let workers: Vec<models::Worker> = rows
+            .into_iter()
+            .map(|db_worker| {
+                // Extract capabilities from JSON value
+                let capabilities =
+                    if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities {
+                        serde_json::json!(caps_obj)
+                    } else {
+                        db_worker.capabilities.clone()
+                    };
+
+                // Extract performance_history from JSON value
+                let performance_history =
+                    if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
+                        serde_json::json!(perf_obj)
+                    } else {
+                        db_worker.performance_history.clone()
+                    };
+
+                models::Worker {
+                    id: db_worker.id,
+                    name: db_worker.name,
+                    worker_type: db_worker.worker_type,
+                    specialty: db_worker.specialty,
+                    model_name: db_worker.model_name,
+                    endpoint: db_worker.endpoint,
+                    capabilities,
+                    performance_history,
+                    is_active: db_worker.is_active,
+                    metadata: std::collections::HashMap::new(), // Database model doesn't have metadata field
+                    created_at: db_worker.created_at,
+                    updated_at: db_worker.updated_at,
+                }
+            })
+            .collect();
+
         tracing::info!("Queried {} workers from database", workers.len());
         Ok(workers)
     }
 
     async fn get_worker(&self, id: Uuid) -> Result<Option<models::Worker>> {
         use data_infrastructure::models::Worker as DbWorker;
-        
+
         let pool = self.db_client.pool();
         let row = sqlx::query_as::<_, DbWorker>(
             r#"
@@ -101,26 +103,28 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    capabilities, performance_history, is_active, created_at, updated_at
             FROM workers
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query worker from database: {}", e))?;
-        
+
         Ok(row.map(|db_worker| {
-            let capabilities = if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities {
+            let capabilities = if let serde_json::Value::Object(caps_obj) = &db_worker.capabilities
+            {
                 serde_json::json!(caps_obj)
             } else {
                 db_worker.capabilities.clone()
             };
-            
-            let performance_history = if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
-                serde_json::json!(perf_obj)
-            } else {
-                db_worker.performance_history.clone()
-            };
-            
+
+            let performance_history =
+                if let serde_json::Value::Object(perf_obj) = &db_worker.performance_history {
+                    serde_json::json!(perf_obj)
+                } else {
+                    db_worker.performance_history.clone()
+                };
+
             models::Worker {
                 id: db_worker.id,
                 name: db_worker.name,
@@ -140,7 +144,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn create_worker(&self, worker: CreateWorker) -> Result<models::Worker> {
         use data_infrastructure::database_operations::CreateWorker as DbCreateWorker;
-        
+
         let db_worker = DbCreateWorker {
             name: worker.name,
             worker_type: worker.worker_type,
@@ -151,10 +155,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             performance_history: worker.performance_history,
             is_active: worker.is_active,
         };
-        
-        let created = self.db_client.create_worker(db_worker).await
+
+        let created = self
+            .db_client
+            .create_worker(db_worker)
+            .await
             .map_err(|e| anyhow!("Failed to create worker: {}", e))?;
-        
+
         Ok(models::Worker {
             id: created.id,
             name: created.name,
@@ -173,7 +180,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<models::Worker> {
         use data_infrastructure::database_operations::UpdateWorker as DbUpdateWorker;
-        
+
         let db_update = DbUpdateWorker {
             name: update.name,
             worker_type: update.worker_type,
@@ -184,10 +191,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             performance_history: update.performance_history,
             is_active: update.is_active,
         };
-        
-        let updated = self.db_client.update_worker(id, db_update).await
+
+        let updated = self
+            .db_client
+            .update_worker(id, db_update)
+            .await
             .map_err(|e| anyhow!("Failed to update worker: {}", e))?;
-        
+
         Ok(models::Worker {
             id: updated.id,
             name: updated.name,
@@ -204,13 +214,18 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         })
     }
 
-    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan> {
+    async fn create_execution_plan(
+        &self,
+        plan: CreateExecutionPlan,
+    ) -> Result<models::ExecutionPlan> {
         let pool = self.db_client.pool();
         let now = Utc::now();
-        
+
         // Use provided working_spec_id if available, otherwise default to PLAN-<id> format
-        let working_spec_id = plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id));
-        
+        let working_spec_id = plan
+            .working_spec_id
+            .unwrap_or_else(|| format!("PLAN-{}", plan.id));
+
         // Insert execution plan into database
         sqlx::query(
             r#"
@@ -219,7 +234,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 milestones, dependency_graph, change_budget, quality_gates,
                 evidence_requirements, active_waivers, metadata, created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            "#
+            "#,
         )
         .bind(plan.id)
         .bind(Uuid::new_v4()) // session_id - generate new session
@@ -239,11 +254,11 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist execution plan: {}", e))?;
-        
+
         info!("Persisted execution plan {} to database", plan.id);
-        
+
         let session_id = Uuid::new_v4();
-        
+
         Ok(models::ExecutionPlan {
             id: plan.id,
             session_id,
@@ -267,7 +282,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn get_execution_plan(&self, id: Uuid) -> Result<Option<models::ExecutionPlan>> {
         let pool = self.db_client.pool();
-        
+
         // Query execution plan from database
         let row = sqlx::query(
             r#"
@@ -283,13 +298,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query execution plan: {}", e))?;
-        
+
         Ok(row.map(|r: sqlx::postgres::PgRow| {
             let id: Uuid = r.get("id");
             let session_id: Uuid = r.get("session_id");
             let working_spec_id: String = r.get("working_spec_id");
             let state: String = r.get("state");
-            
+
             models::ExecutionPlan {
                 id,
                 session_id,
@@ -297,24 +312,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 title: r.get("title"),
                 overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
                 state,
-                milestones: r.try_get::<serde_json::Value, _>("milestones").unwrap_or_else(|_| serde_json::json!([])),
-                dependency_graph: r.try_get::<serde_json::Value, _>("dependency_graph").unwrap_or_else(|_| serde_json::json!({})),
-                change_budget: r.try_get::<serde_json::Value, _>("change_budget").unwrap_or_else(|_| serde_json::json!({})),
-                quality_gates: r.try_get::<serde_json::Value, _>("quality_gates").unwrap_or_else(|_| serde_json::json!({})),
-                evidence_requirements: r.try_get::<serde_json::Value, _>("evidence_requirements").unwrap_or_else(|_| serde_json::json!([])),
-                active_waivers: r.try_get::<serde_json::Value, _>("active_waivers").unwrap_or_else(|_| serde_json::json!([])),
-                metadata: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})),
+                milestones: r
+                    .try_get::<serde_json::Value, _>("milestones")
+                    .unwrap_or_else(|_| serde_json::json!([])),
+                dependency_graph: r
+                    .try_get::<serde_json::Value, _>("dependency_graph")
+                    .unwrap_or_else(|_| serde_json::json!({})),
+                change_budget: r
+                    .try_get::<serde_json::Value, _>("change_budget")
+                    .unwrap_or_else(|_| serde_json::json!({})),
+                quality_gates: r
+                    .try_get::<serde_json::Value, _>("quality_gates")
+                    .unwrap_or_else(|_| serde_json::json!({})),
+                evidence_requirements: r
+                    .try_get::<serde_json::Value, _>("evidence_requirements")
+                    .unwrap_or_else(|_| serde_json::json!([])),
+                active_waivers: r
+                    .try_get::<serde_json::Value, _>("active_waivers")
+                    .unwrap_or_else(|_| serde_json::json!([])),
+                metadata: r
+                    .try_get::<serde_json::Value, _>("metadata")
+                    .unwrap_or_else(|_| serde_json::json!({})),
                 created_at: r.get("created_at"),
                 updated_at: r.get("updated_at"),
-                approved_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at").ok().flatten(),
-                completed_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at").ok().flatten(),
+                approved_at: r
+                    .try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at")
+                    .ok()
+                    .flatten(),
+                completed_at: r
+                    .try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at")
+                    .ok()
+                    .flatten(),
             }
         }))
     }
 
     async fn get_execution_plans(&self) -> Result<Vec<models::ExecutionPlan>> {
         let pool = self.db_client.pool();
-        
+
         // Query all execution plans from database
         let rows = sqlx::query(
             r#"
@@ -329,42 +364,69 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query execution plans: {}", e))?;
-        
-        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
-            let id: Uuid = r.get("id");
-            let session_id: Uuid = r.get("session_id");
-            let working_spec_id: String = r.get("working_spec_id");
-            let state: String = r.get("state");
-            
-            models::ExecutionPlan {
-                id,
-                session_id,
-                working_spec_id,
-                title: r.get("title"),
-                overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
-                state,
-                milestones: r.try_get::<serde_json::Value, _>("milestones").unwrap_or_else(|_| serde_json::json!([])),
-                dependency_graph: r.try_get::<serde_json::Value, _>("dependency_graph").unwrap_or_else(|_| serde_json::json!({})),
-                change_budget: r.try_get::<serde_json::Value, _>("change_budget").unwrap_or_else(|_| serde_json::json!({})),
-                quality_gates: r.try_get::<serde_json::Value, _>("quality_gates").unwrap_or_else(|_| serde_json::json!({})),
-                evidence_requirements: r.try_get::<serde_json::Value, _>("evidence_requirements").unwrap_or_else(|_| serde_json::json!([])),
-                active_waivers: r.try_get::<serde_json::Value, _>("active_waivers").unwrap_or_else(|_| serde_json::json!([])),
-                metadata: r.try_get::<serde_json::Value, _>("metadata").unwrap_or_else(|_| serde_json::json!({})),
-                created_at: r.get("created_at"),
-                updated_at: r.get("updated_at"),
-                approved_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at").ok().flatten(),
-                completed_at: r.try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at").ok().flatten(),
-            }
-        }).collect())
+
+        Ok(rows
+            .into_iter()
+            .map(|r: sqlx::postgres::PgRow| {
+                let id: Uuid = r.get("id");
+                let session_id: Uuid = r.get("session_id");
+                let working_spec_id: String = r.get("working_spec_id");
+                let state: String = r.get("state");
+
+                models::ExecutionPlan {
+                    id,
+                    session_id,
+                    working_spec_id,
+                    title: r.get("title"),
+                    overview: r.try_get::<Option<String>, _>("overview").ok().flatten(),
+                    state,
+                    milestones: r
+                        .try_get::<serde_json::Value, _>("milestones")
+                        .unwrap_or_else(|_| serde_json::json!([])),
+                    dependency_graph: r
+                        .try_get::<serde_json::Value, _>("dependency_graph")
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                    change_budget: r
+                        .try_get::<serde_json::Value, _>("change_budget")
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                    quality_gates: r
+                        .try_get::<serde_json::Value, _>("quality_gates")
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                    evidence_requirements: r
+                        .try_get::<serde_json::Value, _>("evidence_requirements")
+                        .unwrap_or_else(|_| serde_json::json!([])),
+                    active_waivers: r
+                        .try_get::<serde_json::Value, _>("active_waivers")
+                        .unwrap_or_else(|_| serde_json::json!([])),
+                    metadata: r
+                        .try_get::<serde_json::Value, _>("metadata")
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                    created_at: r.get("created_at"),
+                    updated_at: r.get("updated_at"),
+                    approved_at: r
+                        .try_get::<Option<chrono::DateTime<Utc>>, _>("approved_at")
+                        .ok()
+                        .flatten(),
+                    completed_at: r
+                        .try_get::<Option<chrono::DateTime<Utc>>, _>("completed_at")
+                        .ok()
+                        .flatten(),
+                }
+            })
+            .collect())
     }
 
-    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<models::ExecutionPlan> {
+    async fn update_execution_plan(
+        &self,
+        id: Uuid,
+        update: UpdateExecutionPlan,
+    ) -> Result<models::ExecutionPlan> {
         let pool = self.db_client.pool();
-        
+
         // Build update query dynamically based on provided fields
         let mut updates = Vec::new();
         let mut bind_index = 1;
-        
+
         if let Some(ref _title) = update.title {
             updates.push(format!("title = ${}", bind_index));
             bind_index += 1;
@@ -377,22 +439,24 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             updates.push(format!("state = ${}", bind_index));
             bind_index += 1;
         }
-        
+
         if updates.is_empty() {
             // No updates provided, just return existing plan
-            return self.get_execution_plan(id).await?
+            return self
+                .get_execution_plan(id)
+                .await?
                 .ok_or_else(|| anyhow!("Execution plan {} not found", id));
         }
-        
+
         updates.push(format!("updated_at = ${}", bind_index));
         bind_index += 1;
-        
+
         let query = format!(
             "UPDATE execution_plans SET {} WHERE id = ${}",
             updates.join(", "),
             bind_index
         );
-        
+
         // Build query with bindings
         let mut query_builder = sqlx::query(&query);
         if let Some(ref title) = update.title {
@@ -406,20 +470,27 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         }
         query_builder = query_builder.bind(Utc::now());
         query_builder = query_builder.bind(id);
-        
-        query_builder.execute(pool)
+
+        query_builder
+            .execute(pool)
             .await
             .map_err(|e| anyhow!("Failed to update execution plan: {}", e))?;
-        
+
         // Retrieve updated plan
-        self.get_execution_plan(id).await?
+        self.get_execution_plan(id)
+            .await?
             .ok_or_else(|| anyhow!("Execution plan {} not found after update", id))
     }
 
-    async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<models::AuditTrailEntry> {
+    async fn create_audit_trail_entry(
+        &self,
+        entry: CreateAuditTrailEntry,
+    ) -> Result<models::AuditTrailEntry> {
         // Convert agent-orchestration CreateAuditTrailEntry to data-infrastructure format
         // Extract task_id from metadata if available, otherwise use a default
-        let task_id = entry.metadata.get("task_id")
+        let task_id = entry
+            .metadata
+            .get("task_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .unwrap_or_else(|| Uuid::new_v4());
@@ -433,10 +504,14 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 "description": entry.description,
                 "metadata": entry.metadata,
             }),
-            user_id: entry.metadata.get("user_id")
+            user_id: entry
+                .metadata
+                .get("user_id")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
-            ip_address: entry.metadata.get("ip_address")
+            ip_address: entry
+                .metadata
+                .get("ip_address")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
             timestamp: Some(Utc::now()),
@@ -446,7 +521,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let pool = self.db_client.pool();
         let id = Uuid::new_v4();
         let timestamp = db_entry.timestamp.unwrap_or_else(|| Utc::now());
-        
+
         // Insert audit trail entry
         sqlx::query(
             r#"
@@ -454,7 +529,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 id, entity_type, entity_id, action, details,
                 user_id, ip_address, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            "#
+            "#,
         )
         .bind(id)
         .bind(&db_entry.entity_type)
@@ -467,14 +542,14 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist audit trail entry: {}", e))?;
-        
+
         // Retrieve the persisted entry
         let db_result = sqlx::query_as::<_, data_infrastructure::models::AuditTrailEntry>(
             r#"
             SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
             FROM audit_trail_entries
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_one(pool)
@@ -485,18 +560,18 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         Ok(models::AuditTrailEntry {
             id: db_result.id,
             event_type: db_result.action,
-            description: db_result.details.get("description")
+            description: db_result
+                .details
+                .get("description")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "".to_string()),
             timestamp: db_result.created_at,
-            metadata: db_result.details.get("metadata")
+            metadata: db_result
+                .details
+                .get("metadata")
                 .and_then(|v| v.as_object())
-                .map(|obj| {
-                    obj.iter()
-                        .map(|(k, v)| (k.clone(), v.clone()))
-                        .collect()
-                })
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
                 .unwrap_or_default(),
         })
     }
@@ -510,7 +585,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             FROM audit_trail_entries
             WHERE entity_id = $1 AND entity_type = 'task'
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_all(pool)
@@ -518,25 +593,26 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .map_err(|e| anyhow!("Failed to query audit trail entries: {}", e))?;
 
         // Convert to agent-orchestration format
-        Ok(db_results.into_iter().map(|db_entry| {
-            models::AuditTrailEntry {
+        Ok(db_results
+            .into_iter()
+            .map(|db_entry| models::AuditTrailEntry {
                 id: db_entry.id,
                 event_type: db_entry.action,
-                description: db_entry.details.get("description")
+                description: db_entry
+                    .details
+                    .get("description")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| "".to_string()),
                 timestamp: db_entry.created_at,
-                metadata: db_entry.details.get("metadata")
+                metadata: db_entry
+                    .details
+                    .get("metadata")
                     .and_then(|v| v.as_object())
-                    .map(|obj| {
-                        obj.iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect()
-                    })
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
                     .unwrap_or_default(),
-            }
-        }).collect())
+            })
+            .collect())
     }
 
     async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<models::AuditTrailEntry>> {
@@ -547,7 +623,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             SELECT id, entity_type, entity_id, action, details, user_id, ip_address, created_at
             FROM audit_trail_entries
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(pool)
@@ -555,32 +631,33 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .map_err(|e| anyhow!("Failed to query audit trail entry: {}", e))?;
 
         // Convert to agent-orchestration format
-        Ok(db_result.map(|db_entry| {
-            models::AuditTrailEntry {
-                id: db_entry.id,
-                event_type: db_entry.action,
-                description: db_entry.details.get("description")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "".to_string()),
-                timestamp: db_entry.created_at,
-                metadata: db_entry.details.get("metadata")
-                    .and_then(|v| v.as_object())
-                    .map(|obj| {
-                        obj.iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-            }
+        Ok(db_result.map(|db_entry| models::AuditTrailEntry {
+            id: db_entry.id,
+            event_type: db_entry.action,
+            description: db_entry
+                .details
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "".to_string()),
+            timestamp: db_entry.created_at,
+            metadata: db_entry
+                .details
+                .get("metadata")
+                .and_then(|v| v.as_object())
+                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                .unwrap_or_default(),
         }))
     }
 
-    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession> {
+    async fn create_planning_session(
+        &self,
+        session: CreatePlanningSession,
+    ) -> Result<models::PlanningSession> {
         let pool = self.db_client.pool();
         let session_id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         // Insert planning session into database
         sqlx::query(
             r#"
@@ -588,7 +665,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 id, plan_id, orchestrator_id, worker_pool_id, council_session_id,
                 audit_correlation_id, status, execution_state, started_at, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            "#
+            "#,
         )
         .bind(session_id)
         .bind(session.plan_id)
@@ -603,9 +680,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist planning session: {}", e))?;
-        
+
         info!("Persisted planning session {} to database", session_id);
-        
+
         Ok(models::PlanningSession {
             id: session_id,
             plan_id: session.plan_id,
@@ -618,7 +695,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn get_planning_session(&self, id: Uuid) -> Result<Option<models::PlanningSession>> {
         let pool = self.db_client.pool();
-        
+
         // Query planning session from database
         let row = sqlx::query(
             r#"
@@ -631,24 +708,30 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query planning session: {}", e))?;
-        
+
         Ok(row.map(|r: sqlx::postgres::PgRow| models::PlanningSession {
             id: r.get("id"),
             plan_id: r.get("plan_id"),
             status: r.get("status"),
             created_at: r.get("created_at"),
-            updated_at: r.try_get::<chrono::DateTime<Utc>, _>("started_at").unwrap_or_else(|_| r.get("created_at")), // Use started_at as updated_at fallback
+            updated_at: r
+                .try_get::<chrono::DateTime<Utc>, _>("started_at")
+                .unwrap_or_else(|_| r.get("created_at")), // Use started_at as updated_at fallback
             metadata: std::collections::HashMap::new(), // Metadata not stored in this query
         }))
     }
 
-    async fn update_planning_session(&self, id: Uuid, session: UpdatePlanningSession) -> Result<()> {
+    async fn update_planning_session(
+        &self,
+        id: Uuid,
+        session: UpdatePlanningSession,
+    ) -> Result<()> {
         let pool = self.db_client.pool();
-        
+
         // Build update query dynamically
         let mut updates = Vec::new();
         let mut bind_index = 1;
-        
+
         if let Some(ref _status) = session.status {
             updates.push(format!("status = ${}", bind_index));
             bind_index += 1;
@@ -657,18 +740,18 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             updates.push(format!("execution_state = ${}", bind_index));
             bind_index += 1;
         }
-        
+
         if updates.is_empty() {
             // No updates provided
             return Ok(());
         }
-        
+
         let query = format!(
             "UPDATE planning_sessions SET {} WHERE id = ${}",
             updates.join(", "),
             bind_index
         );
-        
+
         // Build query with bindings
         let mut query_builder = sqlx::query(&query);
         if let Some(ref status) = session.status {
@@ -679,24 +762,28 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             query_builder = query_builder.bind(serde_json::json!(metadata));
         }
         query_builder = query_builder.bind(id);
-        
-        query_builder.execute(pool)
+
+        query_builder
+            .execute(pool)
             .await
             .map_err(|e| anyhow!("Failed to update planning session: {}", e))?;
-        
+
         Ok(())
     }
 
-    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<models::PlanningTelemetry> {
+    async fn create_planning_telemetry(
+        &self,
+        telemetry: CreatePlanningTelemetry,
+    ) -> Result<models::PlanningTelemetry> {
         let pool = self.db_client.pool();
         let telemetry_id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         // Extract plan_id from session_id by querying planning_sessions table
         let plan_id = sqlx::query_scalar::<_, Uuid>(
             r#"
             SELECT plan_id FROM planning_sessions WHERE id = $1 LIMIT 1
-            "#
+            "#,
         )
         .bind(telemetry.session_id)
         .fetch_optional(pool)
@@ -705,17 +792,20 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .unwrap_or_else(|| {
             // Fallback: if session not found, use session_id as plan_id
             // This maintains backward compatibility and handles edge cases
-            tracing::warn!("Planning session {} not found, using session_id as plan_id", telemetry.session_id);
+            tracing::warn!(
+                "Planning session {} not found, using session_id as plan_id",
+                telemetry.session_id
+            );
             telemetry.session_id
         });
-        
+
         // Insert planning telemetry into database
         sqlx::query(
             r#"
             INSERT INTO planning_telemetry (
                 id, plan_id, metric_type, metric_value, collected_at, metadata
             ) VALUES ($1, $2, $3, $4, $5, $6)
-            "#
+            "#,
         )
         .bind(telemetry_id)
         .bind(plan_id)
@@ -726,9 +816,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist planning telemetry: {}", e))?;
-        
+
         info!("Persisted planning telemetry {} to database", telemetry_id);
-        
+
         Ok(models::PlanningTelemetry {
             id: telemetry_id,
             session_id: telemetry.session_id,
@@ -739,9 +829,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         })
     }
 
-    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<models::PlanningTelemetry>> {
+    async fn get_planning_telemetry(
+        &self,
+        plan_id: Uuid,
+        metric_type: Option<String>,
+    ) -> Result<Vec<models::PlanningTelemetry>> {
         let pool = self.db_client.pool();
-        
+
         // Query planning telemetry from database
         let rows = if let Some(ref metric_type) = metric_type {
             sqlx::query(
@@ -770,46 +864,50 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             .await
         }
         .map_err(|e| anyhow!("Failed to query planning telemetry: {}", e))?;
-        
-        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
-            // Extract metric_value from JSONB
-            let metric_value_json: serde_json::Value = r.get("metric_value");
-            let metric_value = metric_value_json
-                .as_f64()
-                .or_else(|| metric_value_json.as_i64().map(|v| v as f64))
-                .unwrap_or(0.0);
-            
-            let metadata_json: serde_json::Value = r.get("metadata");
-            models::PlanningTelemetry {
-                id: r.get("id"),
-                session_id: r.get("plan_id"), // Use plan_id as session_id
-                metric_name: r.get("metric_type"),
-                metric_value,
-                timestamp: r.get("collected_at"),
-                metadata: metadata_json.as_object()
-                    .map(|obj| {
-                        obj.iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-            }
-        }).collect())
+
+        Ok(rows
+            .into_iter()
+            .map(|r: sqlx::postgres::PgRow| {
+                // Extract metric_value from JSONB
+                let metric_value_json: serde_json::Value = r.get("metric_value");
+                let metric_value = metric_value_json
+                    .as_f64()
+                    .or_else(|| metric_value_json.as_i64().map(|v| v as f64))
+                    .unwrap_or(0.0);
+
+                let metadata_json: serde_json::Value = r.get("metadata");
+                models::PlanningTelemetry {
+                    id: r.get("id"),
+                    session_id: r.get("plan_id"), // Use plan_id as session_id
+                    metric_name: r.get("metric_type"),
+                    metric_value,
+                    timestamp: r.get("collected_at"),
+                    metadata: metadata_json
+                        .as_object()
+                        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                        .unwrap_or_default(),
+                }
+            })
+            .collect())
     }
 
     async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<()> {
         let pool = self.db_client.pool();
         let event_id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         // Extract optional fields from metadata
-        let milestone_id = event.metadata.get("milestone_id")
+        let milestone_id = event
+            .metadata
+            .get("milestone_id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let worker_id = event.metadata.get("worker_id")
+        let worker_id = event
+            .metadata
+            .get("worker_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok());
-        
+
         // Insert planning audit event into database
         sqlx::query(
             r#"
@@ -828,16 +926,59 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .bind(now)
         .execute(pool)
         .await
-        .map_err(|e| anyhow!("Failed to persist planning audit event: {}", e))?;
-        
+        .map_err(|e| {
+            tracing::error!(
+                error = %e,
+                event_id = %event_id,
+                plan_id = %event.plan_id,
+                table = "planning_audit_events",
+                query = "INSERT INTO planning_audit_events",
+                "Failed to persist planning audit event - column 'description' may be missing"
+            );
+            anyhow!("Failed to persist planning audit event to table 'planning_audit_events' (event_id: {}, plan_id: {}): {}. This may indicate the 'description' column is missing from the table.", event_id, event.plan_id, e)
+        })?;
+
         info!("Persisted planning audit event {} to database", event_id);
-        
+
         Ok(())
     }
 
-    async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<models::PlanningAuditEvent>> {
+    async fn get_planning_audit_events(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Vec<models::PlanningAuditEvent>> {
         let pool = self.db_client.pool();
-        
+
+        // First verify the column exists before querying
+        let has_description: bool = sqlx::query_scalar::<_, bool>(
+            r#"
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = 'planning_audit_events'
+                AND column_name = 'description'
+                AND table_schema = 'public'
+            )
+            "#,
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false);
+
+        if !has_description {
+            tracing::error!(
+                plan_id = %plan_id,
+                table = "planning_audit_events",
+                "CRITICAL: planning_audit_events table is missing 'description' column"
+            );
+            return Err(anyhow!("CRITICAL: planning_audit_events table is missing 'description' column. Please run migration 028 to fix the schema."));
+        }
+
+        tracing::debug!(
+            plan_id = %plan_id,
+            "Querying planning_audit_events with description column"
+        );
+
         // Query planning audit events from database
         let rows = sqlx::query(
             r#"
@@ -850,61 +991,70 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .bind(plan_id)
         .fetch_all(pool)
         .await
-        .map_err(|e| anyhow!("Failed to query planning audit events: {}", e))?;
-        
-        Ok(rows.into_iter().map(|r: sqlx::postgres::PgRow| {
-            let id: Uuid = r.get("id");
-            let plan_id: Uuid = r.get("plan_id");
-            let event_type: String = r.get("event_type");
-            let description: String = r.get("description");
-            let created_at: chrono::DateTime<chrono::Utc> = r.get("created_at");
-            let metadata: serde_json::Value = r.get("metadata");
-            
-            models::PlanningAuditEvent {
-                id,
-                session_id: plan_id, // Use plan_id as session_id
-                event_type,
-                description,
-                timestamp: created_at,
-                metadata: metadata.as_object()
-                    .map(|obj| {
-                        obj.iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-            }
-        }).collect())
+        .map_err(|e| {
+            tracing::error!(
+                error = %e,
+                plan_id = %plan_id,
+                table = "planning_audit_events",
+                query = "SELECT id, plan_id, milestone_id, worker_id, event_type, description, metadata, created_at FROM planning_audit_events",
+                "Failed to query planning audit events - column 'description' may be missing"
+            );
+            anyhow!("Failed to query planning audit events from table 'planning_audit_events' (plan_id: {}): {}. This may indicate the 'description' column is missing from the table.", plan_id, e)
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r: sqlx::postgres::PgRow| {
+                let id: Uuid = r.get("id");
+                let plan_id: Uuid = r.get("plan_id");
+                let event_type: String = r.get("event_type");
+                let description: String = r.get("description");
+                let created_at: chrono::DateTime<chrono::Utc> = r.get("created_at");
+                let metadata: serde_json::Value = r.get("metadata");
+
+                models::PlanningAuditEvent {
+                    id,
+                    session_id: plan_id, // Use plan_id as session_id
+                    event_type,
+                    description,
+                    timestamp: created_at,
+                    metadata: metadata
+                        .as_object()
+                        .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                        .unwrap_or_default(),
+                }
+            })
+            .collect())
     }
 
     async fn delete_execution_plan(&self, id: Uuid) -> Result<()> {
         let pool = self.db_client.pool();
-        
+
         // Delete execution plan from database (cascade will delete related records)
         let rows_affected = sqlx::query(
             r#"
             DELETE FROM execution_plans
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to delete execution plan: {}", e))?
         .rows_affected();
-        
+
         if rows_affected > 0 {
             info!("Deleted execution plan {} from database", id);
         } else {
             warn!("Execution plan {} not found for deletion", id);
         }
-        
+
         Ok(())
     }
 
     async fn get_judges(&self) -> Result<Vec<models::Judge>> {
         use data_infrastructure::models::Judge as DbJudge;
-        
+
         let pool = self.db_client.pool();
         let db_judges = sqlx::query_as::<_, DbJudge>(
             r#"
@@ -912,35 +1062,38 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    timeout_ms, optimization_target, is_active, created_at, updated_at
             FROM judges
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query judges from database: {}", e))?;
-        
+
         // Convert database Judge model to agent-orchestration Judge model
-        let judges: Vec<models::Judge> = db_judges.into_iter().map(|db_judge| {
-            // Build configuration JSON from database fields
-            let configuration = serde_json::json!({
-                "model_name": db_judge.model_name,
-                "endpoint": db_judge.endpoint,
-                "weight": db_judge.weight,
-                "timeout_ms": db_judge.timeout_ms,
-                "optimization_target": db_judge.optimization_target,
-            });
-            
-            models::Judge {
-                id: db_judge.id,
-                name: db_judge.name,
-                judge_type: db_judge.optimization_target.clone(), // Use optimization_target as judge_type
-                configuration,
-                is_active: db_judge.is_active,
-                metadata: std::collections::HashMap::new(),
-                created_at: db_judge.created_at,
-                updated_at: db_judge.updated_at,
-            }
-        }).collect();
-        
+        let judges: Vec<models::Judge> = db_judges
+            .into_iter()
+            .map(|db_judge| {
+                // Build configuration JSON from database fields
+                let configuration = serde_json::json!({
+                    "model_name": db_judge.model_name,
+                    "endpoint": db_judge.endpoint,
+                    "weight": db_judge.weight,
+                    "timeout_ms": db_judge.timeout_ms,
+                    "optimization_target": db_judge.optimization_target,
+                });
+
+                models::Judge {
+                    id: db_judge.id,
+                    name: db_judge.name,
+                    judge_type: db_judge.optimization_target.clone(), // Use optimization_target as judge_type
+                    configuration,
+                    is_active: db_judge.is_active,
+                    metadata: std::collections::HashMap::new(),
+                    created_at: db_judge.created_at,
+                    updated_at: db_judge.updated_at,
+                }
+            })
+            .collect();
+
         info!("Queried {} judges from database", judges.len());
         Ok(judges)
     }
@@ -948,29 +1101,39 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     async fn create_judge(&self, judge: CreateJudge) -> Result<models::Judge> {
         let pool = self.db_client.pool();
         let now = Utc::now();
-        
+
         // Extract database fields from configuration JSON
-        let model_name = judge.configuration.get("model_name")
+        let model_name = judge
+            .configuration
+            .get("model_name")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "default".to_string());
-        let endpoint = judge.configuration.get("endpoint")
+        let endpoint = judge
+            .configuration
+            .get("endpoint")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "http://localhost:8080".to_string());
-        let weight = judge.configuration.get("weight")
+        let weight = judge
+            .configuration
+            .get("weight")
             .and_then(|v| v.as_f64())
             .map(|v| v as f32)
             .unwrap_or(1.0);
-        let timeout_ms = judge.configuration.get("timeout_ms")
+        let timeout_ms = judge
+            .configuration
+            .get("timeout_ms")
             .and_then(|v| v.as_i64())
             .map(|v| v as i32)
             .unwrap_or(5000);
-        let optimization_target = judge.configuration.get("optimization_target")
+        let optimization_target = judge
+            .configuration
+            .get("optimization_target")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| judge.judge_type.clone());
-        
+
         // Insert judge into database
         sqlx::query(
             r#"
@@ -978,7 +1141,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 id, name, model_name, endpoint, weight,
                 timeout_ms, optimization_target, is_active, created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            "#
+            "#,
         )
         .bind(judge.id)
         .bind(&judge.name)
@@ -993,9 +1156,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist judge to database: {}", e))?;
-        
+
         info!("Persisted judge {} to database", judge.id);
-        
+
         // Return created judge model
         Ok(models::Judge {
             id: judge.id,
@@ -1011,7 +1174,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn get_judge(&self, id: Uuid) -> Result<Option<models::Judge>> {
         use data_infrastructure::models::Judge as DbJudge;
-        
+
         let pool = self.db_client.pool();
         let db_judge = sqlx::query_as::<_, DbJudge>(
             r#"
@@ -1019,13 +1182,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    timeout_ms, optimization_target, is_active, created_at, updated_at
             FROM judges
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query judge from database: {}", e))?;
-        
+
         Ok(db_judge.map(|db_judge| {
             // Build configuration JSON from database fields
             let configuration = serde_json::json!({
@@ -1035,7 +1198,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 "timeout_ms": db_judge.timeout_ms,
                 "optimization_target": db_judge.optimization_target,
             });
-            
+
             models::Judge {
                 id: db_judge.id,
                 name: db_judge.name,
@@ -1049,17 +1212,20 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         }))
     }
 
-    async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<models::JudgeEvaluation> {
+    async fn create_judge_evaluation(
+        &self,
+        evaluation: CreateJudgeEvaluation,
+    ) -> Result<models::JudgeEvaluation> {
         let pool = self.db_client.pool();
         let id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         // Find or create verdict_id by querying council_verdicts for this task_id
         // If no verdict exists, we'll need to create one or use a placeholder
         let verdict_id = sqlx::query_scalar::<_, Option<Uuid>>(
             r#"
             SELECT id FROM council_verdicts WHERE task_id = $1 ORDER BY created_at DESC LIMIT 1
-            "#
+            "#,
         )
         .bind(evaluation.task_id)
         .fetch_optional(pool)
@@ -1069,15 +1235,20 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .unwrap_or_else(|| {
             // If no verdict exists, create a placeholder verdict_id
             // In production, this should create an actual verdict record
-            warn!("No verdict found for task {}, using placeholder verdict_id", evaluation.task_id);
+            warn!(
+                "No verdict found for task {}, using placeholder verdict_id",
+                evaluation.task_id
+            );
             Uuid::new_v4()
         });
-        
+
         // Extract fields from evaluation JSON
-        let evaluation_score = evaluation.evaluation.get("score")
+        let evaluation_score = evaluation
+            .evaluation
+            .get("score")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
-        
+
         // Insert judge evaluation into database
         sqlx::query(
             r#"
@@ -1087,7 +1258,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 confidence_score, reasoning, evidence_used, evaluation_metadata,
                 verdict_decision, risk_assessment, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-            "#
+            "#,
         )
         .bind(id)
         .bind(verdict_id)
@@ -1099,23 +1270,33 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .bind(now)
         .bind(Some(evaluation_score as f32))
         .bind(None::<f32>) // confidence_score
-        .bind(evaluation.evaluation.get("reasoning")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())) // reasoning
+        .bind(
+            evaluation
+                .evaluation
+                .get("reasoning")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        ) // reasoning
         .bind(Some(evaluation.evaluation.clone())) // evidence_used - use evaluation JSON
         .bind(Some(evaluation.evaluation.clone())) // evaluation_metadata - use evaluation JSON
-        .bind(evaluation.evaluation.get("verdict_decision")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())) // verdict_decision
-        .bind(evaluation.evaluation.get("risk_assessment")
-            .cloned()) // risk_assessment
+        .bind(
+            evaluation
+                .evaluation
+                .get("verdict_decision")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        ) // verdict_decision
+        .bind(evaluation.evaluation.get("risk_assessment").cloned()) // risk_assessment
         .bind(Some(now))
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist judge evaluation to database: {}", e))?;
-        
-        info!("Persisted judge evaluation {} for judge {} and task {}", id, evaluation.judge_id, evaluation.task_id);
-        
+
+        info!(
+            "Persisted judge evaluation {} for judge {} and task {}",
+            id, evaluation.judge_id, evaluation.task_id
+        );
+
         // Build metadata HashMap from evaluation JSON
         let mut metadata = std::collections::HashMap::new();
         if let Some(obj) = evaluation.evaluation.as_object() {
@@ -1123,7 +1304,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 metadata.insert(k.clone(), v.clone());
             }
         }
-        
+
         // Return created judge evaluation model
         Ok(models::JudgeEvaluation {
             id,
@@ -1138,9 +1319,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
 
     async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<models::JudgeEvaluation>> {
         use data_infrastructure::models::JudgeEvaluation as DbJudgeEvaluation;
-        
+
         let pool = self.db_client.pool();
-        
+
         // Query judge evaluations by joining through council_verdicts
         let db_evaluations = sqlx::query_as::<_, DbJudgeEvaluation>(
             r#"
@@ -1153,73 +1334,89 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 SELECT id FROM council_verdicts WHERE task_id = $1
             )
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_all(pool)
         .await
         .map_err(|e| anyhow!("Failed to query judge evaluations from database: {}", e))?;
-        
+
         // Convert database JudgeEvaluation model to agent-orchestration JudgeEvaluation model
-        let evaluations: Vec<models::JudgeEvaluation> = db_evaluations.into_iter().map(|db_eval| {
-            // Build evaluation JSON from database fields
-            let mut evaluation_json = db_eval.judge_verdict.clone();
-            
-            // Add additional fields to evaluation JSON if they exist
-            if let Some(reasoning) = &db_eval.reasoning {
-                evaluation_json["reasoning"] = serde_json::Value::String(reasoning.clone());
-            }
-            if let Some(verdict_decision) = &db_eval.verdict_decision {
-                evaluation_json["verdict_decision"] = serde_json::Value::String(verdict_decision.clone());
-            }
-            if let Some(risk_assessment) = &db_eval.risk_assessment {
-                evaluation_json["risk_assessment"] = risk_assessment.clone();
-            }
-            
-            // Build metadata HashMap
-            let mut metadata = std::collections::HashMap::new();
-            if let Some(eval_metadata) = &db_eval.evaluation_metadata {
-                if let Some(obj) = eval_metadata.as_object() {
-                    for (k, v) in obj {
-                        metadata.insert(k.clone(), v.clone());
+        let evaluations: Vec<models::JudgeEvaluation> = db_evaluations
+            .into_iter()
+            .map(|db_eval| {
+                // Build evaluation JSON from database fields
+                let mut evaluation_json = db_eval.judge_verdict.clone();
+
+                // Add additional fields to evaluation JSON if they exist
+                if let Some(reasoning) = &db_eval.reasoning {
+                    evaluation_json["reasoning"] = serde_json::Value::String(reasoning.clone());
+                }
+                if let Some(verdict_decision) = &db_eval.verdict_decision {
+                    evaluation_json["verdict_decision"] =
+                        serde_json::Value::String(verdict_decision.clone());
+                }
+                if let Some(risk_assessment) = &db_eval.risk_assessment {
+                    evaluation_json["risk_assessment"] = risk_assessment.clone();
+                }
+
+                // Build metadata HashMap
+                let mut metadata = std::collections::HashMap::new();
+                if let Some(eval_metadata) = &db_eval.evaluation_metadata {
+                    if let Some(obj) = eval_metadata.as_object() {
+                        for (k, v) in obj {
+                            metadata.insert(k.clone(), v.clone());
+                        }
                     }
                 }
-            }
-            metadata.insert("verdict_id".to_string(), serde_json::Value::String(db_eval.verdict_id.to_string()));
-            if let Some(tokens) = db_eval.tokens_used {
-                metadata.insert("tokens_used".to_string(), serde_json::Value::Number(tokens.into()));
-            }
-            if let Some(confidence) = db_eval.confidence {
-                metadata.insert("confidence".to_string(), serde_json::Value::Number(
-                    serde_json::Number::from_f64(confidence as f64).unwrap_or(serde_json::Number::from(0))
-                ));
-            }
-            
-            // Extract task_id from verdict_id by querying council_verdicts
-            // For now, we'll need to query it separately or store it in metadata
-            // Since we're filtering by task_id, we know it matches
-            let task_id = task_id; // Use the provided task_id
-            
-            models::JudgeEvaluation {
-                id: db_eval.id,
-                judge_id: db_eval.judge_id,
-                task_id,
-                evaluation: evaluation_json,
-                score: db_eval.evaluation_score.unwrap_or(0.0) as f64,
-                metadata,
-                created_at: db_eval.created_at,
-            }
-        }).collect();
-        
-        info!("Queried {} judge evaluations for task {} from database", evaluations.len(), task_id);
+                metadata.insert(
+                    "verdict_id".to_string(),
+                    serde_json::Value::String(db_eval.verdict_id.to_string()),
+                );
+                if let Some(tokens) = db_eval.tokens_used {
+                    metadata.insert(
+                        "tokens_used".to_string(),
+                        serde_json::Value::Number(tokens.into()),
+                    );
+                }
+                if let Some(confidence) = db_eval.confidence {
+                    metadata.insert(
+                        "confidence".to_string(),
+                        serde_json::Value::Number(
+                            serde_json::Number::from_f64(confidence as f64)
+                                .unwrap_or(serde_json::Number::from(0)),
+                        ),
+                    );
+                }
+
+                // Extract task_id from verdict_id by querying council_verdicts
+                // For now, we'll need to query it separately or store it in metadata
+                // Since we're filtering by task_id, we know it matches
+                let task_id = task_id; // Use the provided task_id
+
+                models::JudgeEvaluation {
+                    id: db_eval.id,
+                    judge_id: db_eval.judge_id,
+                    task_id,
+                    evaluation: evaluation_json,
+                    score: db_eval.evaluation_score.unwrap_or(0.0) as f64,
+                    metadata,
+                    created_at: db_eval.created_at,
+                }
+            })
+            .collect();
+
+        info!(
+            "Queried {} judge evaluations for task {} from database",
+            evaluations.len(),
+            task_id
+        );
         Ok(evaluations)
     }
 
     async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>> {
-        
-        
         let pool = self.db_client.pool();
-        
+
         let query = if let Some(status_filter) = status {
             sqlx::query(
                 r#"
@@ -1228,7 +1425,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 FROM waivers
                 WHERE status = $1
                 ORDER BY created_at DESC
-                "#
+                "#,
             )
             .bind(status_filter)
         } else {
@@ -1238,15 +1435,15 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                        mitigation_plan, expires_at, created_at, updated_at, status, metadata
                 FROM waivers
                 ORDER BY created_at DESC
-                "#
+                "#,
             )
         };
-        
+
         let rows = query
             .fetch_all(pool)
             .await
             .map_err(|e| anyhow!("Failed to query waivers: {}", e))?;
-        
+
         // Convert database waivers to orchestration models
         let mut waivers = Vec::new();
         for row in rows {
@@ -1273,32 +1470,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             } else {
                 vec![]
             };
-            
+
             // Extract plan_id from metadata or use a default
-            let plan_id = db_waiver_metadata.get("plan_id")
+            let plan_id = db_waiver_metadata
+                .get("plan_id")
                 .and_then(|v| v.as_str())
                 .and_then(|s| Uuid::parse_str(s).ok())
                 .unwrap_or_else(|| Uuid::new_v4());
-            
+
             // Extract waiver_type from metadata or use reason as type
-            let waiver_type = db_waiver_metadata.get("waiver_type")
+            let waiver_type = db_waiver_metadata
+                .get("waiver_type")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "general".to_string());
-            
+
             // Store title and description in metadata if they exist
             let mut metadata = match db_waiver_metadata {
                 serde_json::Value::Object(ref map) => map.clone(),
                 _ => serde_json::Map::new(),
             };
-            metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
-            metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+            metadata.insert(
+                "title".to_string(),
+                serde_json::Value::String(db_waiver_title.clone()),
+            );
+            metadata.insert(
+                "description".to_string(),
+                serde_json::Value::String(db_waiver_description.clone()),
+            );
             if let Some(updated_at) = db_waiver_updated_at {
-                metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+                metadata.insert(
+                    "updated_at".to_string(),
+                    serde_json::Value::String(updated_at.to_rfc3339()),
+                );
             }
             // Convert metadata Map to HashMap<String, serde_json::Value>
-            let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
-            
+            let metadata_map: std::collections::HashMap<String, serde_json::Value> =
+                metadata.into_iter().collect();
+
             waivers.push(models::Waiver {
                 id: db_waiver_id,
                 plan_id,
@@ -1314,38 +1523,39 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 metadata: metadata_map,
             });
         }
-        
+
         Ok(waivers)
     }
 
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver> {
-        
-        
         let pool = self.db_client.pool();
         let id = Uuid::new_v4();
         let now = Utc::now();
         let gates_json = serde_json::to_value(&waiver.waived_gates)
             .map_err(|e| anyhow!("Failed to serialize gates: {}", e))?;
-        
+
         // Create metadata with plan_id
         let mut metadata = serde_json::Map::new();
-        metadata.insert("plan_id".to_string(), serde_json::Value::String(waiver.plan_id.to_string()));
+        metadata.insert(
+            "plan_id".to_string(),
+            serde_json::Value::String(waiver.plan_id.to_string()),
+        );
         let metadata_value = serde_json::Value::Object(metadata);
-        
+
         // Create waiver with default values for fields not in CreateWaiver
         let title = format!("Waiver for plan {}", waiver.plan_id);
         let description = waiver.reason.clone();
         let approved_by = "system".to_string();
         let impact_level = "medium".to_string();
         let mitigation_plan = None::<String>;
-        
+
         sqlx::query(
             r#"
             INSERT INTO waivers (
                 id, title, reason, description, gates, approved_by, impact_level,
                 mitigation_plan, expires_at, created_at, updated_at, status, metadata
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            "#
+            "#,
         )
         .bind(id)
         .bind(&title)
@@ -1363,7 +1573,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to create waiver: {}", e))?;
-        
+
         // Fetch the created waiver
         let row = sqlx::query(
             r#"
@@ -1371,13 +1581,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    mitigation_plan, expires_at, created_at, updated_at, status, metadata
             FROM waivers
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("Failed to fetch created waiver: {}", e))?;
-        
+
         // Extract fields manually
         let db_waiver_id: Uuid = row.try_get("id")?;
         let db_waiver_title: String = row.try_get("title")?;
@@ -1392,7 +1602,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let db_waiver_updated_at: Option<chrono::DateTime<Utc>> = row.try_get("updated_at")?;
         let db_waiver_status: String = row.try_get("status")?;
         let db_waiver_metadata: serde_json::Value = row.try_get("metadata")?;
-        
+
         // Extract gates from JSON
         let gates = if let Some(gates_json) = db_waiver_gates.as_array() {
             gates_json
@@ -1403,32 +1613,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         } else {
             vec![]
         };
-        
+
         // Extract plan_id from metadata or use a default
-        let plan_id = db_waiver_metadata.get("plan_id")
+        let plan_id = db_waiver_metadata
+            .get("plan_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .unwrap_or_else(|| Uuid::new_v4());
-        
+
         // Extract waiver_type from metadata or use reason as type
-        let waiver_type = db_waiver_metadata.get("waiver_type")
+        let waiver_type = db_waiver_metadata
+            .get("waiver_type")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "general".to_string());
-        
+
         // Store title and description in metadata if they exist
         let mut metadata = match db_waiver_metadata {
             serde_json::Value::Object(ref map) => map.clone(),
             _ => serde_json::Map::new(),
         };
-        metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
-        metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+        metadata.insert(
+            "title".to_string(),
+            serde_json::Value::String(db_waiver_title.clone()),
+        );
+        metadata.insert(
+            "description".to_string(),
+            serde_json::Value::String(db_waiver_description.clone()),
+        );
         if let Some(updated_at) = db_waiver_updated_at {
-            metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+            metadata.insert(
+                "updated_at".to_string(),
+                serde_json::Value::String(updated_at.to_rfc3339()),
+            );
         }
         // Convert metadata Map to HashMap<String, serde_json::Value>
-        let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
-        
+        let metadata_map: std::collections::HashMap<String, serde_json::Value> =
+            metadata.into_iter().collect();
+
         Ok(models::Waiver {
             id: db_waiver_id,
             plan_id,
@@ -1446,11 +1668,9 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
     }
 
     async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver> {
-        
-        
         let pool = self.db_client.pool();
         let now = Utc::now();
-        
+
         // UpdateWaiver only has id and status fields (status is String, not Option)
         // Update status if provided
         if !update.status.is_empty() {
@@ -1470,7 +1690,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 .await
                 .map_err(|e| anyhow!("Failed to update waiver updated_at: {}", e))?;
         }
-        
+
         // Fetch the updated waiver
         let row = sqlx::query(
             r#"
@@ -1478,13 +1698,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    mitigation_plan, expires_at, created_at, updated_at, status, metadata
             FROM waivers
             WHERE id = $1
-            "#
+            "#,
         )
         .bind(id)
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("Failed to fetch updated waiver: {}", e))?;
-        
+
         // Extract fields manually
         let db_waiver_id: Uuid = row.try_get("id")?;
         let db_waiver_title: String = row.try_get("title")?;
@@ -1499,7 +1719,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         let db_waiver_updated_at: Option<chrono::DateTime<Utc>> = row.try_get("updated_at")?;
         let db_waiver_status: String = row.try_get("status")?;
         let db_waiver_metadata: serde_json::Value = row.try_get("metadata")?;
-        
+
         // Extract gates from JSON
         let gates = if let Some(gates_json) = db_waiver_gates.as_array() {
             gates_json
@@ -1510,32 +1730,44 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         } else {
             vec![]
         };
-        
+
         // Extract plan_id from metadata or use a default
-        let plan_id = db_waiver_metadata.get("plan_id")
+        let plan_id = db_waiver_metadata
+            .get("plan_id")
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok())
             .unwrap_or_else(|| Uuid::new_v4());
-        
+
         // Extract waiver_type from metadata or use reason as type
-        let waiver_type = db_waiver_metadata.get("waiver_type")
+        let waiver_type = db_waiver_metadata
+            .get("waiver_type")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "general".to_string());
-        
+
         // Store title and description in metadata if they exist
         let mut metadata = match db_waiver_metadata {
             serde_json::Value::Object(ref map) => map.clone(),
             _ => serde_json::Map::new(),
         };
-        metadata.insert("title".to_string(), serde_json::Value::String(db_waiver_title.clone()));
-        metadata.insert("description".to_string(), serde_json::Value::String(db_waiver_description.clone()));
+        metadata.insert(
+            "title".to_string(),
+            serde_json::Value::String(db_waiver_title.clone()),
+        );
+        metadata.insert(
+            "description".to_string(),
+            serde_json::Value::String(db_waiver_description.clone()),
+        );
         if let Some(updated_at) = db_waiver_updated_at {
-            metadata.insert("updated_at".to_string(), serde_json::Value::String(updated_at.to_rfc3339()));
+            metadata.insert(
+                "updated_at".to_string(),
+                serde_json::Value::String(updated_at.to_rfc3339()),
+            );
         }
         // Convert metadata Map to HashMap<String, serde_json::Value>
-        let metadata_map: std::collections::HashMap<String, serde_json::Value> = metadata.into_iter().collect();
-        
+        let metadata_map: std::collections::HashMap<String, serde_json::Value> =
+            metadata.into_iter().collect();
+
         Ok(models::Waiver {
             id: db_waiver_id,
             plan_id,
@@ -1552,10 +1784,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         })
     }
 
-    async fn create_execution_result(&self, result: CreateExecutionResult) -> Result<models::PlanExecutionResult> {
+    async fn create_execution_result(
+        &self,
+        result: CreateExecutionResult,
+    ) -> Result<models::PlanExecutionResult> {
         let pool = self.db_client.pool();
         let now = Utc::now();
-        
+
         // Insert or update execution result (using ON CONFLICT for upsert)
         sqlx::query(
             r#"
@@ -1572,7 +1807,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                 final_state = EXCLUDED.final_state,
                 timeline = EXCLUDED.timeline,
                 updated_at = EXCLUDED.updated_at
-            "#
+            "#,
         )
         .bind(result.plan_id)
         .bind(result.success)
@@ -1587,17 +1822,24 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .execute(pool)
         .await
         .map_err(|e| anyhow!("Failed to persist execution result: {}", e))?;
-        
-        info!("Persisted execution result for plan {} to database", result.plan_id);
-        
+
+        info!(
+            "Persisted execution result for plan {} to database",
+            result.plan_id
+        );
+
         // Fetch the persisted result
-        self.get_execution_result(result.plan_id).await?
+        self.get_execution_result(result.plan_id)
+            .await?
             .ok_or_else(|| anyhow!("Failed to retrieve persisted execution result"))
     }
 
-    async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<models::PlanExecutionResult>> {
+    async fn get_execution_result(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Option<models::PlanExecutionResult>> {
         let pool = self.db_client.pool();
-        
+
         // Query execution result from database
         let row = sqlx::query(
             r#"
@@ -1611,31 +1853,40 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to query execution result: {}", e))?;
-        
-        Ok(row.map(|r: sqlx::postgres::PgRow| {
-            models::PlanExecutionResult {
+
+        Ok(
+            row.map(|r: sqlx::postgres::PgRow| models::PlanExecutionResult {
                 plan_id: r.get("plan_id"),
                 success: r.get("success"),
                 milestones_completed: r.get("milestones_completed"),
                 total_duration_ms: r.get("total_duration_ms"),
-                evidence: r.try_get::<serde_json::Value, _>("evidence").unwrap_or_else(|_| serde_json::json!({})),
-                metrics: r.try_get::<serde_json::Value, _>("metrics").unwrap_or_else(|_| serde_json::json!({})),
+                evidence: r
+                    .try_get::<serde_json::Value, _>("evidence")
+                    .unwrap_or_else(|_| serde_json::json!({})),
+                metrics: r
+                    .try_get::<serde_json::Value, _>("metrics")
+                    .unwrap_or_else(|_| serde_json::json!({})),
                 final_state: r.get("final_state"),
-                timeline: r.try_get::<serde_json::Value, _>("timeline").unwrap_or_else(|_| serde_json::json!([])),
+                timeline: r
+                    .try_get::<serde_json::Value, _>("timeline")
+                    .unwrap_or_else(|_| serde_json::json!([])),
                 created_at: r.get("created_at"),
                 updated_at: r.get("updated_at"),
-            }
-        }))
+            }),
+        )
     }
 
-    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<models::CouncilSession> {
+    async fn create_council_session(
+        &self,
+        session: CreateCouncilSession,
+    ) -> Result<models::CouncilSession> {
         use data_infrastructure::database_operations::CreateCouncilSession as DbCreateCouncilSession;
         use data_infrastructure::models::CouncilSession as DbCouncilSession;
-        
+
         let pool = self.db_client.pool();
         let id = Uuid::new_v4();
         let now = Utc::now();
-        
+
         let db_session = DbCreateCouncilSession {
             session_id: session.session_id,
             task_id: session.task_id,
@@ -1647,7 +1898,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             progress: session.progress,
             metadata: session.metadata,
         };
-        
+
         // Insert council session into database
         let created = sqlx::query_as::<_, DbCouncilSession>(
             r#"
@@ -1660,16 +1911,28 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                       status, selected_judges, contributions, aggregation_result,
                       final_decision, progress, started_at, completed_at,
                       created_at, updated_at, metadata
-            "#
+            "#,
         )
         .bind(id)
         .bind(db_session.session_id)
         .bind(db_session.task_id)
         .bind(db_session.working_spec_id)
         .bind(db_session.review_context)
-        .bind(db_session.status.unwrap_or_else(|| "initialized".to_string()))
-        .bind(db_session.selected_judges.unwrap_or_else(|| serde_json::json!([])))
-        .bind(db_session.contributions.unwrap_or_else(|| serde_json::json!([])))
+        .bind(
+            db_session
+                .status
+                .unwrap_or_else(|| "initialized".to_string()),
+        )
+        .bind(
+            db_session
+                .selected_judges
+                .unwrap_or_else(|| serde_json::json!([])),
+        )
+        .bind(
+            db_session
+                .contributions
+                .unwrap_or_else(|| serde_json::json!([])),
+        )
         .bind(db_session.progress.unwrap_or(0.0))
         .bind(now)
         .bind(now)
@@ -1678,7 +1941,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("Failed to create council session: {}", e))?;
-        
+
         Ok(models::CouncilSession {
             id: created.id,
             session_id: created.session_id,
@@ -1699,9 +1962,12 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         })
     }
 
-    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>> {
+    async fn get_council_session(
+        &self,
+        session_id: Uuid,
+    ) -> Result<Option<models::CouncilSession>> {
         use data_infrastructure::models::CouncilSession as DbCouncilSession;
-        
+
         let pool = self.db_client.pool();
         let session = sqlx::query_as::<_, DbCouncilSession>(
             r#"
@@ -1711,13 +1977,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                    created_at, updated_at, metadata
             FROM council_sessions
             WHERE session_id = $1
-            "#
+            "#,
         )
         .bind(session_id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to get council session: {}", e))?;
-        
+
         Ok(session.map(|s| models::CouncilSession {
             id: s.id,
             session_id: s.session_id,
@@ -1738,9 +2004,12 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         }))
     }
 
-    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>> {
+    async fn get_council_session_by_task(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<models::CouncilSession>> {
         use data_infrastructure::models::CouncilSession as DbCouncilSession;
-        
+
         let pool = self.db_client.pool();
         let session = sqlx::query_as::<_, DbCouncilSession>(
             r#"
@@ -1752,13 +2021,13 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             WHERE task_id = $1
             ORDER BY created_at DESC
             LIMIT 1
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_optional(pool)
         .await
         .map_err(|e| anyhow!("Failed to get council session by task: {}", e))?;
-        
+
         Ok(session.map(|s| models::CouncilSession {
             id: s.id,
             session_id: s.session_id,
@@ -1779,12 +2048,16 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         }))
     }
 
-    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<models::CouncilSession> {
+    async fn update_council_session(
+        &self,
+        session_id: Uuid,
+        update: UpdateCouncilSession,
+    ) -> Result<models::CouncilSession> {
         use data_infrastructure::database_operations::UpdateCouncilSession as DbUpdateCouncilSession;
         use data_infrastructure::models::CouncilSession as DbCouncilSession;
-        
+
         let pool = self.db_client.pool();
-        
+
         let db_update = DbUpdateCouncilSession {
             status: update.status,
             selected_judges: update.selected_judges,
@@ -1795,7 +2068,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
             completed_at: update.completed_at,
             metadata: update.metadata,
         };
-        
+
         let updated = sqlx::query_as::<_, DbCouncilSession>(
             r#"
             UPDATE council_sessions
@@ -1813,7 +2086,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
                       status, selected_judges, contributions, aggregation_result,
                       final_decision, progress, started_at, completed_at,
                       created_at, updated_at, metadata
-            "#
+            "#,
         )
         .bind(db_update.status.as_deref())
         .bind(db_update.selected_judges.as_ref())
@@ -1828,7 +2101,7 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         .fetch_one(pool)
         .await
         .map_err(|e| anyhow!("Failed to update council session: {}", e))?;
-        
+
         Ok(models::CouncilSession {
             id: updated.id,
             session_id: updated.session_id,
@@ -1849,4 +2122,3 @@ impl DatabaseOperations for DatabaseOperationsAdapter {
         })
     }
 }
-

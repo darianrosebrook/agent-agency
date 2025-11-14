@@ -2,8 +2,8 @@
 //!
 //! Command definitions and handlers for the CLI interface.
 
-use schemars::JsonSchema;
 use crate::InterfaceError;
+use schemars::JsonSchema;
 
 /// Available CLI commands
 #[derive(Debug, Clone, JsonSchema)]
@@ -71,13 +71,11 @@ Use 'agent-agency-cli help <command>' for more information about a specific comm
             })
         }
 
-        CliCommand::Version => {
-            Ok(CommandResult {
-                success: true,
-                output: "Agent Agency CLI v0.1.0".to_string(),
-                exit_code: 0,
-            })
-        }
+        CliCommand::Version => Ok(CommandResult {
+            success: true,
+            output: "Agent Agency CLI v0.1.0".to_string(),
+            exit_code: 0,
+        }),
 
         CliCommand::Start => {
             // Implementation would start the system
@@ -119,7 +117,8 @@ Use 'agent-agency-cli help <command>' for more information about a specific comm
             // Implementation would list tasks
             Ok(CommandResult {
                 success: true,
-                output: "Available tasks:\n- task-1: Example task\n- task-2: Another task".to_string(),
+                output: "Available tasks:\n- task-1: Example task\n- task-2: Another task"
+                    .to_string(),
                 exit_code: 0,
             })
         }

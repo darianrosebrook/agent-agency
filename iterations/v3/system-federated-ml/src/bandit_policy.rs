@@ -77,7 +77,7 @@ pub trait BanditPolicy: Send + Sync {
         ctx: &TaskFeatures,
         arms: &[ParameterSet],
     ) -> SelectionResult;
-    
+
     /// Update policy with observed outcome
     fn update(
         &mut self,
@@ -85,7 +85,7 @@ pub trait BanditPolicy: Send + Sync {
         arm: &ParameterSet,
         reward: f64,
     );
-    
+
     /// Get policy version for provenance
     fn version(&self) -> String;
 }
@@ -134,7 +134,7 @@ impl GaussianPosterior {
         // New mean = (old_precision * old_mean + noise_precision * observation) / new_precision
         let new_precision = self.precision + noise_precision;
         let new_mean = (self.precision * self.mean + noise_precision * observation) / new_precision;
-        
+
         self.mean = new_mean;
         self.precision = new_precision;
         self.count += 1;
@@ -193,7 +193,7 @@ impl BanditPolicy for ThompsonGaussian {
     fn select(&self, _ctx: &TaskFeatures, arms: &[ParameterSet]) -> SelectionResult {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        
+
         if arms.is_empty() {
             return SelectionResult {
                 arm_index: 0,
@@ -225,10 +225,10 @@ impl BanditPolicy for ThompsonGaussian {
             let posterior = self.posterior.get(&fingerprint)
                 .cloned()
                 .unwrap_or_else(|| GaussianPosterior::new(self.prior_mean, self.prior_precision));
-            
+
             let sample = posterior.sample(&mut rng);
             propensities.push(sample);
-            
+
             if sample > best_sample {
                 best_sample = sample;
                 best_arm_idx = idx;
@@ -255,10 +255,10 @@ impl BanditPolicy for ThompsonGaussian {
 
     fn update(&mut self, _ctx: &TaskFeatures, arm: &ParameterSet, reward: f64) {
         let fingerprint = Self::arm_fingerprint(arm);
-        
+
         let mut posterior = self.posterior.remove(&fingerprint)
             .unwrap_or_else(|| GaussianPosterior::new(self.prior_mean, self.prior_precision));
-        
+
         posterior.update(reward, self.noise_precision);
         self.posterior.insert(fingerprint, posterior);
         self.update_count += 1;
@@ -318,13 +318,13 @@ impl LinUCB {
         if !self.theta.contains_key(task_type) {
             // Initialize with zero mean and identity covariance
             self.theta.insert(task_type.to_string(), vec![0.0; feature_dim]);
-            self.covariance.insert(task_type.to_string(), 
+            self.covariance.insert(task_type.to_string(),
                 (0..feature_dim).map(|i| {
                     (0..feature_dim).map(|j| if i == j { 1.0 / self.lambda } else { 0.0 }).collect()
                 }).collect()
             );
         }
-        (self.theta.get_mut(task_type).unwrap(), 
+        (self.theta.get_mut(task_type).unwrap(),
          self.covariance.get_mut(task_type).unwrap())
     }
 }

@@ -17,7 +17,9 @@
 //! 3. **Evidence Collection**: Gather violation details for LLM context
 //! 4. **Waivable Tracking**: Non-critical violations passed to LLM for judgment
 
-use agent_agency_contracts::{CAWSInvariant, Severity, ViolationLocation, InvariantCheck, InvariantResults, WorkingSpec};
+use agent_agency_contracts::{
+    CAWSInvariant, InvariantCheck, InvariantResults, Severity, ViolationLocation, WorkingSpec,
+};
 
 /// Run all CAWS invariant checks on a working spec
 pub fn run_caws_invariants(spec: &WorkingSpec) -> InvariantResults {
@@ -62,12 +64,17 @@ fn check_no_console_log(spec: &WorkingSpec) -> InvariantCheck {
 
 /// Check: Structured logging is used
 fn check_structured_logging(spec: &WorkingSpec) -> InvariantCheck {
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -145,12 +152,17 @@ fn check_no_hardcoded_secrets(spec: &WorkingSpec) -> InvariantCheck {
 
 /// Check: Proper error handling patterns
 fn check_error_handling(spec: &WorkingSpec) -> InvariantCheck {
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -182,12 +194,17 @@ fn check_error_handling(spec: &WorkingSpec) -> InvariantCheck {
 
 /// Check: Semantic versioning compliance
 fn check_semver_compliance(spec: &WorkingSpec) -> InvariantCheck {
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -218,12 +235,17 @@ fn check_semver_compliance(spec: &WorkingSpec) -> InvariantCheck {
 
 /// Check: API backward compatibility
 fn check_api_backward_compat(spec: &WorkingSpec) -> InvariantCheck {
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -253,12 +275,17 @@ fn check_api_backward_compat(spec: &WorkingSpec) -> InvariantCheck {
 
 /// Check: CAWS development standards compliance
 fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -272,7 +299,8 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
         "risk tier",
     ];
 
-    let caws_score = caws_indicators.iter()
+    let caws_score = caws_indicators
+        .iter()
         .filter(|indicator| spec_text.to_lowercase().contains(*indicator))
         .count();
 
@@ -281,7 +309,11 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
     } else {
         vec![ViolationLocation {
             rule_id: "CAWS-001".to_string(),
-            description: format!("Low CAWS compliance indicators ({} of {})", caws_score, caws_indicators.len()),
+            description: format!(
+                "Low CAWS compliance indicators ({} of {})",
+                caws_score,
+                caws_indicators.len()
+            ),
             context: "spec".to_string(),
             severity: Severity::Low,
         }]
@@ -300,7 +332,7 @@ fn find_pattern_violations(
     invariant: CAWSInvariant,
     pattern: &str,
     severity: Severity,
-    waivable: bool,
+    _waivable: bool,
     description: &str,
 ) -> Vec<ViolationLocation> {
     use regex::Regex;
@@ -310,12 +342,17 @@ fn find_pattern_violations(
         Err(_) => return vec![], // Invalid regex, skip
     };
 
-    let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+    let spec_text = format!(
+        "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
         spec.title,
         spec.description,
         spec.goals.join("\n- "),
-        spec.acceptance_criteria.iter()
-            .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+        spec.acceptance_criteria
+            .iter()
+            .map(|ac| format!(
+                "{}: Given {}, When {}, Then {}",
+                ac.id, ac.given, ac.when, ac.then
+            ))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -324,7 +361,7 @@ fn find_pattern_violations(
 
     // TODO: Implement code file search for invariant checking
     //       Currently searches spec text only; should search actual code files for comprehensive invariant verification.
-    for (line_num, line) in spec_text.lines().enumerate() {
+    for (_line_num, line) in spec_text.lines().enumerate() {
         if regex.is_match(line) {
             violations.push(ViolationLocation {
                 rule_id: format!("{:?}-{:03}", invariant, violations.len() + 1),
@@ -344,12 +381,14 @@ mod tests {
     use agent_agency_contracts::WorkingSpec;
 
     fn create_test_spec(text: &str) -> WorkingSpec {
-        use agent_agency_contracts::working_spec::{WorkingSpecContext, RollbackPlan, RollbackStrategy, DataImpact};
-        use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
+        use agent_agency_contracts::planning_io::{BudgetEnforcement, ChangeBudget};
         use agent_agency_contracts::task_request::Environment;
-        
+        use agent_agency_contracts::working_spec::{
+            DataImpact, RollbackPlan, RollbackStrategy, WorkingSpecContext,
+        };
+
         let now = chrono::Utc::now();
-        
+
         WorkingSpec {
             version: "1.0".to_string(),
             id: "TEST-001".to_string(),
@@ -364,15 +403,13 @@ mod tests {
                 budget_limits: None,
                 scope_restrictions: None,
             },
-            acceptance_criteria: vec![
-                agent_agency_contracts::AcceptanceCriterion {
-                    id: "TEST-001".to_string(),
-                    given: "Test scenario".to_string(),
-                    when: "Test action".to_string(),
-                    then: "Test outcome".to_string(),
-                    priority: Some(agent_agency_contracts::MoSCoWPriority::Must),
-                }
-            ],
+            acceptance_criteria: vec![agent_agency_contracts::AcceptanceCriterion {
+                id: "TEST-001".to_string(),
+                given: "Test scenario".to_string(),
+                when: "Test action".to_string(),
+                then: "Test outcome".to_string(),
+                priority: Some(agent_agency_contracts::MoSCoWPriority::Must),
+            }],
             test_plan: agent_agency_contracts::TestPlan {
                 unit_tests: vec![],
                 integration_tests: vec![],

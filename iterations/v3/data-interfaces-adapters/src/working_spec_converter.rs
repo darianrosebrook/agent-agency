@@ -5,13 +5,13 @@
 //!
 //! @author @darianrosebrook
 
+use agent_agency_contracts::working_spec::BudgetLimits;
 use agent_agency_contracts::{
-    WorkingSpec, WorkingSpecConstraints, AcceptanceCriterion, TestPlan, RollbackPlan,
+    AcceptanceCriterion, RollbackPlan, TestPlan, WorkingSpec, WorkingSpecConstraints,
     WorkingSpecContext,
 };
-use agent_agency_contracts::working_spec::BudgetLimits;
-use data_infrastructure::api::types::TaskSubmissionRequest;
 use chrono::Utc;
+use data_infrastructure::api::types::TaskSubmissionRequest;
 use uuid::Uuid;
 
 /// Convert TaskSubmissionRequest to WorkingSpec
@@ -25,9 +25,10 @@ pub fn convert_task_request_to_working_spec(
     // Format: TASK-<UUID> so we can extract the UUID later
     let task_uuid = Uuid::new_v4();
     let spec_id = format!("TASK-{}", task_uuid);
-    
+
     // Extract title from description (first line or first 50 chars)
-    let title = request.description
+    let title = request
+        .description
         .lines()
         .next()
         .unwrap_or(&request.description)
@@ -36,25 +37,24 @@ pub fn convert_task_request_to_working_spec(
         .collect::<String>()
         .trim()
         .to_string();
-    
+
     // Parse risk tier (default to Tier 2 if not specified)
-    let risk_tier = request.risk_tier
+    let risk_tier = request
+        .risk_tier
         .as_ref()
         .and_then(|rt| rt.parse::<u32>().ok())
         .filter(|rt| (1..=3).contains(rt))
         .unwrap_or(2);
-    
+
     // Create basic acceptance criteria from description
-    let acceptance_criteria = vec![
-        AcceptanceCriterion {
-            id: "A1".to_string(),
-            given: "Task is submitted".to_string(),
-            when: "Execution completes".to_string(),
-            then: format!("Task '{}' is completed successfully", title),
-            priority: None,
-        },
-    ];
-    
+    let acceptance_criteria = vec![AcceptanceCriterion {
+        id: "A1".to_string(),
+        given: "Task is submitted".to_string(),
+        when: "Execution completes".to_string(),
+        then: format!("Task '{}' is completed successfully", title),
+        priority: None,
+    }];
+
     // Create default test plan
     let test_plan = TestPlan {
         unit_tests: vec![],
@@ -62,7 +62,7 @@ pub fn convert_task_request_to_working_spec(
         e2e_scenarios: vec![],
         coverage_targets: None,
     };
-    
+
     // Create default rollback plan
     let rollback_plan = RollbackPlan {
         strategy: agent_agency_contracts::working_spec::RollbackStrategy::GitRevert,
@@ -72,7 +72,7 @@ pub fn convert_task_request_to_working_spec(
         downtime_required: Some(false),
         rollback_window_minutes: Some(5),
     };
-    
+
     // Create default context (can be enhanced with actual workspace detection)
     let context = WorkingSpecContext {
         workspace_root: std::env::current_dir()
@@ -84,18 +84,18 @@ pub fn convert_task_request_to_working_spec(
         dependencies: std::collections::HashMap::new(),
         environment: agent_agency_contracts::task_request::Environment::Development,
     };
-    
+
     // Create default constraints with reasonable budgets
     let constraints = WorkingSpecConstraints {
         max_duration_minutes: Some(60), // Default 1 hour
-        max_iterations: Some(3), // Default 3 refinement iterations
+        max_iterations: Some(3),        // Default 3 refinement iterations
         budget_limits: Some(BudgetLimits {
             max_files: Some(25), // Default CAWS budget
             max_loc: Some(1000), // Default CAWS budget
         }),
         scope_restrictions: None, // No restrictions by default
     };
-    
+
     // Create default change budget
     let change_budget = agent_agency_contracts::planning_io::ChangeBudget {
         max_files: 25,
@@ -105,22 +105,23 @@ pub fn convert_task_request_to_working_spec(
         allow_new_dependencies: false,
         enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
     };
-    
+
     // Extract goals from description (split by sentences or newlines)
-    let goals: Vec<String> = request.description
+    let goals: Vec<String> = request
+        .description
         .lines()
         .filter(|line| !line.trim().is_empty())
         .take(5) // Limit to 5 goals
         .map(|line| line.trim().to_string())
         .collect();
-    
+
     // If no goals extracted, create one from title
     let goals = if goals.is_empty() {
         vec![format!("Complete task: {}", title)]
     } else {
         goals
     };
-    
+
     Ok(WorkingSpec {
         version: "1.0".to_string(),
         id: spec_id,
@@ -148,7 +149,9 @@ pub fn convert_task_request_to_working_spec(
         change_budget,
         file_changes: vec![],
         coverage_targets: None,
-        overview: request.context.unwrap_or_else(|| request.description.clone()),
+        overview: request
+            .context
+            .unwrap_or_else(|| request.description.clone()),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     })
@@ -157,7 +160,7 @@ pub fn convert_task_request_to_working_spec(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_convert_basic_request() {
         let request = TaskSubmissionRequest {
@@ -168,15 +171,15 @@ mod tests {
             priority: Some("high".to_string()),
             deadline: None,
         };
-        
+
         let spec = convert_task_request_to_working_spec(request).unwrap();
-        
+
         assert_eq!(spec.risk_tier, 2);
         assert!(spec.title.contains("Add user authentication"));
         assert!(!spec.id.is_empty());
         assert!(!spec.acceptance_criteria.is_empty());
     }
-    
+
     #[test]
     fn test_convert_with_default_risk_tier() {
         let request = TaskSubmissionRequest {
@@ -187,11 +190,10 @@ mod tests {
             priority: None,
             deadline: None,
         };
-        
+
         let spec = convert_task_request_to_working_spec(request).unwrap();
-        
+
         // Should default to Tier 2
         assert_eq!(spec.risk_tier, 2);
     }
 }
-

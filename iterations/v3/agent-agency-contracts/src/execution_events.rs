@@ -3,10 +3,10 @@
 //!
 //! These types are shared between orchestration and workers crates.
 
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Execution event types for real-time monitoring
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -17,7 +17,7 @@ pub enum ExecutionEvent {
         task_id: Uuid,
         working_spec_id: String,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     /// Execution completed successfully
     ExecutionCompleted {
@@ -42,7 +42,7 @@ pub enum ExecutionEvent {
         #[schemars(with = "String")]
         worker_id: Uuid,
         #[schemars(with = "String")]
-    estimated_completion_time: DateTime<Utc>,
+        estimated_completion_time: DateTime<Utc>,
     },
     /// Quality check completed
     QualityCheckCompleted {
@@ -57,7 +57,7 @@ pub enum ExecutionEvent {
         task_id: Uuid,
         phase: String,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     /// Execution phase completed
     ExecutionPhaseCompleted {
@@ -76,4 +76,3 @@ pub enum ExecutionEvent {
 }
 
 // WorkingSpec and WorkingSpecScope definitions moved to working_spec.rs for consolidation
-

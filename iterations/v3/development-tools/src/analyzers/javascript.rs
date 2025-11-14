@@ -4,12 +4,15 @@
 //! complexity calculation, violation detection, and best practices checking.
 //! Extracted from workers/src/caws/analyzers/javascript.rs.
 
-use super::{LanguageAnalyzer, LanguageAnalysisResult, ProgrammingLanguage, ViolationSeverity, LanguageViolation, LanguageWarning, SourceLocation};
+use super::{
+    LanguageAnalysisResult, LanguageAnalyzer, LanguageViolation, LanguageWarning,
+    ProgrammingLanguage, SourceLocation, ViolationSeverity,
+};
 use std::collections::HashMap;
 
 /// JavaScript-specific analyzer
 #[derive(Debug)]
-pub struct JavaScriptAnalyzer ;
+pub struct JavaScriptAnalyzer;
 
 impl JavaScriptAnalyzer {
     /// Create a new JavaScript analyzer
@@ -25,12 +28,14 @@ impl JavaScriptAnalyzer {
 
         // Calculate basic complexity metrics
         let lines_of_code = code.lines().count() as f32;
-        let function_count = code.matches("function ").count() as f32 + code.matches("=>").count() as f32;
+        let function_count =
+            code.matches("function ").count() as f32 + code.matches("=>").count() as f32;
         let class_count = code.matches("class ").count() as f32;
         let var_count = code.matches("var ").count() as f32;
         let let_count = code.matches("let ").count() as f32;
         let const_count = code.matches("const ").count() as f32;
-        let import_count = code.matches("import ").count() as f32 + code.matches("require(").count() as f32;
+        let import_count =
+            code.matches("import ").count() as f32 + code.matches("require(").count() as f32;
 
         // Store metrics
         metrics.insert("lines_of_code".to_string(), lines_of_code);
@@ -86,7 +91,13 @@ impl JavaScriptAnalyzer {
     }
 
     /// Check for common JavaScript violations and warnings
-    fn check_javascript_violations(&self, code: &str, file_path: &str, violations: &mut Vec<LanguageViolation>, warnings: &mut Vec<LanguageWarning>) {
+    fn check_javascript_violations(
+        &self,
+        code: &str,
+        file_path: &str,
+        violations: &mut Vec<LanguageViolation>,
+        warnings: &mut Vec<LanguageWarning>,
+    ) {
         let lines: Vec<&str> = code.lines().collect();
 
         for (line_num, line) in lines.iter().enumerate() {
@@ -136,7 +147,9 @@ impl JavaScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use proper logging library instead of console.log".to_string()),
+                    suggestion: Some(
+                        "Use proper logging library instead of console.log".to_string(),
+                    ),
                 });
             }
 
@@ -152,7 +165,9 @@ impl JavaScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use environment variables or configuration for URLs".to_string()),
+                    suggestion: Some(
+                        "Use environment variables or configuration for URLs".to_string(),
+                    ),
                 });
             }
 
@@ -168,7 +183,9 @@ impl JavaScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Use strict equality (===) instead of loose equality (==)".to_string()),
+                    suggestion: Some(
+                        "Use strict equality (===) instead of loose equality (==)".to_string(),
+                    ),
                 });
             }
 
@@ -202,12 +219,26 @@ impl JavaScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Avoid with statement - use proper variable scoping".to_string()),
+                    suggestion: Some(
+                        "Avoid with statement - use proper variable scoping".to_string(),
+                    ),
                 });
             }
 
             // Check for missing semicolons (low severity)
-            if !line.trim().is_empty() && !line.trim().starts_with("//") && !line.trim().starts_with("/*") && !line.trim().starts_with("*") && !line.trim().starts_with("*/") && !line.trim().ends_with(";") && !line.trim().ends_with("{") && !line.trim().ends_with("}") && !line.contains("if ") && !line.contains("else ") && !line.contains("for ") && !line.contains("while ") {
+            if !line.trim().is_empty()
+                && !line.trim().starts_with("//")
+                && !line.trim().starts_with("/*")
+                && !line.trim().starts_with("*")
+                && !line.trim().starts_with("*/")
+                && !line.trim().ends_with(";")
+                && !line.trim().ends_with("{")
+                && !line.trim().ends_with("}")
+                && !line.contains("if ")
+                && !line.contains("else ")
+                && !line.contains("for ")
+                && !line.contains("while ")
+            {
                 warnings.push(LanguageWarning {
                     rule_id: "MISSING_SEMICOLON".to_string(),
                     message: "Missing semicolon at end of statement".to_string(),
@@ -254,7 +285,11 @@ impl LanguageAnalyzer for JavaScriptAnalyzer {
         matches!(ext, "js" | "jsx" | "mjs" | "cjs")
     }
 
-    fn calculate_change_complexity(&self, diff: &str, _content: Option<&str>) -> Result<f32, String> {
+    fn calculate_change_complexity(
+        &self,
+        diff: &str,
+        _content: Option<&str>,
+    ) -> Result<f32, String> {
         // Calculate complexity based on diff content
         let added_lines = diff.lines().filter(|line| line.starts_with('+')).count() as f32;
         let removed_lines = diff.lines().filter(|line| line.starts_with('-')).count() as f32;

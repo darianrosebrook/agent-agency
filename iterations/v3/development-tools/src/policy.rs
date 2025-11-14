@@ -3,11 +3,11 @@
 //! Consolidated policy definitions and validation logic
 //! extracted from scattered implementations across the codebase.
 
+use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use anyhow::Result;
 
 /// Unified CAWS Policy configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -100,7 +100,10 @@ impl PolicyValidator {
         // Validate risk tiers
         for (tier_name, config) in &policy.risk_tiers {
             if config.level == 0 || config.level > 3 {
-                errors.push(format!("Invalid risk level {} for tier {}", config.level, tier_name));
+                errors.push(format!(
+                    "Invalid risk level {} for tier {}",
+                    config.level, tier_name
+                ));
             }
         }
 
@@ -143,47 +146,69 @@ impl PolicyValidator {
 impl Default for CawsPolicy {
     fn default() -> Self {
         let mut risk_tiers = HashMap::new();
-        risk_tiers.insert("low".to_string(), RiskTierConfig {
-            name: "Low Risk".to_string(),
-            level: 1,
-            requires_review: false,
-            max_budget_multiplier: 1.0,
-            mandatory_checks: vec!["syntax".to_string()],
-        });
-        risk_tiers.insert("medium".to_string(), RiskTierConfig {
-            name: "Medium Risk".to_string(),
-            level: 2,
-            requires_review: false,
-            max_budget_multiplier: 2.0,
-            mandatory_checks: vec!["syntax".to_string(), "tests".to_string()],
-        });
-        risk_tiers.insert("high".to_string(), RiskTierConfig {
-            name: "High Risk".to_string(),
-            level: 3,
-            requires_review: true,
-            max_budget_multiplier: 3.0,
-            mandatory_checks: vec!["syntax".to_string(), "tests".to_string(), "security".to_string()],
-        });
+        risk_tiers.insert(
+            "low".to_string(),
+            RiskTierConfig {
+                name: "Low Risk".to_string(),
+                level: 1,
+                requires_review: false,
+                max_budget_multiplier: 1.0,
+                mandatory_checks: vec!["syntax".to_string()],
+            },
+        );
+        risk_tiers.insert(
+            "medium".to_string(),
+            RiskTierConfig {
+                name: "Medium Risk".to_string(),
+                level: 2,
+                requires_review: false,
+                max_budget_multiplier: 2.0,
+                mandatory_checks: vec!["syntax".to_string(), "tests".to_string()],
+            },
+        );
+        risk_tiers.insert(
+            "high".to_string(),
+            RiskTierConfig {
+                name: "High Risk".to_string(),
+                level: 3,
+                requires_review: true,
+                max_budget_multiplier: 3.0,
+                mandatory_checks: vec![
+                    "syntax".to_string(),
+                    "tests".to_string(),
+                    "security".to_string(),
+                ],
+            },
+        );
 
         let mut budget_limits = HashMap::new();
-        budget_limits.insert("low".to_string(), BudgetLimits {
-            max_files: 10,
-            max_loc: 500,
-            max_time_seconds: 300,
-            max_memory_mb: 512,
-        });
-        budget_limits.insert("medium".to_string(), BudgetLimits {
-            max_files: 25,
-            max_loc: 1000,
-            max_time_seconds: 600,
-            max_memory_mb: 1024,
-        });
-        budget_limits.insert("high".to_string(), BudgetLimits {
-            max_files: 50,
-            max_loc: 2000,
-            max_time_seconds: 1800,
-            max_memory_mb: 2048,
-        });
+        budget_limits.insert(
+            "low".to_string(),
+            BudgetLimits {
+                max_files: 10,
+                max_loc: 500,
+                max_time_seconds: 300,
+                max_memory_mb: 512,
+            },
+        );
+        budget_limits.insert(
+            "medium".to_string(),
+            BudgetLimits {
+                max_files: 25,
+                max_loc: 1000,
+                max_time_seconds: 600,
+                max_memory_mb: 1024,
+            },
+        );
+        budget_limits.insert(
+            "high".to_string(),
+            BudgetLimits {
+                max_files: 50,
+                max_loc: 2000,
+                max_time_seconds: 1800,
+                max_memory_mb: 2048,
+            },
+        );
 
         Self {
             risk_tiers,

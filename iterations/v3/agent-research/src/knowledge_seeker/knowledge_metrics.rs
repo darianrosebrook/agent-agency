@@ -1,16 +1,15 @@
 //! Metrics collection and reporting
 
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
 
 use crate::research_types::ResearchMetrics;
 use anyhow::Result;
 
-/// Metrics collector for research operations
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+/// Metrics collector for research operations
+use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct MetricsCollector {
     metrics: Arc<RwLock<ResearchMetrics>>,

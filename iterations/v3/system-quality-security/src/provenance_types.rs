@@ -1,7 +1,7 @@
 //! Types for provenance service
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -24,7 +24,6 @@ pub struct ProvenanceRecord {
     pub git_trailer: String,
     pub signature: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -121,7 +120,6 @@ pub struct WaiverProvenance {
     pub expires_at: Option<DateTime<Utc>>,
     pub granted_by: String,
     #[schemars(with = "String")]
-
     pub granted_at: DateTime<Utc>,
 }
 
@@ -218,10 +216,8 @@ pub enum VerdictDecisionType {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TimeRange {
     #[schemars(with = "String")]
-
     pub start: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub end: DateTime<Utc>,
 }
 
@@ -242,10 +238,8 @@ pub struct ProvenanceChain {
     pub integrity_verified: bool,
     pub chain_length: u32,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -281,7 +275,6 @@ pub struct ProvenanceExport {
     pub records: Vec<ProvenanceRecord>,
     pub metadata: ExportMetadata,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub created_by: String,
 }
@@ -312,7 +305,6 @@ pub struct IntegrityCheckResult {
     pub issues: Vec<IntegrityIssue>,
     pub checked_records: u64,
     #[schemars(with = "String")]
-
     pub checked_at: DateTime<Utc>,
 }
 

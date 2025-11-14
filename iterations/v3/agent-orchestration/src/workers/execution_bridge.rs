@@ -4,27 +4,27 @@
 //! Converts between orchestrator types (Milestone, ExecutionArtifacts) and
 //! worker types (TaskDefinition, TaskResult).
 
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::process::Command;
-use anyhow::{anyhow, Result, Context};
-use uuid::Uuid;
-use tracing::info;
+use anyhow::{anyhow, Context, Result};
 use std::collections::HashMap;
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::Arc;
+use tracing::info;
+use uuid::Uuid;
 
-use agent_agency_contracts::planning_io::Milestone;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+use agent_agency_contracts::planning_io::Milestone;
 use agent_agency_contracts::TaskPriority;
 use agent_workers::MCPWorkerPool;
 use agent_workers::TaskExecutor;
-use agent_workers::{TaskDefinition, Priority as WorkerPriority};
-use agent_workers::{TaskResult as WorkerTaskResult, SubTask, ParallelExecutionPlan};
+use agent_workers::{ParallelExecutionPlan, SubTask, TaskResult as WorkerTaskResult};
+use agent_workers::{Priority as WorkerPriority, TaskDefinition};
 
 /// Bridge between orchestrator and worker execution systems
 pub struct WorkerExecutionBridge {
     /// MCP worker pool for task execution
     worker_pool: Arc<MCPWorkerPool>,
-    
+
     /// Task executor for individual task execution
     #[allow(dead_code)] // Reserved for future use
     task_executor: Arc<TaskExecutor>,
@@ -32,10 +32,7 @@ pub struct WorkerExecutionBridge {
 
 impl WorkerExecutionBridge {
     /// Create a new worker execution bridge
-    pub fn new(
-        worker_pool: Arc<MCPWorkerPool>,
-        task_executor: Arc<TaskExecutor>,
-    ) -> Self {
+    pub fn new(worker_pool: Arc<MCPWorkerPool>, task_executor: Arc<TaskExecutor>) -> Self {
         Self {
             worker_pool,
             task_executor,
@@ -63,15 +60,15 @@ impl WorkerExecutionBridge {
         let task_def = self.milestone_to_task_definition(milestone, worktree_path)?;
 
         // Execute via worker pool - convert error to anyhow
-        let worker_result = self.worker_pool.execute_task(task_def).await
+        let worker_result = self
+            .worker_pool
+            .execute_task(task_def)
+            .await
             .map_err(|e| anyhow!("Worker execution failed: {}", e))?;
 
         // Convert worker result to ExecutionArtifacts
-        let artifacts = self.worker_result_to_artifacts(
-            &worker_result,
-            milestone,
-            worktree_path,
-        )?;
+        let artifacts =
+            self.worker_result_to_artifacts(&worker_result, milestone, worktree_path)?;
 
         Ok(artifacts)
     }
@@ -82,7 +79,10 @@ impl WorkerExecutionBridge {
         plan: &ParallelExecutionPlan,
         worktree_paths: &std::collections::HashMap<Uuid, PathBuf>,
     ) -> Result<Vec<ExecutionArtifacts>> {
-        info!("Executing parallel plan with {} subtasks", plan.subtasks.len());
+        info!(
+            "Executing parallel plan with {} subtasks",
+            plan.subtasks.len()
+        );
 
         // TODO: Implement comprehensive parallel execution using ParallelCoordinator
         //       Currently executes sequentially; should implement comprehensive parallel execution that uses agent-workers ParallelCoordinator for efficient parallel task execution.
@@ -120,18 +120,24 @@ impl WorkerExecutionBridge {
         // - Change Budget: ~250 LOC
         // - Reviewer Requirements: Parallel execution and task coordination expertise
         let mut results = Vec::new();
-        
+
         for task in &plan.subtasks {
             // Find worktree path for this task's worker
-            let worker_id = task.assigned_worker.map(|w| w.0).unwrap_or_else(Uuid::new_v4);
-            let worktree_path = worktree_paths.get(&worker_id)
+            let worker_id = task
+                .assigned_worker
+                .map(|w| w.0)
+                .unwrap_or_else(Uuid::new_v4);
+            let worktree_path = worktree_paths
+                .get(&worker_id)
                 .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
 
             // Convert task to milestone-like structure
             let milestone = self.parallel_task_to_milestone(task)?;
-            
+
             // Execute milestone
-            let artifacts = self.execute_milestone(&milestone, worktree_path, worker_id).await?;
+            let artifacts = self
+                .execute_milestone(&milestone, worktree_path, worker_id)
+                .await?;
             results.push(artifacts);
         }
 
@@ -146,7 +152,7 @@ impl WorkerExecutionBridge {
     ) -> Result<TaskDefinition> {
         // Extract required tools from milestone scope and interfaces
         let mut required_tools = Vec::new();
-        
+
         // Add tools based on milestone scope files/directories
         // Use file_edit for code editing (file_edit is the MCP tool for editing files)
         if !milestone.scope.files.is_empty() || !milestone.scope.directories.is_empty() {
@@ -166,21 +172,35 @@ impl WorkerExecutionBridge {
             agent_agency_contracts::planning_io::MilestonePriority::Low => TaskPriority::Low,
             agent_agency_contracts::planning_io::MilestonePriority::Normal => TaskPriority::Medium,
             agent_agency_contracts::planning_io::MilestonePriority::High => TaskPriority::High,
-            agent_agency_contracts::planning_io::MilestonePriority::Critical => TaskPriority::Critical,
+            agent_agency_contracts::planning_io::MilestonePriority::Critical => {
+                TaskPriority::Critical
+            }
         };
 
         // Build task parameters from milestone
         let mut parameters = std::collections::HashMap::new();
-        parameters.insert("objective".to_string(), serde_json::json!(milestone.objective));
-        parameters.insert("scope".to_string(), serde_json::json!({
-            "files": milestone.scope.files,
-            "directories": milestone.scope.directories,
-            "included_paths": milestone.scope.included_paths,
-            "excluded_paths": milestone.scope.excluded_paths,
-        }));
-        parameters.insert("interfaces".to_string(), serde_json::json!(milestone.interfaces));
+        parameters.insert(
+            "objective".to_string(),
+            serde_json::json!(milestone.objective),
+        );
+        parameters.insert(
+            "scope".to_string(),
+            serde_json::json!({
+                "files": milestone.scope.files,
+                "directories": milestone.scope.directories,
+                "included_paths": milestone.scope.included_paths,
+                "excluded_paths": milestone.scope.excluded_paths,
+            }),
+        );
+        parameters.insert(
+            "interfaces".to_string(),
+            serde_json::json!(milestone.interfaces),
+        );
         parameters.insert("tests".to_string(), serde_json::json!(milestone.tests));
-        parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
+        parameters.insert(
+            "worktree_path".to_string(),
+            serde_json::json!(worktree_path.display().to_string()),
+        );
 
         // Create a generic task name that will match General specialty workers
         // worker_can_handle_task checks task name patterns, but defaults to General specialty
@@ -198,8 +218,14 @@ impl WorkerExecutionBridge {
             deadline: None,
             metadata: std::collections::HashMap::from([
                 ("milestone_id".to_string(), serde_json::json!(milestone.id)),
-                ("risk_tier".to_string(), serde_json::json!(milestone.risk_tier)),
-                ("estimated_effort".to_string(), serde_json::json!(milestone.estimated_effort)),
+                (
+                    "risk_tier".to_string(),
+                    serde_json::json!(milestone.risk_tier),
+                ),
+                (
+                    "estimated_effort".to_string(),
+                    serde_json::json!(milestone.estimated_effort),
+                ),
             ]),
         })
     }
@@ -213,16 +239,16 @@ impl WorkerExecutionBridge {
     ) -> Result<ExecutionArtifacts> {
         // Extract code changes from worker result metadata
         let code_changes = self.extract_code_changes(worker_result, worktree_path)?;
-        
+
         // Extract test results from worker result
         let tests = self.extract_test_results(worker_result)?;
-        
+
         // Extract coverage from worker result quality scores
         let coverage = self.extract_coverage(worker_result)?;
-        
+
         // Extract linting results from worker result errors
         let linting = self.extract_linting(worker_result)?;
-        
+
         // Build provenance from worker result
         let provenance = self.build_provenance(worker_result, milestone, worktree_path)?;
 
@@ -247,7 +273,8 @@ impl WorkerExecutionBridge {
         worktree_path: &PathBuf,
     ) -> Result<agent_agency_contracts::execution_artifacts::CodeChanges> {
         let mut diffs: Vec<agent_agency_contracts::execution_artifacts::DiffArtifact> = Vec::new();
-        let mut new_files: Vec<agent_agency_contracts::execution_artifacts::NewFileArtifact> = Vec::new();
+        let mut new_files: Vec<agent_agency_contracts::execution_artifacts::NewFileArtifact> =
+            Vec::new();
         let mut deleted_files = Vec::new();
         let mut files_modified = 0;
         let mut lines_added = 0;
@@ -269,8 +296,13 @@ impl WorkerExecutionBridge {
                 if !diff_text.trim().is_empty() {
                     // Parse diff to extract file path and create DiffArtifact
                     let diff_lines: Vec<&str> = diff_text.lines().collect();
-                    let file_path = diff_lines.iter()
-                        .find(|line| line.starts_with("diff --git") || line.starts_with("---") || line.starts_with("+++"))
+                    let file_path = diff_lines
+                        .iter()
+                        .find(|line| {
+                            line.starts_with("diff --git")
+                                || line.starts_with("---")
+                                || line.starts_with("+++")
+                        })
                         .and_then(|line| {
                             if line.starts_with("diff --git") {
                                 line.split_whitespace().nth(2)
@@ -284,7 +316,7 @@ impl WorkerExecutionBridge {
                         .trim_start_matches("a/")
                         .trim_start_matches("b/")
                         .to_string();
-                    
+
                     // Count lines added/removed
                     let mut added = 0u32;
                     let mut removed = 0u32;
@@ -295,16 +327,17 @@ impl WorkerExecutionBridge {
                             removed += 1;
                         }
                     }
-                    
+
                     diffs.push(agent_agency_contracts::execution_artifacts::DiffArtifact {
                         file_path,
-                        change_type: agent_agency_contracts::execution_artifacts::ChangeType::Modified,
+                        change_type:
+                            agent_agency_contracts::execution_artifacts::ChangeType::Modified,
                         diff_content: diff_text.to_string(),
                         lines_added: added,
                         lines_removed: removed,
                         hunks: vec![],
                     });
-                    
+
                     // Parse diff statistics
                     let stat_output = Command::new("git")
                         .current_dir(worktree_path)
@@ -318,7 +351,9 @@ impl WorkerExecutionBridge {
                         let stat_text = String::from_utf8_lossy(&stat_output.stdout);
                         for line in stat_text.lines() {
                             if let Some(pipe_idx) = line.rfind('|') {
-                                if let Some(plus_minus) = line[pipe_idx + 1..].trim().split_whitespace().next() {
+                                if let Some(plus_minus) =
+                                    line[pipe_idx + 1..].trim().split_whitespace().next()
+                                {
                                     // Parse "X +Y -Z" format
                                     let parts: Vec<&str> = plus_minus.split_whitespace().collect();
                                     for part in parts {
@@ -357,11 +392,13 @@ impl WorkerExecutionBridge {
                         // Try to read file content
                         let content = std::fs::read_to_string(worktree_path.join(&file_path))
                             .unwrap_or_else(|_| String::new());
-                        new_files.push(agent_agency_contracts::execution_artifacts::NewFileArtifact {
-                            path: file_path,
-                            content,
-                            permissions: None,
-                        });
+                        new_files.push(
+                            agent_agency_contracts::execution_artifacts::NewFileArtifact {
+                                path: file_path,
+                                content,
+                                permissions: None,
+                            },
+                        );
                     }
                 }
             }
@@ -393,7 +430,8 @@ impl WorkerExecutionBridge {
                     // Create a basic DiffArtifact from string
                     diffs.push(agent_agency_contracts::execution_artifacts::DiffArtifact {
                         file_path: "metadata".to_string(),
-                        change_type: agent_agency_contracts::execution_artifacts::ChangeType::Modified,
+                        change_type:
+                            agent_agency_contracts::execution_artifacts::ChangeType::Modified,
                         diff_content: diff_str.to_string(),
                         lines_added: 0,
                         lines_removed: 0,
@@ -444,30 +482,47 @@ impl WorkerExecutionBridge {
         let mut integration_total = 0u32;
         let mut integration_passed = 0u32;
         let mut integration_failed = 0u32;
-        let mut test_files: Vec<agent_agency_contracts::execution_artifacts::TestFileInfo> = Vec::new();
+        let mut test_files: Vec<agent_agency_contracts::execution_artifacts::TestFileInfo> =
+            Vec::new();
         let test_results = Vec::new();
 
         // Check metadata for structured test results (e.g., from Jest tool)
         if let Some(test_data) = worker_result.metadata.get("test_results") {
             if let Some(test_obj) = test_data.as_object() {
                 // Parse Jest-style test results
-                if let Some(test_results_obj) = test_obj.get("testResults").and_then(|v| v.as_object()) {
-                    if let Some(num_passed) = test_results_obj.get("numPassedTests").and_then(|v| v.as_u64()) {
+                if let Some(test_results_obj) =
+                    test_obj.get("testResults").and_then(|v| v.as_object())
+                {
+                    if let Some(num_passed) = test_results_obj
+                        .get("numPassedTests")
+                        .and_then(|v| v.as_u64())
+                    {
                         unit_passed = num_passed as u32;
                     }
-                    if let Some(num_failed) = test_results_obj.get("numFailedTests").and_then(|v| v.as_u64()) {
+                    if let Some(num_failed) = test_results_obj
+                        .get("numFailedTests")
+                        .and_then(|v| v.as_u64())
+                    {
                         unit_failed = num_failed as u32;
                     }
-                    if let Some(num_pending) = test_results_obj.get("numPendingTests").and_then(|v| v.as_u64()) {
+                    if let Some(num_pending) = test_results_obj
+                        .get("numPendingTests")
+                        .and_then(|v| v.as_u64())
+                    {
                         unit_skipped = num_pending as u32;
                     }
                     unit_total = unit_passed + unit_failed + unit_skipped;
 
                     // Extract test file paths
-                    if let Some(test_files_array) = test_results_obj.get("testResults").and_then(|v| v.as_array()) {
+                    if let Some(test_files_array) = test_results_obj
+                        .get("testResults")
+                        .and_then(|v| v.as_array())
+                    {
                         for test_file in test_files_array {
                             if let Some(file_obj) = test_file.as_object() {
-                                if let Some(file_path) = file_obj.get("testFilePath").and_then(|v| v.as_str()) {
+                                if let Some(file_path) =
+                                    file_obj.get("testFilePath").and_then(|v| v.as_str())
+                                {
                                     test_files.push(agent_agency_contracts::execution_artifacts::TestFileInfo {
                                         path: file_path.to_string(),
                                         r#type: agent_agency_contracts::execution_artifacts::TestFileType::Unit,
@@ -494,7 +549,10 @@ impl WorkerExecutionBridge {
                 }
 
                 // Parse integration test results
-                if let Some(integration_obj) = test_obj.get("integration_tests").and_then(|v| v.as_object()) {
+                if let Some(integration_obj) = test_obj
+                    .get("integration_tests")
+                    .and_then(|v| v.as_object())
+                {
                     if let Some(passed) = integration_obj.get("passed").and_then(|v| v.as_u64()) {
                         integration_passed = passed as u32;
                     }
@@ -508,10 +566,14 @@ impl WorkerExecutionBridge {
 
         // Fallback to quality scores if metadata doesn't have structured data
         if unit_total == 0 {
-            unit_total = worker_result.quality_scores.get("tests_total")
+            unit_total = worker_result
+                .quality_scores
+                .get("tests_total")
                 .copied()
                 .unwrap_or(0.0) as u64 as u32;
-            unit_passed = worker_result.quality_scores.get("tests_passed")
+            unit_passed = worker_result
+                .quality_scores
+                .get("tests_passed")
                 .copied()
                 .unwrap_or(0.0) as u64 as u32;
             unit_failed = unit_total.saturating_sub(unit_passed);
@@ -595,7 +657,8 @@ impl WorkerExecutionBridge {
                         if let Some(line_obj) = item.as_object() {
                             if let Some(file) = line_obj.get("file").and_then(|v| v.as_str()) {
                                 if let Some(line) = line_obj.get("line").and_then(|v| v.as_u64()) {
-                                    lines_by_file.entry(file.to_string())
+                                    lines_by_file
+                                        .entry(file.to_string())
                                         .or_insert_with(Vec::new)
                                         .push(line as u32);
                                 }
@@ -603,10 +666,12 @@ impl WorkerExecutionBridge {
                         }
                     }
                     for (file, lines) in lines_by_file {
-                        uncovered_lines.push(agent_agency_contracts::execution_artifacts::UncoveredLines {
-                            file,
-                            lines,
-                        });
+                        uncovered_lines.push(
+                            agent_agency_contracts::execution_artifacts::UncoveredLines {
+                                file,
+                                lines,
+                            },
+                        );
                     }
                 }
             }
@@ -614,12 +679,16 @@ impl WorkerExecutionBridge {
 
         // Fallback to quality scores if metadata doesn't have structured data
         if line_coverage == 0.0 {
-            line_coverage = worker_result.quality_scores.get("coverage_line")
+            line_coverage = worker_result
+                .quality_scores
+                .get("coverage_line")
                 .copied()
                 .unwrap_or(0.0);
         }
         if branch_coverage == 0.0 {
-            branch_coverage = worker_result.quality_scores.get("coverage_branch")
+            branch_coverage = worker_result
+                .quality_scores
+                .get("coverage_branch")
                 .copied()
                 .unwrap_or(0.0);
         }
@@ -627,19 +696,25 @@ impl WorkerExecutionBridge {
         // Extract mutation score if available
         if let Some(score) = worker_result.quality_scores.get("mutation_score") {
             mutation_score = *score;
-        } else if let Some(score) = worker_result.metadata.get("mutation_score").and_then(|v| v.as_f64()) {
+        } else if let Some(score) = worker_result
+            .metadata
+            .get("mutation_score")
+            .and_then(|v| v.as_f64())
+        {
             mutation_score = score;
         }
 
-        Ok(agent_agency_contracts::execution_artifacts::CoverageResults {
-            line_coverage,
-            branch_coverage,
-            function_coverage,
-            mutation_score,
-            coverage_report_path,
-            uncovered_lines,
-            uncovered_branches,
-        })
+        Ok(
+            agent_agency_contracts::execution_artifacts::CoverageResults {
+                line_coverage,
+                branch_coverage,
+                function_coverage,
+                mutation_score,
+                coverage_report_path,
+                uncovered_lines,
+                uncovered_branches,
+            },
+        )
     }
 
     /// Extract linting results from worker result
@@ -661,22 +736,38 @@ impl WorkerExecutionBridge {
                 if let Some(issues_array) = lint_obj.get("results").and_then(|v| v.as_array()) {
                     for result in issues_array {
                         if let Some(result_obj) = result.as_object() {
-                            if let Some(file_path) = result_obj.get("filePath").and_then(|v| v.as_str()) {
-                                if let Some(messages) = result_obj.get("messages").and_then(|v| v.as_array()) {
+                            if let Some(file_path) =
+                                result_obj.get("filePath").and_then(|v| v.as_str())
+                            {
+                                if let Some(messages) =
+                                    result_obj.get("messages").and_then(|v| v.as_array())
+                                {
                                     let mut file_issues = Vec::new();
                                     for message in messages {
                                         if let Some(msg_obj) = message.as_object() {
-                                            let severity = msg_obj.get("severity").and_then(|v| v.as_u64());
-                                            let line = msg_obj.get("line").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-                                            let column = msg_obj.get("column").and_then(|v| v.as_u64()).map(|v| v as u32);
-                                            let code = msg_obj.get("ruleId").or_else(|| msg_obj.get("code"))
+                                            let severity =
+                                                msg_obj.get("severity").and_then(|v| v.as_u64());
+                                            let line = msg_obj
+                                                .get("line")
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0)
+                                                as u32;
+                                            let column = msg_obj
+                                                .get("column")
+                                                .and_then(|v| v.as_u64())
+                                                .map(|v| v as u32);
+                                            let code = msg_obj
+                                                .get("ruleId")
+                                                .or_else(|| msg_obj.get("code"))
                                                 .and_then(|v| v.as_str())
                                                 .unwrap_or("unknown")
                                                 .to_string();
-                                            let message_text = msg_obj.get("message").and_then(|v| v.as_str())
+                                            let message_text = msg_obj
+                                                .get("message")
+                                                .and_then(|v| v.as_str())
                                                 .unwrap_or("")
                                                 .to_string();
-                                            
+
                                             let issue_severity = match severity {
                                                 Some(2) => {
                                                     errors += 1;
@@ -691,7 +782,7 @@ impl WorkerExecutionBridge {
                                                     agent_agency_contracts::execution_artifacts::IssueSeverity::Info
                                                 }
                                             };
-                                            
+
                                             file_issues.push(agent_agency_contracts::execution_artifacts::LintingIssue {
                                                 line,
                                                 column,
@@ -702,7 +793,7 @@ impl WorkerExecutionBridge {
                                             });
                                         }
                                     }
-                                    
+
                                     if !file_issues.is_empty() {
                                         issues_by_file.insert(file_path.to_string(), file_issues);
                                     }
@@ -714,7 +805,9 @@ impl WorkerExecutionBridge {
 
                 // Parse Rust clippy-style results
                 if let Some(clippy_obj) = lint_obj.get("clippy").and_then(|v| v.as_object()) {
-                    if let Some(warnings_count) = clippy_obj.get("warnings").and_then(|v| v.as_u64()) {
+                    if let Some(warnings_count) =
+                        clippy_obj.get("warnings").and_then(|v| v.as_u64())
+                    {
                         warnings = warnings_count as u32;
                     }
                     if let Some(errors_count) = clippy_obj.get("errors").and_then(|v| v.as_u64()) {
@@ -739,7 +832,10 @@ impl WorkerExecutionBridge {
             // Try to infer from error messages
             for error_msg in &worker_result.errors {
                 let error_lower = error_msg.to_lowercase();
-                if error_lower.contains("lint") || error_lower.contains("clippy") || error_lower.contains("eslint") {
+                if error_lower.contains("lint")
+                    || error_lower.contains("clippy")
+                    || error_lower.contains("eslint")
+                {
                     errors += 1;
                 } else if error_lower.contains("warning") {
                     warnings += 1;
@@ -754,15 +850,17 @@ impl WorkerExecutionBridge {
             }
         }
 
-        Ok(agent_agency_contracts::execution_artifacts::LintingResults {
-            total_issues: errors + warnings + info,
-            errors,
-            warnings,
-            info,
-            issues_by_file,
-            linter_version,
-            config_used,
-        })
+        Ok(
+            agent_agency_contracts::execution_artifacts::LintingResults {
+                total_issues: errors + warnings + info,
+                errors,
+                warnings,
+                info,
+                issues_by_file,
+                linter_version,
+                config_used,
+            },
+        )
     }
 
     /// Build provenance from worker result
@@ -773,7 +871,8 @@ impl WorkerExecutionBridge {
         worktree_path: &PathBuf,
     ) -> Result<agent_agency_contracts::execution_artifacts::Provenance> {
         let execution_id = Uuid::new_v4();
-        let started_at = chrono::Utc::now() - chrono::Duration::milliseconds(worker_result.execution_time_ms as i64);
+        let started_at = chrono::Utc::now()
+            - chrono::Duration::milliseconds(worker_result.execution_time_ms as i64);
         let completed_at = Some(chrono::Utc::now());
 
         // Extract git information from worktree
@@ -792,7 +891,9 @@ impl WorkerExecutionBridge {
                 .context("Failed to get git commit hash")?;
 
             if commit_output.status.success() {
-                commit_hash = String::from_utf8_lossy(&commit_output.stdout).trim().to_string();
+                commit_hash = String::from_utf8_lossy(&commit_output.stdout)
+                    .trim()
+                    .to_string();
             }
 
             // Get current branch name
@@ -805,7 +906,9 @@ impl WorkerExecutionBridge {
                 .context("Failed to get git branch")?;
 
             if branch_output.status.success() {
-                branch = String::from_utf8_lossy(&branch_output.stdout).trim().to_string();
+                branch = String::from_utf8_lossy(&branch_output.stdout)
+                    .trim()
+                    .to_string();
             }
 
             // Check if worktree is dirty (has uncommitted changes)
@@ -819,7 +922,7 @@ impl WorkerExecutionBridge {
             if status_output.status.success() {
                 let status_text = String::from_utf8_lossy(&status_output.stdout);
                 dirty = !status_text.trim().is_empty();
-                
+
                 // Extract uncommitted file changes
                 for line in status_text.lines() {
                     if !line.trim().is_empty() {
@@ -833,14 +936,19 @@ impl WorkerExecutionBridge {
         }
 
         // Extract worker version from metadata if available
-        let worker_version = worker_result.metadata.get("worker_version")
+        let worker_version = worker_result
+            .metadata
+            .get("worker_version")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
         // Build environment information
         let mut dependencies = std::collections::HashMap::new();
-        if let Some(toolchain) = worker_result.metadata.get("toolchain")
-            .and_then(|v| v.as_str()) {
+        if let Some(toolchain) = worker_result
+            .metadata
+            .get("toolchain")
+            .and_then(|v| v.as_str())
+        {
             dependencies.insert("toolchain".to_string(), toolchain.to_string());
         }
         let environment = agent_agency_contracts::execution_artifacts::ExecutionEnvironment {
@@ -852,7 +960,9 @@ impl WorkerExecutionBridge {
 
         Ok(agent_agency_contracts::execution_artifacts::Provenance {
             execution_id,
-            worker_id: worker_result.worker_breakdown.first()
+            worker_id: worker_result
+                .worker_breakdown
+                .first()
                 .map(|wb| wb.worker_id.to_string()),
             worker_version,
             started_at,
@@ -895,10 +1005,7 @@ impl WorkerExecutionBridge {
     }
 
     /// Convert parallel task to milestone (helper for parallel execution)
-    fn parallel_task_to_milestone(
-        &self,
-        task: &SubTask,
-    ) -> Result<Milestone> {
+    fn parallel_task_to_milestone(&self, task: &SubTask) -> Result<Milestone> {
         // TODO: Implement comprehensive field mapping for milestone conversion
         //       Currently uses basic conversion; should map all fields from SubTask to Milestone structure.
         Ok(Milestone {
@@ -930,13 +1037,22 @@ impl WorkerExecutionBridge {
             estimated_duration: Some(task.estimated_duration.as_secs() as u32 / 60),
             rollback_plan: String::new(),
             state: agent_agency_contracts::planning_io::MilestoneState::Ready,
-            assigned_workers: vec![task.assigned_worker.map(|w| w.0).unwrap_or_else(Uuid::new_v4)],
+            assigned_workers: vec![task
+                .assigned_worker
+                .map(|w| w.0)
+                .unwrap_or_else(Uuid::new_v4)],
             estimated_effort: task.estimated_effort as f64,
             priority: match task.priority {
                 WorkerPriority::Low => agent_agency_contracts::planning_io::MilestonePriority::Low,
-                WorkerPriority::Medium => agent_agency_contracts::planning_io::MilestonePriority::Normal,
-                WorkerPriority::High => agent_agency_contracts::planning_io::MilestonePriority::High,
-                WorkerPriority::Critical => agent_agency_contracts::planning_io::MilestonePriority::Critical,
+                WorkerPriority::Medium => {
+                    agent_agency_contracts::planning_io::MilestonePriority::Normal
+                }
+                WorkerPriority::High => {
+                    agent_agency_contracts::planning_io::MilestonePriority::High
+                }
+                WorkerPriority::Critical => {
+                    agent_agency_contracts::planning_io::MilestonePriority::Critical
+                }
             },
             risk_tier: 2,
             is_blocking: false,
@@ -946,4 +1062,3 @@ impl WorkerExecutionBridge {
         })
     }
 }
-

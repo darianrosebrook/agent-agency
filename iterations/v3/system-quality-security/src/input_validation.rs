@@ -1,9 +1,9 @@
 //! Input validation utilities for external data
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use regex::Regex;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// Maximum allowed length for various input types
@@ -56,7 +56,10 @@ pub fn validate_string_input(input: &str, field_name: &str, max_length: usize) -
 
     // Length validation
     if input.len() > max_length {
-        errors.push(format!("{} exceeds maximum length of {} characters", field_name, max_length));
+        errors.push(format!(
+            "{} exceeds maximum length of {} characters",
+            field_name, max_length
+        ));
     }
 
     // Null byte check
@@ -68,7 +71,10 @@ pub fn validate_string_input(input: &str, field_name: &str, max_length: usize) -
     // Control character check (except common whitespace)
     if input.chars().any(|c| c.is_control() && !c.is_whitespace()) {
         errors.push(format!("{} contains control characters", field_name));
-        sanitized = input.chars().filter(|c| !c.is_control() || c.is_whitespace()).collect();
+        sanitized = input
+            .chars()
+            .filter(|c| !c.is_control() || c.is_whitespace())
+            .collect();
     }
 
     ValidationResult {
@@ -90,7 +96,9 @@ pub fn validate_identifier(input: &str, field_name: &str) -> ValidationResult {
     // Reserved word check
     let reserved_words = ["null", "undefined", "true", "false", "NaN"];
     if reserved_words.contains(&input.to_lowercase().as_str()) {
-        result.errors.push(format!("{} cannot be a reserved word", field_name));
+        result
+            .errors
+            .push(format!("{} cannot be a reserved word", field_name));
         result.is_valid = false;
     }
 
@@ -102,7 +110,9 @@ pub fn validate_email(input: &str, field_name: &str) -> ValidationResult {
     let mut result = validate_string_input(input, field_name, MAX_EMAIL_LENGTH);
 
     if !EMAIL_PATTERN.is_match(input) {
-        result.errors.push(format!("{} is not a valid email address", field_name));
+        result
+            .errors
+            .push(format!("{} is not a valid email address", field_name));
         result.is_valid = false;
     }
 
@@ -125,7 +135,10 @@ pub fn validate_url(input: &str, field_name: &str, allow_http: bool) -> Validati
 
     if !url_pattern.is_match(input) {
         let protocol_req = if allow_http { "http or https" } else { "https" };
-        result.errors.push(format!("{} must be a valid {} URL", field_name, protocol_req));
+        result.errors.push(format!(
+            "{} must be a valid {} URL",
+            field_name, protocol_req
+        ));
         result.is_valid = false;
     }
 
@@ -137,7 +150,10 @@ pub fn validate_alphanumeric(input: &str, field_name: &str, max_length: usize) -
     let mut result = validate_string_input(input, field_name, max_length);
 
     if !ALPHANUMERIC_PATTERN.is_match(input) {
-        result.errors.push(format!("{} must contain only alphanumeric characters", field_name));
+        result.errors.push(format!(
+            "{} must contain only alphanumeric characters",
+            field_name
+        ));
         result.is_valid = false;
     }
 
@@ -150,19 +166,26 @@ pub fn validate_file_path(input: &str, field_name: &str) -> ValidationResult {
 
     // Check for directory traversal
     if input.contains("..") || input.contains("../") || input.contains("..\\") {
-        result.errors.push(format!("{} contains directory traversal sequences", field_name));
+        result.errors.push(format!(
+            "{} contains directory traversal sequences",
+            field_name
+        ));
         result.is_valid = false;
     }
 
     // Check for dangerous characters
     if !SAFE_PATH_PATTERN.is_match(input) {
-        result.errors.push(format!("{} contains unsafe characters", field_name));
+        result
+            .errors
+            .push(format!("{} contains unsafe characters", field_name));
         result.is_valid = false;
     }
 
     // Check for absolute paths that might be dangerous
     if input.starts_with('/') || input.starts_with('\\') || input.contains(":\\") {
-        result.errors.push(format!("{} cannot contain absolute paths", field_name));
+        result
+            .errors
+            .push(format!("{} cannot contain absolute paths", field_name));
         result.is_valid = false;
     }
 
@@ -179,15 +202,21 @@ where
     match input.parse::<T>() {
         Ok(value) => {
             if value < min {
-                result.errors.push(format!("{} must be at least {}", field_name, min));
+                result
+                    .errors
+                    .push(format!("{} must be at least {}", field_name, min));
                 result.is_valid = false;
             } else if value > max {
-                result.errors.push(format!("{} must be at most {}", field_name, max));
+                result
+                    .errors
+                    .push(format!("{} must be at most {}", field_name, max));
                 result.is_valid = false;
             }
         }
         Err(_) => {
-            result.errors.push(format!("{} is not a valid number", field_name));
+            result
+                .errors
+                .push(format!("{} is not a valid number", field_name));
             result.is_valid = false;
         }
     }
@@ -203,12 +232,17 @@ pub fn validate_json_input(input: &str, field_name: &str, max_depth: usize) -> V
     match serde_json::from_str::<serde_json::Value>(input) {
         Ok(value) => {
             if json_depth(&value) > max_depth {
-                result.errors.push(format!("{} JSON exceeds maximum depth of {}", field_name, max_depth));
+                result.errors.push(format!(
+                    "{} JSON exceeds maximum depth of {}",
+                    field_name, max_depth
+                ));
                 result.is_valid = false;
             }
         }
         Err(e) => {
-            result.errors.push(format!("{} contains invalid JSON: {}", field_name, e));
+            result
+                .errors
+                .push(format!("{} contains invalid JSON: {}", field_name, e));
             result.is_valid = false;
         }
     }
@@ -219,12 +253,8 @@ pub fn validate_json_input(input: &str, field_name: &str, max_depth: usize) -> V
 /// Calculate JSON nesting depth
 fn json_depth(value: &serde_json::Value) -> usize {
     match value {
-        serde_json::Value::Array(arr) => {
-            1 + arr.iter().map(json_depth).max().unwrap_or(0)
-        }
-        serde_json::Value::Object(obj) => {
-            1 + obj.values().map(json_depth).max().unwrap_or(0)
-        }
+        serde_json::Value::Array(arr) => 1 + arr.iter().map(json_depth).max().unwrap_or(0),
+        serde_json::Value::Object(obj) => 1 + obj.values().map(json_depth).max().unwrap_or(0),
         _ => 1,
     }
 }
@@ -236,19 +266,25 @@ pub fn validate_sql_safe(input: &str, field_name: &str) -> ValidationResult {
 
     // Layer 1: Pattern-based detection for common injection attempts
     if let Err(e) = validate_sql_injection_patterns(input, field_name, &mut result) {
-        result.errors.push(format!("SQL pattern validation error: {}", e));
+        result
+            .errors
+            .push(format!("SQL pattern validation error: {}", e));
         result.is_valid = false;
     }
 
     // Layer 2: Context-aware validation for SQL-specific constructs
     if let Err(e) = validate_sql_context(input, field_name, &mut result) {
-        result.errors.push(format!("SQL context validation error: {}", e));
+        result
+            .errors
+            .push(format!("SQL context validation error: {}", e));
         result.is_valid = false;
     }
 
     // Layer 3: Structural analysis for SQL syntax validation
     if let Err(e) = validate_sql_structure(input, field_name, &mut result) {
-        result.errors.push(format!("SQL structure validation error: {}", e));
+        result
+            .errors
+            .push(format!("SQL structure validation error: {}", e));
         result.is_valid = false;
     }
 
@@ -256,7 +292,11 @@ pub fn validate_sql_safe(input: &str, field_name: &str) -> ValidationResult {
 }
 
 /// Pattern-based SQL injection detection
-fn validate_sql_injection_patterns(input: &str, field_name: &str, result: &mut ValidationResult) -> Result<()> {
+fn validate_sql_injection_patterns(
+    input: &str,
+    field_name: &str,
+    result: &mut ValidationResult,
+) -> Result<()> {
     let dangerous_patterns = [
         // DDL operations
         ("DROP", "DROP statement detected"),
@@ -266,47 +306,46 @@ fn validate_sql_injection_patterns(input: &str, field_name: &str, result: &mut V
         ("ALTER", "ALTER statement detected"),
         ("CREATE", "CREATE statement detected"),
         ("TRUNCATE", "TRUNCATE statement detected"),
-
         // Comment patterns
         ("--", "SQL comment pattern detected"),
         ("/*", "Multi-line comment start detected"),
         ("*/", "Multi-line comment end detected"),
         ("#", "Hash comment pattern detected"),
-
         // System procedures (SQL Server, Oracle)
         ("xp_", "Extended stored procedure call detected"),
         ("sp_", "System stored procedure call detected"),
-
         // Execution patterns
         ("exec", "EXEC statement detected"),
         ("execute", "EXECUTE statement detected"),
-
         // Union-based injection
         ("union", "UNION statement detected"),
         ("select", "SELECT statement detected"),
-
         // Boolean-based injection
         ("1=1", "Boolean injection pattern detected"),
         ("1=0", "Boolean injection pattern detected"),
-
         // Script injection
         ("script", "Script tag detected"),
         ("javascript:", "JavaScript URL detected"),
         ("vbscript:", "VBScript URL detected"),
         ("onload=", "Event handler detected"),
         ("onerror=", "Error handler detected"),
-
         // File operations
         ("load_file", "File loading function detected"),
         ("into outfile", "File output operation detected"),
         ("into dumpfile", "Dump file operation detected"),
     ];
 
-    let input_normalized = input.to_lowercase().replace(" ", "").replace("\t", "").replace("\n", "");
+    let input_normalized = input
+        .to_lowercase()
+        .replace(" ", "")
+        .replace("\t", "")
+        .replace("\n", "");
 
     for (pattern, description) in &dangerous_patterns {
         if input_normalized.contains(&pattern.to_lowercase()) {
-            result.errors.push(format!("{}: {}", field_name, description));
+            result
+                .errors
+                .push(format!("{}: {}", field_name, description));
             result.is_valid = false;
         }
     }
@@ -315,17 +354,25 @@ fn validate_sql_injection_patterns(input: &str, field_name: &str, result: &mut V
 }
 
 /// Context-aware SQL validation
-fn validate_sql_context(input: &str, field_name: &str, result: &mut ValidationResult) -> Result<()> {
+fn validate_sql_context(
+    input: &str,
+    field_name: &str,
+    result: &mut ValidationResult,
+) -> Result<()> {
     // Check for balanced quotes and parentheses
     let quote_count = input.chars().filter(|&c| c == '\'').count();
     if quote_count % 2 != 0 {
-        result.errors.push(format!("{}: Unbalanced single quotes detected", field_name));
+        result
+            .errors
+            .push(format!("{}: Unbalanced single quotes detected", field_name));
         result.is_valid = false;
     }
 
     let double_quote_count = input.chars().filter(|&c| c == '"').count();
     if double_quote_count % 2 != 0 {
-        result.errors.push(format!("{}: Unbalanced double quotes detected", field_name));
+        result
+            .errors
+            .push(format!("{}: Unbalanced double quotes detected", field_name));
         result.is_valid = false;
     }
 
@@ -341,7 +388,9 @@ fn validate_sql_context(input: &str, field_name: &str, result: &mut ValidationRe
 
     for (pattern, description) in &suspicious_patterns {
         if input.contains(pattern) {
-            result.errors.push(format!("{}: {} detected", field_name, description));
+            result
+                .errors
+                .push(format!("{}: {} detected", field_name, description));
             result.is_valid = false;
         }
     }
@@ -350,13 +399,16 @@ fn validate_sql_context(input: &str, field_name: &str, result: &mut ValidationRe
 }
 
 /// Structural SQL validation
-fn validate_sql_structure(input: &str, field_name: &str, result: &mut ValidationResult) -> Result<()> {
+fn validate_sql_structure(
+    input: &str,
+    field_name: &str,
+    result: &mut ValidationResult,
+) -> Result<()> {
     // Check for SQL keywords that shouldn't appear in user input
     let sql_keywords = [
-        "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER",
-        "EXEC", "EXECUTE", "UNION", "JOIN", "WHERE", "FROM", "INTO",
-        "VALUES", "SET", "DECLARE", "BEGIN", "END", "IF", "THEN", "ELSE",
-        "WHILE", "FOR", "LOOP", "CASE", "WHEN", "THEN", "ELSE",
+        "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "EXEC", "EXECUTE",
+        "UNION", "JOIN", "WHERE", "FROM", "INTO", "VALUES", "SET", "DECLARE", "BEGIN", "END", "IF",
+        "THEN", "ELSE", "WHILE", "FOR", "LOOP", "CASE", "WHEN", "THEN", "ELSE",
     ];
 
     let input_upper = input.to_uppercase();
@@ -370,7 +422,10 @@ fn validate_sql_structure(input: &str, field_name: &str, result: &mut Validation
 
     // If more than 3 SQL keywords are detected, it's likely SQL injection
     if keyword_count > 3 {
-        result.errors.push(format!("{}: Multiple SQL keywords detected ({}) - possible injection attempt", field_name, keyword_count));
+        result.errors.push(format!(
+            "{}: Multiple SQL keywords detected ({}) - possible injection attempt",
+            field_name, keyword_count
+        ));
         result.is_valid = false;
     }
 
@@ -380,7 +435,9 @@ fn validate_sql_structure(input: &str, field_name: &str, result: &mut Validation
     }
 
     if HEX_PATTERN.is_match(input) {
-        result.errors.push(format!("{}: Hexadecimal values detected", field_name));
+        result
+            .errors
+            .push(format!("{}: Hexadecimal values detected", field_name));
         result.is_valid = false;
     }
 
@@ -410,7 +467,10 @@ pub fn validate_api_input(input: &serde_json::Value, context: &str) -> Result<()
         serde_json::Value::String(s) => {
             let result = validate_string_input(s, context, MAX_STRING_LENGTH);
             if !result.is_valid {
-                return Err(anyhow!("Input validation failed: {}", result.errors.join(", ")));
+                return Err(anyhow!(
+                    "Input validation failed: {}",
+                    result.errors.join(", ")
+                ));
             }
         }
         serde_json::Value::Object(obj) => {
@@ -433,32 +493,41 @@ pub fn validate_api_input(input: &serde_json::Value, context: &str) -> Result<()
 
 /// Batch validation for multiple inputs
 pub fn validate_batch(inputs: Vec<(&str, &str, ValidationType)>) -> Vec<ValidationResult> {
-    inputs.into_iter().map(|(input, field_name, validation_type)| {
-        match validation_type {
-            ValidationType::String(max_len) => validate_string_input(input, field_name, max_len),
-            ValidationType::Identifier => validate_identifier(input, field_name),
-            ValidationType::Email => validate_email(input, field_name),
-            ValidationType::Url(allow_http) => validate_url(input, field_name, allow_http),
-            ValidationType::Alphanumeric(max_len) => validate_alphanumeric(input, field_name, max_len),
-            ValidationType::FilePath => validate_file_path(input, field_name),
-            ValidationType::Numeric(min, max) => validate_numeric(input, field_name, min, max),
-            ValidationType::Json(max_depth) => validate_json_input(input, field_name, max_depth),
-            ValidationType::SqlSafe => validate_sql_safe(input, field_name),
-        }
-    }).collect()
+    inputs
+        .into_iter()
+        .map(
+            |(input, field_name, validation_type)| match validation_type {
+                ValidationType::String(max_len) => {
+                    validate_string_input(input, field_name, max_len)
+                }
+                ValidationType::Identifier => validate_identifier(input, field_name),
+                ValidationType::Email => validate_email(input, field_name),
+                ValidationType::Url(allow_http) => validate_url(input, field_name, allow_http),
+                ValidationType::Alphanumeric(max_len) => {
+                    validate_alphanumeric(input, field_name, max_len)
+                }
+                ValidationType::FilePath => validate_file_path(input, field_name),
+                ValidationType::Numeric(min, max) => validate_numeric(input, field_name, min, max),
+                ValidationType::Json(max_depth) => {
+                    validate_json_input(input, field_name, max_depth)
+                }
+                ValidationType::SqlSafe => validate_sql_safe(input, field_name),
+            },
+        )
+        .collect()
 }
 
 /// Types of validation available
 #[derive(Debug, Clone, JsonSchema)]
 pub enum ValidationType {
-    String(usize),              // max_length
+    String(usize), // max_length
     Identifier,
     Email,
-    Url(bool),                  // allow_http
-    Alphanumeric(usize),        // max_length
+    Url(bool),           // allow_http
+    Alphanumeric(usize), // max_length
     FilePath,
-    Numeric(i64, i64),          // min, max
-    Json(usize),                // max_depth
+    Numeric(i64, i64), // min, max
+    Json(usize),       // max_depth
     SqlSafe,
 }
 
@@ -486,14 +555,22 @@ pub fn validate_file_upload(
 
     // Check for dangerous filename patterns
     if filename.contains("..") || filename.contains("/") || filename.contains("\\") {
-        result.errors.push("Filename contains dangerous path traversal patterns".to_string());
+        result
+            .errors
+            .push("Filename contains dangerous path traversal patterns".to_string());
         result.is_valid = false;
     }
 
     // Check for script injection in filename
-    if filename.contains('<') || filename.contains('>') || filename.contains('"') ||
-       filename.contains('\'') || filename.contains('|') {
-        result.errors.push("Filename contains potentially dangerous characters".to_string());
+    if filename.contains('<')
+        || filename.contains('>')
+        || filename.contains('"')
+        || filename.contains('\'')
+        || filename.contains('|')
+    {
+        result
+            .errors
+            .push("Filename contains potentially dangerous characters".to_string());
         result.is_valid = false;
     }
 
@@ -517,7 +594,9 @@ pub fn validate_file_upload(
 
     // MIME type format validation
     if !content_type.contains('/') || content_type.len() > 100 {
-        result.errors.push("Invalid content type format".to_string());
+        result
+            .errors
+            .push("Invalid content type format".to_string());
         result.is_valid = false;
     }
 
@@ -542,7 +621,9 @@ pub fn validate_api_payload(payload: &str, content_type: &str) -> ValidationResu
     if payload.len() > max_size {
         result.errors.push(format!(
             "Payload size {} bytes exceeds maximum allowed size of {} bytes for content type {}",
-            payload.len(), max_size, content_type
+            payload.len(),
+            max_size,
+            content_type
         ));
         result.is_valid = false;
     }
@@ -556,14 +637,18 @@ pub fn validate_api_payload(payload: &str, content_type: &str) -> ValidationResu
 
         // Additional JSON security checks
         if payload.contains('\0') {
-            result.errors.push("JSON payload contains null bytes".to_string());
+            result
+                .errors
+                .push("JSON payload contains null bytes".to_string());
             result.is_valid = false;
         }
 
         // Check for extremely nested structures (potential DoS)
         let nesting_depth = count_json_nesting(payload);
         if nesting_depth > 10 {
-            result.errors.push("JSON payload has excessive nesting depth".to_string());
+            result
+                .errors
+                .push("JSON payload has excessive nesting depth".to_string());
             result.is_valid = false;
         }
     }
@@ -582,25 +667,40 @@ pub fn validate_query_params(params: &[(String, String)]) -> ValidationResult {
     for (key, value) in params {
         // Key validation
         if key.len() > 100 {
-            result.errors.push(format!("Query parameter key '{}' is too long", key));
+            result
+                .errors
+                .push(format!("Query parameter key '{}' is too long", key));
             result.is_valid = false;
         }
 
         if !IDENTIFIER_PATTERN.is_match(key) {
-            result.errors.push(format!("Query parameter key '{}' contains invalid characters", key));
+            result.errors.push(format!(
+                "Query parameter key '{}' contains invalid characters",
+                key
+            ));
             result.is_valid = false;
         }
 
         // Value validation
         if value.len() > MAX_QUERY_PARAM_LENGTH {
-            result.errors.push(format!("Query parameter '{}' value is too long", key));
+            result
+                .errors
+                .push(format!("Query parameter '{}' value is too long", key));
             result.is_valid = false;
         }
 
         // Check for injection patterns
-        if value.contains('<') || value.contains('>') || value.contains('"') ||
-           value.contains('\'') || value.contains('|') || value.contains(';') {
-            result.errors.push(format!("Query parameter '{}' contains potentially dangerous characters", key));
+        if value.contains('<')
+            || value.contains('>')
+            || value.contains('"')
+            || value.contains('\'')
+            || value.contains('|')
+            || value.contains(';')
+        {
+            result.errors.push(format!(
+                "Query parameter '{}' contains potentially dangerous characters",
+                key
+            ));
             result.is_valid = false;
         }
     }
@@ -619,31 +719,44 @@ pub fn validate_http_headers(headers: &[(String, String)]) -> ValidationResult {
     for (key, value) in headers {
         // Header name validation
         if key.len() > 100 {
-            result.errors.push(format!("Header name '{}' is too long", key));
+            result
+                .errors
+                .push(format!("Header name '{}' is too long", key));
             result.is_valid = false;
         }
 
         // RFC 7230 header name validation (token characters)
-        if !key.chars().all(|c| c.is_ascii() && (c.is_alphanumeric() || c == '-' || c == '_')) {
-            result.errors.push(format!("Header name '{}' contains invalid characters", key));
+        if !key
+            .chars()
+            .all(|c| c.is_ascii() && (c.is_alphanumeric() || c == '-' || c == '_'))
+        {
+            result
+                .errors
+                .push(format!("Header name '{}' contains invalid characters", key));
             result.is_valid = false;
         }
 
         // Header value validation
         if value.len() > MAX_HEADER_VALUE_LENGTH {
-            result.errors.push(format!("Header '{}' value is too long", key));
+            result
+                .errors
+                .push(format!("Header '{}' value is too long", key));
             result.is_valid = false;
         }
 
         // Check for header injection
         if value.contains('\r') || value.contains('\n') {
-            result.errors.push(format!("Header '{}' contains CRLF characters", key));
+            result
+                .errors
+                .push(format!("Header '{}' contains CRLF characters", key));
             result.is_valid = false;
         }
 
         // Check for control characters
         if value.chars().any(|c| c.is_control() && c != '\t') {
-            result.errors.push(format!("Header '{}' contains control characters", key));
+            result
+                .errors
+                .push(format!("Header '{}' contains control characters", key));
             result.is_valid = false;
         }
     }
@@ -786,17 +899,11 @@ mod tests {
     #[test]
     fn test_api_payload_validation() {
         // Valid JSON payload
-        let result = validate_api_payload(
-            r#"{"key": "value", "number": 42}"#,
-            "application/json"
-        );
+        let result = validate_api_payload(r#"{"key": "value", "number": 42}"#, "application/json");
         assert!(result.is_valid);
 
         // Invalid JSON
-        let result = validate_api_payload(
-            r#"{"invalid": json}"#,
-            "application/json"
-        );
+        let result = validate_api_payload(r#"{"invalid": json}"#, "application/json");
         assert!(!result.is_valid);
 
         // Oversized payload
@@ -805,10 +912,7 @@ mod tests {
         assert!(!result.is_valid);
 
         // JSON with null bytes (security issue)
-        let result = validate_api_payload(
-            "{\"key\": \"value\\0bad\"}",
-            "application/json"
-        );
+        let result = validate_api_payload("{\"key\": \"value\\0bad\"}", "application/json");
         assert!(!result.is_valid);
     }
 
@@ -831,16 +935,12 @@ mod tests {
 
         // Oversized value
         let large_value = "x".repeat(MAX_QUERY_PARAM_LENGTH + 1);
-        let params = vec![
-            ("param".to_string(), large_value),
-        ];
+        let params = vec![("param".to_string(), large_value)];
         let result = validate_query_params(&params);
         assert!(!result.is_valid);
 
         // Dangerous characters
-        let params = vec![
-            ("param".to_string(), "value<script>".to_string()),
-        ];
+        let params = vec![("param".to_string(), "value<script>".to_string())];
         let result = validate_query_params(&params);
         assert!(!result.is_valid);
     }
@@ -864,16 +964,12 @@ mod tests {
 
         // Oversized header value
         let large_value = "x".repeat(MAX_HEADER_VALUE_LENGTH + 1);
-        let headers = vec![
-            ("x-custom".to_string(), large_value),
-        ];
+        let headers = vec![("x-custom".to_string(), large_value)];
         let result = validate_http_headers(&headers);
         assert!(!result.is_valid);
 
         // CRLF injection
-        let headers = vec![
-            ("x-header".to_string(), "value\r\ninjected".to_string()),
-        ];
+        let headers = vec![("x-header".to_string(), "value\r\ninjected".to_string())];
         let result = validate_http_headers(&headers);
         assert!(!result.is_valid);
     }
@@ -886,7 +982,9 @@ mod tests {
         assert!(result.is_valid);
 
         // Deep nesting (DoS protection)
-        let deep_json = (0..12).fold("x".to_string(), |acc, _| format!(r#"{{"nested": {}}}"#, acc));
+        let deep_json = (0..12).fold("x".to_string(), |acc, _| {
+            format!(r#"{{"nested": {}}}"#, acc)
+        });
         let result = validate_api_payload(&deep_json, "application/json");
         assert!(!result.is_valid);
     }

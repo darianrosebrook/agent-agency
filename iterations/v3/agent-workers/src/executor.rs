@@ -2,22 +2,31 @@
 //!
 //! Executes tasks by communicating with worker models and handling the execution lifecycle.
 
-use schemars::JsonSchema;
-use crate::worker_types::{TaskContext as WorkerTaskContext, UuidGenerator, TaskPriority, CawsSpec, *};
 use crate::parallel_types::TaskResult;
-use crate::worker_errors::{WorkerExecutionResult, WorkerError};
-use agent_agency_contracts::{IssueSeverity, task_executor::{TaskExecutor as TaskExecutorTrait, TaskExecutionResult, TaskSpec as ContractTaskSpec, TaskContext as CouncilTaskContext, TaskSpec, TaskRequirements}, task_request::RiskTier, AcceptanceCriterion};
-use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use system_resilience::retry::{RetryConfig, RetryPolicy};
+use crate::worker_errors::{WorkerError, WorkerExecutionResult};
+use crate::worker_types::{
+    CawsSpec, TaskContext as WorkerTaskContext, TaskPriority, UuidGenerator, *,
+};
+use agent_agency_contracts::{
+    task_executor::{
+        TaskContext as CouncilTaskContext, TaskExecutionResult, TaskExecutor as TaskExecutorTrait,
+        TaskRequirements, TaskSpec as ContractTaskSpec, TaskSpec,
+    },
+    task_request::RiskTier,
+    AcceptanceCriterion, IssueSeverity,
+};
 use anyhow::{Context, Result};
-use chrono::{Utc, DateTime};
+use chrono::{DateTime, Utc};
+use rand;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{info, warn, error};
+use system_resilience::resilience_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use system_resilience::retry::{RetryConfig, RetryPolicy};
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use sqlx::Row;
-use rand;
 
 // Additional types for distributed worker execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -221,23 +230,28 @@ impl TaskExecutor {
         // Real worker discovery and capability matching
         let worker_info = self.discover_worker_capabilities(worker_id).await?;
         let capability_match = self.match_worker_capabilities(&task_spec, &worker_info)?;
-        
+
         if !capability_match.is_suitable {
             return Err(anyhow::anyhow!(
                 "Worker {} lacks required capabilities for task {}: {:?}",
-                worker_id, task_id, capability_match.missing_capabilities
+                worker_id,
+                task_id,
+                capability_match.missing_capabilities
             ));
         }
 
         // Real load balancing and performance optimization
-        let execution_strategy = self.determine_execution_strategy(&task_spec, &worker_info).await?;
-        
+        let execution_strategy = self
+            .determine_execution_strategy(&task_spec, &worker_info)
+            .await?;
+
         // Real distributed worker coordination and health monitoring
         let health_status = self.check_worker_health(worker_id).await?;
         if !health_status.is_healthy {
             return Err(anyhow::anyhow!(
                 "Worker {} is not healthy: {}",
-                worker_id, health_status.health_message
+                worker_id,
+                health_status.health_message
             ));
         }
 
@@ -246,12 +260,15 @@ impl TaskExecutor {
         if !auth_result.is_authorized {
             return Err(anyhow::anyhow!(
                 "Worker {} not authorized for task {}: {}",
-                worker_id, task_id, auth_result.auth_message
+                worker_id,
+                task_id,
+                auth_result.auth_message
             ));
         }
 
         // Real worker lifecycle management
-        self.update_worker_status(worker_id, "executing", Some(task_id)).await?;
+        self.update_worker_status(worker_id, "executing", Some(task_id))
+            .await?;
 
         // Prepare execution input
         let execution_input = self.prepare_execution_input(&task_spec)?;
@@ -266,12 +283,8 @@ impl TaskExecutor {
             )
             .await?
         } else {
-            self.execute_with_worker_direct(
-                worker_id,
-                &execution_input,
-                &execution_strategy,
-            )
-            .await?
+            self.execute_with_worker_direct(worker_id, &execution_input, &execution_strategy)
+                .await?
         };
 
         // Process and validate result
@@ -283,7 +296,7 @@ impl TaskExecutor {
         let completed_at = self.clock.now();
         let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
         let success = result.success;
-        
+
         {
             let mut stats = self.execution_stats.write().await;
             stats.total_executions += 1;
@@ -294,7 +307,7 @@ impl TaskExecutor {
             }
             stats.execution_times.push(duration_ms);
             stats.last_execution_time = Some(completed_at);
-            
+
             // Keep only last 1000 execution times to prevent memory growth
             if stats.execution_times.len() > 1000 {
                 stats.execution_times.remove(0);
@@ -321,7 +334,12 @@ impl TaskExecutor {
             caws_spec: task_spec
                 .caws_spec
                 .as_ref()
-                .and_then(|spec| serde_json::from_value(serde_json::Value::Object(spec.clone().into_iter().collect())).ok())
+                .and_then(|spec| {
+                    serde_json::from_value(serde_json::Value::Object(
+                        spec.clone().into_iter().collect(),
+                    ))
+                    .ok()
+                })
                 .map(|spec: CawsSpec| self.convert_caws_spec(&spec, Some(task_spec)))
                 .and_then(|spec| serde_json::to_string(&spec).ok()),
         })
@@ -341,7 +359,11 @@ impl TaskExecutor {
         prompt.push_str("**SCOPE**:\n");
         prompt.push_str(&format!(
             "- Files affected: {}\n",
-            task_spec.scope.as_ref().map(|s| s.files_affected.join(", ")).unwrap_or_default()
+            task_spec
+                .scope
+                .as_ref()
+                .map(|s| s.files_affected.join(", "))
+                .unwrap_or_default()
         ));
         if let Some(scope) = &task_spec.scope {
             if let Some(max_loc) = scope.max_loc {
@@ -350,7 +372,11 @@ impl TaskExecutor {
         }
         prompt.push_str(&format!(
             "- Domains: {}\n\n",
-            task_spec.scope.as_ref().map(|s| s.domains.join(", ")).unwrap_or_default()
+            task_spec
+                .scope
+                .as_ref()
+                .map(|s| s.domains.join(", "))
+                .unwrap_or_default()
         ));
 
         // Add acceptance criteria
@@ -358,8 +384,10 @@ impl TaskExecutor {
             if !criteria.is_empty() {
                 prompt.push_str("**ACCEPTANCE CRITERIA**:\n");
                 for criterion in criteria {
-                    prompt.push_str(&format!("- {}: Given {}, When {}, Then {}\n",
-                        criterion.id, criterion.given, criterion.when, criterion.then));
+                    prompt.push_str(&format!(
+                        "- {}: Given {}, When {}, Then {}\n",
+                        criterion.id, criterion.given, criterion.when, criterion.then
+                    ));
                 }
                 prompt.push('\n');
             }
@@ -375,7 +403,8 @@ impl TaskExecutor {
 
         // Add context information
         prompt.push_str("**CONTEXT**:\n");
-        if let Some(serde_json::Value::String(workspace)) = task_spec.context.get("workspace_root") {
+        if let Some(serde_json::Value::String(workspace)) = task_spec.context.get("workspace_root")
+        {
             prompt.push_str(&format!("- Workspace: {}\n", workspace));
         }
         if let Some(serde_json::Value::String(branch)) = task_spec.context.get("git_branch") {
@@ -385,7 +414,8 @@ impl TaskExecutor {
             prompt.push_str(&format!("- Environment: {}\n", env));
         }
         if let Some(serde_json::Value::Array(changes)) = task_spec.context.get("recent_changes") {
-            let change_strings: Vec<String> = changes.iter()
+            let change_strings: Vec<String> = changes
+                .iter()
                 .filter_map(|v| v.as_str())
                 .map(|s| s.to_string())
                 .collect();
@@ -443,14 +473,21 @@ impl TaskExecutor {
         TaskRequirements {
             required_languages,
             required_frameworks,
-            required_domains: task_spec.scope.as_ref().map(|s| s.domains.clone()).unwrap_or_default(),
+            required_domains: task_spec
+                .scope
+                .as_ref()
+                .map(|s| s.domains.clone())
+                .unwrap_or_default(),
             min_quality_score: task_spec.risk_tier.map_or(0.7, |tier| match tier {
                 1 => 0.9,
                 2 => 0.8,
                 _ => 0.7,
             }),
             min_caws_awareness: 0.8,
-            max_execution_time_ms: task_spec.scope.as_ref().and_then(|s| s.max_loc.map(|loc| loc as u64 * 100)),
+            max_execution_time_ms: task_spec
+                .scope
+                .as_ref()
+                .and_then(|s| s.max_loc.map(|loc| loc as u64 * 100)),
             preferred_worker_type: None,
             context_length_estimate: context_length_estimate as usize,
         }
@@ -520,13 +557,19 @@ impl TaskExecutor {
         let rule_lower = rule.to_lowercase();
 
         // Critical rules
-        if rule_lower.contains("security") || rule_lower.contains("safety") ||
-           rule_lower.contains("critical") || rule_lower.contains("blocking") {
+        if rule_lower.contains("security")
+            || rule_lower.contains("safety")
+            || rule_lower.contains("critical")
+            || rule_lower.contains("blocking")
+        {
             IssueSeverity::Error
         }
         // High impact rules
-        else if rule_lower.contains("performance") || rule_lower.contains("reliability") ||
-                rule_lower.contains("compliance") || rule_lower.contains("audit") {
+        else if rule_lower.contains("performance")
+            || rule_lower.contains("reliability")
+            || rule_lower.contains("compliance")
+            || rule_lower.contains("audit")
+        {
             IssueSeverity::Warning
         }
         // Medium rules (default)
@@ -543,7 +586,7 @@ impl TaskExecutor {
         invariants: Option<&[String]>,
     ) -> Vec<ValidationRule> {
         let mut rules = Vec::new();
-        
+
         // Extract validation rules from quality gates
         for (i, gate) in council_spec.quality_gates.iter().enumerate() {
             rules.push(ValidationRule {
@@ -554,37 +597,59 @@ impl TaskExecutor {
                 file_patterns: vec!["**/*".to_string()],
                 config: {
                     let mut config = std::collections::HashMap::new();
-                    config.insert("gate_name".to_string(), serde_json::Value::String(gate.name.clone()));
-                    config.insert("threshold".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(gate.threshold as f64).unwrap()));
+                    config.insert(
+                        "gate_name".to_string(),
+                        serde_json::Value::String(gate.name.clone()),
+                    );
+                    config.insert(
+                        "threshold".to_string(),
+                        serde_json::Value::Number(
+                            serde_json::Number::from_f64(gate.threshold as f64).unwrap(),
+                        ),
+                    );
                     config
                 },
                 severity: ViolationSeverity::Medium,
             });
         }
-        
+
         // Extract validation rules from acceptance criteria
         if let Some(criteria) = acceptance_criteria {
             for criterion in criteria {
                 rules.push(ValidationRule {
                     id: Uuid::new_v4(),
                     name: format!("Acceptance Criterion {}", criterion.id),
-                    description: format!("Given: {}\nWhen: {}\nThen: {}",
-                        criterion.given, criterion.when, criterion.then),
+                    description: format!(
+                        "Given: {}\nWhen: {}\nThen: {}",
+                        criterion.given, criterion.when, criterion.then
+                    ),
                     rule_type: ValidationRuleType::Acceptance,
                     file_patterns: vec!["**/*".to_string()],
                     config: {
                         let mut config = std::collections::HashMap::new();
-                        config.insert("criterion_id".to_string(), serde_json::Value::String(criterion.id.clone()));
-                        config.insert("given".to_string(), serde_json::Value::String(criterion.given.clone()));
-                        config.insert("when".to_string(), serde_json::Value::String(criterion.when.clone()));
-                        config.insert("then".to_string(), serde_json::Value::String(criterion.then.clone()));
+                        config.insert(
+                            "criterion_id".to_string(),
+                            serde_json::Value::String(criterion.id.clone()),
+                        );
+                        config.insert(
+                            "given".to_string(),
+                            serde_json::Value::String(criterion.given.clone()),
+                        );
+                        config.insert(
+                            "when".to_string(),
+                            serde_json::Value::String(criterion.when.clone()),
+                        );
+                        config.insert(
+                            "then".to_string(),
+                            serde_json::Value::String(criterion.then.clone()),
+                        );
                         config
                     },
                     severity: ViolationSeverity::High, // Acceptance criteria are high priority
                 });
             }
         }
-        
+
         // Extract validation rules from invariants
         if let Some(invs) = invariants {
             for (i, invariant) in invs.iter().enumerate() {
@@ -596,15 +661,21 @@ impl TaskExecutor {
                     file_patterns: vec!["**/*".to_string()],
                     config: {
                         let mut config = std::collections::HashMap::new();
-                        config.insert("invariant_index".to_string(), serde_json::Value::Number(i.into()));
-                        config.insert("invariant_text".to_string(), serde_json::Value::String(invariant.clone()));
+                        config.insert(
+                            "invariant_index".to_string(),
+                            serde_json::Value::Number(i.into()),
+                        );
+                        config.insert(
+                            "invariant_text".to_string(),
+                            serde_json::Value::String(invariant.clone()),
+                        );
                         config
                     },
                     severity: ViolationSeverity::Critical, // Invariants are critical
                 });
             }
         }
-        
+
         rules
     }
 
@@ -615,7 +686,7 @@ impl TaskExecutor {
     ) -> Option<PerformanceBenchmarks> {
         // Extract benchmarks from compliance requirements
         let response_time_ms = compliance.performance_budget_ms.unwrap_or(5000); // Default 5s
-        
+
         // Extract throughput from task requirements if available
         let throughput_rps = task_spec
             .and_then(|ts| ts.requirements.as_ref()?.max_execution_time_ms)
@@ -629,7 +700,7 @@ impl TaskExecutor {
                 }
             })
             .unwrap_or(10);
-        
+
         // Estimate memory usage based on task complexity
         // Simple tasks: ~50MB, Medium: ~100MB, Complex: ~200MB
         let memory_usage_mb = task_spec
@@ -642,7 +713,7 @@ impl TaskExecutor {
                 }
             })
             .unwrap_or(100);
-        
+
         // Only create benchmarks if we have meaningful values
         if response_time_ms > 0 || throughput_rps > 0 || memory_usage_mb > 0 {
             Some(PerformanceBenchmarks {
@@ -654,13 +725,11 @@ impl TaskExecutor {
             None
         }
     }
-    fn convert_caws_spec(
-        &self,
-        council_spec: &CawsSpec,
-        task_spec: Option<&TaskSpec>,
-    ) -> CawsSpec {
+    fn convert_caws_spec(&self, council_spec: &CawsSpec, task_spec: Option<&TaskSpec>) -> CawsSpec {
         // Map council CawsSpec validation rules to worker quality gates
-        let quality_gates = council_spec.validation_rules.iter()
+        let quality_gates = council_spec
+            .validation_rules
+            .iter()
             .enumerate()
             .map(|(i, rule)| {
                 QualityGate {
@@ -732,13 +801,16 @@ impl TaskExecutor {
                 None, // acceptance_criteria: could be extracted from WorkingSpec if available
                 None, // invariants: could be extracted from WorkingSpec if available
             ),
-            benchmarks: Self::extract_performance_benchmarks(&ComplianceRequirements::default(), task_spec),
+            benchmarks: Self::extract_performance_benchmarks(
+                &ComplianceRequirements::default(),
+                task_spec,
+            ),
             security: SecurityRequirements::default(),
         }
     }
 
     /// Execute task with worker via HTTP API
-    /// 
+    ///
     /// This method performs the actual HTTP call to the worker endpoint with:
     /// - Proper error handling and status code mapping
     /// - Request/response serialization (JSON)
@@ -769,7 +841,9 @@ impl TaskExecutor {
         // 2. Service discovery: Look up worker capabilities and health status
         // 3. Endpoint management: Validate endpoint is reachable and healthy
         // 4. Registry optimization: Cache resolved endpoints for performance
-        let worker_base_url = self.resolve_worker_endpoint(worker_id).await
+        let worker_base_url = self
+            .resolve_worker_endpoint(worker_id)
+            .await
             .unwrap_or_else(|_| format!("http://worker-{}", worker_id));
 
         let execute_url = format!("{}/execute", worker_base_url.trim_end_matches('/'));
@@ -789,13 +863,13 @@ impl TaskExecutor {
             let error_msg = match status {
                 reqwest::StatusCode::REQUEST_TIMEOUT | reqwest::StatusCode::GATEWAY_TIMEOUT => {
                     format!("Worker request timed out (status: {})", status)
-                },
+                }
                 reqwest::StatusCode::TOO_MANY_REQUESTS => {
                     format!("Worker rate limited (status: {})", status)
-                },
+                }
                 reqwest::StatusCode::SERVICE_UNAVAILABLE | reqwest::StatusCode::BAD_GATEWAY => {
                     format!("Worker service unavailable (status: {})", status)
-                },
+                }
                 _ => {
                     format!("Worker returned error status: {}", status)
                 }
@@ -904,15 +978,14 @@ impl TaskExecutor {
             metadata.insert(META_WORKER_OUTPUT.to_string(), value);
         }
 
-        let status_label = if caws_compliance.is_compliant
-            && quality_metrics.completeness_score > 0.8
-        {
-            "Completed"
-        } else if quality_metrics.completeness_score > 0.5 {
-            "Partial"
-        } else {
-            "Failed"
-        };
+        let status_label =
+            if caws_compliance.is_compliant && quality_metrics.completeness_score > 0.8 {
+                "Completed"
+            } else if quality_metrics.completeness_score > 0.5 {
+                "Partial"
+            } else {
+                "Failed"
+            };
 
         metadata.insert(
             META_EXECUTION_STATUS.to_string(),
@@ -1115,7 +1188,7 @@ impl TaskExecutor {
         // Implement CAWS rules compliance checking
         // Validates worker execution against CAWS quality standards
         // Rules checked: File count, complexity, code quality, test coverage
-        
+
         if file_count > 10 {
             violations.push(CawsViolation {
                 rule: "File Count Limit".to_string(),
@@ -1264,7 +1337,11 @@ impl TaskExecutor {
     }
 
     /// Calculate context length estimate based on task content
-    fn calculate_context_length(&self, task_text: &str, context: &std::collections::HashMap<String, serde_json::Value>) -> u32 {
+    fn calculate_context_length(
+        &self,
+        task_text: &str,
+        context: &std::collections::HashMap<String, serde_json::Value>,
+    ) -> u32 {
         let mut estimate = task_text.len() as u32;
 
         // Add context length from dependencies and recent changes
@@ -1281,9 +1358,7 @@ impl TaskExecutor {
         // Cap at reasonable maximum
         estimate.min(32000)
     }
-
 }
-
 
 #[async_trait::async_trait]
 impl TaskExecutorTrait for TaskExecutor {
@@ -1299,11 +1374,17 @@ impl TaskExecutorTrait for TaskExecutor {
             description: task_spec.description,
             priority: match task_spec.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
-                agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Medium,
-                agent_agency_contracts::types::planning::TaskPriority::Medium => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                    TaskPriority::Medium
+                }
+                agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                    TaskPriority::Medium
+                }
                 agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
                 agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
-                agent_agency_contracts::types::planning::TaskPriority::Critical => TaskPriority::Critical,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                    TaskPriority::Critical
+                }
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -1347,11 +1428,17 @@ impl TaskExecutorTrait for TaskExecutor {
             description: task_spec.description,
             priority: match task_spec.priority {
                 agent_agency_contracts::types::planning::TaskPriority::Low => TaskPriority::Low,
-                agent_agency_contracts::types::planning::TaskPriority::Normal => TaskPriority::Medium,
-                agent_agency_contracts::types::planning::TaskPriority::Medium => TaskPriority::Medium,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                    TaskPriority::Medium
+                }
+                agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                    TaskPriority::Medium
+                }
                 agent_agency_contracts::types::planning::TaskPriority::High => TaskPriority::High,
                 agent_agency_contracts::types::planning::TaskPriority::Urgent => TaskPriority::High,
-                agent_agency_contracts::types::planning::TaskPriority::Critical => TaskPriority::Critical,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                    TaskPriority::Critical
+                }
             },
             required_capabilities: task_spec.required_capabilities,
             context: task_spec.context,
@@ -1366,21 +1453,21 @@ impl TaskExecutorTrait for TaskExecutor {
 
         // Execute with circuit breaker if enabled
         let circuit_breaker = if circuit_breaker_enabled {
-            Some(Arc::new(CircuitBreaker::new(
-                CircuitBreakerConfig {
-                    name: Some("task-execution".to_string()),
-                    failure_threshold: 5,
-                    success_threshold: 3,
-                    timeout_ms: Some(30000), // 30 seconds
-                    failure_window_ms: Some(300000), // 5 minutes
-                    reset_timeout_ms: 60000, // 1 minute
-                },
-            )))
+            Some(Arc::new(CircuitBreaker::new(CircuitBreakerConfig {
+                name: Some("task-execution".to_string()),
+                failure_threshold: 5,
+                success_threshold: 3,
+                timeout_ms: Some(30000),         // 30 seconds
+                failure_window_ms: Some(300000), // 5 minutes
+                reset_timeout_ms: 60000,         // 1 minute
+            })))
         } else {
             None
         };
 
-        let result = self.execute_task(internal_spec, worker_id, circuit_breaker.as_ref()).await?;
+        let result = self
+            .execute_task(internal_spec, worker_id, circuit_breaker.as_ref())
+            .await?;
 
         // Convert result back to contract format
         Ok(TaskExecutionResult {
@@ -1397,16 +1484,21 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn health_check(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<
+        agent_agency_contracts::task_executor::TaskExecutorHealth,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         let stats = self.execution_stats.read().await;
-        
+
         // Calculate success rate from tracked executions
         let success_rate = if stats.total_executions > 0 {
             stats.successful_executions as f64 / stats.total_executions as f64
         } else {
             1.0 // Default to healthy if no executions yet
         };
-        
+
         // Determine health status based on success rate
         let status = if success_rate >= 0.95 {
             agent_agency_contracts::task_executor::HealthStatus::Healthy
@@ -1415,7 +1507,7 @@ impl TaskExecutorTrait for TaskExecutor {
         } else {
             agent_agency_contracts::task_executor::HealthStatus::Unhealthy
         };
-        
+
         Ok(agent_agency_contracts::task_executor::TaskExecutorHealth {
             status,
             last_execution_time: stats.last_execution_time,
@@ -1426,24 +1518,29 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<agent_agency_contracts::task_executor::TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<
+        agent_agency_contracts::task_executor::TaskExecutionStats,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         let stats = self.execution_stats.read().await;
-        
+
         // Calculate statistics from tracked execution times
         let total = stats.total_executions;
         let successful = stats.successful_executions;
         let failed = stats.failed_executions;
-        
+
         // Calculate percentiles from execution times
         let mut sorted_times = stats.execution_times.clone();
         sorted_times.sort();
-        
+
         let average = if !sorted_times.is_empty() {
             sorted_times.iter().sum::<u64>() as f64 / sorted_times.len() as f64
         } else {
             0.0
         };
-        
+
         let median = if !sorted_times.is_empty() {
             let mid = sorted_times.len() / 2;
             if sorted_times.len() % 2 == 0 {
@@ -1454,7 +1551,7 @@ impl TaskExecutorTrait for TaskExecutor {
         } else {
             0.0
         };
-        
+
         let p95 = if sorted_times.len() >= 20 {
             let index = (sorted_times.len() as f64 * 0.95) as usize;
             sorted_times[index.min(sorted_times.len() - 1)] as f64
@@ -1463,7 +1560,7 @@ impl TaskExecutorTrait for TaskExecutor {
         } else {
             0.0
         };
-        
+
         let p99 = if sorted_times.len() >= 100 {
             let index = (sorted_times.len() as f64 * 0.99) as usize;
             sorted_times[index.min(sorted_times.len() - 1)] as f64
@@ -1472,7 +1569,7 @@ impl TaskExecutorTrait for TaskExecutor {
         } else {
             0.0
         };
-        
+
         Ok(agent_agency_contracts::task_executor::TaskExecutionStats {
             total_executions: total,
             successful_executions: successful,
@@ -1484,11 +1581,15 @@ impl TaskExecutorTrait for TaskExecutor {
         })
     }
 
-    async fn cancel_task_execution(&self, task_id: Uuid, worker_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn cancel_task_execution(
+        &self,
+        task_id: Uuid,
+        worker_id: Uuid,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use tracing::{info, warn};
-        
+
         info!("Cancelling task {} on worker {}", task_id, worker_id);
-        
+
         // Resolve worker endpoint
         let worker_base_url = match self.resolve_worker_endpoint(worker_id).await {
             Ok(url) => url,
@@ -1498,15 +1599,15 @@ impl TaskExecutorTrait for TaskExecutor {
                 format!("http://worker-{}.local:8080", worker_id)
             }
         };
-        
+
         let cancel_url = format!("{}/cancel", worker_base_url.trim_end_matches('/'));
-        
+
         // Send cancellation request to worker
         let cancel_body = serde_json::json!({
             "task_id": task_id,
             "reason": "Cancelled by executor"
         });
-        
+
         match self
             .client
             .post(&cancel_url)
@@ -1518,16 +1619,26 @@ impl TaskExecutorTrait for TaskExecutor {
             .await
         {
             Ok(response) if response.status().is_success() => {
-                info!("Successfully cancelled task {} on worker {}", task_id, worker_id);
+                info!(
+                    "Successfully cancelled task {} on worker {}",
+                    task_id, worker_id
+                );
                 Ok(())
             }
             Ok(response) => {
-                warn!("Worker returned non-success status when cancelling task {}: {}", task_id, response.status());
+                warn!(
+                    "Worker returned non-success status when cancelling task {}: {}",
+                    task_id,
+                    response.status()
+                );
                 // Still return Ok() as cancellation was attempted
                 Ok(())
             }
             Err(e) => {
-                warn!("Failed to send cancellation request for task {} to worker {}: {}", task_id, worker_id, e);
+                warn!(
+                    "Failed to send cancellation request for task {} to worker {}: {}",
+                    task_id, worker_id, e
+                );
                 // Return error only if it's a critical failure
                 Err(format!("Failed to cancel task: {}", e).into())
             }
@@ -1543,21 +1654,27 @@ impl TaskExecutor {
         // 1. Environment variable: WORKER_{UUID}_ENDPOINT
         // 2. Database query for worker endpoint
         // 3. Default pattern: http://worker-{id}.local:8080
-        
+
         // Check environment variable first (format: WORKER_{UUID}_ENDPOINT)
-        let env_key = format!("WORKER_{}_ENDPOINT", worker_id.to_string().to_uppercase().replace("-", "_"));
+        let env_key = format!(
+            "WORKER_{}_ENDPOINT",
+            worker_id.to_string().to_uppercase().replace("-", "_")
+        );
         if let Ok(endpoint) = std::env::var(&env_key) {
-            info!("Found worker endpoint from environment variable {}: {}", env_key, endpoint);
+            info!(
+                "Found worker endpoint from environment variable {}: {}",
+                env_key, endpoint
+            );
             return Ok(endpoint);
         }
-        
+
         // Check for generic worker endpoint pattern (WORKER_ENDPOINT_PATTERN)
         if let Ok(pattern) = std::env::var("WORKER_ENDPOINT_PATTERN") {
             let endpoint = pattern.replace("{id}", &worker_id.to_string());
             info!("Using worker endpoint pattern: {}", endpoint);
             return Ok(endpoint);
         }
-        
+
         // TODO: Implement database query for worker endpoints
         //       Currently skips database query and uses default pattern; should implement comprehensive database query for worker endpoints with proper error handling and endpoint validation.
         //
@@ -1593,29 +1710,38 @@ impl TaskExecutor {
         // - CAWS Tier: 2 (worker endpoint management)
         // - Change Budget: ~150 LOC
         // - Reviewer Requirements: Database integration and endpoint management expertise
-        
+
         // Default pattern: http://worker-{id}.local:8080
         let worker_endpoint = format!("http://worker-{}.local:8080", worker_id);
-        
+
         // Validate endpoint is reachable (basic health check)
         // Note: Health check is optional - if it fails, we still return the endpoint
         // as the caller may want to handle the error differently
-        match self.client.get(&format!("{}/health", worker_endpoint))
+        match self
+            .client
+            .get(&format!("{}/health", worker_endpoint))
             .timeout(std::time::Duration::from_secs(5))
             .send()
-            .await 
+            .await
         {
             Ok(response) if response.status().is_success() => {
                 info!("Worker {} is healthy at {}", worker_id, worker_endpoint);
                 Ok(worker_endpoint)
             }
             Ok(response) => {
-                warn!("Worker {} returned non-success status: {}", worker_id, response.status());
+                warn!(
+                    "Worker {} returned non-success status: {}",
+                    worker_id,
+                    response.status()
+                );
                 // Still return endpoint - health check failure doesn't mean endpoint is invalid
                 Ok(worker_endpoint)
             }
             Err(e) => {
-                warn!("Failed to reach worker {} at {}: {}", worker_id, worker_endpoint, e);
+                warn!(
+                    "Failed to reach worker {} at {}: {}",
+                    worker_id, worker_endpoint, e
+                );
                 // Return endpoint anyway - may be temporarily unavailable
                 Ok(worker_endpoint)
             }
@@ -1626,7 +1752,7 @@ impl TaskExecutor {
     async fn discover_worker_capabilities(&self, worker_id: Uuid) -> Result<WorkerCapabilities> {
         // Query worker registry for capabilities
         let query = r#"
-            SELECT 
+            SELECT
                 w.id,
                 w.name,
                 w.specialty,
@@ -1645,7 +1771,8 @@ impl TaskExecutor {
         match self.db_client.query(query, &[&worker_id]).await {
             Ok(rows) => {
                 if let Some(row) = rows.first() {
-                    let capabilities_json: serde_json::Value = row.try_get::<serde_json::Value, _>(4)
+                    let capabilities_json: serde_json::Value = row
+                        .try_get::<serde_json::Value, _>(4)
                         .context("Failed to get capabilities JSON")?;
                     let capabilities: Vec<String> = capabilities_json
                         .as_array()
@@ -1656,23 +1783,48 @@ impl TaskExecutor {
 
                     Ok(WorkerCapabilities {
                         worker_id,
-                        name: row.try_get::<String, _>(1).context("Failed to get worker name")?,
-                        specialty: row.try_get::<String, _>(2).context("Failed to get worker specialty")?,
+                        name: row
+                            .try_get::<String, _>(1)
+                            .context("Failed to get worker name")?,
+                        specialty: row
+                            .try_get::<String, _>(2)
+                            .context("Failed to get worker specialty")?,
                         capabilities,
-                        max_concurrent_tasks: row.try_get::<i32, _>(5).context("Failed to get max concurrent tasks")?,
-                        memory_limit_mb: row.try_get::<i32, _>(6).context("Failed to get memory limit")?,
-                        cpu_limit_cores: row.try_get::<i32, _>(7).context("Failed to get CPU limit")?,
-                        is_active: row.try_get::<bool, _>(8).context("Failed to get active status")?,
-                        last_heartbeat: row.try_get::<Option<DateTime<Utc>>, _>(9).context("Failed to get last heartbeat")?,
-                        version: row.try_get::<String, _>(10).context("Failed to get version")?,
-                        endpoint_url: row.try_get::<Option<String>, _>(11).context("Failed to get endpoint URL")?.unwrap_or_else(|| "http://localhost:3000".to_string()),
+                        max_concurrent_tasks: row
+                            .try_get::<i32, _>(5)
+                            .context("Failed to get max concurrent tasks")?,
+                        memory_limit_mb: row
+                            .try_get::<i32, _>(6)
+                            .context("Failed to get memory limit")?,
+                        cpu_limit_cores: row
+                            .try_get::<i32, _>(7)
+                            .context("Failed to get CPU limit")?,
+                        is_active: row
+                            .try_get::<bool, _>(8)
+                            .context("Failed to get active status")?,
+                        last_heartbeat: row
+                            .try_get::<Option<DateTime<Utc>>, _>(9)
+                            .context("Failed to get last heartbeat")?,
+                        version: row
+                            .try_get::<String, _>(10)
+                            .context("Failed to get version")?,
+                        endpoint_url: row
+                            .try_get::<Option<String>, _>(11)
+                            .context("Failed to get endpoint URL")?
+                            .unwrap_or_else(|| "http://localhost:3000".to_string()),
                     })
                 } else {
-                    Err(anyhow::anyhow!("Worker {} not found in registry", worker_id))
+                    Err(anyhow::anyhow!(
+                        "Worker {} not found in registry",
+                        worker_id
+                    ))
                 }
             }
             Err(e) => {
-                error!("Failed to discover worker capabilities for {}: {}", worker_id, e);
+                error!(
+                    "Failed to discover worker capabilities for {}: {}",
+                    worker_id, e
+                );
                 Err(anyhow::anyhow!("Database error: {}", e))
             }
         }
@@ -1694,7 +1846,8 @@ impl TaskExecutor {
         Ok(CapabilityMatch {
             is_suitable: missing_capabilities.is_empty(),
             missing_capabilities,
-            capability_score: self.calculate_capability_score(&required_capabilities, &worker_info.capabilities),
+            capability_score: self
+                .calculate_capability_score(&required_capabilities, &worker_info.capabilities),
             worker_specialty_match: self.check_specialty_match(task_spec, worker_info),
         })
     }
@@ -1707,7 +1860,7 @@ impl TaskExecutor {
     ) -> Result<ExecutionStrategy> {
         let complexity = self.assess_task_complexity(task_spec);
         let worker_load = self.get_worker_current_load(worker_info.worker_id).await?;
-        
+
         Ok(ExecutionStrategy {
             execution_mode: if complexity.is_high() {
                 ConcurrencyMode::Async
@@ -1717,8 +1870,12 @@ impl TaskExecutor {
             timeout_seconds: self.calculate_timeout(task_spec, worker_info),
             retry_config: self.get_retry_config_for_task(task_spec),
             resource_allocation: ResourceAllocation {
-                memory_mb: worker_info.memory_limit_mb.min(complexity.estimated_memory_mb()),
-                cpu_cores: worker_info.cpu_limit_cores.min(complexity.estimated_cpu_cores()),
+                memory_mb: worker_info
+                    .memory_limit_mb
+                    .min(complexity.estimated_memory_mb()),
+                cpu_cores: worker_info
+                    .cpu_limit_cores
+                    .min(complexity.estimated_cpu_cores()),
                 priority: self.determine_priority(task_spec),
             },
             enable_streaming: complexity.supports_streaming(),
@@ -1729,7 +1886,7 @@ impl TaskExecutor {
     /// Check worker health status
     async fn check_worker_health(&self, worker_id: Uuid) -> Result<HealthStatus> {
         let query = r#"
-            SELECT 
+            SELECT
                 w.is_active,
                 w.last_heartbeat,
                 w.health_status,
@@ -1750,7 +1907,7 @@ impl TaskExecutor {
                     let success_count: i64 = row.get(4);
                     let avg_response_time_ms: Option<i64> = row.get(5);
 
-                    let is_healthy = is_active 
+                    let is_healthy = is_active
                         && last_heartbeat.map_or(false, |hb| {
                             chrono::Utc::now() - hb < chrono::Duration::minutes(5)
                         })
@@ -1775,7 +1932,11 @@ impl TaskExecutor {
                         error_count,
                         success_count,
                         avg_response_time_ms,
-                        health_score: self.calculate_health_score(error_count, success_count, avg_response_time_ms),
+                        health_score: self.calculate_health_score(
+                            error_count,
+                            success_count,
+                            avg_response_time_ms,
+                        ),
                     })
                 } else {
                     Err(anyhow::anyhow!("Worker {} not found", worker_id))
@@ -1796,7 +1957,7 @@ impl TaskExecutor {
     ) -> Result<AuthResult> {
         // Check worker permissions and task authorization
         let query = r#"
-            SELECT 
+            SELECT
                 w.id,
                 w.permissions,
                 w.allowed_domains,
@@ -1837,20 +1998,34 @@ impl TaskExecutor {
 
                     // Check domain restrictions
                     let domain_allowed = if !allowed_domains.is_empty() {
-                        task_spec.scope.as_ref()
-                            .map(|s| s.domains.iter().any(|domain| allowed_domains.contains(domain)))
+                        task_spec
+                            .scope
+                            .as_ref()
+                            .map(|s| {
+                                s.domains
+                                    .iter()
+                                    .any(|domain| allowed_domains.contains(domain))
+                            })
                             .unwrap_or(true)
                     } else {
                         true
                     };
 
-                    let domain_restricted = task_spec.scope.as_ref()
-                        .map(|s| s.domains.iter().any(|domain| restricted_domains.contains(domain)))
+                    let domain_restricted = task_spec
+                        .scope
+                        .as_ref()
+                        .map(|s| {
+                            s.domains
+                                .iter()
+                                .any(|domain| restricted_domains.contains(domain))
+                        })
                         .unwrap_or(false);
 
                     // Check risk tier restrictions
                     let risk_tier_allowed = max_risk_tier.map_or(true, |max_tier| {
-                        task_spec.risk_tier.map_or(true, |task_tier| task_tier <= max_tier as u32)
+                        task_spec
+                            .risk_tier
+                            .map_or(true, |task_tier| task_tier <= max_tier as u32)
                     });
 
                     let is_authorized = domain_allowed && !domain_restricted && risk_tier_allowed;
@@ -1894,8 +2069,8 @@ impl TaskExecutor {
         current_task_id: Option<Uuid>,
     ) -> Result<()> {
         let query = r#"
-            UPDATE workers 
-            SET 
+            UPDATE workers
+            SET
                 status = $1,
                 current_task_id = $2,
                 last_activity = NOW(),
@@ -1903,7 +2078,11 @@ impl TaskExecutor {
             WHERE id = $3
         "#;
 
-        match self.db_client.execute(query, &[&status, &current_task_id, &worker_id]).await {
+        match self
+            .db_client
+            .execute(query, &[&status, &current_task_id, &worker_id])
+            .await
+        {
             Ok(_) => {
                 info!("Updated worker {} status to {}", worker_id, status);
                 Ok(())
@@ -1924,7 +2103,7 @@ impl TaskExecutor {
         circuit_breaker: &Arc<CircuitBreaker>,
     ) -> WorkerExecutionResult<RawExecutionResult> {
         let retry_config = &strategy.retry_config;
-        
+
         self.retry_with_backoff_local(
             RetryConfig {
                 max_attempts: retry_config.max_attempts,
@@ -1940,11 +2119,13 @@ impl TaskExecutor {
                 match circuit_breaker.get_state() {
                     system_resilience::resilience_circuit_breaker::CircuitState::Open => {
                         Err(WorkerError::ExecutionError {
-                            message: "Circuit breaker is open".to_string()
+                            message: "Circuit breaker is open".to_string(),
                         })
                     }
-                    system_resilience::resilience_circuit_breaker::CircuitState::HalfOpen | system_resilience::resilience_circuit_breaker::CircuitState::Closed => {
-                        self.execute_with_worker_direct(worker_id, execution_input, strategy).await
+                    system_resilience::resilience_circuit_breaker::CircuitState::HalfOpen
+                    | system_resilience::resilience_circuit_breaker::CircuitState::Closed => {
+                        self.execute_with_worker_direct(worker_id, execution_input, strategy)
+                            .await
                     }
                 }
             },
@@ -1960,7 +2141,7 @@ impl TaskExecutor {
         strategy: &ExecutionStrategy,
     ) -> WorkerExecutionResult<RawExecutionResult> {
         let worker_endpoint = self.get_worker_endpoint(worker_id).await?;
-        
+
         // Create HTTP client with timeout
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(strategy.timeout_seconds))
@@ -1992,19 +2173,26 @@ impl TaskExecutor {
             })?;
 
         if response.status().is_success() {
-            let result: RawExecutionResult = response
-                .json()
-                .await
-                .map_err(|e| WorkerError::Communication {
-                    message: format!("Failed to parse worker response: {}", e),
-                })?;
+            let result: RawExecutionResult =
+                response
+                    .json()
+                    .await
+                    .map_err(|e| WorkerError::Communication {
+                        message: format!("Failed to parse worker response: {}", e),
+                    })?;
             Ok(result)
         } else {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
             Err(WorkerError::ExecutionFailed {
                 worker_id: WorkerId(worker_id),
-                message: format!("Worker execution failed with status {}: {}", status, error_text),
+                message: format!(
+                    "Worker execution failed with status {}: {}",
+                    status, error_text
+                ),
             })
         }
     }
@@ -2012,14 +2200,28 @@ impl TaskExecutor {
     // Helper methods for capability matching and strategy determination
     fn extract_required_capabilities(&self, task_spec: &TaskSpec) -> Vec<String> {
         let mut capabilities = Vec::new();
-        
+
         // Add capabilities based on task domains
         for domain in &task_spec.scope.as_ref().unwrap().domains {
             match domain.as_str() {
-                "frontend" => capabilities.extend(vec!["react".to_string(), "typescript".to_string(), "css".to_string()]),
-                "backend" => capabilities.extend(vec!["rust".to_string(), "api".to_string(), "database".to_string()]),
-                "testing" => capabilities.extend(vec!["testing".to_string(), "jest".to_string(), "integration".to_string()]),
-                "documentation" => capabilities.extend(vec!["markdown".to_string(), "documentation".to_string()]),
+                "frontend" => capabilities.extend(vec![
+                    "react".to_string(),
+                    "typescript".to_string(),
+                    "css".to_string(),
+                ]),
+                "backend" => capabilities.extend(vec![
+                    "rust".to_string(),
+                    "api".to_string(),
+                    "database".to_string(),
+                ]),
+                "testing" => capabilities.extend(vec![
+                    "testing".to_string(),
+                    "jest".to_string(),
+                    "integration".to_string(),
+                ]),
+                "documentation" => {
+                    capabilities.extend(vec!["markdown".to_string(), "documentation".to_string()])
+                }
                 _ => capabilities.push(domain.clone()),
             }
         }
@@ -2044,27 +2246,60 @@ impl TaskExecutor {
         if required.is_empty() {
             return 1.0;
         }
-        
-        let matched = required.iter().filter(|cap| available.contains(cap)).count();
+
+        let matched = required
+            .iter()
+            .filter(|cap| available.contains(cap))
+            .count();
         matched as f64 / required.len() as f64
     }
 
-    fn check_specialty_match(&self, task_spec: &TaskSpec, worker_info: &WorkerCapabilities) -> bool {
+    fn check_specialty_match(
+        &self,
+        task_spec: &TaskSpec,
+        worker_info: &WorkerCapabilities,
+    ) -> bool {
         // Check if worker specialty matches task requirements
-        task_spec.scope.as_ref()
-            .map(|s| s.domains.iter().any(|domain| {
-                worker_info.specialty.to_lowercase().contains(&domain.to_lowercase())
-            }))
+        task_spec
+            .scope
+            .as_ref()
+            .map(|s| {
+                s.domains.iter().any(|domain| {
+                    worker_info
+                        .specialty
+                        .to_lowercase()
+                        .contains(&domain.to_lowercase())
+                })
+            })
             .unwrap_or(false)
     }
 
     fn assess_task_complexity(&self, task_spec: &TaskSpec) -> TaskComplexity {
-        let file_count = task_spec.scope.as_ref().map(|s| s.files_affected.len()).unwrap_or(0);
-        let loc_estimate = task_spec.scope.as_ref().and_then(|s| s.max_loc).unwrap_or(100);
-        let domain_count = task_spec.scope.as_ref().map(|s| s.domains.len()).unwrap_or(0);
-        let criteria_count = task_spec.acceptance_criteria.as_ref().map(|c| c.len()).unwrap_or(0);
+        let file_count = task_spec
+            .scope
+            .as_ref()
+            .map(|s| s.files_affected.len())
+            .unwrap_or(0);
+        let loc_estimate = task_spec
+            .scope
+            .as_ref()
+            .and_then(|s| s.max_loc)
+            .unwrap_or(100);
+        let domain_count = task_spec
+            .scope
+            .as_ref()
+            .map(|s| s.domains.len())
+            .unwrap_or(0);
+        let criteria_count = task_spec
+            .acceptance_criteria
+            .as_ref()
+            .map(|c| c.len())
+            .unwrap_or(0);
 
-        let complexity_score = (file_count * 2) + (loc_estimate as usize / 100) + (domain_count * 3) + (criteria_count * 2);
+        let complexity_score = (file_count * 2)
+            + (loc_estimate as usize / 100)
+            + (domain_count * 3)
+            + (criteria_count * 2);
 
         if complexity_score > 50 {
             TaskComplexity::High
@@ -2077,13 +2312,13 @@ impl TaskExecutor {
 
     async fn get_worker_current_load(&self, worker_id: Uuid) -> Result<WorkerLoad> {
         let query = r#"
-            SELECT 
+            SELECT
                 COUNT(*) as active_tasks,
                 AVG(execution_time_ms) as avg_execution_time,
                 MAX(execution_time_ms) as max_execution_time
             FROM task_executions te
             JOIN tasks t ON te.task_id = t.id
-            WHERE te.worker_id = $1 
+            WHERE te.worker_id = $1
                 AND te.status IN ('running', 'pending')
                 AND te.started_at > NOW() - INTERVAL '1 hour'
         "#;
@@ -2164,32 +2399,52 @@ impl TaskExecutor {
         }
     }
 
-    fn calculate_health_score(&self, error_count: i64, success_count: i64, avg_response_time_ms: Option<i64>) -> f64 {
+    fn calculate_health_score(
+        &self,
+        error_count: i64,
+        success_count: i64,
+        avg_response_time_ms: Option<i64>,
+    ) -> f64 {
         if success_count == 0 && error_count == 0 {
             return 0.5; // Neutral score for new workers
         }
 
         let total_requests = success_count + error_count;
         let success_rate = success_count as f64 / total_requests as f64;
-        
+
         let response_time_score = avg_response_time_ms.map_or(1.0, |time_ms| {
-            if time_ms < 1000 { 1.0 }
-            else if time_ms < 5000 { 0.8 }
-            else if time_ms < 10000 { 0.6 }
-            else { 0.4 }
+            if time_ms < 1000 {
+                1.0
+            } else if time_ms < 5000 {
+                0.8
+            } else if time_ms < 10000 {
+                0.6
+            } else {
+                0.4
+            }
         });
 
         (success_rate * 0.7) + (response_time_score * 0.3)
     }
 
-    fn calculate_load_percentage(&self, active_tasks: i64, avg_execution_time_ms: Option<i64>) -> f64 {
+    fn calculate_load_percentage(
+        &self,
+        active_tasks: i64,
+        avg_execution_time_ms: Option<i64>,
+    ) -> f64 {
         let base_load = active_tasks as f64 * 10.0; // 10% per active task
         let time_load = avg_execution_time_ms.map_or(0.0, |time_ms| {
-            if time_ms > 30000 { 20.0 } // High execution time penalty
-            else if time_ms > 10000 { 10.0 }
-            else { 0.0 }
+            if time_ms > 30000 {
+                20.0
+            }
+            // High execution time penalty
+            else if time_ms > 10000 {
+                10.0
+            } else {
+                0.0
+            }
         });
-        
+
         (base_load + time_load).min(100.0)
     }
 
@@ -2200,16 +2455,19 @@ impl TaskExecutor {
 
         match self.db_client.query_one(query, &[&worker_id]).await {
             Ok(Some(row)) => {
-                let endpoint: String = row.try_get("endpoint")
-                    .map_err(|e| WorkerError::DatabaseError { message: format!("Failed to get endpoint from row: {}", e) })?;
+                let endpoint: String =
+                    row.try_get("endpoint")
+                        .map_err(|e| WorkerError::DatabaseError {
+                            message: format!("Failed to get endpoint from row: {}", e),
+                        })?;
                 Ok(endpoint)
             }
-            Ok(None) => {
-                Err(WorkerError::WorkerNotFound { worker_id: WorkerId(worker_id) })
-            }
-            Err(e) => {
-                Err(WorkerError::DatabaseError { message: format!("Failed to get worker endpoint: {}", e) })
-            }
+            Ok(None) => Err(WorkerError::WorkerNotFound {
+                worker_id: WorkerId(worker_id),
+            }),
+            Err(e) => Err(WorkerError::DatabaseError {
+                message: format!("Failed to get worker endpoint: {}", e),
+            }),
         }
     }
 
@@ -2244,7 +2502,8 @@ impl TaskExecutor {
 
                     // Add jitter if enabled
                     let actual_delay = if retry_config.use_jitter {
-                        let jitter = (rand::random::<f64>() - 0.5) * 2.0 * retry_config.jitter_factor;
+                        let jitter =
+                            (rand::random::<f64>() - 0.5) * 2.0 * retry_config.jitter_factor;
                         ((delay_ms as f64 * (1.0 + jitter)) as u64).max(0)
                     } else {
                         delay_ms

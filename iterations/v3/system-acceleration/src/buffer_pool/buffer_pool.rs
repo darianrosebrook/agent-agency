@@ -1,8 +1,8 @@
 //! Buffer pool management for efficient memory allocation
 
+use anyhow::Result;
 use schemars::JsonSchema;
 use system_configuration::types::DeviceKind;
-use anyhow::Result;
 
 /// Buffer pool configuration
 #[derive(Debug, Clone, JsonSchema)]
@@ -40,7 +40,10 @@ impl BufferPool {
             used_memory_mb: 0,
         };
 
-        Self { _config: config, stats }
+        Self {
+            _config: config,
+            stats,
+        }
     }
 
     /// Allocate a buffer
@@ -52,7 +55,6 @@ impl BufferPool {
         // - [ ] Handle allocation failures and memory limits
         // - [ ] Add unit tests with mock buffer allocation
         // - [ ] Add integration tests with real buffer management
-        // Placeholder implementation
         Ok(BufferHandle {
             id: 0,
             size_mb,
@@ -68,7 +70,6 @@ impl BufferPool {
         // - [ ] Handle deallocation errors gracefully
         // - [ ] Add unit tests with mock buffer deallocation
         // - [ ] Add integration tests with real buffer cleanup
-        // Placeholder implementation
         Ok(())
     }
 

@@ -5,28 +5,27 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::{anyhow, Result};
+use chrono::Utc;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
-use chrono::Utc;
-use anyhow::{anyhow, Result};
 // Graph algorithms moved to shared module - no longer needed here
 use agent_agency_contracts::{
-    *,
-    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, MilestoneState},
-    WorkingSpec,
+    planning_io::{
+        ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, MilestoneState,
+    },
+    WorkingSpec, *,
 };
 
-use crate::planning::{
-    plan_types::{ExecutionPlan, ExecutionContext, PlanGenerationContext, PlanningConstraints},
-    caws_integration::CawsPlanBridge,
-    tool_chain_bridge::ToolChainBridge,
-    legacy_plan_adapter::LegacyPlanAdapter,
-    WorkingSpecProvider,
-    TaskDescriptorProvider,
-};
 use crate::coreml::CoreMLManager;
+use crate::planning::{
+    caws_integration::CawsPlanBridge,
+    legacy_plan_adapter::LegacyPlanAdapter,
+    plan_types::{ExecutionContext, ExecutionPlan, PlanGenerationContext, PlanningConstraints},
+    tool_chain_bridge::ToolChainBridge,
+};
 use std::sync::Arc;
 use system_acceleration::ane::infer::MistralInferenceOptions;
 use tracing::{info, warn};
@@ -113,22 +112,29 @@ impl PlanGenerator {
 
         match strategy {
             PlanGenerationStrategy::AIAssisted => {
-                self.generate_ai_assisted(&working_spec, &task_descriptor, context).await
+                self.generate_ai_assisted(&working_spec, &task_descriptor, context)
+                    .await
             }
             PlanGenerationStrategy::ToolChainBridge => {
-                self.generate_tool_chain_bridge(&working_spec, &task_descriptor, context).await
+                self.generate_tool_chain_bridge(&working_spec, &task_descriptor, context)
+                    .await
             }
             PlanGenerationStrategy::LegacyAdapter => {
-                self.generate_legacy_adapter(&working_spec, &task_descriptor, context).await
+                self.generate_legacy_adapter(&working_spec, &task_descriptor, context)
+                    .await
             }
             PlanGenerationStrategy::Hybrid => {
-                self.generate_hybrid(&working_spec, &task_descriptor, context).await
+                self.generate_hybrid(&working_spec, &task_descriptor, context)
+                    .await
             }
         }
     }
 
     /// Select appropriate generation strategy
-    fn select_generation_strategy(&self, working_spec: &WorkingSpec) -> Result<PlanGenerationStrategy> {
+    fn select_generation_strategy(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> Result<PlanGenerationStrategy> {
         // Prefer tool chain bridge if available and compatible
         if self.tool_chain_bridge.is_some() && self.is_tool_chain_compatible(working_spec) {
             return Ok(PlanGenerationStrategy::ToolChainBridge);
@@ -147,12 +153,12 @@ impl PlanGenerator {
     fn is_tool_chain_compatible(&self, working_spec: &WorkingSpec) -> bool {
         // Check if working spec has compatible acceptance criteria
         // and can be decomposed into tool chains
-        working_spec.acceptance_criteria.len() > 0 &&
-        working_spec.acceptance_criteria.iter().all(|criterion|
-            !criterion.given.is_empty() &&
-            !criterion.when.is_empty() &&
-            !criterion.then.is_empty()
-        )
+        working_spec.acceptance_criteria.len() > 0
+            && working_spec.acceptance_criteria.iter().all(|criterion| {
+                !criterion.given.is_empty()
+                    && !criterion.when.is_empty()
+                    && !criterion.then.is_empty()
+            })
     }
 
     /// Generate plan using AI assistance
@@ -166,7 +172,9 @@ impl PlanGenerator {
         let contract_plan = self.caws_bridge.spec_to_plan(working_spec.clone())?;
 
         // Enhance with AI-assisted milestone decomposition
-        let enhanced_plan = self.enhance_with_ai_assistance(contract_plan, task_descriptor, context).await?;
+        let enhanced_plan = self
+            .enhance_with_ai_assistance(contract_plan, task_descriptor, context)
+            .await?;
 
         // Wrap in orchestration plan
         self.wrap_in_orchestration_plan(enhanced_plan, context)
@@ -181,7 +189,9 @@ impl PlanGenerator {
     ) -> Result<ExecutionPlan> {
         if let Some(bridge) = &self.tool_chain_bridge {
             // Use tool chain bridge to generate plan
-            let contract_plan = bridge.generate_from_working_spec(working_spec.clone()).await?;
+            let contract_plan = bridge
+                .generate_from_working_spec(working_spec.clone())
+                .await?;
             self.wrap_in_orchestration_plan(contract_plan, context)
         } else {
             Err(anyhow!("Tool chain bridge not available"))
@@ -212,12 +222,16 @@ impl PlanGenerator {
         context: &PlanGenerationContext,
     ) -> Result<ExecutionPlan> {
         // Try tool chain bridge first
-        if let Ok(plan) = self.generate_tool_chain_bridge(working_spec, task_descriptor, context).await {
+        if let Ok(plan) = self
+            .generate_tool_chain_bridge(working_spec, task_descriptor, context)
+            .await
+        {
             return Ok(plan);
         }
 
         // Fall back to AI-assisted generation
-        self.generate_ai_assisted(working_spec, task_descriptor, context).await
+        self.generate_ai_assisted(working_spec, task_descriptor, context)
+            .await
     }
 
     /// Enhance plan with AI assistance
@@ -233,12 +247,15 @@ impl PlanGenerator {
 
         // Use AI to enhance milestone decomposition if CoreML is available
         if let Some(ref coreml_manager) = self.coreml_manager {
-            if let Ok(_ai_suggestions) = self.generate_milestone_decomposition_prompt(
-                task_descriptor,
-                &contract_plan,
-                &complexity,
-                coreml_manager,
-            ).await {
+            if let Ok(_ai_suggestions) = self
+                .generate_milestone_decomposition_prompt(
+                    task_descriptor,
+                    &contract_plan,
+                    &complexity,
+                    coreml_manager,
+                )
+                .await
+            {
                 info!("AI-assisted milestone decomposition completed");
             } else {
                 warn!("AI-assisted milestone decomposition failed, using fallback");
@@ -246,18 +263,16 @@ impl PlanGenerator {
         }
 
         // Decompose into optimal milestones
-        let milestones = self.decompose_into_milestones(
-            &contract_plan,
-            &complexity,
-            &dependencies,
-            context
-        ).await?;
+        let milestones = self
+            .decompose_into_milestones(&contract_plan, &complexity, &dependencies, context)
+            .await?;
 
         // Build dependency graph
         let dependency_graph = self.build_dependency_graph(&milestones, &dependencies)?;
 
         // Optimize for parallel execution
-        let optimized_milestones = self.optimize_for_parallelism(milestones, &context.resource_inventory)?;
+        let optimized_milestones =
+            self.optimize_for_parallelism(milestones, &context.resource_inventory)?;
 
         // Update plan with enhanced data
         contract_plan.milestones = optimized_milestones;
@@ -292,7 +307,10 @@ impl PlanGenerator {
         for criterion in &plan.contract_plan.acceptance_criteria {
             let deps = self.extract_dependencies_from_criterion(criterion)?;
             for dep in deps {
-                dependencies.entry(dep.clone()).or_insert(vec![]).push(criterion.id.clone());
+                dependencies
+                    .entry(dep.clone())
+                    .or_insert(vec![])
+                    .push(criterion.id.clone());
                 if self.is_blocking_dependency(&dep) {
                     blocking_items.insert(dep);
                 }
@@ -307,7 +325,10 @@ impl PlanGenerator {
     }
 
     /// Extract dependencies from acceptance criterion
-    fn extract_dependencies_from_criterion(&self, criterion: &agent_agency_contracts::AcceptanceCriterion) -> Result<Vec<String>> {
+    fn extract_dependencies_from_criterion(
+        &self,
+        criterion: &agent_agency_contracts::AcceptanceCriterion,
+    ) -> Result<Vec<String>> {
         let deps = vec![];
 
         // Look for dependency keywords in the criterion text
@@ -404,26 +425,26 @@ impl PlanGenerator {
         // Use AI to suggest optimal milestone breakdown if CoreML is available
         let working_spec = context.working_spec_provider.get_working_spec().await?;
         let task_descriptor = context.task_descriptor.get_task_descriptor().await?;
-        
+
         if let Some(ref coreml_manager) = self.coreml_manager {
-            if let Ok(_ai_suggestions) = self.generate_milestone_suggestions_prompt(
-                &task_descriptor,
-                &working_spec,
-                complexity,
-                coreml_manager,
-            ).await {
+            if let Ok(_ai_suggestions) = self
+                .generate_milestone_suggestions_prompt(
+                    &task_descriptor,
+                    &working_spec,
+                    complexity,
+                    coreml_manager,
+                )
+                .await
+            {
                 info!("Using AI suggestions for milestone decomposition");
             }
         }
 
         // Create milestones based on acceptance criteria from working spec
         for criterion in &working_spec.acceptance_criteria {
-            let milestone = self.create_milestone_from_criterion(
-                criterion,
-                complexity,
-                dependencies,
-                context,
-            ).await?;
+            let milestone = self
+                .create_milestone_from_criterion(criterion, complexity, dependencies, context)
+                .await?;
             milestones.push(milestone);
         }
 
@@ -444,7 +465,10 @@ impl PlanGenerator {
         context: &PlanGenerationContext,
     ) -> Result<ContractMilestone> {
         let milestone_id = criterion.id.clone();
-        let objective = format!("{} → {} → {}", criterion.given, criterion.when, criterion.then);
+        let objective = format!(
+            "{} → {} → {}",
+            criterion.given, criterion.when, criterion.then
+        );
 
         // Determine scope based on objective
         let scope = self.determine_milestone_scope(&objective, context)?;
@@ -467,7 +491,7 @@ impl PlanGenerator {
             objective: objective.clone(), // Clone for use in rollback_plan
             scope,
             interfaces: vec![], // Would be populated based on analysis
-            tests: vec![], // Would be populated based on requirements
+            tests: vec![],      // Would be populated based on requirements
             evidence_gate,
             quality_gates: vec![], // Quality gates from evidence gate
             dependencies: dependencies.get_dependencies_for_criterion(&criterion.id),
@@ -486,7 +510,11 @@ impl PlanGenerator {
     }
 
     /// Determine milestone scope
-    fn determine_milestone_scope(&self, objective: &str, _context: &PlanGenerationContext) -> Result<MilestoneScope> {
+    fn determine_milestone_scope(
+        &self,
+        objective: &str,
+        _context: &PlanGenerationContext,
+    ) -> Result<MilestoneScope> {
         // TODO: Use NLP and project analysis to determine milestone scope
         //       Currently returns empty scope; should use NLP and project analysis to determine affected files and operations.
         //
@@ -519,7 +547,8 @@ impl PlanGenerator {
         // - CAWS Tier: 2 (planning feature)
         // - Change Budget: ~120 LOC
         // - Reviewer Requirements: NLP and project analysis expertise
-        Ok(MilestoneScope { // Temporary: empty scope until NLP and project analysis
+        Ok(MilestoneScope {
+            // Temporary: empty scope until NLP and project analysis
             excluded_paths: vec![],
             included_paths: vec![],
             files: vec![], // Would be populated by analysis
@@ -532,7 +561,11 @@ impl PlanGenerator {
     }
 
     /// Generate evidence gate
-    fn generate_evidence_gate(&self, risk_tier: u8, complexity: &TaskComplexity) -> Result<EvidenceGate> {
+    fn generate_evidence_gate(
+        &self,
+        risk_tier: u8,
+        complexity: &TaskComplexity,
+    ) -> Result<EvidenceGate> {
         let (min_coverage, min_mutation) = match risk_tier {
             1 => (0.90, 0.70),
             2 => (0.80, 0.50),
@@ -553,7 +586,12 @@ impl PlanGenerator {
     }
 
     /// Estimate milestone effort
-    fn estimate_milestone_effort(&self, complexity: &TaskComplexity, scope: &MilestoneScope, dependencies: &DependencyAnalysis) -> Result<f64> {
+    fn estimate_milestone_effort(
+        &self,
+        complexity: &TaskComplexity,
+        scope: &MilestoneScope,
+        dependencies: &DependencyAnalysis,
+    ) -> Result<f64> {
         let base_effort = match complexity {
             TaskComplexity::Simple => 2.0,
             TaskComplexity::Moderate => 4.0,
@@ -567,7 +605,11 @@ impl PlanGenerator {
     }
 
     /// Determine milestone priority
-    fn determine_priority(&self, complexity: &TaskComplexity, dependencies: &DependencyAnalysis) -> MilestonePriority {
+    fn determine_priority(
+        &self,
+        complexity: &TaskComplexity,
+        dependencies: &DependencyAnalysis,
+    ) -> MilestonePriority {
         if dependencies.has_blocking_dependencies() {
             MilestonePriority::Critical
         } else if matches!(complexity, TaskComplexity::Complex) {
@@ -578,20 +620,27 @@ impl PlanGenerator {
     }
 
     /// Build dependency graph
-    fn build_dependency_graph(&self, milestones: &[ContractMilestone], dependencies: &DependencyAnalysis) -> Result<DependencyGraph> {
+    fn build_dependency_graph(
+        &self,
+        milestones: &[ContractMilestone],
+        dependencies: &DependencyAnalysis,
+    ) -> Result<DependencyGraph> {
         let mut nodes = HashMap::new();
         let mut edges = vec![];
 
         // Create nodes
         for milestone in milestones {
-            nodes.insert(milestone.id.clone(), DependencyNode {
-                milestone_id: milestone.id.clone(),
-                node_type: DependencyNodeType::Milestone,
-                estimated_cost: milestone.estimated_effort,
-                estimated_time_ms: (milestone.estimated_effort * 3600.0 * 1000.0) as u64,
-                resource_requirements: HashMap::new(),
-                metadata: HashMap::new(),
-            });
+            nodes.insert(
+                milestone.id.clone(),
+                DependencyNode {
+                    milestone_id: milestone.id.clone(),
+                    node_type: DependencyNodeType::Milestone,
+                    estimated_cost: milestone.estimated_effort,
+                    estimated_time_ms: (milestone.estimated_effort * 3600.0 * 1000.0) as u64,
+                    resource_requirements: HashMap::new(),
+                    metadata: HashMap::new(),
+                },
+            );
         }
 
         // Create edges based on dependencies
@@ -653,12 +702,16 @@ impl PlanGenerator {
             // - Change Budget: ~100 LOC
             // - Reviewer Requirements: Graph algorithms expertise
             has_cycles: false, // Temporary: assume no cycles until cycle detection is implemented
-            cycles: vec![], // Temporary: empty until cycle detection
+            cycles: vec![],    // Temporary: empty until cycle detection
         })
     }
 
     /// Wrap contract plan in orchestration plan
-    fn wrap_in_orchestration_plan(&self, contract_plan: ContractExecutionPlan, context: &PlanGenerationContext) -> Result<ExecutionPlan> {
+    fn wrap_in_orchestration_plan(
+        &self,
+        contract_plan: ContractExecutionPlan,
+        context: &PlanGenerationContext,
+    ) -> Result<ExecutionPlan> {
         Ok(ExecutionPlan {
             contract_plan,
             orchestration_meta: OrchestrationMetadata {
@@ -682,7 +735,10 @@ impl PlanGenerator {
     }
 
     // Placeholder implementations for complex methods
-    fn build_dependency_graph_from_analysis(&self, _dependencies: &HashMap<String, Vec<String>>) -> Result<DependencyGraph> {
+    fn build_dependency_graph_from_analysis(
+        &self,
+        _dependencies: &HashMap<String, Vec<String>>,
+    ) -> Result<DependencyGraph> {
         Ok(DependencyGraph {
             nodes: HashMap::new(),
             edges: vec![],
@@ -693,13 +749,20 @@ impl PlanGenerator {
         })
     }
 
-    fn needs_infrastructure_milestone(&self, plan: &ContractExecutionPlan, complexity: &TaskComplexity) -> Result<bool> {
+    fn needs_infrastructure_milestone(
+        &self,
+        plan: &ContractExecutionPlan,
+        complexity: &TaskComplexity,
+    ) -> Result<bool> {
         Ok(matches!(complexity, TaskComplexity::Complex) && plan.milestones.len() > 3)
     }
 
-    fn create_infrastructure_milestone(&self, _plan: &ContractExecutionPlan) -> Result<ContractMilestone> {
-        use agent_agency_contracts::planning_io::{MilestoneState, MilestonePriority};
-        
+    fn create_infrastructure_milestone(
+        &self,
+        _plan: &ContractExecutionPlan,
+    ) -> Result<ContractMilestone> {
+        use agent_agency_contracts::planning_io::{MilestonePriority, MilestoneState};
+
         Ok(ContractMilestone {
             id: "M0".to_string(),
             objective: "Set up infrastructure and dependencies".to_string(),
@@ -740,7 +803,11 @@ impl PlanGenerator {
         })
     }
 
-    fn optimize_for_parallelism(&self, milestones: Vec<ContractMilestone>, _resources: &ResourceInventory) -> Result<Vec<ContractMilestone>> {
+    fn optimize_for_parallelism(
+        &self,
+        milestones: Vec<ContractMilestone>,
+        _resources: &ResourceInventory,
+    ) -> Result<Vec<ContractMilestone>> {
         // Basic optimization - real implementation would analyze dependencies and resources
         Ok(milestones)
     }
@@ -749,12 +816,20 @@ impl PlanGenerator {
         format!("Revert changes made for: {}", objective)
     }
 
-    fn calculate_critical_path(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<String>> {
+    fn calculate_critical_path(
+        &self,
+        nodes: &HashMap<String, DependencyNode>,
+        edges: &[DependencyEdge],
+    ) -> Result<Vec<String>> {
         // Use shared graph algorithm for critical path calculation
         crate::planning::graph_algorithms::calculate_critical_path(nodes, edges)
     }
 
-    fn identify_parallel_groups(&self, nodes: &HashMap<String, DependencyNode>, edges: &[DependencyEdge]) -> Result<Vec<Vec<String>>> {
+    fn identify_parallel_groups(
+        &self,
+        nodes: &HashMap<String, DependencyNode>,
+        edges: &[DependencyEdge],
+    ) -> Result<Vec<Vec<String>>> {
         // Use shared graph algorithm for parallel group identification
         crate::planning::graph_algorithms::identify_parallel_groups(nodes, edges)
     }
@@ -803,7 +878,9 @@ Provide your analysis and milestone suggestions in a structured format."#,
             use_kv_cache: true,
         };
 
-        coreml_manager.generate_text("mistral-7b-instruct", &prompt, &options).await
+        coreml_manager
+            .generate_text("mistral-7b-instruct", &prompt, &options)
+            .await
             .map_err(|e| anyhow!("CoreML inference failed: {}", e))
     }
 
@@ -815,7 +892,9 @@ Provide your analysis and milestone suggestions in a structured format."#,
         complexity: &TaskComplexity,
         coreml_manager: &CoreMLManager,
     ) -> Result<String> {
-        let acceptance_criteria_text: Vec<String> = working_spec.acceptance_criteria.iter()
+        let acceptance_criteria_text: Vec<String> = working_spec
+            .acceptance_criteria
+            .iter()
             .map(|c| format!("- {}: {} → {} → {}", c.id, c.given, c.when, c.then))
             .collect();
 
@@ -857,7 +936,9 @@ Provide milestone suggestions in a structured format with:
             use_kv_cache: true,
         };
 
-        coreml_manager.generate_text("mistral-7b-instruct", &prompt, &options).await
+        coreml_manager
+            .generate_text("mistral-7b-instruct", &prompt, &options)
+            .await
             .map_err(|e| anyhow!("CoreML inference failed: {}", e))
     }
 }
@@ -871,7 +952,6 @@ enum TaskComplexity {
     Complex,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct DependencyAnalysis {
     pub dependencies: HashMap<String, Vec<String>>,
@@ -881,7 +961,10 @@ struct DependencyAnalysis {
 
 impl DependencyAnalysis {
     fn get_dependencies_for_criterion(&self, criterion_id: &str) -> Vec<String> {
-        self.dependencies.get(criterion_id).cloned().unwrap_or_default()
+        self.dependencies
+            .get(criterion_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     fn is_blocking_criterion(&self, criterion_id: &str) -> bool {
@@ -889,12 +972,12 @@ impl DependencyAnalysis {
         // 1. It's explicitly marked as blocking in blocking_items
         // 2. Other criteria depend on it (it's a dependency for others)
         // 3. It has dependencies that are blocking (transitive blocking)
-        
+
         // Check if explicitly marked as blocking
         if self.blocking_items.contains(criterion_id) {
             return true;
         }
-        
+
         // Check if other criteria depend on this criterion
         // A criterion blocks others if it appears as a dependency for other criteria
         for (dependent_id, deps) in &self.dependencies {
@@ -903,7 +986,7 @@ impl DependencyAnalysis {
                 return true;
             }
         }
-        
+
         // Check transitive blocking: if this criterion depends on blocking items
         if let Some(deps) = self.dependencies.get(criterion_id) {
             for dep in deps {
@@ -913,7 +996,7 @@ impl DependencyAnalysis {
                 }
             }
         }
-        
+
         false
     }
 
@@ -921,15 +1004,15 @@ impl DependencyAnalysis {
         if !self.is_blocking_criterion(criterion_id) {
             return None;
         }
-        
+
         // Build detailed blocking reason
         let mut reasons = Vec::new();
-        
+
         // Check if explicitly marked as blocking
         if self.blocking_items.contains(criterion_id) {
             reasons.push("explicitly marked as blocking".to_string());
         }
-        
+
         // Check which criteria depend on this one
         let mut dependent_criteria = Vec::new();
         for (dependent_id, deps) in &self.dependencies {
@@ -937,25 +1020,35 @@ impl DependencyAnalysis {
                 dependent_criteria.push(dependent_id.clone());
             }
         }
-        
+
         if !dependent_criteria.is_empty() {
-            reasons.push(format!("blocks {} dependent criteria", dependent_criteria.len()));
+            reasons.push(format!(
+                "blocks {} dependent criteria",
+                dependent_criteria.len()
+            ));
         }
-        
+
         // Check transitive blocking
         if let Some(deps) = self.dependencies.get(criterion_id) {
-            let blocking_deps: Vec<_> = deps.iter()
+            let blocking_deps: Vec<_> = deps
+                .iter()
                 .filter(|dep| self.is_blocking_criterion(dep))
                 .collect();
             if !blocking_deps.is_empty() {
-                reasons.push(format!("depends on {} blocking criteria", blocking_deps.len()));
+                reasons.push(format!(
+                    "depends on {} blocking criteria",
+                    blocking_deps.len()
+                ));
             }
         }
-        
+
         if reasons.is_empty() {
             Some("Blocks dependent milestones".to_string())
         } else {
-            Some(format!("Blocks dependent milestones: {}", reasons.join(", ")))
+            Some(format!(
+                "Blocks dependent milestones: {}",
+                reasons.join(", ")
+            ))
         }
     }
 
@@ -973,11 +1066,11 @@ impl DependencyAnalysis {
 }
 
 // Import missing types
-use agent_agency_contracts::planning_io::{
-    MilestoneScope, EvidenceGate, DependencyGraph, DependencyNode, DependencyEdge,
-    DependencyNodeType, DependencyEdgeType, MilestonePriority,
-};
 use crate::planning::plan_types::{OrchestrationMetadata, ResourceInventory};
+use agent_agency_contracts::planning_io::{
+    DependencyEdge, DependencyEdgeType, DependencyGraph, DependencyNode, DependencyNodeType,
+    EvidenceGate, MilestonePriority, MilestoneScope,
+};
 
 #[cfg(test)]
 mod tests {
@@ -1074,10 +1167,15 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::planning::plan_types::WorkingSpecProvider for MockWorkingSpecProvider {
-        async fn get_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
-            use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, TestPlan, RollbackPlan, WorkingSpecContext, task_request::Environment};
+        async fn get_working_spec(
+            &self,
+        ) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
+            use agent_agency_contracts::{
+                task_request::Environment, RollbackPlan, TestPlan, WorkingSpec,
+                WorkingSpecConstraints, WorkingSpecContext,
+            };
             use chrono::Utc;
-            
+
             Ok(WorkingSpec {
                 version: "1.0".to_string(),
                 id: "test-spec".to_string(),
@@ -1118,7 +1216,8 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 file_changes: vec![],
                 coverage_targets: None,
@@ -1131,12 +1230,15 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::planning::plan_types::TaskDescriptorProvider for MockTaskDescriptorProvider {
-        async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::types::planning::TaskDescriptor, anyhow::Error> {
-            use agent_agency_contracts::types::planning::TaskDescriptor;
-            use agent_agency_contracts::types::planning::{TaskPriority, ExecutionMode};
+        async fn get_task_descriptor(
+            &self,
+        ) -> Result<agent_agency_contracts::types::planning::TaskDescriptor, anyhow::Error>
+        {
             use agent_agency_contracts::planning_io::ChangeBudget;
             use agent_agency_contracts::task_request::ScopeRestrictions;
-            
+            use agent_agency_contracts::types::planning::TaskDescriptor;
+            use agent_agency_contracts::types::planning::{ExecutionMode, TaskPriority};
+
             Ok(TaskDescriptor {
                 task_id: uuid::Uuid::new_v4(),
                 description: "Test task".to_string(),
@@ -1146,7 +1248,8 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 priority: TaskPriority::Normal,
                 execution_mode: ExecutionMode::Auto,
@@ -1167,6 +1270,9 @@ mod tests {
     }
 
     // Import missing types
-    use agent_agency_contracts::{WorkingSpec, TaskDescriptor};
-    use crate::planning::plan_types::{PlanningConstraints, RiskTolerance, QualityRequirements, ParallelPreferences, LoadBalancingStrategy};
+    use crate::planning::plan_types::{
+        LoadBalancingStrategy, ParallelPreferences, PlanningConstraints, QualityRequirements,
+        RiskTolerance,
+    };
+    use agent_agency_contracts::{TaskDescriptor, WorkingSpec};
 }

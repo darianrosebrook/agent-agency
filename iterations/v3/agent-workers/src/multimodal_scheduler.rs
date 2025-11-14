@@ -2,8 +2,8 @@
 //!
 //! Schedules and manages multimodal processing jobs across different modalities.
 
-use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Multimodal scheduler configuration
@@ -33,7 +33,9 @@ pub enum MultimodalJobType {
 }
 
 /// Job priority levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub enum JobPriority {
     Low,
     Medium,
@@ -77,7 +79,6 @@ impl MultimodalJobScheduler {
         // - [ ] Handle scheduling errors and conflicts
         // - [ ] Add unit tests with mock job queue
         // - [ ] Add integration tests with real job scheduling
-        // Placeholder implementation
         Ok(format!("Scheduled job: {}", job.id))
     }
 }

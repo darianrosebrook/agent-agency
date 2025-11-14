@@ -4,9 +4,8 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Inverted index for efficient keyword search
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InvertedIndex {
     index: HashMap<String, Vec<Posting>>,
 }
@@ -20,7 +19,12 @@ impl InvertedIndex {
     }
 
     /// Add a term to the index
-    pub fn add_term(&mut self, term: &str, document_id: usize, _document: &crate::research_types::KnowledgeEntry) {
+    pub fn add_term(
+        &mut self,
+        term: &str,
+        document_id: usize,
+        _document: &crate::research_types::KnowledgeEntry,
+    ) {
         let postings = self.index.entry(term.to_string()).or_insert_with(Vec::new);
 
         // Check if document already exists
@@ -46,7 +50,7 @@ impl InvertedIndex {
 
 /// Posting in the inverted index
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Posting {
     pub document_id: usize,
     pub positions: Vec<usize>,
@@ -55,7 +59,7 @@ pub struct Posting {
 
 /// Search result from inverted index
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub document_id: usize,
     pub score: f32,

@@ -3,8 +3,8 @@
 //! Defines all artifacts produced during task execution with provenance,
 //! test results, coverage data, and complete audit trails.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// All artifacts produced during task execution with provenance
@@ -630,21 +630,25 @@ pub struct ArtifactMetadata {
 }
 
 /// Validate an execution artifacts value against the JSON schema
-pub fn validate_execution_artifacts_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_execution_artifacts_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::EXECUTION_ARTIFACTS_SCHEMA;
 
-    EXECUTION_ARTIFACTS_SCHEMA.validate(value).map_err(|errors| {
-        let issues = errors
-            .into_iter()
-            .map(|error| crate::contract_errors::ValidationIssue {
-                instance_path: error.instance_path.to_string(),
-                schema_path: error.schema_path.to_string(),
-                message: error.to_string(),
-            })
-            .collect();
-        ContractError::validation(ContractKind::ExecutionArtifacts, issues)
-    })
+    EXECUTION_ARTIFACTS_SCHEMA
+        .validate(value)
+        .map_err(|errors| {
+            let issues = errors
+                .into_iter()
+                .map(|error| crate::contract_errors::ValidationIssue {
+                    instance_path: error.instance_path.to_string(),
+                    schema_path: error.schema_path.to_string(),
+                    message: error.to_string(),
+                })
+                .collect();
+            ContractError::validation(ContractKind::ExecutionArtifacts, issues)
+        })
 }
 
 // TODO: Add proper Default implementations after fixing struct field mismatches

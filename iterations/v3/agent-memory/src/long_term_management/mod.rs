@@ -3,13 +3,13 @@
 //! Intelligent lifecycle management for long-term memory storage and retrieval.
 
 use serde::{Deserialize, Serialize};
-pub mod lifecycle;
 pub mod archival;
+pub mod lifecycle;
 pub mod reinforcement;
 pub mod retrieval;
 
-pub use lifecycle::*;
 pub use archival::*;
+pub use lifecycle::*;
 pub use reinforcement::*;
 pub use retrieval::*;
 
@@ -67,21 +67,13 @@ impl LongTermMemoryManager {
 
         // Determine appropriate action based on current state and metrics
         let action = match metadata.state {
-            MemoryLifecycleState::Active => {
-                self.evaluate_active_memory(metadata, age_days).await?
-            }
-            MemoryLifecycleState::Aging => {
-                self.evaluate_aging_memory(metadata, age_days).await?
-            }
+            MemoryLifecycleState::Active => self.evaluate_active_memory(metadata, age_days).await?,
+            MemoryLifecycleState::Aging => self.evaluate_aging_memory(metadata, age_days).await?,
             MemoryLifecycleState::Archival => {
                 self.evaluate_archival_memory(metadata, age_days).await?
             }
-            MemoryLifecycleState::Archived => {
-                MemoryLifecycleAction::KeepArchived
-            }
-            MemoryLifecycleState::Forgotten => {
-                MemoryLifecycleAction::Purge
-            }
+            MemoryLifecycleState::Archived => MemoryLifecycleAction::KeepArchived,
+            MemoryLifecycleState::Forgotten => MemoryLifecycleAction::Purge,
         };
 
         Ok(action)
@@ -127,8 +119,8 @@ impl LongTermMemoryManager {
         let age_days = (chrono::Utc::now() - metadata.created_at).num_days() as u64;
 
         // Archive if old enough and low importance
-        age_days >= self.config.archival_threshold_days &&
-        metadata.importance_score < self.config.importance_threshold
+        age_days >= self.config.archival_threshold_days
+            && metadata.importance_score < self.config.importance_threshold
     }
 
     /// Determine if memory should be forgotten (permanent removal)
@@ -136,8 +128,7 @@ impl LongTermMemoryManager {
         let age_days = (chrono::Utc::now() - metadata.created_at).num_days() as u64;
 
         // Forget if very old and very low importance
-        age_days >= self.config.max_archival_age_days &&
-        metadata.importance_score < 0.1
+        age_days >= self.config.max_archival_age_days && metadata.importance_score < 0.1
     }
 
     /// Evaluate active memory state
@@ -206,7 +197,11 @@ impl LongTermMemoryManager {
         };
 
         // Context relevance boost
-        let context_boost = if access_pattern.context_relevant { 1.2 } else { 1.0 };
+        let context_boost = if access_pattern.context_relevant {
+            1.2
+        } else {
+            1.0
+        };
 
         base_boost * frequency_boost * context_boost
     }

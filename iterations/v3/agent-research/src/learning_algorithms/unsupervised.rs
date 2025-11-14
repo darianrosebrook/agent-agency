@@ -1,15 +1,14 @@
 //! Unsupervised learning algorithms for reflexive learning
 
-use schemars::JsonSchema;
 use crate::reflexive_types::*;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 use rand::prelude::*;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// K-means clustering implementation
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KMeansClustering {
     /// Number of clusters (K)
     k: usize,
@@ -44,7 +43,11 @@ impl KMeansClustering {
         }
 
         if data.nrows() < self.k {
-            return Err(format!("Not enough samples ({}) for {} clusters", data.nrows(), self.k));
+            return Err(format!(
+                "Not enough samples ({}) for {} clusters",
+                data.nrows(),
+                self.k
+            ));
         }
 
         let n_features = data.ncols();
@@ -60,7 +63,10 @@ impl KMeansClustering {
             let new_centroids = self.update_centroids(data, &labels);
 
             // Check for convergence
-            let centroid_shift = (&new_centroids - &self.centroids).mapv(|x| x * x).sum().sqrt();
+            let centroid_shift = (&new_centroids - &self.centroids)
+                .mapv(|x| x * x)
+                .sum()
+                .sqrt();
 
             self.centroids = new_centroids;
 
@@ -142,7 +148,8 @@ impl KMeansClustering {
                     }
 
                     if !cluster_distances.is_empty() {
-                        let avg_distance = cluster_distances.iter().sum::<f64>() / cluster_distances.len() as f64;
+                        let avg_distance =
+                            cluster_distances.iter().sum::<f64>() / cluster_distances.len() as f64;
                         inter_distances.push(avg_distance);
                     }
                 }
@@ -257,7 +264,9 @@ impl KMeansClustering {
                 centroid /= cluster_sizes[cluster] as f64;
             } else {
                 // If cluster is empty, keep the old centroid
-                new_centroids.row_mut(cluster).assign(&self.centroids.row(cluster));
+                new_centroids
+                    .row_mut(cluster)
+                    .assign(&self.centroids.row(cluster));
             }
         }
 
@@ -267,7 +276,7 @@ impl KMeansClustering {
 
 /// Gaussian Mixture Model for soft clustering
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GaussianMixture {
     /// Number of components
     n_components: usize,
@@ -515,7 +524,8 @@ impl GaussianMixture {
         // - CAWS Tier: 2 (ML algorithm feature)
         // - Change Budget: ~120 LOC
         // - Reviewer Requirements: ML and numerical computation expertise
-        for j in 0..self.n_components { // Temporary: diagonal covariances until full matrix calculation
+        for j in 0..self.n_components {
+            // Temporary: diagonal covariances until full matrix calculation
             let mut covariance_sum = Array2::zeros((data.ncols(), data.ncols()));
 
             for i in 0..data.nrows() {

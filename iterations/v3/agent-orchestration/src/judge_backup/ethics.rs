@@ -4,15 +4,19 @@
 //! ethical assessment, stakeholder analysis, and cultural
 //! considerations for working specification evaluation.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use crate::council_errors::CouncilResult;
-use std::sync::RwLock;
-use crate::judge_backup::risk::{EthicalAssessment, EthicalConcern, StakeholderImpact, ConsequenceAssessment, CulturalConsideration, EthicalCategory, EthicalSeverity, TimeHorizon};
+use crate::council_errors::CouncilResult;
+use crate::judge_backup::backup_types::JudgeHealthMetrics;
+use crate::judge_backup::risk::{
+    ConsequenceAssessment, CulturalConsideration, EthicalAssessment, EthicalCategory,
+    EthicalConcern, EthicalSeverity, StakeholderImpact, TimeHorizon,
+};
 use crate::judge_backup::traits::Judge;
 use crate::judge_backup::types::{JudgeConfig, ReviewContext};
-use crate::judge_backup::backup_types::JudgeHealthMetrics;
 use crate::judge_backup::verdicts::JudgeVerdict;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 /// Response cache for ethics judge
 
@@ -95,8 +99,12 @@ impl EthicsJudge {
 
         // Analyze for privacy violations - TUNED based on comprehensive testing
         // Enhanced detection for scenarios that failed integration tests
-        if desc.contains("track") || desc.contains("monitor") || desc.contains("surveil") ||
-           desc.contains("surveillance") || desc.contains("user surveillance") {
+        if desc.contains("track")
+            || desc.contains("monitor")
+            || desc.contains("surveil")
+            || desc.contains("surveillance")
+            || desc.contains("user surveillance")
+        {
             ethical_score *= 0.1; // More severe penalty based on testing results
             concerns.push(EthicalConcern {
                 category: EthicalCategory::Privacy,
@@ -112,21 +120,35 @@ impl EthicsJudge {
         }
 
         // Analyze for discrimination potential - ENHANCED for integration test failures
-        if desc.contains("categorize") || desc.contains("classify") || desc.contains("profile") ||
-           desc.contains("profiling") || desc.contains("demographic profiling") {
-            if desc.contains("demographic") || desc.contains("group") || desc.contains("category") ||
-               desc.contains("engine") {
+        if desc.contains("categorize")
+            || desc.contains("classify")
+            || desc.contains("profile")
+            || desc.contains("profiling")
+            || desc.contains("demographic profiling")
+        {
+            if desc.contains("demographic")
+                || desc.contains("group")
+                || desc.contains("category")
+                || desc.contains("engine")
+            {
                 ethical_score *= 0.2; // More severe penalty based on integration test results
                 concerns.push(EthicalConcern {
                     category: EthicalCategory::Discrimination,
                     severity: EthicalSeverity::Critical, // Upgraded based on testing
-                    description: "High risk of discriminatory profiling and biased decision-making".to_string(),
+                    description: "High risk of discriminatory profiling and biased decision-making"
+                        .to_string(),
                     evidence: vec![
-                        "Task involves demographic profiling or categorical classification".to_string(),
-                        "Creates engine for automated categorization with discrimination potential".to_string(),
+                        "Task involves demographic profiling or categorical classification"
+                            .to_string(),
+                        "Creates engine for automated categorization with discrimination potential"
+                            .to_string(),
                         "Risk of perpetuating societal biases and unfair treatment".to_string(),
                     ],
-                    affected_stakeholders: vec!["vulnerable populations".to_string(), "minority groups".to_string(), "marginalized communities".to_string()],
+                    affected_stakeholders: vec![
+                        "vulnerable populations".to_string(),
+                        "minority groups".to_string(),
+                        "marginalized communities".to_string(),
+                    ],
                 });
             }
         }
@@ -137,7 +159,8 @@ impl EthicsJudge {
             concerns.push(EthicalConcern {
                 category: EthicalCategory::Harm,
                 severity: EthicalSeverity::High,
-                description: "Potential to cause harm through control/restriction mechanisms".to_string(),
+                description: "Potential to cause harm through control/restriction mechanisms"
+                    .to_string(),
                 evidence: vec![
                     "Task involves control or restriction of behavior".to_string(),
                     "Could negatively impact user autonomy".to_string(),
@@ -150,7 +173,10 @@ impl EthicsJudge {
         stakeholder_impacts.push(StakeholderImpact {
             stakeholder_type: crate::judge_backup::risk::StakeholderType::Users,
             impact_magnitude: if ethical_score > 0.7 { 0.3 } else { -0.5 },
-            impact_description: format!("User experience and trust impact (ethical score: {:.1})", ethical_score),
+            impact_description: format!(
+                "User experience and trust impact (ethical score: {:.1})",
+                ethical_score
+            ),
             mitigation_options: if ethical_score <= 0.7 {
                 vec![
                     "Implement user consent mechanisms".to_string(),
@@ -208,7 +234,8 @@ impl EthicsJudge {
             uncertainties.push("Prediction accuracy and potential for false positives".to_string());
         }
         if desc.contains("automated") && desc.contains("decision") {
-            uncertainties.push("Appropriate level of human oversight in automated decisions".to_string());
+            uncertainties
+                .push("Appropriate level of human oversight in automated decisions".to_string());
         }
 
         EthicalAssessment {
@@ -231,20 +258,17 @@ impl Judge for EthicsJudge {
         &self.config
     }
 
-    async fn review_spec(
-        &self,
-        context: &ReviewContext,
-    ) -> CouncilResult<JudgeVerdict> {
+    async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         let start_time = std::time::Instant::now();
 
         // Check cache first
         let cache_key = format!("{}-{}", context.session_id, context.working_spec.len()); // Use length as simple ID
         if let Ok(cache) = self.response_cache.read() {
             if let Some((cached_verdict, timestamp)) = cache.cache.get(&cache_key) {
-            let age = chrono::Utc::now().signed_duration_since(*timestamp);
-            if age.num_seconds() < cache.ttl_seconds as i64 {
-                return Ok(cached_verdict.clone());
-            }
+                let age = chrono::Utc::now().signed_duration_since(*timestamp);
+                if age.num_seconds() < cache.ttl_seconds as i64 {
+                    return Ok(cached_verdict.clone());
+                }
             }
         }
 
@@ -336,14 +360,19 @@ impl Judge for EthicsJudge {
                     "Ethical concerns identified. Score: {:.2}. Requires mitigation strategies.",
                     assessment.ethical_score
                 ),
-                required_changes: assessment.ethical_mitigations.into_iter().enumerate().map(|(i, mitigation)| {
-                    crate::judge_backup::verdicts::RequiredChange {
-                        category: crate::judge_backup::verdicts::ChangeCategory::Requirements,
-                        description: mitigation,
-                        impact: crate::judge_backup::verdicts::ChangeImpact::Moderate,
-                        rationale: "Ethical mitigation required".to_string(),
-                    }
-                }).collect(),
+                required_changes: assessment
+                    .ethical_mitigations
+                    .into_iter()
+                    .enumerate()
+                    .map(
+                        |(i, mitigation)| crate::judge_backup::verdicts::RequiredChange {
+                            category: crate::judge_backup::verdicts::ChangeCategory::Requirements,
+                            description: mitigation,
+                            impact: crate::judge_backup::verdicts::ChangeImpact::Moderate,
+                            rationale: "Ethical mitigation required".to_string(),
+                        },
+                    )
+                    .collect(),
                 priority: crate::judge_backup::verdicts::ChangePriority::High,
                 estimated_effort: crate::judge_backup::verdicts::EffortEstimate {
                     person_hours: 40.0,
@@ -377,24 +406,24 @@ impl Judge for EthicsJudge {
 
         // Cache the result
         if let Ok(mut cache) = self.response_cache.write() {
-            cache.cache.insert(
-                cache_key,
-                (verdict.clone(), chrono::Utc::now())
-            );
+            cache
+                .cache
+                .insert(cache_key, (verdict.clone(), chrono::Utc::now()));
 
             // Clean old cache entries if needed
             if cache.cache.len() > cache.max_size {
                 // Simple cleanup - remove oldest entries
                 let mut entries: Vec<_> = cache.cache.iter().collect();
                 entries.sort_by_key(|(_, (_, timestamp))| timestamp);
-                let to_remove: Vec<String> = entries.iter()
+                let to_remove: Vec<String> = entries
+                    .iter()
                     .take(entries.len() - cache.max_size)
-                .map(|(key, _)| (*key).clone())
-                .collect();
+                    .map(|(key, _)| (*key).clone())
+                    .collect();
 
-            for key in to_remove {
-                cache.cache.remove(&key);
-            }
+                for key in to_remove {
+                    cache.cache.remove(&key);
+                }
             }
         }
 
@@ -411,12 +440,15 @@ impl Judge for EthicsJudge {
         // For ethics judge, delegate to review_spec with a constructed context
         let context = ReviewContext {
             session_id: "ethics_session".to_string(),
-            working_spec: format!(r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#, _title, _description),
+            working_spec: format!(
+                r#"{{"title": "{}", "description": "{}", "acceptance_criteria": []}}"#,
+                _title, _description
+            ),
             risk_tier: 2, // Medium risk
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
         };
-        
+
         self.review_spec(&context).await
     }
 
@@ -425,12 +457,26 @@ impl Judge for EthicsJudge {
 
         // Ethics judge is specialized for ethical considerations
         let ethical_keywords = [
-            "privacy", "ethics", "moral", "fair", "bias", "discrimination",
-            "harm", "consent", "transparency", "accountability", "justice",
-            "rights", "autonomy", "dignity", "equality", "fairness"
+            "privacy",
+            "ethics",
+            "moral",
+            "fair",
+            "bias",
+            "discrimination",
+            "harm",
+            "consent",
+            "transparency",
+            "accountability",
+            "justice",
+            "rights",
+            "autonomy",
+            "dignity",
+            "equality",
+            "fairness",
         ];
 
-        let keyword_matches = ethical_keywords.iter()
+        let keyword_matches = ethical_keywords
+            .iter()
             .filter(|&keyword| desc.contains(keyword))
             .count();
 
@@ -456,4 +502,3 @@ impl Judge for EthicsJudge {
         }
     }
 }
-

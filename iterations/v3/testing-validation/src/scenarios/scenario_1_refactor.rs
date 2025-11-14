@@ -6,21 +6,18 @@
 //! 3. Council evaluates correctness, coverage, and compliance
 //! 4. Validates scope compliance and provenance tracking
 
-use std::time::Instant;
-use tracing::{info, error};
 use std::sync::Arc;
+use std::time::Instant;
+use tracing::{error, info};
 
-use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
 use crate::fixtures::refactor_target::*;
-use crate::{TestResult, TestMetrics, Scenario};
+use crate::harness::{AssertionFramework, LocalServiceManager, TestEnvironment};
+use crate::{Scenario, TestMetrics, TestResult};
 #[cfg(feature = "full")]
 use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
 
 /// Run the refactor scenario test
-pub async fn run_test(
-    env: &TestEnvironment,
-    services: &LocalServiceManager,
-) -> TestResult {
+pub async fn run_test(env: &TestEnvironment, services: &LocalServiceManager) -> TestResult {
     let start_time = Instant::now();
     let mut assertions = AssertionFramework::new();
 
@@ -72,21 +69,19 @@ pub async fn run_test(
     let base_url = "http://localhost:11434".to_string(); // Default Ollama URL
     let default_model = "gemma3n:e2b".to_string();
     drop(ollama_lock); // Release lock
-    
+
     let mut model_registry = ModelRegistry::new();
-    let ollama_provider = Arc::new(OllamaProvider::new(
-        base_url,
-        default_model,
-    ));
+    let ollama_provider = Arc::new(OllamaProvider::new(base_url, default_model));
     model_registry.register_provider("ollama".to_string(), ollama_provider);
     let model_registry = Arc::new(model_registry);
 
-    let evaluator = Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
+    let evaluator =
+        Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
 
     #[cfg(feature = "full")]
-    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
-    #[cfg(feature = "full")]
     use agent_research::self_prompting_agent::prompting_types::{AutonomousMode, SafetyMode};
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
     let agent_config = SelfPromptingAgentConfig {
         max_iterations: 5,
         enable_sandbox: true,
@@ -102,7 +97,9 @@ pub async fn run_test(
         agent_config,
         model_registry,
         evaluator,
-    ).await {
+    )
+    .await
+    {
         Ok(agent) => agent,
         Err(e) => {
             return TestResult {
@@ -138,14 +135,20 @@ pub async fn run_test(
 
     // 1. Verify initial code compiles
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Initial code should compile"
+        &workspace
+            .execute_command("cargo", &["check"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Initial code should compile",
     );
 
     // 2. Run initial tests
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Initial tests should pass"
+        &workspace
+            .execute_command("cargo", &["test"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Initial tests should pass",
     );
 
     // Execute the refactor task with real SelfPromptingAgent
@@ -163,18 +166,26 @@ pub async fn run_test(
     };
 
     // Record metrics
-    env.record_metric("iterations", refactor_result.iterations as f64).await;
-    env.record_metric("model_calls", refactor_result.events.len() as f64).await;
+    env.record_metric("iterations", refactor_result.iterations as f64)
+        .await;
+    env.record_metric("model_calls", refactor_result.events.len() as f64)
+        .await;
 
     // Validate refactor results
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Refactored code should compile"
+        &workspace
+            .execute_command("cargo", &["check"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Refactored code should compile",
     );
 
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Refactored tests should pass"
+        &workspace
+            .execute_command("cargo", &["test"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Refactored tests should pass",
     );
 
     // Check that functions were actually refactored (look for new function definitions)
@@ -198,14 +209,21 @@ pub async fn run_test(
             crate::harness::AssertionType::CodeCompilation,
             false,
             "Refactoring should introduce new helper functions",
-            Some(format!("Expected more than {} functions, found {}", original_function_count, function_count)),
+            Some(format!(
+                "Expected more than {} functions, found {}",
+                original_function_count, function_count
+            )),
         );
     }
 
     // Check scope compliance - only src/ files should be modified
     let modified_files = vec!["src/lib.rs".to_string()]; // Real files modified by the agent
     let allowed_patterns = vec![regex::Regex::new(r"^src/.*$").unwrap()];
-    assertions.assert_scope_compliance(&modified_files, &allowed_patterns, "Changes should stay within scope");
+    assertions.assert_scope_compliance(
+        &modified_files,
+        &allowed_patterns,
+        "Changes should stay within scope",
+    );
 
     let duration = start_time.elapsed().as_millis() as u64;
     let metrics = match env.get_metrics().await {
@@ -229,7 +247,9 @@ pub async fn run_test(
 }
 
 /// Copy refactor target code to workspace
-async fn copy_refactor_code(workspace: &crate::harness::TestWorkspace) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn copy_refactor_code(
+    workspace: &crate::harness::TestWorkspace,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::fs;
     use std::path::Path;
 

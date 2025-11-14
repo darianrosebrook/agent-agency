@@ -9,8 +9,8 @@ use std::sync::atomic::AtomicU64;
 use std::time::Instant;
 use tracing::{debug, warn};
 
-use crate::memory::types::*;
 use crate::memory::allocation::AllocationSite;
+use crate::memory::types::*;
 
 /// Resource handle for tracking managed resources
 #[derive(Debug, Clone)]
@@ -292,8 +292,16 @@ impl HandleRegistry {
     }
 
     /// Register a new handle for tracking
-    pub fn register_handle(&mut self, handle_type: HandleType, handle_info: HandleInfo, object_ref: ObjectRef, description: String) -> u64 {
-        let id = self.next_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    pub fn register_handle(
+        &mut self,
+        handle_type: HandleType,
+        handle_info: HandleInfo,
+        object_ref: ObjectRef,
+        description: String,
+    ) -> u64 {
+        let id = self
+            .next_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
         let handle = TrackedHandle {
             id,
@@ -408,14 +416,16 @@ impl HandleRegistry {
 
     /// Get handles associated with a specific object
     pub fn get_handles_for_object(&self, object_ref: &ObjectRef) -> Vec<&TrackedHandle> {
-        self.handles.values()
+        self.handles
+            .values()
             .filter(|h| &h.object_ref == object_ref && !h.closed)
             .collect()
     }
 
     /// Get all open handles of a specific type
     pub fn get_handles_by_type(&self, handle_type: &HandleType) -> Vec<&TrackedHandle> {
-        self.handles.values()
+        self.handles
+            .values()
             .filter(|h| &h.handle_type == handle_type && !h.closed)
             .collect()
     }
@@ -426,32 +436,34 @@ impl HandleRegistry {
     }
 
     /// Perform platform-specific handle cleanup
-    async fn perform_handle_cleanup(&self, handle: &TrackedHandle) -> Result<(), Box<dyn std::error::Error>> {
+    async fn perform_handle_cleanup(
+        &self,
+        handle: &TrackedHandle,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match &handle.handle_info {
-            HandleInfo::UnixFd(fd) => {
-                self.cleanup_unix_fd(*fd, &handle.handle_type).await
-            }
+            HandleInfo::UnixFd(fd) => self.cleanup_unix_fd(*fd, &handle.handle_type).await,
             HandleInfo::WindowsHandle(win_handle) => {
-                self.cleanup_windows_handle(*win_handle, &handle.handle_type).await
+                self.cleanup_windows_handle(*win_handle, &handle.handle_type)
+                    .await
             }
-            HandleInfo::DarwinFd(fd) => {
-                self.cleanup_darwin_fd(*fd, &handle.handle_type).await
-            }
-            HandleInfo::Custom(data) => {
-                self.cleanup_custom_handle(data, &handle.handle_type).await
-            }
+            HandleInfo::DarwinFd(fd) => self.cleanup_darwin_fd(*fd, &handle.handle_type).await,
+            HandleInfo::Custom(data) => self.cleanup_custom_handle(data, &handle.handle_type).await,
         }
     }
 
     /// Clean up Unix file descriptor
-    async fn cleanup_unix_fd(&self, fd: i32, handle_type: &HandleType) -> Result<(), Box<dyn std::error::Error>> {
+    async fn cleanup_unix_fd(
+        &self,
+        fd: i32,
+        handle_type: &HandleType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match handle_type {
             HandleType::File => {
                 // Close file descriptor
                 #[cfg(unix)]
                 {
-                    use std::os::unix::io::FromRawFd;
                     use std::fs::File;
+                    use std::os::unix::io::FromRawFd;
 
                     // Safely close the file descriptor by wrapping it in a File and letting it drop
                     // This ensures proper cleanup even if the FD was already closed
@@ -470,7 +482,7 @@ impl HandleRegistry {
                 // Close socket
                 #[cfg(unix)]
                 {
-                    use libc::{close, c_int};
+                    use libc::{c_int, close};
 
                     // Use libc::close to properly close the socket
                     let result = unsafe { close(fd as c_int) };
@@ -489,18 +501,25 @@ impl HandleRegistry {
                 }
             }
             _ => {
-                debug!("Unix FD cleanup not implemented for handle type {:?}", handle_type);
+                debug!(
+                    "Unix FD cleanup not implemented for handle type {:?}",
+                    handle_type
+                );
                 Ok(())
             }
         }
     }
 
     /// Clean up Windows handle
-    async fn cleanup_windows_handle(&self, handle: isize, handle_type: &HandleType) -> Result<(), Box<dyn std::error::Error>> {
+    async fn cleanup_windows_handle(
+        &self,
+        handle: isize,
+        handle_type: &HandleType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_os = "windows")]
         {
-            use winapi::um::handleapi::CloseHandle;
             use winapi::shared::ntdef::HANDLE;
+            use winapi::um::handleapi::CloseHandle;
 
             match handle_type {
                 HandleType::File | HandleType::Device => {
@@ -516,7 +535,10 @@ impl HandleRegistry {
                     }
                 }
                 _ => {
-                    debug!("Windows handle cleanup not implemented for type {:?}", handle_type);
+                    debug!(
+                        "Windows handle cleanup not implemented for type {:?}",
+                        handle_type
+                    );
                     Ok(())
                 }
             }
@@ -528,10 +550,14 @@ impl HandleRegistry {
     }
 
     /// Clean up Darwin (macOS/iOS) file descriptor
-    async fn cleanup_darwin_fd(&self, fd: i32, handle_type: &HandleType) -> Result<(), Box<dyn std::error::Error>> {
+    async fn cleanup_darwin_fd(
+        &self,
+        fd: i32,
+        handle_type: &HandleType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_os = "macos")]
         {
-            use libc::{close, c_int};
+            use libc::{c_int, close};
 
             match handle_type {
                 HandleType::File | HandleType::Socket | HandleType::MemoryMap => {
@@ -543,11 +569,17 @@ impl HandleRegistry {
                         Ok(())
                     } else {
                         let error = std::io::Error::last_os_error();
-                        Err(format!("Failed to close Darwin file descriptor {}: {}", fd, error).into())
+                        Err(
+                            format!("Failed to close Darwin file descriptor {}: {}", fd, error)
+                                .into(),
+                        )
                     }
                 }
                 _ => {
-                    debug!("Darwin FD cleanup not implemented for type {:?}", handle_type);
+                    debug!(
+                        "Darwin FD cleanup not implemented for type {:?}",
+                        handle_type
+                    );
                     Ok(())
                 }
             }
@@ -559,7 +591,11 @@ impl HandleRegistry {
     }
 
     /// Clean up custom handle
-    async fn cleanup_custom_handle(&self, _data: &[u8], handle_type: &HandleType) -> Result<(), Box<dyn std::error::Error>> {
+    async fn cleanup_custom_handle(
+        &self,
+        _data: &[u8],
+        handle_type: &HandleType,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         debug!("Custom handle cleanup for type {:?}", handle_type);
         // Custom cleanup logic would go here
         Ok(())
@@ -577,11 +613,18 @@ impl FinalizerQueue {
     }
 
     /// Register a finalizer for execution
-    pub fn register_finalizer<F>(&mut self, object_ref: ObjectRef, finalizer_fn: F, priority: i32) -> u64
+    pub fn register_finalizer<F>(
+        &mut self,
+        object_ref: ObjectRef,
+        finalizer_fn: F,
+        priority: i32,
+    ) -> u64
     where
         F: FnOnce() + Send + 'static,
     {
-        let id = self.next_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let id = self
+            .next_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let order = id; // Use ID as tie-breaker for stable ordering
 
         let finalizer = ResourceFinalizer {
@@ -624,7 +667,8 @@ impl FinalizerQueue {
                 std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     (queued.finalizer.finalizer_fn)()
                 }))
-            }).await;
+            })
+            .await;
 
             let duration = start_time.elapsed().as_micros() as u64;
 

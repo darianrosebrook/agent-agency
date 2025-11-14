@@ -1,5 +1,5 @@
 //! SLO Management API handlers
-//! 
+//!
 //! This module contains all API handlers related to Service Level Objective (SLO)
 //! management, including definition, measurement, tracking, and alerting.
 
@@ -9,7 +9,7 @@ use axum::{
     Json,
 };
 use serde_json;
-use tracing::{info, error};
+use tracing::{error, info};
 
 use crate::api::ApiState;
 
@@ -19,18 +19,24 @@ pub async fn acknowledge_slo_alert(
     Path(alert_id): Path<String>,
     Json(ack_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let alert_uuid = uuid::Uuid::parse_str(&alert_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
-    let acknowledged_by = ack_data.get("acknowledged_by")
+    let alert_uuid = uuid::Uuid::parse_str(&alert_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let acknowledged_by = ack_data
+        .get("acknowledged_by")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let acknowledgment_notes = ack_data.get("acknowledgment_notes")
+
+    let acknowledgment_notes = ack_data
+        .get("acknowledgment_notes")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    match state.api.db_client.acknowledge_slo_alert(&alert_uuid, acknowledged_by, acknowledgment_notes).await {
+    match state
+        .api
+        .db_client
+        .acknowledge_slo_alert(&alert_uuid, acknowledged_by, acknowledgment_notes)
+        .await
+    {
         Ok(()) => {
             info!("Acknowledged SLO alert: {}", alert_id);
             Ok(Json(serde_json::json!({
@@ -55,18 +61,21 @@ pub async fn list_slos(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     match state.api.db_client.list_slos().await {
         Ok(slos) => {
-            let slo_list: Vec<serde_json::Value> = slos.into_iter().map(|slo| {
-                serde_json::json!({
-                    "id": slo["id"],
-                    "name": slo["name"],
-                    "description": slo["description"],
-                    "target_value": slo["target_value"],
-                    "current_value": slo["current_value"],
-                    "status": slo["status"],
-                    "created_at": slo["created_at"],
-                    "updated_at": slo["updated_at"]
+            let slo_list: Vec<serde_json::Value> = slos
+                .into_iter()
+                .map(|slo| {
+                    serde_json::json!({
+                        "id": slo["id"],
+                        "name": slo["name"],
+                        "description": slo["description"],
+                        "target_value": slo["target_value"],
+                        "current_value": slo["current_value"],
+                        "status": slo["status"],
+                        "created_at": slo["created_at"],
+                        "updated_at": slo["updated_at"]
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "slos": slo_list,
@@ -86,9 +95,8 @@ pub async fn get_slo_status(
     State(state): State<ApiState>,
     Path(slo_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let slo_uuid = uuid::Uuid::parse_str(&slo_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let slo_uuid = uuid::Uuid::parse_str(&slo_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     match state.api.db_client.get_slo_status(&slo_uuid).await {
         Ok(Some(slo_status)) => {
             Ok(Json(serde_json::json!({
@@ -122,20 +130,22 @@ pub async fn get_slo_measurements(
     State(state): State<ApiState>,
     Path(slo_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let slo_uuid = uuid::Uuid::parse_str(&slo_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let slo_uuid = uuid::Uuid::parse_str(&slo_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     match state.api.db_client.get_slo_measurements(&slo_uuid).await {
         Ok(measurements) => {
-            let measurement_list: Vec<serde_json::Value> = measurements.into_iter().map(|measurement| {
-                serde_json::json!({
-                    "id": measurement["id"],
-                    "slo_id": measurement["slo_id"],
-                    "value": measurement["value"],
-                    "timestamp": measurement["timestamp"],
-                    "metadata": measurement["metadata"]
+            let measurement_list: Vec<serde_json::Value> = measurements
+                .into_iter()
+                .map(|measurement| {
+                    serde_json::json!({
+                        "id": measurement["id"],
+                        "slo_id": measurement["slo_id"],
+                        "value": measurement["value"],
+                        "timestamp": measurement["timestamp"],
+                        "metadata": measurement["metadata"]
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "slo_id": slo_id,
@@ -157,20 +167,23 @@ pub async fn list_slo_alerts(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     match state.api.db_client.list_slo_alerts().await {
         Ok(alerts) => {
-            let alert_list: Vec<serde_json::Value> = alerts.into_iter().map(|alert| {
-                serde_json::json!({
-                    "id": alert["id"],
-                    "slo_id": alert["slo_id"],
-                    "alert_type": alert["alert_type"],
-                    "severity": alert["severity"],
-                    "message": alert["message"],
-                    "status": alert["status"],
-                    "created_at": alert["created_at"],
-                    "acknowledged_at": alert["acknowledged_at"],
-                    "acknowledged_by": None::<String>, // Not available in current structure
-                    "metadata": serde_json::json!({})
+            let alert_list: Vec<serde_json::Value> = alerts
+                .into_iter()
+                .map(|alert| {
+                    serde_json::json!({
+                        "id": alert["id"],
+                        "slo_id": alert["slo_id"],
+                        "alert_type": alert["alert_type"],
+                        "severity": alert["severity"],
+                        "message": alert["message"],
+                        "status": alert["status"],
+                        "created_at": alert["created_at"],
+                        "acknowledged_at": alert["acknowledged_at"],
+                        "acknowledged_by": None::<String>, // Not available in current structure
+                        "metadata": serde_json::json!({})
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "alerts": alert_list,

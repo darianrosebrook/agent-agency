@@ -3,8 +3,9 @@
 //! Core judge types, configuration, health metrics,
 //! and session management structures.
 
+use crate::judge_backup::verdicts::JudgeVerdict;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use crate::judge_backup::verdicts::JudgeVerdict;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -12,9 +13,9 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum JudgeType {
-    Constitutional,     // CAWS compliance and constitutional analysis
-    Technical,          // Technical implementation analysis
-    Quality,            // Quality assessment (alias for QualityAssurance)
+    Constitutional, // CAWS compliance and constitutional analysis
+    Technical,      // Technical implementation analysis
+    Quality,        // Quality assessment (alias for QualityAssurance)
     QualityAssurance,
     Security,
     Performance,
@@ -112,12 +113,15 @@ enum VerdictSummary {
 impl std::fmt::Display for VerdictSummary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VerdictSummary::Approved { confidence } =>
-                write!(f, "Approved ({:.2} confidence)", confidence),
-            VerdictSummary::RequestedRefinement { change_count } =>
-                write!(f, "Requested {} changes", change_count),
-            VerdictSummary::Rejected { critical_issue_count } =>
-                write!(f, "Rejected ({} critical issues)", critical_issue_count),
+            VerdictSummary::Approved { confidence } => {
+                write!(f, "Approved ({:.2} confidence)", confidence)
+            }
+            VerdictSummary::RequestedRefinement { change_count } => {
+                write!(f, "Requested {} changes", change_count)
+            }
+            VerdictSummary::Rejected {
+                critical_issue_count,
+            } => write!(f, "Rejected ({} critical issues)", critical_issue_count),
         }
     }
 }
@@ -189,5 +193,3 @@ enum JudgeEvaluationResult {
         error: String,
     },
 }
-
-

@@ -5,18 +5,22 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use anyhow::{anyhow, Result};
+use crate::planning::tool_chain_types::{
+    ExternalPlanningConstraints, ExternalPlanningContext, ExternalRiskLevel,
+    ExternalSchemaRegistry, ExternalTaskComplexity, ExternalToolChain, ExternalToolChainPlanner,
+    ExternalToolNode, ExternalToolRegistry,
+};
 use agent_agency_contracts::{
-    planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone, PlanState, EvidenceGate},
+    planning_io::{
+        EvidenceGate, ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone,
+        PlanState,
+    },
     WorkingSpec,
 };
-use crate::planning::tool_chain_types::{
-    ExternalToolChainPlanner, ExternalPlanningContext, ExternalPlanningConstraints,
-    ExternalToolChain, ExternalToolNode, ExternalTaskComplexity, ExternalRiskLevel,
-    ExternalSchemaRegistry, ExternalToolRegistry,
-};
+use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Bridge to tool chain planner
 pub struct ToolChainBridge {
@@ -57,7 +61,10 @@ impl ToolChainBridge {
     }
 
     /// Generate execution plan using tool chain planner
-    pub async fn generate_from_working_spec(&self, working_spec: WorkingSpec) -> Result<ContractExecutionPlan> {
+    pub async fn generate_from_working_spec(
+        &self,
+        working_spec: WorkingSpec,
+    ) -> Result<ContractExecutionPlan> {
         // Convert working spec to planning context
         let planning_context = self.convert_working_spec_to_planning_context(&working_spec)?;
 
@@ -65,14 +72,20 @@ impl ToolChainBridge {
         let constraints = self.create_planning_constraints(&working_spec)?;
 
         // Generate tool chain using the real tool chain planner
-        let tool_chain = (*self.tool_chain_planner).plan_chain(&planning_context, &constraints).await?;
+        let tool_chain = (*self.tool_chain_planner)
+            .plan_chain(&planning_context, &constraints)
+            .await?;
 
         // Convert tool chain back to execution plan format
-        self.convert_tool_chain_to_execution_plan(tool_chain, working_spec).await
+        self.convert_tool_chain_to_execution_plan(tool_chain, working_spec)
+            .await
     }
 
     /// Convert working spec to tool chain planning context
-    fn convert_working_spec_to_planning_context(&self, working_spec: &WorkingSpec) -> Result<ExternalPlanningContext> {
+    fn convert_working_spec_to_planning_context(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> Result<ExternalPlanningContext> {
         // Extract task description from working spec
         let task_description = self.extract_task_description(working_spec);
 
@@ -85,7 +98,7 @@ impl ToolChainBridge {
 
         // Determine risk tolerance
         let risk_tolerance = self.determine_risk_tolerance(working_spec);
-        
+
         // Create constraints
         let constraints = self.create_planning_constraints(working_spec)?;
 
@@ -98,21 +111,33 @@ impl ToolChainBridge {
             task_type: Some(task_type),
             complexity: Some(complexity),
             required_capabilities,
-            time_budget_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000),
+            time_budget_ms: working_spec
+                .constraints
+                .max_duration_minutes
+                .map(|mins| (mins as u64) * 60 * 1000),
             cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
         })
     }
 
     /// Create planning constraints from working spec
-    fn create_planning_constraints(&self, working_spec: &WorkingSpec) -> Result<ExternalPlanningConstraints> {
+    fn create_planning_constraints(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> Result<ExternalPlanningConstraints> {
         Ok(ExternalPlanningConstraints {
-            max_execution_time_secs: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60),
+            max_execution_time_secs: working_spec
+                .constraints
+                .max_duration_minutes
+                .map(|mins| (mins as u64) * 60),
             max_chain_length: Some(5), // Default reasonable limit
             required_capabilities: vec![],
             prohibited_tools: vec![],
-            max_parallelism: Some(3),  // Allow some parallelism
+            max_parallelism: Some(3),   // Allow some parallelism
             max_cost_cents: Some(1000), // Default cost budget
-            max_time_ms: working_spec.constraints.max_duration_minutes.map(|mins| (mins as u64) * 60 * 1000),
+            max_time_ms: working_spec
+                .constraints
+                .max_duration_minutes
+                .map(|mins| (mins as u64) * 60 * 1000),
             require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
         })
     }
@@ -123,7 +148,9 @@ impl ToolChainBridge {
         tool_chain: ExternalToolChain,
         working_spec: WorkingSpec,
     ) -> Result<ContractExecutionPlan> {
-        use agent_agency_contracts::planning_io::{DependencyNode, DependencyEdge, DependencyNodeType, DependencyEdgeType};
+        use agent_agency_contracts::planning_io::{
+            DependencyEdge, DependencyEdgeType, DependencyNode, DependencyNodeType,
+        };
 
         // Create milestones from tool chain nodes
         let mut milestones = Vec::new();
@@ -132,7 +159,8 @@ impl ToolChainBridge {
         // Map tool chain nodes to milestones
         for (idx, node) in tool_chain.nodes.iter().enumerate() {
             let milestone_id = format!("TC-{}", node.id);
-            let milestone = self.create_milestone_from_tool_node(node, &milestone_id, &working_spec)?;
+            let milestone =
+                self.create_milestone_from_tool_node(node, &milestone_id, &working_spec)?;
             milestones.push(milestone);
             node_indices.insert(idx, milestone_id);
         }
@@ -143,7 +171,12 @@ impl ToolChainBridge {
             let to_id = node_indices.get(&idx).unwrap().clone();
             for dep_id in &node.dependencies {
                 // Find the milestone ID for the dependency node
-                if let Some((dep_idx, _)) = tool_chain.nodes.iter().enumerate().find(|(_, n)| &n.id == dep_id) {
+                if let Some((dep_idx, _)) = tool_chain
+                    .nodes
+                    .iter()
+                    .enumerate()
+                    .find(|(_, n)| &n.id == dep_id)
+                {
                     if let Some(from_id) = node_indices.get(&dep_idx) {
                         edges.push(DependencyEdge {
                             from: from_id.clone(),
@@ -160,44 +193,53 @@ impl ToolChainBridge {
         // Create nodes for dependency graph
         let mut nodes = std::collections::HashMap::new();
         for milestone in &milestones {
-            nodes.insert(milestone.id.clone(), DependencyNode {
-                milestone_id: milestone.id.clone(),
-                node_type: DependencyNodeType::Milestone,
-                estimated_cost: milestone.estimated_effort,
-                estimated_time_ms: (milestone.estimated_effort * 3600.0 * 1000.0) as u64,
-                resource_requirements: std::collections::HashMap::new(),
-                metadata: std::collections::HashMap::new(),
-            });
+            nodes.insert(
+                milestone.id.clone(),
+                DependencyNode {
+                    milestone_id: milestone.id.clone(),
+                    node_type: DependencyNodeType::Milestone,
+                    estimated_cost: milestone.estimated_effort,
+                    estimated_time_ms: (milestone.estimated_effort * 3600.0 * 1000.0) as u64,
+                    resource_requirements: std::collections::HashMap::new(),
+                    metadata: std::collections::HashMap::new(),
+                },
+            );
         }
 
         // Determine root and sink milestones
-        let roots: Vec<String> = tool_chain.roots.iter()
+        let roots: Vec<String> = tool_chain
+            .roots
+            .iter()
             .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();
 
-        let sinks: Vec<String> = tool_chain.sinks.iter()
+        let sinks: Vec<String> = tool_chain
+            .sinks
+            .iter()
             .filter_map(|&idx| node_indices.get(&idx))
             .cloned()
             .collect();
 
         // Use shared graph algorithm for critical path calculation
-        let critical_path = crate::planning::graph_algorithms::calculate_critical_path(&nodes, &edges)
-            .unwrap_or_else(|_| {
-                // Fallback to roots[0] -> sinks[0] if calculation fails
-                if !roots.is_empty() && !sinks.is_empty() {
-                    vec![roots[0].clone(), sinks[0].clone()]
-                } else {
-                    vec![]
-                }
-            });
+        let critical_path =
+            crate::planning::graph_algorithms::calculate_critical_path(&nodes, &edges)
+                .unwrap_or_else(|_| {
+                    // Fallback to roots[0] -> sinks[0] if calculation fails
+                    if !roots.is_empty() && !sinks.is_empty() {
+                        vec![roots[0].clone(), sinks[0].clone()]
+                    } else {
+                        vec![]
+                    }
+                });
 
         // Use shared graph algorithm for parallel group identification
-        let parallel_groups = crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
-            .unwrap_or_else(|_| {
-                // Fallback to roots and sinks groups if calculation fails
-                vec![roots, sinks]
-            });
+        let parallel_groups =
+            crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
+                .unwrap_or_else(|_| {
+                    // Fallback to roots and sinks groups if calculation fails
+                    vec![roots, sinks]
+                });
 
         let dependency_graph = agent_agency_contracts::planning_io::DependencyGraph {
             nodes,
@@ -260,7 +302,7 @@ impl ToolChainBridge {
         milestone_id: &str,
         working_spec: &WorkingSpec,
     ) -> Result<ContractMilestone> {
-        use agent_agency_contracts::planning_io::{Milestone, MilestoneScope, MilestonePriority};
+        use agent_agency_contracts::planning_io::{Milestone, MilestonePriority, MilestoneScope};
 
         Ok(Milestone {
             id: milestone_id.to_string(),
@@ -276,10 +318,10 @@ impl ToolChainBridge {
                 resource_requirements: std::collections::HashMap::new(),
             },
             interfaces: vec![], // Would be populated based on tool inputs/outputs
-            tests: vec![], // Tool execution has its own validation
+            tests: vec![],      // Tool execution has its own validation
             evidence_gate: self.create_tool_evidence_gate(working_spec.risk_tier as u8),
-            quality_gates: vec![], // Quality gates from evidence gate
-            dependencies: vec![], // Set by dependency graph
+            quality_gates: vec![],       // Quality gates from evidence gate
+            dependencies: vec![],        // Set by dependency graph
             estimated_duration: Some(5), // Default 5 minutes for tool execution
             rollback_plan: "Tool execution cannot be rolled back".to_string(),
             state: agent_agency_contracts::planning_io::MilestoneState::Pending,
@@ -308,12 +350,27 @@ impl ToolChainBridge {
     }
 
     /// Create change budget from working spec
-    fn create_change_budget(&self, working_spec: &WorkingSpec) -> agent_agency_contracts::planning_io::ChangeBudget {
-        use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
+    fn create_change_budget(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> agent_agency_contracts::planning_io::ChangeBudget {
+        use agent_agency_contracts::planning_io::{BudgetEnforcement, ChangeBudget};
 
         ChangeBudget {
-            max_files: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_files).map(|v| v as usize).unwrap_or(25),
-            max_loc: working_spec.constraints.budget_limits.as_ref().and_then(|b| b.max_loc).map(|v| v as usize).unwrap_or(1000),
+            max_files: working_spec
+                .constraints
+                .budget_limits
+                .as_ref()
+                .and_then(|b| b.max_files)
+                .map(|v| v as usize)
+                .unwrap_or(25),
+            max_loc: working_spec
+                .constraints
+                .budget_limits
+                .as_ref()
+                .and_then(|b| b.max_loc)
+                .map(|v| v as usize)
+                .unwrap_or(1000),
             max_migrations: 5,
             allow_breaking_changes: working_spec.risk_tier > 1,
             allow_new_dependencies: working_spec.risk_tier > 1,
@@ -326,8 +383,14 @@ impl ToolChainBridge {
     }
 
     /// Create quality gates from working spec
-    fn create_quality_gates(&self, working_spec: &WorkingSpec) -> agent_agency_contracts::planning_io::QualityGates {
-        use agent_agency_contracts::planning_io::{QualityGates, MutationRequirements, SecurityRequirements, PerformanceRequirements, DocumentationRequirements};
+    fn create_quality_gates(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> agent_agency_contracts::planning_io::QualityGates {
+        use agent_agency_contracts::planning_io::{
+            DocumentationRequirements, MutationRequirements, PerformanceRequirements, QualityGates,
+            SecurityRequirements,
+        };
 
         let coverage_reqs = std::collections::HashMap::from([
             ("tool_execution".to_string(), 0.0), // Tools have different validation
@@ -344,7 +407,10 @@ impl ToolChainBridge {
                 scan_required: working_spec.risk_tier == 1,
                 max_issues_by_severity: std::collections::HashMap::from([
                     ("critical".to_string(), 0),
-                    ("high".to_string(), if working_spec.risk_tier == 1 { 0 } else { 2 }),
+                    (
+                        "high".to_string(),
+                        if working_spec.risk_tier == 1 { 0 } else { 2 },
+                    ),
                 ]),
                 required_controls: vec![],
             },
@@ -370,16 +436,24 @@ impl ToolChainBridge {
     }
 
     /// Create evidence requirements
-    fn create_evidence_requirements(&self, working_spec: &WorkingSpec) -> Vec<agent_agency_contracts::planning_io::EvidenceRequirement> {
-        working_spec.acceptance_criteria.iter().enumerate().map(|(i, _)| {
-            agent_agency_contracts::planning_io::EvidenceRequirement {
-                milestone_id: format!("TC-M{}", i),
-                evidence_type: "tool_execution".to_string(),
-                collection_method: "automated".to_string(),
-                validation_criteria: std::collections::HashMap::new(),
-                mandatory: true,
-            }
-        }).collect()
+    fn create_evidence_requirements(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> Vec<agent_agency_contracts::planning_io::EvidenceRequirement> {
+        working_spec
+            .acceptance_criteria
+            .iter()
+            .enumerate()
+            .map(
+                |(i, _)| agent_agency_contracts::planning_io::EvidenceRequirement {
+                    milestone_id: format!("TC-M{}", i),
+                    evidence_type: "tool_execution".to_string(),
+                    collection_method: "automated".to_string(),
+                    validation_criteria: std::collections::HashMap::new(),
+                    mandatory: true,
+                },
+            )
+            .collect()
     }
 
     /// Helper methods for working spec analysis
@@ -389,11 +463,23 @@ impl ToolChainBridge {
 
     fn determine_task_type(&self, working_spec: &WorkingSpec) -> String {
         // Determine task type based on acceptance criteria
-        if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("compile") || c.then.contains("compile")) {
+        if working_spec
+            .acceptance_criteria
+            .iter()
+            .any(|c| c.given.contains("compile") || c.then.contains("compile"))
+        {
             "compilation".to_string()
-        } else if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("test") || c.then.contains("test")) {
+        } else if working_spec
+            .acceptance_criteria
+            .iter()
+            .any(|c| c.given.contains("test") || c.then.contains("test"))
+        {
             "testing".to_string()
-        } else if working_spec.acceptance_criteria.iter().any(|c| c.given.contains("deploy") || c.then.contains("deploy")) {
+        } else if working_spec
+            .acceptance_criteria
+            .iter()
+            .any(|c| c.given.contains("deploy") || c.then.contains("deploy"))
+        {
             "deployment".to_string()
         } else {
             "general".to_string()
@@ -403,7 +489,8 @@ impl ToolChainBridge {
     fn determine_task_complexity(&self, working_spec: &WorkingSpec) -> ExternalTaskComplexity {
         if working_spec.acceptance_criteria.len() > 5 || working_spec.file_changes.len() > 10 {
             ExternalTaskComplexity::VeryComplex
-        } else if working_spec.acceptance_criteria.len() > 3 || working_spec.file_changes.len() > 5 {
+        } else if working_spec.acceptance_criteria.len() > 3 || working_spec.file_changes.len() > 5
+        {
             ExternalTaskComplexity::Complex
         } else if working_spec.acceptance_criteria.len() > 1 {
             ExternalTaskComplexity::Moderate
@@ -419,9 +506,13 @@ impl ToolChainBridge {
             capabilities.push("security".to_string());
         }
 
-        if working_spec.coverage_targets.as_ref()
+        if working_spec
+            .coverage_targets
+            .as_ref()
             .and_then(|ct| ct.line_coverage)
-            .unwrap_or(0.0) > 0.8 {
+            .unwrap_or(0.0)
+            > 0.8
+        {
             capabilities.push("quality_gate".to_string());
         }
 
@@ -438,7 +529,10 @@ impl ToolChainBridge {
     }
 
     /// Convert milestone to tool chain execution
-    pub async fn milestone_to_tool_chain(&self, milestone: &ContractMilestone) -> Result<ToolChainExecution> {
+    pub async fn milestone_to_tool_chain(
+        &self,
+        milestone: &ContractMilestone,
+    ) -> Result<ToolChainExecution> {
         use std::collections::HashMap;
         use tracing::debug;
 
@@ -446,45 +540,67 @@ impl ToolChainBridge {
 
         // Extract tools from milestone objective and allowed operations
         let mut tools = Vec::new();
-        
+
         // Parse milestone objective to identify tools
         // For now, create a single tool based on milestone objective
         // In a more sophisticated implementation, this would parse the objective
         // to identify multiple tools and their relationships
         let tool_name = self.extract_tool_name_from_objective(&milestone.objective);
         let tool_version = "1.0.0".to_string(); // Default version
-        
+
         // Build tool parameters from milestone scope and interfaces
         let mut parameters = HashMap::new();
-        parameters.insert("milestone_id".to_string(), serde_json::Value::String(milestone.id.clone()));
-        parameters.insert("objective".to_string(), serde_json::Value::String(milestone.objective.clone()));
-        
+        parameters.insert(
+            "milestone_id".to_string(),
+            serde_json::Value::String(milestone.id.clone()),
+        );
+        parameters.insert(
+            "objective".to_string(),
+            serde_json::Value::String(milestone.objective.clone()),
+        );
+
         // Add scope information
         if !milestone.scope.files.is_empty() {
-            parameters.insert("files".to_string(), serde_json::json!(milestone.scope.files));
+            parameters.insert(
+                "files".to_string(),
+                serde_json::json!(milestone.scope.files),
+            );
         }
         if !milestone.scope.directories.is_empty() {
-            parameters.insert("directories".to_string(), serde_json::json!(milestone.scope.directories));
+            parameters.insert(
+                "directories".to_string(),
+                serde_json::json!(milestone.scope.directories),
+            );
         }
         if !milestone.scope.included_paths.is_empty() {
-            parameters.insert("included_paths".to_string(), serde_json::json!(milestone.scope.included_paths));
+            parameters.insert(
+                "included_paths".to_string(),
+                serde_json::json!(milestone.scope.included_paths),
+            );
         }
-        
+
         // Add allowed operations
         if !milestone.scope.allowed_operations.is_empty() {
-            parameters.insert("allowed_operations".to_string(), serde_json::json!(milestone.scope.allowed_operations));
+            parameters.insert(
+                "allowed_operations".to_string(),
+                serde_json::json!(milestone.scope.allowed_operations),
+            );
         }
-        
+
         // Add interface information if available
         if !milestone.interfaces.is_empty() {
-            parameters.insert("interfaces".to_string(), serde_json::json!(milestone.interfaces));
+            parameters.insert(
+                "interfaces".to_string(),
+                serde_json::json!(milestone.interfaces),
+            );
         }
-        
+
         // Determine timeout from estimated duration
-        let timeout_ms = milestone.estimated_duration
+        let timeout_ms = milestone
+            .estimated_duration
             .map(|minutes| minutes as u64 * 60 * 1000) // Convert minutes to milliseconds
             .or_else(|| Some(300000)); // Default 5 minutes
-        
+
         // Create retry policy based on risk tier
         let retry_policy = if milestone.risk_tier <= 1 {
             // Tier 1: Conservative retry policy
@@ -511,7 +627,7 @@ impl ToolChainBridge {
                 max_delay_ms: 2000,
             })
         };
-        
+
         tools.push(ToolSpec {
             name: tool_name.clone(),
             version: tool_version,
@@ -519,7 +635,7 @@ impl ToolChainBridge {
             timeout_ms,
             retry_policy,
         });
-        
+
         // Build data flow from milestone dependencies
         // For now, create simple sequential data flow
         // In a more sophisticated implementation, this would analyze dependencies
@@ -536,12 +652,13 @@ impl ToolChainBridge {
                 transformation: None, // Could add transformation logic here
             });
         }
-        
+
         // Build execution constraints from milestone
-        let max_execution_time_ms = milestone.estimated_duration
+        let max_execution_time_ms = milestone
+            .estimated_duration
             .map(|minutes| minutes as u64 * 60 * 1000 * 2) // 2x estimated duration as max
             .unwrap_or(600000); // Default 10 minutes
-        
+
         // Extract required capabilities from milestone scope and resource requirements
         let mut required_capabilities = Vec::new();
         for operation in &milestone.scope.allowed_operations {
@@ -550,17 +667,21 @@ impl ToolChainBridge {
         for (key, _value) in &milestone.scope.resource_requirements {
             required_capabilities.push(key.clone());
         }
-        
+
         let constraints = ExecutionConstraints {
             max_execution_time_ms,
             max_cost: None, // Could be extracted from milestone metrics if available
             required_capabilities,
         };
-        
+
         let chain_id = format!("chain_{}", milestone.id);
-        
-        debug!("Converted milestone {} to tool chain with {} tools", milestone.id, tools.len());
-        
+
+        debug!(
+            "Converted milestone {} to tool chain with {} tools",
+            milestone.id,
+            tools.len()
+        );
+
         Ok(ToolChainExecution {
             chain_id,
             tools,
@@ -568,13 +689,13 @@ impl ToolChainBridge {
             constraints,
         })
     }
-    
+
     /// Extract tool name from milestone objective
     fn extract_tool_name_from_objective(&self, objective: &str) -> String {
         // Simple heuristic: extract tool name from objective
         // In a more sophisticated implementation, this would use NLP or pattern matching
         // to identify the actual tool name
-        
+
         // Common patterns:
         // - "Execute tool: <name>"
         // - "Run <name>"
@@ -583,12 +704,16 @@ impl ToolChainBridge {
             return stripped.to_string();
         }
         if let Some(stripped) = objective.strip_prefix("Run ") {
-            return stripped.split_whitespace().next().unwrap_or("default_tool").to_string();
+            return stripped
+                .split_whitespace()
+                .next()
+                .unwrap_or("default_tool")
+                .to_string();
         }
         if let Some(stripped) = objective.strip_suffix(" execution") {
             return stripped.to_string();
         }
-        
+
         // Default: use a sanitized version of the objective
         objective
             .to_lowercase()
@@ -599,10 +724,13 @@ impl ToolChainBridge {
     }
 
     /// Execute tool chain and collect results
-    pub async fn execute_tool_chain(&self, tool_chain: &ToolChainExecution) -> Result<ExecutionResult> {
-        use std::collections::HashMap;
-        use tracing::{debug, warn, error};
+    pub async fn execute_tool_chain(
+        &self,
+        tool_chain: &ToolChainExecution,
+    ) -> Result<ExecutionResult> {
         use chrono::Utc;
+        use std::collections::HashMap;
+        use tracing::{debug, error, warn};
 
         debug!("Executing tool chain: {}", tool_chain.chain_id);
         let start_time = std::time::Instant::now();
@@ -610,7 +738,7 @@ impl ToolChainBridge {
         // Build dependency graph from data flow
         // This helps us determine execution order
         let tool_order = self.determine_execution_order(tool_chain)?;
-        
+
         // Execute tools in dependency order
         let mut tool_results = Vec::new();
         let mut tool_outputs: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
@@ -619,15 +747,20 @@ impl ToolChainBridge {
 
         for tool_name in tool_order {
             // Find the tool spec
-            let tool_spec = tool_chain.tools.iter()
+            let tool_spec = tool_chain
+                .tools
+                .iter()
                 .find(|t| t.name == tool_name)
                 .ok_or_else(|| anyhow!("Tool {} not found in tool chain", tool_name))?;
 
-            debug!("Executing tool: {} (version: {})", tool_spec.name, tool_spec.version);
+            debug!(
+                "Executing tool: {} (version: {})",
+                tool_spec.name, tool_spec.version
+            );
 
             // Prepare input parameters with data flow
             let mut tool_params = tool_spec.parameters.clone();
-            
+
             // Apply data flow transformations
             for data_flow in &tool_chain.data_flow {
                 if data_flow.to_tool == tool_name {
@@ -635,11 +768,12 @@ impl ToolChainBridge {
                     if let Some(source_outputs) = tool_outputs.get(&data_flow.from_tool) {
                         if let Some(output_value) = source_outputs.get(&data_flow.from_output) {
                             // Apply transformation if specified
-                            let transformed_value = if let Some(transform) = &data_flow.transformation {
-                                self.apply_transformation(output_value, transform)?
-                            } else {
-                                output_value.clone()
-                            };
+                            let transformed_value =
+                                if let Some(transform) = &data_flow.transformation {
+                                    self.apply_transformation(output_value, transform)?
+                                } else {
+                                    output_value.clone()
+                                };
                             tool_params.insert(data_flow.to_input.clone(), transformed_value);
                         }
                     }
@@ -647,8 +781,13 @@ impl ToolChainBridge {
             }
 
             // Check execution constraints
-            if start_time.elapsed().as_millis() as u64 > tool_chain.constraints.max_execution_time_ms {
-                let error_msg = format!("Tool chain execution exceeded max time: {}ms", tool_chain.constraints.max_execution_time_ms);
+            if start_time.elapsed().as_millis() as u64
+                > tool_chain.constraints.max_execution_time_ms
+            {
+                let error_msg = format!(
+                    "Tool chain execution exceeded max time: {}ms",
+                    tool_chain.constraints.max_execution_time_ms
+                );
                 warn!("{}", error_msg);
                 errors.push(error_msg.clone());
                 tool_results.push(ToolResult {
@@ -663,13 +802,13 @@ impl ToolChainBridge {
 
             // Execute tool with retry logic
             let tool_result = self.execute_tool_with_retry(tool_spec, &tool_params).await;
-            
+
             match tool_result {
                 Ok(result) => {
                     // Store outputs for data flow
                     tool_outputs.insert(tool_name.clone(), result.output.clone());
                     tool_results.push(result.clone());
-                    
+
                     // Collect evidence from successful tool execution
                     if result.success {
                         evidence.push(EvidenceArtifact {
@@ -694,7 +833,7 @@ impl ToolChainBridge {
                         execution_time_ms: start_time.elapsed().as_millis() as u64,
                         error: Some(error_msg),
                     });
-                    
+
                     // If critical tool fails, stop execution
                     // Could be enhanced with failure policy
                     break;
@@ -705,8 +844,12 @@ impl ToolChainBridge {
         let execution_time_ms = start_time.elapsed().as_millis() as u64;
         let success = errors.is_empty() && tool_results.iter().all(|r| r.success);
 
-        debug!("Tool chain execution completed: success={}, tools_executed={}, errors={}", 
-               success, tool_results.len(), errors.len());
+        debug!(
+            "Tool chain execution completed: success={}, tools_executed={}, errors={}",
+            success,
+            tool_results.len(),
+            errors.len()
+        );
 
         Ok(ExecutionResult {
             success,
@@ -716,36 +859,37 @@ impl ToolChainBridge {
             errors,
         })
     }
-    
+
     /// Determine execution order from data flow dependencies
     fn determine_execution_order(&self, tool_chain: &ToolChainExecution) -> Result<Vec<String>> {
         use std::collections::{HashMap, HashSet};
-        
+
         // Build dependency map: tool -> tools it depends on
         let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
         let mut all_tools = HashSet::new();
-        
+
         // Initialize all tools
         for tool in &tool_chain.tools {
             all_tools.insert(tool.name.clone());
             dependencies.insert(tool.name.clone(), HashSet::new());
         }
-        
+
         // Build dependency graph from data flow
         for data_flow in &tool_chain.data_flow {
             all_tools.insert(data_flow.from_tool.clone());
             all_tools.insert(data_flow.to_tool.clone());
-            
-            dependencies.entry(data_flow.to_tool.clone())
+
+            dependencies
+                .entry(data_flow.to_tool.clone())
                 .or_insert_with(HashSet::new)
                 .insert(data_flow.from_tool.clone());
         }
-        
+
         // Topological sort to determine execution order
         let mut order = Vec::new();
         let mut visited = HashSet::new();
         let mut visiting = HashSet::new();
-        
+
         fn visit(
             tool: &str,
             dependencies: &HashMap<String, HashSet<String>>,
@@ -759,31 +903,31 @@ impl ToolChainBridge {
             if visiting.contains(tool) {
                 return Err(anyhow!("Circular dependency detected in tool chain"));
             }
-            
+
             visiting.insert(tool.to_string());
-            
+
             if let Some(deps) = dependencies.get(tool) {
                 for dep in deps {
                     visit(dep, dependencies, visited, visiting, order)?;
                 }
             }
-            
+
             visiting.remove(tool);
             visited.insert(tool.to_string());
             order.push(tool.to_string());
-            
+
             Ok(())
         }
-        
+
         for tool in &all_tools {
             if !visited.contains(tool) {
                 visit(tool, &dependencies, &mut visited, &mut visiting, &mut order)?;
             }
         }
-        
+
         Ok(order)
     }
-    
+
     /// Execute tool with retry policy
     async fn execute_tool_with_retry(
         &self,
@@ -792,21 +936,28 @@ impl ToolChainBridge {
     ) -> Result<ToolResult> {
         use std::time::Duration;
         use tracing::{debug, warn};
-        
-        let max_attempts = tool_spec.retry_policy.as_ref()
+
+        let max_attempts = tool_spec
+            .retry_policy
+            .as_ref()
             .map(|p| p.max_attempts)
             .unwrap_or(1);
-        
+
         let mut last_error = None;
-        let mut delay_ms = tool_spec.retry_policy.as_ref()
+        let mut delay_ms = tool_spec
+            .retry_policy
+            .as_ref()
             .map(|p| p.base_delay_ms)
             .unwrap_or(0);
-        
+
         for attempt in 1..=max_attempts {
-            debug!("Executing tool {} (attempt {}/{})", tool_spec.name, attempt, max_attempts);
-            
+            debug!(
+                "Executing tool {} (attempt {}/{})",
+                tool_spec.name, attempt, max_attempts
+            );
+
             let start_time = std::time::Instant::now();
-            
+
             // Execute tool (simplified - would integrate with actual tool execution system)
             match self.execute_single_tool(tool_spec, parameters).await {
                 Ok(result) => {
@@ -820,9 +971,14 @@ impl ToolChainBridge {
                 }
                 Err(e) => {
                     last_error = Some(e.to_string());
-                    warn!("Tool {} execution failed (attempt {}/{}): {}", 
-                          tool_spec.name, attempt, max_attempts, last_error.as_ref().unwrap());
-                    
+                    warn!(
+                        "Tool {} execution failed (attempt {}/{}): {}",
+                        tool_spec.name,
+                        attempt,
+                        max_attempts,
+                        last_error.as_ref().unwrap()
+                    );
+
                     // Wait before retry (except on last attempt)
                     if attempt < max_attempts {
                         if let Some(retry_policy) = &tool_spec.retry_policy {
@@ -836,7 +992,7 @@ impl ToolChainBridge {
                 }
             }
         }
-        
+
         // All attempts failed
         Ok(ToolResult {
             tool_name: tool_spec.name.clone(),
@@ -846,7 +1002,7 @@ impl ToolChainBridge {
             error: last_error,
         })
     }
-    
+
     /// Execute a single tool (simplified implementation)
     async fn execute_single_tool(
         &self,
@@ -855,24 +1011,31 @@ impl ToolChainBridge {
     ) -> Result<ToolResult> {
         use std::collections::HashMap;
         use tracing::debug;
-        
+
         // Simplified tool execution
         // In a real implementation, this would:
         // 1. Look up tool in tool registry
         // 2. Validate parameters against tool schema
         // 3. Execute tool via appropriate executor
         // 4. Collect and validate outputs
-        
-        debug!("Executing tool: {} with {} parameters", tool_spec.name, _parameters.len());
-        
+
+        debug!(
+            "Executing tool: {} with {} parameters",
+            tool_spec.name,
+            _parameters.len()
+        );
+
         // Simulate tool execution
         // For now, return a success result with mock output
         // This can be enhanced when tool execution infrastructure is available
         let output = HashMap::from([
             ("status".to_string(), serde_json::json!("completed")),
-            ("tool_name".to_string(), serde_json::json!(tool_spec.name.clone())),
+            (
+                "tool_name".to_string(),
+                serde_json::json!(tool_spec.name.clone()),
+            ),
         ]);
-        
+
         Ok(ToolResult {
             tool_name: tool_spec.name.clone(),
             success: true,
@@ -881,7 +1044,7 @@ impl ToolChainBridge {
             error: None,
         })
     }
-    
+
     /// Apply data transformation
     fn apply_transformation(
         &self,
@@ -889,14 +1052,14 @@ impl ToolChainBridge {
         transform: &str,
     ) -> Result<serde_json::Value> {
         use tracing::warn;
-        
+
         // Simple transformation logic
         // In a more sophisticated implementation, this would support:
         // - JSON path transformations
         // - Type conversions
         // - Data validation
         // - Custom transformation functions
-        
+
         match transform {
             "identity" => Ok(value.clone()),
             "to_string" => Ok(serde_json::Value::String(value.to_string())),
@@ -905,7 +1068,9 @@ impl ToolChainBridge {
                     // serde_json::Number doesn't implement From<f64>, so we need to convert
                     // Try to convert to i64 first if it's a whole number, otherwise use f64 representation
                     if num.fract() == 0.0 && num >= (i64::MIN as f64) && num <= (i64::MAX as f64) {
-                        Ok(serde_json::Value::Number(serde_json::Number::from(num as i64)))
+                        Ok(serde_json::Value::Number(serde_json::Number::from(
+                            num as i64,
+                        )))
                     } else {
                         // For non-integer f64, serde_json doesn't support it directly
                         // Return as string representation instead
@@ -1074,7 +1239,7 @@ mod tests {
 
     #[test]
     fn test_tool_chain_bridge_creation() {
-        use crate::planning::tool_chain_types::{ToolChainPlanner, SchemaRegistry, ToolRegistry};
+        use crate::planning::tool_chain_types::{SchemaRegistry, ToolChainPlanner, ToolRegistry};
         let _bridge = ToolChainBridge::new(
             Arc::new(ToolChainPlanner::default()),
             Arc::new(SchemaRegistry::default()),

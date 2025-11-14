@@ -12,11 +12,11 @@ use uuid::Uuid;
 // Import all provenance types
 use crate::provenance_types::{
     BudgetAdherence, CawsComplianceProvenance, EvidenceItemProvenance, EvidenceSource,
-    ExportFormat, ExportMetadata, FilterOperator, FilterType, IntegrityCheckResult,
-    IntegrityIssue, IntegrityIssueType, IntegritySeverity, JudgeVerdictProvenance,
-    ProvenanceChain, ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord,
-    ProvenanceStats, TimeRange, VerdictDecision, VerificationStatus, ViolationProvenance,
-    ViolationSeverity, WaiverProvenance,
+    ExportFormat, ExportMetadata, FilterOperator, FilterType, IntegrityCheckResult, IntegrityIssue,
+    IntegrityIssueType, IntegritySeverity, JudgeVerdictProvenance, ProvenanceChain,
+    ProvenanceExport, ProvenanceFilter, ProvenanceQuery, ProvenanceRecord, ProvenanceStats,
+    TimeRange, VerdictDecision, VerificationStatus, ViolationProvenance, ViolationSeverity,
+    WaiverProvenance,
 };
 
 use crate::{
@@ -96,7 +96,10 @@ impl ProvenanceService {
                 config.git.commit_message_template.clone(),
             ) {
                 Ok(git_manager) => {
-                    info!("Git integration enabled for repository: {}", config.git.repository_path);
+                    info!(
+                        "Git integration enabled for repository: {}",
+                        config.git.repository_path
+                    );
                     Some(Box::new(git_manager) as Box<dyn GitIntegration>)
                 }
                 Err(e) => {
@@ -105,7 +108,10 @@ impl ProvenanceService {
                 }
             }
         } else {
-            debug!("Git repository not found at: {}. Git integration disabled.", config.git.repository_path);
+            debug!(
+                "Git repository not found at: {}. Git integration disabled.",
+                config.git.repository_path
+            );
             None
         };
 

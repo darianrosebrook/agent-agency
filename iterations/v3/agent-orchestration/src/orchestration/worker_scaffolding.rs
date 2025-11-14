@@ -13,28 +13,32 @@ use tracing::info;
 /// Scaffold standard workers in the database if they don't exist
 pub async fn scaffold_standard_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<()> {
     let pool = db_client.pool();
-    
+
     info!("Checking for standard workers in database...");
-    
+
     // Check if any workers exist
-    let worker_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM workers WHERE is_active = true")
-        .fetch_one(pool)
-        .await?;
-    
+    let worker_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM workers WHERE is_active = true")
+            .fetch_one(pool)
+            .await?;
+
     if worker_count > 0 {
-        info!("Found {} active workers in database, skipping scaffolding", worker_count);
+        info!(
+            "Found {} active workers in database, skipping scaffolding",
+            worker_count
+        );
         return Ok(());
     }
-    
+
     info!("No workers found, scaffolding standard workers...");
-    
+
     // Register standard workers
     register_general_worker(pool).await?;
     register_file_editing_worker(pool).await?;
     register_code_generation_worker(pool).await?;
     register_testing_worker(pool).await?;
     register_documentation_worker(pool).await?;
-    
+
     info!("✅ Scaffolded {} standard workers", 5);
     Ok(())
 }
@@ -42,7 +46,7 @@ pub async fn scaffold_standard_workers(db_client: Arc<DatabaseClient>) -> anyhow
 /// Register General Purpose Worker
 async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -50,7 +54,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         ON CONFLICT DO NOTHING
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("General Purpose Worker")
@@ -71,7 +75,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("  ✅ Registered General Purpose Worker: {}", worker_id);
     Ok(())
 }
@@ -79,7 +83,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register File Editing Specialist
 async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -87,7 +91,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         ON CONFLICT DO NOTHING
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("File Editing Worker")
@@ -111,7 +115,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("  ✅ Registered File Editing Worker: {}", worker_id);
     Ok(())
 }
@@ -119,7 +123,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
 /// Register Code Generation Specialist
 async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -127,7 +131,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         ON CONFLICT DO NOTHING
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Code Generation Worker")
@@ -150,7 +154,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("  ✅ Registered Code Generation Worker: {}", worker_id);
     Ok(())
 }
@@ -158,7 +162,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
 /// Register Testing Specialist
 async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -166,7 +170,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         ON CONFLICT DO NOTHING
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Testing Worker")
@@ -190,7 +194,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("  ✅ Registered Testing Worker: {}", worker_id);
     Ok(())
 }
@@ -198,7 +202,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register Documentation Specialist
 async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -206,7 +210,7 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         ON CONFLICT DO NOTHING
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Documentation Worker")
@@ -229,8 +233,7 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("  ✅ Registered Documentation Worker: {}", worker_id);
     Ok(())
 }
-

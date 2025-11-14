@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-pub mod tree;
 pub mod commit;
+pub mod tree;
 
-pub use tree::*;
 pub use commit::*;
+pub use tree::*;

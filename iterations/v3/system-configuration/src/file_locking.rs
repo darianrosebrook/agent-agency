@@ -85,13 +85,19 @@ impl FileLockGuard {
         if self.lock_type == LockType::Shared {
             match try_lock_file(&mut self.file, LockType::Exclusive, LockMode::NonBlocking) {
                 Ok(()) => {
-                    debug!("Successfully upgraded shared lock to exclusive for {:?}", self.path);
+                    debug!(
+                        "Successfully upgraded shared lock to exclusive for {:?}",
+                        self.path
+                    );
                     self.lock_type = LockType::Exclusive;
                     self.acquired_at = Instant::now();
                     Ok(self)
                 }
                 Err(_) => {
-                    warn!("Failed to upgrade shared lock to exclusive for {:?}", self.path);
+                    warn!(
+                        "Failed to upgrade shared lock to exclusive for {:?}",
+                        self.path
+                    );
                     Err(self)
                 }
             }
@@ -105,13 +111,19 @@ impl FileLockGuard {
         if self.lock_type == LockType::Exclusive {
             match try_lock_file(&mut self.file, LockType::Shared, LockMode::NonBlocking) {
                 Ok(()) => {
-                    debug!("Successfully downgraded exclusive lock to shared for {:?}", self.path);
+                    debug!(
+                        "Successfully downgraded exclusive lock to shared for {:?}",
+                        self.path
+                    );
                     self.lock_type = LockType::Shared;
                     self.acquired_at = Instant::now();
                     Ok(self)
                 }
                 Err(_) => {
-                    warn!("Failed to downgrade exclusive lock to shared for {:?}", self.path);
+                    warn!(
+                        "Failed to downgrade exclusive lock to shared for {:?}",
+                        self.path
+                    );
                     Err(self)
                 }
             }
@@ -124,7 +136,10 @@ impl FileLockGuard {
 impl Drop for FileLockGuard {
     fn drop(&mut self) {
         let duration = self.acquired_at.elapsed();
-        debug!("Releasing {:?} lock on {:?} after {:?}", self.lock_type, self.path, duration);
+        debug!(
+            "Releasing {:?} lock on {:?} after {:?}",
+            self.lock_type, self.path, duration
+        );
 
         if let Err(e) = unlock_file(&mut self.file) {
             warn!("Failed to unlock file {:?}: {}", self.path, e);
@@ -181,7 +196,10 @@ impl FileLock {
         let mut file = open_lock_file(&self.path, self.create_file)?;
         try_lock_file(&mut file, self.lock_type, self.mode)?;
 
-        debug!("Successfully acquired {:?} lock on {:?}", self.lock_type, self.path);
+        debug!(
+            "Successfully acquired {:?} lock on {:?}",
+            self.lock_type, self.path
+        );
 
         Ok(FileLockGuard {
             file,
@@ -193,9 +211,7 @@ impl FileLock {
 
     /// Attempt to acquire a shared read lock
     pub fn read_lock<P: AsRef<Path>>(path: P) -> IoResult<FileLockGuard> {
-        FileLock::new(path)
-            .with_lock_type(LockType::Shared)
-            .lock()
+        FileLock::new(path).with_lock_type(LockType::Shared).lock()
     }
 
     /// Attempt to acquire an exclusive write lock
@@ -237,12 +253,8 @@ fn open_lock_file(path: &Path, create: bool) -> IoResult<File> {
 /// Attempt to acquire a lock on an open file
 fn try_lock_file(file: &mut File, lock_type: LockType, mode: LockMode) -> IoResult<()> {
     match mode {
-        LockMode::Blocking => {
-            acquire_lock_blocking(file, lock_type)
-        }
-        LockMode::NonBlocking => {
-            acquire_lock_nonblocking(file, lock_type)
-        }
+        LockMode::Blocking => acquire_lock_blocking(file, lock_type),
+        LockMode::NonBlocking => acquire_lock_nonblocking(file, lock_type),
         LockMode::BlockingWithTimeout(timeout) => {
             acquire_lock_with_timeout(file, lock_type, timeout)
         }
@@ -284,9 +296,7 @@ fn acquire_lock_blocking(file: &mut File, lock_type: LockType) -> IoResult<()> {
             LockType::Exclusive => LOCKFILE_EXCLUSIVE_LOCK,
         };
 
-        let result = unsafe {
-            LockFileEx(handle, flags, 0, u32::MAX, u32::MAX, &mut overlapped)
-        };
+        let result = unsafe { LockFileEx(handle, flags, 0, u32::MAX, u32::MAX, &mut overlapped) };
 
         if result != 0 {
             Ok(())
@@ -338,9 +348,7 @@ fn acquire_lock_nonblocking(file: &mut File, lock_type: LockType) -> IoResult<()
             LockType::Exclusive => LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
         };
 
-        let result = unsafe {
-            LockFileEx(handle, flags, 0, u32::MAX, u32::MAX, &mut overlapped)
-        };
+        let result = unsafe { LockFileEx(handle, flags, 0, u32::MAX, u32::MAX, &mut overlapped) };
 
         if result != 0 {
             Ok(())
@@ -358,7 +366,11 @@ fn acquire_lock_nonblocking(file: &mut File, lock_type: LockType) -> IoResult<()
 }
 
 /// Acquire a lock with timeout
-fn acquire_lock_with_timeout(file: &mut File, lock_type: LockType, timeout: Duration) -> IoResult<()> {
+fn acquire_lock_with_timeout(
+    file: &mut File,
+    lock_type: LockType,
+    timeout: Duration,
+) -> IoResult<()> {
     let start_time = Instant::now();
 
     loop {
@@ -366,7 +378,10 @@ fn acquire_lock_with_timeout(file: &mut File, lock_type: LockType, timeout: Dura
             Ok(()) => return Ok(()),
             Err(e) if e.kind() == ErrorKind::WouldBlock => {
                 if start_time.elapsed() >= timeout {
-                    return Err(IoError::new(ErrorKind::TimedOut, "Lock acquisition timed out"));
+                    return Err(IoError::new(
+                        ErrorKind::TimedOut,
+                        "Lock acquisition timed out",
+                    ));
                 }
 
                 // Sleep for a short time before retrying
@@ -402,9 +417,7 @@ fn unlock_file(file: &mut File) -> IoResult<()> {
         let handle = file.as_raw_handle();
         let mut overlapped = OVERLAPPED::default();
 
-        let result = unsafe {
-            UnlockFile(handle, 0, 0, u32::MAX, u32::MAX)
-        };
+        let result = unsafe { UnlockFile(handle, 0, 0, u32::MAX, u32::MAX) };
 
         if result != 0 {
             Ok(())
@@ -527,7 +540,7 @@ mod tests {
         let _lock = FileLock::write_lock(path).unwrap();
         let info = LockInfo::for_path(path);
         assert!(info.is_locked);
-        assert!(!info.can_read_lock);  // Can't read lock when exclusive lock is held
+        assert!(!info.can_read_lock); // Can't read lock when exclusive lock is held
         assert!(!info.can_write_lock); // Can't write lock when exclusive lock is held
     }
 

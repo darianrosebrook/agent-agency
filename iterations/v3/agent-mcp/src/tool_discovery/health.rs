@@ -1,11 +1,11 @@
 //! Health monitoring for tool discovery
 
-use schemars::JsonSchema;
-use super::core::{HealthStatus, HealthCheckResult};
+use super::core::{HealthCheckResult, HealthStatus};
 use crate::mcp_types::*;
 use anyhow::Result;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 /// Health monitor for tool discovery service
@@ -38,7 +38,9 @@ impl ToolDiscoveryHealthMonitor {
 
         // Check if we need to perform a fresh check
         if let Some(last) = self.last_check {
-            if timestamp.signed_duration_since(last) < chrono::Duration::from_std(self.check_interval).unwrap() {
+            if timestamp.signed_duration_since(last)
+                < chrono::Duration::from_std(self.check_interval).unwrap()
+            {
                 // Return cached result
                 return HealthCheckResult {
                     status: HealthStatus::Healthy,
@@ -55,7 +57,10 @@ impl ToolDiscoveryHealthMonitor {
 
         // Check basic functionality
         metadata.insert("service_available".to_string(), serde_json::json!(true));
-        metadata.insert("last_check".to_string(), serde_json::json!(timestamp.to_rfc3339()));
+        metadata.insert(
+            "last_check".to_string(),
+            serde_json::json!(timestamp.to_rfc3339()),
+        );
 
         self.last_check = Some(timestamp);
 

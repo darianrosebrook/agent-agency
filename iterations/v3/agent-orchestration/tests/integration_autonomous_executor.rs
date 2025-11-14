@@ -7,25 +7,29 @@
 //! 4. Memory system integration
 //! 5. Progress tracking and plateau detection
 
+use async_trait::async_trait;
+use chrono::Utc;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
-use chrono::Utc;
-use async_trait::async_trait;
 
-use agent_agency_contracts::task_request::{TaskRequest, TaskContext, TaskConstraints, TaskMetadata, RiskTier, BudgetLimits, ScopeRestrictions, Environment, TaskPriority};
-use agent_agency_contracts::task_executor::{TaskExecutionResult, TaskExecutor, TaskSpec, TaskExecutorHealth, TaskExecutionStats, HealthStatus};
+use agent_agency_contracts::planning_io::{BudgetEnforcement, ChangeBudget};
+use agent_agency_contracts::task_executor::{
+    HealthStatus, TaskExecutionResult, TaskExecutionStats, TaskExecutor, TaskExecutorHealth,
+    TaskSpec,
+};
 use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
-use agent_agency_contracts::types::prelude::*;
+use agent_agency_contracts::task_request::{
+    BudgetLimits, Environment, RiskTier, ScopeRestrictions, TaskConstraints, TaskContext,
+    TaskMetadata, TaskPriority, TaskRequest,
+};
 use agent_agency_contracts::types::planning::TaskDescriptor;
-use agent_agency_contracts::planning_io::{ChangeBudget, BudgetEnforcement};
+use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::ExecutionStatus;
 
-use agent_workers::autonomous_executor::{
-    AutonomousExecutor, AutonomousExecutorConfig,
-};
 use agent_orchestration::progress_tracker::RealTimeProgressTracker;
+use agent_workers::autonomous_executor::{AutonomousExecutor, AutonomousExecutorConfig};
 
 #[cfg(feature = "memory")]
 use agent_agency_contracts::MemorySystem;
@@ -87,7 +91,9 @@ impl TaskExecutor for MockTaskExecutor {
         self.execute_task(task_spec, worker_id).await
     }
 
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutorHealth {
             status: HealthStatus::Healthy,
             last_execution_time: Some(Utc::now()),
@@ -98,7 +104,9 @@ impl TaskExecutor for MockTaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutionStats {
             total_executions: 0,
             successful_executions: 0,
@@ -110,7 +118,11 @@ impl TaskExecutor for MockTaskExecutor {
         })
     }
 
-    async fn cancel_task_execution(&self, _task_id: Uuid, _worker_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn cancel_task_execution(
+        &self,
+        _task_id: Uuid,
+        _worker_id: Uuid,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Ok(())
     }
 }
@@ -156,9 +168,9 @@ async fn test_multi_session_context_continuity() {
     // This test requires submit_task/get_task_status methods that don't exist yet
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution instead
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -171,9 +183,9 @@ async fn test_council_review_and_debate_protocol() {
     // This test requires submit_task/get_task_status methods that don't exist yet
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution instead
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -186,9 +198,9 @@ async fn test_iterative_refinement_with_satisficing() {
     // This test requires submit_task/get_task_status methods that don't exist yet
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution instead
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -202,9 +214,9 @@ async fn test_memory_system_integration() {
     // This test requires submit_task/get_task_status methods that don't exist yet
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution instead
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -217,9 +229,9 @@ async fn test_progress_tracking_and_plateau_detection() {
     // This test requires submit_task/get_task_status methods that don't exist yet
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution instead
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -235,7 +247,7 @@ async fn test_autonomous_executor_creation() {
     // Just verify the executor was created successfully
     // This tests that the AutonomousExecutor struct and its dependencies can be instantiated
     println!("✅ AutonomousExecutor created successfully");
-    
+
     // Test basic execution
     let result = executor.execute("test-task".to_string()).await;
     assert!(result.is_ok());
@@ -250,16 +262,18 @@ async fn test_end_to_end_autonomous_execution() {
     // Currently AutonomousExecutor only has execute() method
     // TODO: Implement full autonomous executor API or update test to use available methods
     tracing_subscriber::fmt::init();
-    
+
     let executor = create_test_executor();
-    
+
     // Test basic execution
-    let result = executor.execute("End-to-end autonomous execution test task".to_string()).await;
+    let result = executor
+        .execute("End-to-end autonomous execution test task".to_string())
+        .await;
     assert!(result.is_ok());
     let exec_result = result.unwrap();
     // TaskExecutionResult has a success field
     assert!(exec_result.success);
-    
+
     println!("Basic autonomous execution test passed");
 }
 
@@ -268,12 +282,9 @@ fn _calculate_variance(scores: &[f64]) -> f64 {
     if scores.is_empty() {
         return 0.0;
     }
-    
+
     let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-    let variance = scores.iter()
-        .map(|&x| (x - mean).powi(2))
-        .sum::<f64>() / scores.len() as f64;
-    
+    let variance = scores.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / scores.len() as f64;
+
     variance
 }
-

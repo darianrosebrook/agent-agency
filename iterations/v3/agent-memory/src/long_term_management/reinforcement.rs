@@ -17,7 +17,8 @@ pub struct ReinforcementConfig {
 /// Memory reinforcement engine
 pub struct MemoryReinforcementEngine {
     config: ReinforcementConfig,
-    reinforcement_history: std::collections::HashMap<crate::memory_types::MemoryId, Vec<ReinforcementEvent>>,
+    reinforcement_history:
+        std::collections::HashMap<crate::memory_types::MemoryId, Vec<ReinforcementEvent>>,
 }
 
 impl MemoryReinforcementEngine {
@@ -57,7 +58,11 @@ impl MemoryReinforcementEngine {
     }
 
     /// Calculate reinforcement value based on outcome and context
-    fn calculate_reinforcement_value(&self, outcome: &ReinforcementOutcome, context: &ReinforcementContext) -> f32 {
+    fn calculate_reinforcement_value(
+        &self,
+        outcome: &ReinforcementOutcome,
+        context: &ReinforcementContext,
+    ) -> f32 {
         let base_value = match outcome {
             ReinforcementOutcome::Success => 1.0,
             ReinforcementOutcome::PartialSuccess => 0.5,
@@ -69,7 +74,10 @@ impl MemoryReinforcementEngine {
         let context_multiplier = self.calculate_context_multiplier(context);
 
         // Apply temporal discount
-        let temporal_discount = self.config.discount_factor.powi(context.temporal_distance as i32);
+        let temporal_discount = self
+            .config
+            .discount_factor
+            .powi(context.temporal_distance as i32);
 
         base_value * context_multiplier * temporal_discount
     }
@@ -107,7 +115,10 @@ impl MemoryReinforcementEngine {
     }
 
     /// Get reinforcement history for a memory
-    pub fn get_reinforcement_history(&self, memory_id: &crate::memory_types::MemoryId) -> Vec<ReinforcementEvent> {
+    pub fn get_reinforcement_history(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+    ) -> Vec<ReinforcementEvent> {
         self.reinforcement_history
             .get(memory_id)
             .cloned()
@@ -115,7 +126,10 @@ impl MemoryReinforcementEngine {
     }
 
     /// Calculate long-term importance trend for a memory
-    pub fn calculate_importance_trend(&self, memory_id: &crate::memory_types::MemoryId) -> ImportanceTrend {
+    pub fn calculate_importance_trend(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+    ) -> ImportanceTrend {
         let history = self.get_reinforcement_history(memory_id);
 
         if history.is_empty() {
@@ -123,15 +137,18 @@ impl MemoryReinforcementEngine {
         }
 
         // Analyze reinforcement values over time
-        let recent_reinforcements: Vec<f32> = history.iter()
+        let recent_reinforcements: Vec<f32> = history
+            .iter()
             .rev()
             .take(10) // Last 10 reinforcements
             .map(|event| event.reinforcement_value)
             .collect();
 
-        let average_recent = recent_reinforcements.iter().sum::<f32>() / recent_reinforcements.len() as f32;
+        let average_recent =
+            recent_reinforcements.iter().sum::<f32>() / recent_reinforcements.len() as f32;
 
-        let older_reinforcements: Vec<f32> = history.iter()
+        let older_reinforcements: Vec<f32> = history
+            .iter()
             .rev()
             .skip(10)
             .take(10) // Previous 10 reinforcements
@@ -141,7 +158,8 @@ impl MemoryReinforcementEngine {
         let trend = if older_reinforcements.is_empty() {
             ImportanceTrend::Stable
         } else {
-            let average_older = older_reinforcements.iter().sum::<f32>() / older_reinforcements.len() as f32;
+            let average_older =
+                older_reinforcements.iter().sum::<f32>() / older_reinforcements.len() as f32;
             let change = average_recent - average_older;
 
             if change > 0.2 {
@@ -157,7 +175,11 @@ impl MemoryReinforcementEngine {
     }
 
     /// Predict future importance based on reinforcement patterns
-    pub fn predict_future_importance(&self, memory_id: &crate::memory_types::MemoryId, current_importance: f32) -> f32 {
+    pub fn predict_future_importance(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+        current_importance: f32,
+    ) -> f32 {
         let trend = self.calculate_importance_trend(memory_id);
         let history = self.get_reinforcement_history(memory_id);
 
@@ -173,11 +195,7 @@ impl MemoryReinforcementEngine {
         };
 
         // Apply diminishing returns for very high importance
-        let diminishing_factor = if current_importance > 0.8 {
-            0.95
-        } else {
-            1.0
-        };
+        let diminishing_factor = if current_importance > 0.8 { 0.95 } else { 1.0 };
 
         (current_importance * trend_factor * diminishing_factor)
             .min(self.config.max_importance_score)
@@ -192,7 +210,8 @@ impl MemoryReinforcementEngine {
         }
 
         // Remove memories with no history
-        self.reinforcement_history.retain(|_, history| !history.is_empty());
+        self.reinforcement_history
+            .retain(|_, history| !history.is_empty());
     }
 }
 
@@ -210,7 +229,7 @@ pub enum ReinforcementOutcome {
 pub struct ReinforcementContext {
     pub task_importance: TaskImportance,
     pub user_feedback: UserFeedback,
-    pub memory_relevance: f32, // 0.0 to 1.0
+    pub memory_relevance: f32,  // 0.0 to 1.0
     pub temporal_distance: i32, // Hours since memory was created
     pub was_exploratory: bool,
     pub usage_context: UsageContext,

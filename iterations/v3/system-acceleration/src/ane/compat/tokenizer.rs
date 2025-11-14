@@ -93,7 +93,9 @@ pub fn mistral_encode(text: &str) -> Result<Vec<i32>> {
     }
 
     if tokens_ptr.is_null() || token_count <= 0 {
-        return Err(ANEError::Internal("No tokens returned from encoding".to_string()));
+        return Err(ANEError::Internal(
+            "No tokens returned from encoding".to_string(),
+        ));
     }
 
     let tokens = unsafe {
@@ -114,7 +116,9 @@ pub fn mistral_decode(tokens: &[i32]) -> Result<String> {
     }
 
     if tokens.is_empty() {
-        return Err(ANEError::InvalidInput("Cannot decode empty token sequence".to_string()));
+        return Err(ANEError::InvalidInput(
+            "Cannot decode empty token sequence".to_string(),
+        ));
     }
 
     let mut text_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
@@ -144,7 +148,9 @@ pub fn mistral_decode(tokens: &[i32]) -> Result<String> {
     }
 
     if text_ptr.is_null() {
-        return Err(ANEError::Internal("No text returned from decoding".to_string()));
+        return Err(ANEError::Internal(
+            "No text returned from decoding".to_string(),
+        ));
     }
 
     let text = unsafe {
@@ -191,7 +197,9 @@ pub unsafe fn mistral_tokenizer_encode(
     }
 
     if text.is_null() {
-        *error_out = std::ffi::CString::new("Null text pointer").unwrap().into_raw();
+        *error_out = std::ffi::CString::new("Null text pointer")
+            .unwrap()
+            .into_raw();
         return -1;
     }
 
@@ -199,7 +207,9 @@ pub unsafe fn mistral_tokenizer_encode(
     let text_str = match cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
-            *error_out = std::ffi::CString::new("Invalid UTF-8 text").unwrap().into_raw();
+            *error_out = std::ffi::CString::new("Invalid UTF-8 text")
+                .unwrap()
+                .into_raw();
             return -1;
         }
     };

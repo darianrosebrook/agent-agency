@@ -3,12 +3,14 @@
 //! Provides hooks to track workspace changes during processing and enable
 //! rollback capabilities for failed or incorrect processing operations.
 
+use crate::{DataProcessingError, DataProcessingResult};
 use schemars::JsonSchema;
-use system_resilience::workspace_state::{WorkspaceStateManager, WorkspaceViewManager, RollbackManager, StateId};
-use crate::{DataProcessingResult, DataProcessingError};
-use std::sync::Arc;
 use std::path::PathBuf;
-use tracing::{info, warn, error};
+use std::sync::Arc;
+use system_resilience::workspace_state::{
+    RollbackManager, StateId, WorkspaceStateManager, WorkspaceViewManager,
+};
+use tracing::{error, info, warn};
 
 /// Configuration for workspace integration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
@@ -64,11 +66,16 @@ impl WorkspaceIntegrationHooks {
     /// Create new workspace integration hooks
     pub async fn new(config: &WorkspaceConfig) -> DataProcessingResult<Self> {
         let workspace_config = config.into();
-        let storage = Box::new(system_resilience::workspace_state::FileStorage::new(&config.workspace_root, false));
+        let storage = Box::new(system_resilience::workspace_state::FileStorage::new(
+            &config.workspace_root,
+            false,
+        ));
 
-        let workspace_manager = Arc::new(
-            WorkspaceStateManager::new(&config.workspace_root, workspace_config, storage)
-        );
+        let workspace_manager = Arc::new(WorkspaceStateManager::new(
+            &config.workspace_root,
+            workspace_config,
+            storage,
+        ));
 
         let view_manager = if config.create_processing_views {
             let views_dir = if let Some(ref dir) = config.views_directory {
@@ -78,7 +85,7 @@ impl WorkspaceIntegrationHooks {
             };
             Some(Arc::new(WorkspaceViewManager::new(
                 Arc::clone(&workspace_manager),
-                &views_dir
+                &views_dir,
             )))
         } else {
             None
@@ -93,7 +100,7 @@ impl WorkspaceIntegrationHooks {
             }
             Some(Arc::new(RollbackManager::new(
                 Arc::clone(&workspace_manager),
-                &backup_dir
+                &backup_dir,
             )))
         } else {
             None
@@ -114,56 +121,81 @@ impl WorkspaceIntegrationHooks {
             return Ok(StateId::new()); // Return dummy ID
         }
 
-        let result = self.workspace_manager.capture_state().await
-            .map_err(|e| DataProcessingError::Other(format!("Failed to capture workspace state: {:?}", e)))?;
+        let result = self.workspace_manager.capture_state().await.map_err(|e| {
+            DataProcessingError::Other(format!("Failed to capture workspace state: {:?}", e))
+        })?;
 
         Ok(result.data)
     }
 
     /// Commit workspace changes after successful processing
-    pub async fn commit_processing_changes(&self, pre_state_id: StateId) -> DataProcessingResult<()> {
+    pub async fn commit_processing_changes(
+        &self,
+        pre_state_id: StateId,
+    ) -> DataProcessingResult<()> {
         if !self.config.enable_change_tracking {
             return Ok(());
         }
 
         // Capture current state to compare with pre-processing state
-        let current_state_result = self.workspace_manager.capture_state().await
-            .map_err(|e| DataProcessingError::Other(format!("Failed to capture current state: {:?}", e)))?;
-        
+        let current_state_result = self.workspace_manager.capture_state().await.map_err(|e| {
+            DataProcessingError::Other(format!("Failed to capture current state: {:?}", e))
+        })?;
+
         let current_state_id = current_state_result.data;
 
         // Create a processing view if view manager is available
         if let Some(ref view_manager) = self.view_manager {
-            let view_name = format!("processing_commit_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-            let view_result = view_manager.create_view(current_state_id, Some(view_name.clone())).await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to create processing view: {:?}", e)))?;
-            
-            tracing::info!("Created processing view: {} at {:?}", view_name, view_result.data);
+            let view_name = format!(
+                "processing_commit_{}",
+                chrono::Utc::now().format("%Y%m%d_%H%M%S")
+            );
+            let view_result = view_manager
+                .create_view(current_state_id, Some(view_name.clone()))
+                .await
+                .map_err(|e| {
+                    DataProcessingError::Other(format!("Failed to create processing view: {:?}", e))
+                })?;
+
+            tracing::info!(
+                "Created processing view: {} at {:?}",
+                view_name,
+                view_result.data
+            );
         }
 
         // Log the processing completion
-        tracing::info!("Processing changes committed successfully. Pre-state: {}, Post-state: {}", 
-                      pre_state_id, current_state_id);
+        tracing::info!(
+            "Processing changes committed successfully. Pre-state: {}, Post-state: {}",
+            pre_state_id,
+            current_state_id
+        );
 
         Ok(())
     }
 
     /// Rollback workspace changes after failed processing
     /// Uses RollbackManager to restore workspace state from pre_state_id snapshot
-    pub async fn rollback_processing_changes(&self, pre_state_id: StateId) -> DataProcessingResult<()> {
+    pub async fn rollback_processing_changes(
+        &self,
+        pre_state_id: StateId,
+    ) -> DataProcessingResult<()> {
         if !self.config.enable_rollback {
             return Ok(());
         }
 
         // Implemented: Real workspace rollback functionality using RollbackManager
         // Restores workspace state from pre_state_id snapshot with automatic state restoration
-        
+
         info!("Starting rollback to state: {:?}", pre_state_id);
-        
+
         // Validate that the target state exists
         match self.workspace_manager.get_state(pre_state_id).await {
             Ok(_) => {
-                info!("Target state {:?} exists, proceeding with rollback", pre_state_id);
+                info!(
+                    "Target state {:?} exists, proceeding with rollback",
+                    pre_state_id
+                );
             }
             Err(e) => {
                 error!("Target state {:?} not found: {:?}", pre_state_id, e);
@@ -173,13 +205,16 @@ impl WorkspaceIntegrationHooks {
                 )));
             }
         }
-        
+
         // Perform rollback using RollbackManager
         if let Some(ref rollback_manager) = self.rollback_manager {
             // Create backup of current state before rollback (for safety)
             let create_backup = true;
-            
-            match rollback_manager.rollback_to_state(pre_state_id, create_backup).await {
+
+            match rollback_manager
+                .rollback_to_state(pre_state_id, create_backup)
+                .await
+            {
                 Ok(rollback_result) => {
                     info!(
                         "Rollback completed successfully: {} files restored, {} removed, {} modified (duration: {}ms)",
@@ -188,28 +223,35 @@ impl WorkspaceIntegrationHooks {
                         rollback_result.files_modified,
                         rollback_result.duration_ms
                     );
-                    
+
                     // Log any warnings from rollback operation
                     if !rollback_result.warnings.is_empty() {
                         for warning in &rollback_result.warnings {
                             warn!("Rollback warning: {}", warning);
                         }
                     }
-                    
+
                     // Verify rollback was successful
                     if !rollback_result.success {
                         error!("Rollback operation reported failure despite returning Ok");
                         return Err(DataProcessingError::Other(
-                            "Rollback operation failed".to_string()
+                            "Rollback operation failed".to_string(),
                         ));
                     }
-                    
+
                     // Create a rollback view for debugging/verification
                     if let Some(ref view_manager) = self.view_manager {
-                        let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-                        match view_manager.create_view(pre_state_id, Some(view_name.clone())).await {
+                        let view_name =
+                            format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+                        match view_manager
+                            .create_view(pre_state_id, Some(view_name.clone()))
+                            .await
+                        {
                             Ok(view_result) => {
-                                info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+                                info!(
+                                    "Created rollback view: {} at {:?}",
+                                    view_name, view_result.data
+                                );
                             }
                             Err(e) => {
                                 warn!("Failed to create rollback view: {:?}", e);
@@ -217,20 +259,29 @@ impl WorkspaceIntegrationHooks {
                             }
                         }
                     }
-                    
+
                     Ok(())
                 }
                 Err(e) => {
                     error!("Rollback failed: {:?}", e);
-                    
+
                     // Attempt partial recovery: create a view of the target state for manual recovery
                     if let Some(ref view_manager) = self.view_manager {
-                        let view_name = format!("rollback_failed_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-                        if let Ok(view_result) = view_manager.create_view(pre_state_id, Some(view_name.clone())).await {
-                            warn!("Rollback failed, but created recovery view: {} at {:?}", view_name, view_result.data);
+                        let view_name = format!(
+                            "rollback_failed_{}",
+                            chrono::Utc::now().format("%Y%m%d_%H%M%S")
+                        );
+                        if let Ok(view_result) = view_manager
+                            .create_view(pre_state_id, Some(view_name.clone()))
+                            .await
+                        {
+                            warn!(
+                                "Rollback failed, but created recovery view: {} at {:?}",
+                                view_name, view_result.data
+                            );
                         }
                     }
-                    
+
                     Err(DataProcessingError::Other(format!(
                         "Rollback to state {:?} failed: {:?}",
                         pre_state_id, e
@@ -240,31 +291,55 @@ impl WorkspaceIntegrationHooks {
         } else {
             // Rollback manager not available - fallback to view creation only
             warn!("Rollback manager not available, creating rollback view only");
-            
+
             if let Some(ref view_manager) = self.view_manager {
                 let view_name = format!("rollback_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
-                let view_result = view_manager.create_view(pre_state_id, Some(view_name.clone())).await
-                    .map_err(|e| DataProcessingError::Other(format!("Failed to create rollback view: {:?}", e)))?;
-                
-                info!("Created rollback view: {} at {:?}", view_name, view_result.data);
+                let view_result = view_manager
+                    .create_view(pre_state_id, Some(view_name.clone()))
+                    .await
+                    .map_err(|e| {
+                        DataProcessingError::Other(format!(
+                            "Failed to create rollback view: {:?}",
+                            e
+                        ))
+                    })?;
+
+                info!(
+                    "Created rollback view: {} at {:?}",
+                    view_name, view_result.data
+                );
             }
-            
+
             Err(DataProcessingError::Other(
-                "Rollback manager not initialized - rollback not performed".to_string()
+                "Rollback manager not initialized - rollback not performed".to_string(),
             ))
         }
     }
 
     /// Create a processing view for debugging or analysis
-    pub async fn create_processing_view(&self, state_id: StateId, name: &str) -> DataProcessingResult<PathBuf> {
+    pub async fn create_processing_view(
+        &self,
+        state_id: StateId,
+        name: &str,
+    ) -> DataProcessingResult<PathBuf> {
         if let Some(ref view_manager) = self.view_manager {
-            let view_result = view_manager.create_view(state_id, Some(name.to_string())).await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to create processing view: {:?}", e)))?;
-            
-            tracing::info!("Created processing view '{}' at: {:?}", name, view_result.data);
+            let view_result = view_manager
+                .create_view(state_id, Some(name.to_string()))
+                .await
+                .map_err(|e| {
+                    DataProcessingError::Other(format!("Failed to create processing view: {:?}", e))
+                })?;
+
+            tracing::info!(
+                "Created processing view '{}' at: {:?}",
+                name,
+                view_result.data
+            );
             Ok(view_result.data)
         } else {
-            Err(DataProcessingError::Other("View manager not available".to_string()))
+            Err(DataProcessingError::Other(
+                "View manager not available".to_string(),
+            ))
         }
     }
 
@@ -275,16 +350,17 @@ impl WorkspaceIntegrationHooks {
 
         // Get view statistics if view manager is available
         let (total_views, avg_state_size_mb) = if let Some(ref view_manager) = self.view_manager {
-            let views = view_manager.list_views().await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
-            
+            let views = view_manager.list_views().await.map_err(|e| {
+                DataProcessingError::Other(format!("Failed to list views: {:?}", e))
+            })?;
+
             let total_views = views.len();
             let avg_state_size_mb = if total_views > 0 {
                 disk_usage_mb / total_views as f64
             } else {
                 0.0
             };
-            
+
             (total_views, avg_state_size_mb)
         } else {
             (0, 0.0)
@@ -300,7 +376,10 @@ impl WorkspaceIntegrationHooks {
             }
             Err(e) => {
                 // Fallback to estimation if state listing fails
-                tracing::warn!("Failed to list states from workspace manager: {:?}, using estimation", e);
+                tracing::warn!(
+                    "Failed to list states from workspace manager: {:?}, using estimation",
+                    e
+                );
                 // Use views + 1 as fallback estimation (current state not yet captured)
                 total_views + 1
             }
@@ -317,15 +396,17 @@ impl WorkspaceIntegrationHooks {
     /// List available processing views
     pub async fn list_processing_views(&self) -> DataProcessingResult<Vec<String>> {
         if let Some(ref view_manager) = self.view_manager {
-            let views = view_manager.list_views().await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
-            
+            let views = view_manager.list_views().await.map_err(|e| {
+                DataProcessingError::Other(format!("Failed to list views: {:?}", e))
+            })?;
+
             // Filter for processing-related views and extract names
-            let processing_views: Vec<String> = views.into_iter()
+            let processing_views: Vec<String> = views
+                .into_iter()
                 .filter(|view| view.name.contains("processing") || view.name.contains("rollback"))
                 .map(|view| view.name)
                 .collect();
-            
+
             Ok(processing_views)
         } else {
             Ok(vec![])
@@ -335,19 +416,26 @@ impl WorkspaceIntegrationHooks {
     /// Delete old processing views to save disk space
     pub async fn cleanup_old_views(&self, max_age_days: u32) -> DataProcessingResult<usize> {
         if let Some(ref view_manager) = self.view_manager {
-            let views = view_manager.list_views().await
-                .map_err(|e| DataProcessingError::Other(format!("Failed to list views: {:?}", e)))?;
-            
+            let views = view_manager.list_views().await.map_err(|e| {
+                DataProcessingError::Other(format!("Failed to list views: {:?}", e))
+            })?;
+
             let cutoff_time = chrono::Utc::now() - chrono::Duration::days(max_age_days as i64);
             let mut deleted_count = 0;
-            
+
             for view in views {
                 // Try to parse creation time from view name (assuming format with timestamp)
                 if let Some(timestamp_str) = view.name.split('_').last() {
-                    if let Ok(view_time) = chrono::DateTime::parse_from_str(timestamp_str, "%Y%m%d_%H%M%S") {
+                    if let Ok(view_time) =
+                        chrono::DateTime::parse_from_str(timestamp_str, "%Y%m%d_%H%M%S")
+                    {
                         if view_time.with_timezone(&chrono::Utc) < cutoff_time {
                             if let Err(e) = view_manager.delete_view(&view.name).await {
-                                tracing::warn!("Failed to delete old view '{}': {:?}", view.name, e);
+                                tracing::warn!(
+                                    "Failed to delete old view '{}': {:?}",
+                                    view.name,
+                                    e
+                                );
                             } else {
                                 deleted_count += 1;
                                 tracing::info!("Deleted old view: {}", view.name);
@@ -356,7 +444,7 @@ impl WorkspaceIntegrationHooks {
                     }
                 }
             }
-            
+
             Ok(deleted_count)
         } else {
             Ok(0)
@@ -366,9 +454,9 @@ impl WorkspaceIntegrationHooks {
     /// Calculate disk usage of workspace states and views
     async fn calculate_disk_usage(&self) -> DataProcessingResult<f64> {
         use std::fs;
-        
+
         let mut total_size = 0u64;
-        
+
         // Calculate size of workspace root
         if let Ok(entries) = fs::read_dir(&self.config.workspace_root) {
             for entry in entries.flatten() {
@@ -379,7 +467,7 @@ impl WorkspaceIntegrationHooks {
                 }
             }
         }
-        
+
         // Calculate size of views directory if it exists
         if let Some(ref views_dir) = self.config.views_directory {
             if let Ok(entries) = fs::read_dir(views_dir) {
@@ -392,7 +480,7 @@ impl WorkspaceIntegrationHooks {
                 }
             }
         }
-        
+
         // Convert bytes to MB
         Ok(total_size as f64 / (1024.0 * 1024.0))
     }

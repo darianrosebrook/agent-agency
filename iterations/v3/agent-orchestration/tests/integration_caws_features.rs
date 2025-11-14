@@ -9,17 +9,19 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use anyhow::Result;
 
-use agent_agency_contracts::WorkingSpec;
 use agent_agency_contracts::planning_io::ExecutionPlan as ContractExecutionPlan;
+use agent_agency_contracts::WorkingSpec;
 
+use agent_orchestration::planning::caws_complexity_mode::{
+    CawsComplexityMode, QualityRequirements,
+};
 use agent_orchestration::planning::caws_integration::CawsPlanBridge;
 use agent_orchestration::planning::caws_spec_resolver::{CawsSpecResolver, SpecInfo};
-use agent_orchestration::planning::caws_complexity_mode::{CawsComplexityMode, QualityRequirements};
 
 /// Helper to create a test CAWS directory structure
 fn setup_test_caws_dir(temp_dir: &TempDir) -> PathBuf {
@@ -63,11 +65,17 @@ async fn test_multi_spec_resolution_priority() -> Result<()> {
 
     // Create feature-specific spec
     let feature_spec_path = specs_dir.join("user-auth.yaml");
-    fs::write(&feature_spec_path, create_test_spec_yaml("user-auth", "User Authentication", 1))?;
+    fs::write(
+        &feature_spec_path,
+        create_test_spec_yaml("user-auth", "User Authentication", 1),
+    )?;
 
     // Create legacy spec
     let legacy_spec_path = caws_dir.join("working-spec.yaml");
-    fs::write(&legacy_spec_path, create_test_spec_yaml("legacy", "Legacy Spec", 2))?;
+    fs::write(
+        &legacy_spec_path,
+        create_test_spec_yaml("legacy", "Legacy Spec", 2),
+    )?;
 
     let resolver = CawsSpecResolver::new(temp_dir.path())?;
 
@@ -96,7 +104,10 @@ async fn test_auto_detect_single_spec() -> Result<()> {
 
     // Create single feature spec
     let feature_spec_path = specs_dir.join("feature-1.yaml");
-    fs::write(&feature_spec_path, create_test_spec_yaml("feature-1", "Feature 1", 2))?;
+    fs::write(
+        &feature_spec_path,
+        create_test_spec_yaml("feature-1", "Feature 1", 2),
+    )?;
 
     let resolver = CawsSpecResolver::new(temp_dir.path())?;
 
@@ -182,7 +193,7 @@ async fn test_complexity_mode_detection_from_config_yaml() -> Result<()> {
 #[tokio::test]
 async fn test_complexity_mode_defaults_to_standard() -> Result<()> {
     let temp_dir = TempDir::new()?;
-    
+
     // No config files
     let mode = CawsComplexityMode::detect(temp_dir.path())?;
     assert_eq!(mode, CawsComplexityMode::Standard);
@@ -264,13 +275,13 @@ async fn test_bridge_creates_mode_aware_evidence_gates() -> Result<()> {
 
     // Test with Simple mode
     fs::write(caws_dir.join("mode"), "simple")?;
-    
+
     // Create spec with Tier 2
     fs::write(
         specs_dir.join("test-spec.yaml"),
         create_test_spec_yaml("test-spec", "Test Spec", 2),
     )?;
-    
+
     let bridge = CawsPlanBridge::with_project_root(temp_dir.path())?;
     assert_eq!(bridge.complexity_mode(), CawsComplexityMode::Simple);
 
@@ -284,13 +295,13 @@ async fn test_bridge_creates_mode_aware_evidence_gates() -> Result<()> {
 
     // Test with Enterprise mode
     fs::write(caws_dir.join("mode"), "enterprise")?;
-    
+
     // Create spec with Tier 1
     fs::write(
         specs_dir.join("test-spec-2.yaml"),
         create_test_spec_yaml("test-spec-2", "Test Spec 2", 1),
     )?;
-    
+
     let bridge = CawsPlanBridge::with_project_root(temp_dir.path())?;
     assert_eq!(bridge.complexity_mode(), CawsComplexityMode::Enterprise);
 
@@ -408,9 +419,17 @@ async fn test_spec_to_plan_with_complexity_mode() -> Result<()> {
 
     // Verify evidence gates use mode-aware requirements
     for milestone in &plan.milestones {
-        let requirements = bridge.complexity_mode().quality_requirements(milestone.risk_tier as u8);
-        assert_eq!(milestone.evidence_gate.min_coverage, requirements.line_coverage);
-        assert_eq!(milestone.evidence_gate.min_mutation_score, requirements.mutation_score);
+        let requirements = bridge
+            .complexity_mode()
+            .quality_requirements(milestone.risk_tier as u8);
+        assert_eq!(
+            milestone.evidence_gate.min_coverage,
+            requirements.line_coverage
+        );
+        assert_eq!(
+            milestone.evidence_gate.min_mutation_score,
+            requirements.mutation_score
+        );
     }
 
     Ok(())
@@ -475,4 +494,3 @@ async fn test_spec_resolver_warns_on_multi_agent_legacy_use() -> Result<()> {
 
     Ok(())
 }
-

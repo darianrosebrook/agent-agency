@@ -1,26 +1,27 @@
 //! Main evidence collector implementation
 
-use super::types::*;
 use super::code_analysis::CodeAnalysisCollector;
-use super::test_execution::TestExecutionCollector;
+use super::constitutional::ConstitutionalCollector;
 use super::documentation::DocumentationCollector;
+use super::filtering::EvidenceFilter;
 use super::performance::PerformanceCollector;
 use super::security::SecurityCollector;
-use super::constitutional::ConstitutionalCollector;
-use super::filtering::EvidenceFilter;
+use super::test_execution::TestExecutionCollector;
+use super::types::*;
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
-use crate::extraction_types::{AtomicClaim, ClaimType, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
 use crate::evidence::evidence_types::VerificationMethod;
+use crate::extraction_types::{
+    AtomicClaim, ClaimType, Evidence, EvidenceSource, EvidenceType, ProcessingContext,
+};
 use anyhow::Result;
-use tracing::{debug, info, warn};
 use std::sync::Arc;
 use system_quality_security::provenance_service::ProvenanceService;
+use tracing::{debug, info, warn};
 
-/// Main evidence collector that orchestrates evidence collection from multiple sources
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Serialize, Deserialize) ]
+/// Main evidence collector that orchestrates evidence collection from multiple sources
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize)]
 pub struct EvidenceCollector {
     config: EvidenceCollectorConfig,
     code_analyzer: CodeAnalysisCollector,
@@ -115,7 +116,9 @@ impl EvidenceCollector {
         }
 
         // Filter and rank evidence
-        let filtered_evidence = self.evidence_filter.filter_and_rank_evidence(all_evidence, claim);
+        let filtered_evidence = self
+            .evidence_filter
+            .filter_and_rank_evidence(all_evidence, claim);
 
         info!(
             "Collected {} relevant evidence items for claim {}",
@@ -157,14 +160,14 @@ impl EvidenceCollector {
                 methods.push(VerificationMethod::ConstitutionalCheck);
                 methods.push(VerificationMethod::DocumentationReview);
             }
-            ClaimType::Behavioral |
-            ClaimType::Functional |
-            ClaimType::Structural |
-            ClaimType::Informational |
-            ClaimType::Causal |
-            ClaimType::Conditional |
-            ClaimType::Quantitative |
-            ClaimType::Requirement => {
+            ClaimType::Behavioral
+            | ClaimType::Functional
+            | ClaimType::Structural
+            | ClaimType::Informational
+            | ClaimType::Causal
+            | ClaimType::Conditional
+            | ClaimType::Quantitative
+            | ClaimType::Requirement => {
                 // Default verification methods for other claim types
                 methods.push(VerificationMethod::CodeAnalysis);
                 methods.push(VerificationMethod::DocumentationReview);
@@ -192,17 +195,21 @@ impl EvidenceCollector {
                 self.doc_reviewer.collect_evidence(claim, context).await
             }
             VerificationMethod::PerformanceMeasurement => {
-                self.performance_analyzer.collect_evidence(claim, context).await
+                self.performance_analyzer
+                    .collect_evidence(claim, context)
+                    .await
             }
             VerificationMethod::SecurityScan => {
                 self.security_scanner.collect_evidence(claim, context).await
             }
             VerificationMethod::ConstitutionalCheck => {
-                self.constitutional_checker.collect_evidence(claim, context).await
+                self.constitutional_checker
+                    .collect_evidence(claim, context)
+                    .await
             }
-            VerificationMethod::Measurement |
-            VerificationMethod::LogicalAnalysis |
-            VerificationMethod::ProcessAnalysis => {
+            VerificationMethod::Measurement
+            | VerificationMethod::LogicalAnalysis
+            | VerificationMethod::ProcessAnalysis => {
                 // TODO: Implement verification methods (Measurement, LogicalAnalysis, ProcessAnalysis)
                 // - [ ] Implement measurement-based verification (numeric validation, range checks)
                 // - [ ] Implement logical analysis verification (logical consistency checks)
@@ -228,9 +235,7 @@ impl EvidenceCollector {
                 }])
             }
             // Catch-all for future non-exhaustive variants
-            _ => {
-                Ok(vec![])
-            }
+            _ => Ok(vec![]),
         }
     }
 
@@ -240,19 +245,29 @@ impl EvidenceCollector {
     }
 
     /// Collect CAWS provenance evidence for claims about development process
-    pub async fn collect_caws_provenance_evidence(&self, claim: &AtomicClaim) -> Result<Vec<Evidence>> {
-        debug!("Collecting CAWS provenance evidence for claim: {}", claim.id);
+    pub async fn collect_caws_provenance_evidence(
+        &self,
+        claim: &AtomicClaim,
+    ) -> Result<Vec<Evidence>> {
+        debug!(
+            "Collecting CAWS provenance evidence for claim: {}",
+            claim.id
+        );
 
         // Extract task_id from claim scope
         // working_spec_id might be a UUID string or a plan ID like "PLAN-123"
         // Try parsing as UUID first, then try to extract from plan ID format
-        let task_id = claim.scope.working_spec_id
+        let task_id = claim
+            .scope
+            .working_spec_id
             .parse::<uuid::Uuid>()
             .ok()
             .or_else(|| {
                 // If working_spec_id is in format "PLAN-{uuid}", extract the UUID part
                 if claim.scope.working_spec_id.starts_with("PLAN-") {
-                    claim.scope.working_spec_id
+                    claim
+                        .scope
+                        .working_spec_id
                         .strip_prefix("PLAN-")
                         .and_then(|s| s.parse::<uuid::Uuid>().ok())
                 } else {
@@ -282,23 +297,29 @@ impl EvidenceCollector {
         let provenance_chain = match provenance_service.get_provenance_chain(task_id).await {
             Ok(chain) => chain,
             Err(e) => {
-                warn!("Failed to query provenance chain for task {}: {}", task_id, e);
+                warn!(
+                    "Failed to query provenance chain for task {}: {}",
+                    task_id, e
+                );
                 return Ok(vec![]);
             }
         };
 
         // Convert provenance entries to evidence
         let mut evidence_items = Vec::new();
-        
+
         for record in provenance_chain.entries {
             // Extract CAWS compliance information
             let caws_compliance = &record.caws_compliance;
-            
+
             // Build evidence content from provenance record
             let mut content_parts = Vec::new();
-            content_parts.push(format!("CAWS Compliance Score: {:.2}", caws_compliance.compliance_score));
+            content_parts.push(format!(
+                "CAWS Compliance Score: {:.2}",
+                caws_compliance.compliance_score
+            ));
             content_parts.push(format!("Compliant: {}", caws_compliance.is_compliant));
-            
+
             if !caws_compliance.violations.is_empty() {
                 content_parts.push(format!("Violations: {}", caws_compliance.violations.len()));
                 for violation in &caws_compliance.violations {
@@ -306,11 +327,14 @@ impl EvidenceCollector {
                     content_parts.push(format!("  - [{}] {}", severity_str, violation.description));
                 }
             }
-            
+
             if !caws_compliance.waivers_used.is_empty() {
-                content_parts.push(format!("Waivers Used: {}", caws_compliance.waivers_used.len()));
+                content_parts.push(format!(
+                    "Waivers Used: {}",
+                    caws_compliance.waivers_used.len()
+                ));
             }
-            
+
             // Calculate relevance based on claim type and provenance data
             let relevance = if matches!(claim.claim_type, ClaimType::Constitutional) {
                 0.9 // High relevance for constitutional claims
@@ -319,21 +343,21 @@ impl EvidenceCollector {
             } else {
                 0.5 // Lower relevance for non-compliant records
             };
-            
+
             // Calculate confidence based on compliance score and chain integrity
             let confidence = if provenance_chain.integrity_verified {
                 caws_compliance.compliance_score as f64
             } else {
                 caws_compliance.compliance_score as f64 * 0.8 // Reduce confidence if chain integrity not verified
             };
-            
+
             // Determine evidence type based on compliance status
             let evidence_type = if caws_compliance.is_compliant {
                 EvidenceType::ConstitutionalReference
             } else {
                 EvidenceType::Supporting
             };
-            
+
             evidence_items.push(Evidence {
                 id: record.id,
                 claim_id: claim.id,
@@ -349,14 +373,14 @@ impl EvidenceCollector {
                 timestamp: record.timestamp,
             });
         }
-        
+
         info!(
             "Collected {} CAWS provenance evidence items for claim {} from task {}",
             evidence_items.len(),
             claim.id,
             task_id
         );
-        
+
         Ok(evidence_items)
     }
 }
@@ -366,5 +390,3 @@ impl Default for EvidenceCollector {
         Self::new()
     }
 }
-
-

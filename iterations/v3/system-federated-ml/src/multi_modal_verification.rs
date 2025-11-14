@@ -4,15 +4,15 @@
 //! enabling the system to validate claims across different modalities (text, code,
 //! images, audio, video) and fuse evidence from multiple sources for robust verification.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
 
-use crate::tool_registry::{Tool, ToolMetadata, ToolCategory};
 use crate::evidence_types::{AtomicClaim, EvidenceItem, EvidenceType, Modality};
+use crate::tool_registry::{Tool, ToolCategory, ToolMetadata};
 
 /// Multimodal verification tool suite
 #[derive(Debug)]
@@ -56,30 +56,48 @@ impl CrossModalCorrelationEngine {
         let mut correlation_thresholds = HashMap::new();
 
         // Define evidence type relationships
-        modality_mappings.insert(EvidenceType::CodeAnalysis, vec![
+        modality_mappings.insert(
+            EvidenceType::CodeAnalysis,
+            vec![
+                EvidenceType::Benchmarking,
+                EvidenceType::Profiling,
+                EvidenceType::LoadTesting,
+                EvidenceType::StandardsCompliance,
+            ],
+        );
+
+        modality_mappings.insert(
             EvidenceType::Benchmarking,
-            EvidenceType::Profiling,
-            EvidenceType::LoadTesting,
+            vec![
+                EvidenceType::CodeAnalysis,
+                EvidenceType::Profiling,
+                EvidenceType::LoadTesting,
+                EvidenceType::SecurityAudit,
+            ],
+        );
+
+        modality_mappings.insert(
             EvidenceType::StandardsCompliance,
-        ]);
-
-        modality_mappings.insert(EvidenceType::Benchmarking, vec![
-            EvidenceType::CodeAnalysis,
-            EvidenceType::Profiling,
-            EvidenceType::LoadTesting,
-            EvidenceType::SecurityAudit,
-        ]);
-
-        modality_mappings.insert(EvidenceType::StandardsCompliance, vec![
-            EvidenceType::SecurityAudit,
-            EvidenceType::CodeAnalysis,
-            EvidenceType::Benchmarking,
-        ]);
+            vec![
+                EvidenceType::SecurityAudit,
+                EvidenceType::CodeAnalysis,
+                EvidenceType::Benchmarking,
+            ],
+        );
 
         // Set correlation thresholds (higher values = stronger correlation required)
-        correlation_thresholds.insert((EvidenceType::CodeAnalysis, EvidenceType::Benchmarking), 0.7);
+        correlation_thresholds.insert(
+            (EvidenceType::CodeAnalysis, EvidenceType::Benchmarking),
+            0.7,
+        );
         correlation_thresholds.insert((EvidenceType::Benchmarking, EvidenceType::Profiling), 0.8);
-        correlation_thresholds.insert((EvidenceType::StandardsCompliance, EvidenceType::SecurityAudit), 0.9);
+        correlation_thresholds.insert(
+            (
+                EvidenceType::StandardsCompliance,
+                EvidenceType::SecurityAudit,
+            ),
+            0.9,
+        );
 
         Ok(Self {
             modality_mappings,
@@ -88,7 +106,10 @@ impl CrossModalCorrelationEngine {
     }
 
     /// Correlate evidence across different modalities
-    pub async fn correlate_evidence(&self, evidence_set: &[EvidenceItem]) -> Result<CorrelationResult> {
+    pub async fn correlate_evidence(
+        &self,
+        evidence_set: &[EvidenceItem],
+    ) -> Result<CorrelationResult> {
         let mut correlations = Vec::new();
         let mut overall_confidence = 0.0;
         let mut correlation_count = 0;
@@ -96,7 +117,10 @@ impl CrossModalCorrelationEngine {
         // Group evidence by type
         let mut evidence_by_type: HashMap<EvidenceType, Vec<&EvidenceItem>> = HashMap::new();
         for evidence in evidence_set {
-            evidence_by_type.entry(evidence.evidence_type).or_insert(Vec::new()).push(evidence);
+            evidence_by_type
+                .entry(evidence.evidence_type)
+                .or_insert(Vec::new())
+                .push(evidence);
         }
 
         // Find correlations between different evidence types
@@ -106,9 +130,11 @@ impl CrossModalCorrelationEngine {
                     if let Some(related_evidence) = evidence_by_type.get(related_type) {
                         for primary_item in primary_evidence {
                             for related_item in related_evidence {
-                    if let Some(correlation) = self.correlate_items(primary_item, related_item).await? {
-                        overall_confidence += correlation.confidence;
-                        correlations.push(correlation);
+                                if let Some(correlation) =
+                                    self.correlate_items(primary_item, related_item).await?
+                                {
+                                    overall_confidence += correlation.confidence;
+                                    correlations.push(correlation);
                                     correlation_count += 1;
                                 }
                             }
@@ -133,10 +159,18 @@ impl CrossModalCorrelationEngine {
     }
 
     /// Correlate two specific evidence items
-    async fn correlate_items(&self, item1: &EvidenceItem, item2: &EvidenceItem) -> Result<Option<EvidenceCorrelation>> {
-        let threshold = self.correlation_thresholds
+    async fn correlate_items(
+        &self,
+        item1: &EvidenceItem,
+        item2: &EvidenceItem,
+    ) -> Result<Option<EvidenceCorrelation>> {
+        let threshold = self
+            .correlation_thresholds
             .get(&(item1.evidence_type, item2.evidence_type))
-            .or_else(|| self.correlation_thresholds.get(&(item2.evidence_type, item1.evidence_type)))
+            .or_else(|| {
+                self.correlation_thresholds
+                    .get(&(item2.evidence_type, item1.evidence_type))
+            })
             .unwrap_or(&0.5);
 
         // Calculate semantic similarity between evidence content
@@ -162,13 +196,9 @@ impl CrossModalCorrelationEngine {
     fn calculate_semantic_similarity(&self, content1: &str, content2: &str) -> Result<f64> {
         // Simple semantic similarity based on word overlap and length similarity
         let content1_lower = content1.to_lowercase();
-        let words1: std::collections::HashSet<_> = content1_lower
-            .split_whitespace()
-            .collect();
+        let words1: std::collections::HashSet<_> = content1_lower.split_whitespace().collect();
         let content2_lower = content2.to_lowercase();
-        let words2: std::collections::HashSet<_> = content2_lower
-            .split_whitespace()
-            .collect();
+        let words2: std::collections::HashSet<_> = content2_lower.split_whitespace().collect();
 
         let intersection = words1.intersection(&words2).count();
         let union = words1.len() + words2.len() - intersection;
@@ -180,18 +210,25 @@ impl CrossModalCorrelationEngine {
         let jaccard_similarity = intersection as f64 / union as f64;
 
         // Factor in length similarity (shorter content should have higher overlap)
-        let len_similarity = 1.0 - (content1.len() as f64 - content2.len() as f64).abs() /
-                           (content1.len().max(content2.len()) as f64);
+        let len_similarity = 1.0
+            - (content1.len() as f64 - content2.len() as f64).abs()
+                / (content1.len().max(content2.len()) as f64);
 
         Ok((jaccard_similarity + len_similarity) / 2.0)
     }
 
     /// Determine the type of correlation between two evidence items
-    fn determine_correlation_type(&self, item1: &EvidenceItem, item2: &EvidenceItem) -> CorrelationType {
+    fn determine_correlation_type(
+        &self,
+        item1: &EvidenceItem,
+        item2: &EvidenceItem,
+    ) -> CorrelationType {
         match (item1.evidence_type, item2.evidence_type) {
             (EvidenceType::CodeAnalysis, EvidenceType::Benchmarking) => CorrelationType::Causal,
             (EvidenceType::Benchmarking, EvidenceType::Profiling) => CorrelationType::Supporting,
-            (EvidenceType::StandardsCompliance, EvidenceType::SecurityAudit) => CorrelationType::Validation,
+            (EvidenceType::StandardsCompliance, EvidenceType::SecurityAudit) => {
+                CorrelationType::Validation
+            }
             _ => CorrelationType::Related,
         }
     }
@@ -217,7 +254,11 @@ impl CrossModalCorrelationEngine {
     }
 
     /// Extract factors that support the correlation
-    fn extract_supporting_factors(&self, item1: &EvidenceItem, item2: &EvidenceItem) -> Vec<String> {
+    fn extract_supporting_factors(
+        &self,
+        item1: &EvidenceItem,
+        item2: &EvidenceItem,
+    ) -> Vec<String> {
         let mut factors = Vec::new();
 
         if item1.source == item2.source {
@@ -237,16 +278,22 @@ impl CrossModalCorrelationEngine {
     }
 
     /// Assess overall correlation strength across all correlations
-    fn assess_correlation_strength(&self, correlations: &[EvidenceCorrelation]) -> CorrelationStrength {
+    fn assess_correlation_strength(
+        &self,
+        correlations: &[EvidenceCorrelation],
+    ) -> CorrelationStrength {
         if correlations.is_empty() {
             return CorrelationStrength::Weak;
         }
 
-        let avg_confidence = correlations.iter().map(|c| c.confidence).sum::<f64>() / correlations.len() as f64;
+        let avg_confidence =
+            correlations.iter().map(|c| c.confidence).sum::<f64>() / correlations.len() as f64;
         let high_confidence_count = correlations.iter().filter(|c| c.confidence > 0.8).count();
 
         match (avg_confidence, high_confidence_count) {
-            (avg, high) if avg > 0.8 && high >= correlations.len() / 2 => CorrelationStrength::Strong,
+            (avg, high) if avg > 0.8 && high >= correlations.len() / 2 => {
+                CorrelationStrength::Strong
+            }
             (avg, _) if avg > 0.6 => CorrelationStrength::Moderate,
             _ => CorrelationStrength::Weak,
         }
@@ -266,7 +313,10 @@ impl EvidenceFusionValidator {
         let mut fusion_strategies = HashMap::new();
 
         fusion_strategies.insert(EvidenceType::CodeAnalysis, FusionStrategy::WeightedAverage);
-        fusion_strategies.insert(EvidenceType::Benchmarking, FusionStrategy::HighestConfidence);
+        fusion_strategies.insert(
+            EvidenceType::Benchmarking,
+            FusionStrategy::HighestConfidence,
+        );
         fusion_strategies.insert(EvidenceType::SecurityAudit, FusionStrategy::Consensus);
         fusion_strategies.insert(EvidenceType::StandardsCompliance, FusionStrategy::Strictest);
 
@@ -274,7 +324,11 @@ impl EvidenceFusionValidator {
     }
 
     /// Fuse multiple evidence items into a unified verification result
-    pub async fn fuse_evidence(&self, evidence_set: &[EvidenceItem], _claim: &AtomicClaim) -> Result<FusionResult> {
+    pub async fn fuse_evidence(
+        &self,
+        evidence_set: &[EvidenceItem],
+        _claim: &AtomicClaim,
+    ) -> Result<FusionResult> {
         if evidence_set.is_empty() {
             return Ok(FusionResult {
                 fused_confidence: 0.0,
@@ -302,14 +356,15 @@ impl EvidenceFusionValidator {
 
     /// Select appropriate fusion strategy based on evidence types
     fn select_fusion_strategy(&self, evidence_set: &[EvidenceItem]) -> FusionStrategy {
-        let evidence_types: std::collections::HashSet<_> = evidence_set.iter()
-            .map(|e| e.evidence_type)
-            .collect();
+        let evidence_types: std::collections::HashSet<_> =
+            evidence_set.iter().map(|e| e.evidence_type).collect();
 
         // If all evidence is the same type, use type-specific strategy
         if evidence_types.len() == 1 {
             let evidence_type = evidence_types.into_iter().next().unwrap();
-            return self.fusion_strategies.get(&evidence_type)
+            return self
+                .fusion_strategies
+                .get(&evidence_type)
                 .cloned()
                 .unwrap_or(FusionStrategy::WeightedAverage);
         }
@@ -319,44 +374,52 @@ impl EvidenceFusionValidator {
     }
 
     /// Apply the selected fusion strategy
-    fn apply_fusion_strategy(&self, strategy: FusionStrategy, evidence_set: &[EvidenceItem]) -> Result<f64> {
+    fn apply_fusion_strategy(
+        &self,
+        strategy: FusionStrategy,
+        evidence_set: &[EvidenceItem],
+    ) -> Result<f64> {
         match strategy {
             FusionStrategy::WeightedAverage => {
                 let total_weight: f64 = evidence_set.iter().map(|e| e.confidence).sum();
                 if total_weight == 0.0 {
                     return Ok(0.0);
                 }
-                let weighted_sum: f64 = evidence_set.iter()
+                let weighted_sum: f64 = evidence_set
+                    .iter()
                     .map(|e| e.confidence * e.confidence) // Weight by confidence
                     .sum();
                 Ok(weighted_sum / total_weight)
             }
-            FusionStrategy::HighestConfidence => {
-                Ok(evidence_set.iter()
-                    .map(|e| e.confidence)
-                    .fold(0.0f64, f64::max))
-            }
+            FusionStrategy::HighestConfidence => Ok(evidence_set
+                .iter()
+                .map(|e| e.confidence)
+                .fold(0.0f64, f64::max)),
             FusionStrategy::Consensus => {
-                let avg_confidence = evidence_set.iter()
-                    .map(|e| e.confidence)
-                    .sum::<f64>() / evidence_set.len() as f64;
+                let avg_confidence = evidence_set.iter().map(|e| e.confidence).sum::<f64>()
+                    / evidence_set.len() as f64;
                 let consensus_threshold = 0.8;
-                if evidence_set.iter().all(|e| e.confidence >= consensus_threshold) {
+                if evidence_set
+                    .iter()
+                    .all(|e| e.confidence >= consensus_threshold)
+                {
                     Ok(avg_confidence)
                 } else {
                     Ok(avg_confidence * 0.8) // Penalty for lack of consensus
                 }
             }
-            FusionStrategy::Strictest => {
-                Ok(evidence_set.iter()
-                    .map(|e| e.confidence)
-                    .fold(1.0f64, f64::min))
-            }
+            FusionStrategy::Strictest => Ok(evidence_set
+                .iter()
+                .map(|e| e.confidence)
+                .fold(1.0f64, f64::min)),
         }
     }
 
     /// Detect contradictions in the evidence set
-    fn detect_contradictions(&self, evidence_set: &[EvidenceItem]) -> Result<Vec<EvidenceContradiction>> {
+    fn detect_contradictions(
+        &self,
+        evidence_set: &[EvidenceItem],
+    ) -> Result<Vec<EvidenceContradiction>> {
         let mut contradictions = Vec::new();
 
         for i in 0..evidence_set.len() {
@@ -370,7 +433,10 @@ impl EvidenceFusionValidator {
                         evidence_pair: (item1.id.clone(), item2.id.clone()),
                         contradiction_type: ContradictionType::Direct,
                         severity: self.assess_contradiction_severity(item1, item2),
-                        description: format!("Direct contradiction between {} and {}", item1.id, item2.id),
+                        description: format!(
+                            "Direct contradiction between {} and {}",
+                            item1.id, item2.id
+                        ),
                     });
                 }
 
@@ -380,8 +446,15 @@ impl EvidenceFusionValidator {
                     contradictions.push(EvidenceContradiction {
                         evidence_pair: (item1.id.clone(), item2.id.clone()),
                         contradiction_type: ContradictionType::ConfidenceDisparity,
-                        severity: if confidence_diff > 0.9 { Severity::High } else { Severity::Medium },
-                        description: format!("Large confidence disparity: {:.2} vs {:.2}", item1.confidence, item2.confidence),
+                        severity: if confidence_diff > 0.9 {
+                            Severity::High
+                        } else {
+                            Severity::Medium
+                        },
+                        description: format!(
+                            "Large confidence disparity: {:.2} vs {:.2}",
+                            item1.confidence, item2.confidence
+                        ),
                     });
                 }
             }
@@ -399,17 +472,29 @@ impl EvidenceFusionValidator {
         let positive_indicators = ["pass", "success", "valid", "correct", "true", "verified"];
         let negative_indicators = ["fail", "error", "invalid", "incorrect", "false", "rejected"];
 
-        let item1_positive = positive_indicators.iter().any(|word| content1.contains(word));
-        let item1_negative = negative_indicators.iter().any(|word| content1.contains(word));
-        let item2_positive = positive_indicators.iter().any(|word| content2.contains(word));
-        let item2_negative = negative_indicators.iter().any(|word| content2.contains(word));
+        let item1_positive = positive_indicators
+            .iter()
+            .any(|word| content1.contains(word));
+        let item1_negative = negative_indicators
+            .iter()
+            .any(|word| content1.contains(word));
+        let item2_positive = positive_indicators
+            .iter()
+            .any(|word| content2.contains(word));
+        let item2_negative = negative_indicators
+            .iter()
+            .any(|word| content2.contains(word));
 
         // Contradiction if one says positive and other says negative
         (item1_positive && item2_negative) || (item1_negative && item2_positive)
     }
 
     /// Assess the severity of a contradiction
-    fn assess_contradiction_severity(&self, item1: &EvidenceItem, item2: &EvidenceItem) -> Severity {
+    fn assess_contradiction_severity(
+        &self,
+        item1: &EvidenceItem,
+        item2: &EvidenceItem,
+    ) -> Severity {
         // Higher severity for same evidence type contradictions
         if item1.evidence_type == item2.evidence_type {
             Severity::High
@@ -432,47 +517,74 @@ impl SemanticIntegrator {
         let mut semantic_concepts = HashMap::new();
 
         // Initialize with common semantic concepts across modalities
-        semantic_concepts.insert("performance".to_string(), vec![
-            SemanticMapping {
-                modality: Modality::Text,
-                indicators: vec!["performance", "speed", "fast", "slow", "efficiency"].into_iter().map(String::from).collect(),
-                confidence_weight: 0.8,
-            },
-            SemanticMapping {
-                modality: Modality::Code,
-                indicators: vec!["benchmark", "timing", "optimization", "profile"].into_iter().map(String::from).collect(),
-                confidence_weight: 0.9,
-            },
-            SemanticMapping {
-                modality: Modality::Data,
-                indicators: vec!["latency", "throughput", "response_time", "tps", "qps"].into_iter().map(String::from).collect(),
-                confidence_weight: 1.0,
-            },
-        ]);
+        semantic_concepts.insert(
+            "performance".to_string(),
+            vec![
+                SemanticMapping {
+                    modality: Modality::Text,
+                    indicators: vec!["performance", "speed", "fast", "slow", "efficiency"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 0.8,
+                },
+                SemanticMapping {
+                    modality: Modality::Code,
+                    indicators: vec!["benchmark", "timing", "optimization", "profile"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 0.9,
+                },
+                SemanticMapping {
+                    modality: Modality::Data,
+                    indicators: vec!["latency", "throughput", "response_time", "tps", "qps"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 1.0,
+                },
+            ],
+        );
 
-        semantic_concepts.insert("security".to_string(), vec![
-            SemanticMapping {
-                modality: Modality::Text,
-                indicators: vec!["security", "safe", "vulnerable", "attack", "encryption"].into_iter().map(String::from).collect(),
-                confidence_weight: 0.8,
-            },
-            SemanticMapping {
-                modality: Modality::Code,
-                indicators: vec!["authentication", "authorization", "ssl", "tls", "oauth"].into_iter().map(String::from).collect(),
-                confidence_weight: 0.9,
-            },
-            SemanticMapping {
-                modality: Modality::Data,
-                indicators: vec!["breach", "compliance", "audit", "penetration_test"].into_iter().map(String::from).collect(),
-                confidence_weight: 1.0,
-            },
-        ]);
+        semantic_concepts.insert(
+            "security".to_string(),
+            vec![
+                SemanticMapping {
+                    modality: Modality::Text,
+                    indicators: vec!["security", "safe", "vulnerable", "attack", "encryption"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 0.8,
+                },
+                SemanticMapping {
+                    modality: Modality::Code,
+                    indicators: vec!["authentication", "authorization", "ssl", "tls", "oauth"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 0.9,
+                },
+                SemanticMapping {
+                    modality: Modality::Data,
+                    indicators: vec!["breach", "compliance", "audit", "penetration_test"]
+                        .into_iter()
+                        .map(String::from)
+                        .collect(),
+                    confidence_weight: 1.0,
+                },
+            ],
+        );
 
         Ok(Self { semantic_concepts })
     }
 
     /// Align semantic meaning across different modalities
-    pub async fn align_semantics(&self, evidence_set: &[EvidenceItem]) -> Result<SemanticAlignmentResult> {
+    pub async fn align_semantics(
+        &self,
+        evidence_set: &[EvidenceItem],
+    ) -> Result<SemanticAlignmentResult> {
         let mut concept_alignments = Vec::new();
         let mut overall_alignment_score = 0.0;
 
@@ -499,20 +611,32 @@ impl SemanticIntegrator {
     }
 
     /// Align a specific semantic concept across modalities
-    async fn align_concept(&self, concept: &str, mappings: &[SemanticMapping], evidence_set: &[EvidenceItem]) -> Result<Option<ConceptAlignment>> {
+    async fn align_concept(
+        &self,
+        concept: &str,
+        mappings: &[SemanticMapping],
+        evidence_set: &[EvidenceItem],
+    ) -> Result<Option<ConceptAlignment>> {
         let mut modality_evidence = Vec::new();
 
         for mapping in mappings {
-            let relevant_evidence: Vec<&EvidenceItem> = evidence_set.iter()
+            let relevant_evidence: Vec<&EvidenceItem> = evidence_set
+                .iter()
                 .filter(|e| self.evidence_matches_modality(e, mapping.modality))
-                .filter(|e| mapping.indicators.iter().any(|ind| e.content.to_lowercase().contains(ind)))
+                .filter(|e| {
+                    mapping
+                        .indicators
+                        .iter()
+                        .any(|ind| e.content.to_lowercase().contains(ind))
+                })
                 .collect();
 
             if !relevant_evidence.is_empty() {
                 modality_evidence.push(ModalityEvidence {
                     modality: mapping.modality,
                     evidence_count: relevant_evidence.len(),
-                    average_confidence: relevant_evidence.iter().map(|e| e.confidence).sum::<f64>() / relevant_evidence.len() as f64,
+                    average_confidence: relevant_evidence.iter().map(|e| e.confidence).sum::<f64>()
+                        / relevant_evidence.len() as f64,
                     semantic_strength: mapping.confidence_weight,
                 });
             }
@@ -522,9 +646,11 @@ impl SemanticIntegrator {
             return Ok(None);
         }
 
-        let alignment_score = modality_evidence.iter()
+        let alignment_score = modality_evidence
+            .iter()
             .map(|me| me.average_confidence * me.semantic_strength)
-            .sum::<f64>() / modality_evidence.len() as f64;
+            .sum::<f64>()
+            / modality_evidence.len() as f64;
 
         Ok(Some(ConceptAlignment {
             concept: concept.to_string(),
@@ -537,13 +663,21 @@ impl SemanticIntegrator {
     /// Check if evidence item matches a modality
     fn evidence_matches_modality(&self, evidence: &EvidenceItem, modality: Modality) -> bool {
         match modality {
-            Modality::Text => matches!(evidence.evidence_type,
-                EvidenceType::CodeAnalysis | EvidenceType::StandardsCompliance),
+            Modality::Text => matches!(
+                evidence.evidence_type,
+                EvidenceType::CodeAnalysis | EvidenceType::StandardsCompliance
+            ),
             Modality::Code => matches!(evidence.evidence_type, EvidenceType::CodeAnalysis),
-            Modality::Data => matches!(evidence.evidence_type,
-                EvidenceType::Benchmarking | EvidenceType::Profiling | EvidenceType::LoadTesting),
-            Modality::Visual => evidence.content.contains("image") || evidence.content.contains("chart"),
-            Modality::Audio => evidence.content.contains("audio") || evidence.content.contains("speech"),
+            Modality::Data => matches!(
+                evidence.evidence_type,
+                EvidenceType::Benchmarking | EvidenceType::Profiling | EvidenceType::LoadTesting
+            ),
+            Modality::Visual => {
+                evidence.content.contains("image") || evidence.content.contains("chart")
+            }
+            Modality::Audio => {
+                evidence.content.contains("audio") || evidence.content.contains("speech")
+            }
         }
     }
 
@@ -553,24 +687,37 @@ impl SemanticIntegrator {
             return 1.0; // Single modality is consistent by definition
         }
 
-        let avg_confidence = modality_evidence.iter()
+        let avg_confidence = modality_evidence
+            .iter()
             .map(|me| me.average_confidence)
-            .sum::<f64>() / modality_evidence.len() as f64;
+            .sum::<f64>()
+            / modality_evidence.len() as f64;
 
-        let variance = modality_evidence.iter()
+        let variance = modality_evidence
+            .iter()
             .map(|me| (me.average_confidence - avg_confidence).powi(2))
-            .sum::<f64>() / modality_evidence.len() as f64;
+            .sum::<f64>()
+            / modality_evidence.len() as f64;
 
         // Lower variance = higher consistency (scale to 0-1)
         1.0 / (1.0 + variance.sqrt())
     }
 
     /// Calculate modality coverage across evidence set
-    fn calculate_modality_coverage(&self, evidence_set: &[EvidenceItem]) -> HashMap<Modality, usize> {
+    fn calculate_modality_coverage(
+        &self,
+        evidence_set: &[EvidenceItem],
+    ) -> HashMap<Modality, usize> {
         let mut coverage = HashMap::new();
 
         for evidence in evidence_set {
-            for modality in &[Modality::Text, Modality::Code, Modality::Data, Modality::Visual, Modality::Audio] {
+            for modality in &[
+                Modality::Text,
+                Modality::Code,
+                Modality::Data,
+                Modality::Visual,
+                Modality::Audio,
+            ] {
                 if self.evidence_matches_modality(evidence, *modality) {
                     *coverage.entry(*modality).or_insert(0) += 1;
                 }
@@ -586,13 +733,14 @@ impl SemanticIntegrator {
             return 0.0;
         }
 
-        let avg_alignment = alignments.iter()
-            .map(|a| a.alignment_score)
-            .sum::<f64>() / alignments.len() as f64;
+        let avg_alignment =
+            alignments.iter().map(|a| a.alignment_score).sum::<f64>() / alignments.len() as f64;
 
-        let consistency_score = alignments.iter()
+        let consistency_score = alignments
+            .iter()
             .map(|a| a.cross_modal_consistency)
-            .sum::<f64>() / alignments.len() as f64;
+            .sum::<f64>()
+            / alignments.len() as f64;
 
         (avg_alignment + consistency_score) / 2.0
     }
@@ -605,7 +753,9 @@ impl Tool for CrossModalCorrelationEngine {
         ToolMetadata {
             id: "cross_modal_correlation".to_string(),
             name: "Cross-Modal Correlation Engine".to_string(),
-            description: "Correlates evidence across different modalities for comprehensive verification".to_string(),
+            description:
+                "Correlates evidence across different modalities for comprehensive verification"
+                    .to_string(),
             category: ToolCategory::Analysis,
             version: "1.0.0".to_string(),
             input_schema: None,
@@ -623,7 +773,11 @@ impl Tool for CrossModalCorrelationEngine {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
+    async fn execute(
+        &self,
+        parameters: serde_json::Value,
+        _context: Option<&str>,
+    ) -> Result<serde_json::Value> {
         // Parse evidence set from input
         let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.correlate_evidence(&evidence_set).await?;
@@ -637,7 +791,8 @@ impl Tool for EvidenceFusionValidator {
         ToolMetadata {
             id: "evidence_fusion_validator".to_string(),
             name: "Evidence Fusion Validator".to_string(),
-            description: "Fuses multiple evidence sources into unified verification results".to_string(),
+            description: "Fuses multiple evidence sources into unified verification results"
+                .to_string(),
             category: ToolCategory::Validation,
             version: "1.0.0".to_string(),
             capabilities: vec![
@@ -667,8 +822,13 @@ impl Tool for EvidenceFusionValidator {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
-        let (evidence_set, claim): (Vec<EvidenceItem>, AtomicClaim) = serde_json::from_value(parameters)?;
+    async fn execute(
+        &self,
+        parameters: serde_json::Value,
+        _context: Option<&str>,
+    ) -> Result<serde_json::Value> {
+        let (evidence_set, claim): (Vec<EvidenceItem>, AtomicClaim) =
+            serde_json::from_value(parameters)?;
         let result = self.fuse_evidence(&evidence_set, &claim).await?;
         Ok(serde_json::to_value(result)?)
     }
@@ -710,7 +870,11 @@ impl Tool for SemanticIntegrator {
         }
     }
 
-    async fn execute(&self, parameters: serde_json::Value, _context: Option<&str>) -> Result<serde_json::Value> {
+    async fn execute(
+        &self,
+        parameters: serde_json::Value,
+        _context: Option<&str>,
+    ) -> Result<serde_json::Value> {
         let evidence_set: Vec<EvidenceItem> = serde_json::from_value(parameters)?;
         let result = self.align_semantics(&evidence_set).await?;
         Ok(serde_json::to_value(result)?)
@@ -844,4 +1008,3 @@ pub struct SemanticMapping {
     pub indicators: Vec<String>,
     pub confidence_weight: f64,
 }
-

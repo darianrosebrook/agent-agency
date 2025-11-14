@@ -7,24 +7,29 @@
 //! - Model hot-swapping during loops
 //! - Progress tracking and stopping criteria
 
-use std::time::Instant;
-use tracing::{info, error};
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::mpsc;
+use tracing::{error, info};
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
-#[cfg(feature = "full")]
-use agent_research::self_prompting_agent::SelfPromptingAgent;
-#[cfg(feature = "full")]
-use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
-#[cfg(feature = "full")]
-use agent_research::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingEvent};
-#[cfg(feature = "full")]
-use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 #[cfg(feature = "full")]
 use agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator;
 #[cfg(feature = "full")]
+use agent_research::self_prompting_agent::loop_controller::{
+    SelfPromptingEvent, SelfPromptingLoop,
+};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
+#[cfg(feature = "full")]
 use agent_research::self_prompting_agent::prompting_types::{Task, TaskType};
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
+#[cfg(feature = "full")]
+use agent_research::self_prompting_agent::SelfPromptingAgent;
 use uuid::Uuid;
 
 /// Run the self-prompting loop E2E test
@@ -47,7 +52,10 @@ pub async fn run_self_prompting_test(
             metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Satisficing logic failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Satisficing logic failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -63,7 +71,10 @@ pub async fn run_self_prompting_test(
             metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Iteration limit failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Iteration limit failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -80,7 +91,10 @@ pub async fn run_self_prompting_test(
             metrics.evaluation_scores.extend(result.evaluation_scores);
             if !result.passed {
                 passed = false;
-                errors.push(format!("Quality ceiling failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Quality ceiling failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -96,7 +110,10 @@ pub async fn run_self_prompting_test(
             metrics.model_calls += result.model_calls as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Model hot-swap failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Model hot-swap failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -112,7 +129,10 @@ pub async fn run_self_prompting_test(
             metrics.iterations += result.iterations as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Evaluation framework failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Evaluation framework failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -177,7 +197,8 @@ async fn test_satisficing_logic(
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
 
     // Create loop controller with low max iterations to test satisficing
-    let loop_controller = SelfPromptingLoop::new(3, event_tx).await
+    let loop_controller = SelfPromptingLoop::new(3, event_tx)
+        .await
         .map_err(|e| format!("Failed to create loop controller: {}", e))?;
 
     // Create a task that should be satisfiable quickly
@@ -205,11 +226,18 @@ async fn test_satisficing_logic(
         satisficing_stops = if max_iterations < 5 { 1 } else { 0 };
     }
 
-    info!("Loop controller configured with {} max iterations", max_iterations);
+    info!(
+        "Loop controller configured with {} max iterations",
+        max_iterations
+    );
 
     Ok(SelfPromptingTestResult {
         passed: iterations > 0,
-        error: if iterations == 0 { Some("Loop controller not properly configured".to_string()) } else { None },
+        error: if iterations == 0 {
+            Some("Loop controller not properly configured".to_string())
+        } else {
+            None
+        },
         iterations,
         satisficing_stops,
         max_iteration_stops: 0,
@@ -232,11 +260,15 @@ async fn test_iteration_limit(
 
     // Create loop controller with explicit iteration limit
     let max_iterations = 5;
-    let loop_controller = SelfPromptingLoop::new(max_iterations, event_tx).await
+    let loop_controller = SelfPromptingLoop::new(max_iterations, event_tx)
+        .await
         .map_err(|e| format!("Failed to create loop controller: {}", e))?;
 
     // Verify loop controller was created successfully
-    info!("Loop controller created with {} max iterations", max_iterations);
+    info!(
+        "Loop controller created with {} max iterations",
+        max_iterations
+    );
 
     Ok(SelfPromptingTestResult {
         passed: true,
@@ -262,7 +294,8 @@ async fn test_quality_ceiling(
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
 
     // Create loop controller
-    let loop_controller = SelfPromptingLoop::new(10, event_tx).await
+    let loop_controller = SelfPromptingLoop::new(10, event_tx)
+        .await
         .map_err(|e| format!("Failed to create loop controller: {}", e))?;
 
     // Create evaluator
@@ -286,11 +319,18 @@ async fn test_quality_ceiling(
         }
     }
 
-    info!("Quality ceiling test: {} iterations before reaching threshold", iterations);
+    info!(
+        "Quality ceiling test: {} iterations before reaching threshold",
+        iterations
+    );
 
     Ok(SelfPromptingTestResult {
         passed: quality_ceiling_stops > 0,
-        error: if quality_ceiling_stops == 0 { Some("Quality ceiling not detected".to_string()) } else { None },
+        error: if quality_ceiling_stops == 0 {
+            Some("Quality ceiling not detected".to_string())
+        } else {
+            None
+        },
         iterations,
         satisficing_stops: 0,
         max_iteration_stops: 0,
@@ -333,11 +373,18 @@ async fn test_model_hot_swap(
     let model_swaps = if available_providers.len() > 1 { 1 } else { 0 };
     let model_calls = available_providers.len() as u64;
 
-    info!("Model registry has {} providers available for hot-swapping", available_providers.len());
+    info!(
+        "Model registry has {} providers available for hot-swapping",
+        available_providers.len()
+    );
 
     Ok(SelfPromptingTestResult {
         passed: available_providers.len() > 1,
-        error: if available_providers.len() <= 1 { Some("Not enough providers for hot-swap test".to_string()) } else { None },
+        error: if available_providers.len() <= 1 {
+            Some("Not enough providers for hot-swap test".to_string())
+        } else {
+            None
+        },
         iterations: 0,
         satisficing_stops: 0,
         max_iteration_stops: 0,
@@ -387,7 +434,10 @@ async fn test_evaluation_framework(
 
     match evaluation_result {
         Ok(result) => {
-            info!("Evaluation framework integrated successfully with score: {}", result.score);
+            info!(
+                "Evaluation framework integrated successfully with score: {}",
+                result.score
+            );
             Ok(SelfPromptingTestResult {
                 passed: true,
                 error: None,
@@ -400,18 +450,16 @@ async fn test_evaluation_framework(
                 evaluation_scores: vec![result.score],
             })
         }
-        Err(e) => {
-            Ok(SelfPromptingTestResult {
-                passed: false,
-                error: Some(format!("Evaluation framework error: {}", e)),
-                iterations,
-                satisficing_stops: 0,
-                max_iteration_stops: 0,
-                quality_ceiling_stops: 0,
-                model_swaps: 0,
-                model_calls: 0,
-                evaluation_scores,
-            })
-        }
+        Err(e) => Ok(SelfPromptingTestResult {
+            passed: false,
+            error: Some(format!("Evaluation framework error: {}", e)),
+            iterations,
+            satisficing_stops: 0,
+            max_iteration_stops: 0,
+            quality_ceiling_stops: 0,
+            model_swaps: 0,
+            model_calls: 0,
+            evaluation_scores,
+        }),
     }
 }

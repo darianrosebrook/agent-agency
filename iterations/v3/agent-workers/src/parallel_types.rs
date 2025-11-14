@@ -3,12 +3,14 @@
 //! This module defines the core types used for parallel task execution,
 //! including ComplexTask, TaskResult, and related structures.
 
+use crate::worker_types::{
+    Priority, QualityRequirements, SubTaskId, TaskId, TaskScope, TaskStatus, WorkerId,
+};
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use crate::worker_types::{TaskId, Priority, TaskScope, QualityRequirements, TaskStatus, WorkerId, SubTaskId};
 
 // WorkerSpecialty is defined locally below
 
@@ -54,7 +56,6 @@ pub struct ComplexTask {
 // TaskId is now defined in worker_types.rs
 
 // SubTaskId is now defined in worker_types.rs
-
 
 /// Result of task execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -282,26 +283,32 @@ pub type ParallelResult<T> = Result<T, ParallelError>;
 #[derive(Debug, thiserror::Error)]
 pub enum ParallelError {
     #[error("Decomposition error: {message}")]
-    Decomposition { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
-    
+    Decomposition {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+
     #[error("Worker error: {0}")]
     Worker(String),
-    
+
     #[error("Coordination error: {message}")]
-    Coordination { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
-    
+    Coordination {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
+
     #[error("Validation error: {message}")]
     Validation { message: String },
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
-    
+
     #[error("Timeout error: {0}")]
     Timeout(String),
-    
+
     #[error("Resource error: {0}")]
     Resource(String),
 }

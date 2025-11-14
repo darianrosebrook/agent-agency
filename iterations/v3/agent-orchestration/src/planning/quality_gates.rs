@@ -6,9 +6,8 @@
 //! @author @darianrosebrook
 
 use agent_agency_contracts::planning_io::{
-    QualityGates, MutationRequirements, SecurityRequirements,
-    PerformanceRequirements as PlanningPerformanceRequirements,
-    DocumentationRequirements as PlanningDocumentationRequirements,
+    DocumentationRequirements as PlanningDocumentationRequirements, MutationRequirements,
+    PerformanceRequirements as PlanningPerformanceRequirements, QualityGates, SecurityRequirements,
 };
 use std::collections::HashMap;
 
@@ -59,22 +58,35 @@ pub fn quality_gates_for_risk_tier_and_mode(
 ) -> QualityGates {
     // Detect complexity mode if not provided
     let mode = complexity_mode
-        .or_else(|| crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(".")).ok())
+        .or_else(|| {
+            crate::planning::caws_complexity_mode::CawsComplexityMode::detect(std::path::Path::new(
+                ".",
+            ))
+            .ok()
+        })
         .unwrap_or(crate::planning::caws_complexity_mode::CawsComplexityMode::Standard);
 
     // Get mode-aware quality requirements
     let requirements = mode.quality_requirements(risk_tier as u8);
     let is_critical = risk_tier == 1;
-    
+
     QualityGates {
         coverage_requirements: HashMap::new(),
         mutation_requirements: MutationRequirements {
-            required: matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise) || is_critical,
+            required: matches!(
+                mode,
+                crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise
+            ) || is_critical,
             min_score: requirements.mutation_score,
             operators: vec!["arithmetic".to_string(), "conditional".to_string()],
         },
         security_requirements: SecurityRequirements {
-            scan_required: requirements.manual_review_required || is_critical || matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise),
+            scan_required: requirements.manual_review_required
+                || is_critical
+                || matches!(
+                    mode,
+                    crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise
+                ),
             max_issues_by_severity: HashMap::from([
                 ("critical".to_string(), 0),
                 ("high".to_string(), if is_critical { 0 } else { 2 }),
@@ -96,9 +108,11 @@ pub fn quality_gates_for_risk_tier_and_mode(
             quality_checks: vec![],
         },
         requires_manual_review: requirements.manual_review_required,
-        requires_council_approval: matches!(mode, crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise) || is_critical,
+        requires_council_approval: matches!(
+            mode,
+            crate::planning::caws_complexity_mode::CawsComplexityMode::Enterprise
+        ) || is_critical,
         min_coverage: Some(requirements.line_coverage),
         min_mutation_score_percent: Some(requirements.mutation_score * 100.0),
     }
 }
-

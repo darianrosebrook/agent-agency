@@ -4,11 +4,11 @@
 use crate::memory_types::*;
 use crate::workspace_registry;
 use crate::MemoryResult;
-use sqlx::{Row, PgPool};
-use std::sync::Arc;
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn};
+use sqlx::{PgPool, Row};
+use std::sync::Arc;
+use tracing::{debug, info, warn};
 /// Memory decay engine for managing importance and decay
 #[derive(Debug)]
 pub struct MemoryDecayEngine {
@@ -31,7 +31,7 @@ impl MemoryDecayEngine {
     pub async fn new_with_workspace_registry(
         config: &DecayConfig,
         db_pool: PgPool,
-        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
+        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>,
     ) -> MemoryResult<Self> {
         Ok(Self {
             db_pool,
@@ -39,7 +39,6 @@ impl MemoryDecayEngine {
             workspace_registry: Some(workspace_registry),
         })
     }
-
 
     /// Run a full decay cycle on all memories
     pub async fn run_decay_cycle(&self) -> MemoryResult<usize> {
@@ -77,11 +76,16 @@ impl MemoryDecayEngine {
 
             // Clean up unused workspaces
             let workspaces_cleaned = self.cleanup_unused_workspaces().await?;
-            info!("Workspace cleanup: {} workspaces cleaned", workspaces_cleaned);
+            info!(
+                "Workspace cleanup: {} workspaces cleaned",
+                workspaces_cleaned
+            );
         }
 
-        info!("Decay cycle completed: {} memories updated, {} boosted, {} consolidated",
-              total_updated, boosted, consolidated);
+        info!(
+            "Decay cycle completed: {} memories updated, {} boosted, {} consolidated",
+            total_updated, boosted, consolidated
+        );
 
         Ok(total_updated)
     }
@@ -96,7 +100,8 @@ impl MemoryDecayEngine {
 
         for workspace in workspaces {
             // Calculate workspace decay multiplier based on access patterns
-            let workspace_decay_multiplier = self.calculate_workspace_decay_multiplier(&workspace, now);
+            let workspace_decay_multiplier =
+                self.calculate_workspace_decay_multiplier(&workspace, now);
 
             if workspace_decay_multiplier < 1.0 {
                 // Apply accelerated decay to memories in infrequently accessed workspaces
@@ -120,8 +125,12 @@ impl MemoryDecayEngine {
 
                 total_decayed += updated.rows_affected() as usize;
 
-                debug!("Applied workspace decay multiplier {:.2} to {} memories in workspace {}",
-                        workspace_decay_multiplier, updated.rows_affected(), workspace.name);
+                debug!(
+                    "Applied workspace decay multiplier {:.2} to {} memories in workspace {}",
+                    workspace_decay_multiplier,
+                    updated.rows_affected(),
+                    workspace.name
+                );
             }
         }
 
@@ -129,7 +138,11 @@ impl MemoryDecayEngine {
     }
 
     /// Calculate decay multiplier based on workspace access patterns
-    fn calculate_workspace_decay_multiplier(&self, workspace: &crate::memory_types::WorkspaceEntry, now: DateTime<Utc>) -> f64 {
+    fn calculate_workspace_decay_multiplier(
+        &self,
+        workspace: &crate::memory_types::WorkspaceEntry,
+        now: DateTime<Utc>,
+    ) -> f64 {
         let duration_since_access = now.signed_duration_since(workspace.last_accessed);
         let hours_since_access = duration_since_access.num_hours() as f64;
         let access_frequency = workspace.access_count as f64;
@@ -137,9 +150,11 @@ impl MemoryDecayEngine {
         // Base decay: more aggressive for workspaces not accessed recently
         let base_decay = if hours_since_access < 24.0 {
             1.0 // No extra decay for recently accessed workspaces
-        } else if hours_since_access < 168.0 {  // Week
+        } else if hours_since_access < 168.0 {
+            // Week
             0.95 // Slight decay
-        } else if hours_since_access < 720.0 {  // Month
+        } else if hours_since_access < 720.0 {
+            // Month
             0.85 // Moderate decay
         } else {
             0.7 // Heavy decay for workspaces not accessed in a month
@@ -170,14 +185,20 @@ impl MemoryDecayEngine {
 
         // Find workspaces that haven't been accessed in 90+ days and aren't default
         let all_workspaces = registry.get_accessible_workspaces().await?;
-        let unused_workspaces: Vec<_> = all_workspaces.into_iter()
+        let unused_workspaces: Vec<_> = all_workspaces
+            .into_iter()
             .filter(|w| w.last_accessed < cutoff_date && !w.is_default)
             .collect();
 
         for workspace in unused_workspaces {
             if !workspace.is_default {
                 // Mark workspace as disabled
-                registry.update_workspace_access(&workspace.id, crate::memory_types::WorkspaceAccess::Disabled).await?;
+                registry
+                    .update_workspace_access(
+                        &workspace.id,
+                        crate::memory_types::WorkspaceAccess::Disabled,
+                    )
+                    .await?;
 
                 // Aggressively decay memories in unused workspaces
                 let updated = sqlx::query(
@@ -194,8 +215,11 @@ impl MemoryDecayEngine {
 
                 cleaned_count += 1;
 
-                info!("Cleaned up unused workspace '{}': {} memories decayed",
-                      workspace.name, updated.rows_affected());
+                info!(
+                    "Cleaned up unused workspace '{}': {} memories decayed",
+                    workspace.name,
+                    updated.rows_affected()
+                );
             }
         }
 
@@ -287,7 +311,7 @@ impl MemoryDecayEngine {
         //   - Evaluate expressions with database values (importance_score, decay_factor, age_days)
         //   - Support time-based functions (e.g., age_days, last_accessed)
         //   - Validate formula syntax and safety (prevent SQL injection, infinite loops)
-        // 
+        //
         // TODO: Implement custom decay formula parsing and evaluation
         //       Currently falls back to exponential decay; should implement custom decay formula parsing and evaluation with proper safety validation.
         //
@@ -395,7 +419,10 @@ impl MemoryDecayEngine {
     }
 
     /// Apply temporal weighting to contextual memories
-    pub async fn apply_temporal_weighting(&self, memories: &mut Vec<ContextualMemory>) -> MemoryResult<()> {
+    pub async fn apply_temporal_weighting(
+        &self,
+        memories: &mut Vec<ContextualMemory>,
+    ) -> MemoryResult<()> {
         let now = Utc::now();
 
         for memory in memories.iter_mut() {
@@ -403,11 +430,12 @@ impl MemoryDecayEngine {
 
             // Recency boost: newer memories get higher weight
             let recency_boost = if age_hours < 24.0 {
-                1.0 + (24.0 - age_hours) / 48.0  // Up to 1.5x boost for very recent
-            } else if age_hours < 168.0 {  // Week
-                1.0 + (168.0 - age_hours) / 336.0  // Up to 1.25x boost
+                1.0 + (24.0 - age_hours) / 48.0 // Up to 1.5x boost for very recent
+            } else if age_hours < 168.0 {
+                // Week
+                1.0 + (168.0 - age_hours) / 336.0 // Up to 1.25x boost
             } else {
-                1.0  // No boost for older memories
+                1.0 // No boost for older memories
             };
 
             // Apply temporal weighting
@@ -415,8 +443,10 @@ impl MemoryDecayEngine {
 
             // Add temporal reasoning to path
             if recency_boost > 1.0 {
-                memory.reasoning_path.push(format!("Temporal boost: {:.2}x ({}h ago)",
-                                                  recency_boost, age_hours));
+                memory.reasoning_path.push(format!(
+                    "Temporal boost: {:.2}x ({}h ago)",
+                    recency_boost, age_hours
+                ));
             }
         }
 
@@ -424,7 +454,11 @@ impl MemoryDecayEngine {
     }
 
     /// Manually boost importance of specific memories
-    pub async fn boost_memory_importance(&self, memory_id: MemoryId, boost_factor: f32) -> MemoryResult<()> {
+    pub async fn boost_memory_importance(
+        &self,
+        memory_id: MemoryId,
+        boost_factor: f32,
+    ) -> MemoryResult<()> {
         sqlx::query(
             r#"
             UPDATE memory_embeddings
@@ -438,7 +472,10 @@ impl MemoryDecayEngine {
         .execute(&self.db_pool)
         .await?;
 
-        info!("Boosted importance of memory {} by factor {}", memory_id, boost_factor);
+        info!(
+            "Boosted importance of memory {} by factor {}",
+            memory_id, boost_factor
+        );
         Ok(())
     }
 
@@ -458,7 +495,10 @@ impl MemoryDecayEngine {
         let protected_count = updated.rows_affected() as usize;
 
         if protected_count > 0 {
-            info!("Protected {} important memories from decay", protected_count);
+            info!(
+                "Protected {} important memories from decay",
+                protected_count
+            );
         }
 
         Ok(protected_count)
@@ -484,10 +524,14 @@ impl MemoryDecayEngine {
 
         Ok(DecayStats {
             total_memories: row.try_get::<i64, _>("total_memories").unwrap_or(0) as usize,
-            avg_importance: row.try_get::<Option<f64>, _>("avg_importance")?.unwrap_or(0.0) as f32,
+            avg_importance: row
+                .try_get::<Option<f64>, _>("avg_importance")?
+                .unwrap_or(0.0) as f32,
             avg_decay: row.try_get::<Option<f64>, _>("avg_decay")?.unwrap_or(0.0) as f32,
             min_decay: row.try_get::<Option<f64>, _>("min_decay")?.unwrap_or(0.0) as f32,
-            max_importance: row.try_get::<Option<f64>, _>("max_importance")?.unwrap_or(0.0) as f32,
+            max_importance: row
+                .try_get::<Option<f64>, _>("max_importance")?
+                .unwrap_or(0.0) as f32,
             heavily_decayed: row.try_get::<i64, _>("heavily_decayed").unwrap_or(0) as usize,
             highly_important: row.try_get::<i64, _>("highly_important").unwrap_or(0) as usize,
         })

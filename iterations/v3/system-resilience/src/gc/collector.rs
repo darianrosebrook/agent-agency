@@ -43,7 +43,7 @@ impl Default for GcConfig {
     fn default() -> Self {
         Self {
             auto_gc: true,
-            gc_interval: 3600, // 1 hour
+            gc_interval: 3600,   // 1 hour
             grace_period: 86400, // 24 hours
             max_objects_per_cycle: 10000,
             enable_packing: true,
@@ -169,20 +169,20 @@ impl GarbageCollector {
     /// Run a full GC cycle
     pub fn run_gc_cycle(&mut self, protected_refs: &[ObjectRef]) -> Result<GcResult> {
         let start_time = Self::current_timestamp();
-        
+
         if self.config.verbose {
             println!("Starting GC cycle at {}", start_time);
         }
 
         // Mark phase: identify reachable objects
         let reachable = self.mark_reachable(protected_refs)?;
-        
+
         // Sweep phase: identify unreachable objects
         let unreachable = self.sweep_unreachable(&reachable)?;
-        
+
         // Grace period: move unreachable objects to grace period
         let grace_period = self.apply_grace_period(&unreachable)?;
-        
+
         // Pack phase: pack cold objects if enabled
         let packed = if self.config.enable_packing {
             self.pack_cold_objects(&reachable)?
@@ -191,8 +191,13 @@ impl GarbageCollector {
         };
 
         // Update statistics
-        self.update_stats(reachable.len(), unreachable.len(), grace_period.len(), packed.len());
-        
+        self.update_stats(
+            reachable.len(),
+            unreachable.len(),
+            grace_period.len(),
+            packed.len(),
+        );
+
         let end_time = Self::current_timestamp();
         let duration = end_time - start_time;
 
@@ -227,7 +232,7 @@ impl GarbageCollector {
             // TODO: Implement object reference retrieval from object store
             //       Currently uses placeholder; should query actual object store for object references based on digest.
             let references = self.get_object_references(&digest)?;
-            
+
             for reference in references {
                 if !reachable.contains(&reference) {
                     reachable.insert(reference);
@@ -242,11 +247,11 @@ impl GarbageCollector {
     /// Sweep unreachable objects
     fn sweep_unreachable(&mut self, reachable: &HashSet<Digest>) -> Result<HashSet<Digest>> {
         let mut unreachable = HashSet::new();
-        
+
         // TODO: Implement object enumeration from object store
         //       Currently uses placeholder; should query actual object store to enumerate all objects in the system.
         let all_objects = self.get_all_objects()?;
-        
+
         for object in all_objects {
             if !reachable.contains(&object) && !self.reachability.protected.contains(&object) {
                 unreachable.insert(object);
@@ -373,7 +378,10 @@ impl GarbageCollector {
 
         // Object not found or unrecognized type
         if self.config.verbose {
-            println!("Warning: Could not parse references for object {:?}", digest);
+            println!(
+                "Warning: Could not parse references for object {:?}",
+                digest
+            );
         }
         Ok(Vec::new())
     }
@@ -548,12 +556,16 @@ impl GarbageCollector {
         // Walk the objects directory to find all stored objects
         // Objects are stored in a sharded directory structure: xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         if objects_dir.exists() {
-            for entry in WalkDir::new(&objects_dir).into_iter().filter_map(|e| e.ok()) {
+            for entry in WalkDir::new(&objects_dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+            {
                 if entry.file_type().is_file() {
                     // Extract digest from file path
                     // Expected path format: .recovery/objects/xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                     if let Some(file_name) = entry.file_name().to_str() {
-                        if file_name.len() == 64 { // BLAKE3 hex is 64 characters
+                        if file_name.len() == 64 {
+                            // BLAKE3 hex is 64 characters
                             if let Ok(digest) = Digest::from_hex(file_name) {
                                 all_objects.push(digest);
                             }
@@ -585,7 +597,13 @@ impl GarbageCollector {
     }
 
     /// Update GC statistics
-    fn update_stats(&mut self, reachable: usize, unreachable: usize, grace_period: usize, packed: usize) {
+    fn update_stats(
+        &mut self,
+        reachable: usize,
+        unreachable: usize,
+        grace_period: usize,
+        packed: usize,
+    ) {
         self.stats.objects_processed += reachable + unreachable;
         self.stats.reachable_objects += reachable;
         self.stats.unreachable_objects += unreachable;
@@ -679,7 +697,7 @@ impl GcScheduler {
         Self {
             collector,
             last_gc: Self::current_timestamp(), // Initialize to current time so GC doesn't run immediately
-            interval: 3600, // 1 hour
+            interval: 3600,                     // 1 hour
         }
     }
 
@@ -750,10 +768,10 @@ mod tests {
     fn test_gc_scheduler() {
         let collector = GarbageCollector::new();
         let mut scheduler = GcScheduler::new(collector);
-        
+
         // Should not run GC immediately
         assert!(!scheduler.should_run_gc());
-        
+
         // Force GC
         let protected_refs = vec![ObjectRef {
             digest: Digest::from_bytes([15; 32]),
@@ -767,10 +785,10 @@ mod tests {
     fn test_grace_period() {
         let mut collector = GarbageCollector::new();
         let digest = Digest::from_bytes([16; 32]);
-        
+
         // Add object to grace period
         collector.grace_period.grace_objects.insert(digest, 0);
-        
+
         // Check grace period
         assert!(collector.grace_period.grace_objects.contains_key(&digest));
     }
@@ -779,7 +797,7 @@ mod tests {
     fn test_gc_stats() {
         let collector = GarbageCollector::new();
         let stats = collector.get_stats();
-        
+
         assert_eq!(stats.objects_processed, 0);
         assert_eq!(stats.gc_cycles, 0);
     }

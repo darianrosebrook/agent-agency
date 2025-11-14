@@ -3,9 +3,9 @@
 //! Database operations for embedding storage, index persistence,
 //! and retrieval with connection pooling and health monitoring.
 
-use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -33,7 +33,10 @@ impl EmbeddingStorage {
             .connect(&config.database_url)
             .await?;
 
-        Ok(Self { pool, _config: config })
+        Ok(Self {
+            pool,
+            _config: config,
+        })
     }
 
     /// Store embedding record
@@ -43,7 +46,7 @@ impl EmbeddingStorage {
              VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (id) DO UPDATE SET
                embedding = EXCLUDED.embedding,
-               updated_at = NOW()"
+               updated_at = NOW()",
         )
         .bind(&record.id)
         .bind(&record.content_id)
@@ -61,7 +64,7 @@ impl EmbeddingStorage {
     pub async fn get_embedding(&self, id: Uuid) -> Result<Option<EmbeddingRecord>> {
         let row = sqlx::query(
             "SELECT id, content_id, embedding, model, dimensions, created_at, updated_at
-             FROM embeddings WHERE id = $1"
+             FROM embeddings WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -81,25 +84,32 @@ impl EmbeddingStorage {
     }
 
     /// Find similar embeddings using vector similarity
-    pub async fn find_similar(&self, embedding: &EmbeddingVector, limit: usize) -> Result<Vec<EmbeddingSimilarity>> {
+    pub async fn find_similar(
+        &self,
+        embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Result<Vec<EmbeddingSimilarity>> {
         // Placeholder - would use pgvector or similar extension
         let rows = sqlx::query(
             "SELECT id, content_id, embedding, model, dimensions,
                     1 - (embedding <=> $1) as similarity
              FROM embeddings
              ORDER BY embedding <=> $1
-             LIMIT $2"
+             LIMIT $2",
         )
         .bind(&embedding.values)
         .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|row: sqlx::postgres::PgRow| EmbeddingSimilarity {
-            embedding_id: row.get::<uuid::Uuid, &str>("id"),
-            content_id: row.get::<uuid::Uuid, &str>("content_id"),
-            similarity: row.get::<f64, &str>("similarity"),
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|row: sqlx::postgres::PgRow| EmbeddingSimilarity {
+                embedding_id: row.get::<uuid::Uuid, &str>("id"),
+                content_id: row.get::<uuid::Uuid, &str>("content_id"),
+                similarity: row.get::<f64, &str>("similarity"),
+            })
+            .collect())
     }
 
     /// Store text document metadata
@@ -127,11 +137,15 @@ impl EmbeddingStorage {
     }
 
     /// Real full-text search implementation using PostgreSQL
-    pub async fn search_text_documents(&self, query: &str, limit: usize) -> Result<Vec<super::text::TextDocument>> {
-        use tracing::{info, debug};
-        
+    pub async fn search_text_documents(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<super::text::TextDocument>> {
+        use tracing::{debug, info};
+
         info!("Performing full-text search for query: '{}'", query);
-        
+
         // Use PostgreSQL's full-text search capabilities
         let rows = sqlx::query(
             "SELECT id, title, content, metadata, term_frequencies,
@@ -146,15 +160,17 @@ impl EmbeddingStorage {
         .fetch_all(&self.pool)
         .await?;
 
-        let results: Vec<super::text::TextDocument> = rows.into_iter().map(|row: sqlx::postgres::PgRow| {
-            super::text::TextDocument {
+        let results: Vec<super::text::TextDocument> = rows
+            .into_iter()
+            .map(|row: sqlx::postgres::PgRow| super::text::TextDocument {
                 id: row.get("id"),
                 title: row.get("title"),
                 content: row.get("content"),
                 metadata: serde_json::from_value(row.get("metadata")).unwrap_or_default(),
-                term_frequencies: serde_json::from_value(row.get("term_frequencies")).unwrap_or_default(),
-            }
-        }).collect();
+                term_frequencies: serde_json::from_value(row.get("term_frequencies"))
+                    .unwrap_or_default(),
+            })
+            .collect();
 
         debug!("Found {} text documents matching query", results.len());
         Ok(results)
@@ -162,9 +178,7 @@ impl EmbeddingStorage {
 
     /// Health check for database connectivity
     pub async fn health_check(&self) -> Result<()> {
-        sqlx::query("SELECT 1")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").execute(&self.pool).await?;
         Ok(())
     }
 
@@ -217,5 +231,3 @@ pub struct EmbeddingRecord {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
-
-

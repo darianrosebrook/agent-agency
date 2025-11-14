@@ -12,7 +12,10 @@ use tracing::{debug, info, warn};
 #[async_trait]
 pub trait InferenceBackend: Send + Sync + std::fmt::Debug {
     /// Execute inference request
-    async fn execute(&self, request: InferenceInput) -> Result<InferenceOutput, ModelManagementError>;
+    async fn execute(
+        &self,
+        request: InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError>;
 
     /// Check if backend supports the given model type
     fn supports_model(&self, model_type: &str) -> bool;
@@ -63,7 +66,10 @@ impl InferenceManager {
     }
 
     /// Register an inference backend
-    pub async fn register_backend(&self, backend: Arc<dyn InferenceBackend>) -> Result<(), ModelManagementError> {
+    pub async fn register_backend(
+        &self,
+        backend: Arc<dyn InferenceBackend>,
+    ) -> Result<(), ModelManagementError> {
         let backend_id = backend.id().to_string();
 
         let mut backends = self.backends.write().await;
@@ -78,7 +84,10 @@ impl InferenceManager {
     }
 
     /// Get or create a backend for the given model type
-    pub async fn get_or_create_backend(&self, model_type: &str) -> Result<Arc<dyn InferenceBackend>, ModelManagementError> {
+    pub async fn get_or_create_backend(
+        &self,
+        model_type: &str,
+    ) -> Result<Arc<dyn InferenceBackend>, ModelManagementError> {
         // Check cache first
         {
             let cache = self.backend_cache.read().await;
@@ -98,22 +107,32 @@ impl InferenceManager {
                 let mut cache = self.backend_cache.write().await;
                 cache.insert(model_type.to_string(), backend_id.clone());
 
-                debug!("Selected backend {} for model type {}", backend_id, model_type);
+                debug!(
+                    "Selected backend {} for model type {}",
+                    backend_id, model_type
+                );
                 return Ok(backend.clone());
             }
         }
 
-        Err(ModelManagementError::InferenceError(
-            format!("No backend available for model type: {}", model_type)
-        ))
+        Err(ModelManagementError::InferenceError(format!(
+            "No backend available for model type: {}",
+            model_type
+        )))
     }
 
     /// Execute inference using the appropriate backend
-    pub async fn execute_inference(&self, request: &InferenceInput) -> Result<InferenceOutput, ModelManagementError> {
+    pub async fn execute_inference(
+        &self,
+        request: &InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError> {
         let backend = self.get_or_create_backend(&request.model_id).await?;
 
-        debug!("Executing inference for model {} using backend {}",
-               request.model_id, backend.name());
+        debug!(
+            "Executing inference for model {} using backend {}",
+            request.model_id,
+            backend.name()
+        );
 
         let start_time = std::time::Instant::now();
         let result = backend.execute(request.clone()).await;
@@ -121,8 +140,10 @@ impl InferenceManager {
 
         match &result {
             Ok(output) => {
-                debug!("Inference completed in {:?} for model {}",
-                       execution_time, request.model_id);
+                debug!(
+                    "Inference completed in {:?} for model {}",
+                    execution_time, request.model_id
+                );
                 Ok(output.clone())
             }
             Err(e) => {
@@ -139,7 +160,10 @@ impl InferenceManager {
     }
 
     /// Get backend capabilities
-    pub async fn get_backend_capabilities(&self, backend_id: &str) -> Result<Option<BackendCapabilities>, ModelManagementError> {
+    pub async fn get_backend_capabilities(
+        &self,
+        backend_id: &str,
+    ) -> Result<Option<BackendCapabilities>, ModelManagementError> {
         let backends = self.backends.read().await;
         match backends.get(backend_id) {
             Some(backend) => Ok(Some(backend.capabilities())),
@@ -158,9 +182,10 @@ impl InferenceManager {
             info!("Removed backend: {}", backend_id);
             Ok(())
         } else {
-            Err(ModelManagementError::InferenceError(
-                format!("Backend not found: {}", backend_id)
-            ))
+            Err(ModelManagementError::InferenceError(format!(
+                "Backend not found: {}",
+                backend_id
+            )))
         }
     }
 }
@@ -185,7 +210,10 @@ impl CpuInferenceBackend {
 
 #[async_trait]
 impl InferenceBackend for CpuInferenceBackend {
-    async fn execute(&self, request: InferenceInput) -> Result<InferenceOutput, ModelManagementError> {
+    async fn execute(
+        &self,
+        request: InferenceInput,
+    ) -> Result<InferenceOutput, ModelManagementError> {
         // Simulate inference execution
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 

@@ -12,12 +12,10 @@
 #[cfg(feature = "full")]
 use testing_validation::scenarios::autonomous_workflow::run_test as run_autonomous_test;
 
-use testing_validation::{
-    E2ETestRunner, Scenario,
-};
-use tracing::{info, error};
-use tracing_subscriber;
 use std::env;
+use testing_validation::{E2ETestRunner, Scenario};
+use tracing::{error, info};
+use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -37,15 +35,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             print_help();
             return Ok(());
         }
-        "--autonomous" | "--auto" => {
-            run_legacy_autonomous_test().await
-        }
-        "--all" => {
-            run_all_scenarios().await
-        }
-        scenario_name => {
-            run_specific_scenario(scenario_name).await
-        }
+        "--autonomous" | "--auto" => run_legacy_autonomous_test().await,
+        "--all" => run_all_scenarios().await,
+        scenario_name => run_specific_scenario(scenario_name).await,
     }
 }
 
@@ -60,8 +52,8 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
 
     #[cfg(feature = "full")]
     {
-        use testing_validation::harness::{TestEnvironment, LocalServiceManager};
-        
+        use testing_validation::harness::{LocalServiceManager, TestEnvironment};
+
         // Create test environment
         let _env = TestEnvironment::new().await?;
         info!("✅ Test environment initialized");
@@ -84,8 +76,10 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
             info!("   Iterations: {}", result.metrics.iterations);
             info!("   Tokens used: {}", result.metrics.tokens_used);
         } else {
-            error!("❌ Autonomous workflow test FAILED: {}",
-                   result.error_message.unwrap_or("Unknown error".to_string()));
+            error!(
+                "❌ Autonomous workflow test FAILED: {}",
+                result.error_message.unwrap_or("Unknown error".to_string())
+            );
             std::process::exit(1);
         }
 
@@ -98,7 +92,9 @@ async fn run_legacy_autonomous_test() -> Result<(), Box<dyn std::error::Error + 
     }
 }
 
-async fn run_specific_scenario(scenario_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn run_specific_scenario(
+    scenario_name: &str,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let scenario = parse_scenario_arg(scenario_name)?;
 
     info!("Running specific scenario: {:?}", scenario);
@@ -115,9 +111,11 @@ async fn run_specific_scenario(scenario_name: &str) -> Result<(), Box<dyn std::e
         info!("   Duration: {}ms", result.duration_ms);
         print_scenario_metrics(&result);
     } else {
-        error!("❌ Scenario {:?} FAILED: {}",
-               scenario,
-               result.error_message.unwrap_or("Unknown error".to_string()));
+        error!(
+            "❌ Scenario {:?} FAILED: {}",
+            scenario,
+            result.error_message.unwrap_or("Unknown error".to_string())
+        );
         std::process::exit(1);
     }
 
@@ -165,9 +163,11 @@ async fn run_all_scenarios() -> Result<(), Box<dyn std::error::Error + Send + Sy
             info!("✅ {:?} PASSED", scenario);
         } else {
             failed += 1;
-            error!("❌ {:?} FAILED: {}",
-                   scenario,
-                   error_msg.unwrap_or("Unknown error".to_string()));
+            error!(
+                "❌ {:?} FAILED: {}",
+                scenario,
+                error_msg.unwrap_or("Unknown error".to_string())
+            );
         }
     }
 
@@ -180,7 +180,10 @@ async fn run_all_scenarios() -> Result<(), Box<dyn std::error::Error + Send + Sy
     info!("   Total scenarios: {}", results.len());
     info!("   Passed: {}", passed);
     info!("   Failed: {}", failed);
-    info!("   Success rate: {:.1}%", (passed as f64 / results.len() as f64) * 100.0);
+    info!(
+        "   Success rate: {:.1}%",
+        (passed as f64 / results.len() as f64) * 100.0
+    );
 
     if failed > 0 {
         error!("❌ {} scenario(s) failed", failed);
@@ -259,7 +262,9 @@ fn print_help() {
     println!("Agent Agency V3 E2E Test Runner");
     println!();
     println!("USAGE:");
-    println!("  cargo run --bin e2e_runner                    # Run legacy autonomous workflow test");
+    println!(
+        "  cargo run --bin e2e_runner                    # Run legacy autonomous workflow test"
+    );
     println!("  cargo run --bin e2e_runner -- <scenario>      # Run specific scenario");
     println!("  cargo run --bin e2e_runner -- --all           # Run all scenarios");
     println!("  cargo run --bin e2e_runner -- --help          # Show this help");
@@ -279,7 +284,3 @@ fn print_help() {
     println!("  cargo run --bin e2e_runner -- caws");
     println!("  cargo run --bin e2e_runner -- --all");
 }
-
-
-
-

@@ -429,7 +429,10 @@ impl WorkerAssignmentStrategy {
     }
 
     /// Set audit trail manager (for chain-of-thought recording)
-    pub fn set_audit_trail_manager(&mut self, audit_trail_manager: std::sync::Arc<crate::audit_trail::AuditTrailManager>) {
+    pub fn set_audit_trail_manager(
+        &mut self,
+        audit_trail_manager: std::sync::Arc<crate::audit_trail::AuditTrailManager>,
+    ) {
         self.audit_trail_manager = Some(audit_trail_manager);
     }
 
@@ -451,7 +454,8 @@ impl WorkerAssignmentStrategy {
             chosen_option,
             confidence,
             None, // No candidate details
-        ).await
+        )
+        .await
     }
 
     /// Record assignment decision with candidate details (enhanced for evaluation)
@@ -477,91 +481,130 @@ impl WorkerAssignmentStrategy {
             };
 
             // Build alternatives with scores if candidates provided
-            let alternatives_vec: Vec<crate::chain_of_thought::Alternative> = if let Some(candidates_list) = candidates {
-                // Map candidates to alternatives with real scores
-                candidates_list.iter()
-                    .take(5) // Limit to top 5 candidates to avoid trace bloat
-                    .map(|c| {
-                        let mut pros = Vec::new();
-                        let mut cons = Vec::new();
-                        
-                        if c.capability_score >= 0.8 {
-                            pros.push("High capability match".to_string());
-                        } else if c.capability_score < 0.6 {
-                            cons.push("Low capability match".to_string());
-                        }
-                        
-                        if c.load_factor < 0.5 {
-                            pros.push("Low current load".to_string());
-                        } else if c.load_factor > 0.8 {
-                            cons.push("High current load".to_string());
-                        }
-                        
-                        if c.performance_score >= 0.8 {
-                            pros.push("High performance score".to_string());
-                        }
-                        
-                        crate::chain_of_thought::Alternative {
-                            option: format!("Worker {}", c.worker_id),
-                            score: c.assignment_score,
-                            reasoning: format!(
-                                "Capability: {:.2}, Load: {:.2}, Performance: {:.2}",
-                                c.capability_score, c.load_factor, c.performance_score
-                            ),
-                            pros,
-                            cons,
-                            confidence: c.assignment_score.min(1.0),
-                        }
-                    })
-                    .collect()
-            } else {
-                // Fallback to simple alternatives without scores
-                alternatives.into_iter()
-                    .take(5) // Limit to top 5
-                    .map(|alt| crate::chain_of_thought::Alternative {
-                        option: alt,
-                        score: 0.5,
-                        reasoning: "Candidate evaluation".to_string(),
-                        pros: vec!["Available".to_string()],
-                        cons: vec![],
-                        confidence: 0.7,
-                    })
-                    .collect()
-            };
+            let alternatives_vec: Vec<crate::chain_of_thought::Alternative> =
+                if let Some(candidates_list) = candidates {
+                    // Map candidates to alternatives with real scores
+                    candidates_list
+                        .iter()
+                        .take(5) // Limit to top 5 candidates to avoid trace bloat
+                        .map(|c| {
+                            let mut pros = Vec::new();
+                            let mut cons = Vec::new();
+
+                            if c.capability_score >= 0.8 {
+                                pros.push("High capability match".to_string());
+                            } else if c.capability_score < 0.6 {
+                                cons.push("Low capability match".to_string());
+                            }
+
+                            if c.load_factor < 0.5 {
+                                pros.push("Low current load".to_string());
+                            } else if c.load_factor > 0.8 {
+                                cons.push("High current load".to_string());
+                            }
+
+                            if c.performance_score >= 0.8 {
+                                pros.push("High performance score".to_string());
+                            }
+
+                            crate::chain_of_thought::Alternative {
+                                option: format!("Worker {}", c.worker_id),
+                                score: c.assignment_score,
+                                reasoning: format!(
+                                    "Capability: {:.2}, Load: {:.2}, Performance: {:.2}",
+                                    c.capability_score, c.load_factor, c.performance_score
+                                ),
+                                pros,
+                                cons,
+                                confidence: c.assignment_score.min(1.0),
+                            }
+                        })
+                        .collect()
+                } else {
+                    // Fallback to simple alternatives without scores
+                    alternatives
+                        .into_iter()
+                        .take(5) // Limit to top 5
+                        .map(|alt| crate::chain_of_thought::Alternative {
+                            option: alt,
+                            score: 0.5,
+                            reasoning: "Candidate evaluation".to_string(),
+                            pros: vec!["Available".to_string()],
+                            cons: vec![],
+                            confidence: 0.7,
+                        })
+                        .collect()
+                };
 
             // Calculate risk assessment if candidates provided
             let risk_assessment = if let Some(candidates_list) = candidates {
-                self.calculate_risk_assessment(milestone, candidates_list, &chosen_option, confidence)
+                self.calculate_risk_assessment(
+                    milestone,
+                    candidates_list,
+                    &chosen_option,
+                    confidence,
+                )
             } else {
                 None
             };
 
             // Build evaluation metadata for context
             let mut metadata = std::collections::HashMap::new();
-            metadata.insert("milestone_id".to_string(), serde_json::Value::String(milestone.id.clone()));
-            metadata.insert("milestone_priority".to_string(), serde_json::Value::String(format!("{:?}", milestone.priority)));
-            metadata.insert("milestone_state".to_string(), serde_json::Value::String(format!("{:?}", milestone.state)));
+            metadata.insert(
+                "milestone_id".to_string(),
+                serde_json::Value::String(milestone.id.clone()),
+            );
+            metadata.insert(
+                "milestone_priority".to_string(),
+                serde_json::Value::String(format!("{:?}", milestone.priority)),
+            );
+            metadata.insert(
+                "milestone_state".to_string(),
+                serde_json::Value::String(format!("{:?}", milestone.state)),
+            );
             if let Some(duration) = milestone.estimated_duration {
-                metadata.insert("estimated_duration_minutes".to_string(), serde_json::Value::Number(duration.into()));
+                metadata.insert(
+                    "estimated_duration_minutes".to_string(),
+                    serde_json::Value::Number(duration.into()),
+                );
             }
-            metadata.insert("is_blocking".to_string(), serde_json::Value::Bool(milestone.is_blocking));
-            metadata.insert("risk_tier".to_string(), serde_json::Value::Number(milestone.risk_tier.into()));
-            
+            metadata.insert(
+                "is_blocking".to_string(),
+                serde_json::Value::Bool(milestone.is_blocking),
+            );
+            metadata.insert(
+                "risk_tier".to_string(),
+                serde_json::Value::Number(milestone.risk_tier.into()),
+            );
+
             // Add candidate pool information
             if let Some(candidates_list) = candidates {
-                metadata.insert("candidate_pool_size".to_string(), serde_json::Value::Number(candidates_list.len().into()));
+                metadata.insert(
+                    "candidate_pool_size".to_string(),
+                    serde_json::Value::Number(candidates_list.len().into()),
+                );
                 if let Some(best_candidate) = candidates_list.first() {
-                    metadata.insert("best_capability_score".to_string(), serde_json::Value::Number(
-                        serde_json::Number::from_f64(best_candidate.capability_score).unwrap_or(serde_json::Number::from(0))
-                    ));
+                    metadata.insert(
+                        "best_capability_score".to_string(),
+                        serde_json::Value::Number(
+                            serde_json::Number::from_f64(best_candidate.capability_score)
+                                .unwrap_or(serde_json::Number::from(0)),
+                        ),
+                    );
                 }
             }
-            
+
             // Add decision context
-            metadata.insert("decision_type_label".to_string(), serde_json::Value::String(decision_type.to_string()));
-            metadata.insert("confidence_score".to_string(), serde_json::Value::Number(
-                serde_json::Number::from_f64(confidence).unwrap_or(serde_json::Number::from(0))
-            ));
+            metadata.insert(
+                "decision_type_label".to_string(),
+                serde_json::Value::String(decision_type.to_string()),
+            );
+            metadata.insert(
+                "confidence_score".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(confidence).unwrap_or(serde_json::Number::from(0)),
+                ),
+            );
 
             let decision = crate::chain_of_thought::DecisionPoint {
                 decision_id: self.generate_uuid(),
@@ -576,7 +619,9 @@ impl WorkerAssignmentStrategy {
                 metadata,
             };
 
-            audit_manager.record_orchestration_decision(decision).await?;
+            audit_manager
+                .record_orchestration_decision(decision)
+                .await?;
         }
         Ok(())
     }
@@ -601,9 +646,9 @@ impl WorkerAssignmentStrategy {
         let chosen_worker_id = chosen_option
             .strip_prefix("Worker ")
             .and_then(|s| s.parse::<Uuid>().ok());
-        
-        let chosen_candidate = chosen_worker_id
-            .and_then(|id| candidates.iter().find(|c| c.worker_id == id));
+
+        let chosen_candidate =
+            chosen_worker_id.and_then(|id| candidates.iter().find(|c| c.worker_id == id));
 
         // Analyze risk factors
         if let Some(chosen) = chosen_candidate {
@@ -622,7 +667,8 @@ impl WorkerAssignmentStrategy {
                     "High worker load ({:.2}) may cause delays",
                     chosen.load_factor
                 ));
-                mitigation_strategies.push("Consider load balancing or task prioritization".to_string());
+                mitigation_strategies
+                    .push("Consider load balancing or task prioritization".to_string());
             }
 
             // Low performance score
@@ -631,7 +677,8 @@ impl WorkerAssignmentStrategy {
                     "Low performance score ({:.2}) indicates potential reliability issues",
                     chosen.performance_score
                 ));
-                mitigation_strategies.push("Enable failover and error recovery mechanisms".to_string());
+                mitigation_strategies
+                    .push("Enable failover and error recovery mechanisms".to_string());
             }
         }
 
@@ -641,7 +688,8 @@ impl WorkerAssignmentStrategy {
                 "Limited candidate pool ({} workers) reduces flexibility",
                 candidates.len()
             ));
-            mitigation_strategies.push("Consider expanding worker pool or relaxing constraints".to_string());
+            mitigation_strategies
+                .push("Consider expanding worker pool or relaxing constraints".to_string());
         }
 
         // Low confidence in decision
@@ -650,7 +698,8 @@ impl WorkerAssignmentStrategy {
                 "Low confidence score ({:.2}) indicates uncertainty in assignment",
                 confidence
             ));
-            mitigation_strategies.push("Review assignment criteria and worker capabilities".to_string());
+            mitigation_strategies
+                .push("Review assignment criteria and worker capabilities".to_string());
         }
 
         // High priority milestone with risks
@@ -661,7 +710,8 @@ impl WorkerAssignmentStrategy {
         );
         if is_high_priority && !risk_factors.is_empty() {
             risk_factors.push("High priority milestone requires careful monitoring".to_string());
-            mitigation_strategies.push("Implement additional monitoring and checkpointing".to_string());
+            mitigation_strategies
+                .push("Implement additional monitoring and checkpointing".to_string());
         }
 
         // Build fallback options from alternative candidates
@@ -701,7 +751,8 @@ impl WorkerAssignmentStrategy {
             vec![],
             "".to_string(),
             1.0,
-        ).await?;
+        )
+        .await?;
 
         // Get available workers
         let available_workers = self.get_available_workers().await?;
@@ -714,7 +765,8 @@ impl WorkerAssignmentStrategy {
                 vec![],
                 "fail".to_string(),
                 0.0,
-            ).await?;
+            )
+            .await?;
             return Err(anyhow!("No available workers found"));
         }
 
@@ -723,10 +775,14 @@ impl WorkerAssignmentStrategy {
             milestone,
             "workers_discovered",
             format!("Found {} available workers", available_workers.len()),
-            available_workers.iter().map(|w| format!("Worker {}", w.id)).collect(),
+            available_workers
+                .iter()
+                .map(|w| format!("Worker {}", w.id))
+                .collect(),
             "continue".to_string(),
             0.8,
-        ).await?;
+        )
+        .await?;
 
         // Evaluate candidates
         let candidates = self
@@ -737,17 +793,31 @@ impl WorkerAssignmentStrategy {
         self.record_assignment_decision_with_candidates(
             milestone,
             "candidates_evaluated",
-            format!("Evaluated {} candidates for milestone {}", candidates.len(), milestone.id),
-            candidates.iter().map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score)).collect(),
+            format!(
+                "Evaluated {} candidates for milestone {}",
+                candidates.len(),
+                milestone.id
+            ),
+            candidates
+                .iter()
+                .map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score))
+                .collect(),
             "filter_qualified".to_string(),
             0.9,
             Some(&candidates), // Pass candidate details with scores
-        ).await?;
+        )
+        .await?;
 
         // Log candidate scores for debugging (before filtering consumes candidates)
         let candidate_count = candidates.len();
-        let candidate_scores: Vec<_> = candidates.iter().map(|c| (c.worker_id, c.capability_score)).collect();
-        let highest_score = candidates.iter().map(|c| c.capability_score).fold(0.0, f64::max);
+        let candidate_scores: Vec<_> = candidates
+            .iter()
+            .map(|c| (c.worker_id, c.capability_score))
+            .collect();
+        let highest_score = candidates
+            .iter()
+            .map(|c| c.capability_score)
+            .fold(0.0, f64::max);
         tracing::info!(
             milestone_id = %milestone.id,
             candidate_count = candidate_count,
@@ -773,11 +843,15 @@ impl WorkerAssignmentStrategy {
             self.record_assignment_decision(
                 milestone,
                 "no_qualified_candidates",
-                format!("No workers meet minimum capability score {:.2} for milestone {}", self.config.min_capability_score, milestone.id),
+                format!(
+                    "No workers meet minimum capability score {:.2} for milestone {}",
+                    self.config.min_capability_score, milestone.id
+                ),
                 vec![],
                 "fail".to_string(),
                 0.0,
-            ).await?;
+            )
+            .await?;
             return Err(anyhow!(
                 "No workers meet minimum capability requirements for milestone {}",
                 milestone.id
@@ -788,12 +862,20 @@ impl WorkerAssignmentStrategy {
         self.record_assignment_decision_with_candidates(
             milestone,
             "qualified_candidates",
-            format!("{} workers qualified for milestone {}", qualified_candidates.len(), milestone.id),
-            qualified_candidates.iter().map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score)).collect(),
+            format!(
+                "{} workers qualified for milestone {}",
+                qualified_candidates.len(),
+                milestone.id
+            ),
+            qualified_candidates
+                .iter()
+                .map(|c| format!("Worker {} (score: {:.2})", c.worker_id, c.capability_score))
+                .collect(),
             "apply_load_balancing".to_string(),
             0.85,
             Some(&qualified_candidates), // Pass qualified candidate details
-        ).await?;
+        )
+        .await?;
 
         // Apply load balancing to select worker
         match self.load_balancer.select_worker(&qualified_candidates) {
@@ -802,8 +884,10 @@ impl WorkerAssignmentStrategy {
                 self.record_assignment_decision(
                     milestone,
                     "worker_selected",
-                    format!("Selected worker {} for milestone {} using {} algorithm",
-                        worker_id, milestone.id,
+                    format!(
+                        "Selected worker {} for milestone {} using {} algorithm",
+                        worker_id,
+                        milestone.id,
                         match self.config.load_balancing {
                             LoadBalancingAlgorithm::RoundRobin => "round-robin",
                             LoadBalancingAlgorithm::LeastLoaded => "least-loaded",
@@ -815,7 +899,8 @@ impl WorkerAssignmentStrategy {
                     vec![format!("Worker {}", worker_id)],
                     format!("Worker {}", worker_id),
                     0.95,
-                ).await?;
+                )
+                .await?;
 
                 // Update worker assignment in database
                 self.record_assignment(worker_id, &milestone.id).await?;
@@ -825,11 +910,15 @@ impl WorkerAssignmentStrategy {
                 self.record_assignment_decision(
                     milestone,
                     "load_balancer_failed",
-                    format!("Load balancer failed to select worker for milestone {}", milestone.id),
+                    format!(
+                        "Load balancer failed to select worker for milestone {}",
+                        milestone.id
+                    ),
                     vec![],
                     "fail".to_string(),
                     0.0,
-                ).await?;
+                )
+                .await?;
                 Err(anyhow!("Load balancer failed to select worker"))
             }
         }
@@ -945,22 +1034,26 @@ impl WorkerAssignmentStrategy {
 
         // Extract arbiter decision metadata from milestone.metadata HashMap
         // Keys: arbiter_task_type, arbiter_risk_tier, arbiter_worker_pool, arbiter_confidence
-        let arbiter_worker_pool: Option<String> = milestone.metadata
+        let arbiter_worker_pool: Option<String> = milestone
+            .metadata
             .get("arbiter_worker_pool")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        
-        let arbiter_confidence: f64 = milestone.metadata
+
+        let arbiter_confidence: f64 = milestone
+            .metadata
             .get("arbiter_confidence")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.5);
-        
-        let arbiter_task_type: Option<String> = milestone.metadata
+
+        let arbiter_task_type: Option<String> = milestone
+            .metadata
             .get("arbiter_task_type")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        
-        let arbiter_risk_tier: Option<String> = milestone.metadata
+
+        let arbiter_risk_tier: Option<String> = milestone
+            .metadata
             .get("arbiter_risk_tier")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
@@ -984,9 +1077,11 @@ impl WorkerAssignmentStrategy {
 
         // Filter workers by arbiter worker pool recommendation if available
         // Use Worker.metadata field to check pool membership instead of string contains
-        let filtered_workers: Vec<&Worker> = if let Some(ref recommended_pool) = arbiter_worker_pool {
+        let filtered_workers: Vec<&Worker> = if let Some(ref recommended_pool) = arbiter_worker_pool
+        {
             // Filter workers that match the recommended pool using Worker.metadata
-            let matching: Vec<_> = workers.iter()
+            let matching: Vec<_> = workers
+                .iter()
                 .filter(|w| {
                     // Check if worker.metadata contains "worker_pool" key matching recommended_pool
                     w.metadata
@@ -996,7 +1091,7 @@ impl WorkerAssignmentStrategy {
                         .unwrap_or(false)
                 })
                 .collect();
-            
+
             // Log filtering results for observability
             tracing::debug!(
                 milestone_id = %milestone.id,
@@ -1005,7 +1100,7 @@ impl WorkerAssignmentStrategy {
                 matching_workers = matching.len(),
                 "Filtered workers by arbiter-recommended pool"
             );
-            
+
             matching
         } else {
             // No arbiter recommendation, use all workers
@@ -1040,12 +1135,13 @@ impl WorkerAssignmentStrategy {
             // Boost matching workers by arbiter confidence score
             let arbiter_boost = if let Some(ref recommended_pool) = arbiter_worker_pool {
                 // Check if worker matches recommended pool using metadata
-                let matches_pool = worker.metadata
+                let matches_pool = worker
+                    .metadata
                     .get("worker_pool")
                     .and_then(|v| v.as_str())
                     .map(|pool| pool == recommended_pool)
                     .unwrap_or(false);
-                
+
                 if matches_pool {
                     // Boost score based on arbiter confidence (0.0 to 0.2 boost)
                     arbiter_confidence * 0.2
@@ -1073,7 +1169,11 @@ impl WorkerAssignmentStrategy {
         }
 
         // Sort by assignment score (highest first) to prioritize arbiter-recommended workers
-        candidates.sort_by(|a, b| b.assignment_score.partial_cmp(&a.assignment_score).unwrap_or(std::cmp::Ordering::Equal));
+        candidates.sort_by(|a, b| {
+            b.assignment_score
+                .partial_cmp(&a.assignment_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(candidates)
     }
@@ -1082,22 +1182,23 @@ impl WorkerAssignmentStrategy {
     fn calculate_capability_score(&self, milestone: &Milestone, worker: &Worker) -> f64 {
         // Parse worker capabilities from JSON
         // Handle both array format ["cap1", "cap2"] and object format {"cap1": true, "cap2": true}
-        let worker_capabilities: HashSet<String> = match serde_json::from_value(worker.capabilities.clone()) {
-            Ok(capabilities) => capabilities,
-            Err(_) => {
-                // Try parsing as object and extracting keys
-                if let serde_json::Value::Object(map) = &worker.capabilities {
-                    map.keys().cloned().collect()
-                } else {
-                    tracing::warn!(
-                        worker_id = %worker.id,
-                        capabilities = ?worker.capabilities,
-                        "Failed to parse worker capabilities, returning 0.0"
-                    );
-                    return 0.0;
+        let worker_capabilities: HashSet<String> =
+            match serde_json::from_value(worker.capabilities.clone()) {
+                Ok(capabilities) => capabilities,
+                Err(_) => {
+                    // Try parsing as object and extracting keys
+                    if let serde_json::Value::Object(map) = &worker.capabilities {
+                        map.keys().cloned().collect()
+                    } else {
+                        tracing::warn!(
+                            worker_id = %worker.id,
+                            capabilities = ?worker.capabilities,
+                            "Failed to parse worker capabilities, returning 0.0"
+                        );
+                        return 0.0;
+                    }
                 }
-            }
-        };
+            };
 
         // Milestone requirements from scope operations
         let required_capabilities: HashSet<String> =
@@ -1114,7 +1215,7 @@ impl WorkerAssignmentStrategy {
 
         // Check if worker has all required capabilities
         let has_all_required = required_capabilities.is_subset(&worker_capabilities);
-        
+
         if has_all_required {
             // Worker has all required capabilities - perfect match
             // Score is based on how many required capabilities match (normalized to 0.0-1.0)
@@ -1134,7 +1235,10 @@ impl WorkerAssignmentStrategy {
             .intersection(&required_capabilities)
             .cloned()
             .collect();
-        let union: HashSet<_> = worker_capabilities.union(&required_capabilities).cloned().collect();
+        let union: HashSet<_> = worker_capabilities
+            .union(&required_capabilities)
+            .cloned()
+            .collect();
 
         let score = if union.is_empty() {
             0.0
@@ -1159,7 +1263,8 @@ impl WorkerAssignmentStrategy {
     async fn calculate_load_factor(&self, worker: &Worker) -> Result<f64> {
         // Extract load information from available sources
         // Try to get current_load from performance_history JSON first
-        let base_load = worker.performance_history
+        let base_load = worker
+            .performance_history
             .get("current_load")
             .and_then(|v| v.as_f64())
             .unwrap_or_else(|| {
@@ -1172,7 +1277,8 @@ impl WorkerAssignmentStrategy {
             });
 
         // Factor in health metrics if available in metadata
-        let health_load = worker.metadata
+        let health_load = worker
+            .metadata
             .get("health_metrics")
             .and_then(|v| v.as_object())
             .map(|health_obj| {
@@ -1182,14 +1288,14 @@ impl WorkerAssignmentStrategy {
                     .and_then(|v| v.as_f64())
                     .map(|cpu| (cpu / 100.0).min(1.0))
                     .unwrap_or(0.0);
-                
+
                 // Extract memory usage (0-100% -> 0.0-1.0)
                 let memory_load = health_obj
                     .get("memory_usage_percent")
                     .and_then(|v| v.as_f64())
                     .map(|mem| (mem / 100.0).min(1.0))
                     .unwrap_or(0.0);
-                
+
                 // Extract active tasks (assume max 10 concurrent tasks -> 0.0-1.0)
                 let max_concurrent_tasks = 10.0;
                 let task_load = health_obj
@@ -1197,7 +1303,7 @@ impl WorkerAssignmentStrategy {
                     .and_then(|v| v.as_u64())
                     .map(|tasks| (tasks as f64 / max_concurrent_tasks).min(1.0))
                     .unwrap_or(0.0);
-                
+
                 // Extract queue depth (assume max 20 queued tasks -> 0.0-1.0)
                 let max_queue_depth = 20.0;
                 let queue_load = health_obj
@@ -1205,7 +1311,7 @@ impl WorkerAssignmentStrategy {
                     .and_then(|v| v.as_u64())
                     .map(|queue| (queue as f64 / max_queue_depth).min(1.0))
                     .unwrap_or(0.0);
-                
+
                 // Combine health metrics with weighted average
                 // CPU and memory are most important (30% each), tasks and queue are secondary (20% each)
                 (cpu_load * 0.3) + (memory_load * 0.3) + (task_load * 0.2) + (queue_load * 0.2)
@@ -1299,10 +1405,10 @@ impl WorkerAssignmentStrategy {
                 Ok(historical_results) => {
                     if !historical_results.is_empty() {
                         // Calculate average benchmark score from historical results
-                        let avg_benchmark_score = historical_results.iter()
-                            .map(|r| r.score)
-                            .sum::<f64>() / historical_results.len() as f64;
-                        
+                        let avg_benchmark_score =
+                            historical_results.iter().map(|r| r.score).sum::<f64>()
+                                / historical_results.len() as f64;
+
                         // Blend base score with benchmark score (70% base, 30% benchmark)
                         return (base_score * 0.7) + (avg_benchmark_score * 0.3);
                     }
@@ -1317,7 +1423,9 @@ impl WorkerAssignmentStrategy {
     }
 
     /// Get performance cache (for external monitoring)
-    pub async fn get_performance_cache(&self) -> Result<std::collections::HashMap<Uuid, WorkerPerformance>> {
+    pub async fn get_performance_cache(
+        &self,
+    ) -> Result<std::collections::HashMap<Uuid, WorkerPerformance>> {
         let cache = self.performance_cache.read().await;
         Ok(cache.clone())
     }
@@ -1768,7 +1876,10 @@ mod tests {
     ) -> crate::planning::models::Worker {
         let mut metadata = std::collections::HashMap::new();
         if let Some(pool) = worker_pool {
-            metadata.insert("worker_pool".to_string(), serde_json::Value::String(pool.to_string()));
+            metadata.insert(
+                "worker_pool".to_string(),
+                serde_json::Value::String(pool.to_string()),
+            );
         }
 
         crate::planning::models::Worker {
@@ -1789,19 +1900,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_valid_data() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()));
-        metadata.insert("arbiter_task_type".to_string(), serde_json::Value::String("code-generation".to_string()));
-        metadata.insert("arbiter_risk_tier".to_string(), serde_json::Value::String("Tier2".to_string()));
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()),
+        );
+        metadata.insert(
+            "arbiter_task_type".to_string(),
+            serde_json::Value::String("code-generation".to_string()),
+        );
+        metadata.insert(
+            "arbiter_risk_tier".to_string(),
+            serde_json::Value::String("Tier2".to_string()),
+        );
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
         let worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[worker])
+            .await
+            .unwrap();
+
         // Should have one candidate
         assert_eq!(candidates.len(), 1);
         // Matching worker should receive arbiter boost (0.8 * 0.2 = 0.16)
@@ -1810,14 +1937,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_missing_data() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         // Milestone with no arbiter metadata
-        let milestone = create_test_milestone_with_arbiter_metadata(std::collections::HashMap::new());
+        let milestone =
+            create_test_milestone_with_arbiter_metadata(std::collections::HashMap::new());
         let worker = create_test_worker_with_metadata(Uuid::new_v4(), None);
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[worker])
+            .await
+            .unwrap();
+
         // Should still evaluate workers (no filtering)
         assert_eq!(candidates.len(), 1);
         // No arbiter boost should be applied
@@ -1827,19 +1959,32 @@ mod tests {
 
     #[tokio::test]
     async fn test_extract_arbiter_metadata_with_invalid_types() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
         // Invalid types: should be string but are numbers/objects
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::Number(serde_json::Number::from(123)));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::String("invalid".to_string())); // Should be number
-        metadata.insert("arbiter_task_type".to_string(), serde_json::Value::Bool(true)); // Should be string
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(123)),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::String("invalid".to_string()),
+        ); // Should be number
+        metadata.insert(
+            "arbiter_task_type".to_string(),
+            serde_json::Value::Bool(true),
+        ); // Should be string
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
         let worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[worker]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[worker])
+            .await
+            .unwrap();
+
         // Should handle invalid types gracefully - defaults used
         assert_eq!(candidates.len(), 1);
         // Invalid types should result in no filtering and default confidence (0.5)
@@ -1847,24 +1992,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_pool_filtering_with_matching_workers() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()));
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()),
+        );
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
-        
+
         // Create workers: 2 matching, 1 non-matching
         let matching_worker1 = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
         let matching_worker2 = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
-        let non_matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
+        let non_matching_worker =
+            create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
 
-        let candidates = strategy.evaluate_candidates(
-            &milestone,
-            &[matching_worker1, matching_worker2, non_matching_worker],
-        ).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(
+                &milestone,
+                &[matching_worker1, matching_worker2, non_matching_worker],
+            )
+            .await
+            .unwrap();
+
         // Should filter to only matching workers (2)
         assert_eq!(candidates.len(), 2);
         // Both matching workers should have arbiter boost
@@ -1874,20 +2030,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_worker_pool_filtering_with_no_matches() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()));
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()),
+        );
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
-        
+
         // Create workers: none matching the recommended pool
         let worker1 = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
         let worker2 = create_test_worker_with_metadata(Uuid::new_v4(), Some("javascript-pool"));
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[worker1, worker2]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[worker1, worker2])
+            .await
+            .unwrap();
+
         // Should fall back to all workers when filtering results in empty set
         assert_eq!(candidates.len(), 2);
         // No arbiter boost should be applied (workers don't match)
@@ -1898,78 +2064,123 @@ mod tests {
 
     #[tokio::test]
     async fn test_arbiter_confidence_boost_application() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap())); // Max confidence
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()),
+        ); // Max confidence
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
         let matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("rust-pool"));
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[matching_worker]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[matching_worker])
+            .await
+            .unwrap();
+
         assert_eq!(candidates.len(), 1);
         // With max confidence (1.0), boost should be 1.0 * 0.2 = 0.2
         // Base score should be increased by arbiter boost
         let candidate = &candidates[0];
-        let base_score = (candidate.capability_score * 0.5) + (candidate.performance_score * 0.3) + ((1.0 - candidate.load_factor) * 0.2);
+        let base_score = (candidate.capability_score * 0.5)
+            + (candidate.performance_score * 0.3)
+            + ((1.0 - candidate.load_factor) * 0.2);
         let expected_boost = 1.0 * 0.2; // arbiter_confidence * 0.2
-        assert!((candidate.assignment_score - base_score - expected_boost).abs() < 0.01); // Allow small floating point error
+        assert!((candidate.assignment_score - base_score - expected_boost).abs() < 0.01);
+        // Allow small floating point error
     }
 
     #[tokio::test]
     async fn test_arbiter_confidence_boost_not_applied_to_non_matching() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()));
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()),
+        );
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
-        let non_matching_worker = create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
+        let non_matching_worker =
+            create_test_worker_with_metadata(Uuid::new_v4(), Some("python-pool"));
 
-        let candidates = strategy.evaluate_candidates(&milestone, &[non_matching_worker]).await.unwrap();
-        
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &[non_matching_worker])
+            .await
+            .unwrap();
+
         assert_eq!(candidates.len(), 1);
         // Non-matching worker should not receive boost
         let candidate = &candidates[0];
-        let base_score = (candidate.capability_score * 0.5) + (candidate.performance_score * 0.3) + ((1.0 - candidate.load_factor) * 0.2);
+        let base_score = (candidate.capability_score * 0.5)
+            + (candidate.performance_score * 0.3)
+            + ((1.0 - candidate.load_factor) * 0.2);
         // Assignment score should equal base score (no boost)
         assert!((candidate.assignment_score - base_score).abs() < 0.01);
     }
 
     #[tokio::test]
     async fn test_arbiter_metadata_extraction_performance() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("arbiter_worker_pool".to_string(), serde_json::Value::String("rust-pool".to_string()));
-        metadata.insert("arbiter_confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()));
+        metadata.insert(
+            "arbiter_worker_pool".to_string(),
+            serde_json::Value::String("rust-pool".to_string()),
+        );
+        metadata.insert(
+            "arbiter_confidence".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(0.8).unwrap()),
+        );
 
         let milestone = create_test_milestone_with_arbiter_metadata(metadata);
-        
+
         // Create 100 workers (mix of matching and non-matching)
         let mut workers = Vec::new();
         for i in 0..100 {
-            let pool = if i % 2 == 0 { Some("rust-pool") } else { Some("python-pool") };
+            let pool = if i % 2 == 0 {
+                Some("rust-pool")
+            } else {
+                Some("python-pool")
+            };
             workers.push(create_test_worker_with_metadata(Uuid::new_v4(), pool));
         }
 
         let start = std::time::Instant::now();
-        let candidates = strategy.evaluate_candidates(&milestone, &workers).await.unwrap();
+        let candidates = strategy
+            .evaluate_candidates(&milestone, &workers)
+            .await
+            .unwrap();
         let duration = start.elapsed();
 
         // Should complete in reasonable time (<5ms as specified)
-        assert!(duration.as_millis() < 5, "Arbiter metadata extraction took {}ms, expected <5ms", duration.as_millis());
-        
+        assert!(
+            duration.as_millis() < 5,
+            "Arbiter metadata extraction took {}ms, expected <5ms",
+            duration.as_millis()
+        );
+
         // Should filter to matching workers (50 matching, 50 non-matching)
         assert_eq!(candidates.len(), 50);
     }
 
     #[test]
     fn test_capability_score_calculation() {
-        let strategy = WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
+        let strategy =
+            WorkerAssignmentStrategy::new(Arc::new(crate::test_utils::MockDatabaseOps::new()));
 
         // Create test milestone and worker
         let milestone = agent_agency_contracts::planning_io::Milestone {

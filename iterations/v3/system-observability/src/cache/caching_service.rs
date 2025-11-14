@@ -3,12 +3,12 @@
 //! Provides a service layer around CacheBackend for managing inference result caching
 //! with automatic serialization, key generation, and cache invalidation.
 
+use crate::cache::{CacheBackend, CacheError};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::time::Duration;
-use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
-use crate::cache::{CacheBackend, CacheError};
 
 /// High-level caching service for inference results
 #[async_trait]
@@ -42,10 +42,10 @@ pub trait CachingService: Send + Sync {
 pub struct InferenceCacheKey {
     /// Model identifier
     pub model_id: String,
-    
+
     /// Input prompt or data hash
     pub input_hash: String,
-    
+
     /// Parameter signature (temperature, top_p, etc.)
     pub parameter_signature: String,
 }
@@ -59,8 +59,8 @@ impl InferenceCacheKey {
         let input_hash = format!("{:x}", hasher.finalize());
 
         // Create parameter signature
-        let parameter_signature = serde_json::to_string(parameters)
-            .unwrap_or_else(|_| "default".to_string());
+        let parameter_signature =
+            serde_json::to_string(parameters).unwrap_or_else(|_| "default".to_string());
 
         Self {
             model_id: model_id.to_string(),
@@ -71,7 +71,10 @@ impl InferenceCacheKey {
 
     /// Generate cache key string
     pub fn to_key_string(&self) -> String {
-        format!("inference:{}:{}:{}", self.model_id, self.input_hash, self.parameter_signature)
+        format!(
+            "inference:{}:{}:{}",
+            self.model_id, self.input_hash, self.parameter_signature
+        )
     }
 }
 
@@ -80,10 +83,10 @@ impl InferenceCacheKey {
 pub struct InferenceCacheValue {
     /// Cached output data
     pub output: serde_json::Value,
-    
+
     /// Metadata about the cached result
     pub metadata: CacheMetadata,
-    
+
     /// Cached timestamp
     pub cached_at: chrono::DateTime<chrono::Utc>,
 }
@@ -93,10 +96,10 @@ pub struct InferenceCacheValue {
 pub struct CacheMetadata {
     /// Model version used
     pub model_version: String,
-    
+
     /// Cache hit count
     pub hit_count: u64,
-    
+
     /// Original inference latency (ms)
     pub original_latency_ms: u64,
 }
@@ -106,16 +109,16 @@ pub struct CacheMetadata {
 pub struct CacheStats {
     /// Total cache entries
     pub total_entries: usize,
-    
+
     /// Total cache hits
     pub total_hits: u64,
-    
+
     /// Total cache misses
     pub total_misses: u64,
-    
+
     /// Hit rate (0.0-1.0)
     pub hit_rate: f64,
-    
+
     /// Average cache age (seconds)
     pub avg_age_seconds: f64,
 }
@@ -124,10 +127,10 @@ pub struct CacheStats {
 pub struct DefaultCachingService {
     /// Cache backend
     cache_backend: Arc<dyn CacheBackend>,
-    
+
     /// Default TTL for cached results
     default_ttl: Duration,
-    
+
     /// Cache statistics
     stats: Arc<tokio::sync::RwLock<CacheStats>>,
 }
@@ -178,7 +181,7 @@ impl CachingService for DefaultCachingService {
         cache_key: &InferenceCacheKey,
     ) -> Result<Option<InferenceCacheValue>, CachingServiceError> {
         let key = cache_key.to_key_string();
-        
+
         match self.cache_backend.get(&key).await {
             Ok(Some(value_str)) => {
                 // Update hit stats
@@ -352,6 +355,3 @@ pub enum CachingServiceError {
     #[error("Invalid cache key: {0}")]
     InvalidKey(String),
 }
-
-
-

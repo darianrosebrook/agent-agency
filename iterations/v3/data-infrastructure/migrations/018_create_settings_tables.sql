@@ -111,27 +111,6 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);
 CREATE INDEX IF NOT EXISTS idx_api_keys_last_used_at ON api_keys(last_used_at DESC);
 CREATE INDEX IF NOT EXISTS idx_api_keys_created_at ON api_keys(created_at DESC);
 
--- ===========================================
--- TWO-FACTOR AUTHENTICATION TABLE
--- ===========================================
-
-CREATE TABLE IF NOT EXISTS two_factor_auth (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    method VARCHAR(50) NOT NULL DEFAULT 'totp',
-    secret_encrypted TEXT NOT NULL,
-    backup_codes TEXT[] DEFAULT ARRAY[]::TEXT[],
-    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    last_used_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    UNIQUE(user_id, method)
-);
-
--- Indexes for two_factor_auth
-CREATE INDEX IF NOT EXISTS idx_two_factor_auth_user_id ON two_factor_auth(user_id);
-CREATE INDEX IF NOT EXISTS idx_two_factor_auth_method ON two_factor_auth(method);
-CREATE INDEX IF NOT EXISTS idx_two_factor_auth_is_enabled ON two_factor_auth(is_enabled);
 
 -- ===========================================
 -- COMMENTS
@@ -141,9 +120,6 @@ COMMENT ON TABLE user_settings IS 'User-specific preferences and settings (theme
 COMMENT ON TABLE app_settings IS 'System-wide application configuration settings';
 COMMENT ON TABLE integrations IS 'External service integrations (GitHub, Slack, etc.)';
 COMMENT ON TABLE api_keys IS 'API keys for programmatic access with rate limiting and scopes';
-COMMENT ON TABLE two_factor_auth IS 'Two-factor authentication configuration for users';
-
-COMMENT ON COLUMN user_settings.setting_type IS 'Type of setting: preference, notification, ui, etc.';
 COMMENT ON COLUMN app_settings.setting_type IS 'Type of setting: configuration, feature_flag, etc.';
 COMMENT ON COLUMN integrations.integration_type IS 'Type of integration: webhook, oauth, api, etc.';
 COMMENT ON COLUMN integrations.provider IS 'Service provider: github, slack, discord, etc.';
@@ -151,6 +127,5 @@ COMMENT ON COLUMN integrations.credentials IS 'Encrypted credentials for the int
 COMMENT ON COLUMN api_keys.key_hash IS 'SHA-256 hash of the API key (never store plain keys)';
 COMMENT ON COLUMN api_keys.key_prefix IS 'First 8 characters of the key for identification';
 COMMENT ON COLUMN api_keys.scopes IS 'Array of permission scopes for this API key';
-COMMENT ON COLUMN two_factor_auth.secret_encrypted IS 'Encrypted TOTP secret or other 2FA secret';
 
 

@@ -3,14 +3,14 @@
 //! This module provides admission control, memory accounting, and concurrency
 //! limits using semaphores and atomic operations for thread-safe resource management.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use parking_lot::Mutex;
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::time::Instant;
 
 /// Resource admission permit
-/// 
+///
 /// This struct holds a semaphore permit that must be kept alive for the
 /// duration of the resource usage. When dropped, the permit is automatically
 /// returned to the pool.
@@ -36,7 +36,7 @@ impl Drop for Admission {
 }
 
 /// Resource pool for managing ANE resources
-/// 
+///
 /// Provides admission control for memory and concurrency limits using
 /// semaphores and atomic memory accounting.
 #[derive(Debug)]
@@ -80,7 +80,7 @@ impl Default for PoolStats {
 
 impl Pool {
     /// Create a new resource pool
-    /// 
+    ///
     /// # Arguments
     /// * `max_concurrent` - Maximum number of concurrent operations
     /// * `mem_total_mb` - Total memory pool size in MB
@@ -98,10 +98,10 @@ impl Pool {
     }
 
     /// Request admission to the resource pool
-    /// 
+    ///
     /// # Arguments
     /// * `mem_cost_mb` - Memory cost in MB for this operation
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Admission)` - Admission permit if resources are available
     /// * `Err(ANEError::ResourceLimit)` - If resources are not available
@@ -112,15 +112,18 @@ impl Pool {
             if *used + mem_cost_mb > self.mem_total_mb {
                 let mut stats = self.stats.lock();
                 stats.admission_failures += 1;
-                return Err(ANEError::ResourceLimit(
-                    format!("Insufficient memory: {} MB requested, {} MB available", 
-                           mem_cost_mb, self.mem_total_mb - *used)
-                ));
+                return Err(ANEError::ResourceLimit(format!(
+                    "Insufficient memory: {} MB requested, {} MB available",
+                    mem_cost_mb,
+                    self.mem_total_mb - *used
+                )));
             }
         }
 
         // Acquire semaphore permit (this may block)
-        let permit = self.inner.clone()
+        let permit = self
+            .inner
+            .clone()
             .acquire_owned()
             .await
             .map_err(|_| ANEError::Internal("Semaphore closed".to_string()))?;
@@ -133,22 +136,23 @@ impl Pool {
                 drop(permit);
                 let mut stats = self.stats.lock();
                 stats.admission_failures += 1;
-                return Err(ANEError::ResourceLimit(
-                    format!("Insufficient memory: {} MB requested, {} MB available", 
-                           mem_cost_mb, self.mem_total_mb - *used)
-                ));
+                return Err(ANEError::ResourceLimit(format!(
+                    "Insufficient memory: {} MB requested, {} MB available",
+                    mem_cost_mb,
+                    self.mem_total_mb - *used
+                )));
             }
 
             // Reserve memory
             *used += mem_cost_mb;
-            
+
             // Update statistics
             let mut stats = self.stats.lock();
             stats.total_admissions += 1;
             stats.active_admissions += 1;
             stats.total_memory_allocated_mb += mem_cost_mb as u64;
             stats.last_admission_time = Some(Instant::now());
-            
+
             if *used > stats.peak_memory_usage_mb {
                 stats.peak_memory_usage_mb = *used;
             }
@@ -171,7 +175,7 @@ impl Pool {
     fn release_mem(&self, mem_cost_mb: usize) {
         let mut used = self.mem_used_mb.lock();
         *used = used.saturating_sub(mem_cost_mb);
-        
+
         let mut stats = self.stats.lock();
         stats.active_admissions = stats.active_admissions.saturating_sub(1);
     }
@@ -180,7 +184,7 @@ impl Pool {
     pub fn stats(&self) -> PoolStats {
         let stats = self.stats.lock();
         let used = *self.mem_used_mb.lock();
-        
+
         PoolStats {
             total_admissions: stats.total_admissions,
             active_admissions: stats.active_admissions,
@@ -258,16 +262,22 @@ impl PoolBuilder {
 
     /// Build the resource pool
     pub fn build(self) -> Result<Pool> {
-        let max_concurrent = self.max_concurrent
+        let max_concurrent = self
+            .max_concurrent
             .ok_or_else(|| ANEError::ConfigurationError("max_concurrent not set".to_string()))?;
-        let mem_total_mb = self.mem_total_mb
+        let mem_total_mb = self
+            .mem_total_mb
             .ok_or_else(|| ANEError::ConfigurationError("mem_total_mb not set".to_string()))?;
 
         if max_concurrent == 0 {
-            return Err(ANEError::ConfigurationError("max_concurrent must be > 0".to_string()));
+            return Err(ANEError::ConfigurationError(
+                "max_concurrent must be > 0".to_string(),
+            ));
         }
         if mem_total_mb == 0 {
-            return Err(ANEError::ConfigurationError("mem_total_mb must be > 0".to_string()));
+            return Err(ANEError::ConfigurationError(
+                "mem_total_mb must be > 0".to_string(),
+            ));
         }
 
         Ok(Pool::new(max_concurrent, mem_total_mb))
@@ -296,12 +306,12 @@ mod tests {
     #[tokio::test]
     async fn test_admission_success() {
         let pool = Pool::new(2, 512);
-        
+
         let admission = pool.admit(256).await.unwrap();
         assert_eq!(admission.memory_cost_mb(), 256);
         assert_eq!(pool.memory_usage_mb(), 256);
         assert_eq!(pool.available_memory_mb(), 256);
-        
+
         // Admission should be automatically released when dropped
         drop(admission);
         assert_eq!(pool.memory_usage_mb(), 0);
@@ -311,10 +321,10 @@ mod tests {
     #[tokio::test]
     async fn test_admission_failure() {
         let pool = Pool::new(2, 512);
-        
+
         // First admission should succeed
         let _admission1 = pool.admit(400).await.unwrap();
-        
+
         // Second admission should fail due to insufficient memory
         let result = pool.admit(200).await;
         assert!(result.is_err());
@@ -324,11 +334,11 @@ mod tests {
     #[tokio::test]
     async fn test_concurrency_limit() {
         let pool = Pool::new(2, 1024);
-        
+
         // First two admissions should succeed
         let _admission1 = pool.admit(100).await.unwrap();
         let _admission2 = pool.admit(100).await.unwrap();
-        
+
         // Third admission should block (we'll timeout to avoid hanging)
         let result = timeout(Duration::from_millis(100), pool.admit(100)).await;
         assert!(result.is_err()); // Should timeout
@@ -337,17 +347,17 @@ mod tests {
     #[tokio::test]
     async fn test_pool_statistics() {
         let pool = Pool::new(4, 1024);
-        
+
         let stats_before = pool.stats();
         assert_eq!(stats_before.total_admissions, 0);
         assert_eq!(stats_before.active_admissions, 0);
-        
+
         let _admission = pool.admit(256).await.unwrap();
         let stats_after = pool.stats();
         assert_eq!(stats_after.total_admissions, 1);
         assert_eq!(stats_after.active_admissions, 1);
         assert_eq!(stats_after.total_memory_allocated_mb, 256);
-        
+
         drop(_admission);
         let stats_final = pool.stats();
         assert_eq!(stats_final.active_admissions, 0);
@@ -356,9 +366,9 @@ mod tests {
     #[tokio::test]
     async fn test_memory_pressure() {
         let pool = Pool::new(4, 1000);
-        
+
         assert!(!pool.is_under_pressure(50.0));
-        
+
         let _admission = pool.admit(600).await.unwrap();
         assert!(pool.is_under_pressure(50.0));
         assert!(!pool.is_under_pressure(70.0));
@@ -371,31 +381,27 @@ mod tests {
             .memory_total_mb(2048)
             .build()
             .unwrap();
-            
+
         assert_eq!(pool.mem_total_mb, 2048);
     }
 
     #[tokio::test]
     async fn test_pool_builder_validation() {
         // Test missing max_concurrent
-        let result = PoolBuilder::new()
-            .memory_total_mb(1024)
-            .build();
+        let result = PoolBuilder::new().memory_total_mb(1024).build();
         assert!(result.is_err());
-        
+
         // Test missing memory_total_mb
-        let result = PoolBuilder::new()
-            .max_concurrent(4)
-            .build();
+        let result = PoolBuilder::new().max_concurrent(4).build();
         assert!(result.is_err());
-        
+
         // Test zero max_concurrent
         let result = PoolBuilder::new()
             .max_concurrent(0)
             .memory_total_mb(1024)
             .build();
         assert!(result.is_err());
-        
+
         // Test zero memory_total_mb
         let result = PoolBuilder::new()
             .max_concurrent(4)

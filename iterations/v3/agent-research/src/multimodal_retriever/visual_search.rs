@@ -1,16 +1,16 @@
 //! Visual search engine for image-based queries
 
-use std::path::Path;
 use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 use super::core::MultimodalSearchResult;
-use super::core::{VisualSearchResult, VisualSearchConfig};
+use super::core::{VisualSearchConfig, VisualSearchResult};
 
 /// Visual search bridge for image processing and similarity
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct VisualSearchBridge {
     config: VisualSearchConfig,
 }
@@ -24,7 +24,11 @@ impl VisualSearchBridge {
     }
 
     /// Search for similar images
-    pub async fn search_similar_images(&self, _image_path: &Path, _k: usize) -> Result<Vec<VisualSearchResult>> {
+    pub async fn search_similar_images(
+        &self,
+        _image_path: &Path,
+        _k: usize,
+    ) -> Result<Vec<VisualSearchResult>> {
         // Placeholder implementation
         Ok(Vec::new())
     }
@@ -38,7 +42,7 @@ impl VisualSearchBridge {
 
 /// Visual search engine
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct VisualSearchEngine {
     config: super::core::MultimodalRetrieverConfig,
     search_bridge: VisualSearchBridge,
@@ -66,7 +70,11 @@ impl VisualSearchEngine {
     }
 
     /// Index an image for visual search
-    pub async fn index_image(&mut self, image_path: &std::path::Path, metadata: super::core::VisualSearchResult) -> Result<()> {
+    pub async fn index_image(
+        &mut self,
+        image_path: &std::path::Path,
+        metadata: super::core::VisualSearchResult,
+    ) -> Result<()> {
         // TODO: Implement image indexing using VisualSearchBridge
         //       Currently a placeholder; should implement comprehensive image indexing that uses VisualSearchBridge to index images with metadata for visual search functionality.
         //

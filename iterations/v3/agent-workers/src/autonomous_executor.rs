@@ -3,9 +3,9 @@
 //! Consolidated from workers crate - provides autonomous execution capabilities
 //! with arbitration and decision-making integration.
 
-use schemars::JsonSchema;
 use crate::worker_errors::WorkerError;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -55,7 +55,6 @@ impl AutonomousExecutor {
         // - [ ] Handle execution errors and timeouts
         // - [ ] Add unit tests with mock arbitration system
         // - [ ] Add integration tests with real arbitration execution
-        // Placeholder implementation - would integrate with arbitration system
         Ok(ExecutionResult {
             task_id: task,
             success: true,

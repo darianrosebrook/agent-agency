@@ -3,11 +3,11 @@
 //! This module defines the fundamental traits that all pipeline implementations
 //! should follow, ensuring consistency across the codebase.
 
+use crate::cache::{CacheConfig, CacheStats};
+use crate::PipelineResult;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use crate::PipelineResult;
-use crate::cache::{CacheConfig, CacheStats};
 
 /// Core trait for pipeline stages that can process data
 #[async_trait]
@@ -122,7 +122,6 @@ impl std::fmt::Display for PipelineHealth {
         }
     }
 }
-
 
 /// Trait for components that can report their status
 #[async_trait::async_trait]

@@ -441,19 +441,23 @@ pub struct DecisionMetadata {
 }
 
 /// Validate a refinement decision value against the JSON schema
-pub fn validate_refinement_decision_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_refinement_decision_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::REFINEMENT_DECISION_SCHEMA;
 
-    REFINEMENT_DECISION_SCHEMA.validate(value).map_err(|errors| {
-        let issues = errors
-            .into_iter()
-            .map(|error| crate::contract_errors::ValidationIssue {
-                instance_path: error.instance_path.to_string(),
-                schema_path: error.schema_path.to_string(),
-                message: error.to_string(),
-            })
-            .collect();
-        ContractError::validation(ContractKind::RefinementDecision, issues)
-    })
+    REFINEMENT_DECISION_SCHEMA
+        .validate(value)
+        .map_err(|errors| {
+            let issues = errors
+                .into_iter()
+                .map(|error| crate::contract_errors::ValidationIssue {
+                    instance_path: error.instance_path.to_string(),
+                    schema_path: error.schema_path.to_string(),
+                    message: error.to_string(),
+                })
+                .collect();
+            ContractError::validation(ContractKind::RefinementDecision, issues)
+        })
 }

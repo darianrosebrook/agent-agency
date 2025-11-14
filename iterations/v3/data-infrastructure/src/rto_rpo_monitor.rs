@@ -3,22 +3,22 @@
 //! Provides real-time monitoring and alerting for Recovery Time Objectives (RTO)
 //! and Recovery Point Objectives (RPO) to ensure disaster recovery compliance.
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tokio::time;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::api_alerts::{
-    ReliabilityMonitor, ComplianceStatus, ComplianceViolation, RecoveryMetrics, ComplianceAlert,
-    ServiceComplianceStatus, ViolationType, ViolationSeverity, AlertType, AlertSeverity, MonthlyStats
+    AlertSeverity, AlertType, ComplianceAlert, ComplianceStatus, ComplianceViolation, MonthlyStats,
+    RecoveryMetrics, ReliabilityMonitor, ServiceComplianceStatus, ViolationSeverity, ViolationType,
 };
-use crate::service_failover::{ServiceFailoverManager, ServiceType, ServiceStatus};
+use crate::service_failover::{ServiceFailoverManager, ServiceStatus, ServiceType};
 use crate::simple_client::DatabaseClient;
 use sqlx::Row;
 
@@ -238,12 +238,21 @@ impl RtoRpoMonitor {
                 rpo_seconds: self.objectives.rpo_seconds,
                 critical_service: false,
             };
-            let service_objectives = self.objectives.service_objectives.get(&service_type)
+            let service_objectives = self
+                .objectives
+                .service_objectives
+                .get(&service_type)
                 .unwrap_or(&default_objectives);
 
             // Calculate current RTO (from failover history)
-            let recent_failovers: Vec<_> = failover_history.iter()
-                .filter(|event| matches!(event, crate::service_failover::FailoverEvent::FailoverCompleted { .. }))
+            let recent_failovers: Vec<_> = failover_history
+                .iter()
+                .filter(|event| {
+                    matches!(
+                        event,
+                        crate::service_failover::FailoverEvent::FailoverCompleted { .. }
+                    )
+                })
                 .take(5)
                 .collect();
 
@@ -297,8 +306,11 @@ impl RtoRpoMonitor {
                     } else {
                         ViolationSeverity::High
                     },
-                    description: format!("Service {} is not available (status: {:?})", service_id, status),
-                    measured_value: 0.0, // Not applicable
+                    description: format!(
+                        "Service {} is not available (status: {:?})",
+                        service_id, status
+                    ),
+                    measured_value: 0.0,  // Not applicable
                     objective_value: 0.0, // Not applicable
                     resolved: false,
                     resolution_time: None,
@@ -319,8 +331,12 @@ impl RtoRpoMonitor {
                     violation_type: ViolationType::RTOExceeded,
                     service_type: service_type_as_string(service_type).to_string(),
                     severity: ViolationSeverity::High,
-                    description: format!("RTO exceeded for {}: {}s > {}s objective",
-                        service_type_as_string(service_type), avg_rto.unwrap(), service_objectives.rto_seconds),
+                    description: format!(
+                        "RTO exceeded for {}: {}s > {}s objective",
+                        service_type_as_string(service_type),
+                        avg_rto.unwrap(),
+                        service_objectives.rto_seconds
+                    ),
                     measured_value: avg_rto.unwrap() as f64,
                     objective_value: service_objectives.rto_seconds as f64,
                     resolved: false,
@@ -329,18 +345,25 @@ impl RtoRpoMonitor {
             }
 
             // Check actual RPO compliance by querying WAL log records for last recovery point
-            let rpo_compliant = self.check_rpo_compliance(service_objectives.rpo_seconds).await;
-            
+            let rpo_compliant = self
+                .check_rpo_compliance(service_objectives.rpo_seconds)
+                .await;
+
             if !rpo_compliant {
-                let time_since_last_backup = self.get_time_since_last_backup().await.unwrap_or(u64::MAX);
+                let time_since_last_backup =
+                    self.get_time_since_last_backup().await.unwrap_or(u64::MAX);
                 violations.push(ComplianceViolation {
                     id: Uuid::new_v4(),
                     timestamp: Utc::now(),
                     violation_type: ViolationType::RPOExceeded,
                     service_type: service_type_as_string(service_type).to_string(),
                     severity: ViolationSeverity::High,
-                    description: format!("RPO exceeded for {}: {}s since last backup > {}s objective",
-                        service_type_as_string(service_type), time_since_last_backup, service_objectives.rpo_seconds),
+                    description: format!(
+                        "RPO exceeded for {}: {}s since last backup > {}s objective",
+                        service_type_as_string(service_type),
+                        time_since_last_backup,
+                        service_objectives.rpo_seconds
+                    ),
                     measured_value: time_since_last_backup as f64,
                     objective_value: service_objectives.rpo_seconds as f64,
                     resolved: false,
@@ -348,49 +371,56 @@ impl RtoRpoMonitor {
                 });
             }
 
-            service_compliance.insert(service_type_as_string(service_type).to_string(), ServiceComplianceStatus {
-                service_name: service_type_as_string(service_type).to_string(),
-                current_rto_seconds: avg_rto.unwrap_or(0),
-                current_rpo_seconds: service_objectives.rpo_seconds,
-                // TODO: Get actual last recovery time
-                // - [ ] Query recovery system for last recovery timestamp
-                // - [ ] Handle missing recovery data
-                // - [ ] Add unit tests with mock recovery system
-                // - [ ] Add integration tests with real recovery system
-                last_recovery_time: Some(Utc::now() - chrono::Duration::hours(1)), // Placeholder
-                // TODO: Calculate actual compliance percentage based on RTO/RPO metrics
-                //       Currently uses basic binary calculation; should calculate percentage based on actual metrics and objectives.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Calculate compliance percentage from RTO/RPO metrics
-                // [ ] Weight RTO and RPO compliance appropriately
-                // [ ] Handle partial compliance scenarios
-                // [ ] Support time-weighted compliance calculations
-                // [ ] Add unit tests for compliance calculation
-                // [ ] Add integration tests with various metrics
-                // [ ] Verify compliance percentage accuracy
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Compliance percentage reflects actual RTO/RPO performance
-                // - Partial compliance is calculated correctly
-                // - Time-weighted calculations prioritize recent metrics
-                // - Compliance percentage is accurate and meaningful
-                //
-                // DEPENDENCIES:
-                // - RTO/RPO metrics (Required)
-                // - Compliance calculation utilities (Required)
-                // - Statistical calculation utilities (Required)
-                //
-                // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-                // PRIORITY: Low
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 3 (monitoring enhancement)
-                // - Change Budget: ~40 LOC
-                // - Reviewer Requirements: Metrics and monitoring expertise
-                compliance_percentage: if rto_compliant && rpo_compliant { 100.0 } else { 0.0 }, // Temporary: basic binary calculation until proper percentage calculation
-            });
+            service_compliance.insert(
+                service_type_as_string(service_type).to_string(),
+                ServiceComplianceStatus {
+                    service_name: service_type_as_string(service_type).to_string(),
+                    current_rto_seconds: avg_rto.unwrap_or(0),
+                    current_rpo_seconds: service_objectives.rpo_seconds,
+                    // TODO: Get actual last recovery time
+                    // - [ ] Query recovery system for last recovery timestamp
+                    // - [ ] Handle missing recovery data
+                    // - [ ] Add unit tests with mock recovery system
+                    // - [ ] Add integration tests with real recovery system
+                    last_recovery_time: Some(Utc::now() - chrono::Duration::hours(1)), // Placeholder
+                    // TODO: Calculate actual compliance percentage based on RTO/RPO metrics
+                    //       Currently uses basic binary calculation; should calculate percentage based on actual metrics and objectives.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Calculate compliance percentage from RTO/RPO metrics
+                    // [ ] Weight RTO and RPO compliance appropriately
+                    // [ ] Handle partial compliance scenarios
+                    // [ ] Support time-weighted compliance calculations
+                    // [ ] Add unit tests for compliance calculation
+                    // [ ] Add integration tests with various metrics
+                    // [ ] Verify compliance percentage accuracy
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Compliance percentage reflects actual RTO/RPO performance
+                    // - Partial compliance is calculated correctly
+                    // - Time-weighted calculations prioritize recent metrics
+                    // - Compliance percentage is accurate and meaningful
+                    //
+                    // DEPENDENCIES:
+                    // - RTO/RPO metrics (Required)
+                    // - Compliance calculation utilities (Required)
+                    // - Statistical calculation utilities (Required)
+                    //
+                    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+                    // PRIORITY: Low
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 3 (monitoring enhancement)
+                    // - Change Budget: ~40 LOC
+                    // - Reviewer Requirements: Metrics and monitoring expertise
+                    compliance_percentage: if rto_compliant && rpo_compliant {
+                        100.0
+                    } else {
+                        0.0
+                    }, // Temporary: basic binary calculation until proper percentage calculation
+                },
+            );
         }
 
         // Update compliance status
@@ -399,13 +429,17 @@ impl RtoRpoMonitor {
             compliance_status.timestamp = Utc::now();
             compliance_status.service_status = service_compliance;
             compliance_status.violations = violations.clone();
-            compliance_status.rto_compliant = violations.iter()
+            compliance_status.rto_compliant = violations
+                .iter()
                 .all(|v| v.violation_type != ViolationType::RTOExceeded);
-            compliance_status.rpo_compliant = violations.iter()
+            compliance_status.rpo_compliant = violations
+                .iter()
                 .all(|v| v.violation_type != ViolationType::RPOExceeded);
-            compliance_status.overall_compliant =
-                compliance_status.rto_compliant && compliance_status.rpo_compliant &&
-                violations.iter().all(|v| v.violation_type != ViolationType::ServiceUnavailable);
+            compliance_status.overall_compliant = compliance_status.rto_compliant
+                && compliance_status.rpo_compliant
+                && violations
+                    .iter()
+                    .all(|v| v.violation_type != ViolationType::ServiceUnavailable);
         }
 
         // Store violations
@@ -423,7 +457,8 @@ impl RtoRpoMonitor {
     /// Send alerts for compliance violations
     async fn send_violation_alerts(&self) -> Result<(), String> {
         let violations = self.violations.read().await;
-        let recent_violations: Vec<_> = violations.iter()
+        let recent_violations: Vec<_> = violations
+            .iter()
             .filter(|v| !v.resolved && (Utc::now() - v.timestamp) < chrono::Duration::minutes(5))
             .collect();
 
@@ -433,7 +468,10 @@ impl RtoRpoMonitor {
                 timestamp: Utc::now(),
                 alert_type: AlertType::ComplianceThreshold,
                 severity: AlertSeverity::High,
-                message: format!("{} compliance violations detected in last 5 minutes", recent_violations.len()),
+                message: format!(
+                    "{} compliance violations detected in last 5 minutes",
+                    recent_violations.len()
+                ),
                 affected_services: vec![], // TODO: Convert string service_type back to ServiceType enum
                 recommended_actions: vec![
                     "Review system health dashboard".to_string(),
@@ -462,7 +500,11 @@ impl RtoRpoMonitor {
 
     /// Process compliance alert
     async fn process_alert(&self, alert: &ComplianceAlert) {
-        warn!("Compliance Alert: {} - {}", alert.alert_type_as_string(), alert.message);
+        warn!(
+            "Compliance Alert: {} - {}",
+            alert.alert_type_as_string(),
+            alert.message
+        );
 
         // In a real system, this would:
         // - Send email notifications
@@ -509,7 +551,8 @@ impl RtoRpoMonitor {
         let cutoff = Utc::now() - chrono::Duration::hours(hours);
         let violations = self.violations.read().await;
 
-        violations.iter()
+        violations
+            .iter()
             .filter(|v| v.timestamp > cutoff)
             .cloned()
             .collect()
@@ -528,7 +571,8 @@ impl RtoRpoMonitor {
 
     /// Mark violation as resolved
     pub async fn resolve_violation(&self, violation_id: &str) -> Result<(), String> {
-        let violation_uuid = Uuid::parse_str(violation_id).map_err(|e| format!("Invalid violation ID: {}", e))?;
+        let violation_uuid =
+            Uuid::parse_str(violation_id).map_err(|e| format!("Invalid violation ID: {}", e))?;
         let mut violations = self.violations.write().await;
 
         if let Some(violation) = violations.iter_mut().find(|v| v.id == violation_uuid) {
@@ -540,20 +584,16 @@ impl RtoRpoMonitor {
             Err(format!("Violation not found: {}", violation_id))
         }
     }
-
 }
 
 /// Compliance report
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ComplianceReport {
     #[schemars(with = "String")]
-
     pub generated_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub period_start: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub period_end: DateTime<Utc>,
     pub overall_compliance_percentage: f64,
     pub rto_compliance_percentage: f64,
@@ -604,8 +644,12 @@ fn service_type_as_string(service_type: ServiceType) -> &'static str {
 }
 
 #[allow(dead_code)]
-fn calculate_compliance_percentage(violations: &[ComplianceViolation], violation_type: ViolationType) -> f64 {
-    let relevant_violations = violations.iter()
+fn calculate_compliance_percentage(
+    violations: &[ComplianceViolation],
+    violation_type: ViolationType,
+) -> f64 {
+    let relevant_violations = violations
+        .iter()
         .filter(|v| v.violation_type == violation_type)
         .count();
 
@@ -619,21 +663,29 @@ fn calculate_compliance_percentage(violations: &[ComplianceViolation], violation
 }
 
 #[allow(dead_code)]
-fn generate_service_breakdown(service_status: &HashMap<String, ServiceComplianceStatus>) -> HashMap<String, ServiceComplianceSummary> {
-    service_status.iter().map(|(service_type, status)| {
-        (service_type.clone(), ServiceComplianceSummary {
-            service_type: service_type.clone(),
-            // TODO: Calculate actual uptime percentage
-            // - [ ] Query historical service status data
-            // - [ ] Calculate uptime from service availability records
-            // - [ ] Handle missing data gracefully
-            // - [ ] Add unit tests with mock service data
-            // - [ ] Add integration tests with real service data
-            uptime_percentage: 99.9, // Placeholder - would calculate from actual data
-            violations_count: 0, // Not available in current struct
-            average_rto_seconds: Some(status.current_rto_seconds as f64),
+fn generate_service_breakdown(
+    service_status: &HashMap<String, ServiceComplianceStatus>,
+) -> HashMap<String, ServiceComplianceSummary> {
+    service_status
+        .iter()
+        .map(|(service_type, status)| {
+            (
+                service_type.clone(),
+                ServiceComplianceSummary {
+                    service_type: service_type.clone(),
+                    // TODO: Calculate actual uptime percentage
+                    // - [ ] Query historical service status data
+                    // - [ ] Calculate uptime from service availability records
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock service data
+                    // - [ ] Add integration tests with real service data
+                    uptime_percentage: 99.9, // Placeholder - would calculate from actual data
+                    violations_count: 0,     // Not available in current struct
+                    average_rto_seconds: Some(status.current_rto_seconds as f64),
+                },
+            )
         })
-    }).collect()
+        .collect()
 }
 
 #[allow(dead_code)]
@@ -648,30 +700,45 @@ fn identify_top_issues(violations: &[ComplianceViolation]) -> Vec<String> {
     let mut issues: Vec<_> = issue_counts.into_iter().collect();
     issues.sort_by(|a, b| b.1.cmp(&a.1));
 
-    issues.into_iter().take(5).map(|(issue, count)| format!("{} ({} occurrences)", issue, count)).collect()
+    issues
+        .into_iter()
+        .take(5)
+        .map(|(issue, count)| format!("{} ({} occurrences)", issue, count))
+        .collect()
 }
 
 #[allow(dead_code)]
-fn generate_recommendations(status: &ComplianceStatus, violations: &[ComplianceViolation]) -> Vec<String> {
+fn generate_recommendations(
+    status: &ComplianceStatus,
+    violations: &[ComplianceViolation],
+) -> Vec<String> {
     let mut recommendations = Vec::new();
 
     if !status.rto_compliant {
-        recommendations.push("Review and optimize recovery procedures to meet RTO objectives".to_string());
+        recommendations
+            .push("Review and optimize recovery procedures to meet RTO objectives".to_string());
         recommendations.push("Consider implementing faster backup restoration methods".to_string());
     }
 
     if !status.rpo_compliant {
         recommendations.push("Increase backup frequency to meet RPO objectives".to_string());
-        recommendations.push("Implement continuous data replication for critical systems".to_string());
+        recommendations
+            .push("Implement continuous data replication for critical systems".to_string());
     }
 
-    if violations.iter().any(|v| v.violation_type == ViolationType::ServiceUnavailable) {
-        recommendations.push("Improve service health monitoring and auto-healing capabilities".to_string());
-        recommendations.push("Review failover procedures for faster service restoration".to_string());
+    if violations
+        .iter()
+        .any(|v| v.violation_type == ViolationType::ServiceUnavailable)
+    {
+        recommendations
+            .push("Improve service health monitoring and auto-healing capabilities".to_string());
+        recommendations
+            .push("Review failover procedures for faster service restoration".to_string());
     }
 
     if recommendations.is_empty() {
-        recommendations.push("Continue monitoring - all objectives currently being met".to_string());
+        recommendations
+            .push("Continue monitoring - all objectives currently being met".to_string());
     }
 
     recommendations
@@ -681,7 +748,6 @@ fn generate_recommendations(status: &ComplianceStatus, violations: &[ComplianceV
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct MonitoringComplianceReport {
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub overall_compliance_percentage: f64,
     pub rto_compliance_percentage: f64,
@@ -722,11 +788,18 @@ impl RtoRpoMonitor {
 
         MonitoringComplianceReport {
             timestamp: Utc::now(),
-            overall_compliance_percentage: if status.overall_compliant { 100.0 } else { 95.0 }, // TODO: Calculate actual compliance percentage
+            overall_compliance_percentage: if status.overall_compliant {
+                100.0
+            } else {
+                95.0
+            }, // TODO: Calculate actual compliance percentage
             rto_compliance_percentage: if status.rto_compliant { 100.0 } else { 90.0 },
             rpo_compliance_percentage: if status.rpo_compliant { 100.0 } else { 85.0 },
             total_violations: violations.len(),
-            critical_violations: violations.iter().filter(|v| v.severity == ViolationSeverity::Critical).count(),
+            critical_violations: violations
+                .iter()
+                .filter(|v| v.severity == ViolationSeverity::Critical)
+                .count(),
             average_recovery_time_seconds: metrics.average_rto_seconds as f64,
             max_recovery_time_seconds: metrics.average_rto_seconds as f64 * 2.0, // TODO: Calculate actual max recovery time
             data_loss_incidents: metrics.total_incidents as usize,
@@ -737,53 +810,79 @@ impl RtoRpoMonitor {
 
 #[async_trait::async_trait]
 impl ReliabilityMonitor for RtoRpoMonitor {
-    async fn get_compliance_status(&self) -> Result<ComplianceStatus, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_compliance_status(
+        &self,
+    ) -> Result<ComplianceStatus, Box<dyn std::error::Error + Send + Sync>> {
         let status = self.get_compliance_status().await;
         Ok(ComplianceStatus {
             timestamp: status.timestamp,
             overall_compliant: status.overall_compliant,
             rto_compliant: status.rto_compliant,
             rpo_compliant: status.rpo_compliant,
-            service_status: status.service_status.into_iter().map(|(k, v)| (k, crate::api_alerts::ServiceComplianceStatus {
-                service_name: v.service_name,
-                current_rto_seconds: v.current_rto_seconds,
-                current_rpo_seconds: v.current_rpo_seconds,
-                last_recovery_time: v.last_recovery_time,
-                compliance_percentage: v.compliance_percentage,
-            })).collect(),
-            violations: status.violations.into_iter().map(|v| ComplianceViolation {
-                id: v.id,
-                timestamp: v.timestamp,
-                violation_type: match v.violation_type {
-                    ViolationType::RTOExceeded => crate::api_alerts::ViolationType::RTOExceeded,
-                    ViolationType::RPOExceeded => crate::api_alerts::ViolationType::RPOExceeded,
-                    ViolationType::ServiceUnavailable => crate::api_alerts::ViolationType::ServiceUnavailable,
-                },
-                severity: v.severity,
-                description: v.description,
-                service_type: v.service_type,
-                // TODO: Map actual measured and objective values from violations
-                // - [ ] Extract measured value from violation data structure
-                // - [ ] Extract objective value from service objectives
-                // - [ ] Handle missing data gracefully
-                // - [ ] Add unit tests with mock violation data
-                // - [ ] Add integration tests with real violation data
-                measured_value: 0.0, // Placeholder - would need to map from internal violation
-                objective_value: 0.0, // Placeholder - would need to map from internal violation
-                resolved: v.resolved,
-                resolution_time: v.resolution_time,
-            }).collect(),
+            service_status: status
+                .service_status
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        k,
+                        crate::api_alerts::ServiceComplianceStatus {
+                            service_name: v.service_name,
+                            current_rto_seconds: v.current_rto_seconds,
+                            current_rpo_seconds: v.current_rpo_seconds,
+                            last_recovery_time: v.last_recovery_time,
+                            compliance_percentage: v.compliance_percentage,
+                        },
+                    )
+                })
+                .collect(),
+            violations: status
+                .violations
+                .into_iter()
+                .map(|v| ComplianceViolation {
+                    id: v.id,
+                    timestamp: v.timestamp,
+                    violation_type: match v.violation_type {
+                        ViolationType::RTOExceeded => crate::api_alerts::ViolationType::RTOExceeded,
+                        ViolationType::RPOExceeded => crate::api_alerts::ViolationType::RPOExceeded,
+                        ViolationType::ServiceUnavailable => {
+                            crate::api_alerts::ViolationType::ServiceUnavailable
+                        }
+                    },
+                    severity: v.severity,
+                    description: v.description,
+                    service_type: v.service_type,
+                    // TODO: Map actual measured and objective values from violations
+                    // - [ ] Extract measured value from violation data structure
+                    // - [ ] Extract objective value from service objectives
+                    // - [ ] Handle missing data gracefully
+                    // - [ ] Add unit tests with mock violation data
+                    // - [ ] Add integration tests with real violation data
+                    measured_value: 0.0, // Placeholder - would need to map from internal violation
+                    objective_value: 0.0, // Placeholder - would need to map from internal violation
+                    resolved: v.resolved,
+                    resolution_time: v.resolution_time,
+                })
+                .collect(),
             last_incident_response_time: status.last_incident_response_time,
         })
     }
 
-    async fn get_recent_violations(&self, hours: i64) -> Result<Vec<ComplianceViolation>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_recent_violations(
+        &self,
+        hours: i64,
+    ) -> Result<Vec<ComplianceViolation>, Box<dyn std::error::Error + Send + Sync>> {
         let violations = self.violations.read().await;
         let cutoff = Utc::now() - chrono::Duration::hours(hours);
-        Ok(violations.iter().filter(|v| v.timestamp > cutoff).cloned().collect())
+        Ok(violations
+            .iter()
+            .filter(|v| v.timestamp > cutoff)
+            .cloned()
+            .collect())
     }
 
-    async fn get_recovery_metrics(&self) -> Result<RecoveryMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_recovery_metrics(
+        &self,
+    ) -> Result<RecoveryMetrics, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.internal_get_recovery_metrics().await;
         Ok(RecoveryMetrics {
             total_incidents: metrics.total_incidents,
@@ -794,13 +893,17 @@ impl ReliabilityMonitor for RtoRpoMonitor {
                 period_start: metrics.last_month_stats.period_start,
                 incidents: metrics.last_month_stats.incidents,
                 violations: metrics.last_month_stats.violations,
-                average_recovery_time_seconds: metrics.last_month_stats.average_recovery_time_seconds,
+                average_recovery_time_seconds: metrics
+                    .last_month_stats
+                    .average_recovery_time_seconds,
                 compliance_percentage: metrics.last_month_stats.compliance_percentage,
             },
         })
     }
 
-    async fn get_pending_alerts(&self) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_pending_alerts(
+        &self,
+    ) -> Result<Vec<ComplianceAlert>, Box<dyn std::error::Error + Send + Sync>> {
         // Generate alerts based on compliance status
         let status = self.get_compliance_status().await;
         let mut alerts = Vec::new();
@@ -823,7 +926,8 @@ impl ReliabilityMonitor for RtoRpoMonitor {
                 timestamp: Utc::now(),
                 alert_type: crate::api_alerts::AlertType::RPOViolation,
                 severity: AlertSeverity::Critical,
-                message: "RPO compliance violated - data loss exceeded acceptable limits".to_string(),
+                message: "RPO compliance violated - data loss exceeded acceptable limits"
+                    .to_string(),
                 affected_services: vec![crate::api_alerts::ServiceType::Database],
                 recommended_actions: vec!["Increase backup frequency".to_string()],
             });
@@ -856,7 +960,9 @@ mod tests {
             pager_duty_integration: false,
         };
 
-        let failover_manager = Arc::new(ServiceFailoverManager::new(crate::service_failover::FailoverConfig::default()));
+        let failover_manager = Arc::new(ServiceFailoverManager::new(
+            crate::service_failover::FailoverConfig::default(),
+        ));
         let monitor = RtoRpoMonitor::new(objectives, alert_config, failover_manager);
 
         let status = monitor.get_compliance_status().await;
@@ -872,7 +978,9 @@ mod tests {
         };
 
         let alert_config = AlertConfig::default();
-        let failover_manager = Arc::new(ServiceFailoverManager::new(crate::service_failover::FailoverConfig::default()));
+        let failover_manager = Arc::new(ServiceFailoverManager::new(
+            crate::service_failover::FailoverConfig::default(),
+        ));
         let monitor = RtoRpoMonitor::new(objectives, alert_config, failover_manager);
 
         let report = monitor.generate_compliance_report().await;
@@ -918,12 +1026,13 @@ impl RtoRpoMonitor {
                 }
 
                 let row = &rows[0];
-                match row.try_get::<Option<chrono::DateTime<chrono::Utc>>, &str>("last_backup_time") {
+                match row.try_get::<Option<chrono::DateTime<chrono::Utc>>, &str>("last_backup_time")
+                {
                     Ok(Some(last_backup_time)) => {
                         let now = Utc::now();
                         let duration = now.signed_duration_since(last_backup_time);
                         let seconds = duration.num_seconds();
-                        
+
                         if seconds < 0 {
                             warn!("Last backup time is in the future. Using current time.");
                             Ok(0)
@@ -935,14 +1044,13 @@ impl RtoRpoMonitor {
                         warn!("No valid backup timestamp found in WAL log records.");
                         Ok(u64::MAX) // No backup data - treat as violation
                     }
-                    Err(e) => {
-                        Err(format!("Failed to parse backup timestamp: {}", e))
-                    }
+                    Err(e) => Err(format!("Failed to parse backup timestamp: {}", e)),
                 }
             }
-            Err(e) => {
-                Err(format!("Failed to query WAL log records for RPO compliance: {}", e))
-            }
+            Err(e) => Err(format!(
+                "Failed to query WAL log records for RPO compliance: {}",
+                e
+            )),
         }
     }
 }

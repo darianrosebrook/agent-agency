@@ -2,18 +2,18 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use sqlx::{SqlitePool, Row};
+use sqlx::{Row, SqlitePool};
 use std::path::Path;
 use tracing::{debug, info};
 
-use crate::recovery_types::*;
-use crate::recovery_types::Digest;
 use crate::merkle::AuthorInfo;
+use crate::recovery_types::Digest;
+use crate::recovery_types::*;
 
 /// SQLite index for recovery metadata
 pub struct RecoveryIndex {
@@ -94,7 +94,7 @@ impl RecoveryIndex {
         mode: FileMode,
     ) -> Result<()> {
         let now = Utc::now().timestamp();
-        
+
         sqlx::query(
             "INSERT OR REPLACE INTO file_versions (path, commit_id, digest, mode, created_at) VALUES (?, ?, ?, ?, ?)",
         )
@@ -114,10 +114,10 @@ impl RecoveryIndex {
     pub async fn record_commit(&self, commit: &Commit) -> Result<()> {
         let stats_json = serde_json::to_string(&commit.stats)?;
         let timestamp = commit.timestamp.timestamp();
-        
+
         sqlx::query(
             r#"
-            INSERT OR REPLACE INTO commits 
+            INSERT OR REPLACE INTO commits
             (id, parent, tree, session_id, caws_verdict_id, message, stats_json, timestamp, author_name, author_email, author_agent_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
@@ -156,12 +156,14 @@ impl RecoveryIndex {
             let created_at: i64 = row.get("created_at");
 
             let commit_id = Digest::from_bytes(
-                commit_id_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid commit_id length"))?
+                commit_id_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid commit_id length"))?,
             );
             let digest = Digest::from_bytes(
-                digest_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid digest length"))?
+                digest_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid digest length"))?,
             );
             let mode = FileMode::from_posix(mode as u32);
             let timestamp = DateTime::from_timestamp(created_at, 0)
@@ -196,12 +198,14 @@ impl RecoveryIndex {
             let created_at: i64 = row.get("created_at");
 
             let commit_id = Digest::from_bytes(
-                commit_id_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid commit_id length"))?
+                commit_id_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid commit_id length"))?,
             );
             let digest = Digest::from_bytes(
-                digest_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid digest length"))?
+                digest_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid digest length"))?,
             );
             let mode = FileMode::from_posix(mode as u32);
             let timestamp = DateTime::from_timestamp(created_at, 0)
@@ -221,12 +225,10 @@ impl RecoveryIndex {
 
     /// Get a commit by ID
     pub async fn get_commit(&self, commit_id: Digest) -> Result<Option<Commit>> {
-        let row = sqlx::query(
-            "SELECT * FROM commits WHERE id = ?",
-        )
-        .bind(&commit_id.as_bytes()[..])
-        .fetch_optional(&self.pool)
-        .await?;
+        let row = sqlx::query("SELECT * FROM commits WHERE id = ?")
+            .bind(&commit_id.as_bytes()[..])
+            .fetch_optional(&self.pool)
+            .await?;
 
         if let Some(row) = row {
             let id_bytes: Vec<u8> = row.get("id");
@@ -242,20 +244,23 @@ impl RecoveryIndex {
             let author_agent_id: Option<String> = row.get("author_agent_id");
 
             let id = Digest::from_bytes(
-                id_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid id length"))?
+                id_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid id length"))?,
             );
             let parent = if let Some(parent_bytes) = parent_bytes {
                 Some(Digest::from_bytes(
-                    parent_bytes.try_into()
-                        .map_err(|_| anyhow::anyhow!("Invalid parent length"))?
+                    parent_bytes
+                        .try_into()
+                        .map_err(|_| anyhow::anyhow!("Invalid parent length"))?,
                 ))
             } else {
                 None
             };
             let tree = Digest::from_bytes(
-                tree_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid tree length"))?
+                tree_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid tree length"))?,
             );
             let stats: ChangeStats = serde_json::from_str(&stats_json)?;
             let timestamp = DateTime::from_timestamp(timestamp, 0)
@@ -284,12 +289,10 @@ impl RecoveryIndex {
 
     /// Get commits for a session
     pub async fn get_session_commits(&self, session_id: &str) -> Result<Vec<Commit>> {
-        let rows = sqlx::query(
-            "SELECT * FROM commits WHERE session_id = ? ORDER BY timestamp ASC",
-        )
-        .bind(session_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = sqlx::query("SELECT * FROM commits WHERE session_id = ? ORDER BY timestamp ASC")
+            .bind(session_id)
+            .fetch_all(&self.pool)
+            .await?;
 
         let mut commits = Vec::new();
         for row in rows {
@@ -316,20 +319,23 @@ impl RecoveryIndex {
         let author_agent_id: Option<String> = row.get("author_agent_id");
 
         let id = Digest::from_bytes(
-            id_bytes.try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid id length"))?
+            id_bytes
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid id length"))?,
         );
         let parent = if let Some(parent_bytes) = parent_bytes {
             Some(Digest::from_bytes(
-                parent_bytes.try_into()
-                    .map_err(|_| anyhow::anyhow!("Invalid parent length"))?
+                parent_bytes
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("Invalid parent length"))?,
             ))
         } else {
             None
         };
         let tree = Digest::from_bytes(
-            tree_bytes.try_into()
-                .map_err(|_| anyhow::anyhow!("Invalid tree length"))?
+            tree_bytes
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid tree length"))?,
         );
         let stats: ChangeStats = serde_json::from_str(&stats_json)?;
         let timestamp = DateTime::from_timestamp(timestamp, 0)
@@ -356,7 +362,7 @@ impl RecoveryIndex {
     /// Rebuild the index from Merkle trees (fsck --reindex)
     pub async fn rebuild_from_trees(&self, refs_dir: &Path) -> Result<RebuildReport> {
         info!("Starting index rebuild from Merkle trees");
-        
+
         let mut report = RebuildReport {
             commits_processed: 0,
             files_processed: 0,
@@ -364,8 +370,12 @@ impl RecoveryIndex {
         };
 
         // Clear existing data
-        sqlx::query("DELETE FROM file_versions").execute(&self.pool).await?;
-        sqlx::query("DELETE FROM commits").execute(&self.pool).await?;
+        sqlx::query("DELETE FROM file_versions")
+            .execute(&self.pool)
+            .await?;
+        sqlx::query("DELETE FROM commits")
+            .execute(&self.pool)
+            .await?;
 
         // Walk refs directory to find all commits
         if refs_dir.exists() {
@@ -380,7 +390,10 @@ impl RecoveryIndex {
                                     report.commits_processed += 1;
                                 }
                                 Err(e) => {
-                                    report.errors.push(format!("Failed to rebuild commit {}: {}", commit_id, e));
+                                    report.errors.push(format!(
+                                        "Failed to rebuild commit {}: {}",
+                                        commit_id, e
+                                    ));
                                 }
                             }
                         }
@@ -389,8 +402,12 @@ impl RecoveryIndex {
             }
         }
 
-        info!("Index rebuild completed: {} commits, {} files, {} errors", 
-              report.commits_processed, report.files_processed, report.errors.len());
+        info!(
+            "Index rebuild completed: {} commits, {} files, {} errors",
+            report.commits_processed,
+            report.files_processed,
+            report.errors.len()
+        );
 
         Ok(report)
     }
@@ -403,7 +420,7 @@ impl RecoveryIndex {
         // 3. Walk the tree to find all files
         // 4. Record each file version
         // 5. Record the commit
-        
+
         debug!("Rebuilding commit from tree: {}", commit_id);
         Ok(())
     }
@@ -413,14 +430,15 @@ impl RecoveryIndex {
         let file_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM file_versions")
             .fetch_one(&self.pool)
             .await?;
-        
+
         let commit_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM commits")
             .fetch_one(&self.pool)
             .await?;
 
-        let session_count: (i64,) = sqlx::query_as("SELECT COUNT(DISTINCT session_id) FROM commits")
-            .fetch_one(&self.pool)
-            .await?;
+        let session_count: (i64,) =
+            sqlx::query_as("SELECT COUNT(DISTINCT session_id) FROM commits")
+                .fetch_one(&self.pool)
+                .await?;
 
         Ok(IndexStats {
             file_versions: file_count.0 as u64,
@@ -444,7 +462,6 @@ pub struct FileVersion {
     pub digest: Digest,
     pub mode: FileMode,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -472,10 +489,10 @@ mod tests {
     async fn test_index_creation() {
         // Use in-memory SQLite database for testing (no file I/O issues)
         let database_url = "sqlite::memory:";
-        
+
         let index = RecoveryIndex::new(database_url).await.unwrap();
         let stats = index.get_stats().await.unwrap();
-        
+
         assert_eq!(stats.file_versions, 0);
         assert_eq!(stats.commits, 0);
         assert_eq!(stats.sessions, 0);
@@ -485,16 +502,19 @@ mod tests {
     async fn test_file_version_recording() {
         // Use in-memory SQLite database for testing
         let database_url = "sqlite::memory:";
-        
+
         let index = RecoveryIndex::new(database_url).await.unwrap();
-        
+
         let path = "test.txt";
         let commit_id = Digest::from_bytes([1u8; 32]);
         let digest = Digest::from_bytes([2u8; 32]);
         let mode = FileMode::Regular;
-        
-        index.record_file_version(path, commit_id, digest, mode).await.unwrap();
-        
+
+        index
+            .record_file_version(path, commit_id, digest, mode)
+            .await
+            .unwrap();
+
         let version = index.get_latest_file_version(path).await.unwrap().unwrap();
         assert_eq!(version.path, path);
         assert_eq!(version.commit_id, commit_id);

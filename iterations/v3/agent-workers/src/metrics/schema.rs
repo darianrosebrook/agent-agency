@@ -1,17 +1,16 @@
 //! Metric schema validation to prevent unit confusion and enable evolution
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Versioned metric envelope to prevent unit confusion and enable evolution
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct MetricEnvelope <V> {
+pub struct MetricEnvelope<V> {
     pub schema_version: u16,
-    pub unit: &'static str,  // "ms", "tokens", "bytes", "score"
+    pub unit: &'static str, // "ms", "tokens", "bytes", "score"
     pub value: V,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -25,7 +24,7 @@ impl<V> MetricEnvelope<V> {
             timestamp: Utc::now(),
         }
     }
-    
+
     /// Create with custom schema version
     pub fn with_version(value: V, unit: &'static str, version: u16) -> Self {
         Self {
@@ -35,7 +34,7 @@ impl<V> MetricEnvelope<V> {
             timestamp: Utc::now(),
         }
     }
-    
+
     /// Validate unit matches expected unit
     pub fn validate_unit(&self, expected_unit: &str) -> bool {
         self.unit == expected_unit
@@ -61,13 +60,13 @@ impl MetricSchema {
                 return false;
             }
         }
-        
+
         if let Some(max) = self.max_value {
             if value > max {
                 return false;
             }
         }
-        
+
         true
     }
 }
@@ -124,21 +123,21 @@ impl SchemaRegistry {
         let mut registry = Self {
             schemas: std::collections::HashMap::new(),
         };
-        
+
         registry.register(EXECUTION_TIME_MS);
         registry.register(QUALITY_SCORE);
         registry.register(CPU_USAGE_PERCENT);
         registry.register(MEMORY_USAGE_MB);
         registry.register(TOKEN_COUNT);
-        
+
         registry
     }
-    
+
     /// Register a new schema
     pub fn register(&mut self, schema: MetricSchema) {
         self.schemas.insert(schema.name.to_string(), schema);
     }
-    
+
     /// Validate a metric value against its schema
     pub fn validate(&self, name: &str, value: f64) -> bool {
         self.schemas
@@ -146,7 +145,7 @@ impl SchemaRegistry {
             .map(|schema| schema.validate_value(value))
             .unwrap_or(true) // Unknown metrics pass validation
     }
-    
+
     /// Get schema for a metric name
     pub fn get_schema(&self, name: &str) -> Option<&MetricSchema> {
         self.schemas.get(name)
@@ -166,33 +165,33 @@ mod tests {
     #[test]
     fn test_metric_envelope() {
         let envelope = MetricEnvelope::new(42.0, "ms");
-        
+
         assert_eq!(envelope.schema_version, 1);
         assert_eq!(envelope.unit, "ms");
         assert_eq!(envelope.value, 42.0);
         assert!(envelope.validate_unit("ms"));
         assert!(!envelope.validate_unit("seconds"));
     }
-    
+
     #[test]
     fn test_schema_validation() {
         let registry = SchemaRegistry::new();
-        
+
         // Valid values
         assert!(registry.validate("execution_time", 100.0));
         assert!(registry.validate("quality_score", 0.8));
         assert!(registry.validate("cpu_usage", 50.0));
-        
+
         // Invalid values
         assert!(!registry.validate("execution_time", -10.0)); // Negative time
         assert!(!registry.validate("quality_score", 1.5)); // > 1.0
         assert!(!registry.validate("cpu_usage", 150.0)); // > 100%
     }
-    
+
     #[test]
     fn test_unknown_metric() {
         let registry = SchemaRegistry::new();
-        
+
         // Unknown metrics should pass validation
         assert!(registry.validate("unknown_metric", 999.0));
     }

@@ -1,19 +1,18 @@
 //! Code analysis utilities and engines
 
 use super::types::*;
+use crate::evidence::evidence_types::{TestTimingAnalysis, TestTimingData};
 use crate::extraction_types::AtomicClaim;
-use crate::evidence::evidence_types::{TestTimingData, TestTimingAnalysis};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-/// Code analysis engine for various code quality metrics
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
-pub struct CodeAnalysisEngine ;
+/// Code analysis engine for various code quality metrics
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CodeAnalysisEngine;
 
 impl CodeAnalysisEngine {
     pub fn new() -> Self {
@@ -21,7 +20,10 @@ impl CodeAnalysisEngine {
     }
 
     /// Analyze code metrics for a given claim
-    pub async fn analyze_code_metrics(&self, _claim: &AtomicClaim) -> Result<(f64, f64, f64, Option<f64>)> {
+    pub async fn analyze_code_metrics(
+        &self,
+        _claim: &AtomicClaim,
+    ) -> Result<(f64, f64, f64, Option<f64>)> {
         // TODO: Implement comprehensive code metrics analysis
         //       Currently returns mock analysis; should implement comprehensive code metrics analysis that analyzes the actual codebase to calculate complexity, maintainability, documentation coverage, and test coverage.
         //
@@ -61,15 +63,30 @@ impl CodeAnalysisEngine {
     }
 
     /// Analyze documentation quality
-    pub async fn analyze_documentation(&self, _claim: &AtomicClaim) -> Result<(bool, bool, f64, f64, Vec<String>)> {
+    pub async fn analyze_documentation(
+        &self,
+        _claim: &AtomicClaim,
+    ) -> Result<(bool, bool, f64, f64, Vec<String>)> {
         // Analyze documentation files
         let has_readme = Path::new("README.md").exists();
         let has_api_docs = Path::new("docs").exists();
 
         // Calculate documentation completeness
-        let completeness = if has_readme && has_api_docs { 0.8 } else if has_readme { 0.5 } else { 0.2 };
+        let completeness = if has_readme && has_api_docs {
+            0.8
+        } else if has_readme {
+            0.5
+        } else {
+            0.2
+        };
 
-        Ok((has_readme, has_api_docs, completeness, 0.3, vec!["Some functions missing docs".to_string()]))
+        Ok((
+            has_readme,
+            has_api_docs,
+            completeness,
+            0.3,
+            vec!["Some functions missing docs".to_string()],
+        ))
     }
 
     /// Analyze test coverage
@@ -113,7 +130,10 @@ impl CodeAnalysisEngine {
     }
 
     /// Analyze test timing data
-    pub async fn analyze_test_timing(&self, test_data: &[TestTimingData]) -> Result<TestTimingAnalysis> {
+    pub async fn analyze_test_timing(
+        &self,
+        test_data: &[TestTimingData],
+    ) -> Result<TestTimingAnalysis> {
         if test_data.is_empty() {
             return Ok(TestTimingAnalysis {
                 test_count: 0,
@@ -135,11 +155,13 @@ impl CodeAnalysisEngine {
         let p95_time_ms = times.get(p95_index).copied().unwrap_or(average_time_ms);
 
         // Detect regressions (tests taking significantly longer than average)
-        let regressions_detected = test_data.iter()
+        let regressions_detected = test_data
+            .iter()
             .filter(|t| t.duration_ms > average_time_ms * 2.0)
             .count();
 
-        let slowest_test = test_data.iter()
+        let slowest_test = test_data
+            .iter()
             .max_by(|a, b| a.duration_ms.partial_cmp(&b.duration_ms).unwrap())
             .map(|t| t.test_name.clone());
 
@@ -156,10 +178,10 @@ impl CodeAnalysisEngine {
     pub fn calculate_complexity(&self, code: &str) -> f64 {
         // Simple complexity calculation based on code length and control structures
         let lines = code.lines().count();
-        let control_structures = code.matches("if ").count() +
-                                code.matches("for ").count() +
-                                code.matches("while ").count() +
-                                code.matches("match ").count();
+        let control_structures = code.matches("if ").count()
+            + code.matches("for ").count()
+            + code.matches("while ").count()
+            + code.matches("match ").count();
 
         // Normalize to 0-1 scale
         let complexity = (lines as f64 / 100.0) + (control_structures as f64 / 10.0);

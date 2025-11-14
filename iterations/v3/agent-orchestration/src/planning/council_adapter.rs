@@ -12,10 +12,10 @@ use std::sync::Arc;
 
 #[cfg(feature = "council")]
 use agent_agency_contracts::{
-    CouncilCoordinator,
-    types::planning::TaskDescriptor,
-    types::council::{CouncilVerdict, SessionId, SessionStatus, SessionStatusType},
     errors::CouncilResult,
+    types::council::{CouncilVerdict, SessionId, SessionStatus, SessionStatusType},
+    types::planning::TaskDescriptor,
+    CouncilCoordinator,
 };
 
 /// Adapter that wraps agent-constitutional-council to implement contracts::CouncilCoordinator
@@ -31,7 +31,7 @@ pub struct CouncilCoordinatorAdapter<E: agent_agency_contracts::JudgeEngine> {
 impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
     /// Create a new council coordinator adapter
     pub fn new(council: Arc<agent_constitutional_council::CouncilCoordinator<E>>) -> Self {
-        Self { 
+        Self {
             council,
             db_ops: None,
         }
@@ -66,10 +66,10 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
         if let Some(ref db_ops) = self.db_ops {
             use crate::planning::data_infrastructure_types::CreateCouncilSession;
             use serde_json::json;
-            
+
             // Extract task_id from task descriptor if available
             let task_id = task.task_id;
-            
+
             // Create session record with review context
             let create_session = CreateCouncilSession {
                 session_id: *session_id,
@@ -88,7 +88,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
                     "working_spec_id": review_context.working_spec.id,
                 })),
             };
-            
+
             // Create session record (ignore errors - graceful degradation)
             if let Err(e) = db_ops.create_council_session(create_session).await {
                 tracing::warn!("Failed to create council session record: {}", e);
@@ -98,15 +98,20 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
 
         // The council doesn't have explicit session management, so we'll just validate
         // that the task can be reviewed by attempting a dry-run evaluation
-        let _dry_run_result = self.council.evaluate(&review_context).await
-            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "council".to_string()
-            })?;
+        let _dry_run_result = self.council.evaluate(&review_context).await.map_err(|e| {
+            agent_agency_contracts::ContractError::ServiceUnavailable {
+                service: "council".to_string(),
+            }
+        })?;
 
         Ok(session_id)
     }
 
-    async fn review_task(&self, session_id: &SessionId, task: &TaskDescriptor) -> CouncilResult<CouncilVerdict> {
+    async fn review_task(
+        &self,
+        session_id: &SessionId,
+        task: &TaskDescriptor,
+    ) -> CouncilResult<CouncilVerdict> {
         // Convert to council ReviewContext
         let review_context = agent_constitutional_council::ReviewContext {
             working_spec: self.task_descriptor_to_working_spec(task),
@@ -118,7 +123,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
         if let Some(ref db_ops) = self.db_ops {
             use crate::planning::data_infrastructure_types::UpdateCouncilSession;
             use serde_json::json;
-            
+
             let update = UpdateCouncilSession {
                 status: Some("review_in_progress".to_string()),
                 progress: Some(0.5),
@@ -129,7 +134,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
                 completed_at: None,
                 metadata: None,
             };
-            
+
             if let Err(e) = db_ops.update_council_session(*session_id, update).await {
                 tracing::warn!("Failed to update council session status: {}", e);
                 // Continue with review despite update failure
@@ -137,22 +142,23 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
         }
 
         // Perform the actual evaluation
-        let final_decision = self.council.evaluate(&review_context).await
-            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "council".to_string()
-            })?;
+        let final_decision = self.council.evaluate(&review_context).await.map_err(|e| {
+            agent_agency_contracts::ContractError::ServiceUnavailable {
+                service: "council".to_string(),
+            }
+        })?;
 
         // Update session with final decision if database operations available
         if let Some(ref db_ops) = self.db_ops {
             use crate::planning::data_infrastructure_types::UpdateCouncilSession;
             use serde_json::json;
-            
+
             let final_status = match final_decision.verdict {
                 agent_constitutional_council::CouncilVerdict::Approved
                 | agent_constitutional_council::CouncilVerdict::ConditionalApproval => "completed",
                 agent_constitutional_council::CouncilVerdict::Rejected => "failed",
             };
-            
+
             let update = UpdateCouncilSession {
                 status: Some(final_status.to_string()),
                 progress: Some(1.0),
@@ -173,9 +179,12 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
                 completed_at: Some(chrono::Utc::now()),
                 metadata: None,
             };
-            
+
             if let Err(e) = db_ops.update_council_session(*session_id, update).await {
-                tracing::warn!("Failed to update council session with final decision: {}", e);
+                tracing::warn!(
+                    "Failed to update council session with final decision: {}",
+                    e
+                );
                 // Continue despite update failure - verdict is still returned
             }
         }
@@ -183,7 +192,9 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
         // Convert council FinalDecision to contracts CouncilVerdict
         let verdict = match final_decision.verdict {
             agent_constitutional_council::CouncilVerdict::Approved => CouncilVerdict::Approved,
-            agent_constitutional_council::CouncilVerdict::ConditionalApproval => CouncilVerdict::ConditionalApproval,
+            agent_constitutional_council::CouncilVerdict::ConditionalApproval => {
+                CouncilVerdict::ConditionalApproval
+            }
             agent_constitutional_council::CouncilVerdict::Rejected => CouncilVerdict::Rejected,
         };
 
@@ -207,7 +218,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
                         "timeout" => SessionStatusType::Failed,
                         _ => SessionStatusType::Reviewing,
                     };
-                    
+
                     return Ok(SessionStatus {
                         session_id: *session_id,
                         status: status_type,
@@ -226,7 +237,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinator for CouncilCoord
                 }
             }
         }
-        
+
         // Fallback: Return default completed status if database unavailable or session not found
         Ok(SessionStatus {
             session_id: *session_id,
@@ -245,10 +256,13 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
     /// Comprehensive conversion that maps all TaskDescriptor fields to WorkingSpec,
     /// including risk tier inference, constraints, acceptance criteria, context,
     /// test plans, rollback plans, and metadata.
-    fn task_descriptor_to_working_spec(&self, task: &TaskDescriptor) -> agent_agency_contracts::WorkingSpec {
+    fn task_descriptor_to_working_spec(
+        &self,
+        task: &TaskDescriptor,
+    ) -> agent_agency_contracts::WorkingSpec {
         use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext};
-        use std::collections::HashMap;
         use chrono::Utc;
+        use std::collections::HashMap;
 
         // Determine risk tier with fallback to priority-based inference
         let risk_tier = match task.risk_tier {
@@ -269,7 +283,7 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
         // Build comprehensive constraints with scope_out integration
         let constraints = WorkingSpecConstraints {
             max_duration_minutes: None, // Could be extracted from change budget or task metadata
-            max_iterations: None, // Could be configured based on risk tier
+            max_iterations: None,       // Could be configured based on risk tier
             budget_limits: Some(agent_agency_contracts::BudgetLimits {
                 max_files: task.change_budget.max_files.map(|x| x as u32),
                 max_loc: task.change_budget.max_loc.map(|x| x as u32),
@@ -302,11 +316,21 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
                 when: format!("Task {} is executed", task.task_id),
                 then: acceptance_str.clone(),
                 priority: Some(match task.priority {
-                    agent_agency_contracts::types::planning::TaskPriority::Critical => "critical".to_string(),
-                    agent_agency_contracts::types::planning::TaskPriority::Urgent => "high".to_string(),
-                    agent_agency_contracts::types::planning::TaskPriority::High => "high".to_string(),
-                    agent_agency_contracts::types::planning::TaskPriority::Normal => "normal".to_string(),
-                    agent_agency_contracts::types::planning::TaskPriority::Medium => "normal".to_string(),
+                    agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                        "critical".to_string()
+                    }
+                    agent_agency_contracts::types::planning::TaskPriority::Urgent => {
+                        "high".to_string()
+                    }
+                    agent_agency_contracts::types::planning::TaskPriority::High => {
+                        "high".to_string()
+                    }
+                    agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                        "normal".to_string()
+                    }
+                    agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                        "normal".to_string()
+                    }
                     agent_agency_contracts::types::planning::TaskPriority::Low => "low".to_string(),
                 }),
             }]
@@ -323,25 +347,29 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
 
         // Build comprehensive context with environment variables and dependencies
         let context = WorkingSpecContext {
-            workspace_root: std::env::var("WORKSPACE_ROOT")
-                .unwrap_or_else(|_| ".".to_string()),
-            git_branch: std::env::var("GIT_BRANCH")
-                .unwrap_or_else(|_| "main".to_string()),
+            workspace_root: std::env::var("WORKSPACE_ROOT").unwrap_or_else(|_| ".".to_string()),
+            git_branch: std::env::var("GIT_BRANCH").unwrap_or_else(|_| "main".to_string()),
             recent_changes: vec![], // Could be populated from git history if available
             dependencies: {
                 // Build dependencies from blast radius
                 let mut deps = HashMap::new();
                 for module in &task.blast_radius.modules {
-                    deps.insert(module.clone(), serde_json::json!({
-                        "type": "module",
-                        "impact": "affected"
-                    }));
+                    deps.insert(
+                        module.clone(),
+                        serde_json::json!({
+                            "type": "module",
+                            "impact": "affected"
+                        }),
+                    );
                 }
                 for ext_dep in &task.blast_radius.external_deps {
-                    deps.insert(ext_dep.clone(), serde_json::json!({
-                        "type": "external",
-                        "impact": "affected"
-                    }));
+                    deps.insert(
+                        ext_dep.clone(),
+                        serde_json::json!({
+                            "type": "external",
+                            "impact": "affected"
+                        }),
+                    );
                 }
                 deps
             },
@@ -357,13 +385,16 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
 
         // Build test plan based on risk tier
         let test_plan = agent_agency_contracts::TestPlan {
-            unit_tests: vec![], // Would be populated from task requirements
+            unit_tests: vec![],        // Would be populated from task requirements
             integration_tests: vec![], // Would be populated from task requirements
             e2e_scenarios: if risk_tier == 1 {
                 vec![agent_agency_contracts::E2eScenario {
                     id: format!("e2e-{}", task.task_id),
                     name: format!("End-to-end test for {}", task.task_id),
-                    description: format!("Complete end-to-end test scenario for task {}", task.task_id),
+                    description: format!(
+                        "Complete end-to-end test scenario for task {}",
+                        task.task_id
+                    ),
                     steps: vec![],
                     expected_outcomes: vec![],
                 }]
@@ -371,9 +402,27 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
                 vec![]
             },
             coverage_targets: Some(agent_agency_contracts::CoverageTargets {
-                line_coverage: if risk_tier == 1 { 0.9 } else if risk_tier == 2 { 0.8 } else { 0.7 },
-                branch_coverage: if risk_tier == 1 { 0.95 } else if risk_tier == 2 { 0.85 } else { 0.75 },
-                function_coverage: if risk_tier == 1 { 0.9 } else if risk_tier == 2 { 0.8 } else { 0.7 },
+                line_coverage: if risk_tier == 1 {
+                    0.9
+                } else if risk_tier == 2 {
+                    0.8
+                } else {
+                    0.7
+                },
+                branch_coverage: if risk_tier == 1 {
+                    0.95
+                } else if risk_tier == 2 {
+                    0.85
+                } else {
+                    0.75
+                },
+                function_coverage: if risk_tier == 1 {
+                    0.9
+                } else if risk_tier == 2 {
+                    0.8
+                } else {
+                    0.7
+                },
             }),
         };
 
@@ -404,12 +453,30 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
 
         // Build metadata with comprehensive task information
         let metadata = Some(HashMap::from([
-            ("task_id".to_string(), serde_json::json!(task.task_id.to_string())),
-            ("priority".to_string(), serde_json::json!(format!("{:?}", task.priority))),
-            ("execution_mode".to_string(), serde_json::json!(format!("{:?}", task.execution_mode))),
-            ("blast_radius_modules".to_string(), serde_json::json!(task.blast_radius.modules)),
-            ("data_migration".to_string(), serde_json::json!(task.blast_radius.data_migration)),
-            ("external_deps".to_string(), serde_json::json!(task.blast_radius.external_deps)),
+            (
+                "task_id".to_string(),
+                serde_json::json!(task.task_id.to_string()),
+            ),
+            (
+                "priority".to_string(),
+                serde_json::json!(format!("{:?}", task.priority)),
+            ),
+            (
+                "execution_mode".to_string(),
+                serde_json::json!(format!("{:?}", task.execution_mode)),
+            ),
+            (
+                "blast_radius_modules".to_string(),
+                serde_json::json!(task.blast_radius.modules),
+            ),
+            (
+                "data_migration".to_string(),
+                serde_json::json!(task.blast_radius.data_migration),
+            ),
+            (
+                "external_deps".to_string(),
+                serde_json::json!(task.blast_radius.external_deps),
+            ),
         ]));
 
         // Build scope from scope_in and scope_out
@@ -450,13 +517,26 @@ impl<E: agent_agency_contracts::JudgeEngine> CouncilCoordinatorAdapter<E> {
     }
 
     /// Map contracts TaskPriority to council ReviewPriority
-    fn map_task_priority(&self, priority: agent_agency_contracts::types::planning::TaskPriority) -> agent_constitutional_council::ReviewPriority {
+    fn map_task_priority(
+        &self,
+        priority: agent_agency_contracts::types::planning::TaskPriority,
+    ) -> agent_constitutional_council::ReviewPriority {
         match priority {
-            agent_agency_contracts::types::planning::TaskPriority::Low => agent_constitutional_council::ReviewPriority::Low,
-            agent_agency_contracts::types::planning::TaskPriority::Normal => agent_constitutional_council::ReviewPriority::Normal,
-            agent_agency_contracts::types::planning::TaskPriority::High => agent_constitutional_council::ReviewPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Urgent => agent_constitutional_council::ReviewPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Critical => agent_constitutional_council::ReviewPriority::Critical,
+            agent_agency_contracts::types::planning::TaskPriority::Low => {
+                agent_constitutional_council::ReviewPriority::Low
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                agent_constitutional_council::ReviewPriority::Normal
+            }
+            agent_agency_contracts::types::planning::TaskPriority::High => {
+                agent_constitutional_council::ReviewPriority::High
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => {
+                agent_constitutional_council::ReviewPriority::High
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                agent_constitutional_council::ReviewPriority::Critical
+            }
         }
     }
 }

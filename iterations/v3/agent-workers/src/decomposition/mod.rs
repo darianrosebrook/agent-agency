@@ -1,20 +1,23 @@
 //! Task decomposition engine and pattern analysis
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-pub mod task_analyzer;
 pub mod dependency_graph;
 pub mod strategies;
+pub mod task_analyzer;
 
-pub use task_analyzer::*;
 pub use dependency_graph::*;
 pub use strategies::*;
+pub use task_analyzer::*;
 
 // Re-export types from types module that are used in decomposition
-pub use crate::parallel_types::{ComplexTask, Dependency, SubtaskScores, SubTask, ErrorGroup, RefactoringOperation, SubTaskStatus, DecompositionStrategy, WorkerSpecialty, TaskAnalysis, TaskPattern};
-pub use crate::worker_types::{TaskId, SubTaskId, TaskScope, QualityRequirements, Priority};
+pub use crate::parallel_types::{
+    ComplexTask, DecompositionStrategy, Dependency, ErrorGroup, RefactoringOperation, SubTask,
+    SubTaskStatus, SubtaskScores, TaskAnalysis, TaskPattern, WorkerSpecialty,
+};
+pub use crate::worker_types::{Priority, QualityRequirements, SubTaskId, TaskId, TaskScope};
 
 // Re-export from progress module
 pub use crate::worker_types::WorkerProgressStatus;
@@ -35,7 +38,6 @@ enum DecompositionStrategyType {
     /// Adaptive optimization based on system state
     Adaptive,
 }
-
 
 /// Main decomposition engine that coordinates all decomposition activities
 pub struct DecompositionEngine {
@@ -73,27 +75,20 @@ impl DecompositionEngine {
 
         // Generate subtasks based on the strategy
         let subtasks = match strategy {
-            DecompositionStrategyType::Parallel => {
-                self.decompose_parallel(task, &analysis).await?
-            }
+            DecompositionStrategyType::Parallel => self.decompose_parallel(task, &analysis).await?,
             DecompositionStrategyType::Sequential => {
                 self.decompose_sequential(task, &analysis).await?
             }
             DecompositionStrategyType::Hierarchical => {
                 self.decompose_hierarchical(task, &analysis).await?
             }
-            DecompositionStrategyType::Adaptive => {
-                self.decompose_adaptive(task, &analysis).await?
-            }
+            DecompositionStrategyType::Adaptive => self.decompose_adaptive(task, &analysis).await?,
         };
 
         Ok(subtasks)
     }
 
-    pub async fn analyze(
-        &self,
-        task: &ComplexTask,
-    ) -> Result<TaskAnalysis, DecompositionError> {
+    pub async fn analyze(&self, task: &ComplexTask) -> Result<TaskAnalysis, DecompositionError> {
         // Identify problem patterns
         let patterns = self.pattern_recognizer.identify_patterns(task)?;
 
@@ -125,18 +120,18 @@ impl DecompositionEngine {
     }
 
     /// Create optimized subtasks from analysis
-    pub fn decompose(
-        &self,
-        analysis: TaskAnalysis,
-    ) -> Result<Vec<SubTask>, DecompositionError> {
-        use tracing::{info, warn, error};
-        
-        info!("Starting task decomposition for analysis with {} patterns", analysis.patterns.len());
-        
+    pub fn decompose(&self, analysis: TaskAnalysis) -> Result<Vec<SubTask>, DecompositionError> {
+        use tracing::{error, info, warn};
+
+        info!(
+            "Starting task decomposition for analysis with {} patterns",
+            analysis.patterns.len()
+        );
+
         // Select appropriate decomposition strategy based on task complexity
         let strategy = self.select_decomposition_strategy(&analysis)?;
         info!("Selected decomposition strategy: {:?}", strategy);
-        
+
         let mut all_subtasks = Vec::new();
         let mut _task_dependencies = std::collections::HashMap::<String, Vec<String>>::new();
 
@@ -144,19 +139,26 @@ impl DecompositionEngine {
         for (pattern_idx, pattern) in analysis.patterns.iter().enumerate() {
             match pattern {
                 TaskPattern::CompilationErrors { error_groups } => {
-                    let subtasks = self.decompose_compilation_errors(error_groups, &analysis, pattern_idx)?;
+                    let subtasks =
+                        self.decompose_compilation_errors(error_groups, &analysis, pattern_idx)?;
                     all_subtasks.extend(subtasks);
                 }
                 TaskPattern::RefactoringOperations { operations } => {
-                    let subtasks = self.decompose_refactoring_operations(operations, &analysis, pattern_idx)?;
+                    let subtasks =
+                        self.decompose_refactoring_operations(operations, &analysis, pattern_idx)?;
                     all_subtasks.extend(subtasks);
                 }
                 TaskPattern::TestingGaps { missing_tests } => {
-                    let subtasks = self.decompose_testing_gaps(missing_tests, &analysis, pattern_idx)?;
+                    let subtasks =
+                        self.decompose_testing_gaps(missing_tests, &analysis, pattern_idx)?;
                     all_subtasks.extend(subtasks);
                 }
                 TaskPattern::DocumentationNeeds { files_needing_docs } => {
-                    let subtasks = self.decompose_documentation_needs(files_needing_docs, &analysis, pattern_idx)?;
+                    let subtasks = self.decompose_documentation_needs(
+                        files_needing_docs,
+                        &analysis,
+                        pattern_idx,
+                    )?;
                     all_subtasks.extend(subtasks);
                 }
             }
@@ -164,21 +166,29 @@ impl DecompositionEngine {
 
         // Apply decomposition strategy to optimize task ordering and dependencies
         let optimized_subtasks = self.apply_decomposition_strategy(all_subtasks, &strategy)?;
-        
+
         // Validate decomposition results
         self.validate_decomposition(&optimized_subtasks, &analysis)?;
-        
-        info!("Decomposition completed with {} subtasks", optimized_subtasks.len());
+
+        info!(
+            "Decomposition completed with {} subtasks",
+            optimized_subtasks.len()
+        );
         Ok(optimized_subtasks)
     }
 
     /// Select appropriate decomposition strategy based on task complexity
-    fn select_decomposition_strategy(&self, analysis: &TaskAnalysis) -> Result<DecompositionStrategyType, DecompositionError> {
+    fn select_decomposition_strategy(
+        &self,
+        analysis: &TaskAnalysis,
+    ) -> Result<DecompositionStrategyType, DecompositionError> {
         let pattern_count = analysis.patterns.len();
-        let total_complexity: f64 = analysis.patterns.iter()
+        let total_complexity: f64 = analysis
+            .patterns
+            .iter()
             .map(|p| self.calculate_pattern_complexity(p))
             .sum();
-        
+
         match (pattern_count, total_complexity) {
             (1..=3, 0.0..=5.0) => Ok(DecompositionStrategyType::Sequential),
             (4..=8, 5.0..=15.0) => Ok(DecompositionStrategyType::Parallel),
@@ -193,29 +203,39 @@ impl DecompositionEngine {
             TaskPattern::CompilationErrors { error_groups } => error_groups.len() as f64 * 2.0,
             TaskPattern::RefactoringOperations { operations } => operations.len() as f64 * 3.0,
             TaskPattern::TestingGaps { missing_tests } => missing_tests.len() as f64 * 1.5,
-            TaskPattern::DocumentationNeeds { files_needing_docs } => files_needing_docs.len() as f64 * 0.5,
+            TaskPattern::DocumentationNeeds { files_needing_docs } => {
+                files_needing_docs.len() as f64 * 0.5
+            }
         }
     }
 
     /// Decompose compilation errors into subtasks
-    fn decompose_compilation_errors(&self, error_groups: &[ErrorGroup], analysis: &TaskAnalysis, pattern_idx: usize) -> Result<Vec<SubTask>, DecompositionError> {
+    fn decompose_compilation_errors(
+        &self,
+        error_groups: &[ErrorGroup],
+        analysis: &TaskAnalysis,
+        pattern_idx: usize,
+    ) -> Result<Vec<SubTask>, DecompositionError> {
         let mut subtasks = Vec::new();
-        
+
         for (idx, error_group) in error_groups.iter().enumerate() {
             let subtask = SubTask {
                 id: SubTaskId::new(),
                 parent_task_id: analysis.task_id.clone(),
                 parent_id: analysis.task_id.clone(),
                 title: format!("Fix {} errors", error_group.error_code),
-                description: format!("Resolve {} compilation errors in {} files",
-                    error_group.count, error_group.affected_files.len()),
+                description: format!(
+                    "Resolve {} compilation errors in {} files",
+                    error_group.count,
+                    error_group.affected_files.len()
+                ),
                 complexity: error_group.count as f64 * 0.1,
                 dependencies: self.calculate_compilation_dependencies(idx, error_groups),
                 assigned_worker: None,
                 status: SubTaskStatus::Pending,
                 priority: self.calculate_compilation_priority(error_group),
                 estimated_duration: std::time::Duration::from_secs(
-                    (error_group.count * 30).min(1800) as u64
+                    (error_group.count * 30).min(1800) as u64,
                 ),
                 scope: TaskScope {
                     domains: vec!["compilation".to_string()],
@@ -234,12 +254,16 @@ impl DecompositionEngine {
             };
             subtasks.push(subtask);
         }
-        
+
         Ok(subtasks)
     }
 
     /// Calculate dependencies for compilation tasks
-    fn calculate_compilation_dependencies(&self, idx: usize, error_groups: &[ErrorGroup]) -> Vec<SubTaskId> {
+    fn calculate_compilation_dependencies(
+        &self,
+        idx: usize,
+        error_groups: &[ErrorGroup],
+    ) -> Vec<SubTaskId> {
         // OPTIONAL: Implement proper dependency tracking for compilation tasks (deferred - build optimization feature)
         // - [ ] Track actual SubTaskId for each error group
         // - [ ] Build dependency graph from error group relationships
@@ -265,24 +289,31 @@ impl DecompositionEngine {
     }
 
     /// Decompose refactoring operations into subtasks
-    fn decompose_refactoring_operations(&self, operations: &[RefactoringOperation], analysis: &TaskAnalysis, pattern_idx: usize) -> Result<Vec<SubTask>, DecompositionError> {
+    fn decompose_refactoring_operations(
+        &self,
+        operations: &[RefactoringOperation],
+        analysis: &TaskAnalysis,
+        pattern_idx: usize,
+    ) -> Result<Vec<SubTask>, DecompositionError> {
         let mut subtasks = Vec::new();
-        
+
         for operation in operations {
             let subtask = SubTask {
                 id: SubTaskId::new(),
                 parent_task_id: analysis.task_id.clone(),
                 parent_id: analysis.task_id.clone(),
                 title: operation.operation_type.clone(),
-                description: format!("Perform {} refactoring on file {}",
-                    operation.operation_type, operation.file_path),
+                description: format!(
+                    "Perform {} refactoring on file {}",
+                    operation.operation_type, operation.file_path
+                ),
                 complexity: operation.complexity,
                 dependencies: vec![],
                 assigned_worker: None,
                 status: SubTaskStatus::Pending,
                 priority: Priority::Medium,
                 estimated_duration: std::time::Duration::from_secs(
-                    (operation.complexity * 300.0) as u64
+                    (operation.complexity * 300.0) as u64,
                 ),
                 scope: TaskScope {
                     domains: vec!["refactoring".to_string()],
@@ -301,14 +332,19 @@ impl DecompositionEngine {
             };
             subtasks.push(subtask);
         }
-        
+
         Ok(subtasks)
     }
 
     /// Decompose testing gaps into subtasks
-    fn decompose_testing_gaps(&self, missing_tests: &[String], analysis: &TaskAnalysis, pattern_idx: usize) -> Result<Vec<SubTask>, DecompositionError> {
+    fn decompose_testing_gaps(
+        &self,
+        missing_tests: &[String],
+        analysis: &TaskAnalysis,
+        pattern_idx: usize,
+    ) -> Result<Vec<SubTask>, DecompositionError> {
         let mut subtasks = Vec::new();
-        
+
         for test in missing_tests {
             let subtask = SubTask {
                 id: SubTaskId::new(),
@@ -339,14 +375,19 @@ impl DecompositionEngine {
             };
             subtasks.push(subtask);
         }
-        
+
         Ok(subtasks)
     }
 
     /// Decompose documentation needs into subtasks
-    fn decompose_documentation_needs(&self, files_needing_docs: &[String], analysis: &TaskAnalysis, pattern_idx: usize) -> Result<Vec<SubTask>, DecompositionError> {
+    fn decompose_documentation_needs(
+        &self,
+        files_needing_docs: &[String],
+        analysis: &TaskAnalysis,
+        pattern_idx: usize,
+    ) -> Result<Vec<SubTask>, DecompositionError> {
         let mut subtasks = Vec::new();
-        
+
         for file in files_needing_docs {
             let subtask = SubTask {
                 id: SubTaskId::new(),
@@ -377,18 +418,22 @@ impl DecompositionEngine {
             };
             subtasks.push(subtask);
         }
-        
+
         Ok(subtasks)
     }
 
-
     /// Apply decomposition strategy to optimize task ordering
-    fn apply_decomposition_strategy(&self, mut subtasks: Vec<SubTask>, strategy: &DecompositionStrategyType) -> Result<Vec<SubTask>, DecompositionError> {
+    fn apply_decomposition_strategy(
+        &self,
+        mut subtasks: Vec<SubTask>,
+        strategy: &DecompositionStrategyType,
+    ) -> Result<Vec<SubTask>, DecompositionError> {
         match strategy {
             DecompositionStrategyType::Sequential => {
                 // Sort by priority and estimated effort
                 subtasks.sort_by(|a, b| {
-                    b.priority.cmp(&a.priority)
+                    b.priority
+                        .cmp(&a.priority)
                         .then(a.estimated_duration.cmp(&b.estimated_duration))
                 });
             }
@@ -407,16 +452,19 @@ impl DecompositionEngine {
                 self.apply_adaptive_optimization(&mut subtasks)?;
             }
         }
-        
+
         Ok(subtasks)
     }
 
     /// Create hierarchical dependencies between tasks
-    fn create_hierarchical_dependencies(&self, subtasks: &mut [SubTask]) -> Result<(), DecompositionError> {
+    fn create_hierarchical_dependencies(
+        &self,
+        subtasks: &mut [SubTask],
+    ) -> Result<(), DecompositionError> {
         // Simple dependency creation: compilation errors first, then refactoring, then testing
         for i in 1..subtasks.len() {
-            if self.should_create_dependency(&subtasks[i-1], &subtasks[i]) {
-                subtasks[i].dependencies.push(subtasks[i-1].id.clone());
+            if self.should_create_dependency(&subtasks[i - 1], &subtasks[i]) {
+                subtasks[i].dependencies.push(subtasks[i - 1].id.clone());
             }
         }
         Ok(())
@@ -425,7 +473,9 @@ impl DecompositionEngine {
     /// Check if two tasks should have a dependency relationship
     fn should_create_dependency(&self, predecessor: &SubTask, successor: &SubTask) -> bool {
         match (&predecessor.specialty, &successor.specialty) {
-            (WorkerSpecialty::CompilationErrors { .. }, WorkerSpecialty::Refactoring { .. }) => true,
+            (WorkerSpecialty::CompilationErrors { .. }, WorkerSpecialty::Refactoring { .. }) => {
+                true
+            }
             (WorkerSpecialty::Refactoring { .. }, WorkerSpecialty::Testing { .. }) => true,
             (WorkerSpecialty::Testing { .. }, WorkerSpecialty::Documentation { .. }) => true,
             _ => false,
@@ -433,36 +483,46 @@ impl DecompositionEngine {
     }
 
     /// Apply adaptive optimization based on system state
-    fn apply_adaptive_optimization(&self, subtasks: &mut [SubTask]) -> Result<(), DecompositionError> {
+    fn apply_adaptive_optimization(
+        &self,
+        subtasks: &mut [SubTask],
+    ) -> Result<(), DecompositionError> {
         // Adaptive optimization based on task characteristics
-        // 
+        //
         // Current implementation uses task properties for optimization.
         // Future enhancements would integrate:
         // - Current system load (via MetricsCollector from system-observability)
         // - Available workers (via WorkerPool.get_stats() or MCPWorkerPool)
         // - Historical performance data (via learning system metrics)
         // - Resource constraints (via system metrics)
-        
+
         // Optimization strategy 1: Priority-based ordering
         // High priority tasks should be executed first
         subtasks.sort_by(|a, b| {
-            b.priority.cmp(&a.priority)
-                .then_with(|| a.estimated_effort.partial_cmp(&b.estimated_effort).unwrap_or(std::cmp::Ordering::Equal))
+            b.priority.cmp(&a.priority).then_with(|| {
+                a.estimated_effort
+                    .partial_cmp(&b.estimated_effort)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
         });
-        
+
         // Optimization strategy 2: Dependency-aware ordering
         // Tasks with fewer dependencies should be executed earlier
         // This allows more parallelization opportunities
         subtasks.sort_by(|a, b| {
-            a.dependencies.len().cmp(&b.dependencies.len())
+            a.dependencies
+                .len()
+                .cmp(&b.dependencies.len())
                 .then(b.priority.cmp(&a.priority))
         });
-        
+
         // Optimization strategy 3: Effort-based batching
         // Group similar-effort tasks together for better load balancing
         // This helps when workers have different capabilities
         subtasks.sort_by(|a, b| {
-            let effort_diff = (a.estimated_duration.as_secs() as i64 - b.estimated_duration.as_secs() as i64).abs();
+            let effort_diff = (a.estimated_duration.as_secs() as i64
+                - b.estimated_duration.as_secs() as i64)
+                .abs();
             if effort_diff < 60 {
                 // Similar effort - prioritize by priority
                 b.priority.cmp(&a.priority)
@@ -471,27 +531,31 @@ impl DecompositionEngine {
                 a.estimated_duration.cmp(&b.estimated_duration)
             }
         });
-        
+
         Ok(())
     }
 
     /// Validate decomposition results
-    fn validate_decomposition(&self, subtasks: &[SubTask], analysis: &TaskAnalysis) -> Result<(), DecompositionError> {
+    fn validate_decomposition(
+        &self,
+        subtasks: &[SubTask],
+        analysis: &TaskAnalysis,
+    ) -> Result<(), DecompositionError> {
         if subtasks.is_empty() {
             return Err(DecompositionError::NoSubtasksGenerated);
         }
-        
+
         // Check for circular dependencies
         if self.has_circular_dependencies(subtasks) {
             return Err(DecompositionError::CircularDependencies);
         }
-        
+
         // Validate that all patterns are covered
         let covered_patterns = self.count_covered_patterns(subtasks, analysis);
         if covered_patterns < analysis.patterns.len() {
             return Err(DecompositionError::IncompleteCoverage);
         }
-        
+
         Ok(())
     }
 
@@ -499,28 +563,28 @@ impl DecompositionEngine {
     fn has_circular_dependencies(&self, subtasks: &[SubTask]) -> bool {
         // Build a dependency graph for efficient traversal
         use std::collections::{HashMap, HashSet};
-        
+
         let mut graph: HashMap<SubTaskId, Vec<SubTaskId>> = HashMap::new();
         let mut all_task_ids = HashSet::new();
-        
+
         // Build graph and collect all task IDs
         for subtask in subtasks {
             all_task_ids.insert(subtask.id.clone());
             let deps = subtask.dependencies.clone();
             graph.insert(subtask.id.clone(), deps);
         }
-        
+
         // Check for self-referential dependencies (task depends on itself)
         for (task_id, deps) in &graph {
             if deps.contains(task_id) {
                 return true;
             }
         }
-        
+
         // Use DFS to detect cycles in the dependency graph
         let mut visited = HashSet::new();
         let mut rec_stack = HashSet::new();
-        
+
         for task_id in &all_task_ids {
             if !visited.contains(task_id) {
                 if self.detect_cycle_dfs(task_id, &graph, &mut visited, &mut rec_stack) {
@@ -528,10 +592,10 @@ impl DecompositionEngine {
                 }
             }
         }
-        
+
         false
     }
-    
+
     /// Helper function for DFS cycle detection
     fn detect_cycle_dfs(
         &self,
@@ -542,7 +606,7 @@ impl DecompositionEngine {
     ) -> bool {
         visited.insert(task_id.clone());
         rec_stack.insert(task_id.clone());
-        
+
         if let Some(deps) = graph.get(task_id) {
             for dep in deps {
                 if !visited.contains(dep) {
@@ -555,7 +619,7 @@ impl DecompositionEngine {
                 }
             }
         }
-        
+
         rec_stack.remove(task_id);
         false
     }
@@ -565,26 +629,35 @@ impl DecompositionEngine {
         // Track which patterns are covered by analyzing subtask specialties
         // Each subtask is created from a specific pattern, so we can map subtask specialty to pattern type
         let mut covered_pattern_indices = std::collections::HashSet::new();
-        
+
         for subtask in subtasks {
             // Map subtask specialty to pattern index
             // Subtasks are created sequentially from patterns, so we can infer pattern coverage
             // by checking if the subtask's specialty matches any pattern's requirements
             for (pattern_idx, pattern) in analysis.patterns.iter().enumerate() {
                 let matches_pattern = match (&subtask.specialty, pattern) {
-                    (WorkerSpecialty::CompilationErrors { .. }, TaskPattern::CompilationErrors { .. }) => true,
-                    (WorkerSpecialty::Refactoring { .. }, TaskPattern::RefactoringOperations { .. }) => true,
+                    (
+                        WorkerSpecialty::CompilationErrors { .. },
+                        TaskPattern::CompilationErrors { .. },
+                    ) => true,
+                    (
+                        WorkerSpecialty::Refactoring { .. },
+                        TaskPattern::RefactoringOperations { .. },
+                    ) => true,
                     (WorkerSpecialty::Testing { .. }, TaskPattern::TestingGaps { .. }) => true,
-                    (WorkerSpecialty::Documentation { .. }, TaskPattern::DocumentationNeeds { .. }) => true,
+                    (
+                        WorkerSpecialty::Documentation { .. },
+                        TaskPattern::DocumentationNeeds { .. },
+                    ) => true,
                     _ => false,
                 };
-                
+
                 if matches_pattern {
                     covered_pattern_indices.insert(pattern_idx);
                 }
             }
         }
-        
+
         covered_pattern_indices.len()
     }
 
@@ -602,7 +675,9 @@ impl DecompositionEngine {
         // - [ ] Add integration tests with real task execution
         // - [ ] Add performance benchmarks for parallelization effectiveness
         // PLACEHOLDER: Implement parallel decomposition strategy
-        Err(DecompositionError::NotImplemented { message: "Parallel decomposition not yet implemented".to_string() })
+        Err(DecompositionError::NotImplemented {
+            message: "Parallel decomposition not yet implemented".to_string(),
+        })
     }
 
     async fn decompose_sequential(
@@ -619,7 +694,9 @@ impl DecompositionEngine {
         // - [ ] Add integration tests with real task execution
         // - [ ] Add performance benchmarks for sequential execution
         // PLACEHOLDER: Implement sequential decomposition strategy
-        Err(DecompositionError::NotImplemented { message: "Sequential decomposition not yet implemented".to_string() })
+        Err(DecompositionError::NotImplemented {
+            message: "Sequential decomposition not yet implemented".to_string(),
+        })
     }
 
     async fn decompose_hierarchical(
@@ -636,7 +713,9 @@ impl DecompositionEngine {
         // - [ ] Add integration tests with real hierarchical execution
         // - [ ] Add performance benchmarks for hierarchical decomposition
         // PLACEHOLDER: Implement hierarchical decomposition strategy
-        Err(DecompositionError::NotImplemented { message: "Hierarchical decomposition not yet implemented".to_string() })
+        Err(DecompositionError::NotImplemented {
+            message: "Hierarchical decomposition not yet implemented".to_string(),
+        })
     }
 
     async fn decompose_adaptive(
@@ -653,7 +732,9 @@ impl DecompositionEngine {
         // - [ ] Add integration tests with adaptive strategy execution
         // - [ ] Add performance benchmarks comparing strategies
         // PLACEHOLDER: Implement adaptive decomposition strategy
-        Err(DecompositionError::NotImplemented { message: "Adaptive decomposition not yet implemented".to_string() })
+        Err(DecompositionError::NotImplemented {
+            message: "Adaptive decomposition not yet implemented".to_string(),
+        })
     }
 }
 

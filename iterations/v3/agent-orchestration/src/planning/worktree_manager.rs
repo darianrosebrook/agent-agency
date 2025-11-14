@@ -6,32 +6,32 @@
 //!
 //! @author @darianrosebrook
 
-use std::path::PathBuf;
-use std::sync::Arc;
+use anyhow::{anyhow, Context, Result};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::Command;
-use anyhow::{anyhow, Result, Context};
+use std::sync::Arc;
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use tracing::{info, warn, error};
 
-use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::caws_quality_gates::CawsQualityGateExecutor;
+use agent_agency_contracts::planning_io::Milestone;
 
 /// Git worktree manager configuration
 #[derive(Debug, Clone)]
 pub struct WorktreeManagerConfig {
     /// Base directory for worktrees
     pub worktree_base_path: PathBuf,
-    
+
     /// Main repository path
     pub main_repo_path: PathBuf,
-    
+
     /// Branch name for worktrees
     pub base_branch: String,
-    
+
     /// Auto-cleanup worktrees after merge
     pub auto_cleanup: bool,
-    
+
     /// Maximum concurrent worktrees
     pub max_concurrent_worktrees: usize,
 }
@@ -108,7 +108,11 @@ impl WorktreeManager {
         worker_id: Uuid,
     ) -> Result<WorktreeInfo> {
         let worktree_id = Uuid::new_v4();
-        let branch_name = format!("worktree-{}-{}", milestone.id, worktree_id.to_string()[..8].to_string());
+        let branch_name = format!(
+            "worktree-{}-{}",
+            milestone.id,
+            worktree_id.to_string()[..8].to_string()
+        );
         let worktree_path = self.config.worktree_base_path.join(&branch_name);
 
         info!(
@@ -121,13 +125,16 @@ impl WorktreeManager {
         // Check concurrent worktree limit
         {
             let worktrees = self.active_worktrees.read().await;
-            let active_count = worktrees.values()
+            let active_count = worktrees
+                .values()
                 .filter(|w| matches!(w.status, WorktreeStatus::Created | WorktreeStatus::InUse))
                 .count();
-            
+
             if active_count >= self.config.max_concurrent_worktrees {
-                return Err(anyhow!("Maximum concurrent worktrees ({}) reached", 
-                    self.config.max_concurrent_worktrees));
+                return Err(anyhow!(
+                    "Maximum concurrent worktrees ({}) reached",
+                    self.config.max_concurrent_worktrees
+                ));
             }
         }
 
@@ -150,7 +157,11 @@ impl WorktreeManager {
             return Err(anyhow!("Failed to create git worktree: {}", stderr));
         }
 
-        info!("Git worktree created at {} (branch: {})", worktree_path.display(), branch_name);
+        info!(
+            "Git worktree created at {} (branch: {})",
+            worktree_path.display(),
+            branch_name
+        );
 
         let worktree_info = WorktreeInfo {
             worktree_id,
@@ -186,7 +197,10 @@ impl WorktreeManager {
         let worktrees = self.active_worktrees.read().await;
         worktrees
             .values()
-            .find(|w| w.milestone_id == milestone_id && matches!(w.status, WorktreeStatus::Created | WorktreeStatus::InUse))
+            .find(|w| {
+                w.milestone_id == milestone_id
+                    && matches!(w.status, WorktreeStatus::Created | WorktreeStatus::InUse)
+            })
             .map(|w| w.worktree_path.clone())
             .ok_or_else(|| anyhow!("No worktree found for milestone {}", milestone_id))
     }
@@ -203,23 +217,24 @@ impl WorktreeManager {
     }
 
     /// Merge worktree changes back to main branch
-    pub async fn merge_worktree(
-        &self,
-        worktree_id: Uuid,
-    ) -> Result<MergeResult> {
+    pub async fn merge_worktree(&self, worktree_id: Uuid) -> Result<MergeResult> {
         let worktree_info = {
             let worktrees = self.active_worktrees.read().await;
-            worktrees.get(&worktree_id)
+            worktrees
+                .get(&worktree_id)
                 .ok_or_else(|| anyhow!("Worktree {} not found", worktree_id))?
                 .clone()
         };
 
-        info!("Merging worktree {} (branch {})", worktree_id, worktree_info.branch_name);
+        info!(
+            "Merging worktree {} (branch {})",
+            worktree_id, worktree_info.branch_name
+        );
 
         // Run CAWS quality gates before merge (waiver-aware)
         if let Some(ref executor) = self.quality_gates_executor {
             info!("Running CAWS quality gates before merge (waiver-aware)");
-            
+
             // Execute quality gates in the worktree context
             match executor.execute_quality_gates("push").await {
                 Ok(gate_result) => {
@@ -229,14 +244,14 @@ impl WorktreeManager {
                         gate_result.waived_violations,
                         gate_result.blocking_violations
                     );
-                    
+
                     // Block merge if there are non-waived violations
                     if !gate_result.passed {
                         warn!(
                             "Merge blocked: {} blocking quality gate violations found",
                             gate_result.blocking_violations
                         );
-                        
+
                         // Log blocking violations
                         for violation in &gate_result.violations {
                             if !violation.waived {
@@ -248,7 +263,7 @@ impl WorktreeManager {
                                 );
                             }
                         }
-                        
+
                         return Err(anyhow!(
                             "Cannot merge worktree {}: {} blocking quality gate violations ({} waived violations allowed)",
                             worktree_id,
@@ -256,10 +271,13 @@ impl WorktreeManager {
                             gate_result.waived_violations
                         ));
                     }
-                    
+
                     // Log waived violations for audit trail
                     if gate_result.waived_violations > 0 {
-                        info!("Allowing merge with {} waived violations", gate_result.waived_violations);
+                        info!(
+                            "Allowing merge with {} waived violations",
+                            gate_result.waived_violations
+                        );
                         for violation in &gate_result.violations {
                             if violation.waived {
                                 info!(
@@ -282,7 +300,7 @@ impl WorktreeManager {
             // Try to initialize quality gates executor if not already set
             if let Ok(executor) = CawsQualityGateExecutor::new(&self.config.main_repo_path) {
                 info!("Running CAWS quality gates before merge (waiver-aware, fallback executor)");
-                
+
                 match executor.execute_quality_gates("push").await {
                     Ok(gate_result) => {
                         info!(
@@ -291,14 +309,14 @@ impl WorktreeManager {
                             gate_result.waived_violations,
                             gate_result.blocking_violations
                         );
-                        
+
                         // Block merge if there are non-waived violations
                         if !gate_result.passed {
                             warn!(
                                 "Merge blocked: {} blocking quality gate violations found",
                                 gate_result.blocking_violations
                             );
-                            
+
                             // Log blocking violations
                             for violation in &gate_result.violations {
                                 if !violation.waived {
@@ -310,7 +328,7 @@ impl WorktreeManager {
                                     );
                                 }
                             }
-                            
+
                             return Err(anyhow!(
                                 "Cannot merge worktree {}: {} blocking quality gate violations ({} waived violations allowed)",
                                 worktree_id,
@@ -318,10 +336,13 @@ impl WorktreeManager {
                                 gate_result.waived_violations
                             ));
                         }
-                        
+
                         // Log waived violations for audit trail
                         if gate_result.waived_violations > 0 {
-                            info!("Allowing merge with {} waived violations", gate_result.waived_violations);
+                            info!(
+                                "Allowing merge with {} waived violations",
+                                gate_result.waived_violations
+                            );
                             for violation in &gate_result.violations {
                                 if violation.waived {
                                     info!(
@@ -364,8 +385,10 @@ impl WorktreeManager {
             .arg("merge")
             .arg("--no-ff")
             .arg("-m")
-            .arg(format!("Merged worktree {} for milestone {}", 
-                worktree_id, worktree_info.milestone_id))
+            .arg(format!(
+                "Merged worktree {} for milestone {}",
+                worktree_id, worktree_info.milestone_id
+            ))
             .arg(&worktree_info.branch_name)
             .output()
             .context("Failed to execute git merge command")?;
@@ -376,7 +399,7 @@ impl WorktreeManager {
         if !merge_output.status.success() {
             // Check for merge conflicts
             let stderr = String::from_utf8_lossy(&merge_output.stderr);
-            
+
             // Get conflicted files
             let conflict_output = Command::new("git")
                 .current_dir(&self.config.main_repo_path)
@@ -407,13 +430,19 @@ impl WorktreeManager {
                 .current_dir(&self.config.main_repo_path)
                 .arg("diff")
                 .arg("--name-only")
-                .arg(format!("{}^..{}", &self.config.base_branch, &worktree_info.branch_name))
+                .arg(format!(
+                    "{}^..{}",
+                    &self.config.base_branch, &worktree_info.branch_name
+                ))
                 .output()
                 .context("Failed to count changed files")?;
 
             if diff_output.status.success() {
                 let changed_files = String::from_utf8_lossy(&diff_output.stdout);
-                files_changed = changed_files.lines().filter(|line| !line.is_empty()).count();
+                files_changed = changed_files
+                    .lines()
+                    .filter(|line| !line.is_empty())
+                    .count();
             }
         }
 
@@ -421,8 +450,10 @@ impl WorktreeManager {
             success: conflicts.is_empty(),
             conflicts,
             files_changed,
-            merge_message: format!("Merged worktree {} for milestone {}", 
-                worktree_id, worktree_info.milestone_id),
+            merge_message: format!(
+                "Merged worktree {} for milestone {}",
+                worktree_id, worktree_info.milestone_id
+            ),
         };
 
         // Update worktree status
@@ -450,7 +481,8 @@ impl WorktreeManager {
 
         let worktree_info = {
             let worktrees = self.active_worktrees.read().await;
-            worktrees.get(&worktree_id)
+            worktrees
+                .get(&worktree_id)
                 .ok_or_else(|| anyhow!("Worktree {} not found", worktree_id))?
                 .clone()
         };
@@ -545,9 +577,11 @@ impl WorktreeManager {
             }
             ConflictResolutionStrategy::Manual => {
                 // Require manual resolution
-                return Err(anyhow!("Manual conflict resolution required for worktree {}. Conflicts are in: {}", 
-                    worktree_id, 
-                    worktree_info.worktree_path.display()));
+                return Err(anyhow!(
+                    "Manual conflict resolution required for worktree {}. Conflicts are in: {}",
+                    worktree_id,
+                    worktree_info.worktree_path.display()
+                ));
             }
         }
 
@@ -566,11 +600,16 @@ impl WorktreeManager {
     pub async fn cleanup_worktree(&self, worktree_id: Uuid) -> Result<()> {
         let worktree_info = {
             let mut worktrees = self.active_worktrees.write().await;
-            worktrees.remove(&worktree_id)
+            worktrees
+                .remove(&worktree_id)
                 .ok_or_else(|| anyhow!("Worktree {} not found", worktree_id))?
         };
 
-        info!("Cleaning up worktree {} at {}", worktree_id, worktree_info.worktree_path.display());
+        info!(
+            "Cleaning up worktree {} at {}",
+            worktree_id,
+            worktree_info.worktree_path.display()
+        );
 
         // Execute git worktree remove command
         // First try to remove via git (this handles branch cleanup properly)
@@ -595,8 +634,11 @@ impl WorktreeManager {
 
             if !force_output.status.success() {
                 let stderr = String::from_utf8_lossy(&force_output.stderr);
-                warn!("Git worktree remove failed: {}. Attempting manual cleanup.", stderr);
-                
+                warn!(
+                    "Git worktree remove failed: {}. Attempting manual cleanup.",
+                    stderr
+                );
+
                 // Fallback: manual directory removal
                 if worktree_info.worktree_path.exists() {
                     if let Err(e) = std::fs::remove_dir_all(&worktree_info.worktree_path) {
@@ -670,11 +712,10 @@ pub struct MergeResult {
 pub enum ConflictResolutionStrategy {
     /// Accept changes from main branch
     AcceptOurs,
-    
+
     /// Accept changes from worktree
     AcceptTheirs,
-    
+
     /// Require manual resolution
     Manual,
 }
-

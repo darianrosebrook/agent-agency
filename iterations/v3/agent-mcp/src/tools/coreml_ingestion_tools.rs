@@ -12,9 +12,9 @@
 //! @author @darianrosebrook
 
 use crate::mcp_types::*;
-use uuid::Uuid;
 use chrono::Utc;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Trait for CoreML ingestion operations
 /// Implementations should be provided by crates that have access to agent-data-processing
@@ -25,23 +25,20 @@ pub trait CoreMLIngestionExecutor: Send + Sync {
         file_path: &str,
         content_type: Option<&str>,
     ) -> Result<serde_json::Value, String>;
-    
+
     async fn detect_objects(
         &self,
         file_path: &str,
         content_type: Option<&str>,
     ) -> Result<serde_json::Value, String>;
-    
+
     async fn extract_text_from_image(
         &self,
         file_path: &str,
         content_type: Option<&str>,
     ) -> Result<serde_json::Value, String>;
-    
-    async fn process_video(
-        &self,
-        file_path: &str,
-    ) -> Result<serde_json::Value, String>;
+
+    async fn process_video(&self, file_path: &str) -> Result<serde_json::Value, String>;
 }
 
 /// Placeholder executor that returns errors indicating tools need to be wired up
@@ -56,7 +53,7 @@ impl CoreMLIngestionExecutor for PlaceholderCoreMLIngestionExecutor {
     ) -> Result<serde_json::Value, String> {
         Err("CoreML ingestion executor not configured. Tools need to be wired up with real implementation.".to_string())
     }
-    
+
     async fn detect_objects(
         &self,
         _file_path: &str,
@@ -64,7 +61,7 @@ impl CoreMLIngestionExecutor for PlaceholderCoreMLIngestionExecutor {
     ) -> Result<serde_json::Value, String> {
         Err("CoreML ingestion executor not configured. Tools need to be wired up with real implementation.".to_string())
     }
-    
+
     async fn extract_text_from_image(
         &self,
         _file_path: &str,
@@ -72,11 +69,8 @@ impl CoreMLIngestionExecutor for PlaceholderCoreMLIngestionExecutor {
     ) -> Result<serde_json::Value, String> {
         Err("CoreML ingestion executor not configured. Tools need to be wired up with real implementation.".to_string())
     }
-    
-    async fn process_video(
-        &self,
-        _file_path: &str,
-    ) -> Result<serde_json::Value, String> {
+
+    async fn process_video(&self, _file_path: &str) -> Result<serde_json::Value, String> {
         Err("CoreML ingestion executor not configured. Tools need to be wired up with real implementation.".to_string())
     }
 }
@@ -399,4 +393,3 @@ fn create_process_video_tool() -> MCPTool {
         metadata: HashMap::new(),
     }
 }
-

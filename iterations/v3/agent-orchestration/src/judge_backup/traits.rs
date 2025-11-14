@@ -16,10 +16,7 @@ pub trait Judge: Send + Sync + std::fmt::Debug {
     fn config(&self) -> &JudgeConfig;
 
     /// Review a working specification and return a verdict
-    async fn review_spec(
-        &self,
-        context: &ReviewContext,
-    ) -> CouncilResult<JudgeVerdict>;
+    async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict>;
 
     /// Evaluate a working specification with detailed parameters
     async fn evaluate(
@@ -39,4 +36,3 @@ pub trait Judge: Send + Sync + std::fmt::Debug {
     /// Get judge health metrics
     fn health_metrics(&self) -> JudgeHealthMetrics;
 }
-

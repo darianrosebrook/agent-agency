@@ -5,8 +5,8 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Processing identifier for content processing operations
@@ -48,4 +48,3 @@ pub struct ProcessedContent {
     /// Processing metadata
     pub metadata: std::collections::HashMap<String, serde_json::Value>,
 }
-

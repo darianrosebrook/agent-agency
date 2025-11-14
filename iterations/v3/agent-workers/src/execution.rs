@@ -3,10 +3,10 @@
 //! Handles the execution of MCP tools with proper error handling,
 //! timeout management, and result processing.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use crate::worker_types::*;
 use agent_mcp::ToolRegistry;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Tool executor that manages MCP tool execution
@@ -23,13 +23,23 @@ impl ToolExecutor {
     }
 
     /// Execute a tool with the given context
-    pub async fn execute_tool(&self, context: TaskContext) -> Result<ExecutionResult, ExecutionError> {
+    pub async fn execute_tool(
+        &self,
+        context: TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
         // Extract tool_id from context (required)
-        let tool_id = context.tool_id.as_ref()
+        let tool_id = context
+            .tool_id
+            .as_ref()
             .ok_or_else(|| ExecutionError::InvalidParameters("tool_id is required".to_string()))?;
 
         // Validate tool availability
-        if self.tool_registry.get_tool(uuid::Uuid::parse_str(tool_id).unwrap_or_default()).await.is_none() {
+        if self
+            .tool_registry
+            .get_tool(uuid::Uuid::parse_str(tool_id).unwrap_or_default())
+            .await
+            .is_none()
+        {
             return Err(ExecutionError::ToolNotFound(tool_id.clone()));
         }
 
@@ -47,30 +57,39 @@ impl ToolExecutor {
     }
 
     /// Execute file writer tool
-    async fn execute_file_writer(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let file_path = context.parameters
+    async fn execute_file_writer(
+        &self,
+        context: &TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
+        let file_path = context
+            .parameters
             .get("file_path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("file_path required".to_string()))?;
 
-        let content = context.parameters
+        let content = context
+            .parameters
             .get("content")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("content required".to_string()))?;
 
         // Validate file path to prevent directory traversal attacks
         if file_path.contains("..") || file_path.starts_with('/') {
-            return Err(ExecutionError::InvalidParameters("Invalid file path".to_string()));
+            return Err(ExecutionError::InvalidParameters(
+                "Invalid file path".to_string(),
+            ));
         }
 
         // Ensure parent directories exist
         if let Some(parent) = std::path::Path::new(file_path).parent() {
-            tokio::fs::create_dir_all(parent).await
-                .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to create directories: {}", e)))?;
+            tokio::fs::create_dir_all(parent).await.map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to create directories: {}", e))
+            })?;
         }
 
         // Actually write the file
-        tokio::fs::write(file_path, content).await
+        tokio::fs::write(file_path, content)
+            .await
             .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to write file: {}", e)))?;
 
         let output = serde_json::json!({
@@ -85,26 +104,37 @@ impl ToolExecutor {
             error_message: None,
             execution_time_ms: 10,
             tool_id: ToolId {
-                name: context.tool_id.as_ref().unwrap_or(&"file_writer".to_string()).clone(),
+                name: context
+                    .tool_id
+                    .as_ref()
+                    .unwrap_or(&"file_writer".to_string())
+                    .clone(),
                 version: "1.0.0".to_string(),
             },
         })
     }
 
     /// Execute file reader tool
-    async fn execute_file_reader(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let file_path = context.parameters
+    async fn execute_file_reader(
+        &self,
+        context: &TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
+        let file_path = context
+            .parameters
             .get("file_path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("file_path required".to_string()))?;
 
         // Validate file path to prevent directory traversal attacks
         if file_path.contains("..") || file_path.starts_with('/') {
-            return Err(ExecutionError::InvalidParameters("Invalid file path".to_string()));
+            return Err(ExecutionError::InvalidParameters(
+                "Invalid file path".to_string(),
+            ));
         }
 
         // Actually read the file
-        let content = tokio::fs::read_to_string(file_path).await
+        let content = tokio::fs::read_to_string(file_path)
+            .await
             .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to read file: {}", e)))?;
 
         let output = serde_json::json!({
@@ -120,26 +150,37 @@ impl ToolExecutor {
             error_message: None,
             execution_time_ms: 5,
             tool_id: ToolId {
-                name: context.tool_id.as_ref().unwrap_or(&"file_reader".to_string()).clone(),
+                name: context
+                    .tool_id
+                    .as_ref()
+                    .unwrap_or(&"file_reader".to_string())
+                    .clone(),
                 version: "1.0.0".to_string(),
             },
         })
     }
 
     /// Execute code generator tool
-    async fn execute_code_generator(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let prompt = context.parameters
+    async fn execute_code_generator(
+        &self,
+        context: &TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
+        let prompt = context
+            .parameters
             .get("prompt")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("prompt required".to_string()))?;
 
-        let language = context.parameters
+        let language = context
+            .parameters
             .get("language")
             .and_then(|v| v.as_str())
             .unwrap_or("typescript");
 
         // Actually generate code using AI service
-        let generated_code = self.generate_code_with_ai(prompt, language).await
+        let generated_code = self
+            .generate_code_with_ai(prompt, language)
+            .await
             .unwrap_or_else(|_| self.generate_code_from_prompt(prompt, language));
 
         let output = serde_json::json!({
@@ -155,20 +196,29 @@ impl ToolExecutor {
             error_message: None,
             execution_time_ms: 150,
             tool_id: ToolId {
-                name: context.tool_id.as_ref().unwrap_or(&"code_generator".to_string()).clone(),
+                name: context
+                    .tool_id
+                    .as_ref()
+                    .unwrap_or(&"code_generator".to_string())
+                    .clone(),
                 version: "1.0.0".to_string(),
             },
         })
     }
 
     /// Execute search tool
-    async fn execute_search_tool(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let query = context.parameters
+    async fn execute_search_tool(
+        &self,
+        context: &TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
+        let query = context
+            .parameters
             .get("query")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("query required".to_string()))?;
 
-        let search_type = context.parameters
+        let search_type = context
+            .parameters
             .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("web");
@@ -194,20 +244,29 @@ impl ToolExecutor {
             error_message: None,
             execution_time_ms: 100,
             tool_id: ToolId {
-                name: context.tool_id.as_ref().unwrap_or(&"search_tool".to_string()).clone(),
+                name: context
+                    .tool_id
+                    .as_ref()
+                    .unwrap_or(&"search_tool".to_string())
+                    .clone(),
                 version: "1.0.0".to_string(),
             },
         })
     }
 
     /// Execute validator tool
-    async fn execute_validator(&self, context: &TaskContext) -> Result<ExecutionResult, ExecutionError> {
-        let content = context.parameters
+    async fn execute_validator(
+        &self,
+        context: &TaskContext,
+    ) -> Result<ExecutionResult, ExecutionError> {
+        let content = context
+            .parameters
             .get("content")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ExecutionError::InvalidParameters("content required".to_string()))?;
 
-        let validation_type = context.parameters
+        let validation_type = context
+            .parameters
             .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("syntax");
@@ -249,7 +308,10 @@ impl ToolExecutor {
         // - Reviewer Requirements: MCP integration and code validation expertise
         let is_valid = !content.contains("ERROR") && !content.contains("TODO");
         let issues = if !is_valid {
-            vec!["Found ERROR marker".to_string(), "Found TODO marker".to_string()]
+            vec![
+                "Found ERROR marker".to_string(),
+                "Found TODO marker".to_string(),
+            ]
         } else {
             vec![]
         };
@@ -267,21 +329,34 @@ impl ToolExecutor {
             error_message: None,
             execution_time_ms: 20,
             tool_id: ToolId {
-                name: context.tool_id.as_ref().unwrap_or(&"validator".to_string()).clone(),
+                name: context
+                    .tool_id
+                    .as_ref()
+                    .unwrap_or(&"validator".to_string())
+                    .clone(),
                 version: "1.0.0".to_string(),
             },
         })
     }
 
     /// Generate code using AI service
-    async fn generate_code_with_ai(&self, prompt: &str, language: &str) -> Result<String, ExecutionError> {
+    async fn generate_code_with_ai(
+        &self,
+        prompt: &str,
+        language: &str,
+    ) -> Result<String, ExecutionError> {
         // Try to use Ollama service for code generation
-        let ollama_url = std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
-        let model_name = std::env::var("OLLAMA_CODE_MODEL").unwrap_or_else(|_| "codellama".to_string());
+        let ollama_url =
+            std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let model_name =
+            std::env::var("OLLAMA_CODE_MODEL").unwrap_or_else(|_| "codellama".to_string());
 
         let system_prompt = format!("You are an expert {} developer. Generate high-quality, production-ready code based on the user's requirements. Focus on clean, maintainable code with proper error handling.", language);
 
-        let user_prompt = format!("Generate {} code for the following requirement:\n\n{}", language, prompt);
+        let user_prompt = format!(
+            "Generate {} code for the following requirement:\n\n{}",
+            language, prompt
+        );
 
         let request_body = serde_json::json!({
             "model": model_name,
@@ -298,59 +373,72 @@ impl ToolExecutor {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to create HTTP client: {}", e))
+            })?;
 
         let response = client
             .post(&format!("{}/api/generate", ollama_url))
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("AI service request failed: {}", e)))?;
+            .map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("AI service request failed: {}", e))
+            })?;
 
         if !response.status().is_success() {
-            return Err(ExecutionError::ExecutionFailed(format!("AI service error: {}", response.status())));
+            return Err(ExecutionError::ExecutionFailed(format!(
+                "AI service error: {}",
+                response.status()
+            )));
         }
 
-        let response_json: serde_json::Value = response.json().await
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to parse AI response: {}", e)))?;
+        let response_json: serde_json::Value = response.json().await.map_err(|e| {
+            ExecutionError::ExecutionFailed(format!("Failed to parse AI response: {}", e))
+        })?;
 
-        let generated_code = response_json["response"]
-            .as_str()
-            .ok_or_else(|| ExecutionError::ExecutionFailed("Invalid AI response format".to_string()))?;
+        let generated_code = response_json["response"].as_str().ok_or_else(|| {
+            ExecutionError::ExecutionFailed("Invalid AI response format".to_string())
+        })?;
 
         Ok(generated_code.to_string())
     }
 
     /// Perform web search using search API
-    async fn perform_web_search(&self, query: &str) -> Result<Vec<serde_json::Value>, ExecutionError> {
+    async fn perform_web_search(
+        &self,
+        query: &str,
+    ) -> Result<Vec<serde_json::Value>, ExecutionError> {
         // Try to use DuckDuckGo instant answers API or similar
-        let search_url = format!("https://api.duckduckgo.com/?q={}&format=json&no_html=1&skip_disambig=1", urlencoding::encode(query));
+        let search_url = format!(
+            "https://api.duckduckgo.com/?q={}&format=json&no_html=1&skip_disambig=1",
+            urlencoding::encode(query)
+        );
 
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
             .build()
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to create HTTP client: {}", e))
+            })?;
 
-        let response = client
-            .get(&search_url)
-            .send()
-            .await
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Search request failed: {}", e)))?;
+        let response = client.get(&search_url).send().await.map_err(|e| {
+            ExecutionError::ExecutionFailed(format!("Search request failed: {}", e))
+        })?;
 
         if !response.status().is_success() {
             // Fallback to simulated results if API fails
-            return Ok(vec![
-                serde_json::json!({
-                    "title": format!("Search result for '{}'", query),
-                    "url": format!("https://example.com/search?q={}", urlencoding::encode(query)),
-                    "snippet": format!("Relevant information about {} found online.", query),
-                    "source": "web"
-                })
-            ]);
+            return Ok(vec![serde_json::json!({
+                "title": format!("Search result for '{}'", query),
+                "url": format!("https://example.com/search?q={}", urlencoding::encode(query)),
+                "snippet": format!("Relevant information about {} found online.", query),
+                "source": "web"
+            })]);
         }
 
-        let response_json: serde_json::Value = response.json().await
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to parse search response: {}", e)))?;
+        let response_json: serde_json::Value = response.json().await.map_err(|e| {
+            ExecutionError::ExecutionFailed(format!("Failed to parse search response: {}", e))
+        })?;
 
         // Parse DuckDuckGo response
         let mut results = Vec::new();
@@ -394,10 +482,15 @@ impl ToolExecutor {
     }
 
     /// Search local documentation
-    async fn search_documentation(&self, query: &str) -> Result<Vec<serde_json::Value>, ExecutionError> {
+    async fn search_documentation(
+        &self,
+        query: &str,
+    ) -> Result<Vec<serde_json::Value>, ExecutionError> {
         // Search through local documentation files
         let docs_dir = std::env::current_dir()
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to get current directory: {}", e)))?
+            .map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to get current directory: {}", e))
+            })?
             .join("docs");
 
         if !docs_dir.exists() {
@@ -418,10 +511,15 @@ impl ToolExecutor {
     }
 
     /// Search for code examples
-    async fn search_code_examples(&self, query: &str) -> Result<Vec<serde_json::Value>, ExecutionError> {
+    async fn search_code_examples(
+        &self,
+        query: &str,
+    ) -> Result<Vec<serde_json::Value>, ExecutionError> {
         // Search through source code files
         let src_dir = std::env::current_dir()
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to get current directory: {}", e)))?
+            .map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to get current directory: {}", e))
+            })?
             .join("src");
 
         if !src_dir.exists() {
@@ -436,11 +534,16 @@ impl ToolExecutor {
         self.search_files_recursively_sync(&src_dir, query, &mut results, 0)?;
 
         // Filter for code files and limit results
-        let code_results: Vec<_> = results.into_iter()
+        let code_results: Vec<_> = results
+            .into_iter()
             .filter(|r| {
                 let title = r["title"].as_str().unwrap_or("");
-                title.ends_with(".rs") || title.ends_with(".ts") || title.ends_with(".js") ||
-                title.ends_with(".py") || title.ends_with(".java") || title.ends_with(".cpp")
+                title.ends_with(".rs")
+                    || title.ends_with(".ts")
+                    || title.ends_with(".js")
+                    || title.ends_with(".py")
+                    || title.ends_with(".java")
+                    || title.ends_with(".cpp")
             })
             .take(5)
             .collect();
@@ -461,32 +564,43 @@ impl ToolExecutor {
         }
 
         // For synchronous file operations, we'll use std::fs
-        let entries = std::fs::read_dir(dir)
-            .map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to read directory: {}", e)))?;
+        let entries = std::fs::read_dir(dir).map_err(|e| {
+            ExecutionError::ExecutionFailed(format!("Failed to read directory: {}", e))
+        })?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| ExecutionError::ExecutionFailed(format!("Failed to read directory entry: {}", e)))?;
+            let entry = entry.map_err(|e| {
+                ExecutionError::ExecutionFailed(format!("Failed to read directory entry: {}", e))
+            })?;
             let path = entry.path();
 
             if path.is_dir() {
                 // Skip common non-documentation directories
                 if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
-                    if dir_name.starts_with('.') || dir_name == "node_modules" || dir_name == "target" {
+                    if dir_name.starts_with('.')
+                        || dir_name == "node_modules"
+                        || dir_name == "target"
+                    {
                         continue;
                     }
                 }
                 self.search_files_recursively_sync(&path, query, results, depth + 1)?;
             } else if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
-                if matches!(extension, "md" | "txt" | "rs" | "ts" | "js" | "py" | "java" | "cpp" | "c" | "h") {
+                if matches!(
+                    extension,
+                    "md" | "txt" | "rs" | "ts" | "js" | "py" | "java" | "cpp" | "c" | "h"
+                ) {
                     if let Ok(content) = std::fs::read_to_string(&path) {
                         if content.to_lowercase().contains(&query.to_lowercase()) {
-                            let title = path.file_name()
+                            let title = path
+                                .file_name()
                                 .and_then(|n| n.to_str())
                                 .unwrap_or("Unknown file");
 
                             // Extract relevant snippet
                             let lines: Vec<&str> = content.lines().collect();
-                            let snippet = lines.iter()
+                            let snippet = lines
+                                .iter()
                                 .find(|line| line.to_lowercase().contains(&query.to_lowercase()))
                                 .unwrap_or(&"Content found")
                                 .to_string();
@@ -509,20 +623,29 @@ impl ToolExecutor {
     /// Generate code from a prompt (fallback implementation)
     fn generate_code_from_prompt(&self, prompt: &str, language: &str) -> String {
         if prompt.to_lowercase().contains("react") && prompt.to_lowercase().contains("component") {
-            format!("// Generated {} React component from prompt: {}\n\
+            format!(
+                "// Generated {} React component from prompt: {}\n\
                      import React from 'react';\n\
                      \n\
                      export const MyComponent: React.FC = () => {{\n\
                      \treturn <div>Hello from generated component!</div>;\n\
-                     }};", language, prompt)
+                     }};",
+                language, prompt
+            )
         } else if prompt.to_lowercase().contains("function") {
-            format!("// Generated {} function from prompt: {}\n\
+            format!(
+                "// Generated {} function from prompt: {}\n\
                      export function generatedFunction() {{\n\
                      \tconsole.log('Generated function executed');\n\
-                     }}", language, prompt)
+                     }}",
+                language, prompt
+            )
         } else {
-            format!("// Generated {} code from prompt: {}\n\
-                     console.log('Generated code for: {}');", language, prompt, prompt)
+            format!(
+                "// Generated {} code from prompt: {}\n\
+                     console.log('Generated code for: {}');",
+                language, prompt, prompt
+            )
         }
     }
 }

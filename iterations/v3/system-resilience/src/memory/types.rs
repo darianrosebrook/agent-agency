@@ -3,8 +3,8 @@
 //! This module contains fundamental types for memory tracking, garbage collection,
 //! and memory analysis used throughout the memory management system.
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Object reference for garbage collection
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -178,13 +178,13 @@ pub struct MemoryLimitConfig {
 impl Default for MemoryLimitConfig {
     fn default() -> Self {
         Self {
-            max_heap_mb: 1024, // 1GB
-            max_stack_mb: 8,    // 8MB per thread
-            warning_threshold_percent: 0.75,  // 75%
+            max_heap_mb: 1024,                 // 1GB
+            max_stack_mb: 8,                   // 8MB per thread
+            warning_threshold_percent: 0.75,   // 75%
             critical_threshold_percent: 0.875, // 87.5%
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 800.0, // 800MB
-            monitoring_interval_ms: 5000, // 5 seconds
+            monitoring_interval_ms: 5000,    // 5 seconds
         }
     }
 }

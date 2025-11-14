@@ -3,11 +3,11 @@
 //! Assesses the credibility and reliability of information sources
 //! to determine trustworthiness for evidence collection.
 
-use schemars::JsonSchema;
-use std::collections::HashMap;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tracing::debug;
 
 use crate::evidence_types::*;
@@ -21,7 +21,6 @@ pub struct SourceAssessment {
     pub credibility: SourceCredibility,
     /// Assessment timestamp
     #[schemars(with = "String")]
-
     pub assessed_at: DateTime<Utc>,
     /// Assessment factors
     pub assessment_factors: Vec<String>,
@@ -60,7 +59,12 @@ impl SourceValidator {
     }
 
     /// Assess credibility of a source
-    pub async fn assess_source(&self, source_id: &str, _content: Option<&str>, context: &ProcessingContext) -> Result<SourceCredibility> {
+    pub async fn assess_source(
+        &self,
+        source_id: &str,
+        _content: Option<&str>,
+        context: &ProcessingContext,
+    ) -> Result<SourceCredibility> {
         debug!("Assessing credibility of source: {}", source_id);
 
         let mut authority_score = 0.5;
@@ -87,16 +91,21 @@ impl SourceValidator {
         let age_hours = (Utc::now() - context.timestamp).num_hours();
         let recency_score = if age_hours < 24 {
             1.0 // Very recent
-        } else if age_hours < 168 { // 1 week
+        } else if age_hours < 168 {
+            // 1 week
             0.8 // Recent
-        } else if age_hours < 720 { // 1 month
+        } else if age_hours < 720 {
+            // 1 month
             0.6 // Somewhat recent
         } else {
             0.3 // Old
         };
 
         // Calculate overall score
-        let overall_score = (authority_score * 0.3) + (reliability_score * 0.3) + (bias_score * 0.2) + (recency_score * 0.2);
+        let overall_score = (authority_score * 0.3)
+            + (reliability_score * 0.3)
+            + (bias_score * 0.2)
+            + (recency_score * 0.2);
 
         // Determine supporting and detracting factors
         let mut supporting_factors = Vec::new();
@@ -140,7 +149,12 @@ impl SourceValidator {
     }
 
     /// Validate source against known credibility criteria
-    pub async fn validate_source(&self, source_id: &str, content: Option<&str>, context: &ProcessingContext) -> Result<bool> {
+    pub async fn validate_source(
+        &self,
+        source_id: &str,
+        content: Option<&str>,
+        context: &ProcessingContext,
+    ) -> Result<bool> {
         let credibility = self.assess_source(source_id, content, context).await?;
 
         // Accept sources with credibility above threshold
@@ -151,7 +165,10 @@ impl SourceValidator {
     fn extract_domain(&self, source_id: &str) -> Option<String> {
         // Simple domain extraction - in reality this would be more sophisticated
         if let Some(at_pos) = source_id.find('@') {
-            source_id[at_pos + 1..].split('.').last().map(|s| s.to_string())
+            source_id[at_pos + 1..]
+                .split('.')
+                .last()
+                .map(|s| s.to_string())
         } else if source_id.contains('.') {
             source_id.split('.').last().map(|s| s.to_string())
         } else {
@@ -166,6 +183,7 @@ impl SourceValidator {
 
     /// Update credibility rating for a source
     pub fn update_credibility(&mut self, source_id: String, new_rating: f64) {
-        self.source_ratings.insert(source_id, new_rating.clamp(0.0, 1.0));
+        self.source_ratings
+            .insert(source_id, new_rating.clamp(0.0, 1.0));
     }
 }

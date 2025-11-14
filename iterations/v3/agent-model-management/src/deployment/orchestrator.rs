@@ -1,9 +1,9 @@
 //! Deployment orchestrator for model hot-swapping and traffic management
 
+use crate::deployment::LoadBalancer;
+use crate::models::ModelRegistry;
 use crate::types::*;
 use crate::ModelManagementError;
-use crate::models::ModelRegistry;
-use crate::deployment::LoadBalancer;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -54,10 +54,10 @@ impl Default for DeploymentConfig {
         Self {
             enable_performance_routing: true,
             enable_ab_testing: true,
-            draining_timeout_secs: 300, // 5 minutes
-            warmup_period_secs: 60,     // 1 minute
-            monitoring_interval_secs: 30, // 30 seconds
-            auto_rollback_threshold: 0.1, // 10% error rate
+            draining_timeout_secs: 300,         // 5 minutes
+            warmup_period_secs: 60,             // 1 minute
+            monitoring_interval_secs: 30,       // 30 seconds
+            auto_rollback_threshold: 0.1,       // 10% error rate
             quality_degradation_threshold: 0.1, // 10% quality drop
         }
     }
@@ -107,7 +107,11 @@ impl DeploymentOrchestrator {
     }
 
     /// Register a model for deployment management
-    pub async fn register_model(&self, model_id: &str, model_info: ModelInfo) -> Result<(), ModelManagementError> {
+    pub async fn register_model(
+        &self,
+        model_id: &str,
+        model_info: ModelInfo,
+    ) -> Result<(), ModelManagementError> {
         self.model_registry.register_model(model_info).await?;
 
         // Initialize deployment tracking
@@ -138,14 +142,18 @@ impl DeploymentOrchestrator {
     }
 
     /// Route an inference request through deployment logic
-    pub async fn route_inference_request(&self, model_id: &str, input: InferenceInput) -> Result<InferenceInput, ModelManagementError> {
+    pub async fn route_inference_request(
+        &self,
+        model_id: &str,
+        input: InferenceInput,
+    ) -> Result<InferenceInput, ModelManagementError> {
         debug!("Routing inference request for model {}", model_id);
-        
+
         // Use load balancer for traffic distribution
         if self.config.enable_performance_routing {
             self.load_balancer.route_request(model_id, &input).await?;
         }
-        
+
         Ok(input)
     }
 
@@ -165,8 +173,16 @@ impl DeploymentOrchestrator {
     }
 
     /// Perform a hot-swap operation
-    pub async fn perform_hot_swap(&self, model_id: &str, new_version: &str, strategy: HotSwapStrategy) -> Result<HotSwapResult, ModelManagementError> {
-        info!("Performing hot-swap for model {} to version {} using {:?}", model_id, new_version, strategy);
+    pub async fn perform_hot_swap(
+        &self,
+        model_id: &str,
+        new_version: &str,
+        strategy: HotSwapStrategy,
+    ) -> Result<HotSwapResult, ModelManagementError> {
+        info!(
+            "Performing hot-swap for model {} to version {} using {:?}",
+            model_id, new_version, strategy
+        );
 
         let _start_time = chrono::Utc::now();
 
@@ -178,11 +194,24 @@ impl DeploymentOrchestrator {
             HotSwapStrategy::Immediate => {
                 self.perform_immediate_swap(model_id, new_version).await?
             }
-            HotSwapStrategy::Gradual { steps, interval_secs } => {
-                self.perform_gradual_swap(model_id, new_version, steps, interval_secs).await?
+            HotSwapStrategy::Gradual {
+                steps,
+                interval_secs,
+            } => {
+                self.perform_gradual_swap(model_id, new_version, steps, interval_secs)
+                    .await?
             }
-            HotSwapStrategy::ABTest { test_duration_secs, success_threshold } => {
-                self.perform_ab_test_swap(model_id, new_version, test_duration_secs, success_threshold).await?
+            HotSwapStrategy::ABTest {
+                test_duration_secs,
+                success_threshold,
+            } => {
+                self.perform_ab_test_swap(
+                    model_id,
+                    new_version,
+                    test_duration_secs,
+                    success_threshold,
+                )
+                .await?
             }
             HotSwapStrategy::BlueGreen => {
                 self.perform_blue_green_swap(model_id, new_version).await?
@@ -190,14 +219,21 @@ impl DeploymentOrchestrator {
         };
 
         // Update deployment tracking
-        self.update_deployment_tracking(model_id, new_version, &result).await;
+        self.update_deployment_tracking(model_id, new_version, &result)
+            .await;
 
-        info!("Hot-swap completed for model {}: success={}", model_id, result.success);
+        info!(
+            "Hot-swap completed for model {}: success={}",
+            model_id, result.success
+        );
         Ok(result)
     }
 
     /// Get deployment status for a model
-    pub async fn get_deployment_status(&self, model_id: &str) -> Result<DeploymentStatus, ModelManagementError> {
+    pub async fn get_deployment_status(
+        &self,
+        model_id: &str,
+    ) -> Result<DeploymentStatus, ModelManagementError> {
         let deployments = self.active_deployments.read().await;
         match deployments.get(model_id) {
             Some(deployment) => Ok(deployment.status.clone()),
@@ -212,7 +248,11 @@ impl DeploymentOrchestrator {
     }
 
     /// Validate hot-swap parameters
-    async fn validate_hot_swap(&self, model_id: &str, new_version: &str) -> Result<(), ModelManagementError> {
+    async fn validate_hot_swap(
+        &self,
+        model_id: &str,
+        new_version: &str,
+    ) -> Result<(), ModelManagementError> {
         // Check if model is registered
         if !self.model_registry.model_exists(model_id).await? {
             return Err(ModelManagementError::ModelNotFound(model_id.to_string()));
@@ -225,22 +265,29 @@ impl DeploymentOrchestrator {
         // - [ ] Check version compatibility with existing infrastructure
         // - [ ] Ensure version metadata is properly recorded and auditable
         if new_version.is_empty() {
-            return Err(ModelManagementError::InvalidConfiguration("New version cannot be empty".to_string()));
+            return Err(ModelManagementError::InvalidConfiguration(
+                "New version cannot be empty".to_string(),
+            ));
         }
 
         Ok(())
     }
 
     /// Perform immediate hot-swap
-    async fn perform_immediate_swap(&self, model_id: &str, new_version: &str) -> Result<HotSwapResult, ModelManagementError> {
+    async fn perform_immediate_swap(
+        &self,
+        model_id: &str,
+        new_version: &str,
+    ) -> Result<HotSwapResult, ModelManagementError> {
         debug!("Performing immediate hot-swap for model {}", model_id);
 
         // Update deployment
-        self.update_deployment_version(model_id, new_version, 1.0).await;
+        self.update_deployment_version(model_id, new_version, 1.0)
+            .await;
 
         // Simulate performance measurement
         let performance_delta = PerformanceDelta {
-            latency_delta_ms: -5.0, // Assume 5ms improvement
+            latency_delta_ms: -5.0,  // Assume 5ms improvement
             throughput_delta: 10.0,  // 10% throughput increase
             error_rate_delta: -0.01, // 1% error rate reduction
             significance: 0.95,
@@ -257,7 +304,13 @@ impl DeploymentOrchestrator {
     }
 
     /// Perform gradual hot-swap
-    async fn perform_gradual_swap(&self, _model_id: &str, _new_version: &str, _steps: u32, _interval_secs: u64) -> Result<HotSwapResult, ModelManagementError> {
+    async fn perform_gradual_swap(
+        &self,
+        _model_id: &str,
+        _new_version: &str,
+        _steps: u32,
+        _interval_secs: u64,
+    ) -> Result<HotSwapResult, ModelManagementError> {
         // TODO: Implement actual gradual rollout strategy
         //       Currently returns mock result; should implement actual gradual rollout with step-by-step traffic shifting and monitoring.
         //
@@ -293,11 +346,15 @@ impl DeploymentOrchestrator {
         // - CAWS Tier: 1 (deployment feature)
         // - Change Budget: ~150 LOC
         // - Reviewer Requirements: Deployment and traffic management expertise
-        Ok(HotSwapResult { // Temporary: mock result until actual rollout
+        Ok(HotSwapResult {
+            // Temporary: mock result until actual rollout
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,
-            strategy: HotSwapStrategy::Gradual { steps: _steps, interval_secs: _interval_secs },
+            strategy: HotSwapStrategy::Gradual {
+                steps: _steps,
+                interval_secs: _interval_secs,
+            },
             performance_delta: PerformanceDelta {
                 latency_delta_ms: -2.0,
                 throughput_delta: 5.0,
@@ -309,7 +366,13 @@ impl DeploymentOrchestrator {
     }
 
     /// Perform A/B test hot-swap
-    async fn perform_ab_test_swap(&self, _model_id: &str, _new_version: &str, _test_duration_secs: u64, _success_threshold: f64) -> Result<HotSwapResult, ModelManagementError> {
+    async fn perform_ab_test_swap(
+        &self,
+        _model_id: &str,
+        _new_version: &str,
+        _test_duration_secs: u64,
+        _success_threshold: f64,
+    ) -> Result<HotSwapResult, ModelManagementError> {
         // TODO: Implement actual A/B testing infrastructure
         //       Currently returns mock result; should implement actual A/B testing with traffic splitting, statistical analysis, and winner selection.
         //
@@ -345,11 +408,15 @@ impl DeploymentOrchestrator {
         // - CAWS Tier: 1 (deployment feature)
         // - Change Budget: ~150 LOC
         // - Reviewer Requirements: A/B testing and statistics expertise
-        Ok(HotSwapResult { // Temporary: mock result until actual A/B testing
+        Ok(HotSwapResult {
+            // Temporary: mock result until actual A/B testing
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,
-            strategy: HotSwapStrategy::ABTest { test_duration_secs: _test_duration_secs, success_threshold: _success_threshold },
+            strategy: HotSwapStrategy::ABTest {
+                test_duration_secs: _test_duration_secs,
+                success_threshold: _success_threshold,
+            },
             performance_delta: PerformanceDelta {
                 latency_delta_ms: -3.0,
                 throughput_delta: 8.0,
@@ -361,7 +428,11 @@ impl DeploymentOrchestrator {
     }
 
     /// Perform blue-green hot-swap
-    async fn perform_blue_green_swap(&self, _model_id: &str, _new_version: &str) -> Result<HotSwapResult, ModelManagementError> {
+    async fn perform_blue_green_swap(
+        &self,
+        _model_id: &str,
+        _new_version: &str,
+    ) -> Result<HotSwapResult, ModelManagementError> {
         // TODO: Implement actual blue-green deployment strategy
         //       Currently returns mock result; should implement actual blue-green deployment with parallel environments and instant traffic switching.
         //
@@ -397,7 +468,8 @@ impl DeploymentOrchestrator {
         // - CAWS Tier: 1 (deployment feature)
         // - Change Budget: ~150 LOC
         // - Reviewer Requirements: Deployment and infrastructure expertise
-        Ok(HotSwapResult { // Temporary: mock result until actual blue-green deployment
+        Ok(HotSwapResult {
+            // Temporary: mock result until actual blue-green deployment
             model_id: _model_id.to_string(),
             new_version: _new_version.to_string(),
             success: true,
@@ -413,7 +485,12 @@ impl DeploymentOrchestrator {
     }
 
     /// Update deployment tracking
-    async fn update_deployment_tracking(&self, model_id: &str, new_version: &str, result: &HotSwapResult) {
+    async fn update_deployment_tracking(
+        &self,
+        model_id: &str,
+        new_version: &str,
+        result: &HotSwapResult,
+    ) {
         let mut deployments = self.active_deployments.write().await;
         if let Some(deployment) = deployments.get_mut(model_id) {
             deployment.previous_version = Some(deployment.current_version.clone());
@@ -429,7 +506,12 @@ impl DeploymentOrchestrator {
     }
 
     /// Update deployment version
-    async fn update_deployment_version(&self, model_id: &str, version: &str, traffic_allocation: f64) {
+    async fn update_deployment_version(
+        &self,
+        model_id: &str,
+        version: &str,
+        traffic_allocation: f64,
+    ) {
         let mut deployments = self.active_deployments.write().await;
         if let Some(deployment) = deployments.get_mut(model_id) {
             deployment.current_version = version.to_string();

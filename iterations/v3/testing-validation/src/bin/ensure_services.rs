@@ -11,7 +11,7 @@
 
 use clap::{Parser, ValueEnum};
 use testing_validation::services::ServiceManager;
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber;
 
 #[derive(Parser)]
@@ -55,8 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             for status in &statuses {
                 let icon = if status.healthy { "✅" } else { "❌" };
-                let status_text = if status.healthy { "Running" } else { "Not Running" };
-                
+                let status_text = if status.healthy {
+                    "Running"
+                } else {
+                    "Not Running"
+                };
+
                 println!("{} {}: {}", icon, status.name, status_text);
                 if let Some(endpoint) = &status.endpoint {
                     println!("   Endpoint: {}", endpoint);
@@ -90,7 +94,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 Ok(statuses) => {
                     println!("\n✅ All services started successfully:");
                     for status in &statuses {
-                        println!("  ✅ {}: {}", status.name, status.endpoint.as_ref().unwrap_or(&"N/A".to_string()));
+                        println!(
+                            "  ✅ {}: {}",
+                            status.name,
+                            status.endpoint.as_ref().unwrap_or(&"N/A".to_string())
+                        );
                     }
                     Ok(())
                 }
@@ -102,4 +110,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
     }
 }
-

@@ -1,18 +1,18 @@
 //! Web scraping coordination and management
 
-use std::sync::Arc;
-use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::sync::Arc;
+use tracing::{error, info, warn};
 use uuid::Uuid;
-use tracing::{info, warn, error};
 
-use crate::research_types::*;
 use crate::research_types::ConfigurationUpdate;
+use crate::research_types::*;
 use crate::WebScraper;
 use anyhow::Result;
 
-use super::processing::ContentProcessorManager;
 use super::events::EventEmitter;
+use super::processing::ContentProcessorManager;
 use super::ResearchEvent;
 
 /// Web scraping coordinator
@@ -74,7 +74,8 @@ impl ScrapingCoordinator {
             let url_owned = url.clone();
 
             let handle = tokio::spawn(async move {
-                Self::scrape_single_url(scraper, processor, event_emitter, &url_owned, query_id).await
+                Self::scrape_single_url(scraper, processor, event_emitter, &url_owned, query_id)
+                    .await
             });
 
             handles.push(handle);
@@ -120,7 +121,10 @@ impl ScrapingCoordinator {
         }
 
         // Add query-specific URLs if the query suggests web research
-        if query.query.contains("web") || query.query.contains("online") || query.query.contains("current") {
+        if query.query.contains("web")
+            || query.query.contains("online")
+            || query.query.contains("current")
+        {
             // TODO: Implement comprehensive query-specific URL extraction
             //       Currently relies on existing result URLs; should implement comprehensive extraction that adds default search URLs or extracts URLs from query for enhanced web research capabilities.
             //
@@ -170,9 +174,16 @@ impl ScrapingCoordinator {
 
         // Prioritize documentation and knowledge sources
         let priority_domains = [
-            "github.com", "docs.rs", "wikipedia.org", "stackoverflow.com",
-            "developer.mozilla.org", "web.dev", "developers.google.com",
-            "docs.microsoft.com", "kubernetes.io", "docker.com"
+            "github.com",
+            "docs.rs",
+            "wikipedia.org",
+            "stackoverflow.com",
+            "developer.mozilla.org",
+            "web.dev",
+            "developers.google.com",
+            "docs.microsoft.com",
+            "kubernetes.io",
+            "docker.com",
         ];
 
         for domain in &priority_domains {
@@ -182,10 +193,10 @@ impl ScrapingCoordinator {
         }
 
         // Scrape if content suggests it's a reference or external link
-        content.contains("see also") ||
-        content.contains("reference") ||
-        content.contains("documentation") ||
-        content.contains("docs")
+        content.contains("see also")
+            || content.contains("reference")
+            || content.contains("documentation")
+            || content.contains("docs")
     }
 
     /// Scrape a single URL
@@ -196,28 +207,37 @@ impl ScrapingCoordinator {
         url: &str,
         query_id: Uuid,
     ) -> Result<Option<ResearchResult>> {
-        event_emitter.emit(ResearchEvent::ScrapingStarted(url.to_string())).await;
+        event_emitter
+            .emit(ResearchEvent::ScrapingStarted(url.to_string()))
+            .await;
 
         match web_scraper.scrape_url(&url).await {
             Ok(scraping_result) => {
-                event_emitter.emit(ResearchEvent::ScrapingCompleted(
-                    url.to_string(),
-                    scraping_result.content.len()
-                )).await;
+                event_emitter
+                    .emit(ResearchEvent::ScrapingCompleted(
+                        url.to_string(),
+                        scraping_result.content.len(),
+                    ))
+                    .await;
 
                 // Process the scraped content
-                match content_processor.process_content(&scraping_result.content).await {
+                match content_processor
+                    .process_content(&scraping_result.content)
+                    .await
+                {
                     Ok(processed) => {
-                        let processed = processed.unwrap_or_else(|| crate::research_types::ContentProcessingResult {
-                            original_content: scraping_result.content.clone(),
-                            processed_content: scraping_result.content.clone(),
-                            extracted_text: scraping_result.content.clone(),
-                            summary: None,
-                            key_phrases: vec![],
-                            entities: vec![],
-                            links: vec![],
-                            processing_time_ms: 0,
-                            metadata: std::collections::HashMap::new(),
+                        let processed = processed.unwrap_or_else(|| {
+                            crate::research_types::ContentProcessingResult {
+                                original_content: scraping_result.content.clone(),
+                                processed_content: scraping_result.content.clone(),
+                                extracted_text: scraping_result.content.clone(),
+                                summary: None,
+                                key_phrases: vec![],
+                                entities: vec![],
+                                links: vec![],
+                                processing_time_ms: 0,
+                                metadata: std::collections::HashMap::new(),
+                            }
                         });
 
                         let result = ResearchResult {
@@ -242,7 +262,12 @@ impl ScrapingCoordinator {
                 }
             }
             Err(e) => {
-                event_emitter.emit(ResearchEvent::ScrapingFailed(url.to_string(), e.to_string())).await;
+                event_emitter
+                    .emit(ResearchEvent::ScrapingFailed(
+                        url.to_string(),
+                        e.to_string(),
+                    ))
+                    .await;
                 warn!("Failed to scrape URL {}: {}", url, e);
                 Ok(None)
             }

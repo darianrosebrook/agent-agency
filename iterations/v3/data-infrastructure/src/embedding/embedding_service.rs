@@ -1,9 +1,9 @@
 //! Main embedding service implementation
 
 use super::embedding_cache::*;
+use super::embedding_types::*;
 use super::provider::*;
 use super::similarity::*;
-use super::embedding_types::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -240,7 +240,7 @@ impl EmbeddingServiceFactory {
         tokenizer: std::sync::Arc<dyn crate::embedding::Tokenizer>,
     ) -> Box<dyn EmbeddingService> {
         use crate::embedding::provider::OnnxEmbeddingProvider;
-        
+
         let dimension = match model_name.as_str() {
             "embeddinggemma" => 768,
             _ => config.dimension,
@@ -273,7 +273,9 @@ impl EmbeddingServiceFactory {
             // - Configuration system (Required)
             // PRIORITY: Medium
             512,
-        ).await {
+        )
+        .await
+        {
             Ok(provider) => {
                 tracing::info!("ONNX Runtime embedding provider created successfully");
                 let provider = std::sync::Arc::new(provider);
@@ -286,7 +288,7 @@ impl EmbeddingServiceFactory {
             }
         }
     }
-    
+
     /// Create embedding service using CoreML provider (legacy fallback)
     ///
     /// Attempts to load CoreML embedding model, falls back to DummyEmbeddingProvider if unavailable.
@@ -303,7 +305,7 @@ impl EmbeddingServiceFactory {
         tokenizer: std::sync::Arc<dyn crate::embedding::Tokenizer>,
     ) -> Box<dyn EmbeddingService> {
         use crate::embedding::provider::CoreMLEmbeddingProvider;
-        
+
         let dimension = match model_name.as_str() {
             "embeddinggemma" => 768,
             _ => config.dimension,
@@ -315,7 +317,9 @@ impl EmbeddingServiceFactory {
             dimension,
             tokenizer,
             Some(config.batch_size),
-        ).await {
+        )
+        .await
+        {
             Ok(provider) => {
                 let provider = std::sync::Arc::new(provider);
                 let service = EmbeddingServiceImpl::new(provider, config);
@@ -349,12 +353,11 @@ impl EmbeddingServiceFactory {
         config: EmbeddingConfig,
         preferred_model: Option<String>,
     ) -> Box<dyn EmbeddingService> {
-        
-        use std::sync::Arc;
         use std::path::PathBuf;
+        use std::sync::Arc;
 
         let model_name = preferred_model.unwrap_or_else(|| "embeddinggemma".to_string());
-        
+
         // Try to find ONNX or CoreML model path (ONNX preferred for ANE acceleration)
         let model_result = std::env::var("COREML_EMBEDDING_MODEL_PATH")
             .map(|p| (PathBuf::from(p), "coreml"))
@@ -362,7 +365,7 @@ impl EmbeddingServiceFactory {
                 let base_path = std::env::var("COREML_MODELS_PATH")
                     .map(PathBuf::from)
                     .unwrap_or_else(|_| PathBuf::from("/Users/darianrosebrook/Desktop/Projects/agent-agency/models/coreml"));
-                
+
                 // Try embeddinggemma in various formats (priority order)
                 // 1. ONNX format (preferred for ANE acceleration via CoreMLExecutionProvider)
                 let gemma_onnx = base_path.join("embeddinggemma.onnx");
@@ -370,40 +373,48 @@ impl EmbeddingServiceFactory {
                     tracing::info!("Found embeddinggemma.onnx - using ONNX Runtime with ANE acceleration");
                     return Ok((gemma_onnx, "onnx"));
                 }
-                
+
                 // 2. ML Package format (ML Program)
                 let gemma_mlpackage = base_path.join("embeddinggemma.mlpackage");
                 if gemma_mlpackage.exists() {
                     return Ok((gemma_mlpackage, "coreml"));
                 }
-                
+
                 // 3. ML Model format (legacy Neural Network)
                 let gemma_mlmodel = base_path.join("embeddinggemma.mlmodel");
                 if gemma_mlmodel.exists() {
                     return Ok((gemma_mlmodel, "coreml"));
                 }
-                
+
                 // 4. GGUF format (from Ollama, may need conversion)
                 let gemma_gguf = base_path.join("embeddinggemma.gguf");
                 if gemma_gguf.exists() {
                     tracing::info!("Found embeddinggemma.gguf - may need conversion to .onnx/.mlmodel for inference");
                     return Ok((gemma_gguf, "coreml"));
                 }
-                
+
                 Err(())
             });
-        
+
         match model_result {
             Ok((path, model_type)) => {
                 // Try to load HuggingFace tokenizer from saved location
-                let tokenizer_path = path.parent()
+                let tokenizer_path = path
+                    .parent()
                     .map(|p| p.join("embeddinggemma_tokenizer").join("tokenizer.json"));
-                
-                let tokenizer: Arc<dyn crate::embedding::Tokenizer> = if let Some(ref tokenizer_path) = tokenizer_path {
+
+                let tokenizer: Arc<dyn crate::embedding::Tokenizer> = if let Some(
+                    ref tokenizer_path,
+                ) = tokenizer_path
+                {
                     if tokenizer_path.exists() {
-                        match crate::embedding::tokenization::HfTokenizer::from_file(tokenizer_path) {
+                        match crate::embedding::tokenization::HfTokenizer::from_file(tokenizer_path)
+                        {
                             Ok(hf_tokenizer) => {
-                                tracing::info!("Loaded HuggingFace tokenizer from {}", tokenizer_path.display());
+                                tracing::info!(
+                                    "Loaded HuggingFace tokenizer from {}",
+                                    tokenizer_path.display()
+                                );
                                 Arc::new(hf_tokenizer)
                             }
                             Err(e) => {
@@ -412,20 +423,28 @@ impl EmbeddingServiceFactory {
                             }
                         }
                     } else {
-                        tracing::info!("Tokenizer not found at {}, using SimpleTokenizer", tokenizer_path.display());
+                        tracing::info!(
+                            "Tokenizer not found at {}, using SimpleTokenizer",
+                            tokenizer_path.display()
+                        );
                         Arc::new(crate::embedding::tokenization::SimpleTokenizer::new())
                     }
                 } else {
                     tracing::info!("Using SimpleTokenizer (tokenizer path not available)");
                     Arc::new(crate::embedding::tokenization::SimpleTokenizer::new())
                 };
-                
+
                 // Use ONNX Runtime or CoreML service based on model type
                 match model_type {
                     "onnx" => Self::create_onnx_service(path, model_name, config, tokenizer).await,
-                    "coreml" => Self::create_coreml_service(path, model_name, config, tokenizer).await,
+                    "coreml" => {
+                        Self::create_coreml_service(path, model_name, config, tokenizer).await
+                    }
                     _ => {
-                        tracing::warn!("Unknown model type: {}, falling back to DummyEmbeddingProvider", model_type);
+                        tracing::warn!(
+                            "Unknown model type: {}, falling back to DummyEmbeddingProvider",
+                            model_type
+                        );
                         Self::create_dummy_service(config)
                     }
                 }
@@ -438,7 +457,7 @@ impl EmbeddingServiceFactory {
     }
 
     /// Create embedding service using DummyEmbeddingProvider
-    /// 
+    ///
     /// PLACEHOLDER: Will be replaced with CoreML-based embeddings
     /// TODO: Implement CoreML embedding provider (see todo-1762001962177-gg7fpzx98)
     pub fn create_dummy_service(config: EmbeddingConfig) -> Box<dyn EmbeddingService> {

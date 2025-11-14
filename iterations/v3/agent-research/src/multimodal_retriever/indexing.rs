@@ -1,15 +1,14 @@
 //! Document and image indexing functionality
 
-use std::path::Path;
 use anyhow::Result;
+use std::path::Path;
 
 use super::text_search::TextSearchEngine;
 use super::visual_search::VisualSearchEngine;
 
-/// Document indexer for managing content indexing
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+/// Document indexer for managing content indexing
+use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct DocumentIndexer {
     text_engine: super::text_search::TextSearchEngine,
@@ -35,7 +34,11 @@ impl DocumentIndexer {
     }
 
     /// Index an image
-    pub async fn index_image(&mut self, image_path: &Path, metadata: super::core::VisualSearchResult) -> Result<()> {
+    pub async fn index_image(
+        &mut self,
+        image_path: &Path,
+        metadata: super::core::VisualSearchResult,
+    ) -> Result<()> {
         // Index in visual search engine
         self.visual_engine.index_image(image_path, metadata).await
     }

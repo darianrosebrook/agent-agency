@@ -30,7 +30,7 @@ pub fn create_research_task(
 /// Infer task type from description
 fn infer_task_type(description: &str) -> TaskType {
     let desc_lower = description.to_lowercase();
-    
+
     if desc_lower.contains("test") || desc_lower.contains("spec") {
         TaskType::Testing
     } else if desc_lower.contains("refactor") || desc_lower.contains("restructure") {
@@ -77,12 +77,12 @@ mod tests {
             infer_task_type("Write unit tests for the API"),
             TaskType::Testing
         );
-        
+
         assert_eq!(
             infer_task_type("Refactor the authentication module"),
             TaskType::CodeRefactor
         );
-        
+
         assert_eq!(
             infer_task_type("Generate a user login component"),
             TaskType::CodeGeneration
@@ -96,7 +96,7 @@ mod tests {
             "Test task description".to_string(),
             Some("Test context".to_string()),
         );
-        
+
         assert_eq!(task.description, "Test task description");
         assert_eq!(task.refinement_context.len(), 1);
         assert_eq!(task.refinement_context[0], "Test context");
@@ -112,7 +112,7 @@ mod tests {
             constraints: HashMap::new(),
             refinement_context: vec!["context".to_string()],
         };
-        
+
         let simple: SimpleTask = research_task.into();
         assert_eq!(simple.description, "Test task");
         assert_eq!(simple.context, Some("context".to_string()));

@@ -184,7 +184,9 @@ impl CircuitBreaker {
         CircuitBreakerMetrics {
             total_requests: self.total_requests.load(Ordering::SeqCst),
             successful_requests: self.successful_requests.load(Ordering::SeqCst),
-            failed_requests: self.total_requests.load(Ordering::SeqCst) - self.successful_requests.load(Ordering::SeqCst) - self.rejected_requests.load(Ordering::SeqCst),
+            failed_requests: self.total_requests.load(Ordering::SeqCst)
+                - self.successful_requests.load(Ordering::SeqCst)
+                - self.rejected_requests.load(Ordering::SeqCst),
             rejected_requests: self.rejected_requests.load(Ordering::SeqCst),
             current_state: *self.state.read().await,
             last_failure_time: *self.last_failure_time.read().await,
@@ -225,7 +227,10 @@ impl ResilientHttpClient {
     }
 
     /// Make a request with circuit breaker protection
-    pub async fn request(&self, request_builder: reqwest::RequestBuilder) -> Result<reqwest::Response, ResilientHttpError> {
+    pub async fn request(
+        &self,
+        request_builder: reqwest::RequestBuilder,
+    ) -> Result<reqwest::Response, ResilientHttpError> {
         if !self.circuit_breaker.should_allow_request().await {
             self.circuit_breaker.record_rejection().await;
             return Err(ResilientHttpError::CircuitOpen);

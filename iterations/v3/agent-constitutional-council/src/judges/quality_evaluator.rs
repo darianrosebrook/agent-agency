@@ -19,17 +19,19 @@
 //! 3. **LLM Quality Analysis**: Use inference for requirements completeness review
 //! 4. **Verdict Merging**: Combine automated metrics with expert assessment
 
-use std::sync::Arc;
 use async_trait::async_trait;
+use std::sync::Arc;
 use tracing::debug;
 
 use agent_agency_contracts::{
-    JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, judge_io::Severity, RubricItem,
+    judge_io::Severity, JudgeEngine, JudgePrompt, JudgeType, JudgeVerdict, RubricItem,
+    VerdictLabel, Violation,
 };
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::common::{JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
+use super::common::{
+    EvidenceBuilder, JudgeUtils, RubricBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA,
+};
+use crate::{CouncilError, CouncilResult, ReviewContext};
 
 /// Quality Evaluator for testing and requirements completeness
 #[derive(Debug)]
@@ -42,15 +44,19 @@ pub struct QualityEvaluator {
 #[derive(Debug)]
 pub struct QualityRubric {
     /// Testing criteria
+    #[allow(dead_code)] // Reserved for v4 features
     testing_items: Vec<RubricItem>,
 
     /// Requirements criteria
+    #[allow(dead_code)] // Reserved for v4 features
     requirements_items: Vec<RubricItem>,
 
     /// Documentation criteria
+    #[allow(dead_code)] // Reserved for v4 features
     documentation_items: Vec<RubricItem>,
 
     /// Reliability criteria
+    #[allow(dead_code)] // Reserved for v4 features
     reliability_items: Vec<RubricItem>,
 }
 
@@ -121,9 +127,7 @@ impl QualityRubric {
 impl QualityEvaluator {
     /// Create new quality evaluator
     pub fn new(engine: Arc<dyn JudgeEngine>) -> Self {
-        Self {
-            engine,
-        }
+        Self { engine }
     }
 
     /// Build the complete quality rubric
@@ -150,12 +154,18 @@ impl QualityEvaluator {
     fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
 
-        let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+        let spec_text = format!(
+            "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
             ctx.working_spec.title,
             ctx.working_spec.description,
             ctx.working_spec.goals.join("\n- "),
-            ctx.working_spec.acceptance_criteria.iter()
-                .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+            ctx.working_spec
+                .acceptance_criteria
+                .iter()
+                .map(|ac| format!(
+                    "{}: Given {}, When {}, Then {}",
+                    ac.id, ac.given, ac.when, ac.then
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
@@ -176,7 +186,8 @@ impl QualityEvaluator {
                 rule_id: "QUALITY-REQ-001".to_string(),
                 severity: Severity::High,
                 waivable: false,
-                description: "No acceptance criteria defined for requirements validation".to_string(),
+                description: "No acceptance criteria defined for requirements validation"
+                    .to_string(),
             });
         }
 
@@ -228,11 +239,17 @@ impl super::common::Judge for QualityEvaluator {
         prompt: JudgePrompt,
         violations: Vec<Violation>,
     ) -> CouncilResult<JudgeVerdict> {
-        debug!("📊 Quality Evaluator reviewing spec {}", ctx.working_spec.id);
+        debug!(
+            "📊 Quality Evaluator reviewing spec {}",
+            ctx.working_spec.id
+        );
 
         // STEP 4: Execute engine
         let req = JudgeUtils::build_request(prompt, 256);
-        let llm_verdict = self.engine.complete(req).await
+        let llm_verdict = self
+            .engine
+            .complete(req)
+            .await
             .map_err(|e| CouncilError::Engine(e))?;
 
         // STEP 5: Merge findings

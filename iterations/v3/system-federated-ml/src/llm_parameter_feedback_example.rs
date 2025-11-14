@@ -51,18 +51,18 @@ impl LLMParameterFeedbackExample {
     ) -> Result<String> {
         // 1. Get constraints for this task
         let constraints = self.get_constraints_for_task_type(task_type);
-        
+
         // 2. Check rollout phase
         let should_apply = self.rollout_manager
             .should_apply(task_type, 0.8) // Min confidence
             .await?;
-        
+
         let params = if should_apply {
             // 3. Get optimized parameters
             let recommendations = self.parameter_optimizer
                 .recommend_parameters(task_type, task_features, &constraints)
                 .await?;
-            
+
             if recommendations.deployment_safe {
                 recommendations.set
             } else {
@@ -73,14 +73,14 @@ impl LLMParameterFeedbackExample {
             // Use baseline parameters
             self.get_baseline_parameters(task_type).await?
         };
-        
+
         // 4. Execute generation with parameters
         let request_id = Uuid::new_v4();
         let response = self.execute_generation(prompt, &params, request_id).await?;
-        
+
         // 5. Record outcome for learning
         let outcome = self.measure_outcome(&response, &params).await?;
-        
+
         // 6. Record for counterfactual logging and learning
         self.parameter_optimizer
             .record_outcome(
@@ -92,12 +92,12 @@ impl LLMParameterFeedbackExample {
                 0.8, // Propensity from bandit policy
             )
             .await?;
-        
+
         // 7. Check for auto-rollback
         self.rollout_manager
             .check_and_rollback(task_type, &[outcome])
             .await?;
-        
+
         Ok(response.content)
     }
 
@@ -138,7 +138,7 @@ impl LLMParameterFeedbackExample {
     /// Get baseline parameters for a task type
     async fn get_baseline_parameters(&self, task_type: &str) -> Result<ParameterSet> {
         use chrono::Utc;
-        
+
         Ok(ParameterSet {
             temperature: 0.7,
             max_tokens: 1000,
@@ -162,14 +162,14 @@ impl LLMParameterFeedbackExample {
     ) -> Result<GenerationResponse> {
         // This would integrate with the actual LLM client
         // For this example, we'll simulate the response
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Simulate LLM generation
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         let latency = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(GenerationResponse {
             request_id,
             content: format!("Generated response for: {}", prompt),
@@ -191,13 +191,13 @@ impl LLMParameterFeedbackExample {
     ) -> Result<TaskOutcome> {
         // Simulate quality measurement
         let quality_score = self.estimate_quality(&response.content);
-        
+
         // Simulate latency measurement
         let latency_ms = 100; // Would be measured from actual generation
-        
+
         // Simulate CAWS compliance check
         let caws_compliance = self.check_caws_compliance(&response.content);
-        
+
         Ok(TaskOutcome {
             quality_score,
             latency_ms,
@@ -295,7 +295,7 @@ impl LLMParameterFeedbackExample {
     fn convert_to_used_parameters(&self, params: &ParameterSet) -> crate::orchestration::planning::llm_client::UsedParameters {
         use crate::orchestration::planning::llm_client::UsedParameters;
         use chrono::Utc;
-        
+
         UsedParameters {
             model_name: Some("gpt-4".to_string()),
             temperature: params.temperature,
@@ -326,21 +326,21 @@ impl LLMParameterFeedbackExample {
     pub async fn run_offline_evaluation(&self, task_type: &str) -> Result<()> {
         // This would run offline evaluation using the counterfactual logger
         // to validate that the learned policy improves over baseline
-        
+
         let evaluator = self.cf_logger.evaluator();
         let decisions = evaluator.get_decisions(task_type)?;
-        
+
         if decisions.len() < 100 {
             return Err(anyhow::anyhow!("Insufficient data for offline evaluation: {} decisions", decisions.len()));
         }
-        
+
         // Run offline evaluation
         let policy = ThompsonGaussian::new();
         let result = evaluator.evaluate_ips(&policy, task_type)?;
-        
-        println!("Offline evaluation result for {}: {:.3} estimated reward (CI: {:.3}-{:.3})", 
+
+        println!("Offline evaluation result for {}: {:.3} estimated reward (CI: {:.3}-{:.3})",
                  task_type, result.estimated_reward, result.confidence_interval.0, result.confidence_interval.1);
-        
+
         Ok(())
     }
 }

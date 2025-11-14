@@ -62,15 +62,11 @@ impl InMemoryVectorSearchEngine {
 
     /// Simple text similarity using Jaccard coefficient on words
     fn text_similarity(query: &str, text: &str) -> f32 {
-        let query_words: std::collections::HashSet<_> = query
-            .split_whitespace()
-            .map(|w| w.to_lowercase())
-            .collect();
+        let query_words: std::collections::HashSet<_> =
+            query.split_whitespace().map(|w| w.to_lowercase()).collect();
 
-        let text_words: std::collections::HashSet<_> = text
-            .split_whitespace()
-            .map(|w| w.to_lowercase())
-            .collect();
+        let text_words: std::collections::HashSet<_> =
+            text.split_whitespace().map(|w| w.to_lowercase()).collect();
 
         let intersection = query_words.intersection(&text_words).count();
         let union = query_words.union(&text_words).count();
@@ -85,7 +81,12 @@ impl InMemoryVectorSearchEngine {
 
 #[async_trait]
 impl VectorSearchEngine for InMemoryVectorSearchEngine {
-    async fn vector_search(&self, query_embedding: &[f32], top_k: usize, filters: &SearchFilters) -> MemoryResult<Vec<SearchResult>> {
+    async fn vector_search(
+        &self,
+        query_embedding: &[f32],
+        top_k: usize,
+        filters: &SearchFilters,
+    ) -> MemoryResult<Vec<SearchResult>> {
         let start_time = std::time::Instant::now();
         let index = self.index.read().await;
 
@@ -97,7 +98,7 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
                 SearchResult {
                     memory_id: memory_id.clone(),
                     score: similarity,
-                    rank: 0, // Will be set after sorting
+                    rank: 0,                              // Will be set after sorting
                     memory_data: serde_json::Value::Null, // Would be populated from actual memory data
                     metadata: SearchMetadata {
                         search_type: SearchType::VectorOnly,
@@ -111,7 +112,11 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
             .collect();
 
         // Sort by similarity score (descending)
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Limit to top_k
         results.truncate(top_k);
@@ -129,7 +134,12 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
         Ok(results)
     }
 
-    async fn text_search(&self, query_text: &str, top_k: usize, filters: &SearchFilters) -> MemoryResult<Vec<SearchResult>> {
+    async fn text_search(
+        &self,
+        query_text: &str,
+        top_k: usize,
+        filters: &SearchFilters,
+    ) -> MemoryResult<Vec<SearchResult>> {
         let start_time = std::time::Instant::now();
         let index = self.index.read().await;
 
@@ -155,7 +165,11 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
             .collect();
 
         // Sort by similarity score (descending)
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Limit to top_k
         results.truncate(top_k);
@@ -173,7 +187,11 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
         Ok(results)
     }
 
-    async fn hybrid_search(&self, query: &SearchQuery, config: &VectorSearchConfig) -> MemoryResult<SearchResponse> {
+    async fn hybrid_search(
+        &self,
+        query: &SearchQuery,
+        config: &VectorSearchConfig,
+    ) -> MemoryResult<SearchResponse> {
         let start_time = std::time::Instant::now();
 
         // Simple hybrid: average of vector and text scores
@@ -181,15 +199,20 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
         let mut text_results = Vec::new();
 
         if let Some(embedding) = &query.embedding {
-            vector_results = self.vector_search(embedding, config.default_top_k, &query.filters).await?;
+            vector_results = self
+                .vector_search(embedding, config.default_top_k, &query.filters)
+                .await?;
         }
 
         if let Some(text) = &query.text {
-            text_results = self.text_search(text, config.default_top_k, &query.filters).await?;
+            text_results = self
+                .text_search(text, config.default_top_k, &query.filters)
+                .await?;
         }
 
         // Combine results by memory ID
-        let mut combined_results: HashMap<crate::memory_types::MemoryId, SearchResult> = HashMap::new();
+        let mut combined_results: HashMap<crate::memory_types::MemoryId, SearchResult> =
+            HashMap::new();
 
         for result in vector_results {
             combined_results.insert(result.memory_id.clone(), result);
@@ -226,11 +249,16 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
             }
         }
 
-        let mut final_results: Vec<SearchResult> = combined_results.into_iter()
+        let mut final_results: Vec<SearchResult> = combined_results
+            .into_iter()
             .map(|(_, result)| result)
             .collect();
 
-        final_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        final_results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         final_results.truncate(config.default_top_k);
 
         // Update ranks
@@ -249,9 +277,17 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
         })
     }
 
-    async fn index_memory(&self, memory_id: &crate::memory_types::MemoryId, embedding: &[f32], text_content: &str) -> MemoryResult<()> {
+    async fn index_memory(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+        embedding: &[f32],
+        text_content: &str,
+    ) -> MemoryResult<()> {
         let mut index = self.index.write().await;
-        index.insert(memory_id.clone(), (embedding.to_vec(), text_content.to_string()));
+        index.insert(
+            memory_id.clone(),
+            (embedding.to_vec(), text_content.to_string()),
+        );
 
         let mut stats = self.stats.write().await;
         stats.total_memories_indexed = index.len();
@@ -259,7 +295,10 @@ impl VectorSearchEngine for InMemoryVectorSearchEngine {
         Ok(())
     }
 
-    async fn remove_from_index(&self, memory_id: &crate::memory_types::MemoryId) -> MemoryResult<()> {
+    async fn remove_from_index(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+    ) -> MemoryResult<()> {
         let mut index = self.index.write().await;
         index.remove(memory_id);
 

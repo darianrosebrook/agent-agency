@@ -1,19 +1,18 @@
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 /**
  * Keystore Module - P0-8 Implementation
  *
  * Secure key management system with encryption, access control, and audit logging.
  * Provides keystore functionality for API keys, certificates, and sensitive credentials.
  */
-
 use schemars::JsonSchema;
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Key types supported by the keystore
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -37,10 +36,8 @@ pub struct KeyMetadata {
     pub description: Option<String>,
     pub owner: String,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
     pub access_count: u64,
@@ -141,7 +138,8 @@ pub trait Keystore: Send + Sync {
     async fn rotate_key(&self, key_id: &Uuid, requester: &str) -> KeystoreResult<Uuid>;
 
     /// Get key metadata without decrypting
-    async fn get_key_metadata(&self, key_id: &Uuid, requester: &str) -> KeystoreResult<KeyMetadata>;
+    async fn get_key_metadata(&self, key_id: &Uuid, requester: &str)
+        -> KeystoreResult<KeyMetadata>;
 }
 
 /// Production keystore implementation
@@ -188,7 +186,14 @@ impl ProductionKeystore {
     }
 
     /// Log access for audit purposes
-    async fn log_access(&self, key_id: &Uuid, requester: &str, operation: &str, success: bool, error: Option<&str>) {
+    async fn log_access(
+        &self,
+        key_id: &Uuid,
+        requester: &str,
+        operation: &str,
+        success: bool,
+        error: Option<&str>,
+    ) {
         let entry = AccessLogEntry {
             timestamp: Utc::now(),
             key_id: *key_id,
@@ -208,7 +213,12 @@ impl ProductionKeystore {
     }
 
     /// Check if requester has permission for operation
-    fn check_permission(&self, metadata: &KeyMetadata, permission: &KeyPermission, requester: &str) -> bool {
+    fn check_permission(
+        &self,
+        metadata: &KeyMetadata,
+        permission: &KeyPermission,
+        requester: &str,
+    ) -> bool {
         // Owner always has full access
         if metadata.owner == requester {
             return true;
@@ -220,7 +230,9 @@ impl ProductionKeystore {
 
     /// Check if key is expired
     fn is_expired(&self, metadata: &KeyMetadata) -> bool {
-        metadata.expires_at.map_or(false, |expires| Utc::now() > expires)
+        metadata
+            .expires_at
+            .map_or(false, |expires| Utc::now() > expires)
     }
 
     /// Generate a cryptographically secure random key
@@ -230,7 +242,8 @@ impl ProductionKeystore {
 
         let rng = SystemRandom::new();
         let mut key = vec![0u8; length];
-        rng.fill(&mut key).expect("Failed to generate secure random key");
+        rng.fill(&mut key)
+            .expect("Failed to generate secure random key");
         key
     }
 }
@@ -283,24 +296,31 @@ impl Keystore for ProductionKeystore {
 
     async fn get_key(&self, key_id: &Uuid, requester: &str) -> KeystoreResult<Vec<u8>> {
         let keys = self.keys.read().await;
-        let entry = keys.get(key_id)
-            .ok_or_else(|| KeystoreError::KeyNotFound {
-                key_id: key_id.to_string()
-            })?;
+        let entry = keys.get(key_id).ok_or_else(|| KeystoreError::KeyNotFound {
+            key_id: key_id.to_string(),
+        })?;
 
         // Check permissions
         if !self.check_permission(&entry.metadata, &KeyPermission::Read, requester) {
-            self.log_access(key_id, requester, "get_key", false, Some("permission denied")).await;
+            self.log_access(
+                key_id,
+                requester,
+                "get_key",
+                false,
+                Some("permission denied"),
+            )
+            .await;
             return Err(KeystoreError::PermissionDenied {
-                permission: KeyPermission::Read
+                permission: KeyPermission::Read,
             });
         }
 
         // Check expiration
         if self.is_expired(&entry.metadata) {
-            self.log_access(key_id, requester, "get_key", false, Some("key expired")).await;
+            self.log_access(key_id, requester, "get_key", false, Some("key expired"))
+                .await;
             return Err(KeystoreError::KeyExpired {
-                key_id: key_id.to_string()
+                key_id: key_id.to_string(),
             });
         }
 
@@ -316,7 +336,8 @@ impl Keystore for ProductionKeystore {
             entry.metadata.updated_at = Utc::now();
         }
 
-        self.log_access(key_id, requester, "get_key", true, None).await;
+        self.log_access(key_id, requester, "get_key", true, None)
+            .await;
         Ok(decrypted)
     }
 
@@ -331,16 +352,24 @@ impl Keystore for ProductionKeystore {
         requester: &str,
     ) -> KeystoreResult<()> {
         let mut keys = self.keys.write().await;
-        let entry = keys.get_mut(key_id)
+        let entry = keys
+            .get_mut(key_id)
             .ok_or_else(|| KeystoreError::KeyNotFound {
-                key_id: key_id.to_string()
+                key_id: key_id.to_string(),
             })?;
 
         // Check permissions
         if !self.check_permission(&entry.metadata, &KeyPermission::Write, requester) {
-            self.log_access(key_id, requester, "update_key", false, Some("permission denied")).await;
+            self.log_access(
+                key_id,
+                requester,
+                "update_key",
+                false,
+                Some("permission denied"),
+            )
+            .await;
             return Err(KeystoreError::PermissionDenied {
-                permission: KeyPermission::Write
+                permission: KeyPermission::Write,
             });
         }
 
@@ -362,7 +391,8 @@ impl Keystore for ProductionKeystore {
         entry.metadata.expires_at = expires_at;
         entry.metadata.updated_at = Utc::now();
 
-        self.log_access(key_id, requester, "update_key", true, None).await;
+        self.log_access(key_id, requester, "update_key", true, None)
+            .await;
         Ok(())
     }
 
@@ -372,19 +402,27 @@ impl Keystore for ProductionKeystore {
         // Check if key exists and permissions
         if let Some(entry) = keys.get(key_id) {
             if !self.check_permission(&entry.metadata, &KeyPermission::Delete, requester) {
-                self.log_access(key_id, requester, "delete_key", false, Some("permission denied")).await;
+                self.log_access(
+                    key_id,
+                    requester,
+                    "delete_key",
+                    false,
+                    Some("permission denied"),
+                )
+                .await;
                 return Err(KeystoreError::PermissionDenied {
-                    permission: KeyPermission::Delete
+                    permission: KeyPermission::Delete,
                 });
             }
         } else {
             return Err(KeystoreError::KeyNotFound {
-                key_id: key_id.to_string()
+                key_id: key_id.to_string(),
             });
         }
 
         keys.remove(key_id);
-        self.log_access(key_id, requester, "delete_key", true, None).await;
+        self.log_access(key_id, requester, "delete_key", true, None)
+            .await;
         Ok(())
     }
 
@@ -397,11 +435,12 @@ impl Keystore for ProductionKeystore {
     ) -> KeystoreResult<Vec<KeyMetadata>> {
         let keys = self.keys.read().await;
 
-        let filtered: Vec<KeyMetadata> = keys.values()
+        let filtered: Vec<KeyMetadata> = keys
+            .values()
             .filter(|entry| {
                 // Check ownership or read permission
-                entry.metadata.owner == requester ||
-                entry.metadata.permissions.contains(&KeyPermission::Read)
+                entry.metadata.owner == requester
+                    || entry.metadata.permissions.contains(&KeyPermission::Read)
             })
             .filter(|entry| {
                 // Apply filters
@@ -411,7 +450,9 @@ impl Keystore for ProductionKeystore {
                     }
                 }
                 if let Some(type_filter) = key_type {
-                    if std::mem::discriminant(&entry.metadata.key_type) != std::mem::discriminant(type_filter) {
+                    if std::mem::discriminant(&entry.metadata.key_type)
+                        != std::mem::discriminant(type_filter)
+                    {
                         return false;
                     }
                 }
@@ -439,39 +480,44 @@ impl Keystore for ProductionKeystore {
 
         // Store as new key
         let keys = self.keys.read().await;
-        let current_entry = keys.get(key_id)
-            .ok_or_else(|| KeystoreError::KeyNotFound {
-                key_id: key_id.to_string()
-            })?;
+        let current_entry = keys.get(key_id).ok_or_else(|| KeystoreError::KeyNotFound {
+            key_id: key_id.to_string(),
+        })?;
 
-        let new_key_id = self.store_key(
-            &format!("{}_rotated", current_entry.metadata.name),
-            current_entry.metadata.key_type.clone(),
-            &new_value,
-            &current_entry.metadata.owner,
-            current_entry.metadata.permissions.clone(),
-            current_entry.metadata.description.as_deref(),
-            current_entry.metadata.tags.clone(),
-            current_entry.metadata.expires_at,
-        ).await?;
+        let new_key_id = self
+            .store_key(
+                &format!("{}_rotated", current_entry.metadata.name),
+                current_entry.metadata.key_type.clone(),
+                &new_value,
+                &current_entry.metadata.owner,
+                current_entry.metadata.permissions.clone(),
+                current_entry.metadata.description.as_deref(),
+                current_entry.metadata.tags.clone(),
+                current_entry.metadata.expires_at,
+            )
+            .await?;
 
         info!("Rotated key {} -> {}", key_id, new_key_id);
-        self.log_access(key_id, requester, "rotate_key", true, None).await;
+        self.log_access(key_id, requester, "rotate_key", true, None)
+            .await;
 
         Ok(new_key_id)
     }
 
-    async fn get_key_metadata(&self, key_id: &Uuid, requester: &str) -> KeystoreResult<KeyMetadata> {
+    async fn get_key_metadata(
+        &self,
+        key_id: &Uuid,
+        requester: &str,
+    ) -> KeystoreResult<KeyMetadata> {
         let keys = self.keys.read().await;
-        let entry = keys.get(key_id)
-            .ok_or_else(|| KeystoreError::KeyNotFound {
-                key_id: key_id.to_string()
-            })?;
+        let entry = keys.get(key_id).ok_or_else(|| KeystoreError::KeyNotFound {
+            key_id: key_id.to_string(),
+        })?;
 
         // Check read permission for metadata access
         if !self.check_permission(&entry.metadata, &KeyPermission::Read, requester) {
             return Err(KeystoreError::PermissionDenied {
-                permission: KeyPermission::Read
+                permission: KeyPermission::Read,
             });
         }
 

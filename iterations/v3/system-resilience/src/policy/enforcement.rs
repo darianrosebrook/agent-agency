@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::Codec;
 use crate::policy::CawsPolicy;
+use crate::recovery_types::Codec;
 
 /// CAWS policy enforcement engine
 pub struct PolicyEnforcer {
@@ -102,11 +102,15 @@ impl PolicyEnforcer {
         let hard_limit = (max_size as f64 * self.policy.storage.hard_limit_ratio) as u64;
 
         if new_total > hard_limit {
-            return Ok(StorageCheckResult::Rejected(StorageRejectionReason::HardLimitExceeded));
+            return Ok(StorageCheckResult::Rejected(
+                StorageRejectionReason::HardLimitExceeded,
+            ));
         }
 
         if new_total > soft_limit {
-            return Ok(StorageCheckResult::Warning(StorageWarningReason::SoftLimitExceeded));
+            return Ok(StorageCheckResult::Warning(
+                StorageWarningReason::SoftLimitExceeded,
+            ));
         }
 
         Ok(StorageCheckResult::Allowed)
@@ -116,12 +120,16 @@ impl PolicyEnforcer {
     pub fn check_session_creation(&self, session_id: &str) -> Result<SessionCheckResult> {
         // Check session count limit
         if self.sessions.len() >= self.policy.retention.max_sessions as usize {
-            return Ok(SessionCheckResult::Rejected(SessionRejectionReason::MaxSessionsExceeded));
+            return Ok(SessionCheckResult::Rejected(
+                SessionRejectionReason::MaxSessionsExceeded,
+            ));
         }
 
         // Check if session already exists
         if self.sessions.contains_key(session_id) {
-            return Ok(SessionCheckResult::Rejected(SessionRejectionReason::SessionExists));
+            return Ok(SessionCheckResult::Rejected(
+                SessionRejectionReason::SessionExists,
+            ));
         }
 
         Ok(SessionCheckResult::Allowed)
@@ -132,7 +140,9 @@ impl PolicyEnforcer {
         if let Some(session) = self.sessions.get(session_id) {
             // Check if session is protected
             if session.protected {
-                return Ok(SessionDeletionCheckResult::Rejected(SessionDeletionRejectionReason::ProtectedSession));
+                return Ok(SessionDeletionCheckResult::Rejected(
+                    SessionDeletionRejectionReason::ProtectedSession,
+                ));
             }
 
             // Check if session is too new (within retention period)
@@ -141,7 +151,9 @@ impl PolicyEnforcer {
             let min_retention_seconds = self.policy.retention.min_days as u64 * 24 * 60 * 60;
 
             if session_age < min_retention_seconds {
-                return Ok(SessionDeletionCheckResult::Rejected(SessionDeletionRejectionReason::RetentionPeriodNotMet));
+                return Ok(SessionDeletionCheckResult::Rejected(
+                    SessionDeletionRejectionReason::RetentionPeriodNotMet,
+                ));
             }
 
             Ok(SessionDeletionCheckResult::Allowed)
@@ -164,12 +176,14 @@ impl PolicyEnforcer {
 
     /// Check if storage is over soft limit
     pub fn is_over_soft_limit(&self) -> bool {
-        self.policy.is_over_soft_limit(self.storage_usage.total_bytes)
+        self.policy
+            .is_over_soft_limit(self.storage_usage.total_bytes)
     }
 
     /// Check if storage is over hard limit
     pub fn is_over_hard_limit(&self) -> bool {
-        self.policy.is_over_hard_limit(self.storage_usage.total_bytes)
+        self.policy
+            .is_over_hard_limit(self.storage_usage.total_bytes)
     }
 
     /// Update storage usage
@@ -361,48 +375,69 @@ impl OperationEnforcer {
             StorageCheckResult::Allowed => Ok(EnforcementAction::Allow),
             StorageCheckResult::Warning(reason) => {
                 if self.config.enable_warnings {
-                    Ok(EnforcementAction::Warn(format!("Storage warning: {:?}", reason)))
+                    Ok(EnforcementAction::Warn(format!(
+                        "Storage warning: {:?}",
+                        reason
+                    )))
                 } else {
                     Ok(EnforcementAction::Allow)
                 }
             }
             StorageCheckResult::Rejected(reason) => {
                 if self.config.enable_rejections {
-                    Ok(EnforcementAction::Reject(format!("Storage operation rejected: {:?}", reason)))
+                    Ok(EnforcementAction::Reject(format!(
+                        "Storage operation rejected: {:?}",
+                        reason
+                    )))
                 } else {
-                    Ok(EnforcementAction::ManualIntervention(format!("Storage operation requires intervention: {:?}", reason)))
+                    Ok(EnforcementAction::ManualIntervention(format!(
+                        "Storage operation requires intervention: {:?}",
+                        reason
+                    )))
                 }
             }
         }
     }
 
     /// Enforce policy for a session operation
-    pub fn enforce_session_operation(&mut self, session_id: &str, operation: SessionOperation) -> Result<EnforcementAction> {
+    pub fn enforce_session_operation(
+        &mut self,
+        session_id: &str,
+        operation: SessionOperation,
+    ) -> Result<EnforcementAction> {
         match operation {
-            SessionOperation::Create => {
-                match self.enforcer.check_session_creation(session_id)? {
-                    SessionCheckResult::Allowed => Ok(EnforcementAction::Allow),
-                    SessionCheckResult::Rejected(reason) => {
-                        if self.config.enable_rejections {
-                            Ok(EnforcementAction::Reject(format!("Session creation rejected: {:?}", reason)))
-                        } else {
-                            Ok(EnforcementAction::ManualIntervention(format!("Session creation requires intervention: {:?}", reason)))
-                        }
+            SessionOperation::Create => match self.enforcer.check_session_creation(session_id)? {
+                SessionCheckResult::Allowed => Ok(EnforcementAction::Allow),
+                SessionCheckResult::Rejected(reason) => {
+                    if self.config.enable_rejections {
+                        Ok(EnforcementAction::Reject(format!(
+                            "Session creation rejected: {:?}",
+                            reason
+                        )))
+                    } else {
+                        Ok(EnforcementAction::ManualIntervention(format!(
+                            "Session creation requires intervention: {:?}",
+                            reason
+                        )))
                     }
                 }
-            }
-            SessionOperation::Delete => {
-                match self.enforcer.check_session_deletion(session_id)? {
-                    SessionDeletionCheckResult::Allowed => Ok(EnforcementAction::Allow),
-                    SessionDeletionCheckResult::Rejected(reason) => {
-                        if self.config.enable_rejections {
-                            Ok(EnforcementAction::Reject(format!("Session deletion rejected: {:?}", reason)))
-                        } else {
-                            Ok(EnforcementAction::ManualIntervention(format!("Session deletion requires intervention: {:?}", reason)))
-                        }
+            },
+            SessionOperation::Delete => match self.enforcer.check_session_deletion(session_id)? {
+                SessionDeletionCheckResult::Allowed => Ok(EnforcementAction::Allow),
+                SessionDeletionCheckResult::Rejected(reason) => {
+                    if self.config.enable_rejections {
+                        Ok(EnforcementAction::Reject(format!(
+                            "Session deletion rejected: {:?}",
+                            reason
+                        )))
+                    } else {
+                        Ok(EnforcementAction::ManualIntervention(format!(
+                            "Session deletion requires intervention: {:?}",
+                            reason
+                        )))
                     }
                 }
-            }
+            },
         }
     }
 
@@ -434,11 +469,11 @@ mod tests {
     fn test_storage_operation_check() {
         let policy = CawsPolicy::new();
         let enforcer = PolicyEnforcer::new(policy);
-        
+
         // Test allowed operation
         let result = enforcer.check_storage_operation(1024).unwrap();
         assert!(matches!(result, StorageCheckResult::Allowed));
-        
+
         // Test warning case - use size between soft limit (409.6MB) and hard limit (486.4MB)
         // Default policy: max_size_bytes = 512MB, soft_limit_ratio = 0.8, hard_limit_ratio = 0.95
         // Soft limit = 512MB * 0.8 = 409.6MB, Hard limit = 512MB * 0.95 = 486.4MB
@@ -452,11 +487,11 @@ mod tests {
     fn test_session_creation_check() {
         let policy = CawsPolicy::new();
         let enforcer = PolicyEnforcer::new(policy.clone());
-        
+
         // Test allowed creation
         let result = enforcer.check_session_creation("session1").unwrap();
         assert!(matches!(result, SessionCheckResult::Allowed));
-        
+
         // Test duplicate session
         let mut enforcer = PolicyEnforcer::new(policy.clone());
         enforcer.add_session(SessionInfo {
@@ -468,7 +503,7 @@ mod tests {
             labels: Vec::new(),
             protected: false,
         });
-        
+
         let result = enforcer.check_session_creation("session1").unwrap();
         assert!(matches!(result, SessionCheckResult::Rejected(_)));
     }
@@ -477,7 +512,7 @@ mod tests {
     fn test_label_protection() {
         let policy = CawsPolicy::new();
         let enforcer = PolicyEnforcer::new(policy);
-        
+
         assert!(enforcer.is_label_protected("release/v1.0.0"));
         assert!(enforcer.is_label_protected("postmortem/incident-2024"));
         assert!(!enforcer.is_label_protected("feature/new-feature"));
@@ -487,7 +522,7 @@ mod tests {
     fn test_compression_config() {
         let policy = CawsPolicy::new();
         let enforcer = PolicyEnforcer::new(policy);
-        
+
         let (codec, level) = enforcer.get_compression_config("test.txt");
         assert_eq!(codec, Codec::Zstd);
         assert_eq!(level, 4);
@@ -499,13 +534,15 @@ mod tests {
         let enforcer = PolicyEnforcer::new(policy.clone());
         let config = OperationConfig::default();
         let mut operation_enforcer = OperationEnforcer::new(enforcer, config);
-        
+
         // Test storage operation
         let action = operation_enforcer.enforce_storage_operation(1024).unwrap();
         assert!(matches!(action, EnforcementAction::Allow));
-        
+
         // Test session operation
-        let action = operation_enforcer.enforce_session_operation("session1", SessionOperation::Create).unwrap();
+        let action = operation_enforcer
+            .enforce_session_operation("session1", SessionOperation::Create)
+            .unwrap();
         assert!(matches!(action, EnforcementAction::Allow));
     }
 }

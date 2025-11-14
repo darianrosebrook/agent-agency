@@ -48,11 +48,18 @@ where
 
         if memory_pressure_ratio >= 1.0 {
             // Critical: hard limit exceeded, immediate eviction
-            tracing::warn!("Memory cache exceeded hard limit: {}MB >= {}MB", current_memory_mb, self.max_memory_mb);
+            tracing::warn!(
+                "Memory cache exceeded hard limit: {}MB >= {}MB",
+                current_memory_mb,
+                self.max_memory_mb
+            );
             self.evict_lru();
         } else if memory_pressure_ratio >= 0.9 {
             // High pressure: aggressive eviction
-            tracing::info!("Memory cache high pressure: {:.1}% utilization", memory_pressure_ratio * 100.0);
+            tracing::info!(
+                "Memory cache high pressure: {:.1}% utilization",
+                memory_pressure_ratio * 100.0
+            );
             // Evict more aggressively under high pressure
             for _ in 0..3 {
                 if self.estimate_memory_usage() / (1024 * 1024) >= self.max_memory_mb as u64 {
@@ -63,7 +70,10 @@ where
             }
         } else if memory_pressure_ratio >= 0.8 {
             // Moderate pressure: standard eviction
-            tracing::debug!("Memory cache moderate pressure: {:.1}% utilization", memory_pressure_ratio * 100.0);
+            tracing::debug!(
+                "Memory cache moderate pressure: {:.1}% utilization",
+                memory_pressure_ratio * 100.0
+            );
             self.evict_lru();
         }
 
@@ -128,7 +138,8 @@ where
         // Account for HashMap overhead (capacity * entry size)
         // HashMap typically has ~2x capacity for efficiency
         let hashmap_capacity = self.cache.capacity();
-        let hashmap_overhead = hashmap_capacity as u64 * std::mem::size_of::<(K, (V, Instant))>() as u64;
+        let hashmap_overhead =
+            hashmap_capacity as u64 * std::mem::size_of::<(K, (V, Instant))>() as u64;
         total_bytes += hashmap_overhead;
 
         // Account for actual cache entries
@@ -161,9 +172,8 @@ where
         let now = Instant::now();
         let ttl_duration = Duration::from_secs(self.ttl_seconds);
 
-        self.cache.retain(|_, (_, timestamp)| {
-            now.duration_since(*timestamp) < ttl_duration
-        });
+        self.cache
+            .retain(|_, (_, timestamp)| now.duration_since(*timestamp) < ttl_duration);
     }
 }
 

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// Ensemble learning orchestrator
 
-#[derive(Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize)]
 pub struct LearningAlgorithms {
     #[serde(skip)]
     algorithms: HashMap<LearningAlgorithmType, Box<dyn LearningAlgorithm>>,
@@ -16,7 +16,10 @@ impl std::fmt::Debug for LearningAlgorithms {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LearningAlgorithms")
             .field("algorithm_count", &self.algorithms.len())
-            .field("algorithm_types", &self.algorithms.keys().collect::<Vec<_>>())
+            .field(
+                "algorithm_types",
+                &self.algorithms.keys().collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -36,7 +39,10 @@ impl LearningAlgorithms {
         algorithm: A,
     ) -> Result<(), String> {
         if self.algorithms.contains_key(&algorithm_type) {
-            return Err(format!("Algorithm type {:?} already registered", algorithm_type));
+            return Err(format!(
+                "Algorithm type {:?} already registered",
+                algorithm_type
+            ));
         }
 
         self.algorithms.insert(algorithm_type, Box::new(algorithm));
@@ -44,7 +50,10 @@ impl LearningAlgorithms {
     }
 
     /// Get a registered algorithm
-    pub fn get_algorithm(&self, algorithm_type: &LearningAlgorithmType) -> Option<&dyn LearningAlgorithm> {
+    pub fn get_algorithm(
+        &self,
+        algorithm_type: &LearningAlgorithmType,
+    ) -> Option<&dyn LearningAlgorithm> {
         self.algorithms.get(algorithm_type).map(|a| a.as_ref())
     }
 
@@ -72,10 +81,9 @@ pub trait LearningAlgorithm: Send + Sync {
     fn update_from_feedback(&mut self, feedback: &LearningFeedback) -> Result<(), String>;
 }
 
-
 /// Ensemble analytics and component tracking
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EnsembleAnalytics {
     component_stats: Vec<EnsembleComponentStatistics>,
     overall_performance: HashMap<String, f64>,
@@ -101,14 +109,14 @@ impl EnsembleAnalytics {
         }
 
         // Simple diversity calculation based on performance variance
-        let accuracies: Vec<f64> = self.component_stats.iter()
-            .map(|s| s.accuracy)
-            .collect();
+        let accuracies: Vec<f64> = self.component_stats.iter().map(|s| s.accuracy).collect();
 
         let mean_accuracy = accuracies.iter().sum::<f64>() / accuracies.len() as f64;
-        let variance = accuracies.iter()
+        let variance = accuracies
+            .iter()
             .map(|acc| (acc - mean_accuracy).powi(2))
-            .sum::<f64>() / accuracies.len() as f64;
+            .sum::<f64>()
+            / accuracies.len() as f64;
 
         // Higher variance = more diverse (normalized)
         (variance * 100.0).min(1.0)
@@ -154,16 +162,19 @@ impl EnsembleAnalytics {
         if self.component_stats.is_empty() {
             0.0
         } else {
-            let avg_f1 = self.component_stats.iter()
-                .map(|s| s.f1_score)
-                .sum::<f64>() / self.component_stats.len() as f64;
+            let avg_f1 = self.component_stats.iter().map(|s| s.f1_score).sum::<f64>()
+                / self.component_stats.len() as f64;
             avg_f1
         }
     }
 
     /// Get component contributions for ensemble prediction
-    pub fn get_component_contributions(&self, prediction_context: &str) -> Vec<ComponentContribution> {
-        self.component_stats.iter()
+    pub fn get_component_contributions(
+        &self,
+        prediction_context: &str,
+    ) -> Vec<ComponentContribution> {
+        self.component_stats
+            .iter()
             .enumerate()
             .map(|(i, stats)| {
                 let weight = if stats.accuracy > 0.8 {
@@ -178,7 +189,10 @@ impl EnsembleAnalytics {
                     component_id: stats.component_id.clone(),
                     weight,
                     confidence: stats.accuracy,
-                    prediction: serde_json::Value::String(format!("prediction_from_{}", stats.component_id)),
+                    prediction: serde_json::Value::String(format!(
+                        "prediction_from_{}",
+                        stats.component_id
+                    )),
                 }
             })
             .collect()
@@ -187,16 +201,25 @@ impl EnsembleAnalytics {
     /// Generate ensemble analytics summary
     pub fn generate_analytics(&self) -> EnsembleAnalytics {
         let mut analytics = EnsembleAnalytics::new();
-        analytics.overall_performance.insert("diversity_score".to_string(), self.calculate_diversity_score());
-        analytics.overall_performance.insert("stability_score".to_string(), self.calculate_stability_score());
-        analytics.overall_performance.insert("component_count".to_string(), self.component_stats.len() as f64);
+        analytics.overall_performance.insert(
+            "diversity_score".to_string(),
+            self.calculate_diversity_score(),
+        );
+        analytics.overall_performance.insert(
+            "stability_score".to_string(),
+            self.calculate_stability_score(),
+        );
+        analytics.overall_performance.insert(
+            "component_count".to_string(),
+            self.component_stats.len() as f64,
+        );
         analytics
     }
 }
 
 /// Problem characteristics analysis
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProblemCharacteristicsAnalyzer {
     characteristics_cache: HashMap<String, ProblemCharacteristics>,
 }
@@ -209,13 +232,18 @@ impl ProblemCharacteristicsAnalyzer {
     }
 
     /// Analyze problem characteristics
-    pub fn analyze(&mut self, problem_id: &str, data: &LearningDataPoint) -> ProblemCharacteristics {
+    pub fn analyze(
+        &mut self,
+        problem_id: &str,
+        data: &LearningDataPoint,
+    ) -> ProblemCharacteristics {
         if let Some(cached) = self.characteristics_cache.get(problem_id) {
             return cached.clone();
         }
 
         let characteristics = self.compute_characteristics(data);
-        self.characteristics_cache.insert(problem_id.to_string(), characteristics.clone());
+        self.characteristics_cache
+            .insert(problem_id.to_string(), characteristics.clone());
         characteristics
     }
 
@@ -286,4 +314,3 @@ impl ProblemCharacteristicsAnalyzer {
         }
     }
 }
-

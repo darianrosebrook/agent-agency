@@ -25,9 +25,12 @@ mod tests {
                 "max_files": 10,
                 "max_loc": 500
             }
-        }).to_string();
+        })
+        .to_string();
 
-        let result = checker.check_compliance(&task).await
+        let result = checker
+            .check_compliance(&task)
+            .await
             .expect("Compliance check should succeed");
 
         // Should return a check result
@@ -75,4 +78,3 @@ mod tests {
         }
     }
 }
-

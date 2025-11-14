@@ -8,8 +8,8 @@
 /// ANE Framework FFI Bindings
 /// Real ANE API bindings for Apple Silicon hardware
 pub mod ane_framework {
-    use std::os::raw::c_void;
     use schemars::JsonSchema;
+    use std::os::raw::c_void;
 
     /// ANE Device handle (opaque pointer)
     pub type ANEDeviceRef = *mut c_void;
@@ -26,7 +26,7 @@ pub mod ane_framework {
     /// ANE Performance Statistics
     #[repr(C)]
     #[derive(Debug, Clone, JsonSchema)]
-pub struct ANEPerformanceStats {
+    pub struct ANEPerformanceStats {
         pub total_operations: u64,
         pub active_operations: u32,
         pub average_latency_us: u32,
@@ -37,7 +37,7 @@ pub struct ANEPerformanceStats {
     /// ANE Device Information
     #[repr(C)]
     #[derive(Debug, Clone, JsonSchema)]
-pub struct ANEDeviceInfo {
+    pub struct ANEDeviceInfo {
         pub version: u32,
         pub memory_size_mb: u32,
         pub compute_units: u32,
@@ -50,7 +50,7 @@ pub struct ANEDeviceInfo {
     /// ANE Error codes
     #[repr(C)]
     #[derive(Debug, Clone, PartialEq, JsonSchema)]
-pub enum ANEError {
+    pub enum ANEError {
         Success = 0,
         InvalidParameter = -1,
         DeviceNotFound = -2,
@@ -94,7 +94,10 @@ pub enum ANEError {
         ) -> ANEError;
 
         /// Get performance statistics
-        pub fn ANEGetPerformanceStats(device: ANEDeviceRef, stats: *mut ANEPerformanceStats) -> ANEError;
+        pub fn ANEGetPerformanceStats(
+            device: ANEDeviceRef,
+            stats: *mut ANEPerformanceStats,
+        ) -> ANEError;
 
         /// Wait for operation completion
         pub fn ANEWaitCompletion(queue: ANECommandQueueRef, timeout_ms: u32) -> ANEError;
@@ -128,10 +131,7 @@ pub mod core_ml_bridge {
         pub fn core_ml_release_model(model: *mut c_void);
 
         /// Get Core ML model metadata
-        pub fn core_ml_get_model_info(
-            model: *mut c_void,
-            info_json: *mut *mut c_char,
-        ) -> c_int;
+        pub fn core_ml_get_model_info(model: *mut c_void, info_json: *mut *mut c_char) -> c_int;
 
         /// Convert Core ML model to ANE format
         pub fn core_ml_convert_to_ane(model_path: *const c_char, ane_path: *const c_char) -> c_int;
@@ -165,12 +165,12 @@ pub mod swift_ai_bridge {
         pub fn swift_ai_release_model(model: *mut c_void);
 
         /// Get Swift AI performance metrics
-        pub fn swift_ai_get_metrics(
-            model: *mut c_void,
-            metrics_json: *mut *mut c_char,
-        ) -> c_int;
+        pub fn swift_ai_get_metrics(model: *mut c_void, metrics_json: *mut *mut c_char) -> c_int;
 
         /// Optimize Swift AI model for ANE
-        pub fn swift_ai_optimize_for_ane(model_path: *const c_char, optimized_path: *const c_char) -> c_int;
+        pub fn swift_ai_optimize_for_ane(
+            model_path: *const c_char,
+            optimized_path: *const c_char,
+        ) -> c_int;
     }
 }

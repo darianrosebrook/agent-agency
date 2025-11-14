@@ -10,34 +10,40 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::path::PathBuf;
-use std::collections::HashMap;
-use uuid::Uuid;
 use chrono::Utc;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use uuid::Uuid;
 
-use agent_agency_contracts::WorkingSpec;
-use agent_agency_contracts::planning_io::{Milestone, MilestonePriority, MilestoneScope, EvidenceGate};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
-use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::final_verdict::FinalVerdictContract;
+use agent_agency_contracts::planning_io::{
+    EvidenceGate, Milestone, MilestonePriority, MilestoneScope,
+};
+use agent_agency_contracts::types::prelude::*;
+use agent_agency_contracts::WorkingSpec;
 
-use agent_orchestration::orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig, ExecutionResult};
-use agent_orchestration::planning::plan_generator::PlanGenerator;
-use agent_orchestration::planning::plan_executor::PlanExecutor;
-use agent_orchestration::planning::parallel_coordinator::ParallelCoordinator;
-use agent_orchestration::planning::refinement_loop::RefinementLoopCoordinator;
-use agent_orchestration::planning::worktree_manager::{WorktreeManager, WorktreeManagerConfig};
-use agent_orchestration::planning::caws_debate_scorer::CawsDebateScorer;
-use agent_orchestration::planning::caws_adjudication_cycle::CawsAdjudicationCycle;
-use agent_orchestration::planning::worker_lifecycle_manager::WorkerLifecycleManager;
-use agent_orchestration::planning::council_integration::{CouncilIntegration, CouncilIntegrationImpl};
-use agent_orchestration::workers::execution_bridge::WorkerExecutionBridge;
-use agent_orchestration::council::{Council, CouncilConfig, create_default_council};
+use agent_orchestration::council::{create_default_council, Council, CouncilConfig};
+use agent_orchestration::judge_backup::backup_types::JudgeType;
 use agent_orchestration::judge_backup::mock::{MockJudge, VerdictStrategy};
 use agent_orchestration::judge_backup::types::JudgeConfig;
-use agent_orchestration::judge_backup::backup_types::JudgeType;
+use agent_orchestration::orchestration::unified_orchestrator::{
+    ExecutionResult, UnifiedOrchestrator, UnifiedOrchestratorConfig,
+};
+use agent_orchestration::planning::caws_adjudication_cycle::CawsAdjudicationCycle;
+use agent_orchestration::planning::caws_debate_scorer::CawsDebateScorer;
+use agent_orchestration::planning::council_integration::{
+    CouncilIntegration, CouncilIntegrationImpl,
+};
+use agent_orchestration::planning::parallel_coordinator::ParallelCoordinator;
+use agent_orchestration::planning::plan_executor::PlanExecutor;
+use agent_orchestration::planning::plan_generator::PlanGenerator;
+use agent_orchestration::planning::refinement_loop::RefinementLoopCoordinator;
+use agent_orchestration::planning::worker_lifecycle_manager::WorkerLifecycleManager;
+use agent_orchestration::planning::worktree_manager::{WorktreeManager, WorktreeManagerConfig};
 use agent_orchestration::verdict_aggregation::VerdictAggregator;
+use agent_orchestration::workers::execution_bridge::WorkerExecutionBridge;
 use agent_workers::{MCPWorkerPool, TaskExecutor, WorkerPoolConfig};
 
 /// Create a test working spec
@@ -58,15 +64,13 @@ fn create_test_working_spec() -> WorkingSpec {
             }),
             scope_restrictions: None,
         },
-        acceptance_criteria: vec![
-            agent_agency_contracts::working_spec::AcceptanceCriterion {
-                id: "A1".to_string(),
-                given: "Feature is implemented".to_string(),
-                when: "User interacts with feature".to_string(),
-                then: "Feature works correctly".to_string(),
-                priority: None,
-            },
-        ],
+        acceptance_criteria: vec![agent_agency_contracts::working_spec::AcceptanceCriterion {
+            id: "A1".to_string(),
+            given: "Feature is implemented".to_string(),
+            when: "User interacts with feature".to_string(),
+            then: "Feature works correctly".to_string(),
+            priority: None,
+        }],
         test_plan: agent_agency_contracts::TestPlan {
             unit_tests: vec![agent_agency_contracts::working_spec::UnitTestSpec {
                 description: "test_feature_basic".to_string(),
@@ -94,46 +98,44 @@ fn create_test_working_spec() -> WorkingSpec {
         quality_gates: None,
         scope: vec![],
         metadata: None,
-        milestones: vec![
-            Milestone {
-                id: "milestone-1".to_string(),
-                objective: "Implement core feature".to_string(),
-                scope: MilestoneScope {
-                    files: vec!["src/feature.rs".to_string()],
-                    directories: vec![],
-                    included_paths: vec![],
-                    excluded_paths: vec![],
-                    will_modify: true,
-                    allowed_operations: vec!["read".to_string(), "write".to_string()],
-                    parallelism: None,
-                    resource_requirements: HashMap::new(),
-                },
-                interfaces: vec![],
-                tests: vec![],
-                evidence_gate: EvidenceGate {
-                    min_coverage: 0.8,
-                    min_branch_coverage: 0.7,
-                    min_mutation_score: 0.0,
-                    security_scan_required: false,
-                    performance_budget: None,
-                    required_artifacts: vec![],
-                    custom_validations: vec![],
-                },
-                quality_gates: vec![],
-                dependencies: vec![],
-                estimated_duration: Some(30),
-                rollback_plan: "git revert".to_string(),
-                state: agent_agency_contracts::planning_io::MilestoneState::Pending,
-                assigned_workers: vec![],
-                estimated_effort: 2.0,
-                priority: MilestonePriority::Normal,
-                risk_tier: 2,
-                is_blocking: false,
-                blocking_reason: None,
-                metrics: None,
-                metadata: HashMap::new(),
+        milestones: vec![Milestone {
+            id: "milestone-1".to_string(),
+            objective: "Implement core feature".to_string(),
+            scope: MilestoneScope {
+                files: vec!["src/feature.rs".to_string()],
+                directories: vec![],
+                included_paths: vec![],
+                excluded_paths: vec![],
+                will_modify: true,
+                allowed_operations: vec!["read".to_string(), "write".to_string()],
+                parallelism: None,
+                resource_requirements: HashMap::new(),
             },
-        ],
+            interfaces: vec![],
+            tests: vec![],
+            evidence_gate: EvidenceGate {
+                min_coverage: 0.8,
+                min_branch_coverage: 0.7,
+                min_mutation_score: 0.0,
+                security_scan_required: false,
+                performance_budget: None,
+                required_artifacts: vec![],
+                custom_validations: vec![],
+            },
+            quality_gates: vec![],
+            dependencies: vec![],
+            estimated_duration: Some(30),
+            rollback_plan: "git revert".to_string(),
+            state: agent_agency_contracts::planning_io::MilestoneState::Pending,
+            assigned_workers: vec![],
+            estimated_effort: 2.0,
+            priority: MilestonePriority::Normal,
+            risk_tier: 2,
+            is_blocking: false,
+            blocking_reason: None,
+            metrics: None,
+            metadata: HashMap::new(),
+        }],
         change_budget: agent_agency_contracts::planning_io::ChangeBudget {
             max_files: 10,
             max_loc: 500,
@@ -162,7 +164,8 @@ async fn create_test_orchestrator() -> anyhow::Result<UnifiedOrchestrator> {
         session_timeout_seconds: 300,
         min_judges_required: 2,
         max_judges_per_session: 4,
-        judge_selection_strategy: agent_orchestration::council::JudgeSelectionStrategy::AllAvailable,
+        judge_selection_strategy:
+            agent_orchestration::council::JudgeSelectionStrategy::AllAvailable,
         consensus_strategy: agent_orchestration::decision_making::ConsensusStrategy::Majority,
         risk_thresholds: agent_orchestration::decision_making::RiskThresholds::default(),
         enable_parallel_reviews: true,
@@ -213,7 +216,8 @@ async fn create_test_orchestrator() -> anyhow::Result<UnifiedOrchestrator> {
     ));
 
     // Create worker lifecycle manager
-    let worker_lifecycle_manager = Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
+    let worker_lifecycle_manager =
+        Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
 
     // Create worktree manager
     let worktree_config = WorktreeManagerConfig {
@@ -272,9 +276,11 @@ async fn create_test_orchestrator() -> anyhow::Result<UnifiedOrchestrator> {
     // let worker_pool = Arc::new(MCPWorkerPool::new(WorkerPoolConfig::default()).await);
     // let task_executor = Arc::new(TaskExecutor::new(/* config */));
     // let worker_bridge = Arc::new(WorkerExecutionBridge::new(worker_pool, task_executor));
-    
+
     // Placeholder - actual implementation requires proper setup
-    return Err(anyhow::anyhow!("Test orchestrator creation requires proper worker pool setup"));
+    return Err(anyhow::anyhow!(
+        "Test orchestrator creation requires proper worker pool setup"
+    ));
 
     // The code below is unreachable but kept for reference of what's needed:
     /*
@@ -333,7 +339,7 @@ async fn test_unified_orchestration_end_to_end() {
     // This test requires proper setup of all components
     println!("Integration test: Unified Orchestration End-to-End Flow");
     println!("=========================================================");
-    
+
     // Test would verify:
     // 1. Plan generation succeeds
     // 2. Council review approves plan
@@ -341,7 +347,7 @@ async fn test_unified_orchestration_end_to_end() {
     // 4. Council presentation receives artifacts
     // 5. Refinement loop works if needed
     // 6. Merge completes successfully
-    
+
     // TODO: Implement comprehensive unified orchestrator integration test
     //       Currently a placeholder test structure; should implement comprehensive integration test that includes mock worker pool returning ExecutionArtifacts, mock plan generator creating ExecutionPlan, and proper setup of all dependencies for full test coverage.
     //
@@ -385,24 +391,27 @@ async fn test_unified_orchestration_end_to_end() {
 async fn test_plan_generation_and_council_review() {
     // Test that plan generation and council review work together
     let working_spec = create_test_working_spec();
-    
+
     // Verify working spec is valid
     assert_eq!(working_spec.id, "TEST-001");
     assert_eq!(working_spec.milestones.len(), 1);
     assert_eq!(working_spec.risk_tier, 2);
-    
+
     // Test would verify:
     // 1. PlanGenerator creates ExecutionPlan from WorkingSpec
     // 2. CouncilIntegration.review_plan() approves the plan
     // 3. Plan is ready for execution
-    
-    assert!(true, "Plan generation and council review structure verified");
+
+    assert!(
+        true,
+        "Plan generation and council review structure verified"
+    );
 }
 
 #[tokio::test]
 async fn test_worker_lifecycle_management() {
     // Test worker lifecycle: assignment → execution → completion → presentation
-    
+
     // Create test milestone
     let milestone = Milestone {
         id: "test-milestone".to_string(),
@@ -442,23 +451,23 @@ async fn test_worker_lifecycle_management() {
         metrics: None,
         metadata: HashMap::new(),
     };
-    
+
     // Test would verify:
     // 1. WorkerLifecycleManager.handle_assignment() tracks assignment
     // 2. Worker execution produces ExecutionArtifacts
     // 3. WorkerLifecycleManager.handle_completion() triggers council presentation
     // 4. Council receives artifacts for review
-    
+
     assert!(true, "Worker lifecycle management structure verified");
 }
 
 #[tokio::test]
 async fn test_worktree_isolation() {
     // Test that worktrees are created and isolated properly
-    
+
     let config = WorktreeManagerConfig::default();
     let manager = WorktreeManager::new(config);
-    
+
     let milestone = Milestone {
         id: "test-milestone".to_string(),
         objective: "Test".to_string(),
@@ -497,85 +506,85 @@ async fn test_worktree_isolation() {
         metrics: None,
         metadata: HashMap::new(),
     };
-    
+
     let worker_id = Uuid::new_v4();
-    
+
     // Test would verify:
     // 1. WorktreeManager.create_worktree() creates isolated worktree
     // 2. Worktree path is unique per worker
     // 3. Worktree cleanup works correctly
-    
+
     // Note: Actual worktree creation requires git repository
     // This test structure documents the expected behavior
-    
+
     assert!(true, "Worktree isolation structure verified");
 }
 
 #[tokio::test]
 async fn test_caws_adjudication_cycle() {
     // Test that CAWS Adjudication Cycle executes all 5 stages
-    
+
     // Test would verify:
     // 1. Pleading stage: Worker presents completed work
     // 2. Examination stage: Council reviews evidence
     // 3. Deliberation stage: Council debates
     // 4. Verdict stage: Council reaches decision
     // 5. Publication stage: Verdict published and work merged
-    
+
     let working_spec = create_test_working_spec();
-    
+
     // Create test artifacts
     let artifacts = ExecutionArtifacts::default();
-    
+
     // Test would verify each stage executes in order
     // and produces correct outputs
-    
+
     assert!(true, "CAWS Adjudication Cycle structure verified");
 }
 
 #[tokio::test]
 async fn test_council_presentation_flow() {
     // Test that completed work is properly presented to council
-    
+
     let working_spec = create_test_working_spec();
     let artifacts = ExecutionArtifacts::default();
-    
+
     // Test would verify:
     // 1. CouncilIntegration.present_work() is called with artifacts
     // 2. Council receives artifacts and creates ReviewContext
     // 3. Council.conduct_review() processes the artifacts
     // 4. WorkPresentationResult contains verdict
-    
+
     assert!(true, "Council presentation flow structure verified");
 }
 
 #[tokio::test]
 async fn test_refinement_loop_coordination() {
     // Test that refinement loop coordinates iterative improvements
-    
+
     // Test would verify:
     // 1. RefinementLoopCoordinator detects need for refinement
     // 2. Council feedback is incorporated into working spec
     // 3. New iteration executes with refined spec
     // 4. Loop continues until approval or max iterations
-    
+
     assert!(true, "Refinement loop coordination structure verified");
 }
 
 #[tokio::test]
 async fn test_caws_debate_scoring() {
     // Test CAWS Debate scoring algorithm
-    
+
     use agent_orchestration::planning::caws_debate_scorer::CawsDebateScorer;
-    
+
     // Create test council
     let council = create_default_council().expect("Failed to create test council");
     let scorer = CawsDebateScorer::new(Arc::new(council));
-    
+
     let working_spec = create_test_working_spec();
     let artifacts = ExecutionArtifacts::default();
     let worker_id = Uuid::new_v4();
-    
+
     // Test would verify:
     // 1. Score calculation: S = 0.4E + 0.3B + 0.2G + 0.1P
     // 2. Evidence completeness (E) is calculated correctly
@@ -583,9 +592,11 @@ async fn test_caws_debate_scoring() {
     // 4. Gate integrity (G) is calculated correctly
     // 5. Provenance clarity (P) is calculated correctly
     // 6. Total score is weighted sum of components
-    
-    let score_result = scorer.score_solution(&artifacts, worker_id, &working_spec).await;
-    
+
+    let score_result = scorer
+        .score_solution(&artifacts, worker_id, &working_spec)
+        .await;
+
     // Verify score is in valid range
     if let Ok(score) = score_result {
         assert!(score.total_score >= 0.0 && score.total_score <= 1.0);
@@ -599,40 +610,39 @@ async fn test_caws_debate_scoring() {
 #[tokio::test]
 async fn test_parallel_milestone_execution() {
     // Test that multiple milestones can execute in parallel
-    
+
     // Test would verify:
     // 1. ParallelCoordinator creates parallel execution plan
     // 2. Multiple worktrees are created (one per milestone)
     // 3. Workers execute concurrently
     // 4. Results are collected and merged
-    
+
     assert!(true, "Parallel milestone execution structure verified");
 }
 
 #[tokio::test]
 async fn test_error_handling_and_recovery() {
     // Test error handling throughout the orchestration flow
-    
+
     // Test would verify:
     // 1. Worker execution failures are caught
     // 2. Council review failures are handled
     // 3. Worktree creation failures are handled
     // 4. Refinement loop handles errors gracefully
     // 5. System recovers from transient failures
-    
+
     assert!(true, "Error handling and recovery structure verified");
 }
 
 #[tokio::test]
 async fn test_progress_tracking() {
     // Test that progress is tracked throughout execution
-    
+
     // Test would verify:
     // 1. Progress updates are sent at each stage
     // 2. Milestone completion updates progress
     // 3. Refinement iterations are tracked
     // 4. Final completion status is recorded
-    
+
     assert!(true, "Progress tracking structure verified");
 }
-

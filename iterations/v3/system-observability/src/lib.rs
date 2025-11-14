@@ -3,23 +3,22 @@
 //! Unified observability, monitoring, and telemetry functionality.
 //! Extracted from apple-silicon monolith to provide focused observability services.
 
-pub mod telemetry;
-pub mod telemetry_storage;
-pub mod monitoring;
-pub mod metrics;
-pub mod tracing;
 pub mod cache;
-pub mod learning_service;
+pub mod core;
 pub mod health_metrics;
 pub mod health_types;
-pub mod core;
+pub mod learning_service;
+pub mod metrics;
+pub mod monitoring;
 pub mod slo;
+pub mod telemetry;
+pub mod telemetry_storage;
+pub mod tracing;
 
 // Re-export common types (avoiding conflicts with local types)
 pub use system_configuration::{
-    PipelineStage, PipelineMetrics, PipelineConfig, PipelineError,
-    SequentialPipeline, ParallelPipeline, StreamingPipeline, ValidationPipeline,
-    CacheConfig, CacheStats, PipelineHealth,
+    CacheConfig, CacheStats, ParallelPipeline, PipelineConfig, PipelineError, PipelineHealth,
+    PipelineMetrics, PipelineStage, SequentialPipeline, StreamingPipeline, ValidationPipeline,
 };
 
 use serde::{Deserialize, Serialize};
@@ -28,35 +27,20 @@ pub use telemetry::*;
 pub use telemetry_storage::TelemetryDatabaseStorage;
 // Explicit re-exports from monitoring to avoid conflicts with slo::AlertSeverity
 pub use monitoring::{
-    AlertSeverity as MonitoringAlertSeverity,
-    Alert,
-    AlertManager,
-    HealthMonitor,
-    ComponentHealth,
-    HealthStatus,
-    SystemHealth,
+    Alert, AlertManager, AlertSeverity as MonitoringAlertSeverity, ComponentHealth, HealthMonitor,
+    HealthStatus, SystemHealth,
 };
 // Explicit re-exports from slo to avoid conflicts with monitoring::AlertSeverity
-pub use slo::{
-    AlertSeverity as SloAlertSeverity,
-    SLODefinition,
-    SLOTarget,
-    SLOStatus,
-    SLOMeasurement,
-    SLOAlert,
-    SLOAlertType,
-    SLODataPoint,
-    SLOTracker,
-    SloDatabaseClient,
-    SLOAlertThresholds,
-    SLOExport,
-    create_default_slos,
-};
-pub use metrics::*;
-pub use tracing::*;
-pub use learning_service::*;
-pub use health_metrics::MetricsCollector;
 pub use core::ResponseTimePercentiles;
+pub use health_metrics::MetricsCollector;
+pub use learning_service::*;
+pub use metrics::*;
+pub use slo::{
+    create_default_slos, AlertSeverity as SloAlertSeverity, SLOAlert, SLOAlertThresholds,
+    SLOAlertType, SLODataPoint, SLODefinition, SLOExport, SLOMeasurement, SLOStatus, SLOTarget,
+    SLOTracker, SloDatabaseClient,
+};
+pub use tracing::*;
 
 /// Main service struct for telemetry management
 #[derive(Debug)]

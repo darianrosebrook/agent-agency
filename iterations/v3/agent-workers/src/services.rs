@@ -1,3 +1,6 @@
+use crate::mcp_integration::{create_parameter, create_tool_definition, MCPIntegration};
+use agent_mcp::mcp_types::{MCPTool, ParameterDefinition, ToolCapability, ToolType};
+use schemars::JsonSchema;
 /// Service Registration and Tool Discovery
 ///
 /// This module provides the infrastructure for services from other crates
@@ -26,11 +29,7 @@
 ///     }
 /// }
 /// ```
-
-use serde::{Serialize, Deserialize};
-use schemars::JsonSchema;
-use crate::mcp_integration::{MCPIntegration, create_tool_definition, create_parameter};
-use agent_mcp::mcp_types::{MCPTool, ToolType, ToolCapability, ParameterDefinition};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -70,7 +69,10 @@ impl WorkerServiceRegistry {
     }
 
     /// Register a service and its tools
-    pub async fn register_service(&mut self, service: Box<dyn ToolProvider>) -> Result<(), ServiceError> {
+    pub async fn register_service(
+        &mut self,
+        service: Box<dyn ToolProvider>,
+    ) -> Result<(), ServiceError> {
         let service_name = service.service_name().to_string();
 
         info!("Registering service: {}", service_name);
@@ -80,13 +82,22 @@ impl WorkerServiceRegistry {
 
         // Register service tools with MCP
         let tools = service.register_tools();
-        self.mcp_integration.register_service_tools(&service_name, tools.clone()).await
-            .map_err(|e| ServiceError::ToolRegistrationFailed(format!("{}: {}", service_name, e)))?;
+        self.mcp_integration
+            .register_service_tools(&service_name, tools.clone())
+            .await
+            .map_err(|e| {
+                ServiceError::ToolRegistrationFailed(format!("{}: {}", service_name, e))
+            })?;
 
         // Store the service
-        self.registered_services.insert(service_name.clone(), service);
+        self.registered_services
+            .insert(service_name.clone(), service);
 
-        info!("Successfully registered service: {} with {} tools", service_name, tools.len());
+        info!(
+            "Successfully registered service: {} with {} tools",
+            service_name,
+            tools.len()
+        );
         Ok(())
     }
 
@@ -170,14 +181,27 @@ impl ToolProvider for KnowledgeSeekerService {
                 "knowledge_search",
                 "Search knowledge base for relevant information and context",
                 ToolType::Utility,
-                vec![ToolCapability::TextProcessing, ToolCapability::NetworkAccess],
+                vec![
+                    ToolCapability::TextProcessing,
+                    ToolCapability::NetworkAccess,
+                ],
                 vec![
                     create_parameter("query", "Search query or topic", "string", true, None),
-                    create_parameter("context_type", "Type of context needed", "string", false, Some(serde_json::json!("general"))),
+                    create_parameter(
+                        "context_type",
+                        "Type of context needed",
+                        "string",
+                        false,
+                        Some(serde_json::json!("general")),
+                    ),
                 ],
-                vec![
-                    create_parameter("max_results", "Maximum number of results", "number", false, Some(serde_json::json!(10))),
-                ],
+                vec![create_parameter(
+                    "max_results",
+                    "Maximum number of results",
+                    "number",
+                    false,
+                    Some(serde_json::json!(10)),
+                )],
             ),
             create_tool_definition(
                 "context_synthesis",
@@ -185,12 +209,28 @@ impl ToolProvider for KnowledgeSeekerService {
                 ToolType::Utility,
                 vec![ToolCapability::TextProcessing],
                 vec![
-                    create_parameter("sources", "Array of information sources to synthesize", "array", true, None),
-                    create_parameter("topic", "Topic or focus area for synthesis", "string", true, None),
+                    create_parameter(
+                        "sources",
+                        "Array of information sources to synthesize",
+                        "array",
+                        true,
+                        None,
+                    ),
+                    create_parameter(
+                        "topic",
+                        "Topic or focus area for synthesis",
+                        "string",
+                        true,
+                        None,
+                    ),
                 ],
-                vec![
-                    create_parameter("synthesis_depth", "Depth of synthesis (shallow|medium|deep)", "string", false, Some(serde_json::json!("medium"))),
-                ],
+                vec![create_parameter(
+                    "synthesis_depth",
+                    "Depth of synthesis (shallow|medium|deep)",
+                    "string",
+                    false,
+                    Some(serde_json::json!("medium")),
+                )],
             ),
         ]
     }
@@ -211,26 +251,64 @@ impl ToolProvider for WebSearchService {
                 "web_search",
                 "Search the web for current information and resources",
                 ToolType::Utility,
-                vec![ToolCapability::NetworkAccess, ToolCapability::TextProcessing],
                 vec![
-                    create_parameter("query", "Search query", "string", true, None),
+                    ToolCapability::NetworkAccess,
+                    ToolCapability::TextProcessing,
                 ],
+                vec![create_parameter(
+                    "query",
+                    "Search query",
+                    "string",
+                    true,
+                    None,
+                )],
                 vec![
-                    create_parameter("max_results", "Maximum results to return", "number", false, Some(serde_json::json!(5))),
-                    create_parameter("include_snippets", "Include content snippets", "boolean", false, Some(serde_json::json!(true))),
+                    create_parameter(
+                        "max_results",
+                        "Maximum results to return",
+                        "number",
+                        false,
+                        Some(serde_json::json!(5)),
+                    ),
+                    create_parameter(
+                        "include_snippets",
+                        "Include content snippets",
+                        "boolean",
+                        false,
+                        Some(serde_json::json!(true)),
+                    ),
                 ],
             ),
             create_tool_definition(
                 "url_fetch",
                 "Fetch and extract content from a specific URL",
                 ToolType::Utility,
-                vec![ToolCapability::NetworkAccess, ToolCapability::TextProcessing],
                 vec![
-                    create_parameter("url", "URL to fetch content from", "string", true, None),
+                    ToolCapability::NetworkAccess,
+                    ToolCapability::TextProcessing,
                 ],
+                vec![create_parameter(
+                    "url",
+                    "URL to fetch content from",
+                    "string",
+                    true,
+                    None,
+                )],
                 vec![
-                    create_parameter("extract_text", "Extract readable text only", "boolean", false, Some(serde_json::json!(true))),
-                    create_parameter("max_content_length", "Maximum content length to return", "number", false, Some(serde_json::json!(5000))),
+                    create_parameter(
+                        "extract_text",
+                        "Extract readable text only",
+                        "boolean",
+                        false,
+                        Some(serde_json::json!(true)),
+                    ),
+                    create_parameter(
+                        "max_content_length",
+                        "Maximum content length to return",
+                        "number",
+                        false,
+                        Some(serde_json::json!(5000)),
+                    ),
                 ],
             ),
         ]
@@ -253,12 +331,28 @@ impl ToolProvider for FileSystemService {
                 "Read content from a file",
                 ToolType::Utility,
                 vec![ToolCapability::FileRead, ToolCapability::FileSystemAccess],
+                vec![create_parameter(
+                    "file_path",
+                    "Path to the file to read",
+                    "string",
+                    true,
+                    None,
+                )],
                 vec![
-                    create_parameter("file_path", "Path to the file to read", "string", true, None),
-                ],
-                vec![
-                    create_parameter("encoding", "File encoding", "string", false, Some(serde_json::json!("utf-8"))),
-                    create_parameter("max_bytes", "Maximum bytes to read", "number", false, Some(serde_json::json!(1048576))), // 1MB
+                    create_parameter(
+                        "encoding",
+                        "File encoding",
+                        "string",
+                        false,
+                        Some(serde_json::json!("utf-8")),
+                    ),
+                    create_parameter(
+                        "max_bytes",
+                        "Maximum bytes to read",
+                        "number",
+                        false,
+                        Some(serde_json::json!(1048576)),
+                    ), // 1MB
                 ],
             ),
             create_tool_definition(
@@ -267,12 +361,30 @@ impl ToolProvider for FileSystemService {
                 ToolType::Utility,
                 vec![ToolCapability::FileWrite, ToolCapability::FileSystemAccess],
                 vec![
-                    create_parameter("file_path", "Path to the file to write", "string", true, None),
+                    create_parameter(
+                        "file_path",
+                        "Path to the file to write",
+                        "string",
+                        true,
+                        None,
+                    ),
                     create_parameter("content", "Content to write", "string", true, None),
                 ],
                 vec![
-                    create_parameter("encoding", "File encoding", "string", false, Some(serde_json::json!("utf-8"))),
-                    create_parameter("create_dirs", "Create parent directories if needed", "boolean", false, Some(serde_json::json!(true))),
+                    create_parameter(
+                        "encoding",
+                        "File encoding",
+                        "string",
+                        false,
+                        Some(serde_json::json!("utf-8")),
+                    ),
+                    create_parameter(
+                        "create_dirs",
+                        "Create parent directories if needed",
+                        "boolean",
+                        false,
+                        Some(serde_json::json!(true)),
+                    ),
                 ],
             ),
             create_tool_definition(
@@ -280,12 +392,28 @@ impl ToolProvider for FileSystemService {
                 "List contents of a directory",
                 ToolType::Utility,
                 vec![ToolCapability::FileSystemAccess],
+                vec![create_parameter(
+                    "dir_path",
+                    "Path to the directory",
+                    "string",
+                    true,
+                    None,
+                )],
                 vec![
-                    create_parameter("dir_path", "Path to the directory", "string", true, None),
-                ],
-                vec![
-                    create_parameter("recursive", "List recursively", "boolean", false, Some(serde_json::json!(false))),
-                    create_parameter("include_hidden", "Include hidden files", "boolean", false, Some(serde_json::json!(false))),
+                    create_parameter(
+                        "recursive",
+                        "List recursively",
+                        "boolean",
+                        false,
+                        Some(serde_json::json!(false)),
+                    ),
+                    create_parameter(
+                        "include_hidden",
+                        "Include hidden files",
+                        "boolean",
+                        false,
+                        Some(serde_json::json!(false)),
+                    ),
                 ],
             ),
         ]
@@ -307,13 +435,34 @@ impl ToolProvider for FederatedLearningService {
                 "fl_submit_update",
                 "Submit a model update for federated aggregation",
                 ToolType::Utility,
-                vec![ToolCapability::NetworkAccess, ToolCapability::DatabaseAccess],
                 vec![
-                    create_parameter("model_update", "Serialized model update data", "string", true, None),
-                    create_parameter("participant_id", "Unique participant identifier", "string", true, None),
+                    ToolCapability::NetworkAccess,
+                    ToolCapability::DatabaseAccess,
                 ],
                 vec![
-                    create_parameter("round_id", "Federated learning round ID", "string", false, None),
+                    create_parameter(
+                        "model_update",
+                        "Serialized model update data",
+                        "string",
+                        true,
+                        None,
+                    ),
+                    create_parameter(
+                        "participant_id",
+                        "Unique participant identifier",
+                        "string",
+                        true,
+                        None,
+                    ),
+                ],
+                vec![
+                    create_parameter(
+                        "round_id",
+                        "Federated learning round ID",
+                        "string",
+                        false,
+                        None,
+                    ),
                     create_parameter("metadata", "Additional metadata", "object", false, None),
                 ],
             ),
@@ -321,20 +470,34 @@ impl ToolProvider for FederatedLearningService {
                 "fl_get_global_model",
                 "Retrieve the current global model state",
                 ToolType::Utility,
-                vec![ToolCapability::NetworkAccess, ToolCapability::DatabaseAccess],
-                vec![],
                 vec![
-                    create_parameter("round_id", "Specific round ID to retrieve", "string", false, None),
+                    ToolCapability::NetworkAccess,
+                    ToolCapability::DatabaseAccess,
                 ],
+                vec![],
+                vec![create_parameter(
+                    "round_id",
+                    "Specific round ID to retrieve",
+                    "string",
+                    false,
+                    None,
+                )],
             ),
             create_tool_definition(
                 "fl_participant_register",
                 "Register as a federated learning participant",
                 ToolType::Utility,
-                vec![ToolCapability::NetworkAccess, ToolCapability::DatabaseAccess],
                 vec![
-                    create_parameter("participant_info", "Participant information and capabilities", "object", true, None),
+                    ToolCapability::NetworkAccess,
+                    ToolCapability::DatabaseAccess,
                 ],
+                vec![create_parameter(
+                    "participant_info",
+                    "Participant information and capabilities",
+                    "object",
+                    true,
+                    None,
+                )],
                 vec![],
             ),
         ]
@@ -360,11 +523,21 @@ impl ToolProvider for ModelHotswapService {
                 vec![
                     create_parameter("model_id", "Unique model identifier", "string", true, None),
                     create_parameter("model_data", "Model data or path", "string", true, None),
-                    create_parameter("initial_traffic_percent", "Initial traffic percentage", "number", false, Some(serde_json::json!(10))),
+                    create_parameter(
+                        "initial_traffic_percent",
+                        "Initial traffic percentage",
+                        "number",
+                        false,
+                        Some(serde_json::json!(10)),
+                    ),
                 ],
-                vec![
-                    create_parameter("canary_strategy", "Canary deployment strategy", "string", false, Some(serde_json::json!("linear"))),
-                ],
+                vec![create_parameter(
+                    "canary_strategy",
+                    "Canary deployment strategy",
+                    "string",
+                    false,
+                    Some(serde_json::json!("linear")),
+                )],
             ),
             create_tool_definition(
                 "model_promote",
@@ -373,11 +546,21 @@ impl ToolProvider for ModelHotswapService {
                 vec![ToolCapability::NetworkAccess],
                 vec![
                     create_parameter("model_id", "Model identifier", "string", true, None),
-                    create_parameter("target_traffic_percent", "Target traffic percentage", "number", true, None),
+                    create_parameter(
+                        "target_traffic_percent",
+                        "Target traffic percentage",
+                        "number",
+                        true,
+                        None,
+                    ),
                 ],
-                vec![
-                    create_parameter("gradual_rollout", "Gradual rollout over time", "boolean", false, Some(serde_json::json!(true))),
-                ],
+                vec![create_parameter(
+                    "gradual_rollout",
+                    "Gradual rollout over time",
+                    "boolean",
+                    false,
+                    Some(serde_json::json!(true)),
+                )],
             ),
             create_tool_definition(
                 "model_rollback",
@@ -386,7 +569,13 @@ impl ToolProvider for ModelHotswapService {
                 vec![ToolCapability::NetworkAccess],
                 vec![
                     create_parameter("model_id", "Model identifier", "string", true, None),
-                    create_parameter("target_version", "Version to rollback to", "string", true, None),
+                    create_parameter(
+                        "target_version",
+                        "Version to rollback to",
+                        "string",
+                        true,
+                        None,
+                    ),
                 ],
                 vec![],
             ),
@@ -395,16 +584,31 @@ impl ToolProvider for ModelHotswapService {
 }
 
 /// Create a default service registry with common services
-pub async fn create_default_service_registry(mcp_integration: Arc<MCPIntegration>) -> Result<WorkerServiceRegistry, ServiceError> {
+pub async fn create_default_service_registry(
+    mcp_integration: Arc<MCPIntegration>,
+) -> Result<WorkerServiceRegistry, ServiceError> {
     let mut registry = WorkerServiceRegistry::new(mcp_integration);
 
     // Register core services
-    registry.register_service(Box::new(KnowledgeSeekerService)).await?;
-    registry.register_service(Box::new(WebSearchService)).await?;
-    registry.register_service(Box::new(FileSystemService)).await?;
-    registry.register_service(Box::new(FederatedLearningService)).await?;
-    registry.register_service(Box::new(ModelHotswapService)).await?;
+    registry
+        .register_service(Box::new(KnowledgeSeekerService))
+        .await?;
+    registry
+        .register_service(Box::new(WebSearchService))
+        .await?;
+    registry
+        .register_service(Box::new(FileSystemService))
+        .await?;
+    registry
+        .register_service(Box::new(FederatedLearningService))
+        .await?;
+    registry
+        .register_service(Box::new(ModelHotswapService))
+        .await?;
 
-    info!("Registered {} default services", registry.get_registered_services().len());
+    info!(
+        "Registered {} default services",
+        registry.get_registered_services().len()
+    );
     Ok(registry)
 }

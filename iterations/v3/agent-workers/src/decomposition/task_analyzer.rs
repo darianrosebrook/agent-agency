@@ -1,8 +1,8 @@
 //! Problem pattern analysis for task decomposition
 
-use crate::parallel_types::*;
-use crate::worker_types::{SubTaskId, Priority, TaskScope};
 use crate::error::*;
+use crate::parallel_types::*;
+use crate::worker_types::{Priority, SubTaskId, TaskScope};
 use std::collections::HashMap;
 
 /// Pattern recognizer for identifying decomposition opportunities
@@ -14,7 +14,10 @@ impl PatternRecognizer {
     }
 
     /// Identify patterns in a complex task
-    pub fn identify_patterns(&self, task: &ComplexTask) -> Result<Vec<TaskPattern>, DecompositionError> {
+    pub fn identify_patterns(
+        &self,
+        task: &ComplexTask,
+    ) -> Result<Vec<TaskPattern>, DecompositionError> {
         let mut patterns = Vec::new();
 
         // Analyze task description for patterns
@@ -24,7 +27,9 @@ impl PatternRecognizer {
         if self.is_compilation_task(description) {
             let compilation_patterns = self.identify_compilation_patterns(description)?;
             if !compilation_patterns.is_empty() {
-                patterns.push(TaskPattern::CompilationErrors { error_groups: compilation_patterns });
+                patterns.push(TaskPattern::CompilationErrors {
+                    error_groups: compilation_patterns,
+                });
             }
         }
 
@@ -32,7 +37,9 @@ impl PatternRecognizer {
         if self.is_refactoring_task(description) {
             let refactoring_patterns = self.identify_refactoring_patterns(description)?;
             if !refactoring_patterns.is_empty() {
-                patterns.push(TaskPattern::RefactoringOperations { operations: refactoring_patterns });
+                patterns.push(TaskPattern::RefactoringOperations {
+                    operations: refactoring_patterns,
+                });
             }
         }
 
@@ -56,44 +63,76 @@ impl PatternRecognizer {
     /// Check if task is compilation-related
     fn is_compilation_task(&self, description: &str) -> bool {
         let compilation_keywords = [
-            "compile", "compilation", "build", "cargo check", "error", "E0",
-            "rustc", "linking", "undefined reference", "missing",
+            "compile",
+            "compilation",
+            "build",
+            "cargo check",
+            "error",
+            "E0",
+            "rustc",
+            "linking",
+            "undefined reference",
+            "missing",
         ];
 
-        compilation_keywords.iter()
+        compilation_keywords
+            .iter()
             .any(|keyword| description.to_lowercase().contains(keyword))
     }
 
     /// Check if task is refactoring-related
     fn is_refactoring_task(&self, description: &str) -> bool {
         let refactoring_keywords = [
-            "refactor", "rename", "extract", "move", "restructure",
-            "reorganize", "clean", "simplify", "optimize",
+            "refactor",
+            "rename",
+            "extract",
+            "move",
+            "restructure",
+            "reorganize",
+            "clean",
+            "simplify",
+            "optimize",
         ];
 
-        refactoring_keywords.iter()
+        refactoring_keywords
+            .iter()
             .any(|keyword| description.to_lowercase().contains(keyword))
     }
 
     /// Check if task is testing-related
     fn is_testing_task(&self, description: &str) -> bool {
         let testing_keywords = [
-            "test", "testing", "coverage", "spec", "assert", "mock",
-            "fixture", "unit test", "integration test",
+            "test",
+            "testing",
+            "coverage",
+            "spec",
+            "assert",
+            "mock",
+            "fixture",
+            "unit test",
+            "integration test",
         ];
 
-        testing_keywords.iter()
+        testing_keywords
+            .iter()
             .any(|keyword| description.to_lowercase().contains(keyword))
     }
 
     /// Check if task is documentation-related
     fn is_documentation_task(&self, description: &str) -> bool {
         let documentation_keywords = [
-            "doc", "document", "readme", "comment", "api docs",
-            "user guide", "tutorial", "example",
+            "doc",
+            "document",
+            "readme",
+            "comment",
+            "api docs",
+            "user guide",
+            "tutorial",
+            "example",
         ];
 
-        documentation_keywords.iter()
+        documentation_keywords
+            .iter()
             .any(|keyword| description.to_lowercase().contains(keyword))
     }
 
@@ -188,16 +227,23 @@ impl PatternRecognizer {
     /// Extract error codes from description
     fn extract_error_codes(&self, description: &str) -> Vec<String> {
         let error_pattern = regex::Regex::new(r"E\d{4}").unwrap();
-        error_pattern.find_iter(description)
+        error_pattern
+            .find_iter(description)
             .map(|m| m.as_str().to_string())
             .collect()
     }
 
     /// Find Rust files in directory
-    fn find_rust_files(&self, dir: &std::path::Path) -> DecompositionResult<Vec<std::path::PathBuf>> {
+    fn find_rust_files(
+        &self,
+        dir: &std::path::Path,
+    ) -> DecompositionResult<Vec<std::path::PathBuf>> {
         let mut files = Vec::new();
 
-        fn visit_dir(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
+        fn visit_dir(
+            dir: &std::path::Path,
+            files: &mut Vec<std::path::PathBuf>,
+        ) -> std::io::Result<()> {
             if dir.is_dir() {
                 for entry in std::fs::read_dir(dir)? {
                     let entry = entry?;
@@ -222,7 +268,11 @@ impl PatternRecognizer {
     }
 
     /// Determine which files are likely affected by a specific error
-    fn files_likely_affected_by_error(&self, error_code: &str, files: &[std::path::PathBuf]) -> Vec<std::path::PathBuf> {
+    fn files_likely_affected_by_error(
+        &self,
+        error_code: &str,
+        files: &[std::path::PathBuf],
+    ) -> Vec<std::path::PathBuf> {
         // TODO: Analyze actual error to determine affected files
         //       Currently uses basic heuristic; should analyze actual error message and compiler output to determine affected files.
         //
@@ -255,10 +305,27 @@ impl PatternRecognizer {
         // - CAWS Tier: 2 (error analysis feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Compiler and static analysis expertise
-        match error_code { // Temporary: basic heuristic until actual error analysis
-            "E0063" => files.iter().filter(|f| f.to_string_lossy().contains("struct")).cloned().collect(),
-            "E0277" => files.iter().filter(|f| f.to_string_lossy().contains("trait") || f.to_string_lossy().contains("impl")).cloned().collect(),
-            "E0308" => files.iter().filter(|f| f.to_string_lossy().contains("fn") || f.to_string_lossy().contains("let")).cloned().collect(),
+        match error_code {
+            // Temporary: basic heuristic until actual error analysis
+            "E0063" => files
+                .iter()
+                .filter(|f| f.to_string_lossy().contains("struct"))
+                .cloned()
+                .collect(),
+            "E0277" => files
+                .iter()
+                .filter(|f| {
+                    f.to_string_lossy().contains("trait") || f.to_string_lossy().contains("impl")
+                })
+                .cloned()
+                .collect(),
+            "E0308" => files
+                .iter()
+                .filter(|f| {
+                    f.to_string_lossy().contains("fn") || f.to_string_lossy().contains("let")
+                })
+                .cloned()
+                .collect(),
             _ => files.to_vec(), // Default to all files
         }
     }
@@ -307,7 +374,7 @@ impl PatternRecognizer {
             operations.push(RefactoringOperation {
                 operation_type: "rename".to_string(),
                 file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
-                complexity: 0.7, // Moderate complexity
+                complexity: 0.7,                          // Moderate complexity
                 description: "Rename operation".to_string(),
             });
         }
@@ -316,7 +383,7 @@ impl PatternRecognizer {
             operations.push(RefactoringOperation {
                 operation_type: "extract".to_string(),
                 file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
-                complexity: 0.8, // Higher complexity
+                complexity: 0.8,                          // Higher complexity
                 description: "Extract method/variable".to_string(),
             });
         }
@@ -325,7 +392,7 @@ impl PatternRecognizer {
             operations.push(RefactoringOperation {
                 operation_type: "move".to_string(),
                 file_path: "unknown_file.rs".to_string(), // Temporary: placeholder until file path extraction
-                complexity: 0.6, // Lower complexity
+                complexity: 0.6,                          // Lower complexity
                 description: "Move code between modules".to_string(),
             });
         }
@@ -334,10 +401,7 @@ impl PatternRecognizer {
     }
 
     /// Identify testing gaps
-    fn identify_testing_gaps(
-        &self,
-        description: &str,
-    ) -> Result<Vec<String>, DecompositionError> {
+    fn identify_testing_gaps(&self, description: &str) -> Result<Vec<String>, DecompositionError> {
         let mut gaps = Vec::new();
 
         // Look for untested components
@@ -437,7 +501,8 @@ impl ComplexityScorer {
         parallelization_score *= task.complexity_score;
 
         // Estimate durations based on complexity scores
-        let estimated_durations: Vec<std::time::Duration> = complexity_scores.iter()
+        let estimated_durations: Vec<std::time::Duration> = complexity_scores
+            .iter()
             .map(|&score| self.estimate_duration(score as f32))
             .collect();
 

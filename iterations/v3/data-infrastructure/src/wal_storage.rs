@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use sqlx::{PgPool, postgres::PgPoolOptions, Row};
+use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::sync::Arc;
 use tracing::{debug, info};
 use uuid::Uuid;
@@ -99,8 +99,9 @@ impl WalStorage {
         new_data: Option<JsonValue>,
         sql_statement: Option<String>,
     ) -> Result<Uuid> {
-        let checksum = self.calculate_checksum(&operation_type, &old_data, &new_data, &sql_statement);
-        
+        let checksum =
+            self.calculate_checksum(&operation_type, &old_data, &new_data, &sql_statement);
+
         let record_id = sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO wal_log_records (
@@ -124,7 +125,10 @@ impl WalStorage {
         .await
         .context("Failed to record WAL entry")?;
 
-        debug!("Recorded WAL entry: {} for table {}.{}", record_id, schema_name, table_name);
+        debug!(
+            "Recorded WAL entry: {} for table {}.{}",
+            record_id, schema_name, table_name
+        );
         Ok(record_id)
     }
 
@@ -149,10 +153,14 @@ impl WalStorage {
         .context("Failed to fetch WAL records for replay")?;
 
         let wal_records: Vec<WalRecord> = records.into_iter().map(|r| r.into()).collect();
-        
-        info!("Fetched {} WAL records for replay from {} to {}", 
-              wal_records.len(), start_time, end_time);
-        
+
+        info!(
+            "Fetched {} WAL records for replay from {} to {}",
+            wal_records.len(),
+            start_time,
+            end_time
+        );
+
         Ok(wal_records)
     }
 
@@ -180,15 +188,16 @@ impl WalStorage {
 
     /// Cleanup old WAL records based on retention policy
     pub async fn cleanup_old_records(&self, retention_days: i32) -> Result<i64> {
-        let deleted_count: i64 = sqlx::query_scalar(
-            "SELECT cleanup_old_wal_records($1)"
-        )
-        .bind(retention_days)
-        .fetch_one(&*self.pool)
-        .await
-        .context("Failed to cleanup old WAL records")?;
+        let deleted_count: i64 = sqlx::query_scalar("SELECT cleanup_old_wal_records($1)")
+            .bind(retention_days)
+            .fetch_one(&*self.pool)
+            .await
+            .context("Failed to cleanup old WAL records")?;
 
-        info!("Cleaned up {} old WAL records (retention: {} days)", deleted_count, retention_days);
+        info!(
+            "Cleaned up {} old WAL records (retention: {} days)",
+            deleted_count, retention_days
+        );
         Ok(deleted_count)
     }
 
@@ -196,7 +205,7 @@ impl WalStorage {
     pub async fn get_statistics(&self) -> Result<WalStatistics> {
         let stats = sqlx::query_as::<_, WalStatisticsRow>(
             r#"
-            SELECT 
+            SELECT
                 COUNT(*) as total_records,
                 COUNT(*) FILTER (WHERE applied = FALSE) as pending_records,
                 COUNT(*) FILTER (WHERE applied = TRUE) as applied_records,
@@ -222,23 +231,23 @@ impl WalStorage {
         new_data: &Option<JsonValue>,
         sql_statement: &Option<String>,
     ) -> String {
-        use sha2::{Sha256, Digest};
-        
+        use sha2::{Digest, Sha256};
+
         let mut hasher = Sha256::new();
         hasher.update(operation_type.to_string().as_bytes());
-        
+
         if let Some(ref old) = old_data {
             hasher.update(serde_json::to_string(old).unwrap_or_default().as_bytes());
         }
-        
+
         if let Some(ref new) = new_data {
             hasher.update(serde_json::to_string(new).unwrap_or_default().as_bytes());
         }
-        
+
         if let Some(ref sql) = sql_statement {
             hasher.update(sql.as_bytes());
         }
-        
+
         let result = hasher.finalize();
         format!("{:x}", result)
     }
@@ -284,7 +293,10 @@ impl From<WalRecordRow> for WalRecord {
             timestamp: row.timestamp,
             transaction_id: row.transaction_id,
             sequence_number: row.sequence_number,
-            operation_type: row.operation_type.parse().unwrap_or(WalOperationType::Update),
+            operation_type: row
+                .operation_type
+                .parse()
+                .unwrap_or(WalOperationType::Update),
             schema_name: row.schema_name,
             table_name: row.table_name,
             record_id: row.record_id,
@@ -297,7 +309,6 @@ impl From<WalRecordRow> for WalRecord {
         }
     }
 }
-
 
 #[derive(Debug)]
 struct WalStatisticsRow {
@@ -337,4 +348,3 @@ impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for WalStatisticsRow {
         })
     }
 }
-

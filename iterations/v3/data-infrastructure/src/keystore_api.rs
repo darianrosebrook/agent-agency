@@ -1,24 +1,23 @@
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::Json,
+    routing::{delete, get, post, put},
+    Router,
+};
+use base64::{engine::general_purpose, Engine as _};
 /**
  * Keystore API Endpoints - P0-8 Implementation
  *
  * REST API endpoints for keystore operations with proper authentication and audit logging.
  */
-
 use schemars::JsonSchema;
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::Json,
-    routing::{get, post, put, delete},
-    Router,
-};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use base64::{Engine as _, engine::general_purpose};
 
-use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{KeyType, KeyPermission, KeyMetadata};
+use crate::AppState;
+use system_quality_security::{KeyMetadata, KeyPermission, KeyType};
 
 /// Request to store a new key
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -52,7 +51,7 @@ pub struct ListKeysQuery {
 
 /// API response for successful operations
 #[derive(Debug, Serialize, JsonSchema)]
-pub struct ApiResponse <T> {
+pub struct ApiResponse<T> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,
@@ -96,34 +95,36 @@ pub async fn store_key(
     };
 
     // Store the key
-    match state.keystore.store_key(
-        &request.name,
-        request.key_type,
-        &key_bytes,
-        &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string()),
-        request.permissions,
-        request.description.as_deref(),
-        request.tags,
-        expires_at,
-    ).await {
-        Ok(key_id) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "key_id": key_id.to_string(),
-                    "name": request.name,
-                    "created_at": chrono::Utc::now().to_rfc3339()
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to store key: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .store_key(
+            &request.name,
+            request.key_type,
+            &key_bytes,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+            request.permissions,
+            request.description.as_deref(),
+            request.tags,
+            expires_at,
+        )
+        .await
+    {
+        Ok(key_id) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "key_id": key_id.to_string(),
+                "name": request.name,
+                "created_at": chrono::Utc::now().to_rfc3339()
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to store key: {:?}", e)),
+        })),
     }
 }
 
@@ -147,7 +148,16 @@ pub async fn get_key(
         }
     };
 
-    match state.keystore.get_key(&uuid, &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string())).await {
+    match state
+        .keystore
+        .get_key(
+            &uuid,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
         Ok(key_bytes) => {
             let encoded_value = general_purpose::STANDARD.encode(&key_bytes);
             Ok(Json(ApiResponse {
@@ -159,13 +169,11 @@ pub async fn get_key(
                 error: None,
             }))
         }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to retrieve key: {:?}", e)),
-            }))
-        }
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to retrieve key: {:?}", e)),
+        })),
     }
 }
 
@@ -222,32 +230,34 @@ pub async fn update_key(
         None
     };
 
-    match state.keystore.update_key(
-        &uuid,
-        key_bytes.as_deref(),
-        request.permissions,
-        request.description.as_deref(),
-        request.tags,
-        expires_at,
-        &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string()),
-    ).await {
-        Ok(_) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "key_id": key_id,
-                    "updated_at": chrono::Utc::now().to_rfc3339()
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to update key: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .update_key(
+            &uuid,
+            key_bytes.as_deref(),
+            request.permissions,
+            request.description.as_deref(),
+            request.tags,
+            expires_at,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
+        Ok(_) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "key_id": key_id,
+                "updated_at": chrono::Utc::now().to_rfc3339()
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to update key: {:?}", e)),
+        })),
     }
 }
 
@@ -271,24 +281,29 @@ pub async fn delete_key(
         }
     };
 
-    match state.keystore.delete_key(&uuid, &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string())).await {
-        Ok(_) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "key_id": key_id,
-                    "deleted_at": chrono::Utc::now().to_rfc3339()
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to delete key: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .delete_key(
+            &uuid,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
+        Ok(_) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "key_id": key_id,
+                "deleted_at": chrono::Utc::now().to_rfc3339()
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to delete key: {:?}", e)),
+        })),
     }
 }
 
@@ -302,29 +317,33 @@ pub async fn list_keys(
     let audit_context = extract_audit_context(&headers, Some(addr));
 
     // Parse tags if provided
-    let tags: Option<Vec<String>> = query.tags.as_ref()
+    let tags: Option<Vec<String>> = query
+        .tags
+        .as_ref()
         .map(|t| t.split(',').map(|s| s.trim().to_string()).collect());
 
-    match state.keystore.list_keys(
-        query.owner.as_deref(),
-        query.key_type.as_ref(),
-        tags.as_deref(),
-        &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string()),
-    ).await {
-        Ok(keys) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(keys),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to list keys: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .list_keys(
+            query.owner.as_deref(),
+            query.key_type.as_ref(),
+            tags.as_deref(),
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
+        Ok(keys) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(keys),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to list keys: {:?}", e)),
+        })),
     }
 }
 
@@ -348,21 +367,26 @@ pub async fn get_key_metadata(
         }
     };
 
-    match state.keystore.get_key_metadata(&uuid, &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string())).await {
-        Ok(metadata) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(metadata),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to get key metadata: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .get_key_metadata(
+            &uuid,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
+        Ok(metadata) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(metadata),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to get key metadata: {:?}", e)),
+        })),
     }
 }
 
@@ -386,25 +410,30 @@ pub async fn rotate_key(
         }
     };
 
-    match state.keystore.rotate_key(&uuid, &audit_context.user_id.unwrap_or_else(|| "anonymous".to_string())).await {
-        Ok(new_key_id) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "old_key_id": key_id,
-                    "new_key_id": new_key_id.to_string(),
-                    "rotated_at": chrono::Utc::now().to_rfc3339()
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to rotate key: {:?}", e)),
-            }))
-        }
+    match state
+        .keystore
+        .rotate_key(
+            &uuid,
+            &audit_context
+                .user_id
+                .unwrap_or_else(|| "anonymous".to_string()),
+        )
+        .await
+    {
+        Ok(new_key_id) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "old_key_id": key_id,
+                "new_key_id": new_key_id.to_string(),
+                "rotated_at": chrono::Utc::now().to_rfc3339()
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to rotate key: {:?}", e)),
+        })),
     }
 }
 

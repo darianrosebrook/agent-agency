@@ -4,22 +4,31 @@
 //! for verdict handling, risk assessment, ethics evaluation,
 //! and mock testing capabilities.
 
-pub mod types;
-pub mod traits;
-pub mod verdicts;
-pub mod risk;
+pub mod backup_types;
 pub mod ethics;
 pub mod mock;
-pub mod backup_types;
 pub mod quality_judge;
+pub mod risk;
 pub mod security_judge;
+pub mod traits;
+pub mod types;
+pub mod verdicts;
 
 // Re-export main types and implementations
-pub use traits::Judge;
-pub use verdicts::{JudgeVerdict, RequiredChange, ChangePriority, EffortEstimate, CriticalIssue, IssueSeverity, ChangeImpact};
-pub use risk::{RiskAssessment, RiskLevel, MultiDimensionalRiskAssessment, TechnicalRiskAssessment, EthicalRiskAssessment, OperationalRiskAssessment, BusinessRiskAssessment, EthicalCategory};
 pub use ethics::EthicsJudge;
 pub use mock::MockJudge;
 pub use quality_judge::QualityAssuranceJudge;
+pub use risk::{
+    BusinessRiskAssessment, EthicalCategory, EthicalRiskAssessment, MultiDimensionalRiskAssessment,
+    OperationalRiskAssessment, RiskAssessment, RiskLevel, TechnicalRiskAssessment,
+};
 pub use security_judge::SecurityJudge;
-pub use types::{JudgeConfig, JudgeContribution, JudgeHealthMetrics, VerdictSummary, ReviewContext, PreviousReview};
+pub use traits::Judge;
+pub use types::{
+    JudgeConfig, JudgeContribution, JudgeHealthMetrics, PreviousReview, ReviewContext,
+    VerdictSummary,
+};
+pub use verdicts::{
+    ChangeImpact, ChangePriority, CriticalIssue, EffortEstimate, IssueSeverity, JudgeVerdict,
+    RequiredChange,
+};

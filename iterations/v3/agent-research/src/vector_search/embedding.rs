@@ -35,7 +35,10 @@ impl EmbeddingProcessor {
         }
 
         if embedding.len() < 64 {
-            return Err(anyhow::anyhow!("Embedding too short: {} < 64", embedding.len()));
+            return Err(anyhow::anyhow!(
+                "Embedding too short: {} < 64",
+                embedding.len()
+            ));
         }
 
         if embedding.iter().any(|&x| !x.is_finite()) {
@@ -44,7 +47,10 @@ impl EmbeddingProcessor {
 
         let magnitude = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
         if magnitude < 0.1 {
-            return Err(anyhow::anyhow!("Embedding magnitude too small: {}", magnitude));
+            return Err(anyhow::anyhow!(
+                "Embedding magnitude too small: {}",
+                magnitude
+            ));
         }
 
         Ok(())
@@ -64,7 +70,8 @@ impl EmbeddingProcessor {
     pub fn filter_embedding_quality(&self, embedding: &mut [f32]) -> Result<()> {
         // Remove extreme outliers
         let mean = embedding.iter().sum::<f32>() / embedding.len() as f32;
-        let variance = embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
+        let variance =
+            embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
         let std_dev = variance.sqrt();
 
         for value in embedding.iter_mut() {
@@ -122,7 +129,8 @@ impl EmbeddingProcessor {
         }
 
         let mean = embedding.iter().sum::<f32>() / embedding.len() as f32;
-        let variance = embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
+        let variance =
+            embedding.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / embedding.len() as f32;
         let std_dev = variance.sqrt();
         let magnitude = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
 

@@ -8,6 +8,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
+use crate::validation::UpdateValidator as ValidationUpdateValidator;
 
 /// Model update from a participant
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -57,7 +58,7 @@ pub struct UpdateQualityMetrics {
 /// Update aggregator for combining model updates
 #[derive(Debug)]
 pub struct UpdateAggregator {
-    validation_engine: UpdateValidator,
+    validation_engine: ValidationUpdateValidator,
     quality_thresholds: QualityThresholds,
 }
 
@@ -221,7 +222,7 @@ impl UpdateAggregator {
     /// Create a new update aggregator
     pub fn new(quality_thresholds: QualityThresholds) -> Self {
         Self {
-            validation_engine: UpdateValidator::new(),
+            validation_engine: ValidationUpdateValidator::new(),
             quality_thresholds,
         }
     }
@@ -241,7 +242,11 @@ impl UpdateAggregator {
             if validation.is_valid {
                 valid_updates.push(update);
             } else {
-                debug!("Rejected update from {}: {:?}", update.participant_id, validation.issues);
+                // Convert ValidationIssue to String for debug output
+                let issue_strings: Vec<String> = validation.issues.iter()
+                    .map(|issue| format!("{}: {}", issue.issue_type, issue.description))
+                    .collect();
+                debug!("Rejected update from {}: {:?}", update.participant_id, issue_strings);
             }
         }
 
@@ -350,62 +355,12 @@ pub struct AggregationStats {
     pub average_quality_score: f32,
 }
 
-// TODO: Implement UpdateValidator in validation.rs
-//       This is a placeholder type that should be properly implemented in validation.rs.
-//       Currently provides minimal stub implementation. Should implement full validation logic.
-//
-// Placeholder for the UpdateValidator that will be implemented in validation.rs
-#[derive(Debug)]
-pub struct UpdateValidator ;
-
-impl UpdateValidator {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub async fn validate_update(&self, update: &ModelUpdate) -> Result<ValidationResult> {
-        // TODO: Implement comprehensive model update validation
-        //       Currently uses basic validation; should implement comprehensive validation logic.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Validate update parameters are valid and within expected ranges
-        // [ ] Check update quality metrics meet thresholds
-        // [ ] Verify update compatibility with model version
-        // [ ] Validate training metadata is accurate
-        // [ ] Check for malicious or corrupted updates
-        // [ ] Add unit tests with various validation scenarios
-        // [ ] Add integration tests with real model updates
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Validation catches invalid updates correctly
-        // - Quality metrics are properly validated
-        // - Compatibility checks work correctly
-        // - Security checks prevent malicious updates
-        //
-        // DEPENDENCIES:
-        // - Validation framework (Required)
-        // - Security validation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours
-        // PRIORITY: High (security/data integrity)
-        // BLOCKING: No (basic validation exists)
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (security/data integrity)
-        // - Change Budget: ~120 LOC
-        // Note: Currently only checks basic requirements - needs comprehensive validation
-        let is_valid = !update.parameters.is_empty() &&
-                      update.metadata.training_samples > 0;
-
-        let score = if is_valid { 1.0 } else { 0.0 };
-        let issues = if is_valid {
-            Vec::new()
-        } else {
-            vec!["Invalid update parameters".to_string()]
-        };
-
-        Ok(ValidationResult { is_valid, score, issues })
-    }
-}
+// UpdateValidator is now implemented in validation.rs and used via ValidationUpdateValidator
+// The comprehensive validation includes:
+// - Parameter validation (ranges, NaN/infinity checks)
+// - Quality metrics validation (gradient norm, stability, update magnitude)
+// - Security validation (malicious update detection)
+// - Consistency validation (parameter dimensions, model version compatibility)
+// - Training metadata validation (samples, epochs, loss values)
 
 

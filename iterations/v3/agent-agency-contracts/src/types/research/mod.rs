@@ -6,13 +6,13 @@
 //! @author @darianrosebrook
 
 pub mod dto;
-pub mod ports;
 pub mod errors;
+pub mod ports;
 
 // Re-export all new types
 pub use dto::*;
-pub use ports::*;
 pub use errors::*;
+pub use ports::*;
 
 // Keep existing Evidence types for backward compatibility
 // These are still used by the ResearchEvidenceCollector port

@@ -2,22 +2,26 @@
 //!
 //! This module handles exact/fuzzy/context matching and relevance scoring.
 
-use std::collections::HashMap;
-use regex::Regex;
 use anyhow::Result;
+use regex::Regex;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::verification::verification_types::*;
 
 /// Keyword matcher for text search
 
-#[derive(Debug, Serialize, Deserialize) ]
-pub struct KeywordMatcher ;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeywordMatcher;
 
 impl KeywordMatcher {
     /// Search for keywords in content
-    pub async fn search_keywords_in_content(&self, content: &str, keywords: &[String]) -> Result<Vec<KeywordMatch>> {
+    pub async fn search_keywords_in_content(
+        &self,
+        content: &str,
+        keywords: &[String],
+    ) -> Result<Vec<KeywordMatch>> {
         let mut matches = Vec::new();
 
         for keyword in keywords {
@@ -25,14 +29,17 @@ impl KeywordMatcher {
             if let Ok(regex) = Regex::new(&format!(r"(?i)\b{}\b", regex::escape(keyword))) {
                 for capture in regex.find_iter(content) {
                     let line_start = content[..capture.start()].rfind('\n').unwrap_or(0);
-                    let line_end = content[capture.end()..].find('\n')
+                    let line_end = content[capture.end()..]
+                        .find('\n')
                         .map(|i| capture.end() + i)
                         .unwrap_or(content.len());
                     let line_content = &content[line_start..line_end];
 
-                    let line_number = content[..capture.start()].chars()
+                    let line_number = content[..capture.start()]
+                        .chars()
                         .filter(|&c| c == '\n')
-                        .count() + 1;
+                        .count()
+                        + 1;
 
                     matches.push(KeywordMatch {
                         keyword: keyword.clone(),
@@ -51,7 +58,8 @@ impl KeywordMatcher {
 
     /// Find exact matches
     pub fn find_exact_matches(&self, content: &str, keywords: &[String]) -> Vec<String> {
-        keywords.iter()
+        keywords
+            .iter()
             .filter(|k| content.to_lowercase().contains(&k.to_lowercase()))
             .cloned()
             .collect()
@@ -69,7 +77,7 @@ impl KeywordMatcher {
             } else {
                 // Check for close matches (missing one character, etc.)
                 for i in 0..keyword.len() {
-                    let modified = format!("{}{}", &keyword[..i], &keyword[i+1..]);
+                    let modified = format!("{}{}", &keyword[..i], &keyword[i + 1..]);
                     if content_lower.contains(&modified.to_lowercase()) {
                         matches.push(keyword.clone());
                         break;
@@ -96,8 +104,10 @@ impl KeywordMatcher {
         // Boost if keyword appears near technical terms
         let technical_indicators = ["function", "class", "method", "api", "system", "component"];
         for indicator in technical_indicators {
-            if context_lower.contains(indicator) &&
-               context_lower.find(indicator).unwrap_or(1000) < context_lower.find(&keyword_lower).unwrap_or(0) + 50 {
+            if context_lower.contains(indicator)
+                && context_lower.find(indicator).unwrap_or(1000)
+                    < context_lower.find(&keyword_lower).unwrap_or(0) + 50
+            {
                 score += 0.1;
                 break;
             }
@@ -112,7 +122,11 @@ impl KeywordMatcher {
     }
 
     /// Analyze keyword relevance in content
-    pub async fn analyze_keyword_relevance(&self, content: &str, matches: &[KeywordMatch]) -> Result<(f64, f64)> {
+    pub async fn analyze_keyword_relevance(
+        &self,
+        content: &str,
+        matches: &[KeywordMatch],
+    ) -> Result<(f64, f64)> {
         if matches.is_empty() {
             return Ok((0.0, 0.0));
         }

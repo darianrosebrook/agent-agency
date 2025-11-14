@@ -19,19 +19,19 @@ pub enum ExecutionStrategy {
         /// Maximum concurrent tasks
         max_concurrent: usize,
     },
-    
+
     /// Execute tasks sequentially
     Sequential {
         /// Delay between tasks (ms)
         delay_ms: Option<u64>,
     },
-    
+
     /// Execute based on conditions
     Conditional {
         /// Condition evaluation logic
         condition: String,
     },
-    
+
     /// Custom execution strategy
     Custom {
         /// Strategy name
@@ -46,13 +46,13 @@ pub enum ExecutionStrategy {
 pub struct StrategyConfig {
     /// Default strategy to use
     pub default_strategy: ExecutionStrategy,
-    
+
     /// Strategy-specific configurations
     pub strategy_configs: HashMap<String, StrategyParams>,
-    
+
     /// Enable automatic strategy adaptation
     pub enable_adaptation: bool,
-    
+
     /// Adaptation interval (seconds)
     pub adaptation_interval_secs: u64,
 }
@@ -62,10 +62,10 @@ pub struct StrategyConfig {
 pub struct StrategyParams {
     /// Maximum concurrent tasks for parallel execution
     pub max_concurrent: Option<usize>,
-    
+
     /// Delay between tasks for sequential execution (ms)
     pub delay_ms: Option<u64>,
-    
+
     /// Custom parameters
     pub custom_params: HashMap<String, serde_json::Value>,
 }
@@ -75,16 +75,16 @@ pub struct StrategyParams {
 pub struct StrategyResult {
     /// Strategy used
     pub strategy: ExecutionStrategy,
-    
+
     /// Task execution results
     pub results: Vec<StrategyTaskResult>,
-    
+
     /// Total execution time (ms)
     pub total_time_ms: u64,
-    
+
     /// Success rate (0.0-1.0)
     pub success_rate: f64,
-    
+
     /// Strategy effectiveness score (0.0-1.0)
     pub effectiveness_score: f64,
 }
@@ -129,13 +129,13 @@ pub struct StrategyResult {
 pub struct StrategyTaskResult {
     /// Task ID
     pub task_id: String,
-    
+
     /// Success status
     pub success: bool,
-    
+
     /// Execution time (ms)
     pub execution_time_ms: u64,
-    
+
     /// Error message if failed
     pub error: Option<String>,
 }
@@ -182,16 +182,16 @@ pub trait ExecutionStrategyService: Send + Sync + std::fmt::Debug {
 pub struct TaskCharacteristics {
     /// Number of tasks
     pub task_count: usize,
-    
+
     /// Average task complexity (0.0-1.0)
     pub avg_complexity: f64,
-    
+
     /// Task dependencies
     pub dependencies: Vec<(String, String)>, // (task_id, depends_on_task_id)
-    
+
     /// Resource requirements
     pub resource_requirements: HashMap<String, serde_json::Value>,
-    
+
     /// Time constraints
     pub time_constraints: Option<TimeConstraints>,
 }
@@ -201,10 +201,10 @@ pub struct TaskCharacteristics {
 pub struct TimeConstraints {
     /// Maximum total execution time (ms)
     pub max_total_time_ms: Option<u64>,
-    
+
     /// Individual task timeout (ms)
     pub task_timeout_ms: Option<u64>,
-    
+
     /// Deadline timestamp
     pub deadline: Option<DateTime<Utc>>,
 }
@@ -213,10 +213,10 @@ pub struct TimeConstraints {
 pub struct DefaultExecutionStrategyService {
     /// Strategy configuration
     config: StrategyConfig,
-    
+
     /// Active task group strategies
     active_strategies: std::sync::Arc<tokio::sync::RwLock<HashMap<String, ExecutionStrategy>>>,
-    
+
     /// Strategy performance history
     strategy_history: std::sync::Arc<tokio::sync::RwLock<Vec<StrategyResult>>>,
 }
@@ -237,7 +237,7 @@ impl DefaultExecutionStrategyService {
         // - If tasks have dependencies, use sequential or conditional
         // - If tasks are independent and numerous, use parallel
         // - Otherwise use default strategy
-        
+
         if !characteristics.dependencies.is_empty() {
             // Tasks have dependencies - use sequential or conditional
             if characteristics.task_count > 10 {
@@ -287,7 +287,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
             ExecutionStrategy::Parallel { max_concurrent } => {
                 // Execute tasks in parallel with concurrency limit
                 use futures::stream::{self, StreamExt};
-                
+
                 let task_stream = stream::iter(task_ids.iter().cloned())
                     .map(|task_id| async move {
                         // TODO: Implement real task execution
@@ -544,7 +544,7 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
         strategy: &ExecutionStrategy,
     ) -> Result<f64, StrategyError> {
         let history = self.strategy_history.read().await;
-        
+
         // Calculate average effectiveness for this strategy type
         let matching_results: Vec<&StrategyResult> = history
             .iter()

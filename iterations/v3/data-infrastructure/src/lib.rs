@@ -3,8 +3,8 @@
 //! Consolidates database, interfaces, and api-server functionality into
 //! a comprehensive data layer with persistence, API services, and data contracts.
 
-use std::sync::Arc;
 use anyhow::Result;
+use std::sync::Arc;
 
 // Database modules (from consolidated database crate)
 pub mod audit;
@@ -16,9 +16,9 @@ pub mod data_consistency;
 pub mod database_audit;
 pub mod database_circuit_breaker;
 pub mod database_config;
+pub mod database_init;
 pub mod database_metrics;
 pub mod database_operations;
-pub mod database_init;
 pub mod migrations;
 pub mod models;
 pub mod monitoring;
@@ -28,29 +28,29 @@ pub mod queries;
 pub mod queue;
 pub mod scripts;
 pub mod vector_store;
-pub mod wal_storage;
 pub mod wal_replay;
+pub mod wal_storage;
 
 // API and interface modules (from consolidated interfaces and api-server crates)
 pub mod api;
 pub mod api_alerts;
 pub mod api_circuit_breaker;
 pub mod artifact_store;
+pub mod chat_service;
 pub mod cli_implementation;
 pub mod cli_interface;
-pub mod chat_service;
 pub mod client; // client/mod.rs module
-pub mod simple_client; // simple_client.rs is automatically included as a module
 pub mod health;
 pub mod keystore_api;
 pub mod knowledge_queries;
 pub mod mcp;
+pub mod orchestrator_service;
 pub mod rate_limiter;
 pub mod rto_rpo_monitor;
 pub mod sandbox_api;
 pub mod service_failover;
+pub mod simple_client; // simple_client.rs is automatically included as a module
 pub mod system_observability;
-pub mod orchestrator_service;
 
 // Data infrastructure modules (from consolidated caching, embedding-service, file_ops crates)
 pub mod caching;
@@ -68,7 +68,9 @@ pub use simple_client::ProvenanceClientAdapter;
 pub use orchestrator_service::{OrchestratorService, TaskExecutor};
 
 // Export database operations factory
-pub use database_operations::{create_database_operations, create_database_audit_operations, DatabaseOperations};
+pub use database_operations::{
+    create_database_audit_operations, create_database_operations, DatabaseOperations,
+};
 
 // Re-export sqlx Row type for convenience
 pub use sqlx::Row;
@@ -176,7 +178,8 @@ impl SystemHealthMonitor {
         // Check database health
         // Note: No pool reference available here - using metrics-only assessment
         // For real connectivity checks, use the API health endpoint which has pool access
-        self.database_health.perform_health_check(None)
+        self.database_health
+            .perform_health_check(None)
             .await
             .map_err(|e| format!("Database health check failed: {}", e))?;
 
@@ -205,12 +208,13 @@ pub struct AppState {
 
 // Re-export API and interface types (from consolidated interfaces and api-server crates)
 pub use api::types::{PersistedTask, TaskStoreTrait};
-pub use api::handlers::{list_tasks, get_task_status as get_task, submit_task, get_metrics as get_api_metrics};
-pub use api::handlers::chat_handlers::create_chat_session as create_api_chat_session;
-pub use api::handlers::{get_chat_sessions, get_chat_messages, stream_agent_response, list_waivers, create_waiver};
-pub use api::handlers::{approve_waiver, get_task_provenance};
+// TODO: Re-export handlers when handlers module is restored
+// pub use api::handlers::{list_tasks, get_task_status as get_task, submit_task, get_metrics as get_api_metrics};
+// pub use api::handlers::chat_handlers::create_chat_session as create_api_chat_session;
+// pub use api::handlers::{get_chat_sessions, get_chat_messages, stream_agent_response, list_waivers, create_waiver};
+// pub use api::handlers::{approve_waiver, get_task_provenance};
+pub use api::metrics::{BusinessMetrics, DiskIOMetrics, SystemMetrics};
 pub use client::orchestrator::DatabaseClient as ApiDatabaseClient; // Complex DatabaseClient
-pub use api::metrics::{BusinessMetrics, SystemMetrics, DiskIOMetrics};
 
 // Re-export health check from api module
 pub use api::health::health_check;

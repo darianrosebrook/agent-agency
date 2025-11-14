@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Re-export learning types from contracts for backward compatibility
-pub use agent_agency_contracts::types::learning::{
-    AlgorithmConfig, LearningError, LearningResult,
-};
+pub use agent_agency_contracts::types::learning::{AlgorithmConfig, LearningError, LearningResult};
 
 /// Q-table for Q-learning
 #[derive(Debug, Clone, Serialize, Deserialize)]

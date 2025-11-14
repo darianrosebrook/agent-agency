@@ -1,8 +1,8 @@
 //! Recovery and resilience types for system-resilience crate
 
-use schemars::JsonSchema;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ use crate::merkle::AuthorInfo;
 
 /// Content-addressable storage digest (BLAKE3 hash)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct Digest ([u8; 32]);
+pub struct Digest([u8; 32]);
 
 impl Digest {
     /// Create a digest from raw bytes
@@ -23,9 +23,12 @@ impl Digest {
     /// Create a digest from hex string
     pub fn from_hex(hex: &str) -> Result<Self> {
         if hex.len() != 64 {
-            return Err(anyhow::anyhow!("Invalid hex length: expected 64, got {}", hex.len()));
+            return Err(anyhow::anyhow!(
+                "Invalid hex length: expected 64, got {}",
+                hex.len()
+            ));
         }
-        
+
         let mut bytes = [0u8; 32];
         for (i, chunk) in hex.as_bytes().chunks(2).enumerate() {
             if i >= 32 {
@@ -34,7 +37,7 @@ impl Digest {
             let hex_str = std::str::from_utf8(chunk)?;
             bytes[i] = u8::from_str_radix(hex_str, 16)?;
         }
-        
+
         Ok(Self(bytes))
     }
 
@@ -132,8 +135,7 @@ impl FileMode {
         // Check if symlink (bit 13 set)
         else if mode & 0o120000 != 0 {
             FileMode::Symlink
-        }
-        else {
+        } else {
             FileMode::Regular
         }
     }
@@ -162,13 +164,9 @@ pub enum RestoreAction {
         size: u64,
     },
     /// Create a directory
-    CreateDirectory {
-        path: PathBuf,
-    },
+    CreateDirectory { path: PathBuf },
     /// Remove a file or directory
-    Remove {
-        path: PathBuf,
-    },
+    Remove { path: PathBuf },
 }
 
 impl RestoreAction {
@@ -407,7 +405,7 @@ impl std::error::Error for RecoveryError {}
 
 /// Change identifier for tracking modifications
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct ChangeId (pub String);
+pub struct ChangeId(pub String);
 
 impl ChangeId {
     /// Create a new change ID
@@ -720,18 +718,11 @@ pub enum FileRestoreAction {
         size: u64,
     },
     /// Create a directory
-    CreateDirectory {
-        path: PathBuf,
-    },
+    CreateDirectory { path: PathBuf },
     /// Remove a file or directory
-    Remove {
-        path: PathBuf,
-    },
+    Remove { path: PathBuf },
     /// Delete a file
-    DeleteFile {
-        path: PathBuf,
-        size: u64,
-    },
+    DeleteFile { path: PathBuf, size: u64 },
     /// Change file mode
     Chmod {
         path: PathBuf,
@@ -936,10 +927,7 @@ mod tests {
     #[test]
     fn test_object_ref() {
         let digest = Digest::from_bytes([2u8; 32]);
-        let obj_ref = ObjectRef {
-            digest,
-            size: 1024,
-        };
+        let obj_ref = ObjectRef { digest, size: 1024 };
         assert_eq!(obj_ref.size, 1024);
     }
 
@@ -962,7 +950,7 @@ mod tests {
             digest: digest.clone(),
             size: 512,
         };
-        
+
         let action = RestoreAction::WriteFile {
             path: PathBuf::from("test.txt"),
             mode: FileMode::Regular,
@@ -970,7 +958,7 @@ mod tests {
             source: obj_ref,
             size: 512,
         };
-        
+
         assert_eq!(action.size(), 512);
         assert_eq!(action.path(), &PathBuf::from("test.txt"));
     }
@@ -987,7 +975,6 @@ pub struct Commit {
     pub message: Option<String>,
     pub stats: ChangeStats,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub author: AuthorInfo,
 }

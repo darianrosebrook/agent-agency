@@ -1,54 +1,87 @@
 //! Error types for the parallel worker system
 
+use crate::WorkerMessage;
+use crate::{SubTaskId, TaskId, WorkerId, WorkerSpecialty};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use thiserror::Error;
-use crate::{TaskId, SubTaskId, WorkerId, WorkerSpecialty};
-use crate::WorkerMessage;
 
 /// Main error type for the parallel worker system
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum ParallelError {
     #[error("Task decomposition failed: {message}")]
-    Decomposition { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    Decomposition {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Worker coordination failed: {message}")]
-    Coordination { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    Coordination {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Worker execution failed: {message}")]
-    WorkerExecution { worker_id: WorkerId, message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    WorkerExecution {
+        worker_id: WorkerId,
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Worker error: {0}")]
     Worker(WorkerError),
 
     #[error("Progress tracking failed: {message}")]
-    ProgressTracking { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    ProgressTracking {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Quality validation failed: {message}")]
-    Validation { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    Validation {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Communication failed: {message}")]
-    Communication { message: String, source: Option<Box<dyn std::error::Error + Send + Sync>> },
+    Communication {
+        message: String,
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     #[error("Resource exhaustion: {resource_type} - available: {available}, required: {required}")]
-    ResourceExhaustion { resource_type: String, available: u64, required: u64 },
+    ResourceExhaustion {
+        resource_type: String,
+        available: u64,
+        required: u64,
+    },
 
     #[error("Timeout exceeded: {duration_secs} seconds")]
     Timeout { duration_secs: u64 },
 
     #[error("Task failed with {failed_workers} failed workers out of {total_workers} total")]
-    TaskFailure { task_id: TaskId, failed_workers: usize, total_workers: usize },
+    TaskFailure {
+        task_id: TaskId,
+        failed_workers: usize,
+        total_workers: usize,
+    },
 
     #[error("Invalid configuration: {message}")]
     Configuration { message: String },
 
     #[error("IO error: {message}")]
-    Io { message: String, source: std::io::Error },
+    Io {
+        message: String,
+        source: std::io::Error,
+    },
 
     #[error("Serialization error: {message}")]
-    Serialization { message: String, source: serde_json::Error },
+    Serialization {
+        message: String,
+        source: serde_json::Error,
+    },
 
     #[error("Unknown error: {message}")]
     Unknown { message: String },
@@ -96,10 +129,7 @@ pub enum DecompositionError {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Error)]
 pub enum ValidationError {
     #[error("External tool failure: {tool_name} - {message}")]
-    ExternalToolFailure {
-        tool_name: String,
-        message: String,
-    },
+    ExternalToolFailure { tool_name: String, message: String },
 
     #[error("Validation failed: {message}")]
     ValidationFailed { message: String },
@@ -199,7 +229,10 @@ pub enum WorkerError {
     ResourceLimitsExceeded { resource_type: String },
 
     #[error("Worker specialty mismatch: expected {expected:?}, got {actual:?}")]
-    SpecialtyMismatch { expected: WorkerSpecialty, actual: WorkerSpecialty },
+    SpecialtyMismatch {
+        expected: WorkerSpecialty,
+        actual: WorkerSpecialty,
+    },
 
     #[error("Worker isolation failed: {message}")]
     IsolationFailure { message: String },
@@ -214,7 +247,10 @@ pub enum WorkerError {
     NotImplemented(String),
 
     #[error("Execution failed: {message}")]
-    ExecutionFailed { worker_id: WorkerId, message: String },
+    ExecutionFailed {
+        worker_id: WorkerId,
+        message: String,
+    },
 
     #[error("I/O error: {message}")]
     Io {
@@ -236,9 +272,11 @@ impl Clone for WorkerError {
             WorkerError::WorkerNotFound { worker_id } => WorkerError::WorkerNotFound {
                 worker_id: worker_id.clone(),
             },
-            WorkerError::NoSpecializedWorkerAvailable { specialty } => WorkerError::NoSpecializedWorkerAvailable {
-                specialty: specialty.clone(),
-            },
+            WorkerError::NoSpecializedWorkerAvailable { specialty } => {
+                WorkerError::NoSpecializedWorkerAvailable {
+                    specialty: specialty.clone(),
+                }
+            }
             WorkerError::NoSuitableWorker { message } => WorkerError::NoSuitableWorker {
                 message: message.clone(),
             },
@@ -273,9 +311,11 @@ impl Clone for WorkerError {
             WorkerError::Communication { message } => WorkerError::Communication {
                 message: message.clone(),
             },
-            WorkerError::ResourceLimitsExceeded { resource_type } => WorkerError::ResourceLimitsExceeded {
-                resource_type: resource_type.clone(),
-            },
+            WorkerError::ResourceLimitsExceeded { resource_type } => {
+                WorkerError::ResourceLimitsExceeded {
+                    resource_type: resource_type.clone(),
+                }
+            }
             WorkerError::ExecutionError { message } => WorkerError::ExecutionError {
                 message: message.clone(),
             },

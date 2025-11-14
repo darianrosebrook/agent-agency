@@ -39,27 +39,37 @@ pub struct TensorSpec {
 pub use self::ffi::*;
 pub use self::filesystem::*;
 pub use self::manager::*;
+pub use self::policy::*;
 
 // Submodules
 pub mod ffi;
 pub mod filesystem;
 pub mod manager;
+pub mod policy;
 
 // New ANE implementation modules
+pub mod ane_circuit_breaker;
 pub mod ane_errors;
 pub mod compat;
-pub mod resource_pool;
-pub mod models;
 pub mod infer;
 pub mod metrics;
-pub mod ane_circuit_breaker;
+pub mod models;
 pub mod monitoring;
 pub mod optimization;
+pub mod resource_pool;
 
 // Re-export Mistral functionality
-pub use models::mistral_model::{MistralModel, MistralCompilationOptions, load_mistral_model, estimate_memory_usage, validate_mistral_compatibility};
+pub use models::mistral_model::{
+    estimate_memory_usage, load_mistral_model, validate_mistral_compatibility,
+    MistralCompilationOptions, MistralModel,
+};
 // Re-export Mistral types (functions disabled due to candle-core conflicts)
-pub use infer::mistral::{MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict, DebateArgument, DebatePosition, ConfidenceLevel};
+pub use infer::mistral::{
+    ComplianceLevel, ConfidenceLevel, ConstitutionalVerdict, DebateArgument, DebatePosition,
+    MistralInferenceOptions, RiskTier, Verdict,
+};
 
 // Re-export circuit breaker
-pub use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig, CircuitState, CircuitBreakerError};
+pub use crate::ane::ane_circuit_breaker::{
+    CircuitBreaker, CircuitBreakerConfig, CircuitBreakerError, CircuitState,
+};

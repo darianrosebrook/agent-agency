@@ -17,36 +17,43 @@ pub mod claim_extraction;
 pub mod conflict_resolution_tools;
 pub mod evidence_collection_tools;
 pub mod evidence_types;
-pub mod fact_verification;
 pub mod executor;
-pub mod source_validation;
+pub mod fact_verification;
 pub mod multi_modal_verification;
 pub mod parallel_integration;
 pub mod policy_enforcement;
 pub mod schema_registry;
+pub mod source_validation;
 pub mod tool_chain_planner;
 pub mod tool_coordinator;
 pub mod tool_discovery;
 pub mod tool_execution;
 pub mod tool_registry;
+pub mod validation;
+pub mod model_updates;
 
-pub use arbiter_pipeline::{ArbiterPipelineOptimizer, DecisionPipelineConfig, DecisionInput, DecisionResult};
-pub use conflict_resolution_tools::{ConflictResolutionTool, DebateOrchestrator, ConsensusBuilder};
-pub use evidence_collection_tools::{EvidenceCollectionTool}; // FactVerificationTool, SourceValidationTool - not implemented yet
+pub use arbiter_pipeline::{
+    ArbiterPipelineOptimizer, DecisionInput, DecisionPipelineConfig, DecisionResult,
+};
+pub use conflict_resolution_tools::{ConflictResolutionTool, ConsensusBuilder, DebateOrchestrator};
+pub use evidence_collection_tools::EvidenceCollectionTool; // FactVerificationTool, SourceValidationTool - not implemented yet
 pub use executor::{ChainExecutor, ExecutionResult};
-pub use multi_modal_verification::{MultimodalVerificationTool};
-pub use parallel_integration::{ParallelToolCoordinator};
-pub use policy_enforcement::{PolicyEnforcementTools};
+pub use multi_modal_verification::MultimodalVerificationTool;
+pub use parallel_integration::ParallelToolCoordinator;
+pub use policy_enforcement::PolicyEnforcementTools;
 // pub use governance_tools::{GovernanceTool, AuditLogger, ProvenanceTracker}; // Module not implemented yet
 // pub use quality_gate_tools::{QualityGateTool, CodeAnalysisTool, PerformanceValidator}; // Module not implemented yet
 // pub use reasoning_tools::{ReasoningTool, LogicValidator, InferenceEngine}; // Module not implemented yet
 
 // Stub implementations for missing tool types are handled by PolicyEnforcementTools
-pub use tool_chain_planner::{ToolChainPlanner, ToolChain as TypedToolChain, ChainResult, PlanningContext, PlanningConstraints};
-pub use tool_coordinator::{ToolCoordinator, ToolChain, ToolExecutionResult};
-pub use tool_discovery::{ToolDiscoveryEngine, ToolCapability}; // ToolMetadata - private
+pub use tool_chain_planner::{
+    ChainResult, PlanningConstraints, PlanningContext, ToolChain as TypedToolChain,
+    ToolChainPlanner,
+};
+pub use tool_coordinator::{ToolChain, ToolCoordinator, ToolExecutionResult};
+pub use tool_discovery::{ToolCapability, ToolDiscoveryEngine}; // ToolMetadata - private
 pub use tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
-pub use tool_registry::{ToolRegistry, RegisteredTool, ToolRegistration};
+pub use tool_registry::{RegisteredTool, ToolRegistration, ToolRegistry};
 // pub use workflow_tools::{WorkflowTool, TaskDecomposer, ProgressTracker}; // Module not implemented yet
 // pub use crate::tool_orchestrator::ToolOrchestrator; // Module not implemented yet
 

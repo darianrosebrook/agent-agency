@@ -1,17 +1,17 @@
 //! Vector store integration for multimodal RAG
-//! 
+//!
 //! Provides database-backed vector storage using pgvector extension
 //! with HNSW indices for efficient similarity search.
 
-use schemars::JsonSchema;
 use anyhow::{Context, Result};
-use std::sync::Arc;
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgRow, Row};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::{Row, postgres::PgRow};
 
 /// Shared database pool with proper reference counting
 pub struct DatabasePool {
@@ -72,8 +72,12 @@ impl DatabasePool {
     pub fn clone_ref(&self) -> Self {
         // Increment reference count
         let old_count = self.inner.active_refs.fetch_add(1, Ordering::SeqCst);
-        debug!("Incremented reference count for pool {}: {} -> {}",
-               self.inner.pool_id, old_count, old_count + 1);
+        debug!(
+            "Incremented reference count for pool {}: {} -> {}",
+            self.inner.pool_id,
+            old_count,
+            old_count + 1
+        );
 
         Self {
             inner: Arc::clone(&self.inner),
@@ -85,12 +89,17 @@ impl DatabasePool {
         let old_count = self.inner.active_refs.fetch_sub(1, Ordering::SeqCst);
         let new_count = old_count - 1;
 
-        debug!("Decremented reference count for pool {}: {} -> {}",
-               self.inner.pool_id, old_count, new_count);
+        debug!(
+            "Decremented reference count for pool {}: {} -> {}",
+            self.inner.pool_id, old_count, new_count
+        );
 
         // If this was the last reference, perform cleanup
         if new_count == 0 {
-            info!("Last reference to pool {} dropped, performing cleanup", self.inner.pool_id);
+            info!(
+                "Last reference to pool {} dropped, performing cleanup",
+                self.inner.pool_id
+            );
             self.perform_cleanup();
         }
     }
@@ -108,12 +117,17 @@ impl Drop for DatabasePool {
         let old_count = self.inner.active_refs.fetch_sub(1, Ordering::SeqCst);
         let new_count = old_count - 1;
 
-        debug!("Dropped reference to pool {}: {} -> {}",
-               self.inner.pool_id, old_count, new_count);
+        debug!(
+            "Dropped reference to pool {}: {} -> {}",
+            self.inner.pool_id, old_count, new_count
+        );
 
         // If this was the last reference, perform cleanup
         if new_count == 0 {
-            info!("Last reference to pool {} dropped, performing cleanup", self.inner.pool_id);
+            info!(
+                "Last reference to pool {} dropped, performing cleanup",
+                self.inner.pool_id
+            );
             self.perform_cleanup();
         }
     }
@@ -154,7 +168,10 @@ impl DatabasePool {
         // - CAWS Tier: 2 (standard feature)
         // - Change Budget: ~80 LOC
         // - Reviewer Requirements: Database connection management expertise
-        info!("Performing cleanup for pool {} - closing idle connections", self.inner.pool_id);
+        info!(
+            "Performing cleanup for pool {} - closing idle connections",
+            self.inner.pool_id
+        );
 
         // The sqlx pool will handle connection cleanup when dropped
         // Here we could add custom cleanup logic like:
@@ -180,7 +197,6 @@ pub struct PoolStats {
     pub pool_id: String,
     pub active_refs: usize,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub pool_size: usize,
     pub idle_connections: usize,
@@ -195,7 +211,6 @@ pub struct BlockVectorRecord {
     pub model_id: String,
     pub modality: String,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -209,10 +224,8 @@ pub struct SearchAuditEntry {
     pub results_count: usize,
     pub search_time_ms: u64,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub results: Option<serde_json::Value>,
     pub features: Option<serde_json::Value>,
@@ -254,25 +267,37 @@ pub struct VectorStore {
 
 impl VectorStore {
     pub fn new(pool: DatabasePool) -> Self {
-        info!("Created vector store with pool reference count: {}", pool.reference_count());
+        info!(
+            "Created vector store with pool reference count: {}",
+            pool.reference_count()
+        );
         Self { pool }
     }
 
     /// Store a vector record
-    /// 
+    ///
     /// Stores a vector embedding in the block_vectors table using a database transaction
     /// for atomicity. The vector is stored with its metadata (block_id, model_id, modality)
     /// and uses pgvector's VECTOR type for efficient similarity search.
     pub async fn store_vector(&self, record: BlockVectorRecord) -> Result<(), anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
-            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+            return Err(anyhow::anyhow!(
+                "Vector store pool has no active references"
+            ));
         }
 
-        debug!("Storing vector record {} in pool {}", record.block_id, self.pool.stats().pool_id);
+        debug!(
+            "Storing vector record {} in pool {}",
+            record.block_id,
+            self.pool.stats().pool_id
+        );
 
         // Start a database transaction for atomic operation
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .context("Failed to start database transaction for vector storage")?;
 
         // Insert vector into block_vectors table
@@ -283,10 +308,10 @@ impl VectorStore {
         sqlx::query(
             r#"
             INSERT INTO block_vectors (
-                block_id, content, modality, embedding_model_id, 
+                block_id, content, modality, embedding_model_id,
                 embedding, metadata, project_scope, created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            "#
+            "#,
         )
         .bind(record.block_id)
         .bind("") // content field - placeholder since not in BlockVectorRecord
@@ -302,7 +327,8 @@ impl VectorStore {
         .context("Failed to insert vector into database")?;
 
         // Commit transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .context("Failed to commit vector storage transaction")?;
 
         tracing::debug!(
@@ -317,55 +343,67 @@ impl VectorStore {
     }
 
     /// Search vectors
-    /// 
+    ///
     /// Performs vector similarity search using pgvector's cosine distance operator.
     /// Returns ranked results with similarity scores, supporting filtering by model_id and project_scope.
-    pub async fn search_vectors(&self, query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    pub async fn search_vectors(
+        &self,
+        query: &VectorQuery,
+    ) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
-            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+            return Err(anyhow::anyhow!(
+                "Vector store pool has no active references"
+            ));
         }
 
-        info!("Searching vectors with query for model {} in pool {}", query.model_id, self.pool.stats().pool_id);
+        info!(
+            "Searching vectors with query for model {} in pool {}",
+            query.model_id,
+            self.pool.stats().pool_id
+        );
 
         // Build SQL query with pgvector cosine similarity
         // Using <=> operator for cosine distance, then converting to similarity (1 - distance)
         let mut sql = String::from(
-            "SELECT block_id, embedding, metadata, 
+            "SELECT block_id, embedding, metadata,
                     1 - (embedding <=> $1::vector) as similarity
              FROM block_vectors
-             WHERE embedding_model_id = $2"
+             WHERE embedding_model_id = $2",
         );
-        
+
         let mut param_count = 2;
-        
+
         // Add project_scope filter if provided
         if query.project_scope.is_some() {
             param_count += 1;
             sql.push_str(&format!(" AND project_scope = ${}", param_count));
         }
-        
+
         // Order by similarity (distance ascending) and limit results
-        sql.push_str(&format!(" ORDER BY embedding <=> $1::vector LIMIT ${}", param_count + 1));
-        
+        sql.push_str(&format!(
+            " ORDER BY embedding <=> $1::vector LIMIT ${}",
+            param_count + 1
+        ));
+
         // Execute query with parameters
         let mut db_query = sqlx::query(&sql)
             .bind(&query.vector as &[f32]) // $1: query vector
             .bind(&query.model_id); // $2: model_id
-        
+
         // Bind project_scope if provided
         if let Some(ref project_scope) = query.project_scope {
             db_query = db_query.bind(project_scope);
         }
-        
+
         // Bind limit
         db_query = db_query.bind(query.k as i64);
-        
+
         let rows = db_query
             .fetch_all(&*self.pool)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to execute vector similarity search: {}", e))?;
-        
+
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows
             .into_iter()
@@ -374,7 +412,7 @@ impl VectorStore {
                 let similarity = row.try_get::<f64, &str>("similarity").ok()?;
                 let embedding = row.try_get::<Vec<f32>, &str>("embedding").ok()?;
                 let metadata = row.try_get::<serde_json::Value, &str>("metadata").ok()?;
-                
+
                 Some(VectorSearchResult {
                     block_id,
                     score: similarity as f32,
@@ -383,20 +421,32 @@ impl VectorStore {
                 })
             })
             .collect();
-        
-        info!("Vector search completed: found {} results for model {}", results.len(), query.model_id);
-        
+
+        info!(
+            "Vector search completed: found {} results for model {}",
+            results.len(),
+            query.model_id
+        );
+
         Ok(results)
     }
 
     /// Search similar vectors
-    /// 
+    ///
     /// Performs vector similarity search using pgvector's cosine distance operator.
     /// Simplified interface that takes a query vector directly and returns top-k similar vectors.
-    pub async fn search_similar(&self, query_vector: &[f32], model_id: &str, k: usize, project_scope: Option<&str>) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    pub async fn search_similar(
+        &self,
+        query_vector: &[f32],
+        model_id: &str,
+        k: usize,
+        project_scope: Option<&str>,
+    ) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
-            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+            return Err(anyhow::anyhow!(
+                "Vector store pool has no active references"
+            ));
         }
 
         // Validate input
@@ -404,46 +454,54 @@ impl VectorStore {
             return Err(anyhow::anyhow!("Query vector cannot be empty"));
         }
 
-        info!("Searching similar vectors for model {} with k={} in pool {}", model_id, k, self.pool.stats().pool_id);
+        info!(
+            "Searching similar vectors for model {} with k={} in pool {}",
+            model_id,
+            k,
+            self.pool.stats().pool_id
+        );
 
         // Build SQL query with pgvector cosine similarity
         // Using <=> operator for cosine distance, then converting to similarity (1 - distance)
         let mut sql = String::from(
-            "SELECT block_id, embedding, metadata, 
+            "SELECT block_id, embedding, metadata,
                     1 - (embedding <=> $1::vector) as similarity
              FROM block_vectors
-             WHERE embedding_model_id = $2"
+             WHERE embedding_model_id = $2",
         );
-        
+
         let mut param_count = 2;
-        
+
         // Add project_scope filter if provided
         if project_scope.is_some() {
             param_count += 1;
             sql.push_str(&format!(" AND project_scope = ${}", param_count));
         }
-        
+
         // Order by similarity (distance ascending) and limit results
-        sql.push_str(&format!(" ORDER BY embedding <=> $1::vector LIMIT ${}", param_count + 1));
-        
+        sql.push_str(&format!(
+            " ORDER BY embedding <=> $1::vector LIMIT ${}",
+            param_count + 1
+        ));
+
         // Execute query with parameters
         let mut db_query = sqlx::query(&sql)
             .bind(query_vector as &[f32]) // $1: query vector
             .bind(model_id); // $2: model_id
-        
+
         // Bind project_scope if provided
         if let Some(project_scope) = project_scope {
             db_query = db_query.bind(project_scope);
         }
-        
+
         // Bind limit
         db_query = db_query.bind(k as i64);
-        
+
         let rows = db_query
             .fetch_all(&*self.pool)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to execute vector similarity search: {}", e))?;
-        
+
         // Convert rows to VectorSearchResult
         let results: Vec<VectorSearchResult> = rows
             .into_iter()
@@ -452,7 +510,7 @@ impl VectorStore {
                 let similarity = row.try_get::<f64, &str>("similarity").ok()?;
                 let embedding = row.try_get::<Vec<f32>, &str>("embedding").ok()?;
                 let metadata = row.try_get::<serde_json::Value, &str>("metadata").ok()?;
-                
+
                 Some(VectorSearchResult {
                     block_id,
                     score: similarity as f32,
@@ -461,20 +519,26 @@ impl VectorStore {
                 })
             })
             .collect();
-        
-        info!("Similar vector search completed: found {} results for model {}", results.len(), model_id);
-        
+
+        info!(
+            "Similar vector search completed: found {} results for model {}",
+            results.len(),
+            model_id
+        );
+
         Ok(results)
     }
 
     /// Log search operation
-    /// 
+    ///
     /// Inserts an audit log entry into the search_audit_log table for tracking vector search operations.
     /// Errors are logged but do not block the operation to ensure search functionality is not impacted.
     pub async fn log_search(&self, entry: SearchAuditEntry) -> Result<(), anyhow::Error> {
         // Validate reference count is healthy
         if self.pool.reference_count() == 0 {
-            return Err(anyhow::anyhow!("Vector store pool has no active references"));
+            return Err(anyhow::anyhow!(
+                "Vector store pool has no active references"
+            ));
         }
 
         debug!(
@@ -489,14 +553,14 @@ impl VectorStore {
         // Insert audit log entry into search_audit_log table
         // Use entry.timestamp if provided, otherwise use current time
         let timestamp = entry.timestamp;
-        
+
         // Serialize results and features as JSONB
         let results_json = entry.results.unwrap_or_else(|| serde_json::json!([]));
         let features_json = entry.features.unwrap_or_else(|| serde_json::json!({}));
-        
+
         // Build query string with query_type included in features for additional context
         let query_with_type = format!("{} [type: {}]", entry.query, entry.query_type);
-        
+
         // Insert into search_audit_log table
         // Note: user_id and session_id are optional and not in SearchAuditEntry, so we use NULL
         let result = sqlx::query(
@@ -505,7 +569,7 @@ impl VectorStore {
                 id, query, results, features, timestamp,
                 user_id, session_id, response_time_ms, result_count
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            "#
+            "#,
         )
         .bind(entry.id)
         .bind(&query_with_type)
@@ -568,18 +632,21 @@ pub struct DatabaseVectorStore {
 impl DatabaseVectorStore {
     /// Create new database vector store with reference counting
     pub fn new(pool: Arc<DatabasePool>) -> Self {
-        info!("Creating database vector store with reference count: {}", pool.reference_count());
+        info!(
+            "Creating database vector store with reference count: {}",
+            pool.reference_count()
+        );
 
         // Clone the pool reference (increments reference count)
         let pool_clone = Arc::clone(&pool);
         let vector_store = VectorStore::new((*pool_clone).clone_ref());
 
-        info!("Database vector store created, total references: {}", pool.reference_count());
+        info!(
+            "Database vector store created, total references: {}",
+            pool.reference_count()
+        );
 
-        Self {
-            pool,
-            vector_store,
-        }
+        Self { pool, vector_store }
     }
 
     /// Store a block vector in the database
@@ -591,7 +658,7 @@ impl DatabaseVectorStore {
     /// Result indicating success or failure
     pub async fn store_vector(&self, record: BlockVectorRecord) -> Result<()> {
         debug!("Storing vector for block: {}", record.block_id);
-        
+
         let block_id = record.block_id;
         self.vector_store
             .store_vector(record)
@@ -681,9 +748,7 @@ impl DatabaseVectorStore {
             .as_object()
             .map(|obj| {
                 obj.iter()
-                    .filter_map(|(k, v)| {
-                        v.as_f64().map(|f| (k.clone(), f as f32))
-                    })
+                    .filter_map(|(k, v)| v.as_f64().map(|f| (k.clone(), f as f32)))
                     .collect()
             })
             .unwrap_or_default();
@@ -716,16 +781,14 @@ impl DatabaseVectorStore {
         debug!("Retrieving vector store statistics");
 
         // Count total vectors
-        let total_vectors = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM block_vectors"
-        )
-        .fetch_one(&**self.pool)
-        .await
-        .context("Failed to count total vectors")?;
+        let total_vectors = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM block_vectors")
+            .fetch_one(&**self.pool)
+            .await
+            .context("Failed to count total vectors")?;
 
         // Count vectors by model
         let model_counts = sqlx::query_as::<_, (String, i64)>(
-            "SELECT model_id, COUNT(*) FROM block_vectors GROUP BY model_id"
+            "SELECT model_id, COUNT(*) FROM block_vectors GROUP BY model_id",
         )
         .fetch_all(&**self.pool)
         .await
@@ -733,7 +796,7 @@ impl DatabaseVectorStore {
 
         // Count vectors by modality
         let modality_counts = sqlx::query_as::<_, (String, i64)>(
-            "SELECT modality, COUNT(*) FROM block_vectors GROUP BY modality"
+            "SELECT modality, COUNT(*) FROM block_vectors GROUP BY modality",
         )
         .fetch_all(&**self.pool)
         .await
@@ -745,7 +808,10 @@ impl DatabaseVectorStore {
             modality_counts: modality_counts.into_iter().collect(),
         };
 
-        info!("Retrieved vector store statistics: {} total vectors", stats.total_vectors);
+        info!(
+            "Retrieved vector store statistics: {} total vectors",
+            stats.total_vectors
+        );
         Ok(stats)
     }
 
@@ -757,7 +823,7 @@ impl DatabaseVectorStore {
         debug!("Verifying pgvector extension");
 
         let result = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')"
+            "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')",
         )
         .fetch_one(&**self.pool)
         .await
@@ -839,7 +905,7 @@ mod tests {
 
     // Stub types for tests
     #[derive(Debug, Clone, JsonSchema)]
-pub struct BlockVectorRecord {
+    pub struct BlockVectorRecord {
         pub block_id: String,
         pub vector: Vec<f32>,
         pub model_id: String,
@@ -849,7 +915,7 @@ pub struct BlockVectorRecord {
     }
 
     #[derive(Debug, Clone, JsonSchema)]
-pub struct SearchAuditEntry {
+    pub struct SearchAuditEntry {
         pub query_id: String,
         pub query_type: String,
         pub results_count: usize,
@@ -877,7 +943,10 @@ pub struct SearchAuditEntry {
     async fn test_vector_store_stats_struct() {
         let stats = VectorStoreStats {
             total_vectors: 100,
-            model_counts: vec![("embeddinggemma".to_string(), 50), ("clip-vit-b32".to_string(), 50)],
+            model_counts: vec![
+                ("embeddinggemma".to_string(), 50),
+                ("clip-vit-b32".to_string(), 50),
+            ],
             modality_counts: vec![("text".to_string(), 60), ("image".to_string(), 40)],
         };
 
@@ -919,7 +988,9 @@ pub struct SearchAuditEntry {
         let pool = create_test_pool().await;
         if pool.is_err() {
             // Skip test if no test database is available
-            println!("Skipping vector store database integration tests - no test database configured");
+            println!(
+                "Skipping vector store database integration tests - no test database configured"
+            );
             return;
         }
 
@@ -1000,10 +1071,7 @@ pub struct SearchAuditEntry {
             ("e5-multilingual-large".to_string(), 25),
         ];
 
-        let modality_counts = vec![
-            ("text".to_string(), 200),
-            ("image".to_string(), 50),
-        ];
+        let modality_counts = vec![("text".to_string(), 200), ("image".to_string(), 50)];
 
         let stats = VectorStoreStats {
             total_vectors: 250,

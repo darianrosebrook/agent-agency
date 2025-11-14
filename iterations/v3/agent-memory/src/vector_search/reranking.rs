@@ -41,7 +41,11 @@ impl ResultReranker {
     }
 
     /// Rerank search results
-    pub async fn rerank(&self, results: Vec<SearchResult>, query: &SearchQuery) -> MemoryResult<Vec<SearchResult>> {
+    pub async fn rerank(
+        &self,
+        results: Vec<SearchResult>,
+        query: &SearchQuery,
+    ) -> MemoryResult<Vec<SearchResult>> {
         let mut reranked_results = results;
 
         // Apply reranking strategy
@@ -53,7 +57,9 @@ impl ResultReranker {
                 reranked_results = self.score_based_rerank(reranked_results);
             }
             RerankingStrategy::DiversityBased { lambda } => {
-                reranked_results = self.diversity_based_rerank(reranked_results, *lambda).await?;
+                reranked_results = self
+                    .diversity_based_rerank(reranked_results, *lambda)
+                    .await?;
             }
             RerankingStrategy::RecencyBoost { decay_factor } => {
                 reranked_results = self.recency_boost_rerank(reranked_results, *decay_factor);
@@ -84,8 +90,13 @@ impl ResultReranker {
     }
 
     /// Reciprocal Rank Fusion reranking
-    fn reciprocal_rank_fusion_rerank(&self, results: Vec<SearchResult>, k: f32) -> Vec<SearchResult> {
-        let mut reranked: Vec<SearchResult> = results.into_iter()
+    fn reciprocal_rank_fusion_rerank(
+        &self,
+        results: Vec<SearchResult>,
+        k: f32,
+    ) -> Vec<SearchResult> {
+        let mut reranked: Vec<SearchResult> = results
+            .into_iter()
             .enumerate()
             .map(|(rank, mut result)| {
                 // Apply RRF score transformation
@@ -94,7 +105,11 @@ impl ResultReranker {
             })
             .collect();
 
-        reranked.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        reranked.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         reranked
     }
 
@@ -105,8 +120,14 @@ impl ResultReranker {
         }
 
         // Find min/max scores for normalization
-        let min_score = results.iter().map(|r| r.score).fold(f32::INFINITY, f32::min);
-        let max_score = results.iter().map(|r| r.score).fold(f32::NEG_INFINITY, f32::max);
+        let min_score = results
+            .iter()
+            .map(|r| r.score)
+            .fold(f32::INFINITY, f32::min);
+        let max_score = results
+            .iter()
+            .map(|r| r.score)
+            .fold(f32::NEG_INFINITY, f32::max);
 
         let score_range = max_score - min_score;
 
@@ -119,12 +140,20 @@ impl ResultReranker {
             }
         }
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results
     }
 
     /// Diversity-based reranking using Maximal Marginal Relevance
-    async fn diversity_based_rerank(&self, results: Vec<SearchResult>, lambda: f32) -> MemoryResult<Vec<SearchResult>> {
+    async fn diversity_based_rerank(
+        &self,
+        results: Vec<SearchResult>,
+        lambda: f32,
+    ) -> MemoryResult<Vec<SearchResult>> {
         if results.is_empty() {
             return Ok(results);
         }
@@ -161,7 +190,11 @@ impl ResultReranker {
     }
 
     /// Calculate maximum similarity between candidate and selected results
-    async fn calculate_max_similarity(&self, candidate: &SearchResult, selected: &[SearchResult]) -> MemoryResult<f32> {
+    async fn calculate_max_similarity(
+        &self,
+        candidate: &SearchResult,
+        selected: &[SearchResult],
+    ) -> MemoryResult<f32> {
         let mut max_sim = 0.0f32;
 
         for selected_result in selected {
@@ -200,7 +233,9 @@ impl ResultReranker {
             // - CAWS Tier: 2 (vector search feature)
             // - Change Budget: ~100 LOC
             // - Reviewer Requirements: Vector similarity expertise
-            let similarity = self.calculate_content_similarity(candidate, selected_result).await?; // Temporary: basic similarity until embedding-based calculation
+            let similarity = self
+                .calculate_content_similarity(candidate, selected_result)
+                .await?; // Temporary: basic similarity until embedding-based calculation
             max_sim = max_sim.max(similarity);
         }
 
@@ -208,7 +243,11 @@ impl ResultReranker {
     }
 
     /// Calculate content similarity between two results
-    async fn calculate_content_similarity(&self, a: &SearchResult, b: &SearchResult) -> MemoryResult<f32> {
+    async fn calculate_content_similarity(
+        &self,
+        a: &SearchResult,
+        b: &SearchResult,
+    ) -> MemoryResult<f32> {
         // TODO: Implement embedding-based similarity calculation
         //       Currently uses basic data comparison; should use embeddings or other advanced similarity measures for accurate content similarity.
         //
@@ -244,7 +283,8 @@ impl ResultReranker {
         // - CAWS Tier: 2 (vector search feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Vector similarity expertise
-        if a.memory_data == b.memory_data { // Temporary: basic comparison until embedding-based calculation
+        if a.memory_data == b.memory_data {
+            // Temporary: basic comparison until embedding-based calculation
             Ok(1.0)
         } else {
             // Calculate Jaccard similarity on tags if available
@@ -254,7 +294,8 @@ impl ResultReranker {
             if a_tags.is_empty() && b_tags.is_empty() {
                 Ok(0.1) // Low default similarity
             } else {
-                let intersection: std::collections::HashSet<_> = a_tags.intersection(&b_tags).collect();
+                let intersection: std::collections::HashSet<_> =
+                    a_tags.intersection(&b_tags).collect();
                 let union: std::collections::HashSet<_> = a_tags.union(&b_tags).collect();
                 Ok(intersection.len() as f32 / union.len() as f32)
             }
@@ -277,7 +318,11 @@ impl ResultReranker {
     }
 
     /// Recency-based reranking
-    fn recency_boost_rerank(&self, mut results: Vec<SearchResult>, decay_factor: f32) -> Vec<SearchResult> {
+    fn recency_boost_rerank(
+        &self,
+        mut results: Vec<SearchResult>,
+        decay_factor: f32,
+    ) -> Vec<SearchResult> {
         let now = chrono::Utc::now();
 
         for result in &mut results {
@@ -292,7 +337,11 @@ impl ResultReranker {
             result.score *= (1.0 + recency_boost);
         }
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results
     }
 
@@ -302,12 +351,19 @@ impl ResultReranker {
     }
 
     /// Apply diversity boost using MMR
-    async fn apply_diversity_boost(&self, results: Vec<SearchResult>) -> MemoryResult<Vec<SearchResult>> {
+    async fn apply_diversity_boost(
+        &self,
+        results: Vec<SearchResult>,
+    ) -> MemoryResult<Vec<SearchResult>> {
         self.diversity_based_rerank(results, 0.5).await // Default lambda
     }
 
     /// Custom reranking logic
-    async fn custom_rerank(&self, mut results: Vec<SearchResult>, _query: &SearchQuery) -> MemoryResult<Vec<SearchResult>> {
+    async fn custom_rerank(
+        &self,
+        mut results: Vec<SearchResult>,
+        _query: &SearchQuery,
+    ) -> MemoryResult<Vec<SearchResult>> {
         // TODO: Implement comprehensive custom reranking logic
         //       Currently sorts by score only; should implement comprehensive reranking considering query context, relevance signals, and user preferences.
         //
@@ -343,7 +399,11 @@ impl ResultReranker {
         // - CAWS Tier: 2 (search feature enhancement)
         // - Change Budget: ~120 LOC
         // - Reviewer Requirements: Search ranking expertise
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal)); // Temporary: score sorting until comprehensive reranking
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }); // Temporary: score sorting until comprehensive reranking
         Ok(results)
     }
 }
@@ -359,7 +419,11 @@ impl RerankingPipeline {
     }
 
     /// Apply pipeline of reranking strategies
-    pub async fn apply_pipeline(&self, results: Vec<SearchResult>, query: &SearchQuery) -> MemoryResult<Vec<SearchResult>> {
+    pub async fn apply_pipeline(
+        &self,
+        results: Vec<SearchResult>,
+        query: &SearchQuery,
+    ) -> MemoryResult<Vec<SearchResult>> {
         let mut current_results = results;
 
         for reranker in &self.rerankers {

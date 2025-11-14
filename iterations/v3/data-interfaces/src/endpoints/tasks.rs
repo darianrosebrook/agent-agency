@@ -91,9 +91,10 @@ impl TaskHandler {
         page: Option<usize>,
         page_size: Option<usize>,
     ) -> Result<TaskListResponse, InterfaceError> {
-        let tasks = self.tasks.read().map_err(|e| {
-            InterfaceError::ApiError(format!("Failed to read tasks: {}", e))
-        })?;
+        let tasks = self
+            .tasks
+            .read()
+            .map_err(|e| InterfaceError::ApiError(format!("Failed to read tasks: {}", e)))?;
 
         let page = page.unwrap_or(0);
         let page_size = page_size.unwrap_or(50);
@@ -119,11 +120,13 @@ impl TaskHandler {
 
     /// Get task by ID
     pub async fn get_task(&self, task_id: Uuid) -> Result<TaskInfo, InterfaceError> {
-        let tasks = self.tasks.read().map_err(|e| {
-            InterfaceError::ApiError(format!("Failed to read tasks: {}", e))
-        })?;
+        let tasks = self
+            .tasks
+            .read()
+            .map_err(|e| InterfaceError::ApiError(format!("Failed to read tasks: {}", e)))?;
 
-        tasks.get(&task_id)
+        tasks
+            .get(&task_id)
             .cloned()
             .ok_or_else(|| InterfaceError::ApiError(format!("Task {} not found", task_id)))
     }
@@ -148,16 +151,20 @@ impl TaskHandler {
             error_message: None,
         };
 
-        let mut tasks = self.tasks.write().map_err(|e| {
-            InterfaceError::ApiError(format!("Failed to write tasks: {}", e))
-        })?;
+        let mut tasks = self
+            .tasks
+            .write()
+            .map_err(|e| InterfaceError::ApiError(format!("Failed to write tasks: {}", e)))?;
 
         tasks.insert(task_id, task.clone());
         Ok(task)
     }
 
     /// Handle task API request
-    pub async fn handle_task_request(&self, request: ApiRequest) -> Result<ApiResponse, InterfaceError> {
+    pub async fn handle_task_request(
+        &self,
+        request: ApiRequest,
+    ) -> Result<ApiResponse, InterfaceError> {
         match request.path.as_str() {
             "/api/tasks" => {
                 if request.method == "GET" {
@@ -205,18 +212,23 @@ impl TaskHandler {
                         })?,
                     })
                 } else if request.method == "POST" {
-                    let body_str = request.body.as_ref()
-                        .ok_or_else(|| InterfaceError::ApiError("Missing request body".to_string()))?;
+                    let body_str = request.body.as_ref().ok_or_else(|| {
+                        InterfaceError::ApiError("Missing request body".to_string())
+                    })?;
 
                     let body: serde_json::Value = serde_json::from_str(body_str)
                         .map_err(|e| InterfaceError::ApiError(format!("Invalid JSON: {}", e)))?;
 
-                    let name = body.get("name")
+                    let name = body
+                        .get("name")
                         .and_then(|n| n.as_str())
-                        .ok_or_else(|| InterfaceError::ApiError("Missing 'name' field".to_string()))?
+                        .ok_or_else(|| {
+                            InterfaceError::ApiError("Missing 'name' field".to_string())
+                        })?
                         .to_string();
 
-                    let description = body.get("description")
+                    let description = body
+                        .get("description")
                         .and_then(|d| d.as_str())
                         .map(|s| s.to_string());
 
@@ -229,9 +241,12 @@ impl TaskHandler {
                         })?,
                     })
                 } else {
-                    Err(InterfaceError::ApiError(format!("Method {} not allowed for /api/tasks", request.method)))
+                    Err(InterfaceError::ApiError(format!(
+                        "Method {} not allowed for /api/tasks",
+                        request.method
+                    )))
                 }
-            },
+            }
             path if path.starts_with("/api/tasks/") => {
                 let task_id_str = path.strip_prefix("/api/tasks/").unwrap_or("");
                 let task_id = Uuid::parse_str(task_id_str)
@@ -247,10 +262,15 @@ impl TaskHandler {
                         })?,
                     })
                 } else {
-                    Err(InterfaceError::ApiError(format!("Method {} not allowed for task endpoint", request.method)))
+                    Err(InterfaceError::ApiError(format!(
+                        "Method {} not allowed for task endpoint",
+                        request.method
+                    )))
                 }
-            },
-            _ => Err(InterfaceError::ApiError("Unknown task endpoint".to_string())),
+            }
+            _ => Err(InterfaceError::ApiError(
+                "Unknown task endpoint".to_string(),
+            )),
         }
     }
 }

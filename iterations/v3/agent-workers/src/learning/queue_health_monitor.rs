@@ -1,10 +1,10 @@
 //! Queue health monitor for tracking queue performance
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
@@ -55,7 +55,7 @@ impl QueueHealthMonitor {
         {
             let mut historical = self.historical_data.write().await;
             historical.push(metrics);
-            
+
             // Keep only last 1000 entries to prevent memory growth
             let current_len = historical.len();
             if current_len > 1000 {
@@ -67,27 +67,32 @@ impl QueueHealthMonitor {
     }
 
     /// Get current queue health metrics
-    pub async fn get_health_metrics(&self) -> Result<QueueHealthMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_health_metrics(
+        &self,
+    ) -> Result<QueueHealthMetrics, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.queue_metrics.read().await;
         Ok(metrics.clone())
     }
 
     /// Check if queue is healthy
-    pub async fn is_healthy(&self, thresholds: &QueueHealthThresholds) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn is_healthy(
+        &self,
+        thresholds: &QueueHealthThresholds,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_health_metrics().await?;
-        
-        Ok(
-            metrics.queue_depth <= thresholds.max_queue_depth &&
-            metrics.average_wait_time_ms <= thresholds.max_wait_time_ms &&
-            metrics.processing_rate >= thresholds.min_processing_rate &&
-            metrics.error_rate <= thresholds.max_error_rate
-        )
+
+        Ok(metrics.queue_depth <= thresholds.max_queue_depth
+            && metrics.average_wait_time_ms <= thresholds.max_wait_time_ms
+            && metrics.processing_rate >= thresholds.min_processing_rate
+            && metrics.error_rate <= thresholds.max_error_rate)
     }
 
     /// Get queue health status
-    pub async fn get_health_status(&self) -> Result<QueueHealthStatus, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_health_status(
+        &self,
+    ) -> Result<QueueHealthStatus, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_health_metrics().await?;
-        
+
         let status = if metrics.queue_depth > 100 {
             QueueHealthStatus::Critical
         } else if metrics.queue_depth > 50 || metrics.average_wait_time_ms > 30000.0 {
@@ -102,10 +107,13 @@ impl QueueHealthMonitor {
     }
 
     /// Get historical trends
-    pub async fn get_trends(&self, window_minutes: u64) -> Result<QueueTrends, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_trends(
+        &self,
+        window_minutes: u64,
+    ) -> Result<QueueTrends, Box<dyn std::error::Error + Send + Sync>> {
         let historical = self.historical_data.read().await;
         let cutoff_time = Utc::now() - chrono::Duration::minutes(window_minutes as i64);
-        
+
         let recent_data: Vec<&QueueHealthMetrics> = historical
             .iter()
             .filter(|metrics| metrics.last_updated > cutoff_time)
@@ -120,9 +128,12 @@ impl QueueHealthMonitor {
             });
         }
 
-        let queue_depth_trend = self.calculate_trend(recent_data.iter().map(|m| m.queue_depth as f64));
-        let wait_time_trend = self.calculate_trend(recent_data.iter().map(|m| m.average_wait_time_ms));
-        let processing_rate_trend = self.calculate_trend(recent_data.iter().map(|m| m.processing_rate));
+        let queue_depth_trend =
+            self.calculate_trend(recent_data.iter().map(|m| m.queue_depth as f64));
+        let wait_time_trend =
+            self.calculate_trend(recent_data.iter().map(|m| m.average_wait_time_ms));
+        let processing_rate_trend =
+            self.calculate_trend(recent_data.iter().map(|m| m.processing_rate));
         let error_rate_trend = self.calculate_trend(recent_data.iter().map(|m| m.error_rate));
 
         Ok(QueueTrends {
@@ -165,7 +176,9 @@ impl QueueHealthMonitor {
     }
 
     /// Get performance recommendations
-    pub async fn get_recommendations(&self) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_recommendations(
+        &self,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_health_metrics().await?;
         let mut recommendations = Vec::new();
 
@@ -174,19 +187,27 @@ impl QueueHealthMonitor {
         }
 
         if metrics.average_wait_time_ms > 30000.0 {
-            recommendations.push("High wait times detected - optimize task processing or add more workers".to_string());
+            recommendations.push(
+                "High wait times detected - optimize task processing or add more workers"
+                    .to_string(),
+            );
         }
 
         if metrics.processing_rate < 1.0 {
-            recommendations.push("Low processing rate - check worker performance and resource allocation".to_string());
+            recommendations.push(
+                "Low processing rate - check worker performance and resource allocation"
+                    .to_string(),
+            );
         }
 
         if metrics.error_rate > 0.05 {
-            recommendations.push("High error rate - investigate and fix underlying issues".to_string());
+            recommendations
+                .push("High error rate - investigate and fix underlying issues".to_string());
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Queue is performing well - continue current configuration".to_string());
+            recommendations
+                .push("Queue is performing well - continue current configuration".to_string());
         }
 
         Ok(recommendations)
@@ -214,8 +235,8 @@ impl Default for QueueHealthThresholds {
         Self {
             max_queue_depth: 100,
             max_wait_time_ms: 30000.0, // 30 seconds
-            min_processing_rate: 1.0,   // 1 task per second
-            max_error_rate: 0.05,       // 5% error rate
+            min_processing_rate: 1.0,  // 1 task per second
+            max_error_rate: 0.05,      // 5% error rate
         }
     }
 }

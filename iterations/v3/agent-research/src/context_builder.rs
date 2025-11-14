@@ -3,9 +3,9 @@
 //! Synthesizes context from research results and builds coherent knowledge representations.
 //! Includes cross-reference detection and context synthesis capabilities.
 
-use schemars::JsonSchema;
 use crate::research_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -25,14 +25,14 @@ pub struct ContextBuilder {
 
 /// Cross-reference detector for finding related knowledge
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CrossReferenceDetector {
     similarity_threshold: f32,
     max_references: usize,
 }
 
 /// Context synthesis metrics
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextSynthesisMetrics {
     pub synthesis_time_ms: u64,
     pub evidence_items_processed: usize,
@@ -308,9 +308,13 @@ impl ContextBuilder {
     }
 
     /// Build context from combined content text
-    pub async fn build_context(&self, content: &str, max_length: usize) -> Result<ContextBuildResult> {
+    pub async fn build_context(
+        &self,
+        content: &str,
+        max_length: usize,
+    ) -> Result<ContextBuildResult> {
         let start_time = std::time::Instant::now();
-        
+
         // Truncate content if needed
         let context = if content.len() > max_length {
             let truncated = content.chars().take(max_length).collect::<String>();
@@ -318,9 +322,9 @@ impl ContextBuilder {
         } else {
             content.to_string()
         };
-        
+
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(ContextBuildResult {
             context,
             processing_time_ms,

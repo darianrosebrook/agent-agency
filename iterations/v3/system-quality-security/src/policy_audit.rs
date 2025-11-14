@@ -1,8 +1,8 @@
 use crate::policy_types::*;
-use schemars::JsonSchema;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use flate2::read::GzDecoder;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::OpenOptions;
@@ -822,7 +822,7 @@ pub struct AuditStats {
 
 /// Severity analysis engine turns raw audit events into actionable insights.
 #[derive(Debug, Default, JsonSchema)]
-pub struct SecurityAnalysisEngine ;
+pub struct SecurityAnalysisEngine;
 
 impl SecurityAnalysisEngine {
     /// Analyze audit entries to produce aggregated metrics and severity scoring.

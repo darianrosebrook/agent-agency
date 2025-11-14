@@ -5,16 +5,16 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use std::sync::Arc;
 use tracing::info;
 
-use agent_agency_contracts::{
-    TaskDescriptor, ExecutionArtifacts, WorkingSpec, WorkingSpecConstraints,
-    AcceptanceCriterion, TestPlan, RollbackPlan, WorkingSpecContext,
-};
 use agent_agency_contracts::working_spec::{BudgetLimits, ScopeRestrictions};
+use agent_agency_contracts::{
+    AcceptanceCriterion, ExecutionArtifacts, RollbackPlan, TaskDescriptor, TestPlan, WorkingSpec,
+    WorkingSpecConstraints, WorkingSpecContext,
+};
 use agent_orchestration::orchestration::unified_orchestrator::UnifiedOrchestrator;
 use data_infrastructure::TaskExecutor;
 
@@ -92,7 +92,8 @@ impl TaskExecutor for UnifiedOrchestratorTaskExecutor {
             // - ArtifactMetadata struct extension (Required)
             // - JSON serialization support (Required)
             // PRIORITY: Medium
-            artifact.metadata = Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata::default());
+            artifact.metadata =
+                Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata::default());
 
             Ok(artifact)
         }
@@ -118,7 +119,8 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
 
     // Determine risk tier
     let risk_tier = task_descriptor
-        .risk_tier.clone()
+        .risk_tier
+        .clone()
         .map(|rt| match rt {
             agent_agency_contracts::types::planning::RiskTier::Tier1 => 1,
             agent_agency_contracts::types::planning::RiskTier::Tier2 => 2,
@@ -268,4 +270,3 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
         updated_at: Utc::now(),
     })
 }
-

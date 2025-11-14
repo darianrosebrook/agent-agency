@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -278,15 +278,12 @@ pub struct SourceIntegrityRecord {
     pub tampering_indicators: Vec<TamperingIndicator>,
     pub verification_metadata: HashMap<String, serde_json::Value>,
     #[schemars(with = "String")]
-
     pub first_seen_at: DateTime<Utc>,
     pub last_verified_at: Option<DateTime<Utc>>,
     pub verification_count: i32,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -306,7 +303,6 @@ pub struct SourceIntegrityVerification {
     pub verified_by: Option<String>,
     pub verification_duration_ms: Option<i32>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -328,7 +324,6 @@ pub struct SourceIntegrityAlert {
     pub resolved_by: Option<String>,
     pub resolved_at: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -342,7 +337,6 @@ pub struct IntegrityVerificationResult {
     pub integrity_status: IntegrityStatus,
     pub tampering_indicators: Vec<TamperingIndicator>,
     #[schemars(with = "String")]
-
     pub verification_timestamp: DateTime<Utc>,
     pub verification_duration_ms: Option<i32>,
     pub verification_details: HashMap<String, serde_json::Value>,

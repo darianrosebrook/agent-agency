@@ -3,21 +3,21 @@
 //! Centralized resource lifecycle management, pooling, and adaptive allocation.
 //! Extracted from apple-silicon monolith to provide focused resource services.
 
-pub mod resource_management;
-pub mod pools;
 pub mod monitoring;
+pub mod pools;
+pub mod resource_management;
 
 // Re-export common types
 pub use system_configuration::*;
 
+use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
 
 // Re-export key functionality
-pub use resource_management::*;
-pub use pools::*;
 pub use monitoring::*;
+pub use pools::*;
+pub use resource_management::*;
 
 /// Trait for resource management service
 #[async_trait]
@@ -30,10 +30,7 @@ pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
     ) -> Result<ResourceAllocation, ResourceError>;
 
     /// Release resources for a completed task
-    async fn release_resources_for_task(
-        &mut self,
-        task_id: &str,
-    ) -> Result<(), ResourceError>;
+    async fn release_resources_for_task(&mut self, task_id: &str) -> Result<(), ResourceError>;
 
     /// Adjust resource allocation for a task
     async fn adjust_resource_allocation(
@@ -46,7 +43,10 @@ pub trait ResourceManagementService: Send + Sync + std::fmt::Debug {
     async fn get_utilization(&self) -> ResourceUtilization;
 
     /// Get allocation for a specific task
-    async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError>;
+    async fn get_task_allocation(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<ResourceAllocation>, ResourceError>;
 }
 
 #[async_trait]
@@ -63,17 +63,15 @@ impl ResourceManagementService for ResourceManagerService {
         let allocation = self.allocate_resources(&pool_name, requirements).await?;
 
         // Track allocation by task_id for efficient lookup
-        self.task_allocations.insert(task_id.to_string(), allocation.clone());
+        self.task_allocations
+            .insert(task_id.to_string(), allocation.clone());
 
         tracing::debug!("Allocated resources for task {}: {:?}", task_id, allocation);
 
         Ok(allocation)
     }
 
-    async fn release_resources_for_task(
-        &mut self,
-        task_id: &str,
-    ) -> Result<(), ResourceError> {
+    async fn release_resources_for_task(&mut self, task_id: &str) -> Result<(), ResourceError> {
         // Find which pool has this allocation
         let pool_name = self.find_pool_for_allocation(task_id).await?;
 
@@ -95,22 +93,26 @@ impl ResourceManagementService for ResourceManagerService {
     ) -> Result<ResourceAllocation, ResourceError> {
         // Release old allocation
         self.release_resources_for_task(task_id).await?;
-        
+
         // Allocate new resources
-        self.allocate_resources_for_task(task_id, new_requirements).await
+        self.allocate_resources_for_task(task_id, new_requirements)
+            .await
     }
 
     async fn get_utilization(&self) -> ResourceUtilization {
         self.monitor.get_utilization().await
     }
 
-    async fn get_task_allocation(&self, task_id: &str) -> Result<Option<ResourceAllocation>, ResourceError> {
+    async fn get_task_allocation(
+        &self,
+        task_id: &str,
+    ) -> Result<Option<ResourceAllocation>, ResourceError> {
         // Look up allocation directly from task_allocations map
         match self.task_allocations.get(task_id) {
             Some(allocation) => {
                 tracing::debug!("Found allocation for task {}: {:?}", task_id, allocation);
                 Ok(Some(allocation.clone()))
-            },
+            }
             None => {
                 tracing::debug!("No allocation found for task {}", task_id);
                 Ok(None)
@@ -150,7 +152,9 @@ impl ResourceManagerService {
         pool_name: &str,
         requirements: ResourceRequirements,
     ) -> Result<ResourceAllocation, ResourceError> {
-        let pool = self.pools.get(pool_name)
+        let pool = self
+            .pools
+            .get(pool_name)
             .ok_or_else(|| ResourceError::PoolNotFound(pool_name.to_string()))?;
 
         let allocation = pool.allocate(requirements).await?;
@@ -167,7 +171,9 @@ impl ResourceManagerService {
         pool_name: &str,
         allocation_id: &str,
     ) -> Result<(), ResourceError> {
-        let pool = self.pools.get(pool_name)
+        let pool = self
+            .pools
+            .get(pool_name)
             .ok_or_else(|| ResourceError::PoolNotFound(pool_name.to_string()))?;
 
         pool.release(allocation_id).await?;
@@ -193,17 +199,24 @@ impl ResourceManagerService {
     }
 
     /// Select best pool for resource requirements
-    async fn select_best_pool(&self, requirements: &ResourceRequirements) -> Result<String, ResourceError> {
+    async fn select_best_pool(
+        &self,
+        requirements: &ResourceRequirements,
+    ) -> Result<String, ResourceError> {
         // Simple selection: prefer pools with lowest utilization that can satisfy requirements
         let mut best_pool: Option<(&String, f64)> = None;
         let mut best_utilization = 100.0;
 
         for (name, pool) in &self.pools {
             let utilization = pool.utilization().await;
-            
+
             // Check if pool can satisfy requirements
-            let can_satisfy = requirements.memory_mb.map_or(true, |mem| pool.total_memory_mb() >= mem)
-                && requirements.cpu_cores.map_or(true, |cpu| pool.total_cpu_cores() >= cpu)
+            let can_satisfy = requirements
+                .memory_mb
+                .map_or(true, |mem| pool.total_memory_mb() >= mem)
+                && requirements
+                    .cpu_cores
+                    .map_or(true, |cpu| pool.total_cpu_cores() >= cpu)
                 && requirements.gpu_memory_mb.map_or(true, |_gpu| true); // GPU check would need pool method
 
             if can_satisfy && utilization < best_utilization {
@@ -212,10 +225,11 @@ impl ResourceManagerService {
             }
         }
 
-        best_pool.map(|(name, _)| name.clone())
-            .ok_or_else(|| ResourceError::InsufficientResources {
+        best_pool.map(|(name, _)| name.clone()).ok_or_else(|| {
+            ResourceError::InsufficientResources {
                 resource_type: format!("No suitable pool for requirements: {:?}", requirements),
-            })
+            }
+        })
     }
 
     /// Find pool for an allocation ID
@@ -256,7 +270,7 @@ impl ResourceManagerService {
             // Temporary: return first pool until allocation tracking is implemented
             return Ok(name.clone());
         }
-        
+
         Err(ResourceError::AllocationFailed {
             message: format!("Allocation {} not found", allocation_id),
         })

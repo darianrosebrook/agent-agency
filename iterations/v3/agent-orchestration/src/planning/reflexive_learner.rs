@@ -6,44 +6,44 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
-use uuid::Uuid;
-use tracing::{info, warn, debug};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::time::interval;
-use serde::{Serialize, Deserialize};
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
-use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
-use agent_agency_contracts::planning_io::Milestone;
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use crate::planning::worker_evolution::WorkerEvolutionEngine;
+use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+use agent_agency_contracts::planning_io::Milestone;
 
 /// Learning outcome from task execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LearningOutcome {
     /// Worker ID that executed the task
     pub worker_id: Uuid,
-    
+
     /// Milestone ID that was executed
     pub milestone_id: String,
-    
+
     /// Execution success status
     pub success: bool,
-    
+
     /// Quality score (0.0 - 1.0)
     pub quality_score: f64,
-    
+
     /// Execution time in milliseconds
     pub execution_time_ms: u64,
-    
+
     /// Error message if execution failed
     pub error_message: Option<String>,
-    
+
     /// Timestamp of execution
     pub timestamp: chrono::DateTime<Utc>,
-    
+
     /// Task characteristics for pattern matching
     pub task_characteristics: TaskCharacteristics,
 }
@@ -53,13 +53,13 @@ pub struct LearningOutcome {
 pub struct TaskCharacteristics {
     /// Task complexity (estimated)
     pub complexity: f64,
-    
+
     /// Required capabilities
     pub required_capabilities: Vec<String>,
-    
+
     /// Task type/category
     pub task_type: String,
-    
+
     /// Estimated resource requirements
     pub resource_requirements: ResourceRequirements,
 }
@@ -69,10 +69,10 @@ pub struct TaskCharacteristics {
 pub struct ResourceRequirements {
     /// Estimated memory in MB
     pub memory_mb: u64,
-    
+
     /// Estimated CPU cores
     pub cpu_cores: f64,
-    
+
     /// Estimated execution time in seconds
     pub estimated_time_sec: f64,
 }
@@ -82,13 +82,13 @@ pub struct ResourceRequirements {
 pub struct RoutingAdjustment {
     /// Worker ID affected by adjustment
     pub worker_id: Uuid,
-    
+
     /// Performance score adjustment (-1.0 to 1.0)
     pub performance_adjustment: f64,
-    
+
     /// Capability score adjustments
     pub capability_adjustments: HashMap<String, f64>,
-    
+
     /// Reason for adjustment
     pub reason: String,
 }
@@ -97,16 +97,16 @@ pub struct RoutingAdjustment {
 pub struct ReflexiveLearner {
     /// Worker assignment strategy to update
     worker_assignment_strategy: Arc<WorkerAssignmentStrategy>,
-    
+
     /// Worker evolution engine for creating/refining workers
     evolution_engine: Option<Arc<WorkerEvolutionEngine>>,
-    
+
     /// Learning outcomes history (for pattern analysis)
     outcome_history: Arc<tokio::sync::RwLock<Vec<LearningOutcome>>>,
-    
+
     /// Learning configuration
     config: LearningConfig,
-    
+
     /// Continuous learning loop task handle
     learning_loop_handle: Arc<tokio::sync::RwLock<Option<tokio::task::JoinHandle<()>>>>,
 }
@@ -116,16 +116,16 @@ pub struct ReflexiveLearner {
 pub struct LearningConfig {
     /// Minimum number of outcomes before making adjustments
     pub min_outcomes_for_adjustment: usize,
-    
+
     /// Learning rate for performance score updates (0.0 - 1.0)
     pub learning_rate: f64,
-    
+
     /// Decay factor for old outcomes (0.0 - 1.0)
     pub outcome_decay_factor: f64,
-    
+
     /// Maximum history size
     pub max_history_size: usize,
-    
+
     /// Enable automatic routing adjustments
     pub enable_auto_adjustments: bool,
 }
@@ -156,7 +156,7 @@ impl ReflexiveLearner {
             learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
         }
     }
-    
+
     /// Create a new reflexive learner with evolution engine
     pub fn with_evolution_engine(
         worker_assignment_strategy: Arc<WorkerAssignmentStrategy>,
@@ -184,10 +184,10 @@ impl ReflexiveLearner {
 
         let handle = tokio::spawn(async move {
             let mut interval_timer = interval(interval_duration);
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 if let Err(e) = Self::process_accumulated_outcomes(&learner).await {
                     warn!("Error in continuous learning loop: {}", e);
                 }
@@ -195,8 +195,11 @@ impl ReflexiveLearner {
         });
 
         *self.learning_loop_handle.write().await = Some(handle);
-        info!("ReflexiveLearner: continuous learning loop started (interval: {}s)", interval_secs);
-        
+        info!(
+            "ReflexiveLearner: continuous learning loop started (interval: {}s)",
+            interval_secs
+        );
+
         Ok(())
     }
 
@@ -212,7 +215,7 @@ impl ReflexiveLearner {
     /// Process accumulated outcomes and generate routing adjustments
     async fn process_accumulated_outcomes(learner: &Arc<ReflexiveLearner>) -> Result<()> {
         let history = learner.outcome_history.read().await;
-        
+
         // Need minimum outcomes before making adjustments
         if history.len() < learner.config.min_outcomes_for_adjustment {
             debug!(
@@ -244,7 +247,10 @@ impl ReflexiveLearner {
                             all_adjustments.push(adjustment);
                         }
                         Err(e) => {
-                            warn!("Failed to calculate adjustment for worker {}: {}", worker_id, e);
+                            warn!(
+                                "Failed to calculate adjustment for worker {}: {}",
+                                worker_id, e
+                            );
                         }
                     }
                 }
@@ -291,13 +297,13 @@ impl ReflexiveLearner {
         if let Some(ref evolution_engine) = self.evolution_engine {
             let history = self.outcome_history.read().await;
             let recent_outcomes: Vec<&LearningOutcome> = history.iter().collect();
-            
+
             if recent_outcomes.len() >= 10 {
                 // Process outcomes and generate proposals
                 if let Err(e) = evolution_engine.process_outcomes(&recent_outcomes).await {
                     warn!("Failed to process outcomes for worker evolution: {}", e);
                 }
-                
+
                 // Evaluate and execute approved proposals periodically
                 // (Only evaluate every 50 outcomes to avoid excessive worker creation)
                 if recent_outcomes.len() % 50 == 0 {
@@ -333,9 +339,9 @@ impl ReflexiveLearner {
         // Determine success status
         // Success is determined by: completed_at is Some and tests passed
         let is_completed = artifacts.provenance.completed_at.is_some();
-        let tests_passed = artifacts.tests.unit_tests.failed == 0 &&
-                          artifacts.tests.integration_tests.failed == 0 &&
-                          artifacts.tests.e2e_tests.failed == 0;
+        let tests_passed = artifacts.tests.unit_tests.failed == 0
+            && artifacts.tests.integration_tests.failed == 0
+            && artifacts.tests.e2e_tests.failed == 0;
         let success = is_completed && tests_passed;
 
         // Extract quality score from artifacts (if available)
@@ -371,24 +377,24 @@ impl ReflexiveLearner {
         // Try to extract from provenance audit trail
         // Note: ArtifactMetadata doesn't have quality_score field
         // We'll calculate from test results instead
-        
+
         // Calculate quality from test pass rate
-        let total_tests = artifacts.tests.unit_tests.total + 
-                         artifacts.tests.integration_tests.total + 
-                         artifacts.tests.e2e_tests.total;
-        let passed_tests = artifacts.tests.unit_tests.passed + 
-                          artifacts.tests.integration_tests.passed + 
-                          artifacts.tests.e2e_tests.passed;
-        
+        let total_tests = artifacts.tests.unit_tests.total
+            + artifacts.tests.integration_tests.total
+            + artifacts.tests.e2e_tests.total;
+        let passed_tests = artifacts.tests.unit_tests.passed
+            + artifacts.tests.integration_tests.passed
+            + artifacts.tests.e2e_tests.passed;
+
         if total_tests > 0 {
             (passed_tests as f64 / total_tests as f64).max(0.0).min(1.0)
         } else {
             // Default quality score based on execution completion
             let is_completed = artifacts.provenance.completed_at.is_some();
-            let tests_passed = artifacts.tests.unit_tests.failed == 0 &&
-                              artifacts.tests.integration_tests.failed == 0 &&
-                              artifacts.tests.e2e_tests.failed == 0;
-            
+            let tests_passed = artifacts.tests.unit_tests.failed == 0
+                && artifacts.tests.integration_tests.failed == 0
+                && artifacts.tests.e2e_tests.failed == 0;
+
             if is_completed && tests_passed {
                 0.8 // Default success quality
             } else {
@@ -447,7 +453,8 @@ impl ReflexiveLearner {
         let required_capabilities = milestone.scope.allowed_operations.clone();
 
         // Determine task type from milestone objective
-        let task_type = milestone.objective
+        let task_type = milestone
+            .objective
             .split_whitespace()
             .next()
             .unwrap_or("unknown")
@@ -458,7 +465,10 @@ impl ReflexiveLearner {
         let resource_requirements = ResourceRequirements {
             memory_mb: 512, // Default
             cpu_cores: 1.0, // Default
-            estimated_time_sec: milestone.estimated_duration.map(|m| m as f64 * 60.0).unwrap_or(60.0),
+            estimated_time_sec: milestone
+                .estimated_duration
+                .map(|m| m as f64 * 60.0)
+                .unwrap_or(60.0),
         };
 
         TaskCharacteristics {
@@ -570,10 +580,12 @@ impl ReflexiveLearner {
         new_outcome: &LearningOutcome,
     ) -> Result<RoutingAdjustment> {
         // Calculate success rate
-        let success_rate = outcomes.iter().filter(|o| o.success).count() as f64 / outcomes.len() as f64;
+        let success_rate =
+            outcomes.iter().filter(|o| o.success).count() as f64 / outcomes.len() as f64;
 
         // Calculate average quality score
-        let avg_quality = outcomes.iter().map(|o| o.quality_score).sum::<f64>() / outcomes.len() as f64;
+        let avg_quality =
+            outcomes.iter().map(|o| o.quality_score).sum::<f64>() / outcomes.len() as f64;
 
         // Calculate performance score (weighted combination)
         let performance_score = (success_rate * 0.6) + (avg_quality * 0.4);
@@ -605,10 +617,12 @@ impl ReflexiveLearner {
         new_outcome: &LearningOutcome,
     ) -> Result<RoutingAdjustment> {
         // Calculate success rate for this capability
-        let success_rate = outcomes.iter().filter(|o| o.success).count() as f64 / outcomes.len() as f64;
+        let success_rate =
+            outcomes.iter().filter(|o| o.success).count() as f64 / outcomes.len() as f64;
 
         // Calculate average quality for this capability
-        let avg_quality = outcomes.iter().map(|o| o.quality_score).sum::<f64>() / outcomes.len() as f64;
+        let avg_quality =
+            outcomes.iter().map(|o| o.quality_score).sum::<f64>() / outcomes.len() as f64;
 
         // Calculate capability score
         let capability_score = (success_rate * 0.6) + (avg_quality * 0.4);
@@ -647,7 +661,7 @@ impl ReflexiveLearner {
         // Convert performance adjustment to success/execution_time for update_worker_performance
         // Performance adjustment > 0 means better performance, < 0 means worse
         let success = adjustment.performance_adjustment >= 0.0;
-        
+
         // Estimate execution time from adjustment (positive adjustment = faster execution)
         // Use a baseline of 60000ms (1 minute) and adjust based on performance_adjustment
         let baseline_time_ms = 60000u64;
@@ -660,12 +674,15 @@ impl ReflexiveLearner {
         };
 
         // Update worker performance metrics
-        if let Err(e) = self.worker_assignment_strategy.update_worker_performance(
-            adjustment.worker_id,
-            success,
-            execution_time_ms,
-        ).await {
-            warn!("Failed to update worker performance for {}: {}", adjustment.worker_id, e);
+        if let Err(e) = self
+            .worker_assignment_strategy
+            .update_worker_performance(adjustment.worker_id, success, execution_time_ms)
+            .await
+        {
+            warn!(
+                "Failed to update worker performance for {}: {}",
+                adjustment.worker_id, e
+            );
         } else {
             debug!(
                 "Updated worker {} performance: success={}, execution_time_ms={}, adjustment={:.4}",
@@ -737,7 +754,8 @@ impl ReflexiveLearner {
         // Get all unique worker IDs from outcome history
         let worker_ids: Vec<Uuid> = {
             let history = self.outcome_history.read().await;
-            history.iter()
+            history
+                .iter()
                 .map(|o| o.worker_id)
                 .collect::<std::collections::HashSet<_>>()
                 .into_iter()
@@ -750,15 +768,17 @@ impl ReflexiveLearner {
         // Calculate performance adjustment based on aggregated metrics vs baseline
         let baseline_quality = 0.7;
         let baseline_success = 0.7;
-        let performance_adjustment = ((avg_quality_score - baseline_quality) * 0.5 + 
-                                     (avg_success_rate - baseline_success) * 0.5) * self.config.learning_rate;
+        let performance_adjustment = ((avg_quality_score - baseline_quality) * 0.5
+            + (avg_success_rate - baseline_success) * 0.5)
+            * self.config.learning_rate;
 
         // Create routing adjustments for each worker
         for worker_id in worker_ids {
             let adjustment = RoutingAdjustment {
                 worker_id,
                 performance_adjustment,
-                capability_adjustments: routing_weights.clone()
+                capability_adjustments: routing_weights
+                    .clone()
                     .into_iter()
                     .map(|(k, v)| (k, v * self.config.learning_rate))
                     .collect(),
@@ -770,7 +790,10 @@ impl ReflexiveLearner {
 
             // Apply adjustment
             if let Err(e) = self.apply_adjustment(&adjustment).await {
-                warn!("Failed to apply aggregated insight to worker {}: {}", adjustment.worker_id, e);
+                warn!(
+                    "Failed to apply aggregated insight to worker {}: {}",
+                    adjustment.worker_id, e
+                );
             }
         }
 
@@ -836,4 +859,3 @@ impl Drop for ReflexiveLearner {
         }
     }
 }
-

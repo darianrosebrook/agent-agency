@@ -12,7 +12,7 @@ use std::env;
 pub async fn register_standard_workers(database_url: &str) -> anyhow::Result<()> {
     use data_infrastructure::DatabaseConfig;
     use data_infrastructure::DatabaseClient;
-    
+
     let config = DatabaseConfig {
         database_url: database_url.to_string(),
         max_connections: Some(5),
@@ -20,27 +20,27 @@ pub async fn register_standard_workers(database_url: &str) -> anyhow::Result<()>
         query_timeout: Some(60),
         ..Default::default()
     };
-    
+
     let db_client = DatabaseClient::new(config).await?;
     let pool = db_client.pool();
-    
+
     println!("Registering standard workers...");
-    
+
     // 1. General Purpose Worker
     register_general_worker(pool).await?;
-    
+
     // 2. File Editing Specialist
     register_file_editing_worker(pool).await?;
-    
+
     // 3. Code Generation Specialist
     register_code_generation_worker(pool).await?;
-    
+
     // 4. Testing Specialist
     register_testing_worker(pool).await?;
-    
+
     // 5. Documentation Specialist
     register_documentation_worker(pool).await?;
-    
+
     println!("✅ All standard workers registered successfully");
     Ok(())
 }
@@ -48,7 +48,7 @@ pub async fn register_standard_workers(database_url: &str) -> anyhow::Result<()>
 /// Register General Purpose Worker
 async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -77,7 +77,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     println!("  ✅ Registered General Purpose Worker: {}", worker_id);
     Ok(())
 }
@@ -85,7 +85,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register File Editing Specialist
 async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -117,7 +117,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     println!("  ✅ Registered File Editing Worker: {}", worker_id);
     Ok(())
 }
@@ -125,7 +125,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
 /// Register Code Generation Specialist
 async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -156,7 +156,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     println!("  ✅ Registered Code Generation Worker: {}", worker_id);
     Ok(())
 }
@@ -164,7 +164,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
 /// Register Testing Specialist
 async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -196,7 +196,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     println!("  ✅ Registered Testing Worker: {}", worker_id);
     Ok(())
 }
@@ -204,7 +204,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register Documentation Specialist
 async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
@@ -235,7 +235,7 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     println!("  ✅ Registered Documentation Worker: {}", worker_id);
     Ok(())
 }
@@ -244,7 +244,7 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
 async fn main() -> anyhow::Result<()> {
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://localhost/agent_agency_test".to_string());
-    
+
     register_standard_workers(&database_url).await?;
     Ok(())
 }

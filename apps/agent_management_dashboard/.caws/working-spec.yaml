@@ -1,0 +1,47 @@
+id: FEAT-001
+title: "Migrate Agent Management Dashboard to Tauri Desktop App"
+risk_tier: 2
+mode: feature
+change_budget:
+  max_files: 50
+  max_loc: 2000
+blast_radius:
+  modules: ["dashboard"]
+  data_migration: false
+operational_rollback_slo: "15m"
+scope:
+  in: ["src/", "package.json", "vite.config.ts", "tailwind.config.js", "postcss.config.js", ".caws/"]
+  out: ["node_modules/", "next.config.ts", "next-env.d.ts", ".next/", "out/", "public/"]
+invariants:
+  - "Dashboard functionality must match current web version exactly"
+  - "All SCSS modules and design tokens preserved"
+  - "No breaking changes to component APIs"
+  - "Build process produces native executables for macOS, Windows, Linux"
+acceptance:
+  - id: "MIGRATION-001"
+    given: "Current Next.js dashboard is running"
+    when: "Tauri app is built and launched"
+    then: "All routes work and UI matches exactly"
+  - id: "MIGRATION-002"
+    given: "Dashboard components are rendered"
+    when: "User interacts with components"
+    then: "All functionality works (drag-drop, charts, forms, chat)"
+  - id: "MIGRATION-003"
+    given: "Tauri app is built"
+    when: "Executables are run on target platforms"
+    then: "App launches successfully and connects to v3 backend"
+  - id: "MIGRATION-004"
+    given: "Dashboard is running in Tauri"
+    when: "Performance is measured"
+    then: "Startup time <3s, memory usage <200MB, UI responsiveness <100ms"
+non_functional:
+  performance:
+    startup_time_ms: 3000
+    memory_mb: 200
+    ui_response_ms: 100
+  security: ["no-new-security-vulnerabilities"]
+  compatibility: ["macOS-12+", "Windows-10+", "Linux-Ubuntu-20.04+"]
+contracts:
+  - type: "rest-api"
+    path: "src/app/api/"
+    description: "Dashboard API endpoints for v3 backend communication"

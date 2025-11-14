@@ -63,14 +63,14 @@ impl CAWSBudgetTracker {
     ) -> Result<BudgetCheckResult> {
         let budgets = self.token_budgets.read().unwrap();
         let budget = budgets.get(task_type);
-        
+
         match budget {
             Some(budget) => {
                 let total_expected = expected_volume * expected_tokens_per_task as u64;
                 let remaining = budget.daily_limit.saturating_sub(budget.used_today);
                 let within_budget = total_expected <= remaining;
                 let usage_percentage = (budget.used_today as f64) / (budget.daily_limit as f64) * 100.0;
-                
+
                 Ok(BudgetCheckResult {
                     within_budget,
                     remaining_tokens: remaining,
@@ -100,7 +100,7 @@ impl CAWSBudgetTracker {
     expiry: DateTime<Utc>,
     ) -> Result<WaiverId> {
         let waiver_id = Uuid::new_v4();
-        
+
         // TODO: Implement waiver request creation and approval workflow
         //       Currently generates ID only; should create waiver request, send to approver, store in database, and return waiver ID.
         //
@@ -135,7 +135,7 @@ impl CAWSBudgetTracker {
         // - CAWS Tier: 2 (waiver management feature)
         // - Change Budget: ~200 LOC
         // - Reviewer Requirements: Workflow and database expertise
-        
+
         Ok(waiver_id)
     }
 
@@ -247,7 +247,7 @@ impl CAWSComplianceValidator {
         let budget_check = self.budget_tracker
             .check_budget(task_type, 1000, new_params.max_tokens as u32) // Hardcoded volume estimate
             .await?;
-        
+
         if !budget_check.within_budget {
             return Ok(ComplianceValidationResult {
                 approved: false,
@@ -255,7 +255,7 @@ impl CAWSComplianceValidator {
                 waiver_required: true,
             });
         }
-        
+
         // 2. Check parameter constraints
         let constraint_violations = self.check_parameter_constraints(new_params);
         if !constraint_violations.is_empty() {
@@ -265,7 +265,7 @@ impl CAWSComplianceValidator {
                 waiver_required: false,
             });
         }
-        
+
         // 3. Log provenance
         let change_id = Uuid::new_v4();
         let provenance = ParameterChangeProvenance {
@@ -279,12 +279,12 @@ impl CAWSComplianceValidator {
             policy_version: new_params.policy_version.clone(),
             timestamp: Utc::now(),
         };
-        
+
         {
             let mut log = self.provenance_log.write().unwrap();
             log.push(provenance);
         }
-        
+
         Ok(ComplianceValidationResult {
             approved: true,
             reason: "CAWS compliance validated".to_string(),
@@ -298,24 +298,24 @@ impl CAWSComplianceValidator {
         params: &ParameterSet,
     ) -> Vec<String> {
         let mut violations = Vec::new();
-        
+
         // Temperature constraints
         if params.temperature < 0.0 || params.temperature > 2.0 {
             violations.push("Temperature out of range [0.0, 2.0]".to_string());
         }
-        
+
         // Token constraints
         if params.max_tokens == 0 || params.max_tokens > 100000 {
             violations.push("Max tokens out of range [1, 100000]".to_string());
         }
-        
+
         // Top-p constraints
         if let Some(top_p) = params.top_p {
             if top_p < 0.0 || top_p > 1.0 {
                 violations.push("Top-p out of range [0.0, 1.0]".to_string());
             }
         }
-        
+
         violations
     }
 

@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 
-use crate::memory::types::{AllocationSiteStats, TaskAllocationStats};
 use crate::memory::resources::AllocationLeak;
+use crate::memory::types::{AllocationSiteStats, TaskAllocationStats};
 
 /// Allocation site tracking data
 #[derive(Debug, Clone)]
@@ -79,7 +79,13 @@ impl AllocationSiteTracker {
     }
 
     /// Record a new allocation with site information
-    pub fn record_allocation(&mut self, ptr: usize, size: usize, alignment: usize, site: AllocationSite) {
+    pub fn record_allocation(
+        &mut self,
+        ptr: usize,
+        size: usize,
+        alignment: usize,
+        site: AllocationSite,
+    ) {
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
 
         let record = AllocationRecord {
@@ -97,13 +103,16 @@ impl AllocationSiteTracker {
 
         // Update site statistics
         let location_key = format!("{}:{}", site.file, site.line);
-        let stats = self.site_stats.entry(location_key.clone()).or_insert_with(|| AllocationSiteStats {
-            location: location_key,
-            total_allocations: 0,
-            total_bytes: 0,
-            average_size: 0.0,
-            frequency: 0.0,
-        });
+        let stats = self
+            .site_stats
+            .entry(location_key.clone())
+            .or_insert_with(|| AllocationSiteStats {
+                location: location_key,
+                total_allocations: 0,
+                total_bytes: 0,
+                average_size: 0.0,
+                frequency: 0.0,
+            });
 
         stats.total_allocations += 1;
         stats.total_bytes += size;
@@ -111,19 +120,23 @@ impl AllocationSiteTracker {
 
         // Update task statistics if task_id is provided
         if let Some(task_id) = &site.task_id {
-            let task_stats = self.task_stats.entry(task_id.clone()).or_insert_with(|| TaskAllocationStats {
-                task_id: task_id.clone(),
-                total_allocations: 0,
-                total_bytes: 0,
-                average_size: 0.0,
-                allocation_sites: Vec::new(),
-                peak_memory_bytes: 0,
-                current_memory_bytes: 0,
-            });
+            let task_stats =
+                self.task_stats
+                    .entry(task_id.clone())
+                    .or_insert_with(|| TaskAllocationStats {
+                        task_id: task_id.clone(),
+                        total_allocations: 0,
+                        total_bytes: 0,
+                        average_size: 0.0,
+                        allocation_sites: Vec::new(),
+                        peak_memory_bytes: 0,
+                        current_memory_bytes: 0,
+                    });
 
             task_stats.total_allocations += 1;
             task_stats.total_bytes += size;
-            task_stats.average_size = task_stats.total_bytes as f64 / task_stats.total_allocations as f64;
+            task_stats.average_size =
+                task_stats.total_bytes as f64 / task_stats.total_allocations as f64;
             task_stats.current_memory_bytes += size;
 
             if task_stats.current_memory_bytes > task_stats.peak_memory_bytes {
@@ -141,13 +154,20 @@ impl AllocationSiteTracker {
         //       Currently uses basic estimate; should calculate frequency from actual allocation timestamps and history.
         stats.frequency = stats.total_allocations as f64 / 60.0; // per minute estimate
 
-        debug!("Recorded allocation at {}:{} ({} bytes)", site.file, site.line, size);
+        debug!(
+            "Recorded allocation at {}:{} ({} bytes)",
+            site.file, site.line, size
+        );
     }
 
     /// Record a deallocation
     pub fn record_deallocation(&mut self, ptr: usize) {
         // Find the allocation record by pointer
-        if let Some(record) = self.records.values_mut().find(|r| r.ptr == ptr && !r.deallocated) {
+        if let Some(record) = self
+            .records
+            .values_mut()
+            .find(|r| r.ptr == ptr && !r.deallocated)
+        {
             record.deallocated = true;
             self.total_deallocations.fetch_add(1, Ordering::SeqCst);
 
@@ -157,7 +177,10 @@ impl AllocationSiteTracker {
                     if task_stats.current_memory_bytes >= record.size {
                         task_stats.current_memory_bytes -= record.size;
                     } else {
-                        warn!("Task {} current memory underflow during deallocation", task_id);
+                        warn!(
+                            "Task {} current memory underflow during deallocation",
+                            task_id
+                        );
                         task_stats.current_memory_bytes = 0;
                     }
                 }
@@ -165,7 +188,10 @@ impl AllocationSiteTracker {
 
             debug!("Recorded deallocation of {} bytes", record.size);
         } else {
-            warn!("Attempted to deallocate unknown pointer: {:p}", ptr as *const u8);
+            warn!(
+                "Attempted to deallocate unknown pointer: {:p}",
+                ptr as *const u8
+            );
         }
     }
 
@@ -214,7 +240,10 @@ impl AllocationSiteTracker {
                         size_bytes: record.size,
                         allocation_site: record.site.clone(),
                         allocation_time: record.timestamp,
-                        suspected_leak_reason: format!("Long-lived allocation ({} seconds old)", age.as_secs()),
+                        suspected_leak_reason: format!(
+                            "Long-lived allocation ({} seconds old)",
+                            age.as_secs()
+                        ),
                     });
                 }
             }
@@ -222,7 +251,8 @@ impl AllocationSiteTracker {
 
         // Check for tasks with high memory usage
         for task_stats in self.task_stats.values() {
-            if task_stats.current_memory_bytes > 100 * 1024 * 1024 { // 100MB
+            if task_stats.current_memory_bytes > 100 * 1024 * 1024 {
+                // 100MB
                 leaks.push(AllocationLeak {
                     object_id: 0, // Task-level leak
                     size_bytes: task_stats.current_memory_bytes,
@@ -235,7 +265,11 @@ impl AllocationSiteTracker {
                         task_id: Some(task_stats.task_id.clone()),
                     },
                     allocation_time: Instant::now() - Duration::from_secs(1), // Approximate
-                    suspected_leak_reason: format!("Task {} using {} MB", task_stats.task_id, task_stats.current_memory_bytes / (1024 * 1024)),
+                    suspected_leak_reason: format!(
+                        "Task {} using {} MB",
+                        task_stats.task_id,
+                        task_stats.current_memory_bytes / (1024 * 1024)
+                    ),
                 });
             }
         }
@@ -264,7 +298,10 @@ impl AllocationSiteTracker {
         let cleaned = initial_count - final_count;
 
         if cleaned > 0 {
-            debug!("Cleaned up {} old allocation records, {} records remaining", cleaned, final_count);
+            debug!(
+                "Cleaned up {} old allocation records, {} records remaining",
+                cleaned, final_count
+            );
         }
     }
 

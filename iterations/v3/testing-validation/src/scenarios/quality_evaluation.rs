@@ -7,19 +7,18 @@
 //! - Bug fix task
 //! - Feature implementation task
 
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::{info, warn};
-use serde::{Deserialize, Serialize};
 
 use crate::quality_analyzers::{
-    ReasoningDepthScore, DecisionQualityScore, CouncilTransparencyScore,
+    CouncilTransparencyScore, DecisionQualityScore, OverallQualityScore, ReasoningDepthScore,
     VerdictReasoningQualityScore,
-    OverallQualityScore
 };
 #[cfg(feature = "full")]
-use agent_orchestration::chain_of_thought::DecisionPoint;
-#[cfg(feature = "full")]
 use agent_constitutional_council::verdict_writer::VerdictRecord;
+#[cfg(feature = "full")]
+use agent_orchestration::chain_of_thought::DecisionPoint;
 
 /// Quality evaluation result for a scenario
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,9 +36,9 @@ pub struct QualityEvaluationResult {
 }
 
 /// Scenario 1: Code Refactoring Task
-/// 
+///
 /// Task: Refactor a Rust module to improve maintainability while preserving functionality.
-/// 
+///
 /// Success Criteria:
 /// - Reasoning depth ≥ 0.7
 /// - Council consensus ≥ 0.8
@@ -62,14 +61,17 @@ pub async fn run_code_refactoring_scenario(
         Ok(ws) => ws,
         Err(e) => {
             error!("Failed to create workspace: {}", e);
-            return create_failed_result("Code Refactoring", format!("Workspace creation failed: {}", e));
+            return create_failed_result(
+                "Code Refactoring",
+                format!("Workspace creation failed: {}", e),
+            );
         }
     };
 
     // Create test file with code that needs refactoring
     let test_file_path = workspace.path().join("src").join("lib.rs");
     std::fs::create_dir_all(test_file_path.parent().unwrap()).unwrap();
-    
+
     let broken_code = r#"
 // Intentionally complex code for refactoring test
 pub struct User {
@@ -140,11 +142,13 @@ pub fn process_user_data(user: User, validate: bool, format: bool, save: bool) -
         code_quality.score,
     );
 
-    let passed = reasoning_depth.score >= 0.7 
-        && decision_quality.score >= 0.7 
-        && code_quality.score >= 0.7;
+    let passed =
+        reasoning_depth.score >= 0.7 && decision_quality.score >= 0.7 && code_quality.score >= 0.7;
 
-    info!("Code refactoring scenario completed in {:?}", start_time.elapsed());
+    info!(
+        "Code refactoring scenario completed in {:?}",
+        start_time.elapsed()
+    );
 
     QualityEvaluationResult {
         scenario_name: "Code Refactoring".to_string(),
@@ -161,9 +165,9 @@ pub fn process_user_data(user: User, validate: bool, format: bool, save: bool) -
 }
 
 /// Scenario 2: Documentation Writing Task
-/// 
+///
 /// Task: Write comprehensive API documentation for a Rust module.
-/// 
+///
 /// Success Criteria:
 /// - Reasoning depth ≥ 0.7
 /// - Council consensus ≥ 0.8
@@ -186,7 +190,10 @@ pub async fn run_documentation_writing_scenario(
         Ok(ws) => ws,
         Err(e) => {
             error!("Failed to create workspace: {}", e);
-            return create_failed_result("Documentation Writing", format!("Workspace creation failed: {}", e));
+            return create_failed_result(
+                "Documentation Writing",
+                format!("Workspace creation failed: {}", e),
+            );
         }
     };
 
@@ -261,7 +268,10 @@ let result = process_user_data(user, true, true, false)?;
     if completeness >= 0.8 {
         success_criteria_met.push("Documentation completeness ≥ 80%".to_string());
     } else {
-        success_criteria_failed.push(format!("Documentation completeness {}% < 80%", completeness * 100.0));
+        success_criteria_failed.push(format!(
+            "Documentation completeness {}% < 80%",
+            completeness * 100.0
+        ));
     }
 
     // Calculate overall score
@@ -272,12 +282,15 @@ let result = process_user_data(user, true, true, false)?;
         writing_quality.score,
     );
 
-    let passed = reasoning_depth.score >= 0.7 
-        && decision_quality.score >= 0.7 
+    let passed = reasoning_depth.score >= 0.7
+        && decision_quality.score >= 0.7
         && writing_quality.score >= 0.7
         && completeness >= 0.8;
 
-    info!("Documentation writing scenario completed in {:?}", start_time.elapsed());
+    info!(
+        "Documentation writing scenario completed in {:?}",
+        start_time.elapsed()
+    );
 
     QualityEvaluationResult {
         scenario_name: "Documentation Writing".to_string(),
@@ -294,9 +307,9 @@ let result = process_user_data(user, true, true, false)?;
 }
 
 /// Scenario 3: Bug Fix Task
-/// 
+///
 /// Task: Identify and fix a complex bug in existing code.
-/// 
+///
 /// Success Criteria:
 /// - Reasoning depth ≥ 0.8 (bug fixing requires deep analysis)
 /// - Council consensus ≥ 0.8
@@ -327,7 +340,7 @@ pub async fn run_bug_fix_scenario(
     // Create test file with intentional bug
     let test_file_path = workspace.path().join("src").join("lib.rs");
     std::fs::create_dir_all(test_file_path.parent().unwrap()).unwrap();
-    
+
     let buggy_code = r#"
 pub fn calculate_total(items: Vec<u32>) -> u32 {
     let mut total = 0;
@@ -379,9 +392,8 @@ pub fn calculate_total(items: Vec<u32>) -> u32 {
         code_quality.score,
     );
 
-    let passed = reasoning_depth.score >= 0.8 
-        && decision_quality.score >= 0.7 
-        && code_quality.score >= 0.7;
+    let passed =
+        reasoning_depth.score >= 0.8 && decision_quality.score >= 0.7 && code_quality.score >= 0.7;
 
     info!("Bug fix scenario completed in {:?}", start_time.elapsed());
 
@@ -400,9 +412,9 @@ pub fn calculate_total(items: Vec<u32>) -> u32 {
 }
 
 /// Scenario 4: Feature Implementation Task
-/// 
+///
 /// Task: Implement a new feature following existing patterns.
-/// 
+///
 /// Success Criteria:
 /// - Reasoning depth ≥ 0.7
 /// - Council consensus ≥ 0.8
@@ -426,7 +438,10 @@ pub async fn run_feature_implementation_scenario(
         Ok(ws) => ws,
         Err(e) => {
             error!("Failed to create workspace: {}", e);
-            return create_failed_result("Feature Implementation", format!("Workspace creation failed: {}", e));
+            return create_failed_result(
+                "Feature Implementation",
+                format!("Workspace creation failed: {}", e),
+            );
         }
     };
 
@@ -452,7 +467,7 @@ pub async fn run_feature_implementation_scenario(
     // Create test file with feature implementation
     let test_file_path = workspace.path().join("src").join("lib.rs");
     std::fs::create_dir_all(test_file_path.parent().unwrap()).unwrap();
-    
+
     let feature_code = r#"
 /// New feature: User validation
 pub struct UserValidator {
@@ -494,11 +509,13 @@ impl UserValidator {
         code_quality.score,
     );
 
-    let passed = reasoning_depth.score >= 0.7 
-        && decision_quality.score >= 0.7 
-        && code_quality.score >= 0.7;
+    let passed =
+        reasoning_depth.score >= 0.7 && decision_quality.score >= 0.7 && code_quality.score >= 0.7;
 
-    info!("Feature implementation scenario completed in {:?}", start_time.elapsed());
+    info!(
+        "Feature implementation scenario completed in {:?}",
+        start_time.elapsed()
+    );
 
     QualityEvaluationResult {
         scenario_name: "Feature Implementation".to_string(),
@@ -541,17 +558,32 @@ async fn generate_quality_report(results: &[QualityEvaluationResult]) {
     info!("Generating quality evaluation report");
 
     let mut report = String::from("# Quality Evaluation Report\n\n");
-    report.push_str(&format!("Generated: {}\n\n", chrono::Utc::now().to_rfc3339()));
+    report.push_str(&format!(
+        "Generated: {}\n\n",
+        chrono::Utc::now().to_rfc3339()
+    ));
 
     for result in results {
         report.push_str(&format!("## {}\n\n", result.scenario_name));
-        report.push_str(&format!("**Overall Score**: {:.2}\n", result.overall_score.score));
-        report.push_str(&format!("**Status**: {}\n\n", if result.passed { "PASSED" } else { "FAILED" }));
+        report.push_str(&format!(
+            "**Overall Score**: {:.2}\n",
+            result.overall_score.score
+        ));
+        report.push_str(&format!(
+            "**Status**: {}\n\n",
+            if result.passed { "PASSED" } else { "FAILED" }
+        ));
 
         report.push_str("### Scores\n\n");
-        report.push_str(&format!("- Reasoning Depth: {:.2} ({})\n", 
-            result.reasoning_depth.score, result.reasoning_depth.quality_level()));
-        report.push_str(&format!("- Decision Quality: {:.2}\n", result.decision_quality.score));
+        report.push_str(&format!(
+            "- Reasoning Depth: {:.2} ({})\n",
+            result.reasoning_depth.score,
+            result.reasoning_depth.quality_level()
+        ));
+        report.push_str(&format!(
+            "- Decision Quality: {:.2}\n",
+            result.decision_quality.score
+        ));
         report.push_str(&format!("- Output Quality: {:.2}\n", result.output_quality));
 
         if !result.success_criteria_met.is_empty() {
@@ -584,9 +616,11 @@ async fn generate_quality_report(results: &[QualityEvaluationResult]) {
 
 #[cfg(feature = "full")]
 fn create_simulated_refactoring_decisions() -> Vec<DecisionPoint> {
-    use agent_orchestration::chain_of_thought::{DecisionType, DecisionContext, Alternative, RiskAssessment};
-    use std::collections::HashMap;
+    use agent_orchestration::chain_of_thought::{
+        Alternative, DecisionContext, DecisionType, RiskAssessment,
+    };
     use chrono::Utc;
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     vec![
@@ -637,9 +671,9 @@ fn create_simulated_refactoring_decisions() -> Vec<DecisionPoint> {
 
 #[cfg(feature = "full")]
 fn create_simulated_documentation_decisions() -> Vec<DecisionPoint> {
-    use agent_orchestration::chain_of_thought::{DecisionType, DecisionContext, Alternative};
-    use std::collections::HashMap;
+    use agent_orchestration::chain_of_thought::{Alternative, DecisionContext, DecisionType};
     use chrono::Utc;
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     vec![
@@ -677,9 +711,11 @@ fn create_simulated_documentation_decisions() -> Vec<DecisionPoint> {
 
 #[cfg(feature = "full")]
 fn create_simulated_bugfix_decisions() -> Vec<DecisionPoint> {
-    use agent_orchestration::chain_of_thought::{DecisionType, DecisionContext, Alternative, RiskAssessment};
-    use std::collections::HashMap;
+    use agent_orchestration::chain_of_thought::{
+        Alternative, DecisionContext, DecisionType, RiskAssessment,
+    };
     use chrono::Utc;
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     vec![
@@ -730,9 +766,9 @@ fn create_simulated_bugfix_decisions() -> Vec<DecisionPoint> {
 
 #[cfg(feature = "full")]
 fn create_simulated_feature_decisions() -> Vec<DecisionPoint> {
-    use agent_orchestration::chain_of_thought::{DecisionType, DecisionContext, Alternative};
-    use std::collections::HashMap;
+    use agent_orchestration::chain_of_thought::{Alternative, DecisionContext, DecisionType};
     use chrono::Utc;
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     vec![
@@ -800,4 +836,3 @@ fn create_failed_result(scenario_name: &str, error: String) -> QualityEvaluation
         success_criteria_failed: vec![error],
     }
 }
-

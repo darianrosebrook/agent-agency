@@ -10,14 +10,14 @@ use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::time::Duration;
-use tokio_stream::wrappers::ReceiverStream;
 use tokio::sync::mpsc;
 use tokio::time::{timeout, Instant};
+use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
 
-use super::super::Result as ApiResult;
 use super::super::server::ApiState;
-use crate::chat_service::{ChatService, ChatSession, ChatMessage};
+use super::super::Result as ApiResult;
+use crate::chat_service::{ChatMessage, ChatService, ChatSession};
 use axum::extract::Query;
 use std::collections::HashMap;
 
@@ -44,27 +44,27 @@ struct StreamEvent {
 /// Creates a Server-Sent Events stream for real-time agent responses.
 /// Uses channel-based routing to isolate streams per request.
 /// Implements timeout handling to prevent long-running streams.
-/// 
+///
 /// Channel format: `agent:{agent_id}:task:{task_id}:session:{session_id}`
 pub async fn stream_agent_response(
     State(state): State<ApiState>,
     Json(request): Json<StreamAgentRequest>,
 ) -> ApiResult<Sse<impl Stream<Item = std::result::Result<Event, Infallible>>>> {
     // Generate task_id if not provided (for chat messages, each message gets its own task_id)
-    let task_id = request.task_id.as_ref()
+    let task_id = request
+        .task_id
+        .as_ref()
         .map(|s| s.clone())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
-    
+
     let (channel, cancel_rx) = state
         .websocket_manager
         .create_channel(&request.agent_id, &task_id, &request.session_id)
         .await;
-    
+
     // Get stream timeout from config (default: 300 seconds / 5 minutes)
-    let timeout_duration = Duration::from_secs(
-        state.api.config().stream_timeout_seconds
-    );
-    
+    let timeout_duration = Duration::from_secs(state.api.config().stream_timeout_seconds);
+
     // Clone request for the spawned task
     let request_clone = request.clone();
 
@@ -97,12 +97,12 @@ pub async fn stream_agent_response(
                         tracing::debug!("CoreML inference callback not available, using fallback");
                         format!("I received your message: '{}'. CoreML orchestrator is not available.", request_clone.message)
                     };
-                    
+
                     let words: Vec<&str> = response_text.split_whitespace().collect();
 
                     for (i, word) in words.iter().enumerate() {
                         let is_last = i == words.len() - 1;
-                        
+
                         let event = StreamEvent {
                             content: Some(format!("{} ", word)),
                             done: is_last,
@@ -159,8 +159,12 @@ pub async fn stream_agent_response(
                     done: true,
                     error: Some("Stream cancelled by user".to_string()),
                 };
-                let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(cancel_event).unwrap())).await;
-                
+                let _ = tx
+                    .send(std::result::Result::<Event, Infallible>::Ok(
+                        Event::default().json_data(cancel_event).unwrap(),
+                    ))
+                    .await;
+
                 let duration = start_time.elapsed();
                 tracing::info!(
                     "Stream cancelled for channel {} after {:?}",
@@ -178,8 +182,12 @@ pub async fn stream_agent_response(
                         timeout_duration_clone.as_secs()
                     )),
                 };
-                let _ = tx.send(std::result::Result::<Event, Infallible>::Ok(Event::default().json_data(timeout_event).unwrap())).await;
-                
+                let _ = tx
+                    .send(std::result::Result::<Event, Infallible>::Ok(
+                        Event::default().json_data(timeout_event).unwrap(),
+                    ))
+                    .await;
+
                 let duration = start_time.elapsed();
                 tracing::warn!(
                     "Stream timeout for channel {} after {:?} (configured timeout: {:?})",
@@ -191,7 +199,10 @@ pub async fn stream_agent_response(
         }
 
         // Cleanup channel
-        state_clone.websocket_manager.cleanup_channel(&channel_clone).await;
+        state_clone
+            .websocket_manager
+            .cleanup_channel(&channel_clone)
+            .await;
     });
 
     ApiResult::Ok(Sse::new(ReceiverStream::new(rx)).keep_alive(KeepAlive::default()))
@@ -239,29 +250,31 @@ pub async fn get_chat_sessions(
     Query(params): Query<HashMap<String, String>>,
 ) -> ApiResult<Json<Vec<ChatSessionResponse>>> {
     // Extract workspace_id from query parameters (TODO: Extract from authenticated user)
-    let workspace_id = params.get("workspace_id")
+    let workspace_id = params
+        .get("workspace_id")
         .and_then(|s| Uuid::parse_str(s).ok())
-        .ok_or_else(|| super::super::ApiError::BadRequest("workspace_id query parameter required".to_string()))?;
-    
-    let archived = params.get("archived")
-        .and_then(|s| s.parse::<bool>().ok());
-    let limit = params.get("limit")
-        .and_then(|s| s.parse::<i32>().ok());
-    let offset = params.get("offset")
-        .and_then(|s| s.parse::<i32>().ok());
-    
+        .ok_or_else(|| {
+            super::super::ApiError::BadRequest("workspace_id query parameter required".to_string())
+        })?;
+
+    let archived = params.get("archived").and_then(|s| s.parse::<bool>().ok());
+    let limit = params.get("limit").and_then(|s| s.parse::<i32>().ok());
+    let offset = params.get("offset").and_then(|s| s.parse::<i32>().ok());
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Query sessions from database
-    let sessions = chat_service.list_workspace_sessions(workspace_id, limit, offset, archived)
+    let sessions = chat_service
+        .list_workspace_sessions(workspace_id, limit, offset, archived)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to query chat sessions: {}", e)))?;
-    
-    let responses: Vec<ChatSessionResponse> = sessions.into_iter()
-        .map(session_to_response)
-        .collect();
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to query chat sessions: {}", e))
+        })?;
+
+    let responses: Vec<ChatSessionResponse> =
+        sessions.into_iter().map(session_to_response).collect();
+
     ApiResult::Ok(Json(responses))
 }
 
@@ -271,32 +284,35 @@ pub async fn search_chat_sessions(
     Query(params): Query<HashMap<String, String>>,
 ) -> ApiResult<Json<Vec<ChatSessionResponse>>> {
     // Extract parameters
-    let workspace_id = params.get("workspace_id")
+    let workspace_id = params
+        .get("workspace_id")
         .and_then(|s| Uuid::parse_str(s).ok())
-        .ok_or_else(|| super::super::ApiError::BadRequest("workspace_id query parameter required".to_string()))?;
-    
-    let search_text = params.get("q")
-        .ok_or_else(|| super::super::ApiError::BadRequest("q (search text) query parameter required".to_string()))?;
-    
-    let archived = params.get("archived")
-        .and_then(|s| s.parse::<bool>().ok());
-    let limit = params.get("limit")
-        .and_then(|s| s.parse::<i32>().ok());
-    let offset = params.get("offset")
-        .and_then(|s| s.parse::<i32>().ok());
-    
+        .ok_or_else(|| {
+            super::super::ApiError::BadRequest("workspace_id query parameter required".to_string())
+        })?;
+
+    let search_text = params.get("q").ok_or_else(|| {
+        super::super::ApiError::BadRequest("q (search text) query parameter required".to_string())
+    })?;
+
+    let archived = params.get("archived").and_then(|s| s.parse::<bool>().ok());
+    let limit = params.get("limit").and_then(|s| s.parse::<i32>().ok());
+    let offset = params.get("offset").and_then(|s| s.parse::<i32>().ok());
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Search sessions in database
-    let sessions = chat_service.search_sessions(workspace_id, search_text, archived, limit, offset)
+    let sessions = chat_service
+        .search_sessions(workspace_id, search_text, archived, limit, offset)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to search chat sessions: {}", e)))?;
-    
-    let responses: Vec<ChatSessionResponse> = sessions.into_iter()
-        .map(session_to_response)
-        .collect();
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to search chat sessions: {}", e))
+        })?;
+
+    let responses: Vec<ChatSessionResponse> =
+        sessions.into_iter().map(session_to_response).collect();
+
     ApiResult::Ok(Json(responses))
 }
 
@@ -307,18 +323,22 @@ pub async fn create_chat_session(
     Query(params): Query<HashMap<String, String>>,
 ) -> ApiResult<Json<ChatSessionResponse>> {
     // Extract workspace_id from query parameters (TODO: Extract from authenticated user)
-    let workspace_id = params.get("workspace_id")
+    let workspace_id = params
+        .get("workspace_id")
         .and_then(|s| Uuid::parse_str(s).ok());
-    
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Create session in database
     let metadata = serde_json::json!({});
-    let session = chat_service.create_session(workspace_id, None, request.title.clone(), &metadata)
+    let session = chat_service
+        .create_session(workspace_id, None, request.title.clone(), &metadata)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to create chat session: {}", e)))?;
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to create chat session: {}", e))
+        })?;
+
     ApiResult::Ok(Json(session_to_response(session)))
 }
 
@@ -329,27 +349,28 @@ pub async fn get_chat_messages(
     Query(params): Query<HashMap<String, String>>,
 ) -> ApiResult<Json<Vec<ChatMessageResponse>>> {
     // Parse session_id
-    let session_id = Uuid::parse_str(&session_id_str)
-        .map_err(|_| super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str)))?;
-    
+    let session_id = Uuid::parse_str(&session_id_str).map_err(|_| {
+        super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str))
+    })?;
+
     // Extract query parameters
-    let limit = params.get("limit")
-        .and_then(|s| s.parse::<i32>().ok());
-    let offset = params.get("offset")
-        .and_then(|s| s.parse::<i32>().ok());
-    
+    let limit = params.get("limit").and_then(|s| s.parse::<i32>().ok());
+    let offset = params.get("offset").and_then(|s| s.parse::<i32>().ok());
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Query messages from database
-    let messages = chat_service.get_session_messages(session_id, limit, offset)
+    let messages = chat_service
+        .get_session_messages(session_id, limit, offset)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to query chat messages: {}", e)))?;
-    
-    let responses: Vec<ChatMessageResponse> = messages.into_iter()
-        .map(message_to_response)
-        .collect();
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to query chat messages: {}", e))
+        })?;
+
+    let responses: Vec<ChatMessageResponse> =
+        messages.into_iter().map(message_to_response).collect();
+
     ApiResult::Ok(Json(responses))
 }
 
@@ -360,30 +381,32 @@ pub async fn search_chat_messages(
     Query(params): Query<HashMap<String, String>>,
 ) -> ApiResult<Json<Vec<ChatMessageResponse>>> {
     // Parse session_id
-    let session_id = Uuid::parse_str(&session_id_str)
-        .map_err(|_| super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str)))?;
-    
+    let session_id = Uuid::parse_str(&session_id_str).map_err(|_| {
+        super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str))
+    })?;
+
     // Extract search text
-    let search_text = params.get("q")
-        .ok_or_else(|| super::super::ApiError::BadRequest("q (search text) query parameter required".to_string()))?;
-    
-    let limit = params.get("limit")
-        .and_then(|s| s.parse::<i32>().ok());
-    let offset = params.get("offset")
-        .and_then(|s| s.parse::<i32>().ok());
-    
+    let search_text = params.get("q").ok_or_else(|| {
+        super::super::ApiError::BadRequest("q (search text) query parameter required".to_string())
+    })?;
+
+    let limit = params.get("limit").and_then(|s| s.parse::<i32>().ok());
+    let offset = params.get("offset").and_then(|s| s.parse::<i32>().ok());
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Search messages in database
-    let messages = chat_service.search_messages(session_id, search_text, limit, offset)
+    let messages = chat_service
+        .search_messages(session_id, search_text, limit, offset)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to search chat messages: {}", e)))?;
-    
-    let responses: Vec<ChatMessageResponse> = messages.into_iter()
-        .map(message_to_response)
-        .collect();
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to search chat messages: {}", e))
+        })?;
+
+    let responses: Vec<ChatMessageResponse> =
+        messages.into_iter().map(message_to_response).collect();
+
     ApiResult::Ok(Json(responses))
 }
 
@@ -394,23 +417,35 @@ pub async fn pin_chat_session(
     Json(request): Json<PinSessionRequest>,
 ) -> ApiResult<Json<ChatSessionResponse>> {
     // Parse session_id
-    let session_id = Uuid::parse_str(&session_id_str)
-        .map_err(|_| super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str)))?;
-    
+    let session_id = Uuid::parse_str(&session_id_str).map_err(|_| {
+        super::super::ApiError::BadRequest(format!("Invalid session_id: {}", session_id_str))
+    })?;
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Pin/unpin session in database
-    chat_service.pin_session(session_id, request.pinned)
+    chat_service
+        .pin_session(session_id, request.pinned)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to pin/unpin chat session: {}", e)))?;
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!(
+                "Failed to pin/unpin chat session: {}",
+                e
+            ))
+        })?;
+
     // Fetch updated session
-    let session = chat_service.get_session(session_id)
+    let session = chat_service
+        .get_session(session_id)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to fetch chat session: {}", e)))?
-        .ok_or_else(|| super::super::ApiError::NotFound(format!("Chat session not found: {}", session_id_str)))?;
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to fetch chat session: {}", e))
+        })?
+        .ok_or_else(|| {
+            super::super::ApiError::NotFound(format!("Chat session not found: {}", session_id_str))
+        })?;
+
     ApiResult::Ok(Json(session_to_response(session)))
 }
 
@@ -420,21 +455,27 @@ pub async fn bulk_archive_sessions(
     Json(request): Json<BulkOperationRequest>,
 ) -> ApiResult<Json<BulkOperationResponse>> {
     // Parse session IDs
-    let session_ids: std::result::Result<Vec<Uuid>, _> = request.session_ids.iter()
+    let session_ids: std::result::Result<Vec<Uuid>, _> = request
+        .session_ids
+        .iter()
         .map(|s| Uuid::parse_str(s))
         .collect();
-    
-    let session_ids = session_ids
-        .map_err(|_| super::super::ApiError::BadRequest("Invalid session_id format in request".to_string()))?;
-    
+
+    let session_ids = session_ids.map_err(|_| {
+        super::super::ApiError::BadRequest("Invalid session_id format in request".to_string())
+    })?;
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Bulk archive sessions in database
-    let count = chat_service.bulk_archive_sessions(&session_ids)
+    let count = chat_service
+        .bulk_archive_sessions(&session_ids)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to bulk archive sessions: {}", e)))?;
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to bulk archive sessions: {}", e))
+        })?;
+
     ApiResult::Ok(Json(BulkOperationResponse { count }))
 }
 
@@ -444,21 +485,27 @@ pub async fn bulk_delete_sessions(
     Json(request): Json<BulkOperationRequest>,
 ) -> ApiResult<Json<BulkOperationResponse>> {
     // Parse session IDs
-    let session_ids: std::result::Result<Vec<Uuid>, _> = request.session_ids.iter()
+    let session_ids: std::result::Result<Vec<Uuid>, _> = request
+        .session_ids
+        .iter()
         .map(|s| Uuid::parse_str(s))
         .collect();
-    
-    let session_ids = session_ids
-        .map_err(|_| super::super::ApiError::BadRequest("Invalid session_id format in request".to_string()))?;
-    
+
+    let session_ids = session_ids.map_err(|_| {
+        super::super::ApiError::BadRequest("Invalid session_id format in request".to_string())
+    })?;
+
     // Create ChatService from database client
     let chat_service = ChatService::new(state.api.db_client.clone());
-    
+
     // Bulk delete sessions in database
-    let count = chat_service.bulk_delete_sessions(&session_ids)
+    let count = chat_service
+        .bulk_delete_sessions(&session_ids)
         .await
-        .map_err(|e| super::super::ApiError::InternalError(format!("Failed to bulk delete sessions: {}", e)))?;
-    
+        .map_err(|e| {
+            super::super::ApiError::InternalError(format!("Failed to bulk delete sessions: {}", e))
+        })?;
+
     ApiResult::Ok(Json(BulkOperationResponse { count }))
 }
 
@@ -519,4 +566,3 @@ pub struct BulkOperationRequest {
 pub struct BulkOperationResponse {
     pub count: i32,
 }
-

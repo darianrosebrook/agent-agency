@@ -120,7 +120,6 @@ pub struct RateLimitRequest {
     pub operation: String,
     /// Request timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -133,7 +132,6 @@ pub struct RateLimitResult {
     pub current_count: u32,
     /// Window reset time
     #[schemars(with = "String")]
-
     pub reset_time: DateTime<Utc>,
     /// Retry after seconds (if denied)
     pub retry_after_seconds: Option<u64>,
@@ -199,7 +197,6 @@ pub struct SecurityViolation {
     pub actor: String,
     /// Timestamp of the violation
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Additional context
     pub context: HashMap<String, String>,
@@ -223,7 +220,6 @@ pub struct CouncilDecision {
     pub conditions: Vec<String>,
     /// Timestamp of the decision
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -245,7 +241,6 @@ pub struct SecurityAuditEvent {
     pub result: AuditResult,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Additional metadata
     pub metadata: HashMap<String, String>,
@@ -310,7 +305,9 @@ impl AuditLogEntry {
 }
 
 /// Normalized severity level used by the analysis engine
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, JsonSchema,
+)]
 pub enum SeverityLevel {
     Informational,
     Low,
@@ -390,7 +387,6 @@ pub struct FileAccessRequest {
     pub context: HashMap<String, String>,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -425,7 +421,6 @@ pub struct CommandExecutionRequest {
     pub context: HashMap<String, String>,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -443,7 +438,6 @@ pub struct SecretsScanResult {
     pub scan_time_ms: u64,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -501,7 +495,6 @@ pub struct SecurityStats {
     pub avg_enforcement_time_ms: f64,
     /// Last updated
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 

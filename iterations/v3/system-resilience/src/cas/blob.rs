@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -27,7 +27,7 @@ impl BlobStore {
     /// Store a blob with payload header
     pub fn store_blob(&self, digest: Digest, header: PayloadHeader, data: &[u8]) -> Result<()> {
         let blob_path = self.get_blob_path(digest);
-        
+
         // Ensure directory exists
         if let Some(parent) = blob_path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -45,14 +45,14 @@ impl BlobStore {
     /// Retrieve a blob by digest
     pub fn get_blob(&self, digest: Digest) -> Result<Option<Blob>> {
         let blob_path = self.get_blob_path(digest);
-        
+
         if !blob_path.exists() {
             return Ok(None);
         }
 
         let mut file = File::open(&blob_path)?;
         let blob = self.read_blob_with_header(&mut file)?;
-        
+
         debug!("Retrieved blob: {}", digest);
         Ok(Some(blob))
     }
@@ -70,20 +70,25 @@ impl BlobStore {
     }
 
     /// Write blob with header
-    fn write_blob_with_header(&self, file: &mut File, header: PayloadHeader, data: &[u8]) -> Result<()> {
+    fn write_blob_with_header(
+        &self,
+        file: &mut File,
+        header: PayloadHeader,
+        data: &[u8],
+    ) -> Result<()> {
         // Serialize header
         let header_bytes = bincode::serialize(&header)?;
         let header_len = header_bytes.len() as u32;
-        
+
         // Write header length (4 bytes)
         file.write_all(&header_len.to_le_bytes())?;
-        
+
         // Write header
         file.write_all(&header_bytes)?;
-        
+
         // Write data
         file.write_all(data)?;
-        
+
         Ok(())
     }
 
@@ -93,16 +98,16 @@ impl BlobStore {
         let mut header_len_bytes = [0u8; 4];
         file.read_exact(&mut header_len_bytes)?;
         let header_len = u32::from_le_bytes(header_len_bytes) as usize;
-        
+
         // Read header
         let mut header_bytes = vec![0u8; header_len];
         file.read_exact(&mut header_bytes)?;
         let header: PayloadHeader = bincode::deserialize(&header_bytes)?;
-        
+
         // Read data
         let mut data = Vec::new();
         file.read_to_end(&mut data)?;
-        
+
         Ok(Blob { header, data })
     }
 
@@ -136,7 +141,7 @@ impl BlobStore {
     /// List all blobs in the store
     pub fn list_blobs(&self) -> Result<Vec<Digest>> {
         let mut digests = Vec::new();
-        
+
         if self.objects_dir.exists() {
             for entry in std::fs::read_dir(&self.objects_dir)? {
                 let entry = entry?;
@@ -156,7 +161,7 @@ impl BlobStore {
                 }
             }
         }
-        
+
         Ok(digests)
     }
 
@@ -174,7 +179,7 @@ impl BlobStore {
     pub fn get_stats(&self) -> Result<BlobStats> {
         let mut total_size = 0u64;
         let mut blob_count = 0u64;
-        
+
         if self.objects_dir.exists() {
             for entry in std::fs::read_dir(&self.objects_dir)? {
                 let entry = entry?;
@@ -191,7 +196,7 @@ impl BlobStore {
                 }
             }
         }
-        
+
         Ok(BlobStats {
             total_size,
             blob_count,
@@ -364,7 +369,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let objects_dir = temp_dir.path().join("objects");
         let store = BlobStore::new(objects_dir);
-        
+
         assert!(store.objects_dir.exists() || !store.objects_dir.exists());
     }
 
@@ -373,7 +378,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let objects_dir = temp_dir.path().join("objects");
         let store = BlobStore::new(objects_dir);
-        
+
         let data = b"test content";
         let digest = BlobStore::calculate_digest(data);
         let header = PayloadHeader {
@@ -389,9 +394,9 @@ mod tests {
                 .unwrap()
                 .as_secs(),
         };
-        
+
         store.store_blob(digest, header, data).unwrap();
-        
+
         let retrieved = store.get_blob(digest).unwrap().unwrap();
         assert_eq!(retrieved.data, data);
         assert_eq!(retrieved.header.content_len, data.len() as u32);
@@ -402,7 +407,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let objects_dir = temp_dir.path().join("objects");
         let store = BlobStore::new(objects_dir);
-        
+
         let data = b"test content";
         let digest = BlobStore::calculate_digest(data);
         let header = PayloadHeader {
@@ -418,9 +423,9 @@ mod tests {
                 .unwrap()
                 .as_secs(),
         };
-        
+
         store.store_blob(digest, header, data).unwrap();
-        
+
         assert!(store.verify_blob(digest).unwrap());
     }
 
@@ -432,7 +437,7 @@ mod tests {
             .codec(Codec::None)
             .data(data.to_vec())
             .build();
-        
+
         assert_eq!(blob.data, data);
         assert_eq!(blob.header.kind, PayloadKind::Full);
         assert_eq!(blob.header.codec, Codec::None);

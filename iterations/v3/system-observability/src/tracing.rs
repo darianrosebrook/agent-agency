@@ -99,9 +99,14 @@ impl Tracer {
     }
 
     /// Start a child span
-    pub async fn start_child_span(&self, parent_span_id: &str, name: &str) -> Result<SpanHandle, TracingError> {
+    pub async fn start_child_span(
+        &self,
+        parent_span_id: &str,
+        name: &str,
+    ) -> Result<SpanHandle, TracingError> {
         let active_spans = self.active_spans.read().await;
-        let parent_span = active_spans.get(parent_span_id)
+        let parent_span = active_spans
+            .get(parent_span_id)
             .ok_or_else(|| TracingError::SpanNotFound(parent_span_id.to_string()))?;
 
         let span_id = format!("span_{}", chrono::Utc::now().timestamp_millis());
@@ -167,7 +172,8 @@ impl Tracer {
         let trace_id = headers.get("x-trace-id")?;
         let span_id = headers.get("x-span-id")?;
         let parent_span_id = headers.get("x-parent-span-id").cloned();
-        let sampled = headers.get("x-sampled")
+        let sampled = headers
+            .get("x-sampled")
             .map(|s| s == "true")
             .unwrap_or(true);
 
@@ -227,14 +233,31 @@ pub struct SpanHandle {
 impl SpanHandle {
     /// Set a tag on the span
     pub async fn set_tag(&self, key: &str, value: &str) {
-        if let Some(span) = self.tracer.active_spans.write().await.get_mut(&self.span_id) {
+        if let Some(span) = self
+            .tracer
+            .active_spans
+            .write()
+            .await
+            .get_mut(&self.span_id)
+        {
             span.tags.insert(key.to_string(), value.to_string());
         }
     }
 
     /// Log an event on the span
-    pub async fn log(&self, level: LogLevel, message: &str, fields: HashMap<String, serde_json::Value>) {
-        if let Some(span) = self.tracer.active_spans.write().await.get_mut(&self.span_id) {
+    pub async fn log(
+        &self,
+        level: LogLevel,
+        message: &str,
+        fields: HashMap<String, serde_json::Value>,
+    ) {
+        if let Some(span) = self
+            .tracer
+            .active_spans
+            .write()
+            .await
+            .get_mut(&self.span_id)
+        {
             span.logs.push(LogEntry {
                 timestamp: chrono::Utc::now(),
                 level,
@@ -251,7 +274,10 @@ impl SpanHandle {
 
     /// Finish the span with error
     pub async fn finish_error(self) {
-        let _ = self.tracer.finish_span(&self.span_id, SpanStatus::Error).await;
+        let _ = self
+            .tracer
+            .finish_span(&self.span_id, SpanStatus::Error)
+            .await;
     }
 
     /// Get span ID

@@ -8,7 +8,7 @@ use chrono;
 
 /// Generate a working specification from a task request
 pub async fn generate_working_spec(
-    task_request: &agent_agency_contracts::task_request::TaskRequest
+    task_request: &agent_agency_contracts::task_request::TaskRequest,
 ) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpec> {
     let goals = extract_goals_from_description(&task_request.description)?;
     let acceptance_criteria = generate_acceptance_criteria(&task_request.description)?;
@@ -59,7 +59,9 @@ fn extract_goals_from_description(description: &str) -> PlanningResult<Vec<Strin
     let mut goals = Vec::new();
 
     // Simple goal extraction based on keywords and structure
-    let sentences: Vec<&str> = description.split(|c| c == '.' || c == '!' || c == '?').collect();
+    let sentences: Vec<&str> = description
+        .split(|c| c == '.' || c == '!' || c == '?')
+        .collect();
 
     for sentence in sentences {
         let sentence = sentence.trim();
@@ -69,13 +71,29 @@ fn extract_goals_from_description(description: &str) -> PlanningResult<Vec<Strin
 
         // Look for goal indicators
         let goal_indicators = [
-            "should", "must", "need to", "required to", "implement",
-            "create", "build", "develop", "add", "support", "provide",
-            "ensure", "verify", "validate", "test", "check"
+            "should",
+            "must",
+            "need to",
+            "required to",
+            "implement",
+            "create",
+            "build",
+            "develop",
+            "add",
+            "support",
+            "provide",
+            "ensure",
+            "verify",
+            "validate",
+            "test",
+            "check",
         ];
 
         let sentence_lower = sentence.to_lowercase();
-        if goal_indicators.iter().any(|&indicator| sentence_lower.contains(indicator)) {
+        if goal_indicators
+            .iter()
+            .any(|&indicator| sentence_lower.contains(indicator))
+        {
             goals.push(sentence.to_string());
         }
 
@@ -93,7 +111,9 @@ fn extract_goals_from_description(description: &str) -> PlanningResult<Vec<Strin
 }
 
 /// Generate acceptance criteria from description
-fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_agency_contracts::working_spec::AcceptanceCriterion>> {
+fn generate_acceptance_criteria(
+    description: &str,
+) -> PlanningResult<Vec<agent_agency_contracts::working_spec::AcceptanceCriterion>> {
     let mut criteria = Vec::new();
 
     // Generate basic acceptance criteria based on common patterns
@@ -140,7 +160,8 @@ fn generate_acceptance_criteria(description: &str) -> PlanningResult<Vec<agent_a
 /// Generate a title from description
 fn generate_title_from_description(description: &str) -> String {
     // Extract first sentence or first meaningful part
-    let first_sentence = description.split(|c| c == '.' || c == '!' || c == '?')
+    let first_sentence = description
+        .split(|c| c == '.' || c == '!' || c == '?')
         .next()
         .unwrap_or(description)
         .trim();
@@ -162,7 +183,9 @@ fn generate_title_from_description(description: &str) -> String {
 }
 
 /// Create working spec constraints
-fn create_working_spec_constraints(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecConstraints> {
+fn create_working_spec_constraints(
+    task_request: &agent_agency_contracts::task_request::TaskRequest,
+) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecConstraints> {
     let mut max_duration_minutes = 60;
     let mut max_iterations = 10;
 
@@ -172,11 +195,11 @@ fn create_working_spec_constraints(task_request: &agent_agency_contracts::task_r
             agent_agency_contracts::task_request::RiskTier::Tier1 => {
                 max_duration_minutes = 30;
                 max_iterations = 5;
-            },
+            }
             agent_agency_contracts::task_request::RiskTier::Tier2 => {
                 max_duration_minutes = 60;
                 max_iterations = 10;
-            },
+            }
             agent_agency_contracts::task_request::RiskTier::Tier3 => {
                 max_duration_minutes = 120;
                 max_iterations = 20;
@@ -184,16 +207,20 @@ fn create_working_spec_constraints(task_request: &agent_agency_contracts::task_r
         }
     }
 
-    Ok(agent_agency_contracts::working_spec::WorkingSpecConstraints {
-        max_duration_minutes: Some(max_duration_minutes),
-        max_iterations: Some(max_iterations),
-        budget_limits: None, // Use default budget limits
-        scope_restrictions: None, // No scope restrictions by default
-    })
+    Ok(
+        agent_agency_contracts::working_spec::WorkingSpecConstraints {
+            max_duration_minutes: Some(max_duration_minutes),
+            max_iterations: Some(max_iterations),
+            budget_limits: None,      // Use default budget limits
+            scope_restrictions: None, // No scope restrictions by default
+        },
+    )
 }
 
 /// Generate test plan for task
-fn generate_test_plan(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::TestPlan> {
+fn generate_test_plan(
+    task_request: &agent_agency_contracts::task_request::TaskRequest,
+) -> PlanningResult<agent_agency_contracts::working_spec::TestPlan> {
     let unit_tests = vec![
         agent_agency_contracts::working_spec::UnitTestSpec {
             description: "Basic functionality test".to_string(),
@@ -207,13 +234,11 @@ fn generate_test_plan(task_request: &agent_agency_contracts::task_request::TaskR
         },
     ];
 
-    let integration_tests = vec![
-        agent_agency_contracts::working_spec::IntegrationTestSpec {
-            description: "Component integration test".to_string(),
-            components: vec!["component_a".to_string(), "component_b".to_string()],
-            test_cases: vec!["Test component interaction".to_string()],
-        },
-    ];
+    let integration_tests = vec![agent_agency_contracts::working_spec::IntegrationTestSpec {
+        description: "Component integration test".to_string(),
+        components: vec!["component_a".to_string(), "component_b".to_string()],
+        test_cases: vec!["Test component interaction".to_string()],
+    }];
 
     let coverage_targets = agent_agency_contracts::working_spec::CoverageTargets {
         line_coverage: Some(0.8),
@@ -230,7 +255,9 @@ fn generate_test_plan(task_request: &agent_agency_contracts::task_request::TaskR
 }
 
 /// Generate rollback plan
-fn generate_rollback_plan(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::RollbackPlan> {
+fn generate_rollback_plan(
+    task_request: &agent_agency_contracts::task_request::TaskRequest,
+) -> PlanningResult<agent_agency_contracts::working_spec::RollbackPlan> {
     Ok(agent_agency_contracts::working_spec::RollbackPlan {
         strategy: agent_agency_contracts::working_spec::RollbackStrategy::GitRevert,
         automated_steps: vec![
@@ -248,7 +275,9 @@ fn generate_rollback_plan(task_request: &agent_agency_contracts::task_request::T
 }
 
 /// Create working spec context
-fn create_working_spec_context(task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecContext> {
+fn create_working_spec_context(
+    task_request: &agent_agency_contracts::task_request::TaskRequest,
+) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecContext> {
     Ok(agent_agency_contracts::working_spec::WorkingSpecContext {
         workspace_root: ".".to_string(),
         git_branch: "main".to_string(),

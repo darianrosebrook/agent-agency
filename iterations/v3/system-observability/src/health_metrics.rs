@@ -1,4 +1,3 @@
-
 // ──────────────────────────────────────────────────────────────────────────────
 // system_health_monitor/metrics.rs
 // ──────────────────────────────────────────────────────────────────────────────
@@ -13,7 +12,11 @@ pub struct MetricsCollector {
     _system: System,
 }
 
-impl Default for MetricsCollector { fn default() -> Self { Self::new() } }
+impl Default for MetricsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl MetricsCollector {
     pub fn new() -> Self {
@@ -28,8 +31,12 @@ impl MetricsCollector {
 
         let cpu_usage = system.global_cpu_info().cpu_usage() as f64;
         let total_memory = system.total_memory() as f64;
-        let used_memory  = system.used_memory() as f64;
-        let memory_usage = if total_memory > 0.0 { (used_memory / total_memory) * 100.0 } else { 0.0 };
+        let used_memory = system.used_memory() as f64;
+        let memory_usage = if total_memory > 0.0 {
+            (used_memory / total_memory) * 100.0
+        } else {
+            0.0
+        };
 
         // Calculate real disk usage across all mounted filesystems
         let disk_usage = self.calculate_disk_usage(&mut system);
@@ -85,7 +92,7 @@ impl MetricsCollector {
             total_space += disk.total_space();
             total_used += disk.total_space().saturating_sub(disk.available_space());
         }
-        
+
         if total_space > 0 {
             (total_used as f64 / total_space as f64) * 100.0
         } else {

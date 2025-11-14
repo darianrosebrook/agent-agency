@@ -2,8 +2,8 @@
 //!
 //! Manages worker lifecycle, health monitoring, and coordination.
 
-use crate::worker_errors::WorkerError;
 use crate::specialized_workers::SpecializedWorker;
+use crate::worker_errors::WorkerError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -20,7 +20,11 @@ impl WorkerPoolManager {
         }
     }
 
-    pub async fn add_worker(&self, name: String, worker: Arc<dyn SpecializedWorker + Send + Sync>) -> Result<(), WorkerError> {
+    pub async fn add_worker(
+        &self,
+        name: String,
+        worker: Arc<dyn SpecializedWorker + Send + Sync>,
+    ) -> Result<(), WorkerError> {
         let mut workers = self.workers.write().await;
         workers.insert(name, worker);
         Ok(())

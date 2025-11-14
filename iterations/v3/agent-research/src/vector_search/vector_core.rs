@@ -4,19 +4,19 @@
 
 use crate::research_types::*;
 use anyhow::{Context, Result};
+use chrono::Utc;
+use lru::LruCache;
 use qdrant_client::Qdrant;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, info};
 use uuid::Uuid;
-use lru::LruCache;
-use chrono::Utc;
 
-use super::vector_metrics::VectorSearchMetrics;
-use super::vector_search_cache::CacheManager;
 use super::qdrant::QdrantClient;
 use super::search::SearchOperations;
+use super::vector_metrics::VectorSearchMetrics;
+use super::vector_search_cache::CacheManager;
 
 /// Default cache sizes for in-memory LRU caches
 const DEFAULT_SEARCH_CACHE_SIZE: usize = 1000;
@@ -59,7 +59,10 @@ impl VectorSearchEngine {
         similarity_threshold: f32,
         max_results: u32,
     ) -> Result<Self> {
-        debug!("Creating new VectorSearchEngine with collection: {}", collection_name);
+        debug!(
+            "Creating new VectorSearchEngine with collection: {}",
+            collection_name
+        );
 
         let client = Arc::new(
             Qdrant::from_url(qdrant_url)
@@ -187,10 +190,13 @@ impl VectorSearchEngine {
             Arc::clone(&self.client),
             self.collection_name.clone(),
         ));
-        let search_results = qdrant_client.search_similar(query_embedding, limit, threshold).await?;
-        
+        let search_results = qdrant_client
+            .search_similar(query_embedding, limit, threshold)
+            .await?;
+
         // Convert SearchResult to KnowledgeEntry
-        let knowledge_entries: Vec<KnowledgeEntry> = search_results.iter()
+        let knowledge_entries: Vec<KnowledgeEntry> = search_results
+            .iter()
             .filter_map(|sr| {
                 // Reconstruct KnowledgeEntry from SearchResult
                 Some(KnowledgeEntry {
@@ -211,7 +217,7 @@ impl VectorSearchEngine {
                 })
             })
             .collect();
-        
+
         Ok(knowledge_entries)
     }
 }

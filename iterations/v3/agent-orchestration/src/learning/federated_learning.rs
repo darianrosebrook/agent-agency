@@ -6,13 +6,13 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 use crate::planning::reflexive_learner::ReflexiveLearner;
 use crate::progress_tracker::turn_level::TurnTrajectory;
@@ -44,7 +44,7 @@ impl Default for FederatedLearningConfig {
         Self {
             enabled: true,
             min_tenants: 3,
-            epsilon: 1.0,  // Moderate privacy
+            epsilon: 1.0, // Moderate privacy
             delta: 1e-5,
             aggregation_interval_seconds: 3600, // 1 hour
             max_tenants_per_round: 10,
@@ -173,7 +173,7 @@ impl DifferentialPrivacyEngine {
     fn add_noise(&self, value: f64) -> f64 {
         // Gaussian noise: sigma = sqrt(2 * ln(1.25/delta)) * sensitivity / epsilon
         let sigma = (2.0 * (1.25 / self.delta).ln()).sqrt() * self.sensitivity / self.epsilon;
-        
+
         // Generate Gaussian noise using Box-Muller transform
         let mut rng = rand::thread_rng();
         // Ensure u1 is in (0, 1) to avoid ln(0) = -infinity
@@ -181,11 +181,11 @@ impl DifferentialPrivacyEngine {
         // rng.gen::<f64>() returns [0, 1), so we add epsilon to ensure > 0
         let u1: f64 = rng.gen::<f64>().max(1e-10);
         let u2: f64 = rng.gen::<f64>();
-        
+
         // Box-Muller transform: z0 = sqrt(-2*ln(u1)) * cos(2*PI*u2)
         let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
         let noise = z0 * sigma;
-        
+
         value + noise
     }
 
@@ -224,12 +224,15 @@ impl FederatedLearningEngine {
 
         let mut contributions = self.pending_contributions.write().await;
         contributions.insert(tenant_id, contribution);
-        
+
         tracing::info!("Received contribution from tenant {}", tenant_id);
-        
+
         // Check if we have enough contributions for aggregation
         if contributions.len() >= self.config.min_tenants {
-            tracing::info!("Sufficient contributions ({}) for aggregation", contributions.len());
+            tracing::info!(
+                "Sufficient contributions ({}) for aggregation",
+                contributions.len()
+            );
         }
 
         Ok(())
@@ -240,7 +243,7 @@ impl FederatedLearningEngine {
         // Collect contributions and drop read lock early to avoid deadlock
         let contributions_vec: Vec<(Uuid, TenantContribution)> = {
             let contributions = self.pending_contributions.read().await;
-            
+
             if contributions.len() < self.config.min_tenants {
                 return Err(anyhow::anyhow!(
                     "Insufficient contributions: {} < {}",
@@ -257,7 +260,7 @@ impl FederatedLearningEngine {
             vec.truncate(self.config.max_tenants_per_round);
             vec
         };
-        
+
         // Convert to references for aggregation methods
         let contributions_refs: Vec<(&Uuid, &TenantContribution)> = contributions_vec
             .iter()
@@ -291,7 +294,7 @@ impl FederatedLearningEngine {
         let privacy_metrics = PrivacyMetrics {
             epsilon_consumed: self.config.epsilon,
             delta_guarantee: self.config.delta,
-            noise_level: 0.1, // Estimated noise level
+            noise_level: 0.1,          // Estimated noise level
             information_leakage: 0.01, // Very low information leakage
         };
 
@@ -355,7 +358,9 @@ impl FederatedLearningEngine {
 
             // Aggregate task type distribution
             for (task_type, freq) in &contribution.worker_metrics.task_type_distribution {
-                *task_type_distribution.entry(task_type.clone()).or_insert(0.0) += freq * weight;
+                *task_type_distribution
+                    .entry(task_type.clone())
+                    .or_insert(0.0) += freq * weight;
             }
 
             // Aggregate worker capabilities
@@ -494,7 +499,7 @@ impl FederatedLearningEngine {
             "Applying aggregated model (round {}) to reflexive learner with insights from {} tenants",
             model.round_id, model.tenant_count
         );
-        
+
         // Apply aggregated worker metrics to learner
         // Extract insights from aggregated model
         let avg_quality = model.worker_metrics.avg_quality_score;
@@ -503,12 +508,15 @@ impl FederatedLearningEngine {
         let routing_weights = &model.routing_updates.routing_weights;
 
         // Apply aggregated insights to learner
-        if let Err(e) = learner.apply_aggregated_insights(
-            avg_quality,
-            avg_success,
-            avg_execution_time,
-            routing_weights,
-        ).await {
+        if let Err(e) = learner
+            .apply_aggregated_insights(
+                avg_quality,
+                avg_success,
+                avg_execution_time,
+                routing_weights,
+            )
+            .await
+        {
             tracing::warn!("Failed to apply aggregated model to learner: {}", e);
             return Err(e);
         }
@@ -517,7 +525,7 @@ impl FederatedLearningEngine {
             "Successfully applied aggregated model (round {}) to reflexive learner",
             model.round_id
         );
-        
+
         Ok(())
     }
 
@@ -530,10 +538,10 @@ impl FederatedLearningEngine {
     ) -> Result<TenantContribution> {
         // Extract worker metrics from learner
         let worker_metrics = self.extract_worker_metrics(learner, trajectories).await?;
-        
+
         // Extract routing updates from learner
         let routing_updates = self.extract_routing_updates(learner).await?;
-        
+
         // Extract quality trends from trajectories
         let quality_trends = self.extract_quality_trends(trajectories).await?;
 
@@ -566,15 +574,27 @@ impl FederatedLearningEngine {
 
         for trajectory in trajectories {
             total_quality += trajectory.final_outcome.quality_score;
-            total_success += if trajectory.final_outcome.success { 1.0 } else { 0.0 };
+            total_success += if trajectory.final_outcome.success {
+                1.0
+            } else {
+                0.0
+            };
             count += 1;
 
             // TODO: Extract task types and worker capabilities from trajectory metadata
             //       Currently uses placeholder extraction; should extract actual task types and capabilities from trajectory metadata.
         }
 
-        let avg_quality = if count > 0 { total_quality / count as f64 } else { 0.0 };
-        let avg_success = if count > 0 { total_success / count as f64 } else { 0.0 };
+        let avg_quality = if count > 0 {
+            total_quality / count as f64
+        } else {
+            0.0
+        };
+        let avg_success = if count > 0 {
+            total_success / count as f64
+        } else {
+            0.0
+        };
 
         Ok(WorkerPerformanceMetrics {
             avg_quality_score: avg_quality,
@@ -652,7 +672,8 @@ impl FederatedLearningEngine {
             // TODO: Implement proper plateau detection algorithm
             //       Currently uses basic detection; should use statistical methods to detect learning plateaus accurately.
             if trajectory.turns.len() >= 3 {
-                let recent_qualities: Vec<f64> = trajectory.turns
+                let recent_qualities: Vec<f64> = trajectory
+                    .turns
                     .iter()
                     .rev()
                     .take(3)
@@ -689,9 +710,11 @@ impl FederatedLearningEngine {
         // Weight based on number of trajectories and average quality
         let count = trajectories.len() as f64;
         let avg_quality = if !trajectories.is_empty() {
-            trajectories.iter()
+            trajectories
+                .iter()
                 .map(|t| t.final_outcome.quality_score)
-                .sum::<f64>() / count
+                .sum::<f64>()
+                / count
         } else {
             0.0
         };
@@ -707,9 +730,7 @@ impl FederatedLearningEngine {
         }
 
         let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance = values.iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>() / values.len() as f64;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
 
         variance
     }
@@ -722,23 +743,52 @@ mod tests {
     #[tokio::test]
     async fn test_federated_learning_aggregation() {
         // Use tokio::time::timeout to prevent test from hanging
-        tokio::time::timeout(
-            std::time::Duration::from_secs(10),
-            async {
-                // Use test-friendly config with lower min_tenants
-                let config = FederatedLearningConfig {
-                    min_tenants: 2, // Lower threshold for faster testing
-                    ..Default::default()
-                };
-                let engine = FederatedLearningEngine::new(config);
+        tokio::time::timeout(std::time::Duration::from_secs(10), async {
+            // Use test-friendly config with lower min_tenants
+            let config = FederatedLearningConfig {
+                min_tenants: 2, // Lower threshold for faster testing
+                ..Default::default()
+            };
+            let engine = FederatedLearningEngine::new(config);
 
-                // Create test contributions
-                let tenant1 = Uuid::new_v4();
-                let contribution1 = TenantContribution {
-                    tenant_id: tenant1,
+            // Create test contributions
+            let tenant1 = Uuid::new_v4();
+            let contribution1 = TenantContribution {
+                tenant_id: tenant1,
+                worker_metrics: WorkerPerformanceMetrics {
+                    avg_quality_score: 0.8,
+                    avg_success_rate: 0.9,
+                    avg_execution_time_ms: 100.0,
+                    task_type_distribution: HashMap::new(),
+                    worker_capabilities: HashMap::new(),
+                },
+                routing_updates: RoutingPolicyUpdates {
+                    worker_preferences: HashMap::new(),
+                    complexity_mappings: HashMap::new(),
+                    routing_weights: HashMap::new(),
+                },
+                quality_trends: QualityTrends {
+                    avg_improvement_rate: 0.1,
+                    quality_patterns: HashMap::new(),
+                    plateau_frequency: 0.2,
+                },
+                timestamp: Utc::now(),
+                weight: 1.0,
+            };
+
+            engine
+                .submit_contribution(tenant1, contribution1)
+                .await
+                .unwrap();
+
+            // Submit more contributions to trigger aggregation
+            for i in 0..3 {
+                let tenant_id = Uuid::new_v4();
+                let contribution = TenantContribution {
+                    tenant_id,
                     worker_metrics: WorkerPerformanceMetrics {
-                        avg_quality_score: 0.8,
-                        avg_success_rate: 0.9,
+                        avg_quality_score: 0.7 + (i as f64 * 0.05),
+                        avg_success_rate: 0.8 + (i as f64 * 0.05),
                         avg_execution_time_ms: 100.0,
                         task_type_distribution: HashMap::new(),
                         worker_capabilities: HashMap::new(),
@@ -756,49 +806,22 @@ mod tests {
                     timestamp: Utc::now(),
                     weight: 1.0,
                 };
-
-                engine.submit_contribution(tenant1, contribution1).await.unwrap();
-
-                // Submit more contributions to trigger aggregation
-                for i in 0..3 {
-                    let tenant_id = Uuid::new_v4();
-                    let contribution = TenantContribution {
-                        tenant_id,
-                        worker_metrics: WorkerPerformanceMetrics {
-                            avg_quality_score: 0.7 + (i as f64 * 0.05),
-                            avg_success_rate: 0.8 + (i as f64 * 0.05),
-                            avg_execution_time_ms: 100.0,
-                            task_type_distribution: HashMap::new(),
-                            worker_capabilities: HashMap::new(),
-                        },
-                        routing_updates: RoutingPolicyUpdates {
-                            worker_preferences: HashMap::new(),
-                            complexity_mappings: HashMap::new(),
-                            routing_weights: HashMap::new(),
-                        },
-                        quality_trends: QualityTrends {
-                            avg_improvement_rate: 0.1,
-                            quality_patterns: HashMap::new(),
-                            plateau_frequency: 0.2,
-                        },
-                        timestamp: Utc::now(),
-                        weight: 1.0,
-                    };
-                    engine.submit_contribution(tenant_id, contribution).await.unwrap();
-                }
-
-                // Aggregate - ensure read lock is dropped before write lock
-                let aggregated = {
-                    let result = engine.aggregate_contributions().await;
-                    result
-                };
-                let aggregated = aggregated.unwrap();
-                assert_eq!(aggregated.tenant_count, 4);
-                assert!(aggregated.worker_metrics.avg_quality_score > 0.0);
+                engine
+                    .submit_contribution(tenant_id, contribution)
+                    .await
+                    .unwrap();
             }
-        )
+
+            // Aggregate - ensure read lock is dropped before write lock
+            let aggregated = {
+                let result = engine.aggregate_contributions().await;
+                result
+            };
+            let aggregated = aggregated.unwrap();
+            assert_eq!(aggregated.tenant_count, 4);
+            assert!(aggregated.worker_metrics.avg_quality_score > 0.0);
+        })
         .await
         .expect("Test timed out after 10 seconds");
     }
 }
-

@@ -5,25 +5,20 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use anyhow::{anyhow, Result};
-use uuid::Uuid;
 use agent_agency_contracts::*;
+use anyhow::{anyhow, Result};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use uuid::Uuid;
 // TODO: Re-enable agent_workers import when circular dependency is resolved
 // use agent_workers::{MCPWorkerPool, WorkerHandle};
 use crate::planning::{
-    plan_types::ExecutionPlan as PlanningExecutionPlan,
-    plan_generator::PlanGenerator,
-    plan_executor::PlanExecutor,
-    storage::PlanningStorage,
-    parallel_coordinator::ParallelCoordinator,
-    worker_assignment::WorkerAssignmentStrategy,
-    evidence::EvidenceCollector,
-    scope_guard::ScopeGuard,
-    council_monitor::CouncilMonitor,
-    council_review::CouncilPlanReview,
+    council_monitor::CouncilMonitor, council_review::CouncilPlanReview,
+    evidence::EvidenceCollector, parallel_coordinator::ParallelCoordinator,
+    plan_executor::PlanExecutor, plan_generator::PlanGenerator,
+    plan_types::ExecutionPlan as PlanningExecutionPlan, scope_guard::ScopeGuard,
+    storage::PlanningStorage, worker_assignment::WorkerAssignmentStrategy,
 };
 
 /// Planning integration for orchestrators
@@ -141,17 +136,22 @@ impl OrchestratorPlanningIntegration {
 
         // 2. Review plan with constitutional council
         // Extract spec_id from working spec if available
-        let spec_id = execution_plan.contract_plan.working_spec_id
+        let spec_id = execution_plan
+            .contract_plan
+            .working_spec_id
             .split('-')
             .next()
             .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
-        
-        let review_result = self.council_review.review_plan(
-            &execution_plan,
-            spec_id.as_deref(),
-            Some(std::path::Path::new(".")),
-        ).await?;
+
+        let review_result = self
+            .council_review
+            .review_plan(
+                &execution_plan,
+                spec_id.as_deref(),
+                Some(std::path::Path::new(".")),
+            )
+            .await?;
         if !review_result.approved {
             let reason = "Plan rejected by constitutional council";
             // OPTIONAL: Add detailed reason based on council decision (deferred - UX improvement)
@@ -169,11 +169,14 @@ impl OrchestratorPlanningIntegration {
         let execution_result = plan_executor.execute().await?;
 
         // 4. Collect final evidence and verification
-        let quality_verified = self.verify_execution_quality(&execution_plan, &execution_result).await?;
+        let quality_verified = self
+            .verify_execution_quality(&execution_plan, &execution_result)
+            .await?;
         let evidence_count = execution_result.evidence.plan_evidence.len();
 
         // 5. Store final results
-        self.store_execution_results(task_id, &execution_plan, &execution_result).await?;
+        self.store_execution_results(task_id, &execution_plan, &execution_result)
+            .await?;
 
         Ok(PlanningTaskResult {
             task_id,
@@ -185,7 +188,10 @@ impl OrchestratorPlanningIntegration {
     }
 
     /// Generate execution plan from task descriptor
-    async fn generate_execution_plan(&self, task_descriptor: &TaskDescriptor) -> Result<PlanningExecutionPlan> {
+    async fn generate_execution_plan(
+        &self,
+        task_descriptor: &TaskDescriptor,
+    ) -> Result<PlanningExecutionPlan> {
         // Convert task descriptor to working spec
         let working_spec_value = agent_agency_contracts::WorkingSpec {
             version: "1.0".to_string(),
@@ -237,26 +243,32 @@ impl OrchestratorPlanningIntegration {
         };
 
         // Create plan generation context with provider wrappers
-        use crate::planning::plan_types::{PlanGenerationContext, WorkingSpecProvider, TaskDescriptorProvider};
-        
+        use crate::planning::plan_types::{
+            PlanGenerationContext, TaskDescriptorProvider, WorkingSpecProvider,
+        };
+
         // Simple provider wrapper for working spec
         struct WorkingSpecWrapper(agent_agency_contracts::WorkingSpec);
         #[async_trait::async_trait]
         impl WorkingSpecProvider for WorkingSpecWrapper {
-            async fn get_working_spec(&self) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
+            async fn get_working_spec(
+                &self,
+            ) -> Result<agent_agency_contracts::WorkingSpec, anyhow::Error> {
                 Ok(self.0.clone())
             }
         }
-        
+
         // Simple provider wrapper for task descriptor
         struct TaskDescriptorWrapper(agent_agency_contracts::TaskDescriptor);
         #[async_trait::async_trait]
         impl TaskDescriptorProvider for TaskDescriptorWrapper {
-            async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::TaskDescriptor, anyhow::Error> {
+            async fn get_task_descriptor(
+                &self,
+            ) -> Result<agent_agency_contracts::TaskDescriptor, anyhow::Error> {
                 Ok(self.0.clone())
             }
         }
-        
+
         let plan_context = PlanGenerationContext {
             working_spec_provider: Box::new(WorkingSpecWrapper(working_spec_value)),
             task_descriptor: Box::new(TaskDescriptorWrapper(task_descriptor.clone())),
@@ -272,19 +284,21 @@ impl OrchestratorPlanningIntegration {
         let plan_response = self.plan_generator.generate(&plan_context).await?;
 
         // Store the generated plan
-        self.planning_storage.store_execution_plan(&plan_response).await?;
+        self.planning_storage
+            .store_execution_plan(&plan_response)
+            .await?;
 
         Ok(plan_response)
     }
 
     /// Create plan executor with all real dependencies
     async fn create_plan_executor(&self, plan: PlanningExecutionPlan) -> Result<PlanExecutor> {
-        // Create worker pool using local MCPWorkerPool implementation
+        // Create worker pool using agent_workers MCPWorkerPool implementation
         let _mcp_pool = Arc::new(
-            crate::multimodal_orchestration::MCPWorkerPool::new(
-                crate::multimodal_orchestration::WorkerPoolConfig::default()
-            ).await
-                .map_err(|e| anyhow!("Failed to create MCPWorkerPool: {}", e))?
+            agent_workers::MCPWorkerPool::new(
+                agent_workers::WorkerPoolConfig::default(),
+            )
+            .await
         );
         let worker_pool = Arc::new(WorkerPoolAdapter::new().await);
 
@@ -308,10 +322,12 @@ impl OrchestratorPlanningIntegration {
             audit_trail,
             self.audit_trail_manager.clone(),
             Arc::new(crate::planning::plan_executor::TodoAdapter {
-                inner: tokio::sync::RwLock::new(crate::planning::todo_integration::TodoIntegration::new(
-                    Arc::new(crate::planning::todo_template::TodoTemplateSystem::new()),
-                    Arc::clone(&self.db_ops),
-                )),
+                inner: tokio::sync::RwLock::new(
+                    crate::planning::todo_integration::TodoIntegration::new(
+                        Arc::new(crate::planning::todo_template::TodoTemplateSystem::new()),
+                        Arc::clone(&self.db_ops),
+                    ),
+                ),
             }),
             crate::planning::plan_executor::ExecutionConfig::default(),
         );
@@ -326,15 +342,15 @@ impl OrchestratorPlanningIntegration {
         result: &agent_agency_contracts::planning::PlanExecutionResult,
     ) -> Result<bool> {
         // Check if all quality gates were satisfied
-        let quality_gates_satisfied = result.evidence.quality_validation.iter()
-            .all(|v| v.passed);
+        let quality_gates_satisfied = result.evidence.quality_validation.iter().all(|v| v.passed);
 
         // Check evidence completeness
-        let evidence_complete = !result.evidence.plan_evidence.is_empty() &&
-            result.evidence.plan_evidence.iter().all(|e| e.verified);
+        let evidence_complete = !result.evidence.plan_evidence.is_empty()
+            && result.evidence.plan_evidence.iter().all(|e| e.verified);
 
         // Check milestone completion
-        let milestones_complete = result.milestones_completed == result.evidence.milestone_evidence.len();
+        let milestones_complete =
+            result.milestones_completed == result.evidence.milestone_evidence.len();
 
         Ok(quality_gates_satisfied && evidence_complete && milestones_complete)
     }
@@ -352,28 +368,52 @@ impl OrchestratorPlanningIntegration {
             description: format!("Execution completed for plan {}", plan.contract_plan.id),
             milestone_id: None,
             worker_id: None,
-            metadata: serde_json::Value::Object([
-                ("task_id".to_string(), serde_json::Value::String(task_id.to_string())),
-                ("success".to_string(), serde_json::Value::Bool(result.success)),
-                ("milestones_completed".to_string(), serde_json::Value::Number(result.milestones_completed.into())),
-            ].into_iter().collect()),
-        timestamp: chrono::Utc::now(),
-        plan_id: plan.contract_plan.id,
+            metadata: serde_json::Value::Object(
+                [
+                    (
+                        "task_id".to_string(),
+                        serde_json::Value::String(task_id.to_string()),
+                    ),
+                    (
+                        "success".to_string(),
+                        serde_json::Value::Bool(result.success),
+                    ),
+                    (
+                        "milestones_completed".to_string(),
+                        serde_json::Value::Number(result.milestones_completed.into()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+            ),
+            timestamp: chrono::Utc::now(),
+            plan_id: plan.contract_plan.id,
         };
-        self.planning_storage.as_ref().log_audit_event(audit_event).await?;
+        self.planning_storage
+            .as_ref()
+            .log_audit_event(audit_event)
+            .await?;
 
         // Create audit trail entry
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-        metadata.insert("resource_id".to_string(), serde_json::Value::String(plan.contract_plan.id.to_string()));
-        metadata.insert("resource_type".to_string(), serde_json::Value::String("execution_plan".to_string()));
+        metadata.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(task_id.to_string()),
+        );
+        metadata.insert(
+            "resource_id".to_string(),
+            serde_json::Value::String(plan.contract_plan.id.to_string()),
+        );
+        metadata.insert(
+            "resource_type".to_string(),
+            serde_json::Value::String("execution_plan".to_string()),
+        );
 
         let audit_entry = crate::planning::data_infrastructure_types::CreateAuditTrailEntry {
             event_type: "planning_execution_completed".to_string(),
             description: format!(
                 "Planning execution completed: {} milestones completed, quality_verified: {}",
-                result.milestones_completed,
-                result.success
+                result.milestones_completed, result.success
             ),
             metadata,
         };
@@ -385,13 +425,22 @@ impl OrchestratorPlanningIntegration {
 
     /// Get planning status for a task
     pub async fn get_task_planning_status(&self, task_id: Uuid) -> Result<Option<PlanningStatus>> {
-        
-
         // Check if there's an execution plan for this task
-        if let Some(plan) = self.planning_storage.as_ref().load_execution_plan(task_id).await? {
+        if let Some(plan) = self
+            .planning_storage
+            .as_ref()
+            .load_execution_plan(task_id)
+            .await?
+        {
             // Return planning status based on plan state
-            let progress = plan.execution_state.as_ref()
-                .map(|state| state.completed_milestones.len() as f64 / plan.contract_plan.milestones.len().max(1) as f64 * 100.0)
+            let progress = plan
+                .execution_state
+                .as_ref()
+                .map(|state| {
+                    state.completed_milestones.len() as f64
+                        / plan.contract_plan.milestones.len().max(1) as f64
+                        * 100.0
+                })
                 .unwrap_or(0.0);
 
             // Comprehensive quality verification
@@ -414,14 +463,18 @@ impl OrchestratorPlanningIntegration {
 
     /// Verify quality gates comprehensively
     /// Checks coverage, mutation, security, performance, documentation, and review requirements
-    async fn verify_quality_gates(&self, plan: &crate::planning::plan_types::ExecutionPlan) -> Result<bool> {
+    async fn verify_quality_gates(
+        &self,
+        plan: &crate::planning::plan_types::ExecutionPlan,
+    ) -> Result<bool> {
         use tracing::debug;
-        
 
         let quality_gates = &plan.contract_plan.quality_gates;
 
         // 1. Check coverage requirements
-        let coverage_verified = self.verify_coverage_requirements(quality_gates, plan).await?;
+        let coverage_verified = self
+            .verify_coverage_requirements(quality_gates, plan)
+            .await?;
         if !coverage_verified {
             debug!(plan_id = %plan.contract_plan.id, "Coverage requirements not met");
             return Ok(false);
@@ -429,7 +482,9 @@ impl OrchestratorPlanningIntegration {
 
         // 2. Check mutation testing requirements
         if quality_gates.mutation_requirements.required {
-            let mutation_verified = self.verify_mutation_requirements(quality_gates, plan).await?;
+            let mutation_verified = self
+                .verify_mutation_requirements(quality_gates, plan)
+                .await?;
             if !mutation_verified {
                 debug!(plan_id = %plan.contract_plan.id, "Mutation testing requirements not met");
                 return Ok(false);
@@ -438,7 +493,9 @@ impl OrchestratorPlanningIntegration {
 
         // 3. Check security requirements
         if quality_gates.security_requirements.scan_required {
-            let security_verified = self.verify_security_requirements(quality_gates, plan).await?;
+            let security_verified = self
+                .verify_security_requirements(quality_gates, plan)
+                .await?;
             if !security_verified {
                 debug!(plan_id = %plan.contract_plan.id, "Security requirements not met");
                 return Ok(false);
@@ -446,14 +503,18 @@ impl OrchestratorPlanningIntegration {
         }
 
         // 4. Check performance requirements
-        let performance_verified = self.verify_performance_requirements(quality_gates, plan).await?;
+        let performance_verified = self
+            .verify_performance_requirements(quality_gates, plan)
+            .await?;
         if !performance_verified {
             debug!(plan_id = %plan.contract_plan.id, "Performance requirements not met");
             return Ok(false);
         }
 
         // 5. Check documentation requirements
-        let documentation_verified = self.verify_documentation_requirements(quality_gates, plan).await?;
+        let documentation_verified = self
+            .verify_documentation_requirements(quality_gates, plan)
+            .await?;
         if !documentation_verified {
             debug!(plan_id = %plan.contract_plan.id, "Documentation requirements not met");
             return Ok(false);
@@ -463,7 +524,10 @@ impl OrchestratorPlanningIntegration {
         if quality_gates.requires_manual_review {
             // For now, assume manual review is completed if plan state is Completed
             // In production, this would check a review status field
-            let review_verified = matches!(plan.contract_plan.state, agent_agency_contracts::planning_io::PlanState::Completed);
+            let review_verified = matches!(
+                plan.contract_plan.state,
+                agent_agency_contracts::planning_io::PlanState::Completed
+            );
             if !review_verified {
                 debug!(plan_id = %plan.contract_plan.id, "Manual review required but not completed");
                 return Ok(false);
@@ -474,7 +538,10 @@ impl OrchestratorPlanningIntegration {
         if quality_gates.requires_council_approval {
             // For now, assume council approval is completed if plan state is Completed
             // In production, this would check a council approval status field
-            let approval_verified = matches!(plan.contract_plan.state, agent_agency_contracts::planning_io::PlanState::Completed);
+            let approval_verified = matches!(
+                plan.contract_plan.state,
+                agent_agency_contracts::planning_io::PlanState::Completed
+            );
             if !approval_verified {
                 debug!(plan_id = %plan.contract_plan.id, "Council approval required but not completed");
                 return Ok(false);
@@ -494,12 +561,15 @@ impl OrchestratorPlanningIntegration {
         use tracing::debug;
 
         // Try to get execution result with evidence
-        if let Some(execution_result) = self.planning_storage.as_ref()
-            .get_execution_result(plan.contract_plan.id).await? {
-            
+        if let Some(execution_result) = self
+            .planning_storage
+            .as_ref()
+            .get_execution_result(plan.contract_plan.id)
+            .await?
+        {
             // Check quality metrics from execution result
             let avg_coverage = execution_result.metrics.quality_metrics.avg_coverage;
-            
+
             // Check against min_coverage if set
             if let Some(min_coverage) = quality_gates.min_coverage {
                 if avg_coverage < min_coverage {
@@ -530,7 +600,9 @@ impl OrchestratorPlanningIntegration {
             }
         } else {
             // No execution result - check if coverage is required
-            if !quality_gates.coverage_requirements.is_empty() || quality_gates.min_coverage.is_some() {
+            if !quality_gates.coverage_requirements.is_empty()
+                || quality_gates.min_coverage.is_some()
+            {
                 debug!(
                     plan_id = %plan.contract_plan.id,
                     "Coverage required but no execution result available"
@@ -550,12 +622,15 @@ impl OrchestratorPlanningIntegration {
     ) -> Result<bool> {
         use tracing::debug;
 
-        if let Some(execution_result) = self.planning_storage.as_ref()
-            .get_execution_result(plan.contract_plan.id).await? {
-            
+        if let Some(execution_result) = self
+            .planning_storage
+            .as_ref()
+            .get_execution_result(plan.contract_plan.id)
+            .await?
+        {
             let avg_mutation_score = execution_result.metrics.quality_metrics.avg_mutation_score;
             let min_score = quality_gates.mutation_requirements.min_score * 100.0; // Convert to percentage
-            
+
             if avg_mutation_score < min_score {
                 debug!(
                     plan_id = %plan.contract_plan.id,
@@ -584,13 +659,21 @@ impl OrchestratorPlanningIntegration {
     ) -> Result<bool> {
         use tracing::debug;
 
-        if let Some(execution_result) = self.planning_storage.as_ref()
-            .get_execution_result(plan.contract_plan.id).await? {
-            
-            let security_issues = execution_result.metrics.quality_metrics.security_issues_found;
+        if let Some(execution_result) = self
+            .planning_storage
+            .as_ref()
+            .get_execution_result(plan.contract_plan.id)
+            .await?
+        {
+            let security_issues = execution_result
+                .metrics
+                .quality_metrics
+                .security_issues_found;
 
             // Check max issues by severity
-            for (severity, max_allowed) in &quality_gates.security_requirements.max_issues_by_severity {
+            for (severity, max_allowed) in
+                &quality_gates.security_requirements.max_issues_by_severity
+            {
                 // For now, use total security_issues_found
                 // In production, would check issues by severity from evidence
                 if security_issues > (*max_allowed as usize) {
@@ -607,7 +690,11 @@ impl OrchestratorPlanningIntegration {
 
             // Check required security controls (placeholder - would check evidence artifacts)
             // For now, assume controls are satisfied if security scan passed
-            if !quality_gates.security_requirements.required_controls.is_empty() {
+            if !quality_gates
+                .security_requirements
+                .required_controls
+                .is_empty()
+            {
                 // In production, would verify each required control exists in evidence
                 debug!(
                     plan_id = %plan.contract_plan.id,
@@ -634,10 +721,16 @@ impl OrchestratorPlanningIntegration {
     ) -> Result<bool> {
         use tracing::debug;
 
-        if let Some(execution_result) = self.planning_storage.as_ref()
-            .get_execution_result(plan.contract_plan.id).await? {
-            
-            let performance_regressions = execution_result.metrics.quality_metrics.performance_regressions;
+        if let Some(execution_result) = self
+            .planning_storage
+            .as_ref()
+            .get_execution_result(plan.contract_plan.id)
+            .await?
+        {
+            let performance_regressions = execution_result
+                .metrics
+                .quality_metrics
+                .performance_regressions;
 
             // Check max regressions
             if performance_regressions > quality_gates.performance_requirements.max_regressions {
@@ -651,7 +744,11 @@ impl OrchestratorPlanningIntegration {
             }
 
             // Check required benchmarks (placeholder - would verify benchmarks exist in evidence)
-            if !quality_gates.performance_requirements.required_benchmarks.is_empty() {
+            if !quality_gates
+                .performance_requirements
+                .required_benchmarks
+                .is_empty()
+            {
                 // In production, would verify each required benchmark exists in evidence
                 debug!(
                     plan_id = %plan.contract_plan.id,
@@ -683,12 +780,24 @@ impl OrchestratorPlanningIntegration {
         use tracing::debug;
 
         // Check if execution result has evidence with documentation artifacts
-        if let Some(execution_result) = self.planning_storage.as_ref()
-            .get_execution_result(plan.contract_plan.id).await? {
-            
+        if let Some(execution_result) = self
+            .planning_storage
+            .as_ref()
+            .get_execution_result(plan.contract_plan.id)
+            .await?
+        {
             // Check for documentation artifacts in evidence
-            let has_documentation = execution_result.evidence.plan_evidence.iter()
-                .any(|artifact| matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::Documentation));
+            let has_documentation =
+                execution_result
+                    .evidence
+                    .plan_evidence
+                    .iter()
+                    .any(|artifact| {
+                        matches!(
+                            artifact.artifact_type,
+                            agent_agency_contracts::planning::ArtifactType::Documentation
+                        )
+                    });
 
             if quality_gates.documentation_requirements.api_docs_required && !has_documentation {
                 debug!(
@@ -706,7 +815,11 @@ impl OrchestratorPlanningIntegration {
                 return Ok(false);
             }
 
-            if quality_gates.documentation_requirements.architecture_docs_required && !has_documentation {
+            if quality_gates
+                .documentation_requirements
+                .architecture_docs_required
+                && !has_documentation
+            {
                 debug!(
                     plan_id = %plan.contract_plan.id,
                     "Architecture documentation required but not found"
@@ -728,7 +841,10 @@ impl OrchestratorPlanningIntegration {
             // No execution result - check if documentation is required
             if quality_gates.documentation_requirements.api_docs_required
                 || quality_gates.documentation_requirements.code_docs_required
-                || quality_gates.documentation_requirements.architecture_docs_required {
+                || quality_gates
+                    .documentation_requirements
+                    .architecture_docs_required
+            {
                 debug!(
                     plan_id = %plan.contract_plan.id,
                     "Documentation required but no execution result available"
@@ -788,7 +904,10 @@ impl AuditTrailAdapter {
         audit_manager: Arc<crate::AuditTrailManager>,
         db_ops: Arc<dyn crate::planning::DatabaseOperations>,
     ) -> Self {
-        Self { audit_manager, db_ops }
+        Self {
+            audit_manager,
+            db_ops,
+        }
     }
 }
 
@@ -796,14 +915,20 @@ impl AuditTrailAdapter {
 impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
     async fn log_event(&self, event: crate::planning::plan_executor::AuditEvent) -> Result<()> {
         use crate::planning::CreatePlanningAuditEvent;
-        
+
         // Persist to database via DatabaseOperations
         let mut metadata = event.metadata.clone();
         if let Some(milestone_id) = &event.milestone_id {
-            metadata.insert("milestone_id".to_string(), serde_json::Value::String(milestone_id.clone()));
+            metadata.insert(
+                "milestone_id".to_string(),
+                serde_json::Value::String(milestone_id.clone()),
+            );
         }
         if let Some(worker_id) = &event.worker_id {
-            metadata.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+            metadata.insert(
+                "worker_id".to_string(),
+                serde_json::Value::String(worker_id.to_string()),
+            );
         }
 
         let audit_entry = CreatePlanningAuditEvent {
@@ -813,7 +938,9 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
             metadata,
         };
 
-        self.db_ops.create_planning_audit_event(audit_entry).await
+        self.db_ops
+            .create_planning_audit_event(audit_entry)
+            .await
             .map_err(|e| anyhow!("Failed to create planning audit event: {}", e))?;
 
         // Also update in-memory stats via AuditTrailManager (if configured)
@@ -823,7 +950,8 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
             crate::planning::plan_executor::AuditEventType::CouncilDecision => {
                 // Use council auditor for council decisions
                 if let Some(milestone_id) = &event.milestone_id {
-                    self.audit_manager.council_auditor()
+                    self.audit_manager
+                        .council_auditor()
                         .record_council_consensus(
                             &event.plan_id.to_string(),
                             "plan_executor",
@@ -906,7 +1034,11 @@ impl MockWorkerPoolTrait for SimpleMockWorkerPool {
         vec![
             MockWorkerHandle {
                 id: Uuid::new_v4(),
-                capabilities: vec!["rust".to_string(), "typescript".to_string(), "general".to_string()],
+                capabilities: vec![
+                    "rust".to_string(),
+                    "typescript".to_string(),
+                    "general".to_string(),
+                ],
                 specialty: "general".to_string(),
                 health_status: WorkerHealthStatus::Healthy,
                 performance: MockWorkerPerformance {
@@ -932,7 +1064,11 @@ impl MockWorkerPoolTrait for SimpleMockWorkerPool {
             },
             MockWorkerHandle {
                 id: Uuid::new_v4(),
-                capabilities: vec!["javascript".to_string(), "react".to_string(), "frontend".to_string()],
+                capabilities: vec![
+                    "javascript".to_string(),
+                    "react".to_string(),
+                    "frontend".to_string(),
+                ],
                 specialty: "frontend".to_string(),
                 health_status: WorkerHealthStatus::Degraded, // Simulate a worker with issues
                 performance: MockWorkerPerformance {
@@ -973,7 +1109,7 @@ impl WorkerPoolAdapter {
         // Enhance load calculation with success rate factor
         // Lower success rate indicates higher effective load (more retries/errors)
         let success_rate_factor = 1.0 - worker_handle.performance.success_rate;
-        
+
         // Combine base load with success rate adjustment
         // Workers with lower success rates are effectively more loaded
         let adjusted_load = (base_load * 0.7) + (success_rate_factor * 0.3);
@@ -994,14 +1130,19 @@ impl WorkerPoolAdapter {
 
     /// Get worker health status from available health metrics
     /// Maps health_status and considers performance indicators
-    async fn get_worker_health_from_metrics(&self, worker_handle: &MockWorkerHandle) -> crate::planning::plan_executor::WorkerHealth {
+    async fn get_worker_health_from_metrics(
+        &self,
+        worker_handle: &MockWorkerHandle,
+    ) -> crate::planning::plan_executor::WorkerHealth {
         use tracing::debug;
 
         // Base health from health status field
         let base_health = match worker_handle.health_status {
             WorkerHealthStatus::Healthy => crate::planning::plan_executor::WorkerHealth::Healthy,
             WorkerHealthStatus::Degraded => crate::planning::plan_executor::WorkerHealth::Degraded,
-            WorkerHealthStatus::Unhealthy => crate::planning::plan_executor::WorkerHealth::Unhealthy,
+            WorkerHealthStatus::Unhealthy => {
+                crate::planning::plan_executor::WorkerHealth::Unhealthy
+            }
         };
 
         // Enhance health assessment with performance metrics
@@ -1009,7 +1150,10 @@ impl WorkerPoolAdapter {
         let success_rate = worker_handle.performance.success_rate;
         let failure_rate = 1.0 - success_rate;
 
-        let final_health = if matches!(base_health, crate::planning::plan_executor::WorkerHealth::Healthy) {
+        let final_health = if matches!(
+            base_health,
+            crate::planning::plan_executor::WorkerHealth::Healthy
+        ) {
             // If base health is healthy, check if performance indicates degradation
             if failure_rate > 0.2 {
                 // More than 20% failure rate -> degraded
@@ -1069,7 +1213,9 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
             // Calculate worker load from available metrics
             // Uses performance.current_load from mock worker handle
             // In production, this would query real worker metrics API
-            let load = self.calculate_worker_load_from_metrics(&worker_handle).await;
+            let load = self
+                .calculate_worker_load_from_metrics(&worker_handle)
+                .await;
 
             // Get worker health status from available health data
             // Uses health_status from mock worker handle
@@ -1089,7 +1235,6 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
         Ok(worker_infos)
     }
 
-
     async fn assign_worker(&self, worker_id: Uuid, milestone_id: String) -> Result<()> {
         let mut assignments = self.assignments.write().await;
         assignments.insert(worker_id, milestone_id);
@@ -1102,7 +1247,10 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
         Ok(())
     }
 
-    async fn worker_status(&self, worker_id: Uuid) -> Result<crate::planning::plan_executor::WorkerStatus> {
+    async fn worker_status(
+        &self,
+        worker_id: Uuid,
+    ) -> Result<crate::planning::plan_executor::WorkerStatus> {
         use tracing::debug;
 
         let assignments = self.assignments.read().await;
@@ -1157,7 +1305,6 @@ impl crate::planning::plan_executor::WorkerPool for WorkerPoolAdapter {
             })
         }
     }
-
 }
 
 // Mock implementations for integration (would be replaced with real implementations)
@@ -1176,19 +1323,20 @@ impl MockWorkerPool {
 impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
     async fn available_workers(&self) -> Result<Vec<crate::planning::plan_executor::WorkerInfo>> {
         // Return mock workers
-        Ok(vec![
-            crate::planning::plan_executor::WorkerInfo {
-                id: Uuid::new_v4(),
-                capabilities: vec!["general".to_string()],
-                load: 0.5,
-                health: crate::planning::plan_executor::WorkerHealth::Healthy,
-            }
-        ])
+        Ok(vec![crate::planning::plan_executor::WorkerInfo {
+            id: Uuid::new_v4(),
+            capabilities: vec!["general".to_string()],
+            load: 0.5,
+            health: crate::planning::plan_executor::WorkerHealth::Healthy,
+        }])
     }
 
     async fn assign_worker(&self, worker_id: Uuid, milestone_id: String) -> Result<()> {
         // Mock assignment
-        println!("Mock assigned worker {} to milestone {}", worker_id, milestone_id);
+        println!(
+            "Mock assigned worker {} to milestone {}",
+            worker_id, milestone_id
+        );
         Ok(())
     }
 
@@ -1198,7 +1346,10 @@ impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
         Ok(())
     }
 
-    async fn worker_status(&self, worker_id: Uuid) -> Result<crate::planning::plan_executor::WorkerStatus> {
+    async fn worker_status(
+        &self,
+        worker_id: Uuid,
+    ) -> Result<crate::planning::plan_executor::WorkerStatus> {
         Ok(crate::planning::plan_executor::WorkerStatus {
             current_assignment: None,
             health: crate::planning::plan_executor::WorkerHealth::Healthy,
@@ -1226,7 +1377,10 @@ impl MockAuditTrail {
 impl crate::planning::plan_executor::AuditTrail for MockAuditTrail {
     async fn log_event(&self, event: crate::planning::plan_executor::AuditEvent) -> Result<()> {
         // Mock logging
-        println!("Mock audit event: {} - {}", event.event_type, event.description);
+        println!(
+            "Mock audit event: {} - {}",
+            event.event_type, event.description
+        );
         Ok(())
     }
 }
@@ -1291,7 +1445,7 @@ mod tests {
     //     async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> { Ok(vec![]) }
     //     async fn create_planning_telemetry(&self, _telemetry: crate::planning::CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> { Err(anyhow!("Not implemented")) }
     //     async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> { Ok(vec![]) }
-        
+
     //     // Waiver operations
     //     async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
     //     async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }
@@ -1354,7 +1508,8 @@ mod tests {
                         max_migrations: 0,
                         allow_breaking_changes: false,
                         allow_new_dependencies: false,
-                        enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                        enforcement_mode:
+                            agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                     },
                     file_changes: vec![],
                     coverage_targets: None,
@@ -1380,34 +1535,39 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 quality_gates: agent_agency_contracts::planning_io::QualityGates {
                     coverage_requirements: std::collections::HashMap::new(),
-                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
-                        required: false,
-                        min_score: 0.0,
-                        operators: vec![],
-                    },
-                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
-                        scan_required: false,
-                        max_issues_by_severity: std::collections::HashMap::new(),
-                        required_controls: vec![],
-                    },
-                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
-                        max_regressions: 0,
-                        required_benchmarks: vec![],
-                        slas: vec![],
-                    },
-                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
-                        api_docs_required: false,
-                        code_docs_required: false,
-                        architecture_docs_required: false,
-                        required_formats: vec![],
-                        required_types: vec![],
-                        min_coverage: 0.0,
-                        quality_checks: vec![],
-                    },
+                    mutation_requirements:
+                        agent_agency_contracts::planning_io::MutationRequirements {
+                            required: false,
+                            min_score: 0.0,
+                            operators: vec![],
+                        },
+                    security_requirements:
+                        agent_agency_contracts::planning_io::SecurityRequirements {
+                            scan_required: false,
+                            max_issues_by_severity: std::collections::HashMap::new(),
+                            required_controls: vec![],
+                        },
+                    performance_requirements:
+                        agent_agency_contracts::planning_io::PerformanceRequirements {
+                            max_regressions: 0,
+                            required_benchmarks: vec![],
+                            slas: vec![],
+                        },
+                    documentation_requirements:
+                        agent_agency_contracts::planning_io::DocumentationRequirements {
+                            api_docs_required: false,
+                            code_docs_required: false,
+                            architecture_docs_required: false,
+                            required_formats: vec![],
+                            required_types: vec![],
+                            min_coverage: 0.0,
+                            quality_checks: vec![],
+                        },
                     requires_manual_review: false,
                     requires_council_approval: false,
                     min_coverage: None,
@@ -1502,7 +1662,10 @@ mod tests {
         };
 
         assert_eq!(result.task_id, task_id);
-        assert_eq!(result.execution_plan.contract_plan.id, execution_plan.contract_plan.id);
+        assert_eq!(
+            result.execution_plan.contract_plan.id,
+            execution_plan.contract_plan.id
+        );
         assert_eq!(result.execution_result.plan_id, execution_result.plan_id);
         assert_eq!(result.quality_verified, true);
         assert_eq!(result.evidence_count, 0);

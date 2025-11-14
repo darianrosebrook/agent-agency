@@ -3,16 +3,16 @@
 //! Manages the execution of multi-step tool chains, handles dependencies,
 //! error recovery, and result aggregation for complex reasoning workflows.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
-use crate::tool_registry::ToolRegistry;
 use crate::tool_execution::{ToolExecutor, ToolInvocation, ToolResult};
+use crate::tool_registry::ToolRegistry;
 
 /// Tool coordinator for orchestrating complex workflows
 pub struct ToolCoordinator {
@@ -79,8 +79,7 @@ pub struct ToolChainMetadata {
 }
 
 /// Tool chain execution state
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ToolChainExecution {
     /// Chain definition
     pub chain: ToolChain,
@@ -226,7 +225,11 @@ impl ToolCoordinator {
         for step in &chain.steps {
             for dep in &step.dependencies {
                 if !chain.steps.iter().any(|s| s.step_id == *dep) {
-                    return Err(anyhow::anyhow!("Step '{}' depends on non-existent step '{}'", step.step_id, dep));
+                    return Err(anyhow::anyhow!(
+                        "Step '{}' depends on non-existent step '{}'",
+                        step.step_id,
+                        dep
+                    ));
                 }
             }
         }
@@ -237,7 +240,10 @@ impl ToolCoordinator {
         // Validate tool existence
         for step in &chain.steps {
             if self.tool_registry.get_tool(&step.tool_name).await.is_none() {
-                return Err(anyhow::anyhow!("Tool '{}' not found in registry", step.tool_name));
+                return Err(anyhow::anyhow!(
+                    "Tool '{}' not found in registry",
+                    step.tool_name
+                ));
             }
         }
 
@@ -325,7 +331,11 @@ impl ToolCoordinator {
     }
 
     /// Execute chain internally (handles the actual execution logic)
-    async fn execute_chain_internal(&self, chain_id: &str, chain: &ToolChain) -> Result<serde_json::Value> {
+    async fn execute_chain_internal(
+        &self,
+        chain_id: &str,
+        chain: &ToolChain,
+    ) -> Result<serde_json::Value> {
         let mut step_results = HashMap::new();
         let mut ready_queue = VecDeque::new();
         let mut completed_steps = std::collections::HashSet::new();
@@ -348,7 +358,9 @@ impl ToolCoordinator {
             };
 
             // Execute steps concurrently
-            let mut handles: Vec<tokio::task::JoinHandle<Result<(String, StepResult), anyhow::Error>>> = Vec::new();
+            let mut handles: Vec<
+                tokio::task::JoinHandle<Result<(String, StepResult), anyhow::Error>>,
+            > = Vec::new();
             for step in steps_to_execute {
                 let chain_id = chain_id.to_string();
                 let step_id = step.step_id.clone();
@@ -364,14 +376,19 @@ impl ToolCoordinator {
                     // Get tool from registry
                     let _tool = match tool_registry.get_tool(&tool_name).await {
                         Some(_tool) => _tool,
-                        None => return Ok((step_id.clone(), crate::tool_coordinator::StepResult {
-                            step_id: step_id.to_string(),
-                            result: None,
-                            error: Some("Tool not found".to_string()),
-                            started_at: start_time,
-                            ended_at: Some(chrono::Utc::now()),
-                            retry_count: 0,
-                        })),
+                        None => {
+                            return Ok((
+                                step_id.clone(),
+                                crate::tool_coordinator::StepResult {
+                                    step_id: step_id.to_string(),
+                                    result: None,
+                                    error: Some("Tool not found".to_string()),
+                                    started_at: start_time,
+                                    ended_at: Some(chrono::Utc::now()),
+                                    retry_count: 0,
+                                },
+                            ))
+                        }
                     };
 
                     // Execute tool
@@ -385,23 +402,29 @@ impl ToolCoordinator {
                     match tool_executor.execute_tool(invocation).await {
                         Ok(result) => {
                             let end_time = chrono::Utc::now();
-                            Ok((step_id.clone(), crate::tool_coordinator::StepResult {
+                            Ok((
+                                step_id.clone(),
+                                crate::tool_coordinator::StepResult {
+                                    step_id: step_id.to_string(),
+                                    result: Some(result),
+                                    error: None,
+                                    started_at: start_time,
+                                    ended_at: Some(end_time),
+                                    retry_count: 0,
+                                },
+                            ))
+                        }
+                        Err(e) => Ok((
+                            step_id.clone(),
+                            crate::tool_coordinator::StepResult {
                                 step_id: step_id.to_string(),
-                                result: Some(result),
-                                error: None,
+                                result: None,
+                                error: Some(e.to_string()),
                                 started_at: start_time,
-                                ended_at: Some(end_time),
+                                ended_at: Some(chrono::Utc::now()),
                                 retry_count: 0,
-                            }))
-                        },
-                        Err(e) => Ok((step_id.clone(), crate::tool_coordinator::StepResult {
-                            step_id: step_id.to_string(),
-                            result: None,
-                            error: Some(e.to_string()),
-                            started_at: start_time,
-                            ended_at: Some(chrono::Utc::now()),
-                            retry_count: 0,
-                        })),
+                            },
+                        )),
                     }
                 });
 
@@ -417,9 +440,12 @@ impl ToolCoordinator {
 
                         // Find steps that are now ready (all dependencies satisfied)
                         for step in &chain.steps {
-                            if !completed_steps.contains(&step.step_id) &&
-                               !ready_queue.iter().any(|s| s.step_id == step.step_id) {
-                                let all_deps_satisfied = step.dependencies.iter()
+                            if !completed_steps.contains(&step.step_id)
+                                && !ready_queue.iter().any(|s| s.step_id == step.step_id)
+                            {
+                                let all_deps_satisfied = step
+                                    .dependencies
+                                    .iter()
                                     .all(|dep| completed_steps.contains(dep));
 
                                 if all_deps_satisfied {
@@ -440,11 +466,16 @@ impl ToolCoordinator {
 
         // Check if all steps completed
         if completed_steps.len() != chain.steps.len() {
-            let missing: Vec<_> = chain.steps.iter()
+            let missing: Vec<_> = chain
+                .steps
+                .iter()
                 .filter(|s| !completed_steps.contains(&s.step_id))
                 .map(|s| s.step_id.clone())
                 .collect();
-            return Err(anyhow::anyhow!("Incomplete execution. Missing steps: {:?}", missing));
+            return Err(anyhow::anyhow!(
+                "Incomplete execution. Missing steps: {:?}",
+                missing
+            ));
         }
 
         // TODO: Implement proper result aggregation strategy
@@ -462,11 +493,20 @@ impl ToolCoordinator {
 
     /// Execute a single step
     #[allow(dead_code)]
-    async fn execute_step(&self, chain_id: &str, step_id: &str, tool_name: &str, parameters: serde_json::Value) -> Result<StepResult> {
+    async fn execute_step(
+        &self,
+        chain_id: &str,
+        step_id: &str,
+        tool_name: &str,
+        parameters: serde_json::Value,
+    ) -> Result<StepResult> {
         let start_time = chrono::Utc::now();
 
         // Get tool from registry
-        let _tool = self.tool_registry.get_tool(tool_name).await
+        let _tool = self
+            .tool_registry
+            .get_tool(tool_name)
+            .await
             .ok_or_else(|| anyhow::anyhow!("Tool '{}' not found", tool_name))?;
 
         // Execute tool
@@ -517,7 +557,10 @@ impl ToolCoordinator {
 
         for step_id in graph.keys() {
             if self.has_cycle(step_id, &graph, &mut visited, &mut recursion_stack) {
-                return Err(anyhow::anyhow!("Circular dependency detected involving step '{}'", step_id));
+                return Err(anyhow::anyhow!(
+                    "Circular dependency detected involving step '{}'",
+                    step_id
+                ));
             }
         }
 
@@ -651,8 +694,8 @@ impl ToolChain {
             let mut added = false;
             for step in &self.steps {
                 if !processed.contains(&step.step_id) {
-                    let deps_satisfied = step.dependencies.iter()
-                        .all(|dep| processed.contains(dep));
+                    let deps_satisfied =
+                        step.dependencies.iter().all(|dep| processed.contains(dep));
 
                     if deps_satisfied {
                         result.push(step);
@@ -667,7 +710,9 @@ impl ToolChain {
         }
 
         if result.len() != self.steps.len() {
-            return Err(anyhow::anyhow!("Cannot determine execution order due to unresolved dependencies"));
+            return Err(anyhow::anyhow!(
+                "Cannot determine execution order due to unresolved dependencies"
+            ));
         }
 
         Ok(result)
@@ -684,5 +729,3 @@ impl Default for RetryConfig {
         }
     }
 }
-
-

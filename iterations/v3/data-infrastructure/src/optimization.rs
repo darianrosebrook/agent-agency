@@ -3,10 +3,10 @@
 //! Provides query optimization, index management, read/write splitting,
 //! and comprehensive performance monitoring for production databases.
 
-use schemars::JsonSchema;
 use crate::simple_client::DatabaseClient;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
@@ -62,7 +62,6 @@ pub struct QueryMetrics {
     pub min_execution_time_ms: u64,
     pub max_execution_time_ms: u64,
     #[schemars(with = "String")]
-
     pub last_executed: DateTime<Utc>,
     pub slow_execution_count: u64,
 }
@@ -108,7 +107,10 @@ impl ReadWriteSplitClient {
         if self.read_clients.is_empty() {
             &self.write_client
         } else {
-            let index = self.read_client_index.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % self.read_clients.len();
+            let index = self
+                .read_client_index
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                % self.read_clients.len();
             &self.read_clients[index]
         }
     }
@@ -155,29 +157,28 @@ impl DatabasePerformanceMonitor {
     }
 
     /// Record query execution metrics
-    pub async fn record_query_execution(
-        &self,
-        query_text: &str,
-        execution_time_ms: u64,
-    ) {
+    pub async fn record_query_execution(&self, query_text: &str, execution_time_ms: u64) {
         let query_hash = self.hash_query(query_text);
 
         let mut metrics = self.query_metrics.write().await;
-        let entry = metrics.entry(query_hash.clone()).or_insert_with(|| QueryMetrics {
-            query_hash: query_hash.clone(),
-            query_text: query_text.to_string(),
-            execution_count: 0,
-            total_execution_time_ms: 0,
-            average_execution_time_ms: 0.0,
-            min_execution_time_ms: u64::MAX,
-            max_execution_time_ms: 0,
-            last_executed: Utc::now(),
-            slow_execution_count: 0,
-        });
+        let entry = metrics
+            .entry(query_hash.clone())
+            .or_insert_with(|| QueryMetrics {
+                query_hash: query_hash.clone(),
+                query_text: query_text.to_string(),
+                execution_count: 0,
+                total_execution_time_ms: 0,
+                average_execution_time_ms: 0.0,
+                min_execution_time_ms: u64::MAX,
+                max_execution_time_ms: 0,
+                last_executed: Utc::now(),
+                slow_execution_count: 0,
+            });
 
         entry.execution_count += 1;
         entry.total_execution_time_ms += execution_time_ms;
-        entry.average_execution_time_ms = entry.total_execution_time_ms as f64 / entry.execution_count as f64;
+        entry.average_execution_time_ms =
+            entry.total_execution_time_ms as f64 / entry.execution_count as f64;
         entry.min_execution_time_ms = entry.min_execution_time_ms.min(execution_time_ms);
         entry.max_execution_time_ms = entry.max_execution_time_ms.max(execution_time_ms);
         entry.last_executed = Utc::now();
@@ -194,7 +195,10 @@ impl DatabasePerformanceMonitor {
                 slow_queries.remove(0);
             }
 
-            warn!("Slow query detected: {}ms - {}", execution_time_ms, query_text);
+            warn!(
+                "Slow query detected: {}ms - {}",
+                execution_time_ms, query_text
+            );
         }
     }
 
@@ -236,7 +240,9 @@ impl DatabasePerformanceMonitor {
             // Check for common patterns
             if where_clause.contains("status =") {
                 recommendations.push(IndexRecommendation {
-                    table_name: self.extract_table_name(&query_lower).unwrap_or_else(|| "unknown".to_string()),
+                    table_name: self
+                        .extract_table_name(&query_lower)
+                        .unwrap_or_else(|| "unknown".to_string()),
                     column_name: "status".to_string(),
                     index_type: "btree".to_string(),
                     estimated_improvement: 0.8,
@@ -247,7 +253,9 @@ impl DatabasePerformanceMonitor {
 
             if where_clause.contains("created_at >") || where_clause.contains("created_at <") {
                 recommendations.push(IndexRecommendation {
-                    table_name: self.extract_table_name(&query_lower).unwrap_or_else(|| "unknown".to_string()),
+                    table_name: self
+                        .extract_table_name(&query_lower)
+                        .unwrap_or_else(|| "unknown".to_string()),
                     column_name: "created_at".to_string(),
                     index_type: "btree".to_string(),
                     estimated_improvement: 0.7,
@@ -258,7 +266,9 @@ impl DatabasePerformanceMonitor {
 
             if where_clause.contains("id =") {
                 recommendations.push(IndexRecommendation {
-                    table_name: self.extract_table_name(&query_lower).unwrap_or_else(|| "unknown".to_string()),
+                    table_name: self
+                        .extract_table_name(&query_lower)
+                        .unwrap_or_else(|| "unknown".to_string()),
                     column_name: "id".to_string(),
                     index_type: "btree".to_string(),
                     estimated_improvement: 0.9,
@@ -275,7 +285,11 @@ impl DatabasePerformanceMonitor {
     fn extract_where_clause(&self, query: &str) -> Option<String> {
         if let Some(where_pos) = query.find("where") {
             let after_where = &query[where_pos + 5..];
-            if let Some(end_pos) = after_where.find("order by").or_else(|| after_where.find("group by")).or_else(|| after_where.find("limit")) {
+            if let Some(end_pos) = after_where
+                .find("order by")
+                .or_else(|| after_where.find("group by"))
+                .or_else(|| after_where.find("limit"))
+            {
                 Some(after_where[..end_pos].trim().to_string())
             } else {
                 Some(after_where.trim().to_string())
@@ -289,7 +303,11 @@ impl DatabasePerformanceMonitor {
     fn extract_table_name(&self, query: &str) -> Option<String> {
         if let Some(from_pos) = query.find("from") {
             let after_from = &query[from_pos + 4..];
-            if let Some(end_pos) = after_from.find("where").or_else(|| after_from.find("order")).or_else(|| after_from.find("limit")) {
+            if let Some(end_pos) = after_from
+                .find("where")
+                .or_else(|| after_from.find("order"))
+                .or_else(|| after_from.find("limit"))
+            {
                 let table_part = after_from[..end_pos].trim();
                 // Extract first word (table name)
                 table_part.split_whitespace().next().map(|s| s.to_string())
@@ -323,21 +341,38 @@ impl DatabaseIndexManager {
     }
 
     /// Create recommended indexes
-    pub async fn create_recommended_indexes(&self, recommendations: &[IndexRecommendation]) -> Result<Vec<String>> {
+    pub async fn create_recommended_indexes(
+        &self,
+        recommendations: &[IndexRecommendation],
+    ) -> Result<Vec<String>> {
         let mut created_indexes = Vec::new();
 
         for rec in recommendations {
             if rec.priority >= IndexPriority::High {
                 let index_name = format!("idx_{}_{}", rec.table_name, rec.column_name);
                 let create_sql = match rec.index_type.as_str() {
-                    "btree" => format!("CREATE INDEX CONCURRENTLY {} ON {} ({})", index_name, rec.table_name, rec.column_name),
-                    "hash" => format!("CREATE INDEX CONCURRENTLY {} ON {} USING hash ({})", index_name, rec.table_name, rec.column_name),
+                    "btree" => format!(
+                        "CREATE INDEX CONCURRENTLY {} ON {} ({})",
+                        index_name, rec.table_name, rec.column_name
+                    ),
+                    "hash" => format!(
+                        "CREATE INDEX CONCURRENTLY {} ON {} USING hash ({})",
+                        index_name, rec.table_name, rec.column_name
+                    ),
                     _ => continue,
                 };
 
-                match self.client.execute_parameterized_query(&create_sql, vec![]).await {
+                match self
+                    .client
+                    .execute_parameterized_query(&create_sql, vec![])
+                    .await
+                {
                     Ok(_) => {
-                        info!("Created index: {} (estimated improvement: {:.1}%)", index_name, rec.estimated_improvement * 100.0);
+                        info!(
+                            "Created index: {} (estimated improvement: {:.1}%)",
+                            index_name,
+                            rec.estimated_improvement * 100.0
+                        );
                         created_indexes.push(index_name);
                     }
                     Err(e) => {
@@ -372,7 +407,10 @@ impl DatabaseIndexManager {
             let scan_count: Option<i64> = row.get::<Option<i64>, &str>("idx_scan");
 
             if scan_count.unwrap_or(0) == 0 {
-                suggestions.push(format!("Index '{}' is unused and could be removed", index_name));
+                suggestions.push(format!(
+                    "Index '{}' is unused and could be removed",
+                    index_name
+                ));
             }
         }
 
@@ -431,10 +469,7 @@ pub struct DatabaseOptimizationManager {
 }
 
 impl DatabaseOptimizationManager {
-    pub fn new(
-        client: Arc<DatabaseClient>,
-        config: DatabaseOptimizationConfig,
-    ) -> Self {
+    pub fn new(client: Arc<DatabaseClient>, config: DatabaseOptimizationConfig) -> Self {
         let monitor = Arc::new(DatabasePerformanceMonitor::new(config.clone()));
         let index_manager = DatabaseIndexManager::new(client.clone());
 
@@ -494,8 +529,12 @@ impl DatabaseOptimizationManager {
             )
         "#;
 
-        self.client.execute_parameterized_query(create_query_metrics, vec![]).await?;
-        self.client.execute_parameterized_query(create_index_recommendations, vec![]).await?;
+        self.client
+            .execute_parameterized_query(create_query_metrics, vec![])
+            .await?;
+        self.client
+            .execute_parameterized_query(create_index_recommendations, vec![])
+            .await?;
 
         Ok(())
     }
@@ -514,10 +553,15 @@ impl DatabaseOptimizationManager {
                 // Generate and log recommendations
                 let recommendations = monitor.generate_index_recommendations().await;
                 if !recommendations.is_empty() {
-                    info!("Database optimization recommendations available: {}", recommendations.len());
+                    info!(
+                        "Database optimization recommendations available: {}",
+                        recommendations.len()
+                    );
                     for rec in recommendations.iter().take(3) {
-                        info!("Consider adding {} index on {}.{} (priority: {:?})",
-                            rec.index_type, rec.table_name, rec.column_name, rec.priority);
+                        info!(
+                            "Consider adding {} index on {}.{} (priority: {:?})",
+                            rec.index_type, rec.table_name, rec.column_name, rec.priority
+                        );
                     }
                 }
 
@@ -546,10 +590,17 @@ impl DatabaseOptimizationManager {
                 };
 
                 if bloat_ratio > 0.2 {
-                    warn!("Table '{}' has high bloat ratio: {:.1}% - consider VACUUM", table_name, bloat_ratio * 100.0);
+                    warn!(
+                        "Table '{}' has high bloat ratio: {:.1}% - consider VACUUM",
+                        table_name,
+                        bloat_ratio * 100.0
+                    );
                 }
 
-                debug!("Table '{}' stats: {} live rows, {} dead rows", table_name, stats.live_rows, stats.dead_rows);
+                debug!(
+                    "Table '{}' stats: {} live rows, {} dead rows",
+                    table_name, stats.live_rows, stats.dead_rows
+                );
             }
         }
 
@@ -579,17 +630,25 @@ impl DatabaseOptimizationManager {
     }
 
     /// Apply index recommendations
-    pub async fn apply_index_recommendations(&self, recommendations: &[IndexRecommendation]) -> Result<Vec<String>> {
-        self.index_manager.create_recommended_indexes(recommendations).await
+    pub async fn apply_index_recommendations(
+        &self,
+        recommendations: &[IndexRecommendation],
+    ) -> Result<Vec<String>> {
+        self.index_manager
+            .create_recommended_indexes(recommendations)
+            .await
     }
 
     /// Get table statistics
     pub async fn get_table_statistics(&self) -> HashMap<String, TableStats> {
-        self.index_manager.get_table_statistics().await.unwrap_or_default()
+        self.index_manager
+            .get_table_statistics()
+            .await
+            .unwrap_or_default()
     }
 
     /// Execute query with performance monitoring and proper parameter binding
-    /// 
+    ///
     /// This method uses sqlx::query() with chained .bind() calls to safely bind parameters
     /// and prevent SQL injection. Parameters are bound sequentially, ensuring proper type
     /// encoding and SQL injection protection.
@@ -607,7 +666,7 @@ impl DatabaseOptimizationManager {
         // sqlx::query() with chained .bind() calls ensures SQL injection protection
         // Each parameter is properly encoded according to its type
         let mut query_builder = sqlx::query(query);
-        
+
         // Bind all parameters sequentially
         // Each .bind() call returns a new query builder with the parameter bound
         for param in params {
@@ -626,7 +685,9 @@ impl DatabaseOptimizationManager {
         let monitor = self.monitor.clone();
         let query_text = query.to_string();
         tokio::spawn(async move {
-            monitor.record_query_execution(&query_text, execution_time).await;
+            monitor
+                .record_query_execution(&query_text, execution_time)
+                .await;
         });
 
         tracing::debug!(
@@ -653,7 +714,8 @@ impl DatabaseOptimizationManager {
             slow_queries_count: slow_queries.len(),
             index_recommendations_count: index_recommendations.len(),
             top_slow_queries: slow_queries.into_iter().take(5).collect(),
-            critical_index_recommendations: index_recommendations.into_iter()
+            critical_index_recommendations: index_recommendations
+                .into_iter()
                 .filter(|r| r.priority >= IndexPriority::High)
                 .take(5)
                 .collect(),
@@ -666,7 +728,6 @@ impl DatabaseOptimizationManager {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DatabaseOptimizationReport {
     #[schemars(with = "String")]
-
     pub generated_at: DateTime<Utc>,
     pub total_queries_analyzed: usize,
     pub slow_queries_count: usize,
@@ -688,7 +749,7 @@ impl MonitoredQueryExecutor {
     }
 
     /// Execute query with automatic performance monitoring and proper parameter binding
-    /// 
+    ///
     /// This method uses sqlx::query() with chained .bind() calls to safely bind parameters
     /// and prevent SQL injection. Parameters are bound sequentially, ensuring proper type
     /// encoding and SQL injection protection.
@@ -706,7 +767,7 @@ impl MonitoredQueryExecutor {
         // sqlx::query() with chained .bind() calls ensures SQL injection protection
         // Each parameter is properly encoded according to its type
         let mut query_builder = sqlx::query(query);
-        
+
         // Bind all parameters sequentially
         // Each .bind() call returns a new query builder with the parameter bound
         for param in params {
@@ -722,7 +783,9 @@ impl MonitoredQueryExecutor {
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         // Record metrics
-        self.monitor.record_query_execution(query, execution_time).await;
+        self.monitor
+            .record_query_execution(query, execution_time)
+            .await;
 
         tracing::debug!(
             query = %query,

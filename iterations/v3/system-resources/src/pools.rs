@@ -7,9 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::{
-    ResourcePool, ResourceRequirements, ResourceAllocation, ResourceError,
-};
+use crate::{ResourceAllocation, ResourceError, ResourcePool, ResourceRequirements};
 
 /// Memory pool implementation
 pub struct MemoryPool {
@@ -34,11 +32,16 @@ impl MemoryPool {
 
 #[async_trait]
 impl ResourcePool for MemoryPool {
-    async fn allocate(&self, requirements: ResourceRequirements) -> Result<ResourceAllocation, ResourceError> {
-        let memory_needed = requirements.memory_mb
-            .ok_or_else(|| ResourceError::AllocationFailed {
-                message: "Memory requirement not specified".to_string(),
-            })?;
+    async fn allocate(
+        &self,
+        requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError> {
+        let memory_needed =
+            requirements
+                .memory_mb
+                .ok_or_else(|| ResourceError::AllocationFailed {
+                    message: "Memory requirement not specified".to_string(),
+                })?;
 
         let mut allocated_memory = self.allocated_memory_mb.write().await;
         let mut allocations = self.allocations.write().await;
@@ -60,7 +63,11 @@ impl ResourcePool for MemoryPool {
         // Allocate memory
         *allocated_memory += memory_needed;
 
-        let allocation_id = format!("mem_{}_{}", self.name, chrono::Utc::now().timestamp_millis());
+        let allocation_id = format!(
+            "mem_{}_{}",
+            self.name,
+            chrono::Utc::now().timestamp_millis()
+        );
 
         let allocation = ResourceAllocation {
             allocation_id: allocation_id.clone(),
@@ -79,10 +86,12 @@ impl ResourcePool for MemoryPool {
         let mut allocations = self.allocations.write().await;
         let mut allocated_memory = self.allocated_memory_mb.write().await;
 
-        let allocation = allocations.remove(allocation_id)
-            .ok_or_else(|| ResourceError::ReleaseFailed {
-                message: format!("Allocation not found: {}", allocation_id),
-            })?;
+        let allocation =
+            allocations
+                .remove(allocation_id)
+                .ok_or_else(|| ResourceError::ReleaseFailed {
+                    message: format!("Allocation not found: {}", allocation_id),
+                })?;
 
         // Free the memory
         if let Some(memory_mb) = allocation.allocated_resources.memory_mb {
@@ -119,7 +128,11 @@ impl ResourcePool for MemoryPool {
         // Intelligent resource rebalancing based on usage patterns
         if utilization > 0.9 {
             // High utilization: implement memory compaction/defagmentation
-            tracing::info!("Memory pool '{}' at {:.1}% utilization, performing adaptation", self.name, utilization * 100.0);
+            tracing::info!(
+                "Memory pool '{}' at {:.1}% utilization, performing adaptation",
+                self.name,
+                utilization * 100.0
+            );
 
             // Memory defragmentation: suggest allocation reordering for better memory layout
             // TODO: Implement allocation reordering to reduce fragmentation
@@ -157,26 +170,44 @@ impl ResourcePool for MemoryPool {
             // - CAWS Tier: 2 (memory optimization feature)
             // - Change Budget: ~300 LOC
             // - Reviewer Requirements: Memory management expertise
-            tracing::info!("Memory pool '{}' triggering defragmentation - consider allocation reordering", self.name);
+            tracing::info!(
+                "Memory pool '{}' triggering defragmentation - consider allocation reordering",
+                self.name
+            );
 
             // Allocation rebalancing: distribute allocations more evenly
             // This is a hint for more sophisticated pool management
             let allocations = self.allocations.try_read();
             if let Ok(allocs) = allocations {
                 if allocs.len() > 10 {
-                    tracing::warn!("Memory pool '{}' has {} allocations - consider load balancing", self.name, allocs.len());
+                    tracing::warn!(
+                        "Memory pool '{}' has {} allocations - consider load balancing",
+                        self.name,
+                        allocs.len()
+                    );
                 }
             }
         } else if utilization > 0.7 {
             // Moderate utilization: monitor and prepare for scaling
-            tracing::debug!("Memory pool '{}' at {:.1}% utilization, monitoring for scaling", self.name, utilization * 100.0);
+            tracing::debug!(
+                "Memory pool '{}' at {:.1}% utilization, monitoring for scaling",
+                self.name,
+                utilization * 100.0
+            );
 
             // Predictive scaling: monitor allocation patterns for future capacity planning
             // This could track allocation rates and predict future needs
-            tracing::debug!("Memory pool '{}' entering moderate utilization - monitoring allocation patterns", self.name);
+            tracing::debug!(
+                "Memory pool '{}' entering moderate utilization - monitoring allocation patterns",
+                self.name
+            );
         } else if utilization < 0.3 {
             // Low utilization: potential for optimization
-            tracing::debug!("Memory pool '{}' at {:.1}% utilization - potential for consolidation", self.name, utilization * 100.0);
+            tracing::debug!(
+                "Memory pool '{}' at {:.1}% utilization - potential for consolidation",
+                self.name,
+                utilization * 100.0
+            );
         }
 
         // Predictive scaling based on allocation trends would go here
@@ -195,7 +226,10 @@ impl ResourcePool for MemoryPool {
 
     fn active_count(&self) -> usize {
         // Track actual number of active allocations by counting entries in the allocations map
-        self.allocations.try_read().map(|allocs| allocs.len()).unwrap_or(0)
+        self.allocations
+            .try_read()
+            .map(|allocs| allocs.len())
+            .unwrap_or(0)
     }
 
     fn total_memory_mb(&self) -> u64 {
@@ -238,11 +272,16 @@ impl CpuPool {
 
 #[async_trait]
 impl ResourcePool for CpuPool {
-    async fn allocate(&self, requirements: ResourceRequirements) -> Result<ResourceAllocation, ResourceError> {
-        let cores_needed = requirements.cpu_cores
-            .ok_or_else(|| ResourceError::AllocationFailed {
-                message: "CPU requirement not specified".to_string(),
-            })?;
+    async fn allocate(
+        &self,
+        requirements: ResourceRequirements,
+    ) -> Result<ResourceAllocation, ResourceError> {
+        let cores_needed =
+            requirements
+                .cpu_cores
+                .ok_or_else(|| ResourceError::AllocationFailed {
+                    message: "CPU requirement not specified".to_string(),
+                })?;
 
         let mut allocated_cores = self.allocated_cores.write().await;
 
@@ -256,7 +295,11 @@ impl ResourcePool for CpuPool {
         // Allocate cores
         *allocated_cores += cores_needed;
 
-        let allocation_id = format!("cpu_{}_{}", self.name, chrono::Utc::now().timestamp_millis());
+        let allocation_id = format!(
+            "cpu_{}_{}",
+            self.name,
+            chrono::Utc::now().timestamp_millis()
+        );
 
         let allocation = ResourceAllocation {
             allocation_id: allocation_id.clone(),
@@ -276,10 +319,12 @@ impl ResourcePool for CpuPool {
         let mut allocations = self.allocations.write().await;
         let mut allocated_cores = self.allocated_cores.write().await;
 
-        let allocation = allocations.remove(allocation_id)
-            .ok_or_else(|| ResourceError::ReleaseFailed {
-                message: format!("Allocation not found: {}", allocation_id),
-            })?;
+        let allocation =
+            allocations
+                .remove(allocation_id)
+                .ok_or_else(|| ResourceError::ReleaseFailed {
+                    message: format!("Allocation not found: {}", allocation_id),
+                })?;
 
         // Free the cores
         if let Some(cpu_cores) = allocation.allocated_resources.cpu_cores {
@@ -313,7 +358,10 @@ impl ResourcePool for CpuPool {
 
     fn active_count(&self) -> usize {
         // Track actual number of active allocations by counting entries in the allocations map
-        self.allocations.try_read().map(|allocs| allocs.len()).unwrap_or(0)
+        self.allocations
+            .try_read()
+            .map(|allocs| allocs.len())
+            .unwrap_or(0)
     }
 
     fn total_cpu_cores(&self) -> f32 {

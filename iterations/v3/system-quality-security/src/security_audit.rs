@@ -1,7 +1,7 @@
 //! Audit logging for security events and compliance
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{error, info, warn};
@@ -41,7 +41,6 @@ pub struct AuditLogEntry {
     pub event_id: String,
     /// Event timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Event type
     pub event_type: SecurityEventType,
@@ -83,7 +82,10 @@ impl std::fmt::Debug for SecurityAuditLogger {
             .field("enabled", &self.enabled)
             .field("log_level", &self.log_level)
             .field("include_sensitive_data", &self.include_sensitive_data)
-            .field("audit_sinks", &format!("[{} audit sinks]", self.audit_sinks.len()))
+            .field(
+                "audit_sinks",
+                &format!("[{} audit sinks]", self.audit_sinks.len()),
+            )
             .finish()
     }
 }
@@ -163,7 +165,10 @@ impl SecurityAuditLogger {
 
         let mut metadata = metadata;
         if !success {
-            metadata.insert("failure_reason".to_string(), serde_json::Value::String("authentication_failed".to_string()));
+            metadata.insert(
+                "failure_reason".to_string(),
+                serde_json::Value::String("authentication_failed".to_string()),
+            );
         }
 
         let entry = AuditLogEntry {
@@ -206,7 +211,11 @@ impl SecurityAuditLogger {
             event_type: SecurityEventType::Authorization,
             severity,
             subject,
-            action: if success { format!("access_granted:{}", action) } else { format!("access_denied:{}", action) },
+            action: if success {
+                format!("access_granted:{}", action)
+            } else {
+                format!("access_denied:{}", action)
+            },
             resource,
             success,
             source_ip,
@@ -268,7 +277,10 @@ impl SecurityAuditLogger {
 
         let mut metadata = HashMap::new();
         if let Some(count) = record_count {
-            metadata.insert("record_count".to_string(), serde_json::Value::Number(count.into()));
+            metadata.insert(
+                "record_count".to_string(),
+                serde_json::Value::Number(count.into()),
+            );
         }
 
         let entry = AuditLogEntry {
@@ -299,8 +311,14 @@ impl SecurityAuditLogger {
         source_ip: Option<String>,
     ) -> Result<(), AuditError> {
         let mut metadata = HashMap::new();
-        metadata.insert("policy_name".to_string(), serde_json::Value::String(policy_name));
-        metadata.insert("violation_details".to_string(), serde_json::Value::String(violation_details));
+        metadata.insert(
+            "policy_name".to_string(),
+            serde_json::Value::String(policy_name),
+        );
+        metadata.insert(
+            "violation_details".to_string(),
+            serde_json::Value::String(violation_details),
+        );
 
         let entry = AuditLogEntry {
             event_id: uuid::Uuid::new_v4().to_string(),
@@ -420,7 +438,11 @@ impl SecurityAuditLogger {
         if value.len() <= 8 {
             "*".repeat(value.len())
         } else {
-            format!("{}****{}", &value[..4], &value[value.len().saturating_sub(4)..])
+            format!(
+                "{}****{}",
+                &value[..4],
+                &value[value.len().saturating_sub(4)..]
+            )
         }
     }
 }
@@ -452,16 +474,22 @@ static AUDIT_LOGGER: once_cell::sync::OnceCell<SecurityAuditLogger> =
     once_cell::sync::OnceCell::new();
 
 /// Initialize the global security audit logger
-pub fn init_audit_logger(enabled: bool, log_level: String, include_sensitive_data: bool) -> Result<(), AuditError> {
+pub fn init_audit_logger(
+    enabled: bool,
+    log_level: String,
+    include_sensitive_data: bool,
+) -> Result<(), AuditError> {
     let logger = SecurityAuditLogger::new(enabled, log_level, include_sensitive_data);
-    AUDIT_LOGGER.set(logger)
+    AUDIT_LOGGER
+        .set(logger)
         .map_err(|_| AuditError::LoggingFailed("Audit logger already initialized".to_string()))?;
     Ok(())
 }
 
 /// Get the global security audit logger
 pub fn get_audit_logger() -> Result<&'static SecurityAuditLogger, AuditError> {
-    AUDIT_LOGGER.get()
+    AUDIT_LOGGER
+        .get()
         .ok_or_else(|| AuditError::LoggingFailed("Audit logger not initialized".to_string()))
 }
 
@@ -474,7 +502,9 @@ pub async fn log_auth_event(
     metadata: HashMap<String, serde_json::Value>,
 ) -> Result<(), AuditError> {
     let logger = get_audit_logger()?;
-    logger.log_authentication(subject, success, source_ip, user_agent, metadata).await
+    logger
+        .log_authentication(subject, success, source_ip, user_agent, metadata)
+        .await
 }
 
 /// Convenience function to log authorization events
@@ -487,7 +517,9 @@ pub async fn log_authz_event(
     metadata: HashMap<String, serde_json::Value>,
 ) -> Result<(), AuditError> {
     let logger = get_audit_logger()?;
-    logger.log_authorization(subject, action, resource, success, source_ip, metadata).await
+    logger
+        .log_authorization(subject, action, resource, success, source_ip, metadata)
+        .await
 }
 
 /// Convenience function to log configuration changes
@@ -499,7 +531,9 @@ pub async fn log_config_change(
     source_ip: Option<String>,
 ) -> Result<(), AuditError> {
     let logger = get_audit_logger()?;
-    logger.log_config_change(subject, config_key, old_value, new_value, source_ip).await
+    logger
+        .log_config_change(subject, config_key, old_value, new_value, source_ip)
+        .await
 }
 
 #[cfg(test)]
@@ -518,24 +552,28 @@ mod tests {
         let logger = SecurityAuditLogger::new(true, "info".to_string(), false);
 
         // Test successful authentication
-        let result = logger.log_authentication(
-            "user123".to_string(),
-            true,
-            Some("192.168.1.1".to_string()),
-            Some("Mozilla/5.0".to_string()),
-            HashMap::new(),
-        ).await;
+        let result = logger
+            .log_authentication(
+                "user123".to_string(),
+                true,
+                Some("192.168.1.1".to_string()),
+                Some("Mozilla/5.0".to_string()),
+                HashMap::new(),
+            )
+            .await;
 
         assert!(result.is_ok());
 
         // Test failed authentication
-        let result = logger.log_authentication(
-            "user123".to_string(),
-            false,
-            Some("192.168.1.1".to_string()),
-            Some("Mozilla/5.0".to_string()),
-            HashMap::new(),
-        ).await;
+        let result = logger
+            .log_authentication(
+                "user123".to_string(),
+                false,
+                Some("192.168.1.1".to_string()),
+                Some("Mozilla/5.0".to_string()),
+                HashMap::new(),
+            )
+            .await;
 
         assert!(result.is_ok());
     }

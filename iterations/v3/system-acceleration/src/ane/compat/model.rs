@@ -57,7 +57,7 @@ extern "C" {
         data: *const f32,
         shape: *const i32,
         shape_length: i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_model_create(
@@ -92,7 +92,7 @@ extern "C" {
         out_output_data: *mut *mut f32,
         out_output_shape: *mut *mut i32,
         out_output_shape_len: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_provider_get_feature_float32(
@@ -194,7 +194,10 @@ impl Drop for MLDictionaryFeatureProvider {
             let provider_ref = self.ptr() as u64;
             let result = unsafe { agentbridge_dict_provider_destroy(provider_ref) };
             if result != 0 {
-                tracing::warn!("Failed to destroy Core ML dictionary provider handle {}", provider_ref);
+                tracing::warn!(
+                    "Failed to destroy Core ML dictionary provider handle {}",
+                    provider_ref
+                );
             }
         }
         tracing::debug!("Dropping MLDictionaryFeatureProvider");
@@ -208,17 +211,18 @@ impl MLModel {
             return Err("Core ML not available on this platform".to_string());
         }
 
-        let path_str = path.to_str()
+        let path_str = path
+            .to_str()
             .ok_or_else(|| "Invalid path encoding".to_string())?;
 
-        let path_cstr = CString::new(path_str)
-            .map_err(|e| format!("Invalid path string: {}", e))?;
+        let path_cstr =
+            CString::new(path_str).map_err(|e| format!("Invalid path string: {}", e))?;
 
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
         // Create model configuration with default settings (ANE preferred for Apple Silicon)
-        use super::types::{MLModelConfiguration, MLComputeUnits};
+        use super::types::{MLComputeUnits, MLModelConfiguration};
         let config = MLModelConfiguration {
             compute_units: MLComputeUnits::CpuAndNeuralEngine, // Default to ANE for Apple Silicon
             allow_low_precision_accumulation_on_gpu: true,
@@ -234,7 +238,7 @@ impl MLModel {
                 path_cstr.as_ptr(),
                 config_json_cstr.as_ptr(),
                 &mut model_ref,
-                &mut error_ptr
+                &mut error_ptr,
             )
         };
 
@@ -260,19 +264,21 @@ impl MLModel {
     }
 
     /// Compile a .mlmodel file to .mlmodelc format
-    pub fn compile_model_at_url(url: &str, error: &mut Option<String>) -> std::result::Result<Self, String> {
+    pub fn compile_model_at_url(
+        url: &str,
+        error: &mut Option<String>,
+    ) -> std::result::Result<Self, String> {
         if !coreml_runtime_available() {
             return Err("Core ML not available on this platform".to_string());
         }
 
-        let url_cstr = CString::new(url)
-            .map_err(|e| format!("Invalid URL string: {}", e))?;
+        let url_cstr = CString::new(url).map_err(|e| format!("Invalid URL string: {}", e))?;
 
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
         // Create model configuration with default settings (ANE preferred for Apple Silicon)
-        use super::types::{MLModelConfiguration, MLComputeUnits};
+        use super::types::{MLComputeUnits, MLModelConfiguration};
         let config = MLModelConfiguration {
             compute_units: MLComputeUnits::CpuAndNeuralEngine, // Default to ANE for Apple Silicon
             allow_low_precision_accumulation_on_gpu: true,
@@ -288,7 +294,7 @@ impl MLModel {
                 url_cstr.as_ptr(),
                 config_json_cstr.as_ptr(),
                 &mut model_ref,
-                &mut error_ptr
+                &mut error_ptr,
             )
         };
 
@@ -323,19 +329,12 @@ impl MLModel {
             return Err("Core ML not available on this platform".to_string());
         }
 
-        
-
         // Get model information from the FFI layer
         let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let info_result = unsafe {
-            agentbridge_model_get_info(
-                self.handle(),
-                &mut info_ptr,
-                &mut error_ptr,
-            )
-        };
+        let info_result =
+            unsafe { agentbridge_model_get_info(self.handle(), &mut info_ptr, &mut error_ptr) };
 
         if info_result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -369,13 +368,17 @@ impl MLModel {
         let model_info: serde_json::Value = serde_json::from_str(&model_info_json)
             .map_err(|e| format!("Failed to parse model info: {}", e))?;
 
-        let source_path = model_info["path"].as_str()
+        let source_path = model_info["path"]
+            .as_str()
             .ok_or_else(|| "Model info does not contain path".to_string())?;
 
         // Copy the compiled model file to the destination
         let source_path = std::path::Path::new(source_path);
         if !source_path.exists() {
-            return Err(format!("Source model file does not exist: {:?}", source_path));
+            return Err(format!(
+                "Source model file does not exist: {:?}",
+                source_path
+            ));
         }
 
         // Ensure parent directory exists
@@ -393,8 +396,8 @@ impl MLModel {
             return Err("Model file copy verification failed".to_string());
         }
 
-        let metadata = std::fs::metadata(path)
-            .map_err(|e| format!("Failed to verify copied file: {}", e))?;
+        let metadata =
+            std::fs::metadata(path).map_err(|e| format!("Failed to verify copied file: {}", e))?;
 
         if metadata.len() == 0 {
             return Err("Copied model file is empty".to_string());
@@ -403,7 +406,7 @@ impl MLModel {
         Ok(())
     }
 
-// MLMultiArray implementation
+    // MLMultiArray implementation
     /// Get model information
     pub fn model_info(&self) -> std::result::Result<String, String> {
         if !coreml_runtime_available() {
@@ -413,13 +416,8 @@ impl MLModel {
         let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_model_get_info(
-                self.handle(),
-                &mut info_ptr,
-                &mut error_ptr
-            )
-        };
+        let result =
+            unsafe { agentbridge_model_get_info(self.handle(), &mut info_ptr, &mut error_ptr) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {

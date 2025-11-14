@@ -5,6 +5,7 @@
 
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::models::mistral_model::{reasoning_templates, MistralModel};
+use crate::ane::policy::{BackendPolicy, PerformancePolicy, TaskType};
 use candle_core::{Device, IndexOp, Tensor};
 use rand::Rng;
 use schemars::JsonSchema;
@@ -17,6 +18,12 @@ pub struct MistralInferenceOptions {
     pub top_p: Option<f32>,       // None = no top-p filtering
     pub timeout_ms: u64,
     pub use_kv_cache: bool,
+    /// Sequence length for input (policy-recommended if None)
+    pub sequence_length: Option<usize>,
+    /// Task type for policy-based optimization (auto-detected if None)
+    pub task_type: Option<TaskType>,
+    /// Backend policy (auto-selected if None)
+    pub backend_policy: Option<BackendPolicy>,
 }
 
 impl Default for MistralInferenceOptions {
@@ -27,6 +34,86 @@ impl Default for MistralInferenceOptions {
             top_p: Some(0.9),       // Enable top-p sampling
             timeout_ms: 30000,      // 30 seconds
             use_kv_cache: true,
+            sequence_length: None,  // Will use policy recommendation
+            task_type: None,        // Will auto-detect from input
+            backend_policy: None,   // Will use policy recommendation
+        }
+    }
+}
+
+impl MistralInferenceOptions {
+    /// Apply performance policy to determine optimal sequence length and backend
+    ///
+    /// This integrates the ANE performance policy system to automatically select
+    /// optimal sequence length and backend based on task characteristics and
+    /// benchmark findings.
+    ///
+    /// # Arguments
+    /// * `input_length` - Length of input tokens
+    /// * `policy` - Performance policy (uses default if None)
+    ///
+    /// # Returns
+    /// Updated options with policy-recommended sequence length and backend
+    pub fn with_policy(mut self, input_length: usize, policy: Option<&PerformancePolicy>) -> Self {
+        // Create default policy if not provided (owned, not borrowed)
+        let default_policy = PerformancePolicy::default();
+        let policy = policy.unwrap_or(&default_policy);
+        
+        // Auto-detect task type if not set
+        let task_type = self.task_type.unwrap_or_else(|| {
+            TaskType::from_input(input_length, self.max_tokens)
+        });
+        
+        // Get policy-recommended sequence length if not set
+        if self.sequence_length.is_none() {
+            self.sequence_length = Some(policy.recommended_sequence_length(task_type));
+        }
+        
+        // Get policy-recommended backend if not set
+        if self.backend_policy.is_none() {
+            let seq_len = self.sequence_length.unwrap_or(policy.sequence_length.default);
+            self.backend_policy = Some(policy.recommended_backend(seq_len));
+        }
+        
+        self
+    }
+    
+    /// Get effective sequence length (policy-recommended or explicit)
+    pub fn effective_sequence_length(&self, input_length: usize) -> usize {
+        self.sequence_length.unwrap_or_else(|| {
+            let policy = PerformancePolicy::default();
+            let task_type = self.task_type.unwrap_or_else(|| {
+                TaskType::from_input(input_length, self.max_tokens)
+            });
+            policy.recommended_sequence_length(task_type)
+        })
+    }
+    
+    /// Get effective backend policy (policy-recommended or explicit)
+    pub fn effective_backend_policy(&self, input_length: usize) -> BackendPolicy {
+        self.backend_policy.unwrap_or_else(|| {
+            let policy = PerformancePolicy::default();
+            let seq_len = self.effective_sequence_length(input_length);
+            policy.recommended_backend(seq_len)
+        })
+    }
+    
+    /// Convert backend policy to MLComputeUnits for model loading
+    pub fn to_compute_units(&self, input_length: usize) -> crate::ane::compat::coreml::MLComputeUnits {
+        use crate::ane::compat::coreml::MLComputeUnits;
+        match self.effective_backend_policy(input_length) {
+            BackendPolicy::ANE => MLComputeUnits::CpuAndNeuralEngine,
+            BackendPolicy::CPU => MLComputeUnits::CpuOnly,
+            BackendPolicy::Auto => {
+                // Auto-select based on sequence length
+                let policy = PerformancePolicy::default();
+                let seq_len = self.effective_sequence_length(input_length);
+                match policy.recommended_backend(seq_len) {
+                    BackendPolicy::ANE => MLComputeUnits::CpuAndNeuralEngine,
+                    BackendPolicy::CPU => MLComputeUnits::CpuOnly,
+                    BackendPolicy::Auto => MLComputeUnits::CpuAndNeuralEngine, // Default to ANE
+                }
+            }
         }
     }
 }
@@ -145,13 +232,33 @@ pub async fn generate_text(
     // Tokenize input
     let input_tokens = model.tokenizer.encode(prompt)?;
 
-    // Check if input fits in context window
-    let context_length = model.schema.context_length;
+    // Apply performance policy to determine optimal sequence length and backend
+    let policy = PerformancePolicy::default();
+    let options = options.clone().with_policy(input_tokens.len(), Some(&policy));
+    
+    // Get effective sequence length from policy (or use explicit if set)
+    let effective_seq_len = options.effective_sequence_length(input_tokens.len());
+    
+    // Log policy decision for observability
+    let task_type = options.task_type.unwrap_or_else(|| {
+        TaskType::from_input(input_tokens.len(), options.max_tokens)
+    });
+    let backend = options.effective_backend_policy(input_tokens.len());
+    tracing::info!(
+        "Policy decision: task_type={:?}, seq_len={}, backend={:?}, input_len={}",
+        task_type, effective_seq_len, backend, input_tokens.len()
+    );
+    
+    // Check input length against effective sequence length (policy-recommended or explicit)
+    // Use effective_seq_len as the context window limit for this inference
+    let context_length = effective_seq_len.min(model.schema.context_length); // Cap at model's max context window
     if input_tokens.len() > context_length {
         return Err(ANEError::ContextTooLong(format!(
-            "Input length {} exceeds context window {}",
+            "Input length {} exceeds effective context window {} (policy-recommended: {}, model max: {})",
             input_tokens.len(),
-            context_length
+            context_length,
+            effective_seq_len,
+            model.schema.context_length
         )));
     }
 
@@ -236,7 +343,7 @@ pub async fn generate_text(
         };
 
         // Sample next token
-        let next_token = sample_token(&logits, options)?;
+        let next_token = sample_token(&logits, &options)?;
 
         // Check for end token
         if next_token == eos_id {

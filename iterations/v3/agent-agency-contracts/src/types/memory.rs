@@ -6,18 +6,18 @@
 //! @author @darianrosebrook
 
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use schemars::JsonSchema;
 
 /// Memory type classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[schemars(with = "String")]
 pub enum MemoryType {
-    Episodic,  // Event-based memories
-    Semantic,  // Factual knowledge
+    Episodic,   // Event-based memories
+    Semantic,   // Factual knowledge
     Procedural, // Skill-based memories
-    Working,   // Short-term working memory
+    Working,    // Short-term working memory
 }
 
 /// Re-export TaskPriority from planning module for consistency

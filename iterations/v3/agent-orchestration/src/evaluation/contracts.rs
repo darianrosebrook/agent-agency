@@ -3,9 +3,9 @@
 //! Defines formal contracts for scenarios, evaluators, and reporters.
 //! These traits enable composable evaluation components and independent testing.
 
-use crate::evaluation::framework::{EvaluationScenario, AgentEvaluation, EvaluationReport};
-use crate::chain_of_thought::{DecisionPoint, CoordinationEvent};
 use crate::audit_trail::AuditEvent;
+use crate::chain_of_thought::{CoordinationEvent, DecisionPoint};
+use crate::evaluation::framework::{AgentEvaluation, EvaluationReport, EvaluationScenario};
 use std::sync::Arc;
 
 /// Scenario trait for test scenarios
@@ -14,16 +14,16 @@ use std::sync::Arc;
 pub trait Scenario: Send + Sync {
     /// Get scenario identifier
     fn id(&self) -> &str;
-    
+
     /// Get scenario definition
     fn definition(&self) -> &EvaluationScenario;
-    
+
     /// Set up scenario environment (e.g., create test files)
     fn setup(&self) -> Result<(), String>;
-    
+
     /// Clean up scenario environment
     fn cleanup(&self) -> Result<(), String>;
-    
+
     /// Verify ground truth (did agent solve the problem correctly?)
     fn verify_ground_truth(
         &self,
@@ -39,7 +39,7 @@ pub trait Scenario: Send + Sync {
 pub trait Evaluator: Send + Sync {
     /// Get evaluator name
     fn name(&self) -> &str;
-    
+
     /// Evaluate agent execution
     fn evaluate(
         &self,
@@ -48,7 +48,7 @@ pub trait Evaluator: Send + Sync {
         events: &[CoordinationEvent],
         audit_entries: &[AuditEvent],
     ) -> Result<AgentEvaluation, String>;
-    
+
     /// Get evaluation dimensions this evaluator focuses on
     fn dimensions(&self) -> Vec<&str>;
 }
@@ -59,10 +59,10 @@ pub trait Evaluator: Send + Sync {
 pub trait Reporter: Send + Sync {
     /// Get reporter name
     fn name(&self) -> &str;
-    
+
     /// Render evaluation report
     fn render(&self, report: &EvaluationReport) -> Result<String, String>;
-    
+
     /// Get output format (e.g., "markdown", "html", "junit")
     fn format(&self) -> &str;
 }
@@ -73,7 +73,7 @@ pub trait Reporter: Send + Sync {
 pub trait Oracle: Send + Sync {
     /// Get oracle identifier
     fn id(&self) -> &str;
-    
+
     /// Verify execution against ground truth
     fn verify(
         &self,
@@ -89,19 +89,19 @@ pub trait Oracle: Send + Sync {
 pub struct OracleResult {
     /// Whether the execution was correct
     pub correct: bool,
-    
+
     /// Confidence score (0.0-1.0)
     pub confidence: f64,
-    
+
     /// Detailed explanation of verification
     pub explanation: String,
-    
+
     /// Specific issues found (if any)
     pub issues: Vec<String>,
 }
 
 /// Default heuristic-based Oracle implementation
-/// 
+///
 /// Uses pattern matching on decisions and events to verify expected behaviors.
 /// This is a fallback Oracle that provides basic verification when no specialized
 /// Oracle is available.
@@ -118,7 +118,7 @@ impl Oracle for HeuristicOracle {
     fn id(&self) -> &str {
         "heuristic"
     }
-    
+
     fn verify(
         &self,
         scenario: &EvaluationScenario,
@@ -127,9 +127,11 @@ impl Oracle for HeuristicOracle {
         _audit_entries: &[AuditEvent],
     ) -> Result<OracleResult, String> {
         use crate::evaluation::framework::BehaviorImportance;
-        
+
         // Check if scenario has expected behaviors
-        let critical_behaviors: Vec<_> = scenario.expected_behaviors.iter()
+        let critical_behaviors: Vec<_> = scenario
+            .expected_behaviors
+            .iter()
             .filter(|b| matches!(b.importance, BehaviorImportance::Critical))
             .collect();
 
@@ -149,25 +151,22 @@ impl Oracle for HeuristicOracle {
         for behavior in &critical_behaviors {
             let behavior_name = behavior.behavior.as_str();
             let verified = match behavior_name {
-                "problem_identification" => {
-                    decisions.iter().any(|d| {
-                        d.reasoning.to_lowercase().contains("problem") ||
-                        d.reasoning.to_lowercase().contains("issue") ||
-                        d.reasoning.to_lowercase().contains("error")
-                    })
-                }
-                "reasoning_transparency" => {
-                    decisions.iter().any(|d| !d.reasoning.is_empty() && d.reasoning.len() > 20)
-                }
-                "solution_exploration" => {
-                    decisions.iter().any(|d| d.alternatives.len() > 1)
-                }
-                "risk_assessment" => {
-                    decisions.iter().any(|d| d.risk_assessment.is_some())
-                }
+                "problem_identification" => decisions.iter().any(|d| {
+                    d.reasoning.to_lowercase().contains("problem")
+                        || d.reasoning.to_lowercase().contains("issue")
+                        || d.reasoning.to_lowercase().contains("error")
+                }),
+                "reasoning_transparency" => decisions
+                    .iter()
+                    .any(|d| !d.reasoning.is_empty() && d.reasoning.len() > 20),
+                "solution_exploration" => decisions.iter().any(|d| d.alternatives.len() > 1),
+                "risk_assessment" => decisions.iter().any(|d| d.risk_assessment.is_some()),
                 _ => {
                     // Unknown behavior - log but don't fail
-                    issues.push(format!("Unknown behavior '{}' - cannot verify", behavior_name));
+                    issues.push(format!(
+                        "Unknown behavior '{}' - cannot verify",
+                        behavior_name
+                    ));
                     true
                 }
             };
@@ -175,7 +174,10 @@ impl Oracle for HeuristicOracle {
             if verified {
                 verified_count += 1;
             } else {
-                issues.push(format!("Critical behavior '{}' not verified", behavior_name));
+                issues.push(format!(
+                    "Critical behavior '{}' not verified",
+                    behavior_name
+                ));
             }
         }
 
@@ -213,12 +215,12 @@ impl CompositeEvaluator {
             name,
         }
     }
-    
+
     /// Add an evaluator to the composite
     pub fn add_evaluator(&mut self, evaluator: Arc<dyn Evaluator>) {
         self.evaluators.push(evaluator);
     }
-    
+
     /// Evaluate using all evaluators and combine results
     pub fn evaluate_composite(
         &self,
@@ -230,7 +232,7 @@ impl CompositeEvaluator {
         if self.evaluators.is_empty() {
             return Err("No evaluators in composite".to_string());
         }
-        
+
         // Run all evaluators
         let mut evaluations = Vec::new();
         for evaluator in &self.evaluators {
@@ -242,49 +244,53 @@ impl CompositeEvaluator {
                 }
             }
         }
-        
+
         if evaluations.is_empty() {
             return Err("All evaluators failed".to_string());
         }
-        
+
         // Combine evaluations (average scores)
         let combined = self.combine_evaluations(&evaluations);
         Ok(combined)
     }
-    
+
     /// Combine multiple evaluations into one
     fn combine_evaluations(&self, evaluations: &[AgentEvaluation]) -> AgentEvaluation {
         let count = evaluations.len() as f64;
-        
+
         // Average all scores
-        let overall_score = evaluations.iter()
-            .map(|e| e.overall_score)
-            .sum::<f64>() / count;
-        
+        let overall_score = evaluations.iter().map(|e| e.overall_score).sum::<f64>() / count;
+
         // Average dimensions
-        let functional_correctness = evaluations.iter()
+        let functional_correctness = evaluations
+            .iter()
             .map(|e| e.dimensions.functional_correctness)
-            .sum::<f64>() / count;
-        
-        let process_quality = evaluations.iter()
+            .sum::<f64>()
+            / count;
+
+        let process_quality = evaluations
+            .iter()
             .map(|e| e.dimensions.process_quality)
-            .sum::<f64>() / count;
-        
-        let adaptability = evaluations.iter()
+            .sum::<f64>()
+            / count;
+
+        let adaptability = evaluations
+            .iter()
             .map(|e| e.dimensions.adaptability)
-            .sum::<f64>() / count;
-        
-        let efficiency = evaluations.iter()
+            .sum::<f64>()
+            / count;
+
+        let efficiency = evaluations
+            .iter()
             .map(|e| e.dimensions.efficiency)
-            .sum::<f64>() / count;
-        
-        let safety = evaluations.iter()
-            .map(|e| e.dimensions.safety)
-            .sum::<f64>() / count;
-        
+            .sum::<f64>()
+            / count;
+
+        let safety = evaluations.iter().map(|e| e.dimensions.safety).sum::<f64>() / count;
+
         // Use first evaluation as template (they should all have same scenario_id)
         let template = &evaluations[0];
-        
+
         AgentEvaluation {
             evaluation_id: template.evaluation_id,
             scenario_id: template.scenario_id.clone(),
@@ -309,7 +315,7 @@ impl Evaluator for CompositeEvaluator {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn evaluate(
         &self,
         scenario: &EvaluationScenario,
@@ -319,7 +325,7 @@ impl Evaluator for CompositeEvaluator {
     ) -> Result<AgentEvaluation, String> {
         self.evaluate_composite(scenario, decisions, events, audit_entries)
     }
-    
+
     fn dimensions(&self) -> Vec<&str> {
         // Return union of all evaluator dimensions
         let mut dims = std::collections::HashSet::new();
@@ -346,16 +352,16 @@ impl CompositeReporter {
             name,
         }
     }
-    
+
     /// Add a reporter to the composite
     pub fn add_reporter(&mut self, reporter: Arc<dyn Reporter>) {
         self.reporters.push(reporter);
     }
-    
+
     /// Render report using all reporters
     pub fn render_all(&self, report: &EvaluationReport) -> Result<Vec<(String, String)>, String> {
         let mut results = Vec::new();
-        
+
         for reporter in &self.reporters {
             match reporter.render(report) {
                 Ok(content) => {
@@ -366,7 +372,7 @@ impl CompositeReporter {
                 }
             }
         }
-        
+
         Ok(results)
     }
 }
@@ -375,7 +381,7 @@ impl Reporter for CompositeReporter {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn render(&self, report: &EvaluationReport) -> Result<String, String> {
         // Render using first reporter as default
         if let Some(reporter) = self.reporters.first() {
@@ -384,10 +390,11 @@ impl Reporter for CompositeReporter {
             Err("No reporters in composite".to_string())
         }
     }
-    
+
     fn format(&self) -> &str {
         // Return first reporter's format
-        self.reporters.first()
+        self.reporters
+            .first()
             .map(|r| r.format())
             .unwrap_or("unknown")
     }
@@ -406,7 +413,7 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        
+
         fn evaluate(
             &self,
             scenario: &EvaluationScenario,
@@ -415,14 +422,9 @@ mod tests {
             _audit_entries: &[AuditEvent],
         ) -> Result<AgentEvaluation, String> {
             let engine = EvaluationEngine::new();
-            engine.evaluate_scenario(
-                &scenario.scenario_id,
-                &[],
-                &[],
-                &[],
-            )
+            engine.evaluate_scenario(&scenario.scenario_id, &[], &[], &[])
         }
-        
+
         fn dimensions(&self) -> Vec<&str> {
             vec!["functional_correctness", "process_quality"]
         }
@@ -431,13 +433,13 @@ mod tests {
     #[test]
     fn test_composite_evaluator() {
         let mut composite = CompositeEvaluator::new("test-composite".to_string());
-        
+
         let evaluator1 = Arc::new(MockEvaluator {
             name: "evaluator1".to_string(),
         });
-        
+
         composite.add_evaluator(evaluator1);
-        
+
         assert_eq!(composite.name(), "test-composite");
         assert_eq!(composite.dimensions().len(), 2);
     }
@@ -451,11 +453,11 @@ mod tests {
         fn name(&self) -> &str {
             &self.name
         }
-        
+
         fn render(&self, _report: &EvaluationReport) -> Result<String, String> {
             Ok("Mock report".to_string())
         }
-        
+
         fn format(&self) -> &str {
             &self.format_name
         }
@@ -464,14 +466,14 @@ mod tests {
     #[test]
     fn test_composite_reporter() {
         let mut composite = CompositeReporter::new("test-reporter".to_string());
-        
+
         let reporter = Arc::new(MockReporter {
             name: "reporter1".to_string(),
             format_name: "markdown".to_string(),
         });
-        
+
         composite.add_reporter(reporter);
-        
+
         assert_eq!(composite.name(), "test-reporter");
         assert_eq!(composite.format(), "markdown");
     }

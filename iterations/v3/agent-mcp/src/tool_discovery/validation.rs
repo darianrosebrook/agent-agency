@@ -1,9 +1,9 @@
 //! Tool validation functionality
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::mcp_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 /// Tool validation result
@@ -64,7 +64,11 @@ impl ToolValidator for BasicToolValidator {
         }
 
         let score = if errors.is_empty() {
-            if warnings.is_empty() { 1.0 } else { 0.8 }
+            if warnings.is_empty() {
+                1.0
+            } else {
+                0.8
+            }
         } else {
             0.0
         };

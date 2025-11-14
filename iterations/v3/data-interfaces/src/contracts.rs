@@ -2,9 +2,9 @@
 //!
 //! Interface contracts and validation.
 
+use crate::{ContractConfig, InterfaceError};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::{ContractConfig, InterfaceError};
 
 /// Interface contract validator
 #[derive(Debug)]
@@ -22,13 +22,20 @@ impl ContractValidator {
         Ok(())
     }
 
-    pub async fn validate_contract(&self, contract: &InterfaceContract) -> Result<ValidationResult, InterfaceError> {
+    pub async fn validate_contract(
+        &self,
+        contract: &InterfaceContract,
+    ) -> Result<ValidationResult, InterfaceError> {
         // Basic validation logic
         let is_valid = !contract.name.is_empty() && contract.version > 0;
 
         Ok(ValidationResult {
             valid: is_valid,
-            errors: if is_valid { vec![] } else { vec!["Invalid contract".to_string()] },
+            errors: if is_valid {
+                vec![]
+            } else {
+                vec!["Invalid contract".to_string()]
+            },
         })
     }
 }

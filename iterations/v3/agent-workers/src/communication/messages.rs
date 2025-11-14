@@ -1,11 +1,11 @@
 //! Worker communication message types and handling
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
-use crate::worker_types::{TaskId, WorkerId, SubTaskId};
+use crate::worker_types::{SubTaskId, TaskId, WorkerId};
 use crate::WorkerMessage;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Central message broker for coordinating worker communication
 pub struct MessageBroker {
@@ -66,7 +66,8 @@ impl CommunicationHub {
 
     /// Create a new broker for the given task
     pub fn create_broker(&mut self, task_id: TaskId, buffer_size: usize) -> &MessageBroker {
-        self.brokers.insert(task_id.clone(), MessageBroker::new(buffer_size));
+        self.brokers
+            .insert(task_id.clone(), MessageBroker::new(buffer_size));
         self.brokers.get(&task_id).unwrap()
     }
 
@@ -291,14 +292,16 @@ pub mod helpers {
 
     /// Check if message indicates completion (success or failure)
     pub fn is_completion_message(message: &WorkerMessage) -> bool {
-        matches!(message,
+        matches!(
+            message,
             WorkerMessage::Completed { .. } | WorkerMessage::Failed { .. }
         )
     }
 
     /// Check if message indicates an error condition
     pub fn is_error_message(message: &WorkerMessage) -> bool {
-        matches!(message,
+        matches!(
+            message,
             WorkerMessage::Failed { .. } | WorkerMessage::Blocked { .. }
         )
     }

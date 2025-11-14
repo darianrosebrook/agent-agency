@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-use crate::simple_client::DatabaseClient;
 use crate::models::*;
+use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
 use sqlx::Row;
 use uuid::Uuid;
@@ -19,7 +19,7 @@ impl DatabaseClient {
         min_conf: f32,
     ) -> Result<Vec<ExternalKnowledgeEntity>> {
         let query = "SELECT * FROM kb_semantic_search($1::vector, $2, $3, $4, $5)";
-        
+
         let rows = sqlx::query(query)
             .bind(query_vec)
             .bind(model_id)
@@ -29,7 +29,7 @@ impl DatabaseClient {
             .fetch_all(self.pool())
             .await
             .context("Failed to execute semantic search")?;
-        
+
         let mut entities = Vec::new();
         for row in rows {
             entities.push(ExternalKnowledgeEntity {
@@ -54,10 +54,10 @@ impl DatabaseClient {
                 license: None,
             });
         }
-        
+
         Ok(entities)
     }
-    
+
     /// Get entity by source and key
     pub async fn kb_get_entity(
         &self,
@@ -71,14 +71,14 @@ impl DatabaseClient {
             FROM external_knowledge_entities
             WHERE source = $1 AND entity_key = $2
         ";
-        
+
         let row = sqlx::query(query)
             .bind(source)
             .bind(key)
             .fetch_optional(self.pool())
             .await
             .context("Failed to get entity")?;
-        
+
         match row {
             Some(row) => Ok(Some(ExternalKnowledgeEntity {
                 id: Some(row.try_get("id")?),
@@ -104,7 +104,7 @@ impl DatabaseClient {
             None => Ok(None),
         }
     }
-    
+
     /// Get related entities via relationships
     pub async fn kb_get_related(
         &self,
@@ -113,7 +113,7 @@ impl DatabaseClient {
         max_depth: usize,
     ) -> Result<Vec<ExternalKnowledgeEntity>> {
         let query = "SELECT * FROM kb_get_related($1, $2, $3)";
-        
+
         let rows = sqlx::query(query)
             .bind(entity_id)
             .bind(types.as_ref().map(|v| v.as_slice()))
@@ -121,20 +121,20 @@ impl DatabaseClient {
             .fetch_all(self.pool())
             .await
             .context("Failed to get related entities")?;
-        
+
         let mut entities = Vec::new();
         for row in rows {
             let entity_id: Uuid = row.try_get("entity_id")?;
-            
+
             // Fetch full entity details
             if let Some(entity) = self.kb_get_entity_by_id(entity_id).await? {
                 entities.push(entity);
             }
         }
-        
+
         Ok(entities)
     }
-    
+
     /// Get entity by ID
     async fn kb_get_entity_by_id(&self, id: Uuid) -> Result<Option<ExternalKnowledgeEntity>> {
         let query = "
@@ -144,12 +144,12 @@ impl DatabaseClient {
             FROM external_knowledge_entities
             WHERE id = $1
         ";
-        
+
         let row = sqlx::query(query)
             .bind(id)
             .fetch_optional(self.pool())
             .await?;
-        
+
         match row {
             Some(row) => Ok(Some(ExternalKnowledgeEntity {
                 id: Some(row.try_get("id")?),
@@ -175,20 +175,20 @@ impl DatabaseClient {
             None => Ok(None),
         }
     }
-    
+
     /// Record usage for relevance tracking
     pub async fn kb_record_usage(&self, entity_id: Uuid) -> Result<()> {
         let query = "SELECT record_knowledge_usage($1)";
-        
+
         sqlx::query(query)
             .bind(entity_id)
             .execute(self.pool())
             .await
             .context("Failed to record usage")?;
-        
+
         Ok(())
     }
-    
+
     /// Upsert entity with vectors
     pub async fn kb_upsert_entity(
         &self,
@@ -196,14 +196,14 @@ impl DatabaseClient {
         vectors: Vec<(String, Vec<f32>)>,
     ) -> Result<Uuid> {
         let mut tx = self.pool().begin().await?;
-        
+
         // Insert or update entity
         let query = "
-            INSERT INTO external_knowledge_entities 
-            (source, entity_key, canonical_name, lang, entity_type, properties, 
+            INSERT INTO external_knowledge_entities
+            (source, entity_key, canonical_name, lang, entity_type, properties,
              confidence, dump_version, toolchain, license)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            ON CONFLICT (source, entity_key) 
+            ON CONFLICT (source, entity_key)
             DO UPDATE SET
                 canonical_name = EXCLUDED.canonical_name,
                 lang = EXCLUDED.lang,
@@ -215,7 +215,7 @@ impl DatabaseClient {
                 license = EXCLUDED.license
             RETURNING id
         ";
-        
+
         let row = sqlx::query(query)
             .bind(entity.source.as_str())
             .bind(&entity.entity_key)
@@ -230,9 +230,9 @@ impl DatabaseClient {
             .fetch_one(&mut *tx)
             .await
             .context("Failed to upsert entity")?;
-        
+
         let entity_id: Uuid = row.try_get("id")?;
-        
+
         // Insert vectors
         for (model_id, vec) in vectors {
             let vec_query = "
@@ -241,7 +241,7 @@ impl DatabaseClient {
                 ON CONFLICT (entity_id, model_id)
                 DO UPDATE SET vec = EXCLUDED.vec
             ";
-            
+
             sqlx::query(vec_query)
                 .bind(entity_id)
                 .bind(&model_id)
@@ -250,31 +250,27 @@ impl DatabaseClient {
                 .await
                 .context("Failed to insert vector")?;
         }
-        
+
         tx.commit().await?;
-        
+
         Ok(entity_id)
     }
-    
+
     /// Get entity vector
-    pub async fn kb_get_entity_vector(
-        &self,
-        entity_id: Uuid,
-        model_id: &str,
-    ) -> Result<Vec<f32>> {
+    pub async fn kb_get_entity_vector(&self, entity_id: Uuid, model_id: &str) -> Result<Vec<f32>> {
         let query = "SELECT vec FROM knowledge_vectors WHERE entity_id = $1 AND model_id = $2";
-        
+
         let row = sqlx::query(query)
             .bind(entity_id)
             .bind(model_id)
             .fetch_one(self.pool())
             .await
             .context("Failed to get entity vector")?;
-        
+
         let vec: Vec<f32> = row.try_get("vec")?;
         Ok(vec)
     }
-    
+
     /// Get entities by source
     pub async fn kb_get_entities_by_source(
         &self,
@@ -290,14 +286,14 @@ impl DatabaseClient {
             ORDER BY usage_count DESC
             LIMIT $2
         ";
-        
+
         let rows = sqlx::query(query)
             .bind(source)
             .bind(limit.unwrap_or(10000) as i64)
             .fetch_all(self.pool())
             .await
             .context("Failed to get entities by source")?;
-        
+
         let mut entities = Vec::new();
         for row in rows {
             entities.push(ExternalKnowledgeEntity {
@@ -322,22 +318,22 @@ impl DatabaseClient {
                 license: row.try_get("license")?,
             });
         }
-        
+
         Ok(entities)
     }
-    
+
     /// Create relationship
     pub async fn kb_create_relationship(
         &self,
         relationship: KnowledgeRelationship,
     ) -> Result<Uuid> {
         let query = "
-            INSERT INTO knowledge_relationships 
+            INSERT INTO knowledge_relationships
             (source_entity_id, target_entity_id, relationship_type, confidence, metadata)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id
         ";
-        
+
         let row = sqlx::query(query)
             .bind(relationship.source_entity_id)
             .bind(relationship.target_entity_id)
@@ -347,20 +343,20 @@ impl DatabaseClient {
             .fetch_one(self.pool())
             .await
             .context("Failed to create relationship")?;
-        
+
         let id: Uuid = row.try_get("id")?;
         Ok(id)
     }
-    
+
     /// Get knowledge base statistics
     pub async fn kb_get_stats(&self) -> Result<Vec<KnowledgeStats>> {
         let query = "SELECT * FROM kb_get_stats()";
-        
+
         let rows = sqlx::query(query)
             .fetch_all(self.pool())
             .await
             .context("Failed to get stats")?;
-        
+
         let mut stats = Vec::new();
         for row in rows {
             stats.push(KnowledgeStats {
@@ -373,8 +369,7 @@ impl DatabaseClient {
                 last_updated: row.try_get("last_updated")?,
             });
         }
-        
+
         Ok(stats)
     }
 }
-

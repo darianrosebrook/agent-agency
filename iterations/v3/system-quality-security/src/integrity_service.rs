@@ -4,9 +4,9 @@
 
 use crate::{
     hasher::ContentHasher,
-    tampering_detector::{TamperingDetectionResult, TamperingDetector},
     integrity_types::*,
     storage_new::{NewSourceIntegrityStorage, PostgresSourceIntegrityStorage},
+    tampering_detector::{TamperingDetectionResult, TamperingDetector},
 };
 use anyhow::Result;
 use uuid::Uuid;
@@ -109,13 +109,15 @@ impl SourceIntegrityService {
             // - Baseline storage and comparison system (Required)
             // PRIORITY: Medium
             tampering_indicators: vec![],
-            verification_metadata: metadata.map(|m| {
-                if let serde_json::Value::Object(map) = m {
-                    map.into_iter().collect()
-                } else {
-                    std::collections::HashMap::new()
-                }
-            }).unwrap_or_default(),
+            verification_metadata: metadata
+                .map(|m| {
+                    if let serde_json::Value::Object(map) = m {
+                        map.into_iter().collect()
+                    } else {
+                        std::collections::HashMap::new()
+                    }
+                })
+                .unwrap_or_default(),
         };
 
         // Store the record
@@ -146,12 +148,18 @@ impl SourceIntegrityService {
     }
 
     /// Get records by source
-    pub async fn get_records_by_source(&self, source_id: &str) -> Result<Vec<SourceIntegrityRecord>> {
+    pub async fn get_records_by_source(
+        &self,
+        source_id: &str,
+    ) -> Result<Vec<SourceIntegrityRecord>> {
         self.storage.get_records_by_source(source_id).await
     }
 
     /// Get records by status
-    pub async fn get_records_by_status(&self, status: IntegrityStatus) -> Result<Vec<SourceIntegrityRecord>> {
+    pub async fn get_records_by_status(
+        &self,
+        status: IntegrityStatus,
+    ) -> Result<Vec<SourceIntegrityRecord>> {
         self.storage.get_records_by_status(status).await
     }
 
@@ -166,7 +174,10 @@ impl SourceIntegrityService {
     }
 
     /// Cleanup old records
-    pub async fn cleanup_old_records(&self, older_than: chrono::DateTime<chrono::Utc>) -> Result<usize> {
+    pub async fn cleanup_old_records(
+        &self,
+        older_than: chrono::DateTime<chrono::Utc>,
+    ) -> Result<usize> {
         self.storage.cleanup_old_records(older_than).await
     }
 }

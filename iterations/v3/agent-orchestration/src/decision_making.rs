@@ -3,11 +3,12 @@
 //! This module implements various algorithms for reaching consensus
 //! decisions from aggregated judge verdicts.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use async_trait::async_trait;
 use crate::council_errors::CouncilResult;
 use crate::verdict_aggregation::AggregationResult;
 use agent_agency_contracts::TaskPriority;
+use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Decision engine that applies algorithms to reach final decisions
 #[async_trait]
@@ -123,9 +124,17 @@ pub struct HistoricalDecision {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DecisionOutcome {
-    Success { quality_score: f64, time_to_completion: u64 },
-    Failure { reason: String, recovery_cost: f64 },
-    PartialSuccess { achieved_percentage: f64 },
+    Success {
+        quality_score: f64,
+        time_to_completion: u64,
+    },
+    Failure {
+        reason: String,
+        recovery_cost: f64,
+    },
+    PartialSuccess {
+        achieved_percentage: f64,
+    },
 }
 
 /// Emergency override flags
@@ -195,7 +204,6 @@ struct ExecutionPlan {
     pub quality_gates: Vec<QualityGate>,
     pub risk_mitigations: Vec<String>,
 }
-
 
 /// Resource requirements
 
@@ -285,7 +293,6 @@ pub struct AlgorithmicDecisionEngine {
     learning_enabled: bool,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RiskThresholds {
     pub low_risk_threshold: f64,
@@ -333,20 +340,25 @@ impl DecisionEngine for AlgorithmicDecisionEngine {
         // Apply the selected consensus strategy
         match self.strategy {
             ConsensusStrategy::Majority => {
-                self.make_majority_decision(aggregation_result, context).await
-            },
+                self.make_majority_decision(aggregation_result, context)
+                    .await
+            }
             ConsensusStrategy::WeightedExpertise => {
-                self.make_weighted_expertise_decision(aggregation_result, context).await
-            },
+                self.make_weighted_expertise_decision(aggregation_result, context)
+                    .await
+            }
             ConsensusStrategy::RiskBased => {
-                self.make_risk_based_decision(aggregation_result, context).await
-            },
+                self.make_risk_based_decision(aggregation_result, context)
+                    .await
+            }
             ConsensusStrategy::LearningBased => {
-                self.make_learning_based_decision(aggregation_result, context).await
-            },
+                self.make_learning_based_decision(aggregation_result, context)
+                    .await
+            }
             ConsensusStrategy::Conservative => {
-                self.make_conservative_decision(aggregation_result, context).await
-            },
+                self.make_conservative_decision(aggregation_result, context)
+                    .await
+            }
         }
     }
 }
@@ -359,8 +371,12 @@ impl AlgorithmicDecisionEngine {
     ) -> CouncilResult<FinalDecision> {
         // Simple majority-based decision making
         match &aggregation_result.council_decision {
-            crate::verdict_aggregation::CouncilDecision::Approve { confidence,  .. } => {
-                if *confidence >= 0.5 && self.check_organizational_constraints(context, aggregation_result).await? {
+            crate::verdict_aggregation::CouncilDecision::Approve { confidence, .. } => {
+                if *confidence >= 0.5
+                    && self
+                        .check_organizational_constraints(context, aggregation_result)
+                        .await?
+                {
                     Ok(FinalDecision::Proceed {
                         confidence: *confidence,
                         execution_plan: self.create_execution_plan(aggregation_result, context),
@@ -375,41 +391,62 @@ impl AlgorithmicDecisionEngine {
                         supporting_data: vec!["Council aggregation results".to_string()],
                     })
                 }
-            },
-            crate::verdict_aggregation::CouncilDecision::Refine { confidence, required_changes, priority, estimated_effort } => {
+            }
+            crate::verdict_aggregation::CouncilDecision::Refine {
+                confidence,
+                required_changes,
+                priority,
+                estimated_effort,
+            } => {
                 if *confidence >= 0.4 && context.organizational_constraints.allow_refinements {
-                Ok(FinalDecision::Refine {
-                    refinement_directive: RefinementDirective {
-                        required_changes: required_changes.iter().map(|change| RefinementChange {
-                            category: change.category.clone(),
-                            description: change.description.clone(),
-                            rationale: change.rationale.clone(),
-                            acceptance_criteria: format!("Implement: {}", change.description),
-                        }).collect(),
+                    Ok(FinalDecision::Refine {
+                        refinement_directive: RefinementDirective {
+                            required_changes: required_changes
+                                .iter()
+                                .map(|change| RefinementChange {
+                                    category: change.category.clone(),
+                                    description: change.description.clone(),
+                                    rationale: change.rationale.clone(),
+                                    acceptance_criteria: format!(
+                                        "Implement: {}",
+                                        change.description
+                                    ),
+                                })
+                                .collect(),
                             change_priority: priority.clone(),
                             estimated_effort: estimated_effort.clone(),
                             acceptance_criteria: vec!["Changes implemented and tested".to_string()],
                             max_iterations: 2,
                         },
-                        timeline_extension: Some((estimated_effort.average_person_hours / 8.0) as u64), // Convert to days
+                        timeline_extension: Some(
+                            (estimated_effort.average_person_hours / 8.0) as u64,
+                        ), // Convert to days
                         resource_allocation: None,
                     })
                 } else {
                     Ok(FinalDecision::Escalate {
                         reason: "Complex refinement requirements".to_string(),
-                        required_stakeholders: vec!["Product Manager".to_string(), "Engineering Lead".to_string()],
+                        required_stakeholders: vec![
+                            "Product Manager".to_string(),
+                            "Engineering Lead".to_string(),
+                        ],
                         decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(48)),
                         supporting_data: vec!["Refinement complexity analysis".to_string()],
                     })
                 }
-            },
-            crate::verdict_aggregation::CouncilDecision::Reject { confidence, critical_issues, alternative_approaches } => {
-                Ok(FinalDecision::Reject {
-                    reason: format!("Critical issues identified with {:.1}% confidence", confidence * 100.0),
-                    alternative_solutions: alternative_approaches.clone(),
-                    escalation_path: EscalationPath::ProductManager,
-                })
-            },
+            }
+            crate::verdict_aggregation::CouncilDecision::Reject {
+                confidence,
+                critical_issues: _,
+                alternative_approaches,
+            } => Ok(FinalDecision::Reject {
+                reason: format!(
+                    "Critical issues identified with {:.1}% confidence",
+                    confidence * 100.0
+                ),
+                alternative_solutions: alternative_approaches.clone(),
+                escalation_path: EscalationPath::ProductManager,
+            }),
             crate::verdict_aggregation::CouncilDecision::Inconclusive { reason, .. } => {
                 Ok(FinalDecision::Escalate {
                     reason: reason.clone(),
@@ -417,7 +454,7 @@ impl AlgorithmicDecisionEngine {
                     decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(72)),
                     supporting_data: vec!["Dissenting opinions analysis".to_string()],
                 })
-            },
+            }
         }
     }
 
@@ -427,14 +464,21 @@ impl AlgorithmicDecisionEngine {
         context: &DecisionContext,
     ) -> CouncilResult<FinalDecision> {
         // Weight decisions by judge specialization scores
-        let total_weight: f64 = aggregation_result.judge_contributions
+        let total_weight: f64 = aggregation_result
+            .judge_contributions
             .iter()
             .map(|contrib| contrib.specialization_score * contrib.contribution_quality)
             .sum();
 
-        let approval_weight: f64 = aggregation_result.judge_contributions
+        let approval_weight: f64 = aggregation_result
+            .judge_contributions
             .iter()
-            .filter(|contrib| matches!(contrib.verdict, crate::judge_backup::verdicts::JudgeVerdict::Approve { .. }))
+            .filter(|contrib| {
+                matches!(
+                    contrib.verdict,
+                    crate::judge_backup::verdicts::JudgeVerdict::Approve { .. }
+                )
+            })
             .map(|contrib| contrib.specialization_score * contrib.contribution_quality)
             .sum();
 
@@ -455,8 +499,14 @@ impl AlgorithmicDecisionEngine {
         } else {
             // Fall back to escalation for low weighted confidence
             Ok(FinalDecision::Escalate {
-                reason: format!("Low weighted expertise confidence: {:.2}", weighted_confidence),
-                required_stakeholders: vec!["Domain Experts".to_string(), "Engineering Lead".to_string()],
+                reason: format!(
+                    "Low weighted expertise confidence: {:.2}",
+                    weighted_confidence
+                ),
+                required_stakeholders: vec![
+                    "Domain Experts".to_string(),
+                    "Engineering Lead".to_string(),
+                ],
                 decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(48)),
                 supporting_data: vec!["Expertise-weighted analysis".to_string()],
             })
@@ -470,9 +520,9 @@ impl AlgorithmicDecisionEngine {
     ) -> CouncilResult<FinalDecision> {
         // Make decisions based on risk assessment
         let risk_level = match &aggregation_result.council_decision {
-            crate::verdict_aggregation::CouncilDecision::Approve { risk_assessment, .. } => {
-                risk_assessment.overall_risk.clone()
-            },
+            crate::verdict_aggregation::CouncilDecision::Approve {
+                risk_assessment, ..
+            } => risk_assessment.overall_risk.clone(),
             _ => crate::judge_backup::risk::RiskLevel::High, // Default to high risk for non-approval
         };
 
@@ -495,17 +545,24 @@ impl AlgorithmicDecisionEngine {
                             "Unexpected issues detected".to_string(),
                         ],
                     })
-                },
+                }
                 _ => {
                     // Other decisions still go through normal flow
-                    self.make_majority_decision(aggregation_result, context).await
+                    self.make_majority_decision(aggregation_result, context)
+                        .await
                 }
             }
         } else {
             // Risk is too high - escalate
             Ok(FinalDecision::Escalate {
-                reason: format!("Risk level {:?} exceeds organizational limit {:?}", risk_level, max_allowed_risk),
-                required_stakeholders: vec!["Risk Management".to_string(), "Executive Stakeholders".to_string()],
+                reason: format!(
+                    "Risk level {:?} exceeds organizational limit {:?}",
+                    risk_level, max_allowed_risk
+                ),
+                required_stakeholders: vec![
+                    "Risk Management".to_string(),
+                    "Executive Stakeholders".to_string(),
+                ],
                 decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(24)),
                 supporting_data: vec!["Risk assessment analysis".to_string()],
             })
@@ -521,7 +578,8 @@ impl AlgorithmicDecisionEngine {
         let similar_cases = self.find_similar_historical_cases(aggregation_result, context);
 
         let success_rate = if !similar_cases.is_empty() {
-            let successful_cases = similar_cases.iter()
+            let successful_cases = similar_cases
+                .iter()
                 .filter(|case| matches!(case.outcome, DecisionOutcome::Success { .. }))
                 .count();
             successful_cases as f64 / similar_cases.len() as f64
@@ -534,15 +592,25 @@ impl AlgorithmicDecisionEngine {
 
         if adjusted_confidence >= 0.6 {
             // Historical data supports proceeding
-            self.make_majority_decision(aggregation_result, context).await
+            self.make_majority_decision(aggregation_result, context)
+                .await
         } else {
             // Historical data suggests caution
             Ok(FinalDecision::Escalate {
-                reason: format!("Historical success rate {:.1}% suggests caution", success_rate * 100.0),
-                required_stakeholders: vec!["Product Manager".to_string(), "Engineering Lead".to_string()],
+                reason: format!(
+                    "Historical success rate {:.1}% suggests caution",
+                    success_rate * 100.0
+                ),
+                required_stakeholders: vec![
+                    "Product Manager".to_string(),
+                    "Engineering Lead".to_string(),
+                ],
                 decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(48)),
                 supporting_data: vec![
-                    format!("Historical analysis of {} similar cases", similar_cases.len()),
+                    format!(
+                        "Historical analysis of {} similar cases",
+                        similar_cases.len()
+                    ),
                     "Risk-benefit analysis".to_string(),
                 ],
             })
@@ -569,7 +637,10 @@ impl AlgorithmicDecisionEngine {
         // Check consensus strength
         if aggregation_result.consensus_strength < 0.8 {
             return Ok(FinalDecision::Escalate {
-                reason: format!("Conservative policy: consensus strength {:.2} below threshold", aggregation_result.consensus_strength),
+                reason: format!(
+                    "Conservative policy: consensus strength {:.2} below threshold",
+                    aggregation_result.consensus_strength
+                ),
                 required_stakeholders: vec!["Engineering Lead".to_string()],
                 decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(48)),
                 supporting_data: vec!["Consensus analysis".to_string()],
@@ -597,21 +668,25 @@ impl AlgorithmicDecisionEngine {
                 } else {
                     Ok(FinalDecision::Escalate {
                         reason: "Conservative policy: approval confidence below 90%".to_string(),
-                        required_stakeholders: vec!["Product Manager".to_string(), "Engineering Lead".to_string()],
+                        required_stakeholders: vec![
+                            "Product Manager".to_string(),
+                            "Engineering Lead".to_string(),
+                        ],
                         decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(24)),
                         supporting_data: vec!["Confidence analysis".to_string()],
                     })
                 }
-            },
+            }
             _ => {
                 // For non-approval decisions, escalate for human review
                 Ok(FinalDecision::Escalate {
-                    reason: "Conservative policy: non-approval decisions require human review".to_string(),
+                    reason: "Conservative policy: non-approval decisions require human review"
+                        .to_string(),
                     required_stakeholders: vec!["Product Manager".to_string()],
                     decision_deadline: Some(chrono::Utc::now() + chrono::Duration::hours(48)),
                     supporting_data: vec!["Decision analysis".to_string()],
                 })
-            },
+            }
         }
     }
 
@@ -624,41 +699,58 @@ impl AlgorithmicDecisionEngine {
         for trigger in &context.organizational_constraints.require_human_review {
             match trigger {
                 HumanReviewTrigger::HighRiskDecisions => {
-                    if matches!(context.risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1) {
+                    if matches!(
+                        context.risk_tier,
+                        agent_agency_contracts::task_request::RiskTier::Tier1
+                    ) {
                         return Ok(false); // Requires human review
                     }
-                },
+                }
                 HumanReviewTrigger::UnresolvedDissent => {
                     if !aggregation_result.dissenting_opinions.is_empty() {
                         return Ok(false);
                     }
-                },
+                }
                 HumanReviewTrigger::ComplexRefinements => {
-                    if let crate::verdict_aggregation::CouncilDecision::Refine { estimated_effort, .. } = &aggregation_result.council_decision {
+                    if let crate::verdict_aggregation::CouncilDecision::Refine {
+                        estimated_effort,
+                        ..
+                    } = &aggregation_result.council_decision
+                    {
                         if estimated_effort.average_person_hours > 40.0 {
                             return Ok(false);
                         }
                     }
-                },
+                }
                 HumanReviewTrigger::BudgetExceeded => {
                     if let Some(budget) = &context.resource_constraints.budget_limits {
-                        if let Some(estimated_effort) = &aggregation_result.aggregated_changes.as_ref().map(|c| &c.estimated_effort) {
+                        if let Some(estimated_effort) = &aggregation_result
+                            .aggregated_changes
+                            .as_ref()
+                            .map(|c| &c.estimated_effort)
+                        {
                             let estimated_cost = estimated_effort.average_person_hours * 100.0; // Rough cost estimate
                             if estimated_cost > budget.max_cost {
                                 return Ok(false);
                             }
                         }
                     }
-                },
+                }
                 HumanReviewTrigger::TimelineExceeded => {
-                    if let Some(available_hours) = context.resource_constraints.available_development_hours {
-                        if let Some(estimated_effort) = &aggregation_result.aggregated_changes.as_ref().map(|c| &c.estimated_effort) {
+                    if let Some(available_hours) =
+                        context.resource_constraints.available_development_hours
+                    {
+                        if let Some(estimated_effort) = &aggregation_result
+                            .aggregated_changes
+                            .as_ref()
+                            .map(|c| &c.estimated_effort)
+                        {
                             if estimated_effort.max_person_hours > available_hours {
                                 return Ok(false);
                             }
                         }
                     }
-                },
+                }
             }
         }
 
@@ -676,7 +768,8 @@ impl AlgorithmicDecisionEngine {
             agent_agency_contracts::task_request::RiskTier::Tier3 => TaskPriority::Medium, // Normal mapped to Medium
         };
 
-        let estimated_duration_hours = aggregation_result.aggregated_changes
+        let estimated_duration_hours = aggregation_result
+            .aggregated_changes
             .as_ref()
             .map(|changes| changes.estimated_effort.average_person_hours)
             .unwrap_or(16.0); // Default 2 days
@@ -736,16 +829,22 @@ impl AlgorithmicDecisionEngine {
         let mut criteria = Vec::new();
 
         // Extract from description
-        if description.to_lowercase().contains("add") || description.to_lowercase().contains("implement") {
+        if description.to_lowercase().contains("add")
+            || description.to_lowercase().contains("implement")
+        {
             criteria.push("Feature is implemented and functional".to_string());
         }
-        if description.to_lowercase().contains("fix") || description.to_lowercase().contains("resolve") {
+        if description.to_lowercase().contains("fix")
+            || description.to_lowercase().contains("resolve")
+        {
             criteria.push("Issue is resolved without regression".to_string());
         }
         if description.to_lowercase().contains("test") {
             criteria.push("Tests pass and provide adequate coverage".to_string());
         }
-        if description.to_lowercase().contains("api") || description.to_lowercase().contains("endpoint") {
+        if description.to_lowercase().contains("api")
+            || description.to_lowercase().contains("endpoint")
+        {
             criteria.push("API contracts are maintained and documented".to_string());
         }
 
@@ -756,7 +855,9 @@ impl AlgorithmicDecisionEngine {
         if rationale.to_lowercase().contains("performance") {
             criteria.push("Performance benchmarks are met".to_string());
         }
-        if rationale.to_lowercase().contains("compatibility") || rationale.to_lowercase().contains("backward") {
+        if rationale.to_lowercase().contains("compatibility")
+            || rationale.to_lowercase().contains("backward")
+        {
             criteria.push("Backward compatibility is maintained".to_string());
         }
         if rationale.to_lowercase().contains("user") {
@@ -803,5 +904,7 @@ pub fn create_decision_engine() -> Box<dyn DecisionEngine> {
 
 /// Create a conservative decision engine
 pub fn create_conservative_decision_engine() -> Box<dyn DecisionEngine> {
-    Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Conservative))
+    Box::new(AlgorithmicDecisionEngine::new(
+        ConsensusStrategy::Conservative,
+    ))
 }

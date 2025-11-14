@@ -13,10 +13,10 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
 use anyhow::Result;
-use uuid::Uuid;
+use std::sync::Arc;
 use tracing::info;
+use uuid::Uuid;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::WorkingSpec;
@@ -24,29 +24,29 @@ use agent_agency_contracts::WorkingSpec;
 use crate::council::Council;
 use crate::planning::caws_adjudication_cycle::ClaimExtractionResults;
 use crate::planning::caws_quality_gates::CawsQualityGateResult;
-use crate::planning::rubric_engineering::{RubricEngine, TaskSurface, ComponentScores};
+use crate::planning::rubric_engineering::{ComponentScores, RubricEngine, TaskSurface};
 
 /// Solution score breakdown
 #[derive(Debug, Clone)]
 pub struct SolutionScore {
     /// Solution identifier
     pub solution_id: String,
-    
+
     /// Worker identifier
     pub worker_id: Uuid,
-    
+
     /// Total score (0.0 to 1.0)
     pub total_score: f64,
-    
+
     /// Evidence completeness score (0.0 to 1.0)
     pub evidence_completeness: f64,
-    
+
     /// Budget adherence score (0.0 to 1.0)
     pub budget_adherence: f64,
-    
+
     /// Gate integrity score (0.0 to 1.0)
     pub gate_integrity: f64,
-    
+
     /// Provenance clarity score (0.0 to 1.0)
     pub provenance_clarity: f64,
 }
@@ -56,19 +56,19 @@ pub struct SolutionScore {
 pub struct DebateScoringResult {
     /// Winning solution identifier
     pub winner_solution_id: String,
-    
+
     /// Winning worker identifier
     pub winner_worker_id: Uuid,
-    
+
     /// Winning score
     pub winning_score: f64,
-    
+
     /// Confidence in the result (0.0 to 1.0)
     pub confidence: f64,
-    
+
     /// All solution scores
     pub solution_scores: Vec<SolutionScore>,
-    
+
     /// Judge notes summarizing the debate
     pub judge_notes: String,
 }
@@ -89,7 +89,7 @@ impl CawsDebateScorer {
             rubric_engine: None,
         }
     }
-    
+
     /// Create new CAWS debate scorer with rubric engine
     pub fn with_rubric_engine(council: Arc<Council>, rubric_engine: Arc<RubricEngine>) -> Self {
         Self {
@@ -125,8 +125,11 @@ impl CawsDebateScorer {
                 gate_integrity,
                 provenance_clarity,
             };
-            
-            match rubric_engine.calculate_weighted_score(&surface, &component_scores).await {
+
+            match rubric_engine
+                .calculate_weighted_score(&surface, &component_scores)
+                .await
+            {
                 Ok(weighted) => weighted,
                 Err(e) => {
                     warn!("Failed to calculate weighted score with rubric, falling back to default: {}", e);
@@ -171,7 +174,8 @@ impl CawsDebateScorer {
             working_spec,
             claim_results,
             None,
-        ).await
+        )
+        .await
     }
 
     /// Score a single solution with claim verification and quality gate results
@@ -193,7 +197,8 @@ impl CawsDebateScorer {
             claim_results,
             quality_gate_result,
             None,
-        ).await
+        )
+        .await
     }
 
     /// Score a single solution with claim verification, quality gates, and complexity mode
@@ -208,27 +213,32 @@ impl CawsDebateScorer {
         quality_gate_result: Option<&CawsQualityGateResult>,
         complexity_mode: Option<crate::planning::caws_complexity_mode::CawsComplexityMode>,
     ) -> Result<SolutionScore> {
-        info!("Scoring solution from worker {} with claim verification and quality gates", worker_id);
+        info!(
+            "Scoring solution from worker {} with claim verification and quality gates",
+            worker_id
+        );
 
         // Calculate individual score components
         let mut evidence_completeness = self.calculate_evidence_completeness(artifacts);
-        
+
         // Enhance evidence completeness with claim verification results
         if claim_results.total_claims > 0 {
-            let claim_verification_score = claim_results.verified_claims as f64 / claim_results.total_claims as f64;
+            let claim_verification_score =
+                claim_results.verified_claims as f64 / claim_results.total_claims as f64;
             // Blend claim verification into evidence completeness (weighted average)
-            evidence_completeness = (evidence_completeness * 0.7) + (claim_verification_score * 0.3);
+            evidence_completeness =
+                (evidence_completeness * 0.7) + (claim_verification_score * 0.3);
         }
-        
+
         let budget_adherence = self.calculate_budget_adherence(artifacts, working_spec);
-        
+
         // Calculate gate integrity with waiver-aware scoring
         let gate_integrity = if let Some(gate_result) = quality_gate_result {
             self.calculate_gate_integrity_with_waivers(artifacts, gate_result)
         } else {
             self.calculate_gate_integrity(artifacts)
         };
-        
+
         let provenance_clarity = self.calculate_provenance_clarity(artifacts);
 
         // Determine scoring weights based on complexity mode
@@ -256,7 +266,7 @@ impl CawsDebateScorer {
         let total_score = if let Some(ref rubric_engine) = self.rubric_engine {
             // Classify task surface
             let surface = TaskSurface::classify(working_spec, Some(artifacts));
-            
+
             // Calculate weighted score using rubric
             let component_scores = ComponentScores {
                 evidence_completeness,
@@ -264,8 +274,11 @@ impl CawsDebateScorer {
                 gate_integrity,
                 provenance_clarity,
             };
-            
-            match rubric_engine.calculate_weighted_score(&surface, &component_scores).await {
+
+            match rubric_engine
+                .calculate_weighted_score(&surface, &component_scores)
+                .await
+            {
                 Ok(weighted) => weighted,
                 Err(e) => {
                     warn!("Failed to calculate weighted score with rubric, falling back to mode-aware weights: {}", e);
@@ -294,7 +307,7 @@ impl CawsDebateScorer {
             provenance_clarity,
         })
     }
-    
+
     /// Record performance for rubric adjustment
     pub async fn record_performance(
         &self,
@@ -313,15 +326,17 @@ impl CawsDebateScorer {
                 gate_integrity: solution_score.gate_integrity,
                 provenance_clarity: solution_score.provenance_clarity,
             };
-            
-            rubric_engine.record_performance(
-                task_id,
-                surface,
-                component_scores,
-                solution_score.total_score,
-                success,
-                quality_score,
-            ).await;
+
+            rubric_engine
+                .record_performance(
+                    task_id,
+                    surface,
+                    component_scores,
+                    solution_score.total_score,
+                    success,
+                    quality_score,
+                )
+                .await;
         }
     }
 
@@ -338,24 +353,34 @@ impl CawsDebateScorer {
             return Err(anyhow::anyhow!("Cannot score debate with no solutions"));
         }
 
-        info!("Scoring debate between {} competing solutions with claim verification", solutions.len());
+        info!(
+            "Scoring debate between {} competing solutions with claim verification",
+            solutions.len()
+        );
 
         // Score each solution with claim verification
         let mut solution_scores = Vec::new();
         for (artifacts, worker_id) in &solutions {
-            let score = self.score_solution_with_claims(artifacts, *worker_id, working_spec, claim_results).await?;
+            let score = self
+                .score_solution_with_claims(artifacts, *worker_id, working_spec, claim_results)
+                .await?;
             solution_scores.push(score);
         }
 
         // Find winner (highest total score)
-        let winner = solution_scores.iter()
-            .max_by(|a, b| a.total_score.partial_cmp(&b.total_score).unwrap_or(std::cmp::Ordering::Equal))
+        let winner = solution_scores
+            .iter()
+            .max_by(|a, b| {
+                a.total_score
+                    .partial_cmp(&b.total_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .ok_or_else(|| anyhow::anyhow!("Failed to determine debate winner"))?;
 
         // Calculate confidence based on score gap
         let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
         scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         let confidence = if scores.len() >= 2 {
             // Confidence based on gap between winner and second place
             let gap = scores[0] - scores[1];
@@ -365,7 +390,8 @@ impl CawsDebateScorer {
         };
 
         // Generate judge notes with claim verification summary
-        let judge_notes = self.generate_judge_notes_with_claims(&solution_scores, winner, claim_results);
+        let judge_notes =
+            self.generate_judge_notes_with_claims(&solution_scores, winner, claim_results);
 
         Ok(DebateScoringResult {
             winner_solution_id: winner.solution_id.clone(),
@@ -390,24 +416,34 @@ impl CawsDebateScorer {
             return Err(anyhow::anyhow!("Cannot score debate with no solutions"));
         }
 
-        info!("Scoring debate between {} competing solutions", solutions.len());
+        info!(
+            "Scoring debate between {} competing solutions",
+            solutions.len()
+        );
 
         // Score each solution
         let mut solution_scores = Vec::new();
         for (artifacts, worker_id) in &solutions {
-            let score = self.score_solution(artifacts, *worker_id, working_spec).await?;
+            let score = self
+                .score_solution(artifacts, *worker_id, working_spec)
+                .await?;
             solution_scores.push(score);
         }
 
         // Find winner (highest total score)
-        let winner = solution_scores.iter()
-            .max_by(|a, b| a.total_score.partial_cmp(&b.total_score).unwrap_or(std::cmp::Ordering::Equal))
+        let winner = solution_scores
+            .iter()
+            .max_by(|a, b| {
+                a.total_score
+                    .partial_cmp(&b.total_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .ok_or_else(|| anyhow::anyhow!("Failed to determine debate winner"))?;
 
         // Calculate confidence based on score gap
         let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
         scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         let confidence = if scores.len() >= 2 {
             // Confidence based on gap between winner and second place
             let gap = scores[0] - scores[1];
@@ -540,7 +576,8 @@ impl CawsDebateScorer {
             score += 0.3;
         } else {
             // Penalty based on error count
-            let error_rate = artifacts.linting.errors as f64 / artifacts.linting.total_issues as f64;
+            let error_rate =
+                artifacts.linting.errors as f64 / artifacts.linting.total_issues as f64;
             score += (1.0 - error_rate) * 0.3;
         }
         factors += 1;
@@ -701,4 +738,3 @@ impl CawsDebateScorer {
         )
     }
 }
-

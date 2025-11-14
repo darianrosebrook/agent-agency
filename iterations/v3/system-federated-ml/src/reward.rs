@@ -142,15 +142,15 @@ impl RewardFunction {
         let norm_quality = outcome.quality_score;
         let norm_latency = (outcome.latency_ms as f64) / (baseline.avg_latency as f64);
         let norm_tokens = (outcome.tokens_used as f64) / baseline.avg_tokens;
-        
+
         // Calculate individual components
         let quality_contrib = self.weights.w_quality * norm_quality;
         let latency_penalty = self.weights.w_latency * norm_latency;
         let token_penalty = self.weights.w_tokens * norm_tokens;
-        
+
         // Scalarized reward
         let reward = quality_contrib - latency_penalty - token_penalty;
-        
+
         RewardResult {
             reward,
             components: RewardComponents {
@@ -161,7 +161,7 @@ impl RewardFunction {
             constraint_violations: Vec::new(), // Will be populated by constraint checker
         }
     }
-    
+
     /// Check hard constraints (pre-action)
     pub fn check_constraints(
         &self,
@@ -352,7 +352,7 @@ impl RewardFunction {
         confidence_level: f64,
     ) -> (f64, f64) {
         let reward = self.calculate(outcome, baseline).reward;
-        
+
         // TODO: Implement proper confidence interval calculation using statistical methods
         //       Currently uses placeholder calculation; should use proper statistical methods (t-distribution, bootstrap, etc.) for accurate confidence intervals.
         //
@@ -387,7 +387,7 @@ impl RewardFunction {
         let margin = 0.1 * reward.abs(); // 10% margin
         let lower = reward - margin;
         let upper = reward + margin;
-        
+
         (lower, upper)
     }
 
@@ -433,7 +433,7 @@ mod tests {
         };
 
         let result = reward_fn.calculate(&outcome, &baseline);
-        
+
         assert!(result.reward > 0.0, "Reward should be positive for good outcome");
         assert!(result.components.quality_contrib > 0.0, "Quality contribution should be positive");
     }
@@ -442,7 +442,7 @@ mod tests {
     fn test_constraint_checking() {
         let reward_fn = RewardFunction::default();
         let constraints = OptimizationConstraints::default();
-        
+
         let baseline = BaselineMetrics {
             avg_quality: 0.7,
             avg_latency: 1200,

@@ -41,15 +41,16 @@
 //!     .record_command_complete(cmd_audit, exit_code, stdout, stderr, duration).await;
 //! ```
 
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use sqlx::{PgPool, postgres::PgPoolOptions};
 use tracing::info;
+use uuid::Uuid;
 
 /// Central audit trail manager coordinating all audit operations
 
@@ -320,12 +321,24 @@ impl AuditTrailManager {
         Self {
             config: config.clone(),
             db_pool: None,
-            file_auditor: Arc::new(FileOperationsAuditor::new(config.clone(), global_stats.clone())),
+            file_auditor: Arc::new(FileOperationsAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
             terminal_auditor: Arc::new(TerminalAuditor::new(config.clone(), global_stats.clone())),
             council_auditor: Arc::new(CouncilAuditor::new(config.clone(), global_stats.clone())),
-            agent_thinking_auditor: Arc::new(AgentThinkingAuditor::new(config.clone(), global_stats.clone())),
-            performance_auditor: Arc::new(PerformanceAuditor::new(config.clone(), global_stats.clone())),
-            error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(config.clone(), global_stats.clone())),
+            agent_thinking_auditor: Arc::new(AgentThinkingAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
+            performance_auditor: Arc::new(PerformanceAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
+            error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
             learning_auditor: Arc::new(LearningAuditor::new(config.clone(), global_stats.clone())),
             global_stats,
             #[cfg(feature = "evaluation")]
@@ -346,11 +359,13 @@ impl AuditTrailManager {
     /// Create a new audit trail manager with database persistence
     pub async fn with_db_pool(config: AuditConfig, db_url: Option<&str>) -> Self {
         let db_pool = if let Some(url) = db_url {
-            Some(PgPoolOptions::new()
-                .max_connections(5)
-                .connect(url)
-                .await
-                .expect("Failed to connect to database for audit logging"))
+            Some(
+                PgPoolOptions::new()
+                    .max_connections(5)
+                    .connect(url)
+                    .await
+                    .expect("Failed to connect to database for audit logging"),
+            )
         } else {
             None
         };
@@ -371,12 +386,24 @@ impl AuditTrailManager {
         Self {
             config: config.clone(),
             db_pool,
-            file_auditor: Arc::new(FileOperationsAuditor::new(config.clone(), global_stats.clone())),
+            file_auditor: Arc::new(FileOperationsAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
             terminal_auditor: Arc::new(TerminalAuditor::new(config.clone(), global_stats.clone())),
             council_auditor: Arc::new(CouncilAuditor::new(config.clone(), global_stats.clone())),
-            agent_thinking_auditor: Arc::new(AgentThinkingAuditor::new(config.clone(), global_stats.clone())),
-            performance_auditor: Arc::new(PerformanceAuditor::new(config.clone(), global_stats.clone())),
-            error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(config.clone(), global_stats.clone())),
+            agent_thinking_auditor: Arc::new(AgentThinkingAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
+            performance_auditor: Arc::new(PerformanceAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
+            error_recovery_auditor: Arc::new(ErrorRecoveryAuditor::new(
+                config.clone(),
+                global_stats.clone(),
+            )),
             learning_auditor: Arc::new(LearningAuditor::new(config.clone(), global_stats.clone())),
             global_stats,
             #[cfg(feature = "evaluation")]
@@ -435,7 +462,7 @@ impl AuditTrailManager {
     }
 
     /// Query decision points (evaluation framework)
-    /// 
+    ///
     /// Performance: O(log n + k) where k is the number of results
     /// Uses BTreeMap indexes for efficient querying by plan_id and timestamp
     #[cfg(feature = "evaluation")]
@@ -448,7 +475,7 @@ impl AuditTrailManager {
     ) -> Vec<crate::chain_of_thought::DecisionPoint> {
         let decisions = self.decision_points.read().await;
         let mut candidate_indices = std::collections::HashSet::new();
-        
+
         // Use plan_id index if provided (O(log n))
         if let Some(pid) = plan_id {
             if let Some(indices) = self.decision_points_by_plan_id.read().await.get(&pid) {
@@ -458,27 +485,34 @@ impl AuditTrailManager {
                 return Vec::new();
             }
         }
-        
+
         // Use timestamp index for time window (O(log n + k))
         let timestamp_index = self.decision_points_by_timestamp.read().await;
         let time_range_indices: Vec<usize> = if since.is_some() || until.is_some() {
-            let start_bound = since.map(|t| std::ops::Bound::Included(t))
+            let start_bound = since
+                .map(|t| std::ops::Bound::Included(t))
                 .unwrap_or(std::ops::Bound::Unbounded);
-            let end_bound = until.map(|t| std::ops::Bound::Included(t))
+            let end_bound = until
+                .map(|t| std::ops::Bound::Included(t))
                 .unwrap_or(std::ops::Bound::Unbounded);
-            
+
             timestamp_index
                 .range((start_bound, end_bound))
                 .flat_map(|(_, indices)| indices.iter().copied())
                 .collect()
         } else {
             // No time filter - use all indices
-            timestamp_index.values().flat_map(|indices| indices.iter().copied()).collect()
+            timestamp_index
+                .values()
+                .flat_map(|indices| indices.iter().copied())
+                .collect()
         };
-        
+
         // Intersect candidate sets if both filters provided
-        let final_indices: Vec<usize> = if plan_id.is_some() && (since.is_some() || until.is_some()) {
-            time_range_indices.into_iter()
+        let final_indices: Vec<usize> = if plan_id.is_some() && (since.is_some() || until.is_some())
+        {
+            time_range_indices
+                .into_iter()
                 .filter(|idx| candidate_indices.contains(idx))
                 .collect()
         } else if plan_id.is_some() {
@@ -486,26 +520,27 @@ impl AuditTrailManager {
         } else {
             time_range_indices
         };
-        
+
         // Retrieve actual decision points
-        let mut results: Vec<_> = final_indices.iter()
+        let mut results: Vec<_> = final_indices
+            .iter()
             .filter_map(|idx| decisions.get(*idx))
             .cloned()
             .collect();
-        
+
         // Sort by timestamp (already mostly sorted due to timestamp index)
         results.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-        
+
         // Apply limit
         if let Some(limit_val) = limit {
             results.truncate(limit_val);
         }
-        
+
         results
     }
 
     /// Query coordination events (evaluation framework)
-    /// 
+    ///
     /// Performance: O(log n + k) where k is the number of results
     /// Uses BTreeMap timestamp index for efficient time-window queries
     #[cfg(feature = "evaluation")]
@@ -518,18 +553,20 @@ impl AuditTrailManager {
     ) -> Vec<crate::chain_of_thought::CoordinationEvent> {
         let events = self.coordination_events.read().await;
         let timestamp_index = self.coordination_events_by_timestamp.read().await;
-        
+
         // Use timestamp index for time window (O(log n + k))
-        let start_bound = since.map(|t| std::ops::Bound::Included(t))
+        let start_bound = since
+            .map(|t| std::ops::Bound::Included(t))
             .unwrap_or(std::ops::Bound::Unbounded);
-        let end_bound = until.map(|t| std::ops::Bound::Included(t))
+        let end_bound = until
+            .map(|t| std::ops::Bound::Included(t))
             .unwrap_or(std::ops::Bound::Unbounded);
-        
+
         let mut indices: Vec<usize> = timestamp_index
             .range((start_bound, end_bound))
             .flat_map(|(_, indices)| indices.iter().copied())
             .collect();
-        
+
         // Filter by plan_id if provided using plan_id index for O(log n) performance
         if let Some(pid) = plan_id {
             let plan_id_index = self.coordination_events_by_plan_id.read().await;
@@ -543,21 +580,22 @@ impl AuditTrailManager {
                 indices.clear();
             }
         }
-        
+
         // Retrieve actual events
-        let mut results: Vec<_> = indices.iter()
+        let mut results: Vec<_> = indices
+            .iter()
             .filter_map(|idx| events.get(*idx))
             .cloned()
             .collect();
-        
+
         // Sort by timestamp (already mostly sorted due to timestamp index)
         results.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-        
+
         // Apply limit
         if let Some(limit_val) = limit {
             results.truncate(limit_val);
         }
-        
+
         results
     }
 
@@ -570,19 +608,23 @@ impl AuditTrailManager {
         let mut events = self.coordination_events.write().await;
         let index = events.len();
         events.push(event.clone());
-        
+
         // Update timestamp index for O(log n) queries
-        self.coordination_events_by_timestamp.write().await
+        self.coordination_events_by_timestamp
+            .write()
+            .await
             .entry(event.timestamp)
             .or_insert_with(Vec::new)
             .push(index);
-        
+
         // Update plan_id index for O(log n) queries
         // Extract plan_id from event details if present
         if let Some(plan_id_value) = event.details.get("plan_id") {
             if let Some(plan_id_str) = plan_id_value.as_str() {
                 if let Ok(plan_id) = Uuid::parse_str(plan_id_str) {
-                    self.coordination_events_by_plan_id.write().await
+                    self.coordination_events_by_plan_id
+                        .write()
+                        .await
                         .entry(plan_id)
                         .or_insert_with(Vec::new)
                         .push(index);
@@ -591,7 +633,9 @@ impl AuditTrailManager {
                 // Handle JSON object format if needed
                 if let Some(plan_id_str) = plan_id_json.get("value").and_then(|v| v.as_str()) {
                     if let Ok(plan_id) = Uuid::parse_str(plan_id_str) {
-                        self.coordination_events_by_plan_id.write().await
+                        self.coordination_events_by_plan_id
+                            .write()
+                            .await
                             .entry(plan_id)
                             .or_insert_with(Vec::new)
                             .push(index);
@@ -599,12 +643,16 @@ impl AuditTrailManager {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     /// Export audit trail for analysis
-    pub async fn export_audit_trail(&self, format: AuditOutputFormat, time_range: Option<(DateTime<Utc>, DateTime<Utc>)>) -> Result<String, AuditError> {
+    pub async fn export_audit_trail(
+        &self,
+        format: AuditOutputFormat,
+        time_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
+    ) -> Result<String, AuditError> {
         if let Some(ref pool) = self.db_pool {
             let mut query = "SELECT * FROM audit_events".to_string();
             let mut params: Vec<serde_json::Value> = Vec::new();
@@ -622,45 +670,41 @@ impl AuditTrailManager {
                 query_builder = query_builder.bind(param);
             }
 
-            let rows = query_builder
-                .fetch_all(pool)
-                .await
-                .map_err(|e| AuditError::StorageError(format!("Failed to export audit events: {}", e)))?;
+            let rows = query_builder.fetch_all(pool).await.map_err(|e| {
+                AuditError::StorageError(format!("Failed to export audit events: {}", e))
+            })?;
 
-            let events = rows.into_iter()
+            let events = rows
+                .into_iter()
                 .map(|row| row.into_audit_event())
                 .collect::<Result<Vec<_>, _>>()?;
 
             // Format based on requested output format
             match format {
-                AuditOutputFormat::Json => {
-                    serde_json::to_string_pretty(&events)
-                        .map_err(|e| AuditError::StorageError(format!("Failed to serialize audit events: {}", e)))
-                }
-                AuditOutputFormat::StructuredText => {
-                    Ok(self.format_audit_events_as_text(&events))
-                }
-                AuditOutputFormat::Binary => {
-                    Err(AuditError::StorageError("Binary format not yet implemented".to_string()))
-                }
-                AuditOutputFormat::MultiFormat => {
-                    Err(AuditError::StorageError("Multi-format output not yet implemented".to_string()))
-                }
-                AuditOutputFormat::Csv => {
-                    self.format_audit_events_as_csv(&events)
-                }
-                AuditOutputFormat::Text => {
-                    Ok(self.format_audit_events_as_text(&events))
-                }
+                AuditOutputFormat::Json => serde_json::to_string_pretty(&events).map_err(|e| {
+                    AuditError::StorageError(format!("Failed to serialize audit events: {}", e))
+                }),
+                AuditOutputFormat::StructuredText => Ok(self.format_audit_events_as_text(&events)),
+                AuditOutputFormat::Binary => Err(AuditError::StorageError(
+                    "Binary format not yet implemented".to_string(),
+                )),
+                AuditOutputFormat::MultiFormat => Err(AuditError::StorageError(
+                    "Multi-format output not yet implemented".to_string(),
+                )),
+                AuditOutputFormat::Csv => self.format_audit_events_as_csv(&events),
+                AuditOutputFormat::Text => Ok(self.format_audit_events_as_text(&events)),
             }
         } else {
-            Err(AuditError::StorageError("Database not configured for audit export".to_string()))
+            Err(AuditError::StorageError(
+                "Database not configured for audit export".to_string(),
+            ))
         }
     }
 
     /// Format audit events as CSV
     fn format_audit_events_as_csv(&self, events: &[AuditEvent]) -> Result<String, AuditError> {
-        let mut csv = String::from("timestamp,category,severity,actor,operation,target,result,tags\n");
+        let mut csv =
+            String::from("timestamp,category,severity,actor,operation,target,result,tags\n");
 
         for event in events {
             let result_str = match &event.result {
@@ -770,36 +814,44 @@ impl AuditTrailManager {
                 query_builder = query_builder.bind(param);
             }
 
-            let rows = query_builder
-                .fetch_all(pool)
-                .await
-                .map_err(|e| AuditError::StorageError(format!("Failed to search audit events: {}", e)))?;
+            let rows = query_builder.fetch_all(pool).await.map_err(|e| {
+                AuditError::StorageError(format!("Failed to search audit events: {}", e))
+            })?;
 
             // Convert to AuditEvents
-            let events = rows.into_iter()
+            let events = rows
+                .into_iter()
                 .map(|row| row.into_audit_event())
                 .collect::<Result<Vec<_>, _>>()?;
 
             Ok(events)
         } else {
-            Err(AuditError::StorageError("Database not configured for audit searches".to_string()))
+            Err(AuditError::StorageError(
+                "Database not configured for audit searches".to_string(),
+            ))
         }
     }
 
     /// Clean up old audit logs based on retention policy
     pub async fn cleanup_old_logs(&self) -> Result<u64, AuditError> {
         if let Some(ref pool) = self.db_pool {
-            let cutoff_date = Utc::now() - chrono::Duration::days(self.config.retention_days as i64);
+            let cutoff_date =
+                Utc::now() - chrono::Duration::days(self.config.retention_days as i64);
 
             let result = sqlx::query("DELETE FROM audit_events WHERE timestamp < $1")
                 .bind(cutoff_date)
                 .execute(pool)
                 .await
-                .map_err(|e| AuditError::StorageError(format!("Failed to cleanup old audit logs: {}", e)))?;
+                .map_err(|e| {
+                    AuditError::StorageError(format!("Failed to cleanup old audit logs: {}", e))
+                })?;
 
             let deleted_count = result.rows_affected();
 
-            info!("Cleaned up {} audit events older than {} days", deleted_count, self.config.retention_days);
+            info!(
+                "Cleaned up {} audit events older than {} days",
+                deleted_count, self.config.retention_days
+            );
 
             Ok(deleted_count)
         } else {
@@ -809,7 +861,11 @@ impl AuditTrailManager {
 
     /// Persist audit event to database
     #[allow(dead_code)] // Reserved for future use
-    async fn persist_audit_event(&self, pool: &PgPool, event: &AuditEvent) -> Result<(), AuditError> {
+    async fn persist_audit_event(
+        &self,
+        pool: &PgPool,
+        event: &AuditEvent,
+    ) -> Result<(), AuditError> {
         // Create audit_events table if it doesn't exist
         self.ensure_audit_table_exists(pool).await?;
 
@@ -884,40 +940,50 @@ impl AuditTrailManager {
     }
 
     /// Query audit events for deterministic replays
-    pub async fn query_events_for_replay(&self, task_id: &str) -> Result<Vec<AuditEvent>, AuditError> {
+    pub async fn query_events_for_replay(
+        &self,
+        task_id: &str,
+    ) -> Result<Vec<AuditEvent>, AuditError> {
         if let Some(ref pool) = self.db_pool {
             let events = sqlx::query_as::<_, AuditEventRow>(
-                "SELECT * FROM audit_events WHERE context->>'task_id' = $1 ORDER BY timestamp ASC"
+                "SELECT * FROM audit_events WHERE context->>'task_id' = $1 ORDER BY timestamp ASC",
             )
             .bind(task_id)
             .fetch_all(pool)
             .await
-            .map_err(|e| AuditError::StorageError(format!("Failed to query audit events: {}", e)))?;
+            .map_err(|e| {
+                AuditError::StorageError(format!("Failed to query audit events: {}", e))
+            })?;
 
             // Convert rows back to AuditEvent
-            let audit_events = events.into_iter()
+            let audit_events = events
+                .into_iter()
                 .map(|row| row.into_audit_event())
                 .collect::<Result<Vec<_>, _>>()?;
 
             Ok(audit_events)
         } else {
-            Err(AuditError::StorageError("Database not configured for audit queries".to_string()))
+            Err(AuditError::StorageError(
+                "Database not configured for audit queries".to_string(),
+            ))
         }
     }
 
     /// Record task execution start
-    /// 
+    ///
     /// Records when a task begins execution on a worker.
     pub async fn record_task_execution_start(
         &self,
-        task_id: Uuid,
+        _task_id: Uuid,
         execution_id: Uuid,
         worker_id: Option<Uuid>,
         correlation_id: Option<String>,
     ) -> Result<(), AuditError> {
         let execution_id_str = execution_id.to_string();
-        let worker_id_str = worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
-        
+        let worker_id_str = worker_id
+            .map(|w| w.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
         let event = AuditEvent {
             event_id: Uuid::new_v4(),
             timestamp: Utc::now(),
@@ -927,15 +993,27 @@ impl AuditTrailManager {
             severity: AuditSeverity::Info,
             actor: "orchestrator".to_string(),
             operation: "task_execution_start".to_string(),
-            message: Some(format!("Task {} execution started on worker {}", task_id, worker_id_str)),
+            message: Some(format!(
+                "Task {} execution started on worker {}",
+                task_id, worker_id_str
+            )),
             operation_id: Some(execution_id_str.clone()),
             target: Some(worker_id_str.clone()),
             parameters: {
                 let mut params = HashMap::new();
-                params.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str.clone()));
-                params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                params.insert(
+                    "execution_id".to_string(),
+                    serde_json::Value::String(execution_id_str.clone()),
+                );
+                params.insert(
+                    "task_id".to_string(),
+                    serde_json::Value::String(task_id.to_string()),
+                );
                 if let Some(wid) = worker_id {
-                    params.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                    params.insert(
+                        "worker_id".to_string(),
+                        serde_json::Value::String(wid.to_string()),
+                    );
                 }
                 params
             },
@@ -943,14 +1021,27 @@ impl AuditTrailManager {
             performance: None,
             context: {
                 let mut ctx = HashMap::new();
-                ctx.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str));
-                ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+                ctx.insert(
+                    "execution_id".to_string(),
+                    serde_json::Value::String(execution_id_str),
+                );
+                ctx.insert(
+                    "task_id".to_string(),
+                    serde_json::Value::String(task_id.to_string()),
+                );
                 if let Some(wid) = worker_id {
-                    ctx.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                    ctx.insert(
+                        "worker_id".to_string(),
+                        serde_json::Value::String(wid.to_string()),
+                    );
                 }
                 ctx
             },
-            tags: vec!["orchestration".to_string(), "execution".to_string(), "task_start".to_string()],
+            tags: vec![
+                "orchestration".to_string(),
+                "execution".to_string(),
+                "task_start".to_string(),
+            ],
         };
 
         // Log the audit event using structured logging
@@ -968,7 +1059,7 @@ impl AuditTrailManager {
     }
 
     /// Record task execution completion
-    /// 
+    ///
     /// Records when a task completes execution (success or failure).
     pub async fn record_task_execution_completion(
         &self,
@@ -976,33 +1067,62 @@ impl AuditTrailManager {
         correlation_id: Option<String>,
     ) -> Result<(), AuditError> {
         let execution_id_str = result.execution_id.to_string();
-        let worker_id_str = result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
-        
+        let worker_id_str = result
+            .worker_id
+            .map(|w| w.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
         let event = AuditEvent {
             event_id: Uuid::new_v4(),
             timestamp: Utc::now(),
             correlation_id: correlation_id.clone(),
             parent_event_id: None,
             category: AuditCategory::Operation,
-            severity: if result.success { AuditSeverity::Info } else { AuditSeverity::Warning },
+            severity: if result.success {
+                AuditSeverity::Info
+            } else {
+                AuditSeverity::Warning
+            },
             actor: "orchestrator".to_string(),
             operation: "task_execution_completion".to_string(),
             message: Some(format!(
                 "Task {} execution {}",
                 result.task_id,
-                if result.success { "completed successfully" } else { "failed" }
+                if result.success {
+                    "completed successfully"
+                } else {
+                    "failed"
+                }
             )),
             operation_id: Some(execution_id_str.clone()),
             target: Some(worker_id_str.clone()),
             parameters: {
                 let mut params = HashMap::new();
-                params.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str.clone()));
-                params.insert("task_id".to_string(), serde_json::Value::String(result.task_id.to_string()));
-                params.insert("success".to_string(), serde_json::Value::Bool(result.success));
-                params.insert("error_count".to_string(), serde_json::Value::Number((result.errors.len() as u64).into()));
-                params.insert("duration_ms".to_string(), serde_json::Value::Number((result.duration_ms as u64).into()));
+                params.insert(
+                    "execution_id".to_string(),
+                    serde_json::Value::String(execution_id_str.clone()),
+                );
+                params.insert(
+                    "task_id".to_string(),
+                    serde_json::Value::String(result.task_id.to_string()),
+                );
+                params.insert(
+                    "success".to_string(),
+                    serde_json::Value::Bool(result.success),
+                );
+                params.insert(
+                    "error_count".to_string(),
+                    serde_json::Value::Number((result.errors.len() as u64).into()),
+                );
+                params.insert(
+                    "duration_ms".to_string(),
+                    serde_json::Value::Number((result.duration_ms as u64).into()),
+                );
                 if let Some(wid) = result.worker_id {
-                    params.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                    params.insert(
+                        "worker_id".to_string(),
+                        serde_json::Value::String(wid.to_string()),
+                    );
                 }
                 params
             },
@@ -1029,12 +1149,27 @@ impl AuditTrailManager {
             }),
             context: {
                 let mut ctx = HashMap::new();
-                ctx.insert("execution_id".to_string(), serde_json::Value::String(execution_id_str));
-                ctx.insert("task_id".to_string(), serde_json::Value::String(result.task_id.to_string()));
-                ctx.insert("duration_ms".to_string(), serde_json::Value::Number((result.duration_ms as u64).into()));
-                ctx.insert("success".to_string(), serde_json::Value::Bool(result.success));
+                ctx.insert(
+                    "execution_id".to_string(),
+                    serde_json::Value::String(execution_id_str),
+                );
+                ctx.insert(
+                    "task_id".to_string(),
+                    serde_json::Value::String(result.task_id.to_string()),
+                );
+                ctx.insert(
+                    "duration_ms".to_string(),
+                    serde_json::Value::Number((result.duration_ms as u64).into()),
+                );
+                ctx.insert(
+                    "success".to_string(),
+                    serde_json::Value::Bool(result.success),
+                );
                 if let Some(wid) = result.worker_id {
-                    ctx.insert("worker_id".to_string(), serde_json::Value::String(wid.to_string()));
+                    ctx.insert(
+                        "worker_id".to_string(),
+                        serde_json::Value::String(wid.to_string()),
+                    );
                 }
                 ctx
             },
@@ -1072,9 +1207,15 @@ impl AuditTrailManager {
     /// Record execution result for audit trail
     /// Note: TaskExecutionResult (contract type) doesn't contain artifacts/working_spec/quality_report
     /// These should be stored/retrieved separately if needed
-    pub async fn record_execution(&self, result: &agent_agency_contracts::task_executor::TaskExecutionResult) -> Result<(), AuditError> {
+    pub async fn record_execution(
+        &self,
+        result: &agent_agency_contracts::task_executor::TaskExecutionResult,
+    ) -> Result<(), AuditError> {
         let execution_id_str = result.execution_id.to_string();
-        let worker_id_str = result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string());
+        let worker_id_str = result
+            .worker_id
+            .map(|w| w.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
         let event = AuditEventRow {
             id: uuid::Uuid::new_v4(),
             timestamp: chrono::Utc::now(),
@@ -1094,7 +1235,11 @@ impl AuditTrailManager {
                 "success": result.success,
                 "error_count": result.errors.len(),
             }),
-            result: serde_json::json!(if result.success { "completed" } else { "failed" }),
+            result: serde_json::json!(if result.success {
+                "completed"
+            } else {
+                "failed"
+            }),
             performance: None, // No timing info available
             context: serde_json::json!({
                 "execution_id": result.execution_id,
@@ -1130,28 +1275,38 @@ impl AuditTrailManager {
             let mut decisions = self.decision_points.write().await;
             let index = decisions.len();
             decisions.push(decision.clone());
-            
+
             // Update indexes for O(log n) queries
             if let Some(plan_id) = decision.context.plan_id {
-                self.decision_points_by_plan_id.write().await
+                self.decision_points_by_plan_id
+                    .write()
+                    .await
                     .entry(plan_id)
                     .or_insert_with(Vec::new)
                     .push(index);
             }
-            
-            self.decision_points_by_timestamp.write().await
+
+            self.decision_points_by_timestamp
+                .write()
+                .await
                 .entry(decision.timestamp)
                 .or_insert_with(Vec::new)
                 .push(index);
         }
-        
-        self.agent_thinking_auditor().record_decision_point(
-            format!("{:?}", decision.decision_type).as_str(),
-            decision.alternatives.into_iter().map(|a| a.option).collect(),
-            decision.chosen_option.as_str(),
-            decision.reasoning.as_str(),
-            Some(decision.confidence as f32),
-        ).await
+
+        self.agent_thinking_auditor()
+            .record_decision_point(
+                format!("{:?}", decision.decision_type).as_str(),
+                decision
+                    .alternatives
+                    .into_iter()
+                    .map(|a| a.option)
+                    .collect(),
+                decision.chosen_option.as_str(),
+                decision.reasoning.as_str(),
+                Some(decision.confidence as f32),
+            )
+            .await
     }
 
     /// Record worker coordination event
@@ -1161,17 +1316,37 @@ impl AuditTrailManager {
     ) -> Result<(), AuditError> {
         // Record as performance metric since coordination involves resource utilization
         let mut metadata = HashMap::new();
-        metadata.insert("task_id".to_string(), serde_json::Value::String(trace.task_id.to_string()));
-        metadata.insert("coordination_events".to_string(), serde_json::Value::Number(serde_json::Number::from(trace.coordination_events.len() as u64)));
-        metadata.insert("worker_assignments".to_string(), serde_json::Value::Number(serde_json::Number::from(trace.worker_assignments.len() as u64)));
-        metadata.insert("cpu_utilization".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(trace.resource_utilization.cpu_utilization).unwrap()));
+        metadata.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(trace.task_id.to_string()),
+        );
+        metadata.insert(
+            "coordination_events".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(
+                trace.coordination_events.len() as u64
+            )),
+        );
+        metadata.insert(
+            "worker_assignments".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(
+                trace.worker_assignments.len() as u64
+            )),
+        );
+        metadata.insert(
+            "cpu_utilization".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(trace.resource_utilization.cpu_utilization).unwrap(),
+            ),
+        );
 
-        self.performance_auditor().record_operation_performance(
-            "worker_coordination",
-            Duration::from_millis(0), // Coordination overhead timing not tracked here
-            true,
-            metadata,
-        ).await
+        self.performance_auditor()
+            .record_operation_performance(
+                "worker_coordination",
+                Duration::from_millis(0), // Coordination overhead timing not tracked here
+                true,
+                metadata,
+            )
+            .await
     }
 
     /// Record council evaluation process
@@ -1180,70 +1355,88 @@ impl AuditTrailManager {
         trace: crate::chain_of_thought::CouncilEvaluationTrace,
     ) -> Result<(), AuditError> {
         // Record council consensus result
-        let vote_distribution = trace.individual_verdicts.iter()
+        let vote_distribution = trace
+            .individual_verdicts
+            .iter()
             .map(|v| (v.verdict.clone(), 1))
             .collect();
 
-        self.council_auditor().record_council_consensus(
-            trace.session_id.to_string().as_str(),
-            trace.final_decision.as_str(),
-            vote_distribution,
-            trace.aggregation_process.final_consensus_score as f32,
-            Duration::from_millis(1000), // Default duration - can be made configurable later
-        ).await
+        self.council_auditor()
+            .record_council_consensus(
+                trace.session_id.to_string().as_str(),
+                trace.final_decision.as_str(),
+                vote_distribution,
+                trace.aggregation_process.final_consensus_score as f32,
+                Duration::from_millis(1000), // Default duration - can be made configurable later
+            )
+            .await
     }
 
     /// Record chain-of-thought reasoning step
     pub async fn record_chain_of_thought(
         &self,
-        task_id: Uuid,
+        _task_id: Uuid,
         phase: crate::chain_of_thought::ChainOfThoughtPhase,
         content: String,
         confidence: f64,
     ) -> Result<(), AuditError> {
-        self.agent_thinking_auditor().record_reasoning_step(
-            format!("{:?}", phase).as_str(),
-            content.as_str(),
-            vec![], // No alternatives for basic reasoning steps
-            "", // No chosen alternative for basic reasoning
-            confidence as f32,
-            Duration::from_millis(100), // Default reasoning step duration
-        ).await
+        self.agent_thinking_auditor()
+            .record_reasoning_step(
+                format!("{:?}", phase).as_str(),
+                content.as_str(),
+                vec![], // No alternatives for basic reasoning steps
+                "",     // No chosen alternative for basic reasoning
+                confidence as f32,
+                Duration::from_millis(100), // Default reasoning step duration
+            )
+            .await
     }
 
     /// Record heartbeat for progress monitoring
     pub async fn record_heartbeat(
         &self,
-        task_id: Uuid,
+        _task_id: Uuid,
         component: &str,
         progress: crate::chain_of_thought::ProgressIndicator,
-        estimated_remaining: Option<std::time::Duration>,
+        _estimated_remaining: Option<std::time::Duration>,
     ) -> Result<(), AuditError> {
         // Delegate to performance auditor for operation performance tracking
         let progress_desc = match &progress {
-            crate::chain_of_thought::ProgressIndicator::Percentage(p) => format!("{:.1}% complete", p),
-            crate::chain_of_thought::ProgressIndicator::Steps { current, total } => format!("Step {}/{}", current, total),
+            crate::chain_of_thought::ProgressIndicator::Percentage(p) => {
+                format!("{:.1}% complete", p)
+            }
+            crate::chain_of_thought::ProgressIndicator::Steps { current, total } => {
+                format!("Step {}/{}", current, total)
+            }
             crate::chain_of_thought::ProgressIndicator::Phase(phase) => format!("Phase: {}", phase),
-            crate::chain_of_thought::ProgressIndicator::WaitingFor { resource, .. } => format!("Waiting for: {}", resource),
+            crate::chain_of_thought::ProgressIndicator::WaitingFor { resource, .. } => {
+                format!("Waiting for: {}", resource)
+            }
         };
 
         let mut metadata = HashMap::new();
-        metadata.insert("component".to_string(), serde_json::Value::String(component.to_string()));
-        metadata.insert("progress".to_string(), serde_json::Value::String(progress_desc));
-        metadata.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
+        metadata.insert(
+            "component".to_string(),
+            serde_json::Value::String(component.to_string()),
+        );
+        metadata.insert(
+            "progress".to_string(),
+            serde_json::Value::String(progress_desc),
+        );
+        metadata.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(task_id.to_string()),
+        );
 
-        self.performance_auditor().record_operation_performance(
-            "heartbeat",
-            Duration::from_millis(0),
-            true,
-            metadata,
-        ).await
+        self.performance_auditor()
+            .record_operation_performance("heartbeat", Duration::from_millis(0), true, metadata)
+            .await
     }
 
     /// Record timeout warning
     pub async fn record_timeout_warning(
         &self,
-        task_id: Uuid,
+        _task_id: Uuid,
         component: &str,
         operation: &str,
         elapsed: std::time::Duration,
@@ -1251,77 +1444,129 @@ impl AuditTrailManager {
     ) -> Result<(), AuditError> {
         // Delegate to error recovery auditor since timeouts indicate potential issues
         let mut context = HashMap::new();
-        context.insert("component".to_string(), serde_json::Value::String(component.to_string()));
-        context.insert("operation".to_string(), serde_json::Value::String(operation.to_string()));
-        context.insert("elapsed_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(elapsed.as_millis() as u64)));
-        context.insert("threshold_ms".to_string(), serde_json::Value::Number(serde_json::Number::from(timeout_threshold.as_millis() as u64)));
+        context.insert(
+            "component".to_string(),
+            serde_json::Value::String(component.to_string()),
+        );
+        context.insert(
+            "operation".to_string(),
+            serde_json::Value::String(operation.to_string()),
+        );
+        context.insert(
+            "elapsed_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(elapsed.as_millis() as u64)),
+        );
+        context.insert(
+            "threshold_ms".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(
+                timeout_threshold.as_millis() as u64
+            )),
+        );
 
-        self.error_recovery_auditor().record_error_recovery_attempt(
-            "timeout_warning",
-            "monitoring",
-            false, // Not a successful recovery yet
-            Duration::from_millis(0),
-            context,
-        ).await
+        self.error_recovery_auditor()
+            .record_error_recovery_attempt(
+                "timeout_warning",
+                "monitoring",
+                false, // Not a successful recovery yet
+                Duration::from_millis(0),
+                context,
+            )
+            .await
     }
 
     /// Record stuck operation detection
     pub async fn record_stuck_detection(
         &self,
-        task_id: Uuid,
+        _task_id: Uuid,
         component: &str,
         stuck_state: crate::chain_of_thought::StuckState,
         last_activity: DateTime<Utc>,
     ) -> Result<(), AuditError> {
         // Delegate to error recovery auditor since stuck operations need recovery
         let stuck_description = match &stuck_state {
-            crate::chain_of_thought::StuckState::NoProgress { duration_ms, .. } =>
-                format!("No progress for {}ms", duration_ms),
-            crate::chain_of_thought::StuckState::WaitingForResource { resource, .. } =>
-                format!("Waiting for resource: {}", resource),
-            crate::chain_of_thought::StuckState::DeadlockDetected { resources, .. } =>
-                format!("Deadlock detected with {} resources", resources.len()),
-            crate::chain_of_thought::StuckState::TimeoutImminent { elapsed_ms, threshold_ms } =>
-                format!("Timeout imminent: {}/{}ms", elapsed_ms, threshold_ms),
+            crate::chain_of_thought::StuckState::NoProgress { duration_ms, .. } => {
+                format!("No progress for {}ms", duration_ms)
+            }
+            crate::chain_of_thought::StuckState::WaitingForResource { resource, .. } => {
+                format!("Waiting for resource: {}", resource)
+            }
+            crate::chain_of_thought::StuckState::DeadlockDetected { resources, .. } => {
+                format!("Deadlock detected with {} resources", resources.len())
+            }
+            crate::chain_of_thought::StuckState::TimeoutImminent {
+                elapsed_ms,
+                threshold_ms,
+            } => format!("Timeout imminent: {}/{}ms", elapsed_ms, threshold_ms),
         };
 
         let mut context = HashMap::new();
-        context.insert("component".to_string(), serde_json::Value::String(component.to_string()));
-        context.insert("stuck_description".to_string(), serde_json::Value::String(stuck_description));
-        context.insert("last_activity".to_string(), serde_json::Value::String(last_activity.to_rfc3339()));
-        context.insert("stuck_state".to_string(), serde_json::to_value(&stuck_state).unwrap());
+        context.insert(
+            "component".to_string(),
+            serde_json::Value::String(component.to_string()),
+        );
+        context.insert(
+            "stuck_description".to_string(),
+            serde_json::Value::String(stuck_description),
+        );
+        context.insert(
+            "last_activity".to_string(),
+            serde_json::Value::String(last_activity.to_rfc3339()),
+        );
+        context.insert(
+            "stuck_state".to_string(),
+            serde_json::to_value(&stuck_state).unwrap(),
+        );
 
-        self.error_recovery_auditor().record_error_recovery_attempt(
-            "stuck_operation",
-            "detection",
-            false, // Not recovered yet
-            Utc::now().signed_duration_since(last_activity).to_std().unwrap_or(Duration::from_secs(0)),
-            context,
-        ).await
+        self.error_recovery_auditor()
+            .record_error_recovery_attempt(
+                "stuck_operation",
+                "detection",
+                false, // Not recovered yet
+                Utc::now()
+                    .signed_duration_since(last_activity)
+                    .to_std()
+                    .unwrap_or(Duration::from_secs(0)),
+                context,
+            )
+            .await
     }
 
     /// Record error propagation tracking
     pub async fn record_error_propagation(
         &self,
-        error_id: Uuid,
+        _error_id: Uuid,
         source_component: &str,
         target_component: &str,
         error_chain: Vec<crate::chain_of_thought::ErrorLink>,
     ) -> Result<(), AuditError> {
         // Delegate to error recovery auditor for error tracking
         let mut context = HashMap::new();
-        context.insert("source_component".to_string(), serde_json::Value::String(source_component.to_string()));
-        context.insert("target_component".to_string(), serde_json::Value::String(target_component.to_string()));
-        context.insert("chain_length".to_string(), serde_json::Value::Number(serde_json::Number::from(error_chain.len() as u64)));
-        context.insert("error_chain".to_string(), serde_json::to_value(&error_chain).unwrap());
+        context.insert(
+            "source_component".to_string(),
+            serde_json::Value::String(source_component.to_string()),
+        );
+        context.insert(
+            "target_component".to_string(),
+            serde_json::Value::String(target_component.to_string()),
+        );
+        context.insert(
+            "chain_length".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(error_chain.len() as u64)),
+        );
+        context.insert(
+            "error_chain".to_string(),
+            serde_json::to_value(&error_chain).unwrap(),
+        );
 
-        self.error_recovery_auditor().record_error_recovery_attempt(
-            "error_propagation",
-            "tracking",
-            false, // Error propagation is not a recovery success
-            Duration::from_millis(0), // Duration not applicable for propagation tracking
-            context,
-        ).await
+        self.error_recovery_auditor()
+            .record_error_recovery_attempt(
+                "error_propagation",
+                "tracking",
+                false,                    // Error propagation is not a recovery success
+                Duration::from_millis(0), // Duration not applicable for propagation tracking
+                context,
+            )
+            .await
     }
 }
 
@@ -1348,7 +1593,7 @@ struct AuditEventRow {
     performance: Option<serde_json::Value>,
     context: serde_json::Value,
     tags: Vec<String>,
-    }
+}
 
 impl AuditEventRow {
     /// Convert database row back to AuditEvent
@@ -1358,24 +1603,33 @@ impl AuditEventRow {
             timestamp: self.timestamp,
             correlation_id: self.correlation_id,
             parent_event_id: self.parent_event_id,
-            category: serde_json::from_value(self.category)
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize category: {}", e)))?,
-            severity: serde_json::from_value(self.severity)
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize severity: {}", e)))?,
+            category: serde_json::from_value(self.category).map_err(|e| {
+                AuditError::StorageError(format!("Failed to deserialize category: {}", e))
+            })?,
+            severity: serde_json::from_value(self.severity).map_err(|e| {
+                AuditError::StorageError(format!("Failed to deserialize severity: {}", e))
+            })?,
             actor: self.actor,
             operation: self.operation,
             message: self.message,
             operation_id: self.operation_id,
             target: self.target,
-            parameters: serde_json::from_value(self.parameters)
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize parameters: {}", e)))?,
-            result: serde_json::from_value(self.result)
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize result: {}", e)))?,
-            performance: self.performance.map(|p| serde_json::from_value(p))
+            parameters: serde_json::from_value(self.parameters).map_err(|e| {
+                AuditError::StorageError(format!("Failed to deserialize parameters: {}", e))
+            })?,
+            result: serde_json::from_value(self.result).map_err(|e| {
+                AuditError::StorageError(format!("Failed to deserialize result: {}", e))
+            })?,
+            performance: self
+                .performance
+                .map(|p| serde_json::from_value(p))
                 .transpose()
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize performance: {}", e)))?,
-            context: serde_json::from_value(self.context)
-                .map_err(|e| AuditError::StorageError(format!("Failed to deserialize context: {}", e)))?,
+                .map_err(|e| {
+                    AuditError::StorageError(format!("Failed to deserialize performance: {}", e))
+                })?,
+            context: serde_json::from_value(self.context).map_err(|e| {
+                AuditError::StorageError(format!("Failed to deserialize context: {}", e))
+            })?,
             tags: self.tags,
         })
     }
@@ -1453,22 +1707,50 @@ mod auditors {
 
     impl FileOperationsAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
-        pub async fn record_file_read(&self, file_path: &str, bytes_read: u64) -> Result<(), AuditError> {
-            self.record_file_operation("read", file_path, bytes_read, None).await
+        pub async fn record_file_read(
+            &self,
+            file_path: &str,
+            bytes_read: u64,
+        ) -> Result<(), AuditError> {
+            self.record_file_operation("read", file_path, bytes_read, None)
+                .await
         }
 
-        pub async fn record_file_write(&self, file_path: &str, bytes_written: u64) -> Result<(), AuditError> {
-            self.record_file_operation("write", file_path, bytes_written, None).await
+        pub async fn record_file_write(
+            &self,
+            file_path: &str,
+            bytes_written: u64,
+        ) -> Result<(), AuditError> {
+            self.record_file_operation("write", file_path, bytes_written, None)
+                .await
         }
 
-        pub async fn record_file_search(&self, pattern: &str, files_searched: usize, matches_found: usize, duration: Duration) -> Result<(), AuditError> {
+        pub async fn record_file_search(
+            &self,
+            pattern: &str,
+            files_searched: usize,
+            matches_found: usize,
+            duration: Duration,
+        ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("pattern".to_string(), serde_json::Value::String(pattern.to_string()));
-            parameters.insert("files_searched".to_string(), serde_json::Value::Number(files_searched.into()));
-            parameters.insert("matches_found".to_string(), serde_json::Value::Number(matches_found.into()));
+            parameters.insert(
+                "pattern".to_string(),
+                serde_json::Value::String(pattern.to_string()),
+            );
+            parameters.insert(
+                "files_searched".to_string(),
+                serde_json::Value::Number(files_searched.into()),
+            );
+            parameters.insert(
+                "matches_found".to_string(),
+                serde_json::Value::Number(matches_found.into()),
+            );
 
             self.record_operation(
                 "search",
@@ -1483,10 +1765,17 @@ mod auditors {
                     network_bytes: None,
                 }),
                 vec!["file_operation".to_string()],
-            ).await
+            )
+            .await
         }
 
-        async fn record_file_operation(&self, operation: &str, file_path: &str, bytes: u64, duration: Option<Duration>) -> Result<(), AuditError> {
+        async fn record_file_operation(
+            &self,
+            operation: &str,
+            file_path: &str,
+            bytes: u64,
+            duration: Option<Duration>,
+        ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
             parameters.insert("bytes".to_string(), serde_json::Value::Number(bytes.into()));
 
@@ -1503,7 +1792,8 @@ mod auditors {
                     network_bytes: None,
                 }),
                 vec!["file_operation".to_string()],
-            ).await
+            )
+            .await
         }
 
         async fn record_operation(
@@ -1545,12 +1835,20 @@ mod auditors {
             // Update global stats
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
             // File auditor doesn't persist to database - events are logged to console/files
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                println!(" FILE AUDIT: {} {} {:?}", event.operation, event.target.as_deref().unwrap_or(""), event.result);
+                println!(
+                    " FILE AUDIT: {} {} {:?}",
+                    event.operation,
+                    event.target.as_deref().unwrap_or(""),
+                    event.result
+                );
             }
 
             Ok(())
@@ -1587,7 +1885,11 @@ mod auditors {
             }
         }
 
-        pub async fn record_command_start(&self, command: &str, correlation_id: Option<String>) -> String {
+        pub async fn record_command_start(
+            &self,
+            command: &str,
+            correlation_id: Option<String>,
+        ) -> String {
             let command_id = Uuid::new_v4().to_string();
             let audit = CommandAudit {
                 command_id: command_id.clone(),
@@ -1596,7 +1898,10 @@ mod auditors {
                 correlation_id: correlation_id.clone(),
             };
 
-            self.active_commands.write().await.insert(command_id.clone(), audit);
+            self.active_commands
+                .write()
+                .await
+                .insert(command_id.clone(), audit);
 
             // Record start event
             let event = AuditEvent {
@@ -1638,7 +1943,9 @@ mod auditors {
 
             if let Some(audit) = audit {
                 let success = exit_code == 0;
-                let error_message = stderr.clone().unwrap_or_else(|| "Command failed".to_string());
+                let error_message = stderr
+                    .clone()
+                    .unwrap_or_else(|| "Command failed".to_string());
                 let result = if success {
                     AuditResult::Success { data: None }
                 } else {
@@ -1650,12 +1957,21 @@ mod auditors {
                 };
 
                 let mut parameters = HashMap::new();
-                parameters.insert("exit_code".to_string(), serde_json::Value::Number(exit_code.into()));
+                parameters.insert(
+                    "exit_code".to_string(),
+                    serde_json::Value::Number(exit_code.into()),
+                );
                 if let Some(ref stdout) = stdout {
-                    parameters.insert("stdout_length".to_string(), serde_json::Value::Number(stdout.len().into()));
+                    parameters.insert(
+                        "stdout_length".to_string(),
+                        serde_json::Value::Number(stdout.len().into()),
+                    );
                 }
                 if let Some(ref stderr) = stderr {
-                    parameters.insert("stderr_length".to_string(), serde_json::Value::Number(stderr.len().into()));
+                    parameters.insert(
+                        "stderr_length".to_string(),
+                        serde_json::Value::Number(stderr.len().into()),
+                    );
                 }
 
                 let event = AuditEvent {
@@ -1664,10 +1980,17 @@ mod auditors {
                     correlation_id: audit.correlation_id,
                     parent_event_id: None,
                     category: AuditCategory::TerminalCommand,
-                    severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
+                    severity: if success {
+                        AuditSeverity::Info
+                    } else {
+                        AuditSeverity::Warning
+                    },
                     actor: "agent".to_string(),
                     operation: "command_complete".to_string(),
-                    message: Some(format!("Terminal command completed: {} (success: {})", audit.command, success)),
+                    message: Some(format!(
+                        "Terminal command completed: {} (success: {})",
+                        audit.command, success
+                    )),
                     operation_id: Some(audit.command_id),
                     target: Some(audit.command),
                     parameters,
@@ -1685,17 +2008,26 @@ mod auditors {
 
                 self.write_event(event).await
             } else {
-                Err(AuditError::Config(format!("Command {} not found", command_id)))
+                Err(AuditError::Config(format!(
+                    "Command {} not found",
+                    command_id
+                )))
             }
         }
 
         async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
             if let AuditResult::Failure { .. } = &event.result {
-                *stats.error_counts.entry("terminal_command".to_string()).or_insert(0) += 1;
+                *stats
+                    .error_counts
+                    .entry("terminal_command".to_string())
+                    .or_insert(0) += 1;
             }
 
             if self.config.log_level != AuditLogLevel::Minimal {
@@ -1706,10 +2038,15 @@ mod auditors {
                     AuditResult::InProgress => "",
                     AuditResult::Cancelled => "",
                 };
-                println!(" TERMINAL: {} {} ({}ms)",
+                println!(
+                    " TERMINAL: {} {} ({}ms)",
                     status,
                     event.target.as_deref().unwrap_or(""),
-                    event.performance.as_ref().map(|p| p.duration.as_millis()).unwrap_or(0)
+                    event
+                        .performance
+                        .as_ref()
+                        .map(|p| p.duration.as_millis())
+                        .unwrap_or(0)
                 );
             }
 
@@ -1728,7 +2065,10 @@ mod auditors {
 
     impl CouncilAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
         pub async fn record_council_vote(
@@ -1741,13 +2081,28 @@ mod auditors {
             duration: Duration,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
-            parameters.insert("judge_id".to_string(), serde_json::Value::String(judge_id.to_string()));
-            parameters.insert("decision".to_string(), serde_json::Value::String(decision.to_string()));
-            parameters.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()));
+            parameters.insert(
+                "session_id".to_string(),
+                serde_json::Value::String(session_id.to_string()),
+            );
+            parameters.insert(
+                "judge_id".to_string(),
+                serde_json::Value::String(judge_id.to_string()),
+            );
+            parameters.insert(
+                "decision".to_string(),
+                serde_json::Value::String(decision.to_string()),
+            );
+            parameters.insert(
+                "confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()),
+            );
 
             let mut context = HashMap::new();
-            context.insert("reasoning".to_string(), serde_json::Value::String(reasoning.to_string()));
+            context.insert(
+                "reasoning".to_string(),
+                serde_json::Value::String(reasoning.to_string()),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -1758,7 +2113,10 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: judge_id.to_string(),
                 operation: "vote".to_string(),
-                message: Some(format!("Judge {} voted on session {}", judge_id, session_id)),
+                message: Some(format!(
+                    "Judge {} voted on session {}",
+                    judge_id, session_id
+                )),
                 operation_id: Some(session_id.to_string()),
                 target: Some(session_id.to_string()),
                 parameters,
@@ -1786,11 +2144,23 @@ mod auditors {
             duration: Duration,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("session_id".to_string(), serde_json::Value::String(session_id.to_string()));
-            parameters.insert("final_decision".to_string(), serde_json::Value::String(final_decision.to_string()));
-            parameters.insert("consensus_strength".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(consensus_strength as f64).unwrap()));
+            parameters.insert(
+                "session_id".to_string(),
+                serde_json::Value::String(session_id.to_string()),
+            );
+            parameters.insert(
+                "final_decision".to_string(),
+                serde_json::Value::String(final_decision.to_string()),
+            );
+            parameters.insert(
+                "consensus_strength".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(consensus_strength as f64).unwrap(),
+                ),
+            );
 
-            let vote_dist_json = serde_json::to_value(&vote_distribution).unwrap_or(serde_json::Value::Null);
+            let vote_dist_json =
+                serde_json::to_value(&vote_distribution).unwrap_or(serde_json::Value::Null);
             parameters.insert("vote_distribution".to_string(), vote_dist_json);
 
             let event = AuditEvent {
@@ -1802,7 +2172,10 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "council".to_string(),
                 operation: "consensus".to_string(),
-                message: Some(format!("Council reached consensus on session {} with decision: {}", session_id, final_decision)),
+                message: Some(format!(
+                    "Council reached consensus on session {} with decision: {}",
+                    session_id, final_decision
+                )),
                 operation_id: Some(session_id.to_string()),
                 target: Some(session_id.to_string()),
                 parameters,
@@ -1824,13 +2197,22 @@ mod auditors {
         async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                println!("🏛️  COUNCIL: {} {} - {}",
+                println!(
+                    "🏛️  COUNCIL: {} {} - {}",
                     event.operation,
                     event.target.as_deref().unwrap_or(""),
-                    event.parameters.get("decision").or_else(|| event.parameters.get("final_decision")).and_then(|v| v.as_str()).unwrap_or("")
+                    event
+                        .parameters
+                        .get("decision")
+                        .or_else(|| event.parameters.get("final_decision"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
                 );
             }
 
@@ -1849,7 +2231,10 @@ mod auditors {
 
     impl AgentThinkingAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
         pub async fn record_reasoning_step(
@@ -1862,14 +2247,32 @@ mod auditors {
             duration: Duration,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("step_name".to_string(), serde_json::Value::String(step_name.to_string()));
-            parameters.insert("chosen_alternative".to_string(), serde_json::Value::String(chosen_alternative.to_string()));
-            parameters.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()));
-            parameters.insert("alternatives_count".to_string(), serde_json::Value::Number(alternatives_considered.len().into()));
+            parameters.insert(
+                "step_name".to_string(),
+                serde_json::Value::String(step_name.to_string()),
+            );
+            parameters.insert(
+                "chosen_alternative".to_string(),
+                serde_json::Value::String(chosen_alternative.to_string()),
+            );
+            parameters.insert(
+                "confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()),
+            );
+            parameters.insert(
+                "alternatives_count".to_string(),
+                serde_json::Value::Number(alternatives_considered.len().into()),
+            );
 
             let mut context = HashMap::new();
-            context.insert("reasoning".to_string(), serde_json::Value::String(reasoning.to_string()));
-            context.insert("alternatives".to_string(), serde_json::to_value(&alternatives_considered).unwrap_or(serde_json::Value::Null));
+            context.insert(
+                "reasoning".to_string(),
+                serde_json::Value::String(reasoning.to_string()),
+            );
+            context.insert(
+                "alternatives".to_string(),
+                serde_json::to_value(&alternatives_considered).unwrap_or(serde_json::Value::Null),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -1908,16 +2311,34 @@ mod auditors {
             risk_assessment: Option<f32>,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("decision_type".to_string(), serde_json::Value::String(decision_type.to_string()));
-            parameters.insert("chosen_option".to_string(), serde_json::Value::String(chosen_option.to_string()));
-            parameters.insert("options_count".to_string(), serde_json::Value::Number(options.len().into()));
+            parameters.insert(
+                "decision_type".to_string(),
+                serde_json::Value::String(decision_type.to_string()),
+            );
+            parameters.insert(
+                "chosen_option".to_string(),
+                serde_json::Value::String(chosen_option.to_string()),
+            );
+            parameters.insert(
+                "options_count".to_string(),
+                serde_json::Value::Number(options.len().into()),
+            );
             if let Some(risk) = risk_assessment {
-                parameters.insert("risk_assessment".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(risk as f64).unwrap()));
+                parameters.insert(
+                    "risk_assessment".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from_f64(risk as f64).unwrap()),
+                );
             }
 
             let mut context = HashMap::new();
-            context.insert("reasoning".to_string(), serde_json::Value::String(reasoning.to_string()));
-            context.insert("options".to_string(), serde_json::to_value(&options).unwrap_or(serde_json::Value::Null));
+            context.insert(
+                "reasoning".to_string(),
+                serde_json::Value::String(reasoning.to_string()),
+            );
+            context.insert(
+                "options".to_string(),
+                serde_json::to_value(&options).unwrap_or(serde_json::Value::Null),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -1944,13 +2365,23 @@ mod auditors {
         pub async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
-            if self.config.log_level == AuditLogLevel::Detailed || self.config.log_level == AuditLogLevel::Debug {
-                println!(" THINKING: {} {} (confidence: {:.2})",
+            if self.config.log_level == AuditLogLevel::Detailed
+                || self.config.log_level == AuditLogLevel::Debug
+            {
+                println!(
+                    " THINKING: {} {} (confidence: {:.2})",
                     event.operation,
                     event.target.as_deref().unwrap_or(""),
-                    event.parameters.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0)
+                    event
+                        .parameters
+                        .get("confidence")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0)
                 );
             }
 
@@ -1969,7 +2400,10 @@ mod auditors {
 
     impl PerformanceAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
         pub async fn record_operation_performance(
@@ -1980,8 +2414,14 @@ mod auditors {
             metadata: HashMap<String, serde_json::Value>,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("operation".to_string(), serde_json::Value::String(operation.to_string()));
-            parameters.insert("duration_ms".to_string(), serde_json::Value::Number((duration.as_millis() as u64).into()));
+            parameters.insert(
+                "operation".to_string(),
+                serde_json::Value::String(operation.to_string()),
+            );
+            parameters.insert(
+                "duration_ms".to_string(),
+                serde_json::Value::Number((duration.as_millis() as u64).into()),
+            );
             parameters.insert("success".to_string(), serde_json::Value::Bool(success));
 
             // Add metadata
@@ -1995,18 +2435,29 @@ mod auditors {
                 correlation_id: None,
                 parent_event_id: None,
                 category: AuditCategory::Performance,
-                severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
+                severity: if success {
+                    AuditSeverity::Info
+                } else {
+                    AuditSeverity::Warning
+                },
                 actor: "system".to_string(),
                 operation: "performance_metric".to_string(),
-                message: Some(format!("Performance metric recorded for operation: {} (success: {})", operation, success)),
+                message: Some(format!(
+                    "Performance metric recorded for operation: {} (success: {})",
+                    operation, success
+                )),
                 operation_id: Some(operation.to_string()),
                 target: Some(operation.to_string()),
                 parameters,
-                result: if success { AuditResult::Success { data: None } } else { AuditResult::Failure {
-                    error_message: "Operation failed".to_string(),
-                    error_code: None,
-                    recoverable: true,
-                }},
+                result: if success {
+                    AuditResult::Success { data: None }
+                } else {
+                    AuditResult::Failure {
+                        error_message: "Operation failed".to_string(),
+                        error_code: None,
+                        recoverable: true,
+                    }
+                },
                 performance: Some(AuditPerformance {
                     duration,
                     cpu_time_us: None,
@@ -2024,15 +2475,29 @@ mod auditors {
         async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                let duration_ms = event.parameters.get("duration_ms")
-                    .and_then(|v| v.as_u64()).unwrap_or(0);
-                let success = event.parameters.get("success")
-                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let duration_ms = event
+                    .parameters
+                    .get("duration_ms")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let success = event
+                    .parameters
+                    .get("success")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let status = if success { "" } else { "" };
-                println!(" PERFORMANCE: {} {} - {}ms", status, event.target.as_deref().unwrap_or(""), duration_ms);
+                println!(
+                    " PERFORMANCE: {} {} - {}ms",
+                    status,
+                    event.target.as_deref().unwrap_or(""),
+                    duration_ms
+                );
             }
 
             Ok(())
@@ -2050,7 +2515,10 @@ mod auditors {
 
     impl ErrorRecoveryAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
         pub async fn record_error_recovery_attempt(
@@ -2062,10 +2530,19 @@ mod auditors {
             context: HashMap<String, serde_json::Value>,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("error_type".to_string(), serde_json::Value::String(error_type.to_string()));
-            parameters.insert("recovery_strategy".to_string(), serde_json::Value::String(recovery_strategy.to_string()));
+            parameters.insert(
+                "error_type".to_string(),
+                serde_json::Value::String(error_type.to_string()),
+            );
+            parameters.insert(
+                "recovery_strategy".to_string(),
+                serde_json::Value::String(recovery_strategy.to_string()),
+            );
             parameters.insert("success".to_string(), serde_json::Value::Bool(success));
-            parameters.insert("duration_ms".to_string(), serde_json::Value::Number((duration.as_millis() as u64).into()));
+            parameters.insert(
+                "duration_ms".to_string(),
+                serde_json::Value::Number((duration.as_millis() as u64).into()),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -2073,18 +2550,31 @@ mod auditors {
                 correlation_id: None,
                 parent_event_id: None,
                 category: AuditCategory::ErrorRecovery,
-                severity: if success { AuditSeverity::Info } else { AuditSeverity::Warning },
+                severity: if success {
+                    AuditSeverity::Info
+                } else {
+                    AuditSeverity::Warning
+                },
                 actor: "recovery_system".to_string(),
                 operation: "error_recovery".to_string(),
-                message: Some(format!("Error recovery {} for error type: {} using strategy: {}", if success { "succeeded" } else { "failed" }, error_type, recovery_strategy)),
+                message: Some(format!(
+                    "Error recovery {} for error type: {} using strategy: {}",
+                    if success { "succeeded" } else { "failed" },
+                    error_type,
+                    recovery_strategy
+                )),
                 operation_id: Some(error_type.to_string()),
                 target: Some(error_type.to_string()),
                 parameters,
-                result: if success { AuditResult::Success { data: None } } else { AuditResult::Failure {
-                    error_message: "Recovery failed".to_string(),
-                    error_code: None,
-                    recoverable: false,
-                }},
+                result: if success {
+                    AuditResult::Success { data: None }
+                } else {
+                    AuditResult::Failure {
+                        error_message: "Recovery failed".to_string(),
+                        error_code: None,
+                        recoverable: false,
+                    }
+                },
                 performance: Some(AuditPerformance {
                     duration,
                     cpu_time_us: None,
@@ -2109,10 +2599,22 @@ mod auditors {
             context: HashMap<String, serde_json::Value>,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("operation_id".to_string(), serde_json::Value::String(operation_id.to_string()));
-            parameters.insert("failure_event_id".to_string(), serde_json::Value::String(failure_event_id.to_string()));
-            parameters.insert("recovery_success".to_string(), serde_json::Value::Bool(recovery_success));
-            parameters.insert("slo_impact".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(slo_impact).unwrap()));
+            parameters.insert(
+                "operation_id".to_string(),
+                serde_json::Value::String(operation_id.to_string()),
+            );
+            parameters.insert(
+                "failure_event_id".to_string(),
+                serde_json::Value::String(failure_event_id.to_string()),
+            );
+            parameters.insert(
+                "recovery_success".to_string(),
+                serde_json::Value::Bool(recovery_success),
+            );
+            parameters.insert(
+                "slo_impact".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(slo_impact).unwrap()),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -2120,10 +2622,17 @@ mod auditors {
                 correlation_id: None,
                 parent_event_id: None,
                 category: AuditCategory::ErrorRecovery,
-                severity: if slo_impact > 0.5 { AuditSeverity::High } else { AuditSeverity::Medium },
+                severity: if slo_impact > 0.5 {
+                    AuditSeverity::High
+                } else {
+                    AuditSeverity::Medium
+                },
                 actor: "slo_monitor".to_string(),
                 operation: "error_recovery_correlation".to_string(),
-                message: Some(format!("Error recovery correlation recorded - success: {}", recovery_success)),
+                message: Some(format!(
+                    "Error recovery correlation recorded - success: {}",
+                    recovery_success
+                )),
                 operation_id: Some(operation_id.to_string()),
                 target: Some(operation_id.to_string()),
                 parameters,
@@ -2139,18 +2648,45 @@ mod auditors {
         async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
-            *stats.error_counts.entry("recovery_attempt".to_string()).or_insert(0) += 1;
-            if event.parameters.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
-                *stats.error_counts.entry("recovery_success".to_string()).or_insert(0) += 1;
+            *stats
+                .error_counts
+                .entry("recovery_attempt".to_string())
+                .or_insert(0) += 1;
+            if event
+                .parameters
+                .get("success")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                *stats
+                    .error_counts
+                    .entry("recovery_success".to_string())
+                    .or_insert(0) += 1;
             }
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                let strategy = event.parameters.get("recovery_strategy").and_then(|v| v.as_str()).unwrap_or("");
-                let success = event.parameters.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
+                let strategy = event
+                    .parameters
+                    .get("recovery_strategy")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let success = event
+                    .parameters
+                    .get("success")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let status = if success { "" } else { "" };
-                println!(" RECOVERY: {} {} - {}", status, event.target.as_deref().unwrap_or(""), strategy);
+                println!(
+                    " RECOVERY: {} {} - {}",
+                    status,
+                    event.target.as_deref().unwrap_or(""),
+                    strategy
+                );
             }
 
             Ok(())
@@ -2168,7 +2704,10 @@ mod auditors {
 
     impl LearningAuditor {
         pub fn new(config: AuditConfig, global_stats: Arc<RwLock<GlobalAuditStats>>) -> Self {
-            Self { config, global_stats }
+            Self {
+                config,
+                global_stats,
+            }
         }
 
         pub async fn record_learning_insight(
@@ -2180,13 +2719,28 @@ mod auditors {
             source: &str,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("insight_type".to_string(), serde_json::Value::String(insight_type.to_string()));
-            parameters.insert("impact".to_string(), serde_json::Value::String(impact.to_string()));
-            parameters.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()));
-            parameters.insert("source".to_string(), serde_json::Value::String(source.to_string()));
+            parameters.insert(
+                "insight_type".to_string(),
+                serde_json::Value::String(insight_type.to_string()),
+            );
+            parameters.insert(
+                "impact".to_string(),
+                serde_json::Value::String(impact.to_string()),
+            );
+            parameters.insert(
+                "confidence".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(confidence as f64).unwrap()),
+            );
+            parameters.insert(
+                "source".to_string(),
+                serde_json::Value::String(source.to_string()),
+            );
 
             let mut context = HashMap::new();
-            context.insert("description".to_string(), serde_json::Value::String(description.to_string()));
+            context.insert(
+                "description".to_string(),
+                serde_json::Value::String(description.to_string()),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -2197,7 +2751,10 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "learning_system".to_string(),
                 operation: "insight_gained".to_string(),
-                message: Some(format!("Learning system gained insight: {} with impact: {}", insight_type, impact)),
+                message: Some(format!(
+                    "Learning system gained insight: {} with impact: {}",
+                    insight_type, impact
+                )),
                 operation_id: Some(insight_type.to_string()),
                 target: Some(insight_type.to_string()),
                 parameters,
@@ -2218,12 +2775,24 @@ mod auditors {
             risk_level: &str,
         ) -> Result<(), AuditError> {
             let mut parameters = HashMap::new();
-            parameters.insert("optimization_type".to_string(), serde_json::Value::String(optimization_type.to_string()));
-            parameters.insert("expected_improvement".to_string(), serde_json::Value::String(expected_improvement.to_string()));
-            parameters.insert("risk_level".to_string(), serde_json::Value::String(risk_level.to_string()));
+            parameters.insert(
+                "optimization_type".to_string(),
+                serde_json::Value::String(optimization_type.to_string()),
+            );
+            parameters.insert(
+                "expected_improvement".to_string(),
+                serde_json::Value::String(expected_improvement.to_string()),
+            );
+            parameters.insert(
+                "risk_level".to_string(),
+                serde_json::Value::String(risk_level.to_string()),
+            );
 
             let mut context = HashMap::new();
-            context.insert("description".to_string(), serde_json::Value::String(description.to_string()));
+            context.insert(
+                "description".to_string(),
+                serde_json::Value::String(description.to_string()),
+            );
 
             let event = AuditEvent {
                 event_id: Uuid::new_v4(),
@@ -2234,7 +2803,10 @@ mod auditors {
                 severity: AuditSeverity::Info,
                 actor: "learning_system".to_string(),
                 operation: "optimization_applied".to_string(),
-                message: Some(format!("Optimization applied: {} with expected improvement: {}", optimization_type, expected_improvement)),
+                message: Some(format!(
+                    "Optimization applied: {} with expected improvement: {}",
+                    optimization_type, expected_improvement
+                )),
                 operation_id: Some(optimization_type.to_string()),
                 target: Some(optimization_type.to_string()),
                 parameters,
@@ -2250,13 +2822,22 @@ mod auditors {
         async fn write_event(&self, event: AuditEvent) -> Result<(), AuditError> {
             let mut stats = self.global_stats.write().await;
             stats.total_events += 1;
-            *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+            *stats
+                .events_by_category
+                .entry(event.category.clone())
+                .or_insert(0) += 1;
 
             if self.config.log_level != AuditLogLevel::Minimal {
-                println!(" LEARNING: {} {} - {}",
+                println!(
+                    " LEARNING: {} {} - {}",
                     event.operation,
                     event.target.as_deref().unwrap_or(""),
-                    event.parameters.get("impact").or_else(|| event.parameters.get("expected_improvement")).and_then(|v| v.as_str()).unwrap_or("")
+                    event
+                        .parameters
+                        .get("impact")
+                        .or_else(|| event.parameters.get("expected_improvement"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
                 );
             }
 

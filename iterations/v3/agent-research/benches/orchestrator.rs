@@ -13,7 +13,7 @@ use serde_json::json;
 
 fn bench_orchestrator_algorithm_selection(c: &mut Criterion) {
     let orchestrator = LearningOrchestrator::new();
-    
+
     let task_spec = json!({
         "task_id": "bench-task-001",
         "description": "Performance test for algorithm selection",
@@ -34,4 +34,3 @@ fn bench_orchestrator_algorithm_selection(c: &mut Criterion) {
 
 criterion_group!(benches, bench_orchestrator_algorithm_selection);
 criterion_main!(benches);
-

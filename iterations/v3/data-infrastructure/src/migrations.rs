@@ -3,10 +3,10 @@
 //! Handles database schema migrations with rollback capabilities,
 //! migration tracking, and production-safe deployment strategies.
 
-use schemars::JsonSchema;
 use crate::simple_client::DatabaseClient;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;
@@ -86,7 +86,6 @@ pub struct MigrationResult {
     pub name: String,
     /// Applied timestamp
     #[schemars(with = "String")]
-
     pub applied_at: DateTime<Utc>,
     /// Execution time (milliseconds)
     pub execution_time_ms: u64,
@@ -107,7 +106,6 @@ pub struct AppliedMigration {
     pub name: String,
     /// Applied timestamp
     #[schemars(with = "String")]
-
     pub applied_at: DateTime<Utc>,
     /// Checksum for integrity verification
     pub checksum: String,
@@ -426,10 +424,7 @@ impl MigrationManager {
         );
 
         self.client
-            .execute_parameterized_query(
-                &query,
-                vec![&migration_id.to_string()],
-            )
+            .execute_parameterized_query(&query, vec![&migration_id.to_string()])
             .await?;
 
         Ok(())
@@ -618,28 +613,36 @@ impl MigrationManager {
         // 2. Migration file analysis: Parse and identify migration identifiers
         // 3. Migration dependency resolution: Compare with applied migrations
         // 4. Migration management: Return ordered list of pending migrations
-        
+
         // Scan migrations directory for all .sql files
         let mut migration_entries = fs::read_dir(&self.migration_dir)
             .await
             .context("Failed to read migrations directory")?;
-        
+
         let mut discovered_migrations = Vec::new();
-        while let Some(entry) = migration_entries.next_entry().await
-            .context("Failed to read migration entry")? {
+        while let Some(entry) = migration_entries
+            .next_entry()
+            .await
+            .context("Failed to read migration entry")?
+        {
             let path = entry.path();
             if let Some(file_name) = path.file_name() {
                 let file_name_str = file_name.to_string_lossy();
                 // Parse migration files: format is NNN_description.sql
-                if file_name_str.ends_with(".sql") && file_name_str.chars().next().map_or(false, |c| c.is_numeric()) {
+                if file_name_str.ends_with(".sql")
+                    && file_name_str
+                        .chars()
+                        .next()
+                        .map_or(false, |c| c.is_numeric())
+                {
                     discovered_migrations.push(file_name_str.to_string());
                 }
             }
         }
-        
+
         // Sort migrations by numeric prefix to maintain order
         discovered_migrations.sort();
-        
+
         // Query the database pool to fetch applied migrations list
         let applied_migrations = self.list_applied_migrations().await?;
         let applied_ids: std::collections::HashSet<String> = applied_migrations
@@ -649,7 +652,7 @@ impl MigrationManager {
                 m.migration_id.clone()
             })
             .collect();
-        
+
         let discovered_count = discovered_migrations.len();
 
         // Filter to get only pending migrations
@@ -657,11 +660,7 @@ impl MigrationManager {
             .into_iter()
             .filter(|migration_file| {
                 // Extract numeric prefix from filename (e.g., "001_description.sql" -> "001")
-                let numeric_id = migration_file
-                    .split('_')
-                    .next()
-                    .unwrap_or("")
-                    .to_string();
+                let numeric_id = migration_file.split('_').next().unwrap_or("").to_string();
                 !applied_ids.contains(&numeric_id)
             })
             .collect();
@@ -672,7 +671,7 @@ impl MigrationManager {
             self.migration_dir.display(),
             pending.len()
         );
-        
+
         Ok(pending)
     }
 }

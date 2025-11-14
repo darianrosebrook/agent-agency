@@ -5,13 +5,13 @@
 //! - Cleaning up after execution
 //! - Managing scaffolded test files
 
-use std::path::{Path, PathBuf};
-use std::fs;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Scenario state tracking information
 #[derive(Debug, Clone)]
@@ -47,7 +47,7 @@ impl PlaygroundManager {
     /// Creates a temporary directory with scenario-specific test files
     pub async fn setup_scenario(&self, scenario_id: &str) -> Result<(), String> {
         let scenario_dir = self.playground_root.join(scenario_id);
-        
+
         // Create scenario directory
         fs::create_dir_all(&scenario_dir)
             .map_err(|e| format!("Failed to create playground directory: {}", e))?;
@@ -60,57 +60,57 @@ impl PlaygroundManager {
             created_at: now,
             last_accessed: now,
         };
-        
+
         let mut active = self.active_scenarios.write().await;
         active.insert(scenario_id.to_string(), scenario_state);
-        
+
         Ok(())
     }
 
     /// Clean up playground environment after scenario execution
     pub async fn cleanup_scenario(&self, scenario_id: &str) -> Result<(), String> {
         let scenario_dir = self.playground_root.join(scenario_id);
-        
+
         // Remove from active scenarios tracking
         let mut active = self.active_scenarios.write().await;
         active.remove(scenario_id);
-        
+
         // Clean up directory
         if scenario_dir.exists() {
             fs::remove_dir_all(&scenario_dir)
                 .map_err(|e| format!("Failed to cleanup playground directory: {}", e))?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Get active scenario state
     pub async fn get_scenario_state(&self, scenario_id: &str) -> Option<ScenarioState> {
         let active = self.active_scenarios.read().await;
         let state = active.get(scenario_id)?.clone();
-        
+
         // Update last accessed time
         drop(active);
         let mut active = self.active_scenarios.write().await;
         if let Some(state) = active.get_mut(scenario_id) {
             state.last_accessed = Utc::now();
         }
-        
+
         Some(state)
     }
-    
+
     /// List all active scenarios
     pub async fn list_active_scenarios(&self) -> Vec<ScenarioState> {
         let active = self.active_scenarios.read().await;
         active.values().cloned().collect()
     }
-    
+
     /// Check if a scenario is currently active
     pub async fn is_scenario_active(&self, scenario_id: &str) -> bool {
         let active = self.active_scenarios.read().await;
         active.contains_key(scenario_id)
     }
-    
+
     /// Update scenario last accessed time
     pub async fn touch_scenario(&self, scenario_id: &str) -> Result<(), String> {
         let mut active = self.active_scenarios.write().await;
@@ -118,7 +118,10 @@ impl PlaygroundManager {
             state.last_accessed = Utc::now();
             Ok(())
         } else {
-            Err(format!("Scenario {} not found in active scenarios", scenario_id))
+            Err(format!(
+                "Scenario {} not found in active scenarios",
+                scenario_id
+            ))
         }
     }
 
@@ -136,16 +139,15 @@ impl PlaygroundManager {
     ) -> Result<PathBuf, String> {
         let scenario_dir = self.get_scenario_dir(scenario_id);
         let file_path = scenario_dir.join(filename);
-        
+
         // Ensure parent directory exists
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create parent directory: {}", e))?;
         }
-        
-        fs::write(&file_path, content)
-            .map_err(|e| format!("Failed to write test file: {}", e))?;
-        
+
+        fs::write(&file_path, content).map_err(|e| format!("Failed to write test file: {}", e))?;
+
         Ok(file_path)
     }
 
@@ -318,7 +320,9 @@ pub fn main() {
 }
 "#;
 
-        let rust_path = self.create_test_file(scenario_id, "broken-rust.rs", broken_rust_content).await?;
+        let rust_path = self
+            .create_test_file(scenario_id, "broken-rust.rs", broken_rust_content)
+            .await?;
         created_files.push(rust_path);
 
         // Create broken-types.ts with comprehensive TypeScript errors
@@ -388,7 +392,9 @@ const mockUsers = [
 export { User, calculateTotal, riskyOperation, config, mockUsers };
 "#;
 
-        let types_path = self.create_test_file(scenario_id, "broken-types.ts", broken_types_content).await?;
+        let types_path = self
+            .create_test_file(scenario_id, "broken-types.ts", broken_types_content)
+            .await?;
         created_files.push(types_path);
 
         // Create broken-python.py with comprehensive Python errors
@@ -488,7 +494,9 @@ if __name__ == "__main__":
     print("Hello, broken Python world!")
 "#;
 
-        let python_path = self.create_test_file(scenario_id, "broken-python.py", broken_python_content).await?;
+        let python_path = self
+            .create_test_file(scenario_id, "broken-python.py", broken_python_content)
+            .await?;
         created_files.push(python_path);
 
         Ok(created_files)
@@ -497,7 +505,7 @@ if __name__ == "__main__":
     /// List all files in a scenario playground
     pub fn list_scenario_files(&self, scenario_id: &str) -> Result<Vec<PathBuf>, String> {
         let scenario_dir = self.get_scenario_dir(scenario_id);
-        
+
         if !scenario_dir.exists() {
             return Ok(vec![]);
         }
@@ -509,7 +517,7 @@ if __name__ == "__main__":
         for entry in entries {
             let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
             let path = entry.path();
-            
+
             if path.is_file() {
                 files.push(path);
             } else if path.is_dir() {
@@ -525,14 +533,13 @@ if __name__ == "__main__":
     /// Recursively list files in a directory
     fn list_files_recursive(&self, dir: &Path) -> Result<Vec<PathBuf>, String> {
         let mut files = Vec::new();
-        
-        let entries = fs::read_dir(dir)
-            .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+        let entries = fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
 
         for entry in entries {
             let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
             let path = entry.path();
-            
+
             if path.is_file() {
                 files.push(path);
             } else if path.is_dir() {
@@ -550,7 +557,7 @@ if __name__ == "__main__":
             fs::remove_dir_all(&self.playground_root)
                 .map_err(|e| format!("Failed to cleanup playground root: {}", e))?;
         }
-        
+
         Ok(())
     }
 }
@@ -576,21 +583,21 @@ mod tests {
     async fn test_setup_and_cleanup_scenario() {
         let temp_dir = TempDir::new().unwrap();
         let manager = PlaygroundManager::with_root(temp_dir.path().to_path_buf());
-        
+
         let scenario_id = "test-scenario-001";
-        
+
         // Setup scenario
         let result = manager.setup_scenario(scenario_id).await;
         assert!(result.is_ok());
-        
+
         // Verify directory exists
         let scenario_dir = manager.get_scenario_dir(scenario_id);
         assert!(scenario_dir.exists());
-        
+
         // Cleanup scenario
         let result = manager.cleanup_scenario(scenario_id).await;
         assert!(result.is_ok());
-        
+
         // Verify directory is removed
         assert!(!scenario_dir.exists());
     }
@@ -599,20 +606,18 @@ mod tests {
     async fn test_create_test_file() {
         let temp_dir = TempDir::new().unwrap();
         let manager = PlaygroundManager::with_root(temp_dir.path().to_path_buf());
-        
+
         let scenario_id = "test-scenario-002";
         manager.setup_scenario(scenario_id).await.unwrap();
-        
-        let file_path = manager.create_test_file(
-            scenario_id,
-            "test.rs",
-            "fn main() { println!(\"Hello\"); }",
-        ).await;
-        
+
+        let file_path = manager
+            .create_test_file(scenario_id, "test.rs", "fn main() { println!(\"Hello\"); }")
+            .await;
+
         assert!(file_path.is_ok());
         let path = file_path.unwrap();
         assert!(path.exists());
-        
+
         // Verify content
         let content = fs::read_to_string(&path).unwrap();
         assert!(content.contains("Hello"));
@@ -622,16 +627,18 @@ mod tests {
     async fn test_create_broken_file() {
         let temp_dir = TempDir::new().unwrap();
         let manager = PlaygroundManager::with_root(temp_dir.path().to_path_buf());
-        
+
         let scenario_id = "test-scenario-003";
         manager.setup_scenario(scenario_id).await.unwrap();
-        
-        let file_path = manager.create_broken_file(scenario_id, "broken.rs", "compilation").await;
+
+        let file_path = manager
+            .create_broken_file(scenario_id, "broken.rs", "compilation")
+            .await;
         assert!(file_path.is_ok());
-        
+
         let path = file_path.unwrap();
         assert!(path.exists());
-        
+
         // Verify content has error
         let content = fs::read_to_string(&path).unwrap();
         assert!(content.contains("Type mismatch") || content.contains("\"hello\""));
@@ -641,25 +648,31 @@ mod tests {
     async fn test_scaffold_comprehensive_broken_files() {
         let temp_dir = TempDir::new().unwrap();
         let manager = PlaygroundManager::with_root(temp_dir.path().to_path_buf());
-        
+
         let scenario_id = "test-scenario-comprehensive";
-        
+
         // Scaffold comprehensive broken files
-        let result = manager.scaffold_comprehensive_broken_files(scenario_id).await;
+        let result = manager
+            .scaffold_comprehensive_broken_files(scenario_id)
+            .await;
         assert!(result.is_ok());
-        
+
         let created_files = result.unwrap();
         assert_eq!(created_files.len(), 3);
-        
+
         // Verify all three files exist
         let rust_path = manager.get_scenario_dir(scenario_id).join("broken-rust.rs");
-        let types_path = manager.get_scenario_dir(scenario_id).join("broken-types.ts");
-        let python_path = manager.get_scenario_dir(scenario_id).join("broken-python.py");
-        
+        let types_path = manager
+            .get_scenario_dir(scenario_id)
+            .join("broken-types.ts");
+        let python_path = manager
+            .get_scenario_dir(scenario_id)
+            .join("broken-python.py");
+
         assert!(rust_path.exists(), "broken-rust.rs should exist");
         assert!(types_path.exists(), "broken-types.ts should exist");
         assert!(python_path.exists(), "broken-python.py should exist");
-        
+
         // Verify Rust file content
         let rust_content = fs::read_to_string(&rust_path).unwrap();
         assert!(rust_content.contains("Duplicate struct definition"));
@@ -667,7 +680,7 @@ mod tests {
         assert!(rust_content.contains("TODO:"));
         assert!(rust_content.contains("PLACEHOLDER:"));
         assert!(rust_content.contains("MOCK DATA:"));
-        
+
         // Verify TypeScript file content
         let types_content = fs::read_to_string(&types_path).unwrap();
         assert!(types_content.contains("Duplicate interface definition"));
@@ -675,7 +688,7 @@ mod tests {
         assert!(types_content.contains("TODO:"));
         assert!(types_content.contains("PLACEHOLDER:"));
         assert!(types_content.contains("MOCK DATA:"));
-        
+
         // Verify Python file content
         let python_content = fs::read_to_string(&python_path).unwrap();
         assert!(python_content.contains("Missing import"));

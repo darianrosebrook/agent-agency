@@ -39,9 +39,6 @@ toml = "0.8"
 sha2 = "0.10"
 base64 = "0.21"
 rand = "0.8"
-totp-rs = "2.0"
-base32 = "0.4"
-urlencoding = "2.1"
 
 # Security and authentication
 system-quality-security = { path = "../system-quality-security" }
@@ -61,13 +58,14 @@ agent-research = { path = "../agent-research" }
 agent-memory = { path = "../agent-memory" }
 data-infrastructure = { path = "../data-infrastructure", features = ["orchestration"] }
 agent-mcp = { path = "../agent-mcp" }
-agent-data-processing = { path = "../agent-data-processing", features = ["coreml"] }
+agent-data-processing = { path = "../agent-data-processing" }  # CoreML disabled to avoid Swift library loading issues
 
 [features]
 default = ["orchestration"]
 orchestration = ["research", "memory"]  # Enable both research and memory for UnifiedOrchestrator
 memory = ["agent-orchestration/memory"]  # Enable memory feature for UnifiedOrchestrator
 research = ["agent-orchestration/research"]  # Enable research feature for UnifiedOrchestrator
+system-acceleration = ["agent-orchestration/system-acceleration"]  # Enable system acceleration features
 testing = []  # Enable testing endpoints (uses subprocess, no direct dependency)
 
 [[bin]]

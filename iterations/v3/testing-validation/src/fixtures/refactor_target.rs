@@ -41,7 +41,10 @@ pub fn process_user_data(input: &str) -> Result<HashMap<String, String>, String>
                 return Err("Name too short".to_string());
             }
 
-            if trimmed.chars().any(|c| !c.is_alphabetic() && !c.is_whitespace()) {
+            if trimmed
+                .chars()
+                .any(|c| !c.is_alphabetic() && !c.is_whitespace())
+            {
                 return Err("Name contains invalid characters".to_string());
             }
 
@@ -171,12 +174,14 @@ pub fn calculate_user_score(user_data: &HashMap<String, String>) -> Result<f64, 
 
 /// Function with poor naming and unclear purpose
 pub fn do_stuff_with_data(data: Vec<HashMap<String, String>>) -> Vec<Result<f64, String>> {
-    data.into_iter().map(|item| {
-        match process_user_data(&serde_json::to_string(&item).unwrap_or_default()) {
-            Ok(processed) => calculate_user_score(&processed),
-            Err(e) => Err(e),
-        }
-    }).collect()
+    data.into_iter()
+        .map(
+            |item| match process_user_data(&serde_json::to_string(&item).unwrap_or_default()) {
+                Ok(processed) => calculate_user_score(&processed),
+                Err(e) => Err(e),
+            },
+        )
+        .collect()
 }
 
 /// Test module for the refactor target
@@ -211,6 +216,3 @@ mod tests {
         assert!(score > 0.0);
     }
 }
-
-
-

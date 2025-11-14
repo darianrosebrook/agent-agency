@@ -3,13 +3,13 @@
 //! Implements CAWS-compliant conflict resolution through structured debates,
 //! evidence synthesis, and consensus building mechanisms.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug, warn};
+use tracing::{debug, info, warn};
 
 // Tool trait imported but not directly used in this module
 
@@ -39,19 +39,22 @@ impl ConflictResolutionTool {
     }
 
     /// Real conflict resolution implementation
-    pub async fn resolve_conflicts(&self, conflicts: &serde_json::Value) -> Result<serde_json::Value> {
+    pub async fn resolve_conflicts(
+        &self,
+        conflicts: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
         use tracing::{info, warn};
-        
+
         info!("Resolving conflicts in federated learning system");
-        
+
         if let Some(conflicts_array) = conflicts.as_array() {
             let mut resolved_conflicts = Vec::new();
-            
+
             for conflict in conflicts_array {
                 let resolved = self.resolve_single_conflict(conflict).await?;
                 resolved_conflicts.push(resolved);
             }
-            
+
             Ok(serde_json::json!({
                 "resolved_conflicts": resolved_conflicts,
                 "resolution_strategy": "consensus_based",
@@ -65,35 +68,56 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve a single conflict using consensus-based approach
-    async fn resolve_single_conflict(&self, conflict: &serde_json::Value) -> Result<serde_json::Value> {
+    async fn resolve_single_conflict(
+        &self,
+        conflict: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
         use tracing::debug;
-        
+
         debug!("Resolving single conflict: {:?}", conflict);
-        
+
         // Extract conflict details
-        let conflict_type = conflict.get("type")
+        let conflict_type = conflict
+            .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
-        
-        let participants = conflict.get("participants")
+
+        let participants = conflict
+            .get("participants")
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
-        
-        let evidence = conflict.get("evidence")
+
+        let evidence = conflict
+            .get("evidence")
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
-        
+
         // Apply conflict resolution strategy based on type
         let resolution = match conflict_type {
-            "model_parameter" => self.resolve_model_parameter_conflict(&participants, &evidence).await?,
-            "gradient_update" => self.resolve_gradient_update_conflict(&participants, &evidence).await?,
-            "aggregation_method" => self.resolve_aggregation_method_conflict(&participants, &evidence).await?,
-            "privacy_constraint" => self.resolve_privacy_constraint_conflict(&participants, &evidence).await?,
-            _ => self.resolve_generic_conflict(&participants, &evidence).await?,
+            "model_parameter" => {
+                self.resolve_model_parameter_conflict(&participants, &evidence)
+                    .await?
+            }
+            "gradient_update" => {
+                self.resolve_gradient_update_conflict(&participants, &evidence)
+                    .await?
+            }
+            "aggregation_method" => {
+                self.resolve_aggregation_method_conflict(&participants, &evidence)
+                    .await?
+            }
+            "privacy_constraint" => {
+                self.resolve_privacy_constraint_conflict(&participants, &evidence)
+                    .await?
+            }
+            _ => {
+                self.resolve_generic_conflict(&participants, &evidence)
+                    .await?
+            }
         };
-        
+
         Ok(serde_json::json!({
             "original_conflict": conflict,
             "resolution": resolution,
@@ -105,34 +129,43 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve model parameter conflicts using weighted consensus
-    async fn resolve_model_parameter_conflict(&self, participants: &[serde_json::Value], evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_model_parameter_conflict(
+        &self,
+        participants: &[serde_json::Value],
+        evidence: &[serde_json::Value],
+    ) -> Result<serde_json::Value> {
         use tracing::debug;
-        
-        debug!("Resolving model parameter conflict with {} participants", participants.len());
-        
+
+        debug!(
+            "Resolving model parameter conflict with {} participants",
+            participants.len()
+        );
+
         // Calculate weighted consensus based on participant credibility and evidence strength
         let mut weighted_sum = 0.0;
         let mut total_weight = 0.0;
-        
+
         for participant in participants {
-            let credibility = participant.get("credibility")
+            let credibility = participant
+                .get("credibility")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.5);
-            
-            let parameter_value = participant.get("parameter_value")
+
+            let parameter_value = participant
+                .get("parameter_value")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            
+
             weighted_sum += parameter_value * credibility;
             total_weight += credibility;
         }
-        
+
         let consensus_value = if total_weight > 0.0 {
             weighted_sum / total_weight
         } else {
             0.0
         };
-        
+
         Ok(serde_json::json!({
             "consensus_value": consensus_value,
             "method": "weighted_consensus",
@@ -142,27 +175,37 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve gradient update conflicts using federated averaging
-    async fn resolve_gradient_update_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_gradient_update_conflict(
+        &self,
+        participants: &[serde_json::Value],
+        _evidence: &[serde_json::Value],
+    ) -> Result<serde_json::Value> {
         use tracing::debug;
-        
-        debug!("Resolving gradient update conflict with {} participants", participants.len());
-        
+
+        debug!(
+            "Resolving gradient update conflict with {} participants",
+            participants.len()
+        );
+
         // Use federated averaging to resolve gradient conflicts
         let mut aggregated_gradient = Vec::new();
         let mut total_samples = 0;
-        
+
         for participant in participants {
-            let gradient = participant.get("gradient")
+            let gradient = participant
+                .get("gradient")
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default();
-            
-            let sample_count = participant.get("sample_count")
+
+            let sample_count = participant
+                .get("sample_count")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(1);
-            
+
             if aggregated_gradient.is_empty() {
-                aggregated_gradient = gradient.iter()
+                aggregated_gradient = gradient
+                    .iter()
                     .map(|v| v.as_f64().unwrap_or(0.0) * sample_count as f64)
                     .collect();
             } else {
@@ -172,17 +215,17 @@ impl ConflictResolutionTool {
                     }
                 }
             }
-            
+
             total_samples += sample_count;
         }
-        
+
         // Normalize by total sample count
         if total_samples > 0 {
             for val in &mut aggregated_gradient {
                 *val /= total_samples as f64;
             }
         }
-        
+
         Ok(serde_json::json!({
             "aggregated_gradient": aggregated_gradient,
             "method": "federated_averaging",
@@ -192,30 +235,39 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve aggregation method conflicts using majority voting
-    async fn resolve_aggregation_method_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
-        use tracing::debug;
+    async fn resolve_aggregation_method_conflict(
+        &self,
+        participants: &[serde_json::Value],
+        _evidence: &[serde_json::Value],
+    ) -> Result<serde_json::Value> {
         use std::collections::HashMap;
-        
-        debug!("Resolving aggregation method conflict with {} participants", participants.len());
-        
+        use tracing::debug;
+
+        debug!(
+            "Resolving aggregation method conflict with {} participants",
+            participants.len()
+        );
+
         // Count votes for each aggregation method
         let mut method_votes: HashMap<String, usize> = HashMap::new();
-        
+
         for participant in participants {
-            let method = participant.get("preferred_method")
+            let method = participant
+                .get("preferred_method")
                 .and_then(|v| v.as_str())
                 .unwrap_or("federated_averaging");
-            
+
             *method_votes.entry(method.to_string()).or_insert(0) += 1;
         }
-        
+
         // Find the method with the most votes
         let default_method = "federated_averaging".to_string();
-        let consensus_method = method_votes.iter()
+        let consensus_method = method_votes
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(method, _)| method.as_str())
             .unwrap_or(&default_method);
-        
+
         Ok(serde_json::json!({
             "consensus_method": consensus_method,
             "method": "majority_voting",
@@ -225,26 +277,34 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve privacy constraint conflicts using strictest policy
-    async fn resolve_privacy_constraint_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_privacy_constraint_conflict(
+        &self,
+        participants: &[serde_json::Value],
+        _evidence: &[serde_json::Value],
+    ) -> Result<serde_json::Value> {
         use tracing::debug;
-        
-        debug!("Resolving privacy constraint conflict with {} participants", participants.len());
-        
+
+        debug!(
+            "Resolving privacy constraint conflict with {} participants",
+            participants.len()
+        );
+
         // Apply the strictest privacy constraint (highest privacy level)
         let mut max_privacy_level = 0;
         let mut strictest_constraint = serde_json::json!({});
-        
+
         for participant in participants {
-            let privacy_level = participant.get("privacy_level")
+            let privacy_level = participant
+                .get("privacy_level")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            
+
             if privacy_level > max_privacy_level {
                 max_privacy_level = privacy_level;
                 strictest_constraint = participant.clone();
             }
         }
-        
+
         Ok(serde_json::json!({
             "applied_constraint": strictest_constraint,
             "method": "strictest_policy",
@@ -254,28 +314,38 @@ impl ConflictResolutionTool {
     }
 
     /// Resolve generic conflicts using consensus
-    async fn resolve_generic_conflict(&self, participants: &[serde_json::Value], _evidence: &[serde_json::Value]) -> Result<serde_json::Value> {
+    async fn resolve_generic_conflict(
+        &self,
+        participants: &[serde_json::Value],
+        _evidence: &[serde_json::Value],
+    ) -> Result<serde_json::Value> {
         use tracing::debug;
-        
-        debug!("Resolving generic conflict with {} participants", participants.len());
-        
+
+        debug!(
+            "Resolving generic conflict with {} participants",
+            participants.len()
+        );
+
         // Simple consensus: take the most common position
-        let mut position_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        
+        let mut position_counts: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
+
         for participant in participants {
-            let position = participant.get("position")
+            let position = participant
+                .get("position")
                 .and_then(|v| v.as_str())
                 .unwrap_or("neutral");
-            
+
             *position_counts.entry(position.to_string()).or_insert(0) += 1;
         }
-        
+
         let default_position = "neutral".to_string();
-        let consensus_position = position_counts.iter()
+        let consensus_position = position_counts
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(position, _)| position.as_str())
             .unwrap_or(&default_position);
-        
+
         Ok(serde_json::json!({
             "consensus_position": consensus_position,
             "method": "simple_consensus",
@@ -310,10 +380,19 @@ impl DebateOrchestrator {
     }
 
     /// Start a new debate session
-    pub async fn start_debate(&self, topic: &str, participants: Vec<String>, evidence: &[EvidenceItem]) -> Result<String> {
+    pub async fn start_debate(
+        &self,
+        topic: &str,
+        participants: Vec<String>,
+        evidence: &[EvidenceItem],
+    ) -> Result<String> {
         let debate_id = format!("debate_{}", uuid::Uuid::new_v4());
 
-        info!("Starting debate '{}' with {} participants", debate_id, participants.len());
+        info!(
+            "Starting debate '{}' with {} participants",
+            debate_id,
+            participants.len()
+        );
 
         let session = DebateSession {
             id: debate_id.clone(),
@@ -348,13 +427,19 @@ impl DebateOrchestrator {
 
             // Check if debate can conclude
             if round_result.confidence >= self.min_confidence {
-                self.conclude_debate(debate_id, Some(round_result.winner), round_result.confidence).await?;
+                self.conclude_debate(
+                    debate_id,
+                    Some(round_result.winner),
+                    round_result.confidence,
+                )
+                .await?;
                 break;
             }
 
             // Check if we've reached max rounds
             if round_num == self.max_rounds {
-                self.conclude_debate(debate_id, None, round_result.confidence).await?;
+                self.conclude_debate(debate_id, None, round_result.confidence)
+                    .await?;
             }
         }
 
@@ -364,14 +449,17 @@ impl DebateOrchestrator {
     /// Conduct a single debate round
     async fn conduct_round(&self, debate_id: &str, round_num: usize) -> Result<RoundResult> {
         let mut active = self.active_debates.write().await;
-        let session = active.get_mut(debate_id)
+        let session = active
+            .get_mut(debate_id)
             .ok_or_else(|| anyhow::anyhow!("Debate session not found: {}", debate_id))?;
 
         let mut arguments = Vec::new();
 
         // Have each participant make their case
         for participant in &session.participants {
-            let argument = self.generate_participant_argument(participant, session, round_num).await?;
+            let argument = self
+                .generate_participant_argument(participant, session, round_num)
+                .await?;
             arguments.push(argument);
         }
 
@@ -390,14 +478,16 @@ impl DebateOrchestrator {
         session.rounds.push(round);
         session.current_round = round_num;
 
-        Ok(RoundResult {
-            winner,
-            confidence,
-        })
+        Ok(RoundResult { winner, confidence })
     }
 
     /// Generate argument for a debate participant
-    async fn generate_participant_argument(&self, participant: &str, session: &DebateSession, round_num: usize) -> Result<DebateArgument> {
+    async fn generate_participant_argument(
+        &self,
+        participant: &str,
+        session: &DebateSession,
+        round_num: usize,
+    ) -> Result<DebateArgument> {
         // TODO: Implement comprehensive LLM-based argument generation
         //       Currently simulates with rule-based generation; should implement comprehensive argument generation that uses LLM or reasoning tools to generate sophisticated arguments for debate participants.
         //
@@ -436,7 +526,8 @@ impl DebateOrchestrator {
         let stance = self.determine_participant_stance(participant, session)?;
         let evidence_references = self.select_evidence_for_stance(&stance, &session.evidence);
         let counter_arguments = if round_num > 1 {
-            self.generate_counter_arguments(participant, session, round_num).await?
+            self.generate_counter_arguments(participant, session, round_num)
+                .await?
         } else {
             Vec::new()
         };
@@ -453,7 +544,11 @@ impl DebateOrchestrator {
     }
 
     /// Determine participant's stance on the debate topic
-    fn determine_participant_stance(&self, participant: &str, _session: &DebateSession) -> Result<DebateStance> {
+    fn determine_participant_stance(
+        &self,
+        participant: &str,
+        _session: &DebateSession,
+    ) -> Result<DebateStance> {
         // Rule-based stance determination based on participant type and evidence
         match participant {
             "constitutional_judge" => Ok(DebateStance::StrictCompliance),
@@ -465,8 +560,13 @@ impl DebateOrchestrator {
     }
 
     /// Select relevant evidence for a stance
-    fn select_evidence_for_stance(&self, stance: &DebateStance, evidence: &[EvidenceItem]) -> Vec<String> {
-        evidence.iter()
+    fn select_evidence_for_stance(
+        &self,
+        stance: &DebateStance,
+        evidence: &[EvidenceItem],
+    ) -> Vec<String> {
+        evidence
+            .iter()
             .filter(|item| self.evidence_supports_stance(item, stance))
             .map(|item| item.id.clone())
             .take(3)
@@ -485,7 +585,12 @@ impl DebateOrchestrator {
     }
 
     /// Generate counter-arguments for subsequent rounds
-    async fn generate_counter_arguments(&self, participant: &str, session: &DebateSession, _round_num: usize) -> Result<Vec<String>> {
+    async fn generate_counter_arguments(
+        &self,
+        participant: &str,
+        session: &DebateSession,
+        _round_num: usize,
+    ) -> Result<Vec<String>> {
         let mut counter_args = Vec::new();
 
         // Look at previous rounds and generate counters
@@ -493,7 +598,10 @@ impl DebateOrchestrator {
             for arg in &round.arguments {
                 if arg.participant != participant {
                     // Generate a simple counter-argument
-                    counter_args.push(format!("Counter to {}'s point about {}", arg.participant, arg.stance));
+                    counter_args.push(format!(
+                        "Counter to {}'s point about {}",
+                        arg.participant, arg.stance
+                    ));
                 }
             }
         }
@@ -502,7 +610,11 @@ impl DebateOrchestrator {
     }
 
     /// Evaluate arguments in a round and determine winner
-    async fn evaluate_round_arguments(&self, arguments: &[DebateArgument], _session: &DebateSession) -> Result<String> {
+    async fn evaluate_round_arguments(
+        &self,
+        arguments: &[DebateArgument],
+        _session: &DebateSession,
+    ) -> Result<String> {
         // Simple evaluation based on confidence and evidence count
         let mut best_participant = &arguments[0].participant;
         let mut best_score = 0.0;
@@ -522,7 +634,11 @@ impl DebateOrchestrator {
     }
 
     /// Calculate confidence for the round
-    async fn calculate_round_confidence(&self, arguments: &[DebateArgument], _session: &DebateSession) -> Result<f64> {
+    async fn calculate_round_confidence(
+        &self,
+        arguments: &[DebateArgument],
+        _session: &DebateSession,
+    ) -> Result<f64> {
         let total_confidence: f64 = arguments.iter().map(|a| a.confidence).sum();
         let avg_confidence = total_confidence / arguments.len() as f64;
 
@@ -534,7 +650,12 @@ impl DebateOrchestrator {
     }
 
     /// Conclude a debate
-    async fn conclude_debate(&self, debate_id: &str, winner: Option<String>, confidence: f64) -> Result<()> {
+    async fn conclude_debate(
+        &self,
+        debate_id: &str,
+        winner: Option<String>,
+        confidence: f64,
+    ) -> Result<()> {
         let mut active = self.active_debates.write().await;
 
         if let Some(session) = active.get_mut(debate_id) {
@@ -556,8 +677,10 @@ impl DebateOrchestrator {
 
             active.remove(debate_id);
 
-            info!("Debate {} concluded with winner: {:?}, confidence: {:.2}",
-                  debate_id, winner, confidence);
+            info!(
+                "Debate {} concluded with winner: {:?}, confidence: {:.2}",
+                debate_id, winner, confidence
+            );
         }
 
         Ok(())
@@ -596,8 +719,14 @@ impl ConsensusBuilder {
     }
 
     /// Build consensus from conflicting positions
-    pub async fn build_consensus(&self, positions: &[DebatePosition], strategy_name: &str) -> Result<ConsensusResult> {
-        let strategy = self.strategies.get(strategy_name)
+    pub async fn build_consensus(
+        &self,
+        positions: &[DebatePosition],
+        strategy_name: &str,
+    ) -> Result<ConsensusResult> {
+        let strategy = self
+            .strategies
+            .get(strategy_name)
             .ok_or_else(|| anyhow::anyhow!("Unknown consensus strategy: {}", strategy_name))?;
 
         match strategy {
@@ -609,14 +738,18 @@ impl ConsensusBuilder {
     }
 
     /// Majority vote consensus
-    async fn majority_vote_consensus(&self, positions: &[DebatePosition]) -> Result<ConsensusResult> {
+    async fn majority_vote_consensus(
+        &self,
+        positions: &[DebatePosition],
+    ) -> Result<ConsensusResult> {
         let mut vote_counts = HashMap::new();
 
         for position in positions {
             *vote_counts.entry(position.decision.clone()).or_insert(0) += 1;
         }
 
-        let (decision, votes) = vote_counts.into_iter()
+        let (decision, votes) = vote_counts
+            .into_iter()
             .max_by_key(|(_, count)| *count)
             .unwrap_or(("no_consensus".to_string(), 0));
 
@@ -631,7 +764,10 @@ impl ConsensusBuilder {
     }
 
     /// Weighted vote consensus (CAWS compliance weighted)
-    async fn weighted_vote_consensus(&self, positions: &[DebatePosition]) -> Result<ConsensusResult> {
+    async fn weighted_vote_consensus(
+        &self,
+        positions: &[DebatePosition],
+    ) -> Result<ConsensusResult> {
         let mut weighted_votes = HashMap::new();
 
         for position in positions {
@@ -643,24 +779,32 @@ impl ConsensusBuilder {
                 _ => 1.0,
             };
 
-            *weighted_votes.entry(position.decision.clone()).or_insert(0.0) += weight;
+            *weighted_votes
+                .entry(position.decision.clone())
+                .or_insert(0.0) += weight;
         }
 
-        let (decision, weight) = weighted_votes.into_iter()
+        let (decision, weight) = weighted_votes
+            .into_iter()
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
             .unwrap_or(("no_consensus".to_string(), 0.0));
 
-        let total_weight: f64 = positions.iter().map(|p| {
-            match p.participant_type.as_str() {
+        let total_weight: f64 = positions
+            .iter()
+            .map(|p| match p.participant_type.as_str() {
                 "constitutional_judge" => 3.0,
                 "technical_auditor" => 2.0,
                 "quality_evaluator" => 2.0,
                 "integration_validator" => 2.0,
                 _ => 1.0,
-            }
-        }).sum();
+            })
+            .sum();
 
-        let confidence = if total_weight > 0.0 { weight / total_weight } else { 0.0 };
+        let confidence = if total_weight > 0.0 {
+            weight / total_weight
+        } else {
+            0.0
+        };
 
         Ok(ConsensusResult {
             decision,
@@ -671,13 +815,18 @@ impl ConsensusBuilder {
     }
 
     /// Delphi method consensus (iterative refinement)
-    async fn delphi_method_consensus(&self, positions: &[DebatePosition]) -> Result<ConsensusResult> {
+    async fn delphi_method_consensus(
+        &self,
+        positions: &[DebatePosition],
+    ) -> Result<ConsensusResult> {
         // TODO: Implement full Delphi method with multiple rounds
         //       Currently uses basic implementation; should implement full Delphi method with iterative refinement rounds.
         let refined_positions = positions.to_vec();
 
         // First round: identify outliers
-        let (decision, confidence) = self.analyze_position_distribution(&refined_positions).await?;
+        let (decision, confidence) = self
+            .analyze_position_distribution(&refined_positions)
+            .await?;
 
         Ok(ConsensusResult {
             decision,
@@ -688,11 +837,15 @@ impl ConsensusBuilder {
     }
 
     /// CAWS priority consensus (constitution-first decision making)
-    async fn caws_priority_consensus(&self, positions: &[DebatePosition]) -> Result<ConsensusResult> {
+    async fn caws_priority_consensus(
+        &self,
+        positions: &[DebatePosition],
+    ) -> Result<ConsensusResult> {
         // CAWS Article 7: Claims shall be accepted only when substantiated by verifiable evidence
         // Priority: Constitutional compliance > Technical merit > Quality > Integration
 
-        let constitutional_positions: Vec<_> = positions.iter()
+        let constitutional_positions: Vec<_> = positions
+            .iter()
             .filter(|p| p.participant_type == "constitutional_judge")
             .collect();
 
@@ -712,11 +865,16 @@ impl ConsensusBuilder {
     }
 
     /// Analyze distribution of positions
-    async fn analyze_position_distribution(&self, positions: &[DebatePosition]) -> Result<(String, f64)> {
+    async fn analyze_position_distribution(
+        &self,
+        positions: &[DebatePosition],
+    ) -> Result<(String, f64)> {
         let mut decision_counts = HashMap::new();
 
         for position in positions {
-            *decision_counts.entry(position.decision.clone()).or_insert(0) += 1;
+            *decision_counts
+                .entry(position.decision.clone())
+                .or_insert(0) += 1;
         }
 
         let total_positions = positions.len();
@@ -746,22 +904,35 @@ impl EvidenceSynthesizer {
         let mut strategies = HashMap::new();
 
         strategies.insert("equal_weight".to_string(), WeightingStrategy::EqualWeight);
-        strategies.insert("source_reliability".to_string(), WeightingStrategy::SourceReliability);
+        strategies.insert(
+            "source_reliability".to_string(),
+            WeightingStrategy::SourceReliability,
+        );
         strategies.insert("recency_bias".to_string(), WeightingStrategy::RecencyBias);
         strategies.insert("caws_priority".to_string(), WeightingStrategy::CawsPriority);
 
-        Ok(Self { weighting_strategies: strategies })
+        Ok(Self {
+            weighting_strategies: strategies,
+        })
     }
 
     /// Synthesize conflicting evidence into coherent assessment
-    pub async fn synthesize_evidence(&self, evidence: &[EvidenceItem], strategy_name: &str) -> Result<EvidenceSynthesis> {
-        let strategy = self.weighting_strategies.get(strategy_name)
+    pub async fn synthesize_evidence(
+        &self,
+        evidence: &[EvidenceItem],
+        strategy_name: &str,
+    ) -> Result<EvidenceSynthesis> {
+        let strategy = self
+            .weighting_strategies
+            .get(strategy_name)
             .ok_or_else(|| anyhow::anyhow!("Unknown weighting strategy: {}", strategy_name))?;
 
         let weights = self.calculate_evidence_weights(evidence, strategy).await?;
         let conflicts = self.identify_conflicts(evidence).await?;
         let resolution = self.resolve_conflicts(&conflicts, &weights).await?;
-        let confidence = self.calculate_synthesis_confidence(&weights, &conflicts).await?;
+        let confidence = self
+            .calculate_synthesis_confidence(&weights, &conflicts)
+            .await?;
 
         Ok(EvidenceSynthesis {
             synthesized_claims: resolution.synthesized_claims,
@@ -773,15 +944,23 @@ impl EvidenceSynthesizer {
     }
 
     /// Calculate weights for evidence items
-    async fn calculate_evidence_weights(&self, evidence: &[EvidenceItem], strategy: &WeightingStrategy) -> Result<HashMap<String, f64>> {
+    async fn calculate_evidence_weights(
+        &self,
+        evidence: &[EvidenceItem],
+        strategy: &WeightingStrategy,
+    ) -> Result<HashMap<String, f64>> {
         let mut weights = HashMap::new();
 
         for item in evidence {
             let weight = match strategy {
                 WeightingStrategy::EqualWeight => 1.0,
-                WeightingStrategy::SourceReliability => self.calculate_source_reliability(item).await?,
+                WeightingStrategy::SourceReliability => {
+                    self.calculate_source_reliability(item).await?
+                }
                 WeightingStrategy::RecencyBias => self.calculate_recency_weight(item).await?,
-                WeightingStrategy::CawsPriority => self.calculate_caws_priority_weight(item).await?,
+                WeightingStrategy::CawsPriority => {
+                    self.calculate_caws_priority_weight(item).await?
+                }
             };
 
             weights.insert(item.id.clone(), weight);
@@ -879,16 +1058,28 @@ impl EvidenceSynthesizer {
         let positive_indicators = ["true", "yes", "correct", "valid", "passes"];
         let negative_indicators = ["false", "no", "incorrect", "invalid", "fails"];
 
-        let a_has_positive = positive_indicators.iter().any(|&word| a_text.contains(word));
-        let a_has_negative = negative_indicators.iter().any(|&word| a_text.contains(word));
-        let b_has_positive = positive_indicators.iter().any(|&word| b_text.contains(word));
-        let b_has_negative = negative_indicators.iter().any(|&word| b_text.contains(word));
+        let a_has_positive = positive_indicators
+            .iter()
+            .any(|&word| a_text.contains(word));
+        let a_has_negative = negative_indicators
+            .iter()
+            .any(|&word| a_text.contains(word));
+        let b_has_positive = positive_indicators
+            .iter()
+            .any(|&word| b_text.contains(word));
+        let b_has_negative = negative_indicators
+            .iter()
+            .any(|&word| b_text.contains(word));
 
         (a_has_positive && b_has_negative) || (a_has_negative && b_has_positive)
     }
 
     /// Resolve conflicts using evidence weights
-    async fn resolve_conflicts(&self, conflicts: &ConflictAnalysis, weights: &HashMap<String, f64>) -> Result<ConflictResolution> {
+    async fn resolve_conflicts(
+        &self,
+        conflicts: &ConflictAnalysis,
+        weights: &HashMap<String, f64>,
+    ) -> Result<ConflictResolution> {
         let mut synthesized_claims = Vec::new();
 
         for conflict in &conflicts.conflicts {
@@ -902,7 +1093,10 @@ impl EvidenceSynthesizer {
             };
 
             synthesized_claims.push(SynthesizedClaim {
-                claim: format!("Resolved conflict between {} and {}", conflict.evidence_a, conflict.evidence_b),
+                claim: format!(
+                    "Resolved conflict between {} and {}",
+                    conflict.evidence_a, conflict.evidence_b
+                ),
                 supporting_evidence: vec![winning_evidence],
                 confidence: (weight_a + weight_b) / 2.0,
                 resolution_method: "weighted_evidence".to_string(),
@@ -913,9 +1107,17 @@ impl EvidenceSynthesizer {
     }
 
     /// Calculate synthesis confidence
-    async fn calculate_synthesis_confidence(&self, weights: &HashMap<String, f64>, conflicts: &ConflictAnalysis) -> Result<f64> {
+    async fn calculate_synthesis_confidence(
+        &self,
+        weights: &HashMap<String, f64>,
+        conflicts: &ConflictAnalysis,
+    ) -> Result<f64> {
         let total_weight: f64 = weights.values().sum();
-        let avg_weight = if weights.is_empty() { 0.0 } else { total_weight / weights.len() as f64 };
+        let avg_weight = if weights.is_empty() {
+            0.0
+        } else {
+            total_weight / weights.len() as f64
+        };
         let conflict_penalty = conflicts.unresolved as f64 * 0.1; // 10% penalty per unresolved conflict
 
         Ok((avg_weight - conflict_penalty).max(0.0f64).min(1.0f64))
@@ -1109,4 +1311,3 @@ pub struct SynthesizedClaim {
     pub confidence: f64,
     pub resolution_method: String,
 }
-

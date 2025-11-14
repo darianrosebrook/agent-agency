@@ -89,7 +89,7 @@ impl RolloutManager {
     ) -> Result<bool> {
         let state = self.state.read().unwrap();
         let rollout_state = state.get(task_type);
-        
+
         match rollout_state {
             Some(state) => {
                 match state.phase {
@@ -127,7 +127,7 @@ impl RolloutManager {
     ) -> Result<PhaseTransition> {
         let mut state = self.state.write().unwrap();
         let current_state = state.get(task_type).cloned();
-        
+
         match current_state {
             Some(mut rollout_state) => {
                 let new_phase = match rollout_state.phase {
@@ -166,12 +166,12 @@ impl RolloutManager {
                         return Ok(PhaseTransition::AlreadyAtMax);
                     }
                 };
-                
+
                 let old_phase = rollout_state.phase;
                 rollout_state.phase = new_phase;
                 rollout_state.traffic_percentage = self.get_traffic_percentage_for_phase(new_phase);
                 state.insert(task_type.to_string(), rollout_state);
-                
+
                 Ok(PhaseTransition::Advanced {
                     from: old_phase,
                     to: new_phase,
@@ -187,7 +187,7 @@ impl RolloutManager {
                     auto_rollback_enabled: true,
                 };
                 state.insert(task_type.to_string(), shadow_state);
-                
+
                 Ok(PhaseTransition::Initialized {
                     phase: RolloutPhase::Shadow,
                 })
@@ -203,20 +203,20 @@ impl RolloutManager {
     ) -> Result<Option<RollbackDecision>> {
         let mut state = self.state.write().unwrap();
         let rollout_state = state.get_mut(task_type);
-        
+
         match rollout_state {
             Some(state) => {
                 // Check for SLO breaches
                 let breaches = self.detect_slo_breaches(recent_outcomes).await?;
-                
+
                 if !breaches.is_empty() {
                     // Record breaches
                     state.slo_breaches.extend(breaches.clone());
-                    
+
                     // Auto-rollback if enabled and critical breaches detected
                     let critical_breaches = breaches.iter()
                         .any(|b| matches!(b.severity, BreachSeverity::Critical));
-                    
+
                     if state.auto_rollback_enabled && critical_breaches {
                         // Rollback to previous phase or shadow
                         let new_phase = match state.phase {
@@ -225,10 +225,10 @@ impl RolloutManager {
                             RolloutPhase::Canary => RolloutPhase::Shadow,
                             RolloutPhase::Shadow => RolloutPhase::Shadow,
                         };
-                        
+
                         state.phase = new_phase;
                         state.traffic_percentage = self.get_traffic_percentage_for_phase(new_phase);
-                        
+
                         return Ok(Some(RollbackDecision {
                             reason: "SLO breach detected".to_string(),
                             new_phase,
@@ -236,7 +236,7 @@ impl RolloutManager {
                         }));
                     }
                 }
-                
+
                 Ok(None)
             }
             None => Ok(None),
@@ -351,7 +351,7 @@ impl RolloutManager {
         outcomes: &[TaskOutcome],
     ) -> Result<Vec<SLOBreach>> {
         let mut breaches = Vec::new();
-        
+
         for outcome in outcomes {
             // Check latency SLO
             if outcome.latency_ms > self.slo_monitor.p99_latency_threshold_ms {
@@ -363,7 +363,7 @@ impl RolloutManager {
                     severity: BreachSeverity::Critical,
                 });
             }
-            
+
             // Check quality SLO
             if outcome.quality_score < self.slo_monitor.quality_floor {
                 breaches.push(SLOBreach {
@@ -375,7 +375,7 @@ impl RolloutManager {
                 });
             }
         }
-        
+
         Ok(breaches)
     }
 }

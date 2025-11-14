@@ -4,16 +4,16 @@
 //! using static analysis, test coverage metrics, and code complexity analysis.
 
 use crate::council_errors::CouncilResult;
-use crate::judge_backup::traits::Judge;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use crate::judge_backup::backup_types::JudgeHealthMetrics;
+use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use crate::judge_backup::traits::Judge;
 use crate::judge_backup::types::{JudgeConfig, ReviewContext};
 use crate::judge_backup::verdicts::{
-    JudgeVerdict, RequiredChange, ChangePriority, EffortEstimate, 
-    ComplexityLevel, ChangeCategory, ChangeImpact, CriticalIssue, IssueSeverity
+    ChangeCategory, ChangeImpact, ChangePriority, ComplexityLevel, CriticalIssue, EffortEstimate,
+    IssueSeverity, JudgeVerdict, RequiredChange,
 };
-use crate::judge_backup::risk::{RiskAssessment, RiskLevel};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
 /// Quality Assurance Judge for code quality analysis
@@ -48,9 +48,9 @@ impl QualityAssuranceJudge {
     /// Analyze code quality metrics from working specification
     async fn analyze_code_quality(&self, spec_description: &str) -> CouncilResult<f64> {
         let mut quality_score: f64 = 0.5; // Base score
-        
+
         let desc_lower = spec_description.to_lowercase();
-        
+
         // Test coverage analysis
         if desc_lower.contains("test") || desc_lower.contains("testing") {
             quality_score += 0.15;
@@ -61,7 +61,7 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("unit test") || desc_lower.contains("integration test") {
             quality_score += 0.1;
         }
-        
+
         // Code structure analysis
         if desc_lower.contains("refactor") || desc_lower.contains("clean") {
             quality_score += 0.1;
@@ -69,7 +69,7 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("architecture") || desc_lower.contains("design") {
             quality_score += 0.1;
         }
-        
+
         // Documentation analysis
         if desc_lower.contains("documentation") || desc_lower.contains("doc") {
             quality_score += 0.05;
@@ -77,7 +77,7 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("readme") || desc_lower.contains("api doc") {
             quality_score += 0.05;
         }
-        
+
         // Error handling analysis
         if desc_lower.contains("error handling") || desc_lower.contains("exception") {
             quality_score += 0.1;
@@ -85,7 +85,7 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("validation") || desc_lower.contains("input validation") {
             quality_score += 0.05;
         }
-        
+
         // Performance considerations
         if desc_lower.contains("performance") || desc_lower.contains("optimization") {
             quality_score += 0.05;
@@ -93,7 +93,7 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("memory") || desc_lower.contains("cpu") {
             quality_score += 0.05;
         }
-        
+
         // Negative indicators
         if desc_lower.contains("hack") || desc_lower.contains("quick fix") {
             quality_score -= 0.2;
@@ -104,14 +104,18 @@ impl QualityAssuranceJudge {
         if desc_lower.contains("placeholder") || desc_lower.contains("stub") {
             quality_score -= 0.15;
         }
-        
+
         Ok(quality_score.max(0.0).min(1.0))
     }
 
     /// Generate quality-focused required changes
-    fn generate_quality_changes(&self, quality_score: f64, spec_description: &str) -> Vec<RequiredChange> {
+    fn generate_quality_changes(
+        &self,
+        quality_score: f64,
+        spec_description: &str,
+    ) -> Vec<RequiredChange> {
         let mut changes = Vec::new();
-        
+
         if quality_score < 0.6 {
             changes.push(RequiredChange {
                 category: ChangeCategory::Testing,
@@ -120,7 +124,7 @@ impl QualityAssuranceJudge {
                 rationale: "Low quality score indicates insufficient testing".to_string(),
             });
         }
-        
+
         if quality_score < 0.7 {
             changes.push(RequiredChange {
                 category: ChangeCategory::Quality,
@@ -129,9 +133,10 @@ impl QualityAssuranceJudge {
                 rationale: "Robust error handling is essential for production code".to_string(),
             });
         }
-        
-        if spec_description.to_lowercase().contains("stub") || 
-           spec_description.to_lowercase().contains("placeholder") {
+
+        if spec_description.to_lowercase().contains("stub")
+            || spec_description.to_lowercase().contains("placeholder")
+        {
             changes.push(RequiredChange {
                 category: ChangeCategory::Quality,
                 description: "Replace stub implementations with real functionality".to_string(),
@@ -139,14 +144,18 @@ impl QualityAssuranceJudge {
                 rationale: "Stub implementations are production blockers".to_string(),
             });
         }
-        
+
         changes
     }
 
     /// Generate critical issues for quality concerns
-    fn generate_critical_issues(&self, quality_score: f64, spec_description: &str) -> Vec<CriticalIssue> {
+    fn generate_critical_issues(
+        &self,
+        quality_score: f64,
+        spec_description: &str,
+    ) -> Vec<CriticalIssue> {
         let mut issues = Vec::new();
-        
+
         if quality_score < 0.4 {
             issues.push(CriticalIssue {
                 severity: IssueSeverity::Critical,
@@ -155,7 +164,7 @@ impl QualityAssuranceJudge {
                 evidence: vec!["Low quality score indicates significant issues".to_string()],
             });
         }
-        
+
         if spec_description.to_lowercase().contains("hack") {
             issues.push(CriticalIssue {
                 severity: IssueSeverity::High,
@@ -164,7 +173,7 @@ impl QualityAssuranceJudge {
                 evidence: vec!["Hacky code detected in specification".to_string()],
             });
         }
-        
+
         issues
     }
 }
@@ -175,21 +184,21 @@ impl Judge for QualityAssuranceJudge {
         &self.config
     }
 
-    async fn review_spec(
-        &self,
-        context: &ReviewContext,
-    ) -> CouncilResult<JudgeVerdict> {
+    async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict> {
         let start_time = Instant::now();
-        
+
         // Simulate review time
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         let quality_score = self.analyze_code_quality(&context.working_spec).await?;
-        
+
         let verdict = if quality_score >= 0.8 {
             JudgeVerdict::Approve {
                 confidence: quality_score,
-                reasoning: format!("High quality score ({:.2}) indicates well-structured implementation", quality_score),
+                reasoning: format!(
+                    "High quality score ({:.2}) indicates well-structured implementation",
+                    quality_score
+                ),
                 quality_score,
                 risk_assessment: RiskAssessment {
                     overall_risk: RiskLevel::Low,
@@ -202,7 +211,10 @@ impl Judge for QualityAssuranceJudge {
             let changes = self.generate_quality_changes(quality_score, &context.working_spec);
             JudgeVerdict::Refine {
                 confidence: quality_score,
-                reasoning: format!("Moderate quality score ({:.2}) requires improvements", quality_score),
+                reasoning: format!(
+                    "Moderate quality score ({:.2}) requires improvements",
+                    quality_score
+                ),
                 required_changes: changes,
                 priority: ChangePriority::Medium,
                 estimated_effort: EffortEstimate {
@@ -215,12 +227,18 @@ impl Judge for QualityAssuranceJudge {
             let issues = self.generate_critical_issues(quality_score, &context.working_spec);
             JudgeVerdict::Reject {
                 confidence: 1.0 - quality_score,
-                reasoning: format!("Low quality score ({:.2}) indicates significant quality concerns", quality_score),
+                reasoning: format!(
+                    "Low quality score ({:.2}) indicates significant quality concerns",
+                    quality_score
+                ),
                 critical_issues: issues,
-                alternative_approaches: vec!["Implement comprehensive testing".to_string(), "Add proper error handling".to_string()],
+                alternative_approaches: vec![
+                    "Implement comprehensive testing".to_string(),
+                    "Add proper error handling".to_string(),
+                ],
             }
         };
-        
+
         Ok(verdict)
     }
 
@@ -238,15 +256,15 @@ impl Judge for QualityAssuranceJudge {
             previous_reviews: vec![],
             constraints: std::collections::HashMap::new(),
         };
-        
+
         self.review_spec(&context).await
     }
 
     fn specialization_score(&self, context: &ReviewContext) -> f64 {
         let desc_lower = context.working_spec.to_lowercase();
-        
+
         let mut score: f64 = 0.5; // Base score for QA
-        
+
         // Quality-focused keywords boost QA specialization
         if desc_lower.contains("test") || desc_lower.contains("quality") {
             score += 0.2;
@@ -260,12 +278,13 @@ impl Judge for QualityAssuranceJudge {
         if desc_lower.contains("performance") || desc_lower.contains("optimization") {
             score += 0.1;
         }
-        
+
         score.min(1.0)
     }
 
     fn is_available(&self) -> bool {
-        self.health_metrics.health_status == crate::judge_backup::backup_types::JudgeHealthStatus::Healthy
+        self.health_metrics.health_status
+            == crate::judge_backup::backup_types::JudgeHealthStatus::Healthy
     }
 
     fn health_metrics(&self) -> JudgeHealthMetrics {

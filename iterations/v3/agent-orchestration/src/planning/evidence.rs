@@ -5,14 +5,14 @@
 //!
 //! @author @darianrosebrook
 
+use agent_agency_contracts::planning_io::{EvidenceGate, Milestone};
+use anyhow::{anyhow, Result};
+use chrono::Utc;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use anyhow::{anyhow, Result};
 use uuid::Uuid;
-use chrono::Utc;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use agent_agency_contracts::planning_io::{Milestone, EvidenceGate};
 // Local type definitions to avoid circular dependency with agent-research
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResearchEvidence {
@@ -26,7 +26,6 @@ pub struct ResearchEvidence {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum ResearchEvidenceType {
     CodeReview,
@@ -35,14 +34,17 @@ pub enum ResearchEvidenceType {
     PerformanceMetrics,
     Performance, // Alias/synonym for PerformanceMetrics
     SecurityScan,
-    Security, // Alias/synonym for SecurityScan
+    Security,       // Alias/synonym for SecurityScan
     Constitutional, // Constitutional/CAWS compliance evidence
     Documentation,
 }
 
 #[async_trait::async_trait]
 pub trait ResearchEvidenceCollector: Send + Sync {
-    async fn collect_evidence(&self, context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>>;
+    async fn collect_evidence(
+        &self,
+        context: &ProcessingContext,
+    ) -> anyhow::Result<Vec<ResearchEvidence>>;
 }
 
 /// No-op research evidence collector for when research feature is disabled
@@ -50,7 +52,10 @@ pub struct NoOpResearchEvidenceCollector;
 
 #[async_trait::async_trait]
 impl ResearchEvidenceCollector for NoOpResearchEvidenceCollector {
-    async fn collect_evidence(&self, _context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>> {
+    async fn collect_evidence(
+        &self,
+        _context: &ProcessingContext,
+    ) -> anyhow::Result<Vec<ResearchEvidence>> {
         Ok(vec![])
     }
 }
@@ -64,7 +69,7 @@ pub struct ProcessingContext {
     pub priority: String,
 }
 
-use crate::planning::plan_types::{EvidenceBundle, EvidenceArtifact};
+use crate::planning::plan_types::{EvidenceArtifact, EvidenceBundle};
 
 /// Evidence collector with real integration to agent-research
 pub struct EvidenceCollector {
@@ -185,28 +190,41 @@ impl EvidenceCollector {
     }
 
     /// Collect evidence for milestone completion using real evidence collection
-    pub async fn collect_evidence(&self, milestone: &Milestone, plan_id: &str) -> Result<EvidenceBundle> {
+    pub async fn collect_evidence(
+        &self,
+        milestone: &Milestone,
+        plan_id: &str,
+    ) -> Result<EvidenceBundle> {
         let collection_start = Utc::now();
 
         // Convert milestone to research evidence collection context
         let collection_context = self.create_collection_context(milestone)?;
 
         // Collect evidence using research collector
-        let research_evidence = self.research_collector.collect_evidence(&collection_context).await?;
+        let research_evidence = self
+            .research_collector
+            .collect_evidence(&collection_context)
+            .await?;
 
         // Convert research evidence to planning evidence bundle
-        let evidence_bundle = self.convert_research_evidence_to_bundle(
-            research_evidence,
-            milestone,
-            plan_id,
-            collection_start,
-        ).await?;
+        let evidence_bundle = self
+            .convert_research_evidence_to_bundle(
+                research_evidence,
+                milestone,
+                plan_id,
+                collection_start,
+            )
+            .await?;
 
         // Validate evidence against milestone requirements
-        self.validate_evidence_bundle(&evidence_bundle, &milestone.evidence_gate).await?;
+        self.validate_evidence_bundle(&evidence_bundle, &milestone.evidence_gate)
+            .await?;
 
         // Store evidence if configured
-        if matches!(self.storage_config.backend, EvidenceStorageBackend::FileSystem) {
+        if matches!(
+            self.storage_config.backend,
+            EvidenceStorageBackend::FileSystem
+        ) {
             self.store_evidence_bundle(&evidence_bundle).await?;
         }
 
@@ -214,11 +232,16 @@ impl EvidenceCollector {
     }
 
     /// Validate collected evidence against gate requirements
-    pub async fn validate_evidence(&self, evidence: &EvidenceBundle, gate: &EvidenceGate) -> Result<bool> {
+    pub async fn validate_evidence(
+        &self,
+        evidence: &EvidenceBundle,
+        gate: &EvidenceGate,
+    ) -> Result<bool> {
         // Check coverage requirements
         if let Some(test_coverage) = self.get_test_coverage(evidence) {
-            if test_coverage.line_coverage < gate.min_coverage ||
-               test_coverage.branch_coverage < gate.min_branch_coverage {
+            if test_coverage.line_coverage < gate.min_coverage
+                || test_coverage.branch_coverage < gate.min_branch_coverage
+            {
                 return Ok(false);
             }
         } else if gate.min_coverage > 0.0 {
@@ -262,8 +285,11 @@ impl EvidenceCollector {
         let mut artifact_count = 0;
 
         for artifact in &evidence.artifacts {
-            if let Some(quality) = artifact.metadata.get("quality_score")
-                .and_then(|v| v.as_f64()) {
+            if let Some(quality) = artifact
+                .metadata
+                .get("quality_score")
+                .and_then(|v| v.as_f64())
+            {
                 total_score += quality;
                 artifact_count += 1;
             }
@@ -277,7 +303,10 @@ impl EvidenceCollector {
     }
 
     /// Create collection context for research collector
-    fn create_collection_context(&self, milestone: &Milestone) -> Result<crate::planning::evidence::ProcessingContext> {
+    fn create_collection_context(
+        &self,
+        milestone: &Milestone,
+    ) -> Result<crate::planning::evidence::ProcessingContext> {
         use uuid::Uuid;
         let context_json = serde_json::json!({
             "milestone_id": milestone.id,
@@ -304,7 +333,9 @@ impl EvidenceCollector {
         let mut artifacts = Vec::new();
 
         for research_ev in research_evidence {
-            let artifact = self.convert_single_evidence(research_ev, collection_start).await?;
+            let artifact = self
+                .convert_single_evidence(research_ev, collection_start)
+                .await?;
             artifacts.push(artifact);
         }
 
@@ -341,13 +372,25 @@ impl EvidenceCollector {
 
         // Create metadata
         let mut metadata = HashMap::from([
-            ("collected_at".to_string(), serde_json::Value::String(collected_at.to_string())),
-            ("quality_score".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(quality_score).unwrap())),
-            ("source".to_string(), serde_json::Value::String("research_collector".to_string())),
+            (
+                "collected_at".to_string(),
+                serde_json::Value::String(collected_at.to_string()),
+            ),
+            (
+                "quality_score".to_string(),
+                serde_json::Value::Number(serde_json::Number::from_f64(quality_score).unwrap()),
+            ),
+            (
+                "source".to_string(),
+                serde_json::Value::String("research_collector".to_string()),
+            ),
         ]);
 
         // Add evidence-specific metadata
-        metadata.insert("evidence_content".to_string(), serde_json::Value::String(research_ev.content.clone()));
+        metadata.insert(
+            "evidence_content".to_string(),
+            serde_json::Value::String(research_ev.content.clone()),
+        );
 
         Ok(EvidenceArtifact {
             metadata: std::collections::HashMap::new(),
@@ -360,7 +403,11 @@ impl EvidenceCollector {
     }
 
     /// Validate evidence bundle against gate requirements
-    async fn validate_evidence_bundle(&self, bundle: &EvidenceBundle, gate: &EvidenceGate) -> Result<()> {
+    async fn validate_evidence_bundle(
+        &self,
+        bundle: &EvidenceBundle,
+        gate: &EvidenceGate,
+    ) -> Result<()> {
         if !self.validate_evidence(bundle, gate).await? {
             return Err(anyhow!(
                 "Evidence validation failed for milestone {}. Quality score: {:?}",
@@ -385,22 +432,16 @@ impl EvidenceCollector {
     /// Store evidence bundle to configured backend
     async fn store_evidence_bundle(&self, bundle: &EvidenceBundle) -> Result<()> {
         match self.storage_config.backend {
-            EvidenceStorageBackend::FileSystem => {
-                self.store_to_filesystem(bundle).await
-            }
-            EvidenceStorageBackend::Database => {
-                self.store_to_database(bundle).await
-            }
-            EvidenceStorageBackend::Distributed => {
-                self.store_to_distributed(bundle).await
-            }
+            EvidenceStorageBackend::FileSystem => self.store_to_filesystem(bundle).await,
+            EvidenceStorageBackend::Database => self.store_to_database(bundle).await,
+            EvidenceStorageBackend::Distributed => self.store_to_distributed(bundle).await,
         }
     }
 
     /// Store evidence to file system
     async fn store_to_filesystem(&self, bundle: &EvidenceBundle) -> Result<()> {
-        use tokio::fs;
         use std::path::PathBuf;
+        use tokio::fs;
 
         let evidence_dir = PathBuf::from(&self.storage_config.location)
             .join("planning")
@@ -408,8 +449,8 @@ impl EvidenceCollector {
 
         fs::create_dir_all(&evidence_dir).await?;
 
-        let evidence_file = evidence_dir.join(format!("evidence-{}.json",
-            bundle.collected_at.timestamp()));
+        let evidence_file =
+            evidence_dir.join(format!("evidence-{}.json", bundle.collected_at.timestamp()));
 
         let evidence_json = serde_json::to_string_pretty(bundle)?;
         fs::write(evidence_file, evidence_json).await?;
@@ -434,25 +475,32 @@ impl EvidenceCollector {
         for artifact in &evidence.artifacts {
             if artifact.artifact_type == "test_results" {
                 // Try metadata first (preferred location)
-                if let Some(line_cov) = artifact.metadata.get("line_coverage")
-                    .and_then(|v| v.as_f64()) {
-                    if let Some(branch_cov) = artifact.metadata.get("branch_coverage")
-                        .and_then(|v| v.as_f64()) {
+                if let Some(line_cov) = artifact
+                    .metadata
+                    .get("line_coverage")
+                    .and_then(|v| v.as_f64())
+                {
+                    if let Some(branch_cov) = artifact
+                        .metadata
+                        .get("branch_coverage")
+                        .and_then(|v| v.as_f64())
+                    {
                         return Some(TestCoverage {
                             line_coverage: line_cov,
                             branch_coverage: branch_cov,
                         });
                     }
                 }
-                
+
                 // Fallback: Try structured content (for test data)
-                if let crate::planning::plan_types::EvidenceContent::Structured(content) = &artifact.content {
+                if let crate::planning::plan_types::EvidenceContent::Structured(content) =
+                    &artifact.content
+                {
                     if let Some(line_cov_val) = content.get("line_coverage") {
                         if let Some(branch_cov_val) = content.get("branch_coverage") {
-                            if let (Some(line_cov), Some(branch_cov)) = (
-                                line_cov_val.as_f64(),
-                                branch_cov_val.as_f64(),
-                            ) {
+                            if let (Some(line_cov), Some(branch_cov)) =
+                                (line_cov_val.as_f64(), branch_cov_val.as_f64())
+                            {
                                 return Some(TestCoverage {
                                     line_coverage: line_cov,
                                     branch_coverage: branch_cov,
@@ -469,7 +517,9 @@ impl EvidenceCollector {
     fn get_mutation_score(&self, evidence: &EvidenceBundle) -> Option<f64> {
         for artifact in &evidence.artifacts {
             if artifact.artifact_type == "mutation_testing" {
-                return artifact.metadata.get("mutation_score")
+                return artifact
+                    .metadata
+                    .get("mutation_score")
                     .and_then(|v| v.as_f64());
             }
         }
@@ -477,34 +527,39 @@ impl EvidenceCollector {
     }
 
     fn has_security_scan(&self, evidence: &EvidenceBundle) -> bool {
-        evidence.artifacts.iter()
+        evidence
+            .artifacts
+            .iter()
             .any(|a| a.artifact_type == "security_scan")
     }
 
     fn has_artifact(&self, evidence: &EvidenceBundle, artifact_type: &str) -> bool {
-        evidence.artifacts.iter()
+        evidence
+            .artifacts
+            .iter()
             .any(|a| a.artifact_type == artifact_type)
     }
 
-    fn validate_performance_budget(&self, evidence: &EvidenceBundle, budget: &agent_agency_contracts::planning_io::PerformanceBudget) -> bool {
+    fn validate_performance_budget(
+        &self,
+        evidence: &EvidenceBundle,
+        budget: &agent_agency_contracts::planning_io::PerformanceBudget,
+    ) -> bool {
         for artifact in &evidence.artifacts {
             if artifact.artifact_type == "performance" {
-                if let Some(p95) = artifact.metadata.get("p95_ms")
-                    .and_then(|v| v.as_u64()) {
+                if let Some(p95) = artifact.metadata.get("p95_ms").and_then(|v| v.as_u64()) {
                     if p95 > budget.max_p95_ms {
                         return false;
                     }
                 }
 
-                if let Some(p99) = artifact.metadata.get("p99_ms")
-                    .and_then(|v| v.as_u64()) {
+                if let Some(p99) = artifact.metadata.get("p99_ms").and_then(|v| v.as_u64()) {
                     if p99 > budget.max_p99_ms {
                         return false;
                     }
                 }
 
-                if let Some(memory) = artifact.metadata.get("memory_mb")
-                    .and_then(|v| v.as_u64()) {
+                if let Some(memory) = artifact.metadata.get("memory_mb").and_then(|v| v.as_u64()) {
                     if memory > budget.max_memory_mb as u64 {
                         return false;
                     }
@@ -533,17 +588,18 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ResearchEvidenceCollector for MockResearchCollector {
-        async fn collect_evidence(&self, _context: &ProcessingContext) -> anyhow::Result<Vec<ResearchEvidence>> {
-            Ok(vec![
-                ResearchEvidence {
-                    id: Uuid::new_v4(),
-                    content: "Quality test results for milestone execution".to_string(),
-                    evidence_type: ResearchEvidenceType::TestExecution,
-                    confidence: 0.9,
-                    source: "test-harness".to_string(),
-                    timestamp: Utc::now(),
-                }
-            ])
+        async fn collect_evidence(
+            &self,
+            _context: &ProcessingContext,
+        ) -> anyhow::Result<Vec<ResearchEvidence>> {
+            Ok(vec![ResearchEvidence {
+                id: Uuid::new_v4(),
+                content: "Quality test results for milestone execution".to_string(),
+                evidence_type: ResearchEvidenceType::TestExecution,
+                confidence: 0.9,
+                source: "test-harness".to_string(),
+                timestamp: Utc::now(),
+            }])
         }
     }
 
@@ -584,8 +640,14 @@ mod tests {
                 content: crate::planning::plan_types::EvidenceContent::Structured(HashMap::from([
                     ("data".to_string(), serde_json::Value::Null),
                     ("verified".to_string(), serde_json::Value::Bool(true)),
-                    ("line_coverage".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.85).unwrap())),
-                    ("branch_coverage".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(0.80).unwrap())),
+                    (
+                        "line_coverage".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from_f64(0.85).unwrap()),
+                    ),
+                    (
+                        "branch_coverage".to_string(),
+                        serde_json::Value::Number(serde_json::Number::from_f64(0.80).unwrap()),
+                    ),
                 ])),
                 quality_score: 0.9,
                 collected_at: Utc::now(),

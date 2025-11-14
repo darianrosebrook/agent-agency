@@ -3,9 +3,9 @@
 //! CLIP and SSIM-based visual embeddings with HNSW indexing
 //! for efficient visual similarity search.
 
-use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -81,7 +81,11 @@ impl VisualIndexer {
     }
 
     /// Search similar images using visual embeddings
-    pub fn visual_search(&self, query_embedding: &EmbeddingVector, limit: usize) -> Vec<VisualSearchResult> {
+    pub fn visual_search(
+        &self,
+        query_embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Vec<VisualSearchResult> {
         let mut results = Vec::new();
 
         for (doc_id, embedding) in &self.visual_embeddings {
@@ -99,7 +103,11 @@ impl VisualIndexer {
     }
 
     /// Find images similar to a reference image
-    pub fn find_similar_images(&self, reference_id: Uuid, limit: usize) -> Result<Vec<VisualSearchResult>> {
+    pub fn find_similar_images(
+        &self,
+        reference_id: Uuid,
+        limit: usize,
+    ) -> Result<Vec<VisualSearchResult>> {
         if let Some(reference_embedding) = self.visual_embeddings.get(&reference_id) {
             Ok(self.visual_search(reference_embedding, limit))
         } else {
@@ -108,7 +116,11 @@ impl VisualIndexer {
     }
 
     /// Search by semantic concept
-    pub fn semantic_visual_search(&self, concept_embedding: &EmbeddingVector, limit: usize) -> Vec<VisualSearchResult> {
+    pub fn semantic_visual_search(
+        &self,
+        concept_embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Vec<VisualSearchResult> {
         self.visual_search(concept_embedding, limit)
     }
 
@@ -118,17 +130,26 @@ impl VisualIndexer {
             total_images: self.visual_embeddings.len(),
             models_indexed: self.visual_hnsw.len(),
             total_index_size: self.visual_hnsw.values().map(|m| m.index_size).sum(),
-            average_dimensions: self.visual_hnsw.values().map(|m| m.dimensions).sum::<usize>() / self.visual_hnsw.len().max(1),
+            average_dimensions: self
+                .visual_hnsw
+                .values()
+                .map(|m| m.dimensions)
+                .sum::<usize>()
+                / self.visual_hnsw.len().max(1),
         }
     }
 
     /// Extract visual features from image data
-    pub fn extract_features(&self, _image_data: &[u8], _format: &ImageFormat) -> Result<VisualFeatures> {
+    pub fn extract_features(
+        &self,
+        _image_data: &[u8],
+        _format: &ImageFormat,
+    ) -> Result<VisualFeatures> {
         // Placeholder - would use actual computer vision libraries
         Ok(VisualFeatures {
-            color_histogram: vec![0.1, 0.2, 0.3], // Placeholder
-            edge_features: vec![0.4, 0.5, 0.6], // Placeholder
-            texture_features: vec![0.7, 0.8, 0.9], // Placeholder
+            color_histogram: vec![0.1, 0.2, 0.3],        // Placeholder
+            edge_features: vec![0.4, 0.5, 0.6],          // Placeholder
+            texture_features: vec![0.7, 0.8, 0.9],       // Placeholder
             semantic_features: vec![0.1, 0.2, 0.3, 0.4], // Placeholder
         })
     }
@@ -193,7 +214,12 @@ impl VisualIndexer {
     }
 
     fn cosine_similarity(&self, a: &EmbeddingVector, b: &EmbeddingVector) -> f64 {
-        let dot_product: f64 = a.values.iter().zip(&b.values).map(|(x, y)| (*x as f64) * (*y as f64)).sum();
+        let dot_product: f64 = a
+            .values
+            .iter()
+            .zip(&b.values)
+            .map(|(x, y)| (*x as f64) * (*y as f64))
+            .sum();
         let norm_a: f64 = a.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
         let norm_b: f64 = b.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
 
@@ -206,14 +232,17 @@ impl VisualIndexer {
 
     fn initialize_visual_hnsw(&mut self, model: &str) {
         if !self.visual_hnsw.contains_key(model) {
-            self.visual_hnsw.insert(model.to_string(), VisualHnswMetadata {
-                dimensions: 512, // CLIP visual dimension
-                max_connections: 32,
-                ef_construction: 200,
-                ef_search: 64,
-                index_size: 0,
-                model_version: model.to_string(),
-            });
+            self.visual_hnsw.insert(
+                model.to_string(),
+                VisualHnswMetadata {
+                    dimensions: 512, // CLIP visual dimension
+                    max_connections: 32,
+                    ef_construction: 200,
+                    ef_search: 64,
+                    index_size: 0,
+                    model_version: model.to_string(),
+                },
+            );
         }
     }
 }
@@ -241,7 +270,11 @@ pub struct ImageProcessor;
 
 impl ImageProcessor {
     /// Resize image to standard dimensions
-    pub fn resize_image(image_data: &[u8], _target_width: u32, _target_height: u32) -> Result<Vec<u8>> {
+    pub fn resize_image(
+        image_data: &[u8],
+        _target_width: u32,
+        _target_height: u32,
+    ) -> Result<Vec<u8>> {
         // Placeholder - would use image processing library
         Ok(image_data.to_vec())
     }
@@ -258,5 +291,3 @@ impl ImageProcessor {
         Ok(vec![(255, 0, 0), (0, 255, 0), (0, 0, 255)])
     }
 }
-
-

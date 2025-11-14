@@ -1,17 +1,17 @@
 //! Embedding cache for performance optimization
 
-use schemars::JsonSchema;
 use super::embedding_types::*;
 use super::provider::EmbeddingProvider;
 use dashmap::DashMap;
+use futures::future::BoxFuture;
 use lru::LruCache;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::path::PathBuf;
-use futures::future::BoxFuture;
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::sync::RwLock;
 
 /// LRU cache for embeddings
 pub struct EmbeddingCache {
@@ -343,7 +343,11 @@ impl ModelCache {
     }
 
     /// Get a cached model if it exists
-    pub async fn get(&self, model_path: &PathBuf, model_name: &str) -> Option<Arc<dyn EmbeddingProvider + Send + Sync>> {
+    pub async fn get(
+        &self,
+        model_path: &PathBuf,
+        model_name: &str,
+    ) -> Option<Arc<dyn EmbeddingProvider + Send + Sync>> {
         let cache_key = Self::make_cache_key(model_path, model_name);
         let mut cache = self.cache.write().await;
 
@@ -418,7 +422,9 @@ impl ModelCache {
         let mut evicted_memory = 0usize;
 
         // Evict least recently used models until we have enough room
-        while *current_memory + required_memory - evicted_memory > self.max_memory_bytes && !cache.is_empty() {
+        while *current_memory + required_memory - evicted_memory > self.max_memory_bytes
+            && !cache.is_empty()
+        {
             if let Some((_, evicted_model)) = cache.pop_lru() {
                 evicted_memory += evicted_model.memory_usage_bytes;
 
@@ -511,12 +517,19 @@ impl ModelCache {
         loader: F,
     ) -> Result<(), ModelCacheError>
     where
-        F: Fn(PathBuf, String) -> BoxFuture<'static, Result<Arc<dyn EmbeddingProvider + Send + Sync>, ModelCacheError>>,
+        F: Fn(
+            PathBuf,
+            String,
+        ) -> BoxFuture<
+            'static,
+            Result<Arc<dyn EmbeddingProvider + Send + Sync>, ModelCacheError>,
+        >,
     {
         for (model_path, model_name, memory_estimate) in models_to_load {
             if !self.contains(&model_path, &model_name).await {
                 let provider = loader(model_path.clone(), model_name.clone()).await?;
-                self.put(model_path, model_name, provider, memory_estimate).await?;
+                self.put(model_path, model_name, provider, memory_estimate)
+                    .await?;
             }
         }
         Ok(())
@@ -525,7 +538,8 @@ impl ModelCache {
     /// Get list of currently cached models
     pub async fn list_cached_models(&self) -> Vec<ModelCacheInfo> {
         let cache = self.cache.read().await;
-        cache.iter()
+        cache
+            .iter()
             .map(|(key, model)| ModelCacheInfo {
                 cache_key: key.clone(),
                 model_path: model.model_path.clone(),
@@ -549,9 +563,12 @@ impl ModelCachePersistence {
     }
 
     /// Save cache metadata to disk
-    async fn save_cache_metadata(&self, cache: &LruCache<String, CachedModel>) -> Result<(), ModelCacheError> {
-        use tokio::fs;
+    async fn save_cache_metadata(
+        &self,
+        cache: &LruCache<String, CachedModel>,
+    ) -> Result<(), ModelCacheError> {
         use std::collections::HashMap;
+        use tokio::fs;
 
         let metadata: HashMap<String, PersistentModelMetadata> = cache
             .iter()
@@ -561,39 +578,46 @@ impl ModelCachePersistence {
                     .unwrap_or(Duration::ZERO)
                     .as_secs();
 
-                (key.clone(), PersistentModelMetadata {
-                    model_path: model.model_path.clone(),
-                    model_name: model.model_name.clone(),
-                    loaded_at_epoch_secs,
-                    memory_usage_bytes: model.memory_usage_bytes,
-                })
+                (
+                    key.clone(),
+                    PersistentModelMetadata {
+                        model_path: model.model_path.clone(),
+                        model_name: model.model_name.clone(),
+                        loaded_at_epoch_secs,
+                        memory_usage_bytes: model.memory_usage_bytes,
+                    },
+                )
             })
             .collect();
 
-        let json = serde_json::to_string_pretty(&metadata)
-            .map_err(|e| ModelCacheError::PersistenceError(format!("Failed to serialize metadata: {}", e)))?;
+        let json = serde_json::to_string_pretty(&metadata).map_err(|e| {
+            ModelCacheError::PersistenceError(format!("Failed to serialize metadata: {}", e))
+        })?;
 
-        fs::write(&self.metadata_path, json)
-            .await
-            .map_err(|e| ModelCacheError::PersistenceError(format!("Failed to write metadata file: {}", e)))?;
+        fs::write(&self.metadata_path, json).await.map_err(|e| {
+            ModelCacheError::PersistenceError(format!("Failed to write metadata file: {}", e))
+        })?;
 
         Ok(())
     }
 
     /// Load cache metadata from disk
-    pub async fn load_cache_metadata(&self) -> Result<HashMap<String, PersistentModelMetadata>, ModelCacheError> {
+    pub async fn load_cache_metadata(
+        &self,
+    ) -> Result<HashMap<String, PersistentModelMetadata>, ModelCacheError> {
         use tokio::fs;
 
         if !self.metadata_path.exists() {
             return Ok(HashMap::new());
         }
 
-        let json = fs::read_to_string(&self.metadata_path)
-            .await
-            .map_err(|e| ModelCacheError::PersistenceError(format!("Failed to read metadata file: {}", e)))?;
+        let json = fs::read_to_string(&self.metadata_path).await.map_err(|e| {
+            ModelCacheError::PersistenceError(format!("Failed to read metadata file: {}", e))
+        })?;
 
-        serde_json::from_str(&json)
-            .map_err(|e| ModelCacheError::PersistenceError(format!("Failed to deserialize metadata: {}", e)))
+        serde_json::from_str(&json).map_err(|e| {
+            ModelCacheError::PersistenceError(format!("Failed to deserialize metadata: {}", e))
+        })
     }
 }
 

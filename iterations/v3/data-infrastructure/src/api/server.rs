@@ -3,25 +3,24 @@
 //! Contains the main RestApi struct and core business logic methods
 //! for task management, execution, and API operations.
 
-use schemars::JsonSchema;
-use chrono::{DateTime, Utc, TimeDelta};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::sync::Arc;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use axum::{Router, routing::get};
 use axum::response::IntoResponse;
+use axum::{routing::get, Router};
+use chrono::{DateTime, TimeDelta, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
-use super::{ApiError, Result};
 use super::types::{
-    ApiConfig, TaskSubmissionRequest, TaskSubmissionResponse,
-    TaskStatusResponse, TaskResultResponse, SavedQueryResponse, SaveQueryRequest,
-    DashboardTaskSummary, DashboardDiffSummary
+    ApiConfig, DashboardDiffSummary, DashboardTaskSummary, SaveQueryRequest, SavedQueryResponse,
+    TaskResultResponse, TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse,
 };
-use agent_agency_contracts::{ExecutionArtifacts, WorkingSpec, QualityReport};
+use super::{ApiError, Result};
 use crate::DatabaseClient;
+use agent_agency_contracts::{ExecutionArtifacts, QualityReport, WorkingSpec};
 
 // Stub types for compilation
 
@@ -33,10 +32,8 @@ pub struct ExecutionProgress {
     pub progress_percentage: f64,
     pub current_phase: String,
     #[schemars(with = "String")]
-
     pub started_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -65,12 +62,14 @@ impl ProgressTracker {
             WHERE task_id = $1
             ORDER BY execution_started_at DESC
             LIMIT 1
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_optional(self.db_client.pool())
         .await
-        .map_err(|e| ApiError::InternalError(format!("Failed to query task execution progress: {}", e)))?;
+        .map_err(|e| {
+            ApiError::InternalError(format!("Failed to query task execution progress: {}", e))
+        })?;
 
         // Query task_execution_states for current state
         let state_row = sqlx::query(
@@ -78,137 +77,165 @@ impl ProgressTracker {
             SELECT status, last_updated, state_data
             FROM task_execution_states
             WHERE task_id = $1
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_optional(self.db_client.pool())
         .await
-        .map_err(|e| ApiError::InternalError(format!("Failed to query task execution state: {}", e)))?;
+        .map_err(|e| {
+            ApiError::InternalError(format!("Failed to query task execution state: {}", e))
+        })?;
 
         // Determine status and progress from execution and state
-        let (status, progress_percentage, current_phase, started_at, updated_at) = match (execution_row, state_row) {
-            (Some(exec_row), Some(state_row)) => {
-                let exec_status: String = exec_row.try_get("status")
-                    .unwrap_or_else(|_| "unknown".to_string());
-                let state_status: String = state_row.try_get("status")
-                    .unwrap_or_else(|_| "unknown".to_string());
-                
-                let started: DateTime<Utc> = exec_row.try_get("execution_started_at")
-                    .unwrap_or_else(|_| Utc::now());
-                let updated: DateTime<Utc> = state_row.try_get("last_updated")
-                    .unwrap_or_else(|_| Utc::now());
-                
-                // Use state status if available, otherwise execution status
-                let final_status = if state_status != "unknown" { state_status } else { exec_status };
-                
-                // Calculate progress based on status
-                let progress = match final_status.as_str() {
-                    "pending" => 0.0,
-                    "running" => {
-                        // Estimate progress based on execution time if available
-                        if let Ok(Some(_exec_time_ms)) = exec_row.try_get::<Option<i32>, &str>("execution_time_ms") {
-                            // If we have execution time, estimate based on average task duration
-                            // Assume average task takes 5 minutes, cap at 90% while running
-                            let elapsed: TimeDelta = Utc::now() - started;
-                            let elapsed_secs = elapsed.num_seconds();
-                            (elapsed_secs as f64 / 300.0 * 90.0).min(90.0)
-                        } else {
-                            50.0 // Default midpoint for running tasks
+        let (status, progress_percentage, current_phase, started_at, updated_at) =
+            match (execution_row, state_row) {
+                (Some(exec_row), Some(state_row)) => {
+                    let exec_status: String = exec_row
+                        .try_get("status")
+                        .unwrap_or_else(|_| "unknown".to_string());
+                    let state_status: String = state_row
+                        .try_get("status")
+                        .unwrap_or_else(|_| "unknown".to_string());
+
+                    let started: DateTime<Utc> = exec_row
+                        .try_get("execution_started_at")
+                        .unwrap_or_else(|_| Utc::now());
+                    let updated: DateTime<Utc> = state_row
+                        .try_get("last_updated")
+                        .unwrap_or_else(|_| Utc::now());
+
+                    // Use state status if available, otherwise execution status
+                    let final_status = if state_status != "unknown" {
+                        state_status
+                    } else {
+                        exec_status
+                    };
+
+                    // Calculate progress based on status
+                    let progress = match final_status.as_str() {
+                        "pending" => 0.0,
+                        "running" => {
+                            // Estimate progress based on execution time if available
+                            if let Ok(Some(_exec_time_ms)) =
+                                exec_row.try_get::<Option<i32>, &str>("execution_time_ms")
+                            {
+                                // If we have execution time, estimate based on average task duration
+                                // Assume average task takes 5 minutes, cap at 90% while running
+                                let elapsed: TimeDelta = Utc::now() - started;
+                                let elapsed_secs = elapsed.num_seconds();
+                                (elapsed_secs as f64 / 300.0 * 90.0).min(90.0)
+                            } else {
+                                50.0 // Default midpoint for running tasks
+                            }
                         }
-                    }
-                    "completed" => 100.0,
-                    "failed" | "cancelled" => 0.0,
-                    "paused" => {
-                        // Estimate based on state_data if available
-                        if let Ok(Some(state_data)) = state_row.try_get::<Option<serde_json::Value>, &str>("state_data") {
-                            // Try to extract progress from state_data
-                            state_data.get("progress")
-                                .and_then(|p| p.as_f64())
-                                .unwrap_or(50.0)
-                        } else {
-                            50.0
+                        "completed" => 100.0,
+                        "failed" | "cancelled" => 0.0,
+                        "paused" => {
+                            // Estimate based on state_data if available
+                            if let Ok(Some(state_data)) =
+                                state_row.try_get::<Option<serde_json::Value>, &str>("state_data")
+                            {
+                                // Try to extract progress from state_data
+                                state_data
+                                    .get("progress")
+                                    .and_then(|p| p.as_f64())
+                                    .unwrap_or(50.0)
+                            } else {
+                                50.0
+                            }
                         }
+                        _ => 0.0,
+                    };
+
+                    let phase = match final_status.as_str() {
+                        "pending" => "pending",
+                        "running" => "executing",
+                        "completed" => "completed",
+                        "failed" => "failed",
+                        "cancelled" => "cancelled",
+                        "paused" => "paused",
+                        _ => "unknown",
                     }
-                    _ => 0.0,
-                };
-                
-                let phase = match final_status.as_str() {
-                    "pending" => "pending",
-                    "running" => "executing",
-                    "completed" => "completed",
-                    "failed" => "failed",
-                    "cancelled" => "cancelled",
-                    "paused" => "paused",
-                    _ => "unknown",
-                }.to_string();
-                
-                (final_status, progress, phase, started, updated)
-            }
-            (Some(exec_row), None) => {
-                let status: String = exec_row.try_get("status")
-                    .unwrap_or_else(|_| "unknown".to_string());
-                let started: DateTime<Utc> = exec_row.try_get("execution_started_at")
-                    .unwrap_or_else(|_| Utc::now());
-                let progress = match status.as_str() {
-                    "running" => 50.0,
-                    "completed" => 100.0,
-                    "failed" | "cancelled" => 0.0,
-                    _ => 0.0,
-                };
-                (status, progress, "executing".to_string(), started, Utc::now())
-            }
-            (None, Some(state_row)) => {
-                let status: String = state_row.try_get("status")
-                    .unwrap_or_else(|_| "unknown".to_string());
-                let updated: DateTime<Utc> = state_row.try_get("last_updated")
-                    .unwrap_or_else(|_| Utc::now());
-                let progress = match status.as_str() {
-                    "pending" => 0.0,
-                    "running" => 50.0,
-                    "completed" => 100.0,
-                    "failed" | "cancelled" => 0.0,
-                    "paused" => 50.0,
-                    _ => 0.0,
-                };
-                (status.clone(), progress, status.clone(), updated, updated)
-            }
-            (None, None) => {
-                // No execution or state found - check if task exists
-                let task_row = sqlx::query(
-                    r#"
+                    .to_string();
+
+                    (final_status, progress, phase, started, updated)
+                }
+                (Some(exec_row), None) => {
+                    let status: String = exec_row
+                        .try_get("status")
+                        .unwrap_or_else(|_| "unknown".to_string());
+                    let started: DateTime<Utc> = exec_row
+                        .try_get("execution_started_at")
+                        .unwrap_or_else(|_| Utc::now());
+                    let progress = match status.as_str() {
+                        "running" => 50.0,
+                        "completed" => 100.0,
+                        "failed" | "cancelled" => 0.0,
+                        _ => 0.0,
+                    };
+                    (
+                        status,
+                        progress,
+                        "executing".to_string(),
+                        started,
+                        Utc::now(),
+                    )
+                }
+                (None, Some(state_row)) => {
+                    let status: String = state_row
+                        .try_get("status")
+                        .unwrap_or_else(|_| "unknown".to_string());
+                    let updated: DateTime<Utc> = state_row
+                        .try_get("last_updated")
+                        .unwrap_or_else(|_| Utc::now());
+                    let progress = match status.as_str() {
+                        "pending" => 0.0,
+                        "running" => 50.0,
+                        "completed" => 100.0,
+                        "failed" | "cancelled" => 0.0,
+                        "paused" => 50.0,
+                        _ => 0.0,
+                    };
+                    (status.clone(), progress, status.clone(), updated, updated)
+                }
+                (None, None) => {
+                    // No execution or state found - check if task exists
+                    let task_row = sqlx::query(
+                        r#"
                     SELECT status, created_at, updated_at
                     FROM tasks
                     WHERE id = $1
-                    "#
-                )
-                .bind(task_id)
-                .fetch_optional(self.db_client.pool())
-                .await
-                .map_err(|e| ApiError::InternalError(format!("Failed to query task: {}", e)))?;
-                
-                match task_row {
-                    Some(row) => {
-                        let status: String = row.try_get("status")
-                            .unwrap_or_else(|_| "unknown".to_string());
-                        let created: DateTime<Utc> = row.try_get("created_at")
-                            .unwrap_or_else(|_| Utc::now());
-                        let updated: DateTime<Utc> = row.try_get("updated_at")
-                            .unwrap_or_else(|_| Utc::now());
-                        let progress = match status.as_str() {
-                            "pending" => 0.0,
-                            "in_progress" => 50.0,
-                            "completed" => 100.0,
-                            "failed" => 0.0,
-                            _ => 0.0,
-                        };
-                        (status, progress, "pending".to_string(), created, updated)
-                    }
-                    None => {
-                        return Err(ApiError::TaskNotFound(task_id.to_string()));
+                    "#,
+                    )
+                    .bind(task_id)
+                    .fetch_optional(self.db_client.pool())
+                    .await
+                    .map_err(|e| ApiError::InternalError(format!("Failed to query task: {}", e)))?;
+
+                    match task_row {
+                        Some(row) => {
+                            let status: String = row
+                                .try_get("status")
+                                .unwrap_or_else(|_| "unknown".to_string());
+                            let created: DateTime<Utc> =
+                                row.try_get("created_at").unwrap_or_else(|_| Utc::now());
+                            let updated: DateTime<Utc> =
+                                row.try_get("updated_at").unwrap_or_else(|_| Utc::now());
+                            let progress = match status.as_str() {
+                                "pending" => 0.0,
+                                "in_progress" => 50.0,
+                                "completed" => 100.0,
+                                "failed" => 0.0,
+                                _ => 0.0,
+                            };
+                            (status, progress, "pending".to_string(), created, updated)
+                        }
+                        None => {
+                            return Err(ApiError::TaskNotFound(task_id.to_string()));
+                        }
                     }
                 }
-            }
-        };
+            };
 
         Ok(ExecutionProgress {
             task_id,
@@ -257,19 +284,26 @@ impl Orchestrator {
         Self { service }
     }
 
-    pub async fn orchestrate_task(&self, description: &str, execution_mode: String) -> Result<ExecutionArtifacts> {
+    pub async fn orchestrate_task(
+        &self,
+        description: &str,
+        execution_mode: String,
+    ) -> Result<ExecutionArtifacts> {
         // Execute task using orchestrator service
-        let task_id = self.service.execute_task(
-            description.to_string(),
-            Some(execution_mode),
-            None,
-        ).await.map_err(|e| ApiError::ExecutionError(format!("Task execution failed: {}", e)))?;
+        let task_id = self
+            .service
+            .execute_task(description.to_string(), Some(execution_mode), None)
+            .await
+            .map_err(|e| ApiError::ExecutionError(format!("Task execution failed: {}", e)))?;
 
         // Wait a moment for task to start (in real implementation, would poll or use events)
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Get task status to construct artifacts
-        let task_state = self.service.get_task_status(task_id).await
+        let task_state = self
+            .service
+            .get_task_status(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Failed to get task status: {}", e)))?
             .ok_or_else(|| ApiError::TaskNotFound(task_id.to_string()))?;
 
@@ -282,7 +316,9 @@ impl Orchestrator {
             Ok(ExecutionArtifacts {
                 version: "1.0.0".to_string(),
                 task_id,
-                working_spec_id: task_state.working_spec.as_ref()
+                working_spec_id: task_state
+                    .working_spec
+                    .as_ref()
                     .map(|ws| ws.id.clone())
                     .unwrap_or_else(|| "unknown".to_string()),
                 iteration: 0,
@@ -376,34 +412,41 @@ impl RestApi {
         let _state = ApiState {
             api: Arc::new(self.clone()),
             websocket_manager: Arc::new(crate::websocket::WebSocketManager::new()),
-            query_performance_monitor: Arc::new(crate::monitoring::query_performance::QueryPerformanceMonitor::with_defaults()),
+            query_performance_monitor: Arc::new(
+                crate::monitoring::query_performance::QueryPerformanceMonitor::with_defaults(),
+            ),
             coreml_inference_callback: None,
         };
 
         // This router is not used in main.rs - routes are created directly there
-        let mut router = Router::new()
-            .route("/health", get(|| async { "OK" }));
+        let mut router = Router::new().route("/health", get(|| async { "OK" }));
 
         // Add API key authentication middleware when configured
         if self.__config.require_api_key {
             let api_keys = self.__config.api_keys.clone();
-            router = router.layer(axum::middleware::from_fn(move |request: axum::http::Request<axum::body::Body>, next: axum::middleware::Next| {
-                let headers = request.headers().clone();
-                let api_keys = api_keys.clone();
-                async move {
-                    match crate::api::middleware::api_key_auth(headers, api_keys).await {
-                        Ok(_) => Ok(next.run(request).await),
-                        Err(status) => Err(status.into_response()),
+            router = router.layer(axum::middleware::from_fn(
+                move |request: axum::http::Request<axum::body::Body>,
+                      next: axum::middleware::Next| {
+                    let headers = request.headers().clone();
+                    let api_keys = api_keys.clone();
+                    async move {
+                        match crate::api::middleware::api_key_auth(headers, api_keys).await {
+                            Ok(_) => Ok(next.run(request).await),
+                            Err(status) => Err(status.into_response()),
+                        }
                     }
-                }
-            }));
+                },
+            ));
         }
 
         router
     }
 
     /// Submit a task for autonomous execution
-    pub async fn submit_task(&self, request: TaskSubmissionRequest) -> Result<TaskSubmissionResponse> {
+    pub async fn submit_task(
+        &self,
+        request: TaskSubmissionRequest,
+    ) -> Result<TaskSubmissionResponse> {
         let task_id = Uuid::new_v4();
 
         // Initialize task state
@@ -437,7 +480,9 @@ impl RestApi {
                 orchestrator,
                 active_tasks.clone(),
                 progress_tracker,
-            ).await {
+            )
+            .await
+            {
                 tracing::error!("Task execution failed for {}: {:?}", task_id, e);
                 // Update task state with error
                 let mut active_tasks = active_tasks.write().await;
@@ -474,12 +519,20 @@ impl RestApi {
         }
 
         // Start progress tracking
-        progress_tracker.start_execution(task_id, "user-submitted".to_string()).await
+        progress_tracker
+            .start_execution(task_id, "user-submitted".to_string())
+            .await
             .map_err(|e| ApiError::InternalError(format!("Progress tracking failed: {:?}", e)))?;
 
         // Execute the task with execution mode
-        let execution_mode = request.execution_mode.as_deref().unwrap_or("default").to_string();
-        let result = orchestrator.orchestrate_task(&request.description, execution_mode).await
+        let execution_mode = request
+            .execution_mode
+            .as_deref()
+            .unwrap_or("default")
+            .to_string();
+        let result = orchestrator
+            .orchestrate_task(&request.description, execution_mode)
+            .await
             .map_err(|e| ApiError::ExecutionError(format!("Task orchestration failed: {:?}", e)))?;
 
         // Update task state with results
@@ -496,7 +549,9 @@ impl RestApi {
         }
 
         // Complete progress tracking
-        progress_tracker.complete_execution(task_id, true).await
+        progress_tracker
+            .complete_execution(task_id, true)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Progress completion failed: {:?}", e)))?;
 
         Ok(())
@@ -504,7 +559,10 @@ impl RestApi {
 
     /// Get task status
     pub async fn get_task_status(&self, task_id: Uuid) -> Result<TaskStatusResponse> {
-        let progress = self.progress_tracker.get_progress(task_id).await
+        let progress = self
+            .progress_tracker
+            .get_progress(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Progress retrieval failed: {:?}", e)))?;
 
         let active_tasks = self.active_tasks.read().await;
@@ -530,7 +588,8 @@ impl RestApi {
     /// Get task result
     pub async fn get_task_result(&self, task_id: Uuid) -> Result<TaskResultResponse> {
         let active_tasks = self.active_tasks.read().await;
-        let task_state = active_tasks.get(&task_id)
+        let task_state = active_tasks
+            .get(&task_id)
             .ok_or_else(|| ApiError::TaskNotFound(task_id.to_string()))?;
 
         Ok(TaskResultResponse {
@@ -552,7 +611,9 @@ impl RestApi {
             let mut active_tasks = self.active_tasks.write().await;
             if let Some(task) = active_tasks.get_mut(&task_id) {
                 if task.status != TaskStatus::Running {
-                    return Err(ApiError::InvalidOperation("Can only pause running tasks".to_string()));
+                    return Err(ApiError::InvalidOperation(
+                        "Can only pause running tasks".to_string(),
+                    ));
                 }
                 task.status = TaskStatus::Paused;
                 task.updated_at = Utc::now();
@@ -562,7 +623,9 @@ impl RestApi {
         }
 
         // Pause in progress tracker
-        self.progress_tracker.pause_execution(task_id).await
+        self.progress_tracker
+            .pause_execution(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Pause failed: {:?}", e)))?;
 
         Ok(())
@@ -575,7 +638,9 @@ impl RestApi {
             let mut active_tasks = self.active_tasks.write().await;
             if let Some(task) = active_tasks.get_mut(&task_id) {
                 if task.status != TaskStatus::Paused {
-                    return Err(ApiError::InvalidOperation("Can only resume paused tasks".to_string()));
+                    return Err(ApiError::InvalidOperation(
+                        "Can only resume paused tasks".to_string(),
+                    ));
                 }
                 task.status = TaskStatus::Running;
                 task.updated_at = Utc::now();
@@ -585,7 +650,9 @@ impl RestApi {
         }
 
         // Resume in progress tracker
-        self.progress_tracker.resume_execution(task_id).await
+        self.progress_tracker
+            .resume_execution(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Resume failed: {:?}", e)))?;
 
         Ok(())
@@ -606,7 +673,9 @@ impl RestApi {
         }
 
         // Cancel in progress tracker
-        self.progress_tracker.cancel_execution(task_id).await
+        self.progress_tracker
+            .cancel_execution(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Cancellation failed: {:?}", e)))?;
 
         Ok(())
@@ -621,7 +690,8 @@ impl RestApi {
             ORDER BY created_at DESC
         "#;
 
-        let rows = self.db_client
+        let rows = self
+            .db_client
             .query(query, &[])
             .await
             .map_err(|e| ApiError::DatabaseError(format!("Failed to list queries: {}", e)))?;
@@ -655,11 +725,9 @@ impl RestApi {
             RETURNING id, created_at, updated_at
         "#;
 
-        let row = self.db_client
-            .query_one_with_params(
-                query,
-                &[&request.name, &request.query_text],
-            )
+        let row = self
+            .db_client
+            .query_one_with_params(query, &[&request.name, &request.query_text])
             .await
             .map_err(|e| ApiError::DatabaseError(format!("Failed to save query: {}", e)))?
             .ok_or_else(|| ApiError::DatabaseError("Query insertion failed".to_string()))?;
@@ -685,13 +753,17 @@ impl RestApi {
             WHERE id = $1
         "#;
 
-        let result = self.db_client
+        let result = self
+            .db_client
             .execute(query, &[&query_id])
             .await
             .map_err(|e| ApiError::DatabaseError(format!("Failed to delete query: {}", e)))?;
 
         if result.rows_affected() == 0 {
-            return Err(ApiError::NotFound(format!("Query with ID {} not found", query_id)));
+            return Err(ApiError::NotFound(format!(
+                "Query with ID {} not found",
+                query_id
+            )));
         }
 
         Ok(())
@@ -703,8 +775,13 @@ impl RestApi {
         let mut responses = Vec::new();
 
         for (task_id, task_state) in active_tasks.iter() {
-            let progress = self.progress_tracker.get_progress(*task_id).await
-                .map_err(|e| ApiError::InternalError(format!("Progress retrieval failed: {:?}", e)))?;
+            let progress = self
+                .progress_tracker
+                .get_progress(*task_id)
+                .await
+                .map_err(|e| {
+                    ApiError::InternalError(format!("Progress retrieval failed: {:?}", e))
+                })?;
 
             let response = TaskStatusResponse {
                 task_id: *task_id,
@@ -726,24 +803,30 @@ impl RestApi {
     pub async fn get_metrics(&self) -> Result<HashMap<String, serde_json::Value>> {
         let active_tasks = self.active_tasks.read().await;
         let active_count = active_tasks.len();
-        let completed_count = active_tasks.values()
+        let completed_count = active_tasks
+            .values()
             .filter(|t| matches!(t.status, TaskStatus::Completed))
             .count();
-        let failed_count = active_tasks.values()
+        let failed_count = active_tasks
+            .values()
             .filter(|t| matches!(t.status, TaskStatus::Failed))
             .count();
 
         let mut metrics = HashMap::new();
         metrics.insert("active_tasks".to_string(), serde_json::json!(active_count));
-        metrics.insert("completed_tasks".to_string(), serde_json::json!(completed_count));
+        metrics.insert(
+            "completed_tasks".to_string(),
+            serde_json::json!(completed_count),
+        );
         metrics.insert("failed_tasks".to_string(), serde_json::json!(failed_count));
-        metrics.insert("success_rate".to_string(), serde_json::json!(
-            if completed_count + failed_count > 0 {
+        metrics.insert(
+            "success_rate".to_string(),
+            serde_json::json!(if completed_count + failed_count > 0 {
                 completed_count as f64 / (completed_count + failed_count) as f64
             } else {
                 1.0
-            }
-        ));
+            }),
+        );
 
         Ok(metrics)
     }
@@ -751,12 +834,23 @@ impl RestApi {
     /// Get dashboard data for a task
     pub async fn get_dashboard_data(&self, task_id: Uuid) -> Result<DashboardTaskSummary> {
         let active_tasks = self.active_tasks.read().await;
-        let task_state = active_tasks.get(&task_id)
+        let task_state = active_tasks
+            .get(&task_id)
             .ok_or_else(|| ApiError::TaskNotFound(task_id.to_string()))?;
 
-        let _progress: ExecutionProgress = self.progress_tracker.get_progress(task_id).await
+        let _progress: ExecutionProgress = self
+            .progress_tracker
+            .get_progress(task_id)
+            .await
             .map_err(|e| ApiError::InternalError(format!("Progress retrieval failed: {:?}", e)))
-            .unwrap_or(ExecutionProgress { task_id: task_id, status: "completed".to_string(), progress_percentage: 100.0, current_phase: "completed".to_string(), started_at: Utc::now(), updated_at: Utc::now() });
+            .unwrap_or(ExecutionProgress {
+                task_id: task_id,
+                status: "completed".to_string(),
+                progress_percentage: 100.0,
+                current_phase: "completed".to_string(),
+                started_at: Utc::now(),
+                updated_at: Utc::now(),
+            });
         // TODO: Build iteration summaries from actual iteration data
         // - [ ] Query iteration tracking system for task iterations
         // - [ ] Build iteration summaries with progress and status
@@ -772,7 +866,7 @@ impl RestApi {
             description: task_state.description.clone(),
             status: format!("{:?}", task_state.status).to_lowercase(),
             current_iteration: 1, // Placeholder - would come from actual iteration tracking
-            total_iterations: 5, // Placeholder - would come from actual iteration tracking
+            total_iterations: 5,  // Placeholder - would come from actual iteration tracking
             score: task_state.quality_report.as_ref().map(|r| r.overall_score),
             execution_mode: "auto".to_string(), // Placeholder
             start_time: task_state.started_at,
@@ -782,22 +876,25 @@ impl RestApi {
     }
 
     /// Get diff summary for a task iteration
-    pub async fn get_diff_summary(&self, task_id: Uuid, iteration: usize) -> Result<Vec<DashboardDiffSummary>> {
+    pub async fn get_diff_summary(
+        &self,
+        task_id: Uuid,
+        iteration: usize,
+    ) -> Result<Vec<DashboardDiffSummary>> {
         let active_tasks = self.active_tasks.read().await;
-        let _task_state = active_tasks.get(&task_id)
+        let _task_state = active_tasks
+            .get(&task_id)
             .ok_or_else(|| ApiError::TaskNotFound(task_id.to_string()))?;
 
         // Placeholder diff data - would come from actual artifacts
-        Ok(vec![
-            DashboardDiffSummary {
-                iteration: iteration.try_into().unwrap(),
-                file_path: "src/main.rs".to_string(),
-                change_type: "modified".to_string(),
-                lines_added: 15,
-                lines_removed: 5,
-                diff_preview: "@@ -10,5 +10,15 @@\n- old code\n+ new code".to_string(),
-            }
-        ])
+        Ok(vec![DashboardDiffSummary {
+            iteration: iteration.try_into().unwrap(),
+            file_path: "src/main.rs".to_string(),
+            change_type: "modified".to_string(),
+            lines_added: 15,
+            lines_removed: 5,
+            diff_preview: "@@ -10,5 +10,15 @@\n- old code\n+ new code".to_string(),
+        }])
     }
 }
 
@@ -807,7 +904,20 @@ impl RestApi {
 pub struct ApiState {
     pub api: Arc<RestApi>,
     pub websocket_manager: Arc<crate::websocket::WebSocketManager>,
-    pub query_performance_monitor: Arc<crate::monitoring::query_performance::QueryPerformanceMonitor>,
+    pub query_performance_monitor:
+        Arc<crate::monitoring::query_performance::QueryPerformanceMonitor>,
     /// Optional callback for CoreML inference (set by wrapper when UnifiedOrchestrator is available)
-    pub coreml_inference_callback: Option<Arc<dyn Fn(String) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, String>> + Send>> + Send + Sync>>,
+    pub coreml_inference_callback: Option<
+        Arc<
+            dyn Fn(
+                    String,
+                ) -> std::pin::Pin<
+                    Box<
+                        dyn std::future::Future<Output = std::result::Result<String, String>>
+                            + Send,
+                    >,
+                > + Send
+                + Sync,
+        >,
+    >,
 }

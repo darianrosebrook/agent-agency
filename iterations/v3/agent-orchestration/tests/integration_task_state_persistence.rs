@@ -9,18 +9,18 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
-use anyhow::Result;
 
 use agent_agency_contracts::WorkingSpec;
 use agent_orchestration::orchestration::task_state_persistence::{
-    DatabaseTaskStatePersistence, TaskStatePersistence, TaskExecutionState, ExecutionStateStatus,
+    DatabaseTaskStatePersistence, ExecutionStateStatus, TaskExecutionState, TaskStatePersistence,
 };
-use data_infrastructure::simple_client::DatabaseClient;
 use data_infrastructure::database_config::DatabaseConfig;
+use data_infrastructure::simple_client::DatabaseClient;
 #[cfg(feature = "evaluation")]
 use testing_validation::database_lifecycle::TestDatabaseManager;
 
@@ -39,19 +39,20 @@ async fn create_test_database() -> (TestDatabaseManager, DatabaseClient) {
             }
         })
         .unwrap_or_else(|_| "postgresql://postgres@localhost:5432".to_string());
-    
+
     let admin_url = format!("{}/postgres", base_url);
-    
+
     // Create isolated test database
     let test_db = TestDatabaseManager::new(&admin_url, None)
         .await
         .expect("Failed to create test database");
-    
+
     // Initialize schema (applies all migrations)
-    test_db.initialize_schema()
+    test_db
+        .initialize_schema()
         .await
         .expect("Failed to initialize test database schema");
-    
+
     // Create database client for the test database
     let config = DatabaseConfig {
         database_url: test_db.database_url(),
@@ -60,10 +61,11 @@ async fn create_test_database() -> (TestDatabaseManager, DatabaseClient) {
         query_timeout: Some(60),
         ..Default::default()
     };
-    
-    let db_client = DatabaseClient::new(config).await
+
+    let db_client = DatabaseClient::new(config)
+        .await
         .expect("Failed to create test database client");
-    
+
     (test_db, db_client)
 }
 
@@ -79,7 +81,7 @@ async fn create_test_db_client() -> DatabaseClient {
 async fn create_test_database() -> ((), DatabaseClient) {
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
-    
+
     let config = DatabaseConfig {
         database_url: database_url.clone(),
         pool_max: Some(5),
@@ -87,10 +89,11 @@ async fn create_test_database() -> ((), DatabaseClient) {
         query_timeout: Some(60),
         ..Default::default()
     };
-    
-    let client = DatabaseClient::new(config).await
+
+    let client = DatabaseClient::new(config)
+        .await
         .expect("Failed to create test database client");
-    
+
     ((), client)
 }
 
@@ -196,35 +199,36 @@ async fn test_database_persistence_save_and_load() {
     let _ = tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .try_init();
-    
+
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id = Uuid::new_v4();
-    
+
     // Create test task in database
     create_test_task(&db_client, task_id).await.unwrap();
-    
+
     // Create and save state
     let state = create_test_state(task_id, ExecutionStateStatus::Running);
     persistence.save_state(&state).await.unwrap();
-    
+
     // Load state
     let loaded = persistence.load_state(task_id).await.unwrap();
     assert!(loaded.is_some());
     let loaded_state = loaded.unwrap();
-    
+
     // Verify state matches
     assert_eq!(loaded_state.task_id, task_id);
     assert_eq!(loaded_state.status, ExecutionStateStatus::Running);
     assert_eq!(loaded_state.current_iteration, 1);
     assert_eq!(loaded_state.progress_percentage, 50.0);
-    
+
     // Cleanup
     persistence.delete_state(task_id).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -238,39 +242,40 @@ async fn test_database_persistence_list_resumable_tasks() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id_1 = Uuid::new_v4();
     let task_id_2 = Uuid::new_v4();
     let task_id_3 = Uuid::new_v4();
-    
+
     // Create test tasks
     create_test_task(&db_client, task_id_1).await.unwrap();
     create_test_task(&db_client, task_id_2).await.unwrap();
     create_test_task(&db_client, task_id_3).await.unwrap();
-    
+
     // Create states with different statuses
     let state_running = create_test_state(task_id_1, ExecutionStateStatus::Running);
     let state_paused = create_test_state(task_id_2, ExecutionStateStatus::Paused);
     let state_completed = create_test_state(task_id_3, ExecutionStateStatus::Completed);
-    
+
     persistence.save_state(&state_running).await.unwrap();
     persistence.save_state(&state_paused).await.unwrap();
     persistence.save_state(&state_completed).await.unwrap();
-    
+
     // List resumable tasks
     let resumable = persistence.list_resumable_tasks().await.unwrap();
-    
+
     // Should include running and paused, but not completed
     assert!(resumable.contains(&task_id_1));
     assert!(resumable.contains(&task_id_2));
     assert!(!resumable.contains(&task_id_3));
-    
+
     // Cleanup
     persistence.delete_state(task_id_1).await.unwrap();
     persistence.delete_state(task_id_2).await.unwrap();
     persistence.delete_state(task_id_3).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -284,32 +289,44 @@ async fn test_database_persistence_has_resumable_state() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id_running = Uuid::new_v4();
     let task_id_completed = Uuid::new_v4();
     let task_id_nonexistent = Uuid::new_v4();
-    
+
     // Create test tasks
     create_test_task(&db_client, task_id_running).await.unwrap();
-    create_test_task(&db_client, task_id_completed).await.unwrap();
-    
+    create_test_task(&db_client, task_id_completed)
+        .await
+        .unwrap();
+
     // Create states
     let state_running = create_test_state(task_id_running, ExecutionStateStatus::Running);
     let state_completed = create_test_state(task_id_completed, ExecutionStateStatus::Completed);
-    
+
     persistence.save_state(&state_running).await.unwrap();
     persistence.save_state(&state_completed).await.unwrap();
-    
+
     // Check resumable state
-    assert!(persistence.has_resumable_state(task_id_running).await.unwrap());
-    assert!(!persistence.has_resumable_state(task_id_completed).await.unwrap());
-    assert!(!persistence.has_resumable_state(task_id_nonexistent).await.unwrap());
-    
+    assert!(persistence
+        .has_resumable_state(task_id_running)
+        .await
+        .unwrap());
+    assert!(!persistence
+        .has_resumable_state(task_id_completed)
+        .await
+        .unwrap());
+    assert!(!persistence
+        .has_resumable_state(task_id_nonexistent)
+        .await
+        .unwrap());
+
     // Cleanup
     persistence.delete_state(task_id_running).await.unwrap();
     persistence.delete_state(task_id_completed).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -323,38 +340,45 @@ async fn test_database_persistence_checkpoints() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id = Uuid::new_v4();
-    
+
     // Create test task
     create_test_task(&db_client, task_id).await.unwrap();
-    
+
     // Create initial state
     let mut state = create_test_state(task_id, ExecutionStateStatus::Running);
     persistence.save_state(&state).await.unwrap();
-    
+
     // Create first checkpoint
-    persistence.create_checkpoint(task_id, &state).await.unwrap();
-    
+    persistence
+        .create_checkpoint(task_id, &state)
+        .await
+        .unwrap();
+
     // Update state
     state.current_iteration = 2;
     state.progress_percentage = 75.0;
     persistence.save_state(&state).await.unwrap();
-    
+
     // Create second checkpoint
-    persistence.create_checkpoint(task_id, &state).await.unwrap();
-    
+    persistence
+        .create_checkpoint(task_id, &state)
+        .await
+        .unwrap();
+
     // List checkpoints
     let checkpoints = persistence.list_checkpoints(task_id).await.unwrap();
     assert_eq!(checkpoints.len(), 2);
-    
+
     // Verify checkpoints are ordered DESC (most recent first)
     assert!(checkpoints[0] >= checkpoints[1]);
-    
+
     // Cleanup
     persistence.delete_state(task_id).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -368,32 +392,42 @@ async fn test_database_persistence_delete_state() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id = Uuid::new_v4();
-    
+
     // Create test task
     create_test_task(&db_client, task_id).await.unwrap();
-    
+
     // Create and save state
     let state = create_test_state(task_id, ExecutionStateStatus::Running);
     persistence.save_state(&state).await.unwrap();
-    
+
     // Create checkpoint
-    persistence.create_checkpoint(task_id, &state).await.unwrap();
-    
+    persistence
+        .create_checkpoint(task_id, &state)
+        .await
+        .unwrap();
+
     // Verify state exists
     assert!(persistence.load_state(task_id).await.unwrap().is_some());
-    assert_eq!(persistence.list_checkpoints(task_id).await.unwrap().len(), 1);
-    
+    assert_eq!(
+        persistence.list_checkpoints(task_id).await.unwrap().len(),
+        1
+    );
+
     // Delete state
     persistence.delete_state(task_id).await.unwrap();
-    
+
     // Verify state is deleted
     assert!(persistence.load_state(task_id).await.unwrap().is_none());
-    assert_eq!(persistence.list_checkpoints(task_id).await.unwrap().len(), 0);
+    assert_eq!(
+        persistence.list_checkpoints(task_id).await.unwrap().len(),
+        0
+    );
     assert!(!persistence.has_resumable_state(task_id).await.unwrap());
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -407,32 +441,33 @@ async fn test_database_persistence_update_state() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id = Uuid::new_v4();
-    
+
     // Create test task
     create_test_task(&db_client, task_id).await.unwrap();
-    
+
     // Create initial state
     let mut state = create_test_state(task_id, ExecutionStateStatus::Running);
     persistence.save_state(&state).await.unwrap();
-    
+
     // Update state
     state.current_iteration = 3;
     state.progress_percentage = 90.0;
     state.status = ExecutionStateStatus::Paused;
     persistence.save_state(&state).await.unwrap();
-    
+
     // Load and verify updates
     let loaded = persistence.load_state(task_id).await.unwrap().unwrap();
     assert_eq!(loaded.current_iteration, 3);
     assert_eq!(loaded.progress_percentage, 90.0);
     assert_eq!(loaded.status, ExecutionStateStatus::Paused);
-    
+
     // Cleanup
     persistence.delete_state(task_id).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -446,25 +481,26 @@ async fn test_database_persistence_crashed_state_resumable() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_id = Uuid::new_v4();
-    
+
     // Create test task
     create_test_task(&db_client, task_id).await.unwrap();
-    
+
     // Create crashed state
     let state = create_test_state(task_id, ExecutionStateStatus::Crashed);
     persistence.save_state(&state).await.unwrap();
-    
+
     // Verify crashed state is resumable
     assert!(persistence.has_resumable_state(task_id).await.unwrap());
     let resumable = persistence.list_resumable_tasks().await.unwrap();
     assert!(resumable.contains(&task_id));
-    
+
     // Cleanup
     persistence.delete_state(task_id).await.unwrap();
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {
@@ -478,32 +514,33 @@ async fn test_database_persistence_multiple_tasks() {
     // Create isolated test database with automatic migrations
     let (test_db, db_client) = create_test_database().await;
     let db_client = Arc::new(db_client);
-    let persistence: Arc<dyn TaskStatePersistence> = Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
-    
+    let persistence: Arc<dyn TaskStatePersistence> =
+        Arc::new(DatabaseTaskStatePersistence::new(db_client.clone()));
+
     let task_ids: Vec<Uuid> = (0..5).map(|_| Uuid::new_v4()).collect();
-    
+
     // Create test tasks and states
     for task_id in &task_ids {
         create_test_task(&db_client, *task_id).await.unwrap();
         let state = create_test_state(*task_id, ExecutionStateStatus::Running);
         persistence.save_state(&state).await.unwrap();
     }
-    
+
     // List resumable tasks
     let resumable = persistence.list_resumable_tasks().await.unwrap();
     assert_eq!(resumable.len(), 5);
-    
+
     // Verify all tasks are in resumable list
     for task_id in &task_ids {
         assert!(resumable.contains(task_id));
         assert!(persistence.has_resumable_state(*task_id).await.unwrap());
     }
-    
+
     // Cleanup
     for task_id in &task_ids {
         persistence.delete_state(*task_id).await.unwrap();
     }
-    
+
     // Drop test database
     #[cfg(feature = "evaluation")]
     {

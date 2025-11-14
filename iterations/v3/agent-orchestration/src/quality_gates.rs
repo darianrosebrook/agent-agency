@@ -5,13 +5,14 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::process::Command;
-use std::path::Path;
-use anyhow::{Result, Context};
-use tracing::{debug, warn, error, info};
 use agent_agency_contracts::planning_io::QualityGates;
+use anyhow::{Context, Result};
 use chrono::Utc;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+use std::process::Command;
+use tracing::{debug, error, info, warn};
 
 /// Quality gate execution result
 
@@ -70,13 +71,20 @@ impl QualityGateExecutor {
 
         // Check coverage if specified
         if let Some(min_coverage) = quality_gates.min_coverage {
-            debug!("Checking coverage with minimum threshold: {:.1}%", min_coverage * 100.0);
+            debug!(
+                "Checking coverage with minimum threshold: {:.1}%",
+                min_coverage * 100.0
+            );
             let coverage_result = self.check_coverage(min_coverage).await?;
             results.push(coverage_result);
         } else if !quality_gates.coverage_requirements.is_empty() {
             // Check coverage requirements by type
             for (test_type, threshold) in &quality_gates.coverage_requirements {
-                debug!("Checking {} coverage with threshold: {:.1}%", test_type, threshold * 100.0);
+                debug!(
+                    "Checking {} coverage with threshold: {:.1}%",
+                    test_type,
+                    threshold * 100.0
+                );
                 let coverage_result = self.check_coverage_by_type(test_type, *threshold).await?;
                 results.push(coverage_result);
             }
@@ -98,18 +106,22 @@ impl QualityGateExecutor {
 
         // Check mutation testing if required
         if quality_gates.mutation_requirements.required {
-            debug!("Checking mutation testing with minimum score: {:.1}%", 
-                quality_gates.mutation_requirements.min_score * 100.0);
-            let mutation_result = self.check_mutation_testing(
-                quality_gates.mutation_requirements.min_score
-            ).await?;
+            debug!(
+                "Checking mutation testing with minimum score: {:.1}%",
+                quality_gates.mutation_requirements.min_score * 100.0
+            );
+            let mutation_result = self
+                .check_mutation_testing(quality_gates.mutation_requirements.min_score)
+                .await?;
             results.push(mutation_result);
         }
 
         // Check security if required
         if quality_gates.security_requirements.scan_required {
             debug!("Checking security requirements");
-            let security_result = self.check_security(&quality_gates.security_requirements).await?;
+            let security_result = self
+                .check_security(&quality_gates.security_requirements)
+                .await?;
             results.push(security_result);
         }
 
@@ -132,7 +144,7 @@ impl QualityGateExecutor {
     /// Check test coverage using cargo-llvm-cov or similar tool
     async fn check_coverage(&self, min_threshold: f64) -> Result<QualityGateResult> {
         let start_time = Utc::now();
-        
+
         // Try cargo-llvm-cov first (most common Rust coverage tool)
         let coverage_result = if self.has_command("cargo-llvm-cov") {
             self.check_coverage_llvm_cov(min_threshold).await
@@ -175,11 +187,17 @@ impl QualityGateExecutor {
                 };
 
                 if passed {
-                    info!("Coverage check passed: {:.1}% >= {:.1}%", 
-                        coverage_percent * 100.0, min_threshold * 100.0);
+                    info!(
+                        "Coverage check passed: {:.1}% >= {:.1}%",
+                        coverage_percent * 100.0,
+                        min_threshold * 100.0
+                    );
                 } else {
-                    warn!("Coverage check failed: {:.1}% < {:.1}%", 
-                        coverage_percent * 100.0, min_threshold * 100.0);
+                    warn!(
+                        "Coverage check failed: {:.1}% < {:.1}%",
+                        coverage_percent * 100.0,
+                        min_threshold * 100.0
+                    );
                 }
 
                 Ok(result)
@@ -210,7 +228,7 @@ impl QualityGateExecutor {
     /// Check coverage by test type (unit, integration, e2e)
     async fn check_coverage_by_type(
         &self,
-        test_type: &str,
+        _test_type: &str,
         min_threshold: f64,
     ) -> Result<QualityGateResult> {
         // TODO: Implement test type-specific coverage checking
@@ -252,7 +270,10 @@ impl QualityGateExecutor {
     }
 
     /// Check coverage using cargo-llvm-cov
-    async fn check_coverage_llvm_cov(&self, min_threshold: f64) -> Result<(f64, Vec<QualityGateIssue>)> {
+    async fn check_coverage_llvm_cov(
+        &self,
+        min_threshold: f64,
+    ) -> Result<(f64, Vec<QualityGateIssue>)> {
         let output = Command::new("cargo")
             .args(&["llvm-cov", "--json", "--summary-only"])
             .current_dir(&self.workspace_root)
@@ -275,7 +296,8 @@ impl QualityGateExecutor {
             .and_then(|s| s.get("lines"))
             .and_then(|l| l.get("percent"))
             .and_then(|p| p.as_f64())
-            .unwrap_or(0.0) / 100.0;
+            .unwrap_or(0.0)
+            / 100.0;
 
         let mut issues = Vec::new();
         if coverage_percent < min_threshold {
@@ -298,7 +320,10 @@ impl QualityGateExecutor {
     }
 
     /// Check coverage using cargo-tarpaulin
-    async fn check_coverage_tarpaulin(&self, min_threshold: f64) -> Result<(f64, Vec<QualityGateIssue>)> {
+    async fn check_coverage_tarpaulin(
+        &self,
+        min_threshold: f64,
+    ) -> Result<(f64, Vec<QualityGateIssue>)> {
         let output = Command::new("cargo")
             .args(&["tarpaulin", "--out", "Json", "--output-dir", "."])
             .current_dir(&self.workspace_root)
@@ -314,17 +339,18 @@ impl QualityGateExecutor {
 
         // Parse tarpaulin JSON output (usually in tarpaulin.json)
         let json_path = Path::new(&self.workspace_root).join("tarpaulin.json");
-        let json_content = std::fs::read_to_string(&json_path)
-            .context("Failed to read tarpaulin.json")?;
+        let json_content =
+            std::fs::read_to_string(&json_path).context("Failed to read tarpaulin.json")?;
 
-        let json_output: serde_json::Value = serde_json::from_str(&json_content)
-            .context("Failed to parse tarpaulin JSON output")?;
+        let json_output: serde_json::Value =
+            serde_json::from_str(&json_content).context("Failed to parse tarpaulin JSON output")?;
 
         // Extract line coverage percentage
         let coverage_percent = json_output
             .get("line_percent")
             .and_then(|p| p.as_f64())
-            .unwrap_or(0.0) / 100.0;
+            .unwrap_or(0.0)
+            / 100.0;
 
         let mut issues = Vec::new();
         if coverage_percent < min_threshold {
@@ -368,35 +394,42 @@ impl QualityGateExecutor {
             if let Ok(message) = serde_json::from_str::<serde_json::Value>(line) {
                 if message.get("reason").and_then(|r| r.as_str()) == Some("compiler-message") {
                     if let Some(msg) = message.get("message") {
-                        let level = msg.get("level")
+                        let level = msg
+                            .get("level")
                             .and_then(|l| l.as_str())
                             .unwrap_or("unknown");
-                        
-                        let code = msg.get("code")
+
+                        let code = msg
+                            .get("code")
                             .and_then(|c| c.get("code"))
                             .and_then(|c| c.as_str())
                             .unwrap_or("UNKNOWN")
                             .to_string();
 
-                        let message_text = msg.get("message")
+                        let message_text = msg
+                            .get("message")
                             .and_then(|m| m.as_str())
                             .unwrap_or("")
                             .to_string();
 
-                        let span = msg.get("spans")
+                        let span = msg
+                            .get("spans")
                             .and_then(|s| s.as_array())
                             .and_then(|s| s.first())
                             .and_then(|s| s.as_object());
 
-                        let file = span.and_then(|s| s.get("file_name"))
+                        let file = span
+                            .and_then(|s| s.get("file_name"))
                             .and_then(|f| f.as_str())
                             .map(|f| f.to_string());
-                        
-                        let line = span.and_then(|s| s.get("line_start"))
+
+                        let line = span
+                            .and_then(|s| s.get("line_start"))
                             .and_then(|l| l.as_u64())
                             .map(|l| l as u32);
 
-                        let column = span.and_then(|s| s.get("column_start"))
+                        let column = span
+                            .and_then(|s| s.get("column_start"))
                             .and_then(|c| c.as_u64())
                             .map(|c| c as u32);
 
@@ -444,7 +477,13 @@ impl QualityGateExecutor {
         }
 
         let passed = !has_errors && output.status.success();
-        let score = if passed && !has_warnings { 1.0 } else if passed { 0.8 } else { 0.0 };
+        let score = if passed && !has_warnings {
+            1.0
+        } else if passed {
+            0.8
+        } else {
+            0.0
+        };
 
         let result = QualityGateResult {
             gate_name: "linting".to_string(),
@@ -457,11 +496,23 @@ impl QualityGateExecutor {
         };
 
         if passed {
-            info!("Linting check passed ({} warnings, 0 errors)", 
-                result.issues.iter().filter(|i| matches!(i.severity, IssueSeverity::Warning)).count());
+            info!(
+                "Linting check passed ({} warnings, 0 errors)",
+                result
+                    .issues
+                    .iter()
+                    .filter(|i| matches!(i.severity, IssueSeverity::Warning))
+                    .count()
+            );
         } else {
-            warn!("Linting check failed ({} errors found)", 
-                result.issues.iter().filter(|i| matches!(i.severity, IssueSeverity::Error)).count());
+            warn!(
+                "Linting check failed ({} errors found)",
+                result
+                    .issues
+                    .iter()
+                    .filter(|i| matches!(i.severity, IssueSeverity::Error))
+                    .count()
+            );
         }
 
         Ok(result)
@@ -488,38 +539,45 @@ impl QualityGateExecutor {
             if let Ok(message) = serde_json::from_str::<serde_json::Value>(line) {
                 if message.get("reason").and_then(|r| r.as_str()) == Some("compiler-message") {
                     if let Some(msg) = message.get("message") {
-                        let level = msg.get("level")
+                        let level = msg
+                            .get("level")
                             .and_then(|l| l.as_str())
                             .unwrap_or("unknown");
-                        
+
                         if level == "error" {
                             has_errors = true;
 
-                            let code = msg.get("code")
+                            let code = msg
+                                .get("code")
                                 .and_then(|c| c.get("code"))
                                 .and_then(|c| c.as_str())
                                 .unwrap_or("TYPE_ERROR")
                                 .to_string();
 
-                            let message_text = msg.get("message")
+                            let message_text = msg
+                                .get("message")
                                 .and_then(|m| m.as_str())
                                 .unwrap_or("")
                                 .to_string();
 
-                            let span = msg.get("spans")
+                            let span = msg
+                                .get("spans")
                                 .and_then(|s| s.as_array())
                                 .and_then(|s| s.first())
                                 .and_then(|s| s.as_object());
 
-                            let file = span.and_then(|s| s.get("file_name"))
+                            let file = span
+                                .and_then(|s| s.get("file_name"))
                                 .and_then(|f| f.as_str())
                                 .map(|f| f.to_string());
-                            
-                            let line = span.and_then(|s| s.get("line_start"))
+
+                            let line = span
+                                .and_then(|s| s.get("line_start"))
                                 .and_then(|l| l.as_u64())
                                 .map(|l| l as u32);
 
-                            let column = span.and_then(|s| s.get("column_start"))
+                            let column = span
+                                .and_then(|s| s.get("column_start"))
                                 .and_then(|c| c.as_u64())
                                 .map(|c| c as u32);
 
@@ -557,7 +615,7 @@ impl QualityGateExecutor {
 
         let passed = !has_errors && output.status.success();
         let score = if passed { 1.0 } else { 0.0 };
-        
+
         let issues_count = issues.len(); // Save count before moving
 
         let result = QualityGateResult {
@@ -709,7 +767,9 @@ impl QualityGateExecutor {
                     file: None,
                     line: None,
                     column: None,
-                    suggestion: Some("Run 'cargo audit' to see details and update dependencies".to_string()),
+                    suggestion: Some(
+                        "Run 'cargo audit' to see details and update dependencies".to_string(),
+                    ),
                 });
             }
         } else {
@@ -747,4 +807,3 @@ impl QualityGateExecutor {
             .unwrap_or(false)
     }
 }
-

@@ -1,43 +1,45 @@
 //! Parallel coordinator - main orchestrator for parallel task execution
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::parallel_types::{ComplexTask, SubTask, TaskResult, WorkerResult, ParallelResult, ParallelError, WorkerBreakdown};
-use crate::worker_types::{TaskId, SubTaskId, WorkerId, Priority};
-use crate::error::{CommunicationError, ValidationError, ProgressError};
-use crate::decomposition::{DecompositionEngine};
-use crate::worker::{WorkerManager, DefaultWorkerPool};
-use crate::progress::{ProgressAggregator, ProgressSynthesizer};
-use crate::validation::{ValidationRunner};
 use crate::communication::hub::CommunicationHub;
+use crate::decomposition::DecompositionEngine;
+use crate::error::{CommunicationError, ProgressError, ValidationError};
 use crate::learning::{
-    ParallelWorkerMetricsCollector, PatternAnalyzer, AdaptiveWorkerSelector, ConfigurationOptimizer,
-    LearningPersistence, RewardWeights, Baseline,
+    AdaptiveWorkerSelector, Baseline, ConfigurationOptimizer, LearningPersistence,
+    ParallelWorkerMetricsCollector, PatternAnalyzer, RewardWeights,
 };
 use crate::learning::{
-    ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
-    OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
+    ConfigurationRecommendations, ExecutionRecord, FailurePattern, OptimalConfig,
+    OptimizationEvent, SuccessPattern, TaskPattern, WorkerPerformanceProfile,
 };
-use crate::worker_types::{TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, QualityRequirements, Progress, ValidationContext};
 use crate::parallel_types::WorkerSpecialty;
-use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, ExecutionStatus};
+use crate::parallel_types::{
+    ComplexTask, ParallelError, ParallelResult, SubTask, TaskResult, WorkerBreakdown, WorkerResult,
+};
+use crate::progress::{ProgressAggregator, ProgressSynthesizer};
+use crate::validation::ValidationRunner;
+use crate::worker::{DefaultWorkerPool, WorkerManager};
+use crate::worker_types::{
+    ExecutionOutcome, LearningMode, Progress, QualityRequirements, TaskDefinition, TaskStatus,
+    ValidationContext,
+};
+use crate::worker_types::{Priority, SubTaskId, TaskId, WorkerId};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
+use agent_agency_contracts::task_executor::{ExecutionStatus, TaskExecutor, TaskSpec};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 // Import refactored modules
-use crate::learning::{
-    RealFairnessMonitor
-};
-use crate::learning_system::{
-    RealAdaptiveSelector, RealConfigOptimizer,
-    RealQueueHealthMonitor, RealFailureTaxonomy, RealLearningPersistence,
-    QueueHealthMetrics, FailureClassification
-};
 use crate::bridges::{
-    OrchestrationQualityBridge, OrchestrationMonitoringBridge, CouncilLearningBridge
+    CouncilLearningBridge, OrchestrationMonitoringBridge, OrchestrationQualityBridge,
 };
 use crate::execution_stats::ParallelExecutionStats;
+use crate::learning::RealFairnessMonitor;
+use crate::learning_system::{
+    FailureClassification, QueueHealthMetrics, RealAdaptiveSelector, RealConfigOptimizer,
+    RealFailureTaxonomy, RealLearningPersistence, RealQueueHealthMonitor,
+};
 
 /// Orchestrator handle trait for sequential execution fallback
 #[async_trait::async_trait]
@@ -60,15 +62,24 @@ impl RealOrchestratorHandle {
 impl OrchestratorHandle for RealOrchestratorHandle {
     async fn execute_sequential(&self, task: ComplexTask) -> ParallelResult<TaskResult> {
         tracing::info!("Executing task sequentially: {}", task.title);
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Convert ComplexTask to TaskSpec for the executor
         let mut context = HashMap::new();
-        context.insert("task_id".to_string(), serde_json::Value::String(task.id.0.to_string()));
+        context.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(task.id.0.to_string()),
+        );
         context.insert("domains".to_string(), serde_json::json!(task.scope.domains));
-        context.insert("files_affected".to_string(), serde_json::json!(task.scope.files_affected));
-        context.insert("complexity_score".to_string(), serde_json::json!(task.complexity_score));
+        context.insert(
+            "files_affected".to_string(),
+            serde_json::json!(task.scope.files_affected),
+        );
+        context.insert(
+            "complexity_score".to_string(),
+            serde_json::json!(task.complexity_score),
+        );
         context.insert("priority".to_string(), serde_json::json!(task.priority));
         context.insert("metadata".to_string(), serde_json::json!(task.metadata));
 
@@ -80,7 +91,9 @@ impl OrchestratorHandle for RealOrchestratorHandle {
                 Priority::Low => agent_agency_contracts::types::planning::TaskPriority::Low,
                 Priority::Medium => agent_agency_contracts::types::planning::TaskPriority::Medium,
                 Priority::High => agent_agency_contracts::types::planning::TaskPriority::High,
-                Priority::Critical => agent_agency_contracts::types::planning::TaskPriority::Critical,
+                Priority::Critical => {
+                    agent_agency_contracts::types::planning::TaskPriority::Critical
+                }
             },
             required_capabilities: task.scope.domains.clone(),
             context,
@@ -96,17 +109,20 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             caws_spec: None,
             requirements: None,
         };
-        
+
         // Execute the task using the real TaskExecutor
         let worker_id = uuid::Uuid::new_v4();
-        let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
+        let execution_result = self
+            .task_executor
+            .execute_task(task_spec, worker_id)
+            .await
             .map_err(|e| ParallelError::Coordination {
                 message: format!("Task execution failed: {}", e),
                 source: Some(e),
             })?;
-        
+
         let execution_time = start_time.elapsed();
-        
+
         // Convert execution result to TaskResult
         let task_result = TaskResult {
             task_id: task.id,
@@ -116,10 +132,18 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             execution_time,
             execution_time_ms: execution_time.as_millis() as u64,
             summary: if execution_result.success {
-                format!("Sequential execution completed successfully: {}", execution_result.output)
+                format!(
+                    "Sequential execution completed successfully: {}",
+                    execution_result.output
+                )
             } else {
-                format!("Sequential execution failed: {}", 
-                    execution_result.errors.first().unwrap_or(&"Unknown error".to_string()))
+                format!(
+                    "Sequential execution failed: {}",
+                    execution_result
+                        .errors
+                        .first()
+                        .unwrap_or(&"Unknown error".to_string())
+                )
             },
             worker_breakdown: vec![WorkerBreakdown {
                 worker_id: WorkerId(worker_id),
@@ -133,13 +157,21 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             errors: execution_result.errors.clone(),
             error_message: execution_result.errors.first().cloned(),
             tool_used: None, // Sequential execution doesn't specify a tool
-            status: if execution_result.success { TaskStatus::Completed } else { TaskStatus::Failed },
+            status: if execution_result.success {
+                TaskStatus::Completed
+            } else {
+                TaskStatus::Failed
+            },
             metadata: execution_result.metadata,
         };
-        
-        tracing::info!("Sequential execution completed for task {}: success={}, time={:?}", 
-            task.title, task_result.success, execution_time);
-        
+
+        tracing::info!(
+            "Sequential execution completed for task {}: success={}, time={:?}",
+            task.title,
+            task_result.success,
+            execution_time
+        );
+
         Ok(task_result)
     }
 }
@@ -169,7 +201,6 @@ pub struct ParallelCoordinator {
     // Execution statistics
     execution_stats: ParallelExecutionStats,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParallelCoordinatorConfig {
@@ -204,7 +235,8 @@ impl ParallelCoordinator {
         let progress_aggregator = ProgressAggregator::new();
         let progress_synthesizer = ProgressSynthesizer::new();
         let validation_runner = ValidationRunner::new(10); // max_parallel_validations
-        let communication_hub = CommunicationHub::new(crate::communication::channels::ChannelConfig::default());
+        let communication_hub =
+            CommunicationHub::new(crate::communication::channels::ChannelConfig::default());
 
         // Initialize learning components with real implementations
         // TODO: Create proper database config for DatabaseClient::new():
@@ -231,7 +263,9 @@ impl ParallelCoordinator {
         let db_config = data_infrastructure::DatabaseConfig::default();
         let db_client = Arc::new(tokio::task::block_in_place(|| {
             tokio::runtime::Handle::current().block_on(async {
-                data_infrastructure::ApiDatabaseClient::new(db_config).await.unwrap()
+                data_infrastructure::ApiDatabaseClient::new(db_config)
+                    .await
+                    .unwrap()
             })
         }));
         let pattern_analyzer = Arc::new(PatternAnalyzer::new(5, 0.7)); // min_pattern_frequency=5, confidence_threshold=0.7
@@ -242,9 +276,11 @@ impl ParallelCoordinator {
             pattern_analyzer.clone(),
         ));
         let config_optimizer = Arc::new(ConfigurationOptimizer::new(pattern_analyzer.clone()));
-        let queue_health_monitor = Arc::new(crate::learning::queue_health_monitor::QueueHealthMonitor::new());
+        let queue_health_monitor =
+            Arc::new(crate::learning::queue_health_monitor::QueueHealthMonitor::new());
         let failure_taxonomy = Arc::new(crate::learning::failure_taxonomy::FailureTaxonomy::new());
-        let learning_persistence = Arc::new(crate::learning::learning_persistence::InMemoryLearningPersistence::new());
+        let learning_persistence =
+            Arc::new(crate::learning::learning_persistence::InMemoryLearningPersistence::new());
 
         // Initialize other learning components
         let reward_weights = crate::learning::types::RewardWeights {
@@ -258,7 +294,10 @@ impl ParallelCoordinator {
             p50_quality: 0.8,
             p50_tokens: 1500.0,
         };
-        let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new(reward_weights, baseline));
+        let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new(
+            reward_weights,
+            baseline,
+        ));
         let council_bridge = Arc::new(CouncilLearningBridge::new());
 
         // Initialize bridges
@@ -301,7 +340,7 @@ impl ParallelCoordinator {
 
         // Analyze task complexity
         let complexity_analysis = self.decomposition_engine.analyze_complexity(&task).await?;
-        
+
         if complexity_analysis.complexity_score < self.config.complexity_threshold as f64 {
             tracing::info!("Task complexity too low for parallel execution, using sequential");
             return self.execute_sequential_fallback(task).await;
@@ -309,9 +348,12 @@ impl ParallelCoordinator {
 
         // Decompose task into subtasks
         let subtasks = self.decomposition_engine.decompose_task(&task).await?;
-        
+
         if subtasks.len() > self.config.max_subtasks_per_task {
-            tracing::warn!("Too many subtasks ({}) for parallel execution, using sequential", subtasks.len());
+            tracing::warn!(
+                "Too many subtasks ({}) for parallel execution, using sequential",
+                subtasks.len()
+            );
             return self.execute_sequential_fallback(task).await;
         }
 
@@ -319,7 +361,9 @@ impl ParallelCoordinator {
         let execution_stats = self.execute_subtasks_parallel(subtasks, &task).await?;
 
         // Synthesize results
-        let final_result = self.progress_synthesizer.synthesize_results(execution_stats)?;
+        let final_result = self
+            .progress_synthesizer
+            .synthesize_results(execution_stats)?;
 
         tracing::info!("Parallel execution completed for task: {}", task.title);
         Ok(final_result)
@@ -373,9 +417,12 @@ impl ParallelCoordinator {
     ) -> ParallelResult<WorkerResult> {
         // Get available workers from worker manager
         let available_workers = self.worker_manager.list_available_workers().await;
-        
+
         // Select optimal worker for the subtask
-        let worker_id = self.adaptive_selector.select_worker(&subtask, &available_workers).await?
+        let worker_id = self
+            .adaptive_selector
+            .select_worker(&subtask, &available_workers)
+            .await?
             .ok_or_else(|| ParallelError::Coordination {
                 message: "No suitable worker available".to_string(),
                 source: None,
@@ -383,7 +430,10 @@ impl ParallelCoordinator {
 
         // Execute the subtask
         let start_time = std::time::Instant::now();
-        let result = self.worker_manager.execute_subtask(subtask, worker_id).await?;
+        let result = self
+            .worker_manager
+            .execute_subtask(subtask, worker_id)
+            .await?;
         let execution_time = start_time.elapsed();
 
         Ok(WorkerResult {

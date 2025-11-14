@@ -51,7 +51,10 @@ impl MemoryDeduplicator {
     }
 
     /// Find duplicate memories across the entire memory store
-    pub async fn find_duplicates(&self, memories: Vec<crate::memory_types::Memory>) -> crate::MemoryResult<Vec<DuplicateGroup>> {
+    pub async fn find_duplicates(
+        &self,
+        memories: Vec<crate::memory_types::Memory>,
+    ) -> crate::MemoryResult<Vec<DuplicateGroup>> {
         let mut duplicate_groups = Vec::new();
         let mut processed_ids = std::collections::HashSet::new();
 
@@ -69,7 +72,9 @@ impl MemoryDeduplicator {
                     continue;
                 }
 
-                let similarity = self.calculate_similarity(&memories[i], &memories[j]).await?;
+                let similarity = self
+                    .calculate_similarity(&memories[i], &memories[j])
+                    .await?;
 
                 if similarity >= self.config.similarity_threshold {
                     duplicates.push(memories[j].id.clone());
@@ -79,7 +84,8 @@ impl MemoryDeduplicator {
             }
 
             if !duplicates.is_empty() {
-                let recommendation = self.generate_merge_recommendation(&memories[i], &duplicates, max_similarity);
+                let recommendation =
+                    self.generate_merge_recommendation(&memories[i], &duplicates, max_similarity);
                 let group = DuplicateGroup {
                     canonical_memory: memories[i].id.clone(),
                     duplicate_memories: duplicates,
@@ -108,8 +114,12 @@ impl MemoryDeduplicator {
 
         for memory in memories {
             let time_window_seconds = self.config.time_window_hours as i64 * 3600;
-            let window_start = memory.created_at.timestamp() / time_window_seconds * time_window_seconds;
-            time_groups.entry(window_start).or_insert_with(Vec::new).push(memory);
+            let window_start =
+                memory.created_at.timestamp() / time_window_seconds * time_window_seconds;
+            time_groups
+                .entry(window_start)
+                .or_insert_with(Vec::new)
+                .push(memory);
         }
 
         // Find duplicates within each time window
@@ -122,12 +132,17 @@ impl MemoryDeduplicator {
     }
 
     /// Merge duplicate memories according to strategy
-    pub async fn merge_duplicates(&self, group: &DuplicateGroup) -> crate::MemoryResult<crate::memory_types::Memory> {
+    pub async fn merge_duplicates(
+        &self,
+        group: &DuplicateGroup,
+    ) -> crate::MemoryResult<crate::memory_types::Memory> {
         match &group.merge_recommendation {
             MergeRecommendation::KeepCanonical => {
                 // Return canonical memory unchanged
                 // In practice, this would fetch from database
-                Err(crate::MemoryError::NotFound("Canonical memory not accessible".to_string()))
+                Err(crate::MemoryError::NotFound(
+                    "Canonical memory not accessible".to_string(),
+                ))
             }
             MergeRecommendation::MergeIntoCanonical => {
                 // Merge duplicate content into canonical
@@ -137,29 +152,36 @@ impl MemoryDeduplicator {
                 // Create new merged memory
                 self.create_merged_memory(group).await
             }
-            MergeRecommendation::DiscardAll => {
-                Err(crate::MemoryError::Other("Cannot merge - discard all requested".to_string()))
-            }
+            MergeRecommendation::DiscardAll => Err(crate::MemoryError::Other(
+                "Cannot merge - discard all requested".to_string(),
+            )),
         }
     }
 
     /// Calculate similarity between two memories
-    async fn calculate_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> crate::MemoryResult<f32> {
+    async fn calculate_similarity(
+        &self,
+        a: &crate::memory_types::Memory,
+        b: &crate::memory_types::Memory,
+    ) -> crate::MemoryResult<f32> {
         // Multi-faceted similarity calculation
         let content_similarity = self.calculate_content_similarity(a, b)?;
         let temporal_similarity = self.calculate_temporal_similarity(a, b);
         let contextual_similarity = self.calculate_contextual_similarity(a, b);
 
         // Weighted combination
-        let similarity = 0.6 * content_similarity +
-                        0.2 * temporal_similarity +
-                        0.2 * contextual_similarity;
+        let similarity =
+            0.6 * content_similarity + 0.2 * temporal_similarity + 0.2 * contextual_similarity;
 
         Ok(similarity)
     }
 
     /// Calculate content-based similarity
-    fn calculate_content_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> crate::MemoryResult<f32> {
+    fn calculate_content_similarity(
+        &self,
+        a: &crate::memory_types::Memory,
+        b: &crate::memory_types::Memory,
+    ) -> crate::MemoryResult<f32> {
         // TODO: Implement advanced content similarity calculation:
         // 1. Semantic similarity: Calculate semantic similarity
         //    - Use embedding-based similarity for semantic matching
@@ -185,7 +207,11 @@ impl MemoryDeduplicator {
     }
 
     /// Calculate temporal similarity (closer in time = more similar)
-    fn calculate_temporal_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> f32 {
+    fn calculate_temporal_similarity(
+        &self,
+        a: &crate::memory_types::Memory,
+        b: &crate::memory_types::Memory,
+    ) -> f32 {
         let time_diff = (a.created_at - b.created_at).num_seconds().abs() as f32;
         let max_diff = self.config.time_window_hours as f32 * 3600.0;
 
@@ -197,7 +223,11 @@ impl MemoryDeduplicator {
     }
 
     /// Calculate contextual similarity
-    fn calculate_contextual_similarity(&self, a: &crate::memory_types::Memory, b: &crate::memory_types::Memory) -> f32 {
+    fn calculate_contextual_similarity(
+        &self,
+        a: &crate::memory_types::Memory,
+        b: &crate::memory_types::Memory,
+    ) -> f32 {
         // Compare tags, importance, and other metadata
         let mut similarity = 0.0;
         let mut factors = 0;
@@ -225,10 +255,12 @@ impl MemoryDeduplicator {
 
     /// Text similarity using Jaccard coefficient on words
     fn text_similarity(&self, text_a: &str, text_b: &str) -> f32 {
-        let words_a: std::collections::HashSet<_> = text_a.split_whitespace()
+        let words_a: std::collections::HashSet<_> = text_a
+            .split_whitespace()
             .map(|w| w.to_lowercase())
             .collect();
-        let words_b: std::collections::HashSet<_> = text_b.split_whitespace()
+        let words_b: std::collections::HashSet<_> = text_b
+            .split_whitespace()
             .map(|w| w.to_lowercase())
             .collect();
 
@@ -284,15 +316,25 @@ impl MemoryDeduplicator {
     }
 
     /// Merge duplicate content into canonical memory
-    async fn merge_into_canonical(&self, _group: &DuplicateGroup) -> crate::MemoryResult<crate::memory_types::Memory> {
+    async fn merge_into_canonical(
+        &self,
+        _group: &DuplicateGroup,
+    ) -> crate::MemoryResult<crate::memory_types::Memory> {
         // Implementation would merge content from duplicates into canonical memory
-        Err(crate::MemoryError::Other("Merge implementation pending".to_string()))
+        Err(crate::MemoryError::Other(
+            "Merge implementation pending".to_string(),
+        ))
     }
 
     /// Create new merged memory from duplicates
-    async fn create_merged_memory(&self, _group: &DuplicateGroup) -> crate::MemoryResult<crate::memory_types::Memory> {
+    async fn create_merged_memory(
+        &self,
+        _group: &DuplicateGroup,
+    ) -> crate::MemoryResult<crate::memory_types::Memory> {
         // Implementation would create new memory combining all duplicates
-        Err(crate::MemoryError::Other("Create merged implementation pending".to_string()))
+        Err(crate::MemoryError::Other(
+            "Create merged implementation pending".to_string(),
+        ))
     }
 }
 
@@ -311,10 +353,16 @@ pub struct DeduplicationStats {
 #[async_trait::async_trait]
 pub trait DeduplicationEngine: Send + Sync {
     /// Run deduplication on memory store
-    async fn deduplicate(&self, config: &DeduplicationConfig) -> crate::MemoryResult<DeduplicationStats>;
+    async fn deduplicate(
+        &self,
+        config: &DeduplicationConfig,
+    ) -> crate::MemoryResult<DeduplicationStats>;
 
     /// Preview deduplication without applying changes
-    async fn preview_deduplication(&self, config: &DeduplicationConfig) -> crate::MemoryResult<Vec<DuplicateGroup>>;
+    async fn preview_deduplication(
+        &self,
+        config: &DeduplicationConfig,
+    ) -> crate::MemoryResult<Vec<DuplicateGroup>>;
 
     /// Get deduplication statistics
     async fn get_stats(&self) -> crate::MemoryResult<DeduplicationStats>;

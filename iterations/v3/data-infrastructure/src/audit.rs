@@ -1,3 +1,5 @@
+use crate::simple_client::DatabaseClient;
+use chrono::{DateTime, Utc};
 /**
  * Audit Logging Module
  *
@@ -6,13 +8,10 @@
  * Comprehensive audit trail implementation for task operations and system events.
  * Provides compliance-ready logging with proper context and metadata.
  */
-
 use schemars::JsonSchema;
-use std::net::IpAddr;
-use sqlx::Row;
-use chrono::{DateTime, Utc};
 use serde_json::Value;
-use crate::simple_client::DatabaseClient;
+use sqlx::Row;
+use std::net::IpAddr;
 
 /// Audit event types for different operations
 #[derive(Debug, Clone, JsonSchema)]
@@ -80,22 +79,37 @@ impl AuditLogger {
         "#;
 
         let details_json = details.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str()).unwrap_or("");
+        let user_agent_str = context
+            .user_agent
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("");
 
-        self.db_client.execute(
-            query,
-            &[
-                &task_id,
-                &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
-                &action,
-                &old_state.unwrap_or(""),
-                &new_state.unwrap_or(""),
-                &details_json.to_string().as_str(),
-                &context.ip_address.as_ref().map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string()).as_str(),
-                &user_agent_str,
-                &context.session_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
-            ],
-        ).await?;
+        self.db_client
+            .execute(
+                query,
+                &[
+                    &task_id,
+                    &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
+                    &action,
+                    &old_state.unwrap_or(""),
+                    &new_state.unwrap_or(""),
+                    &details_json.to_string().as_str(),
+                    &context
+                        .ip_address
+                        .as_ref()
+                        .map(|ip| ip.to_string())
+                        .unwrap_or_else(|| "unknown".to_string())
+                        .as_str(),
+                    &user_agent_str,
+                    &context
+                        .session_id
+                        .as_ref()
+                        .map(|s| s.as_str())
+                        .unwrap_or(""),
+                ],
+            )
+            .await?;
 
         Ok(())
     }
@@ -131,27 +145,42 @@ impl AuditLogger {
         };
 
         let details_json = details.unwrap_or_else(|| Value::Object(serde_json::Map::new()));
-        let user_agent_str = context.user_agent.as_ref().map(|s| s.as_str()).unwrap_or("");
+        let user_agent_str = context
+            .user_agent
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("");
 
-        self.db_client.execute(
-            query,
-            &[
-                &event_type,
-                &severity_str,
-                &context.source.as_str(),
-                &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
-                &context.session_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
-                &resource_type.unwrap_or(""),
-                &resource_id.unwrap_or(""),
-                &action.unwrap_or(""),
-                &details_json.to_string().as_str(),
-                &context.ip_address.as_ref().map(|ip| ip.to_string()).unwrap_or_else(|| "unknown".to_string()).as_str(),
-                &user_agent_str,
-                &success.to_string().as_str(),
-                &error_message.unwrap_or(""),
-                &processing_time_ms.unwrap_or(0).to_string().as_str(),
-            ],
-        ).await?;
+        self.db_client
+            .execute(
+                query,
+                &[
+                    &event_type,
+                    &severity_str,
+                    &context.source.as_str(),
+                    &context.user_id.as_ref().map(|s| s.as_str()).unwrap_or(""),
+                    &context
+                        .session_id
+                        .as_ref()
+                        .map(|s| s.as_str())
+                        .unwrap_or(""),
+                    &resource_type.unwrap_or(""),
+                    &resource_id.unwrap_or(""),
+                    &action.unwrap_or(""),
+                    &details_json.to_string().as_str(),
+                    &context
+                        .ip_address
+                        .as_ref()
+                        .map(|ip| ip.to_string())
+                        .unwrap_or_else(|| "unknown".to_string())
+                        .as_str(),
+                    &user_agent_str,
+                    &success.to_string().as_str(),
+                    &error_message.unwrap_or(""),
+                    &processing_time_ms.unwrap_or(0).to_string().as_str(),
+                ],
+            )
+            .await?;
 
         Ok(())
     }
@@ -197,7 +226,8 @@ impl AuditLogger {
             success,
             error_message,
             Some(processing_time_ms),
-        ).await
+        )
+        .await
     }
 
     /// Get task audit trail

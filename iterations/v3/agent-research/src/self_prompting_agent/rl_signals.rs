@@ -2,25 +2,24 @@
 //!
 //! Provides signals and policy adjustments for RL-based agent improvement.
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::sync::Arc;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use crate::reinforcement::QLearning;
 use crate::reflexive_types::AlgorithmConfig;
+use crate::reinforcement::QLearning;
 use crate::self_prompting_agent::prompting_types::SelfPromptingAgentError;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// RL signal for feedback
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RLSignal {
     pub signal_type: String,
     pub value: f64,
     pub context: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
-
 
 /// RL signal generator
 pub struct RLSignalGenerator {
@@ -49,7 +48,7 @@ impl RLSignalGenerator {
     pub async fn generate(&self, state: &str) -> Result<RLSignal, SelfPromptingAgentError> {
         // Analyze state and generate appropriate RL signal
         let state_lower = state.to_lowercase();
-        
+
         // Determine signal value based on state characteristics
         let value = if state_lower.contains("success") || state_lower.contains("complete") {
             1.0
@@ -66,7 +65,9 @@ impl RLSignalGenerator {
                 "retry".to_string(),
                 "abort".to_string(),
             ];
-            let best_action = q_learning.get_q_table().get_best_action(state)
+            let best_action = q_learning
+                .get_q_table()
+                .get_best_action(state)
                 .unwrap_or_else(|| available_actions[0].clone());
             let q_value = q_learning.get_q_table().get(state, &best_action);
             // Normalize Q-value to [-1, 1] range
@@ -96,7 +97,7 @@ impl RLSignalGenerator {
 
 /// Policy adjustment based on RL signals
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyAdjustment {
     pub parameter: String,
     pub current_value: f64,
@@ -127,7 +128,7 @@ impl PolicyAdjuster {
         default_policy.insert("temperature".to_string(), 0.7);
         default_policy.insert("max_iterations".to_string(), 5.0);
         default_policy.insert("risk_tolerance".to_string(), 0.5);
-        
+
         Self {
             q_learning: Arc::new(RwLock::new(QLearning::new(config))),
             current_policy: Arc::new(RwLock::new(default_policy)),
@@ -135,7 +136,10 @@ impl PolicyAdjuster {
     }
 
     /// Adjust policy based on signal
-    pub async fn adjust_policy(&self, signal: &RLSignal) -> Result<Option<PolicyAdjustment>, SelfPromptingAgentError> {
+    pub async fn adjust_policy(
+        &self,
+        signal: &RLSignal,
+    ) -> Result<Option<PolicyAdjustment>, SelfPromptingAgentError> {
         // Use Q-learning to determine optimal policy adjustment
         let state = format!("signal_{}_{}", signal.signal_type, signal.value);
         let available_actions = vec![
@@ -147,17 +151,17 @@ impl PolicyAdjuster {
             "decrease_risk".to_string(),
             "maintain_current".to_string(),
         ];
-        
+
         let mut q_learning = self.q_learning.write().await;
         let action = q_learning.select_action(&state, &available_actions);
-        
+
         // Update Q-learning with signal value as reward
         let next_state = format!("policy_adjusted_{}", action);
         q_learning.update(&state, &action, signal.value, &next_state);
-        
+
         // Map action to policy adjustment
         let mut policy = self.current_policy.write().await;
-        
+
         let adjustment = if action == "maintain_current" {
             None
         } else if action == "increase_temperature" {
@@ -168,7 +172,10 @@ impl PolicyAdjuster {
                 parameter: "temperature".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests increasing exploration", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests increasing exploration",
+                    signal.value
+                ),
             })
         } else if action == "decrease_temperature" {
             let current = policy.get("temperature").copied().unwrap_or(0.7);
@@ -178,7 +185,10 @@ impl PolicyAdjuster {
                 parameter: "temperature".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests increasing precision", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests increasing precision",
+                    signal.value
+                ),
             })
         } else if action == "increase_iterations" {
             let current = policy.get("max_iterations").copied().unwrap_or(5.0);
@@ -188,7 +198,10 @@ impl PolicyAdjuster {
                 parameter: "max_iterations".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests more iterations needed", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests more iterations needed",
+                    signal.value
+                ),
             })
         } else if action == "decrease_iterations" {
             let current = policy.get("max_iterations").copied().unwrap_or(5.0);
@@ -198,7 +211,10 @@ impl PolicyAdjuster {
                 parameter: "max_iterations".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests fewer iterations sufficient", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests fewer iterations sufficient",
+                    signal.value
+                ),
             })
         } else if action == "increase_risk" {
             let current = policy.get("risk_tolerance").copied().unwrap_or(0.5);
@@ -208,7 +224,10 @@ impl PolicyAdjuster {
                 parameter: "risk_tolerance".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests higher risk tolerance", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests higher risk tolerance",
+                    signal.value
+                ),
             })
         } else if action == "decrease_risk" {
             let current = policy.get("risk_tolerance").copied().unwrap_or(0.5);
@@ -218,21 +237,27 @@ impl PolicyAdjuster {
                 parameter: "risk_tolerance".to_string(),
                 current_value: current,
                 new_value,
-                reason: format!("Signal value {:.2} suggests lower risk tolerance", signal.value),
+                reason: format!(
+                    "Signal value {:.2} suggests lower risk tolerance",
+                    signal.value
+                ),
             })
         } else {
             None
         };
-        
+
         Ok(adjustment)
     }
 
     /// Apply policy adjustment
-    pub async fn apply_adjustment(&self, adjustment: &PolicyAdjustment) -> Result<(), SelfPromptingAgentError> {
+    pub async fn apply_adjustment(
+        &self,
+        adjustment: &PolicyAdjustment,
+    ) -> Result<(), SelfPromptingAgentError> {
         // Apply the adjustment to the stored policy
         let mut policy = self.current_policy.write().await;
         policy.insert(adjustment.parameter.clone(), adjustment.new_value);
-        
+
         tracing::info!(
             "Applied policy adjustment: {} from {} to {} ({})",
             adjustment.parameter,
@@ -270,7 +295,13 @@ impl RLTrainer {
     }
 
     /// Train on experience
-    pub async fn train_on_experience(&self, state: &str, action: &str, reward: f64, next_state: &str) -> Result<(), SelfPromptingAgentError> {
+    pub async fn train_on_experience(
+        &self,
+        state: &str,
+        action: &str,
+        reward: f64,
+        next_state: &str,
+    ) -> Result<(), SelfPromptingAgentError> {
         // Store experience in buffer
         {
             let mut buffer = self.experience_buffer.write().await;
@@ -282,16 +313,20 @@ impl RLTrainer {
                 done: false,
             });
         }
-        
+
         // Update Q-learning with the experience
         {
             let mut q_learning = self.q_learning.write().await;
             q_learning.update(state, action, reward, next_state);
         }
-        
+
         tracing::debug!(
             "Trained on experience: {} -> {} -> {} -> {} (reward: {:.2})",
-            state, action, reward, next_state, reward
+            state,
+            action,
+            reward,
+            next_state,
+            reward
         );
         Ok(())
     }
@@ -304,9 +339,11 @@ impl RLTrainer {
             "iterative_refinement".to_string(),
             "standard_approach".to_string(),
         ];
-        
+
         // Use Q-learning to select best action
-        q_learning.get_q_table().get_best_action(state)
+        q_learning
+            .get_q_table()
+            .get_best_action(state)
             .filter(|action| available_actions.contains(action))
             .unwrap_or_else(|| {
                 // Fallback based on state characteristics
@@ -322,7 +359,7 @@ impl RLTrainer {
 }
 
 /// Experience buffer for RL training
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExperienceBuffer {
     experiences: Vec<Experience>,
     max_size: usize,
@@ -349,22 +386,24 @@ impl ExperienceBuffer {
     pub fn sample_batch(&self, batch_size: usize) -> Vec<&Experience> {
         use rand::seq::SliceRandom;
         use rand::thread_rng;
-        
+
         if self.experiences.is_empty() {
             return Vec::new();
         }
-        
+
         let batch_size = batch_size.min(self.experiences.len());
         let mut rng = thread_rng();
-        
+
         // Randomly sample without replacement
-        self.experiences.choose_multiple(&mut rng, batch_size).collect()
+        self.experiences
+            .choose_multiple(&mut rng, batch_size)
+            .collect()
     }
 }
 
 /// RL experience tuple
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Experience {
     pub state: String,
     pub action: String,

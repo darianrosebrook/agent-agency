@@ -5,53 +5,62 @@
 //!
 //! @author @darianrosebrook
 
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 
-pub mod turn_level;
-pub mod trajectory_analyzer;
 pub mod credit_assignment;
+pub mod trajectory_analyzer;
+pub mod turn_level;
 
 pub use turn_level::{
-    TurnLevelTracker, TurnLevelProgressTracker, TurnProgress, AgentAction, TurnOutcome,
-    CreditAssignment, TurnTrajectory, TaskOutcome, ProgressUpdate,
+    AgentAction, CreditAssignment, ProgressUpdate, TaskOutcome, TurnLevelProgressTracker,
+    TurnLevelTracker, TurnOutcome, TurnProgress, TurnTrajectory,
 };
 
 pub use trajectory_analyzer::{
-    TrajectoryAnalyzer, TrajectoryInsights, TrajectoryPattern, DetectedPattern,
-    QualityTrend, TrendDirection, PerformanceMetrics, ActionSequenceAnalysis,
+    ActionSequenceAnalysis, DetectedPattern, PerformanceMetrics, QualityTrend, TrajectoryAnalyzer,
+    TrajectoryInsights, TrajectoryPattern, TrendDirection,
 };
 
-pub use credit_assignment::{
-    AdvancedCreditAssigner, TdLearningConfig, ValueFunction,
-};
+pub use credit_assignment::{AdvancedCreditAssigner, TdLearningConfig, ValueFunction};
 
 /// Progress tracking trait for task execution
 #[async_trait::async_trait]
 pub trait ProgressTracker: Send + Sync {
     /// Update progress for a specific task
-    async fn update_progress(&self, task_id: Uuid, progress: ExecutionProgress) -> Result<(), ProgressError>;
-    
+    async fn update_progress(
+        &self,
+        task_id: Uuid,
+        progress: ExecutionProgress,
+    ) -> Result<(), ProgressError>;
+
     /// Get current progress for a task
-    async fn get_progress(&self, task_id: Uuid) -> Result<Option<ExecutionProgress>, ProgressError>;
-    
+    async fn get_progress(&self, task_id: Uuid)
+        -> Result<Option<ExecutionProgress>, ProgressError>;
+
     /// Get all active task progress
     async fn get_all_progress(&self) -> Result<HashMap<Uuid, ExecutionProgress>, ProgressError>;
-    
+
     /// Persist progress to storage
     async fn persist_progress(&self, task_id: Uuid) -> Result<(), ProgressError>;
-    
+
     /// Load progress from storage
-    async fn load_progress(&self, task_id: Uuid) -> Result<Option<ExecutionProgress>, ProgressError>;
-    
+    async fn load_progress(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<ExecutionProgress>, ProgressError>;
+
     /// Subscribe to progress updates
-    async fn subscribe_to_updates(&self, task_id: Uuid) -> Result<mpsc::Receiver<ExecutionProgress>, ProgressError>;
-    
+    async fn subscribe_to_updates(
+        &self,
+        task_id: Uuid,
+    ) -> Result<mpsc::Receiver<ExecutionProgress>, ProgressError>;
+
     /// Emit progress event
     async fn emit_event(&self, event: ExecutionEvent) -> Result<(), ProgressError>;
 }
@@ -234,10 +243,13 @@ pub struct RealTimeProgressTracker {
 pub trait ProgressPersistence: Send + Sync + std::fmt::Debug {
     /// Save progress to persistent storage
     async fn save_progress(&self, progress: &ExecutionProgress) -> Result<(), ProgressError>;
-    
+
     /// Load progress from persistent storage
-    async fn load_progress(&self, task_id: Uuid) -> Result<Option<ExecutionProgress>, ProgressError>;
-    
+    async fn load_progress(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<ExecutionProgress>, ProgressError>;
+
     /// Delete progress from persistent storage
     async fn delete_progress(&self, task_id: Uuid) -> Result<(), ProgressError>;
 }
@@ -266,12 +278,17 @@ impl RealTimeProgressTracker {
     }
 
     /// Calculate estimated completion time
-    fn calculate_estimated_completion(&self, progress: &ExecutionProgress) -> Option<DateTime<Utc>> {
+    fn calculate_estimated_completion(
+        &self,
+        progress: &ExecutionProgress,
+    ) -> Option<DateTime<Utc>> {
         if progress.percentage <= 0.0 || progress.percentage >= 100.0 {
             return None;
         }
 
-        let elapsed = progress.last_updated.signed_duration_since(progress.started_at);
+        let elapsed = progress
+            .last_updated
+            .signed_duration_since(progress.started_at);
         let elapsed_ms = elapsed.num_milliseconds() as f64;
         let total_estimated_ms = elapsed_ms * 100.0 / progress.percentage;
         let remaining_ms = total_estimated_ms - elapsed_ms;
@@ -282,10 +299,14 @@ impl RealTimeProgressTracker {
 
 #[async_trait::async_trait]
 impl ProgressTracker for RealTimeProgressTracker {
-    async fn update_progress(&self, task_id: Uuid, mut progress: ExecutionProgress) -> Result<(), ProgressError> {
+    async fn update_progress(
+        &self,
+        task_id: Uuid,
+        mut progress: ExecutionProgress,
+    ) -> Result<(), ProgressError> {
         // Update timestamp
         progress.last_updated = Utc::now();
-        
+
         // Calculate estimated completion
         progress.estimated_completion = self.calculate_estimated_completion(&progress);
 
@@ -325,7 +346,10 @@ impl ProgressTracker for RealTimeProgressTracker {
         Ok(())
     }
 
-    async fn get_progress(&self, task_id: Uuid) -> Result<Option<ExecutionProgress>, ProgressError> {
+    async fn get_progress(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<ExecutionProgress>, ProgressError> {
         let store = self.progress_store.read().await;
         Ok(store.get(&task_id).cloned())
     }
@@ -345,7 +369,10 @@ impl ProgressTracker for RealTimeProgressTracker {
         Ok(())
     }
 
-    async fn load_progress(&self, task_id: Uuid) -> Result<Option<ExecutionProgress>, ProgressError> {
+    async fn load_progress(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<ExecutionProgress>, ProgressError> {
         if let Some(backend) = &self.persistence_backend {
             let progress = backend.load_progress(task_id).await?;
             if let Some(progress) = &progress {
@@ -358,9 +385,12 @@ impl ProgressTracker for RealTimeProgressTracker {
         }
     }
 
-    async fn subscribe_to_updates(&self, task_id: Uuid) -> Result<mpsc::Receiver<ExecutionProgress>, ProgressError> {
+    async fn subscribe_to_updates(
+        &self,
+        task_id: Uuid,
+    ) -> Result<mpsc::Receiver<ExecutionProgress>, ProgressError> {
         let (tx, rx) = mpsc::channel(100);
-        
+
         {
             let mut subscribers = self.subscribers.write().await;
             subscribers.entry(task_id).or_insert_with(Vec::new).push(tx);
@@ -430,7 +460,7 @@ mod tests {
     async fn test_progress_tracker_basic_operations() {
         let tracker = RealTimeProgressTracker::new(None);
         let task_id = Uuid::new_v4();
-        
+
         let mut progress = ExecutionProgress::default();
         progress.task_id = task_id;
         progress.status = ExecutionStatus::Running;
@@ -438,7 +468,10 @@ mod tests {
         progress.current_phase = "Processing".to_string();
 
         // Update progress
-        assert!(tracker.update_progress(task_id, progress.clone()).await.is_ok());
+        assert!(tracker
+            .update_progress(task_id, progress.clone())
+            .await
+            .is_ok());
 
         // Get progress
         let retrieved = tracker.get_progress(task_id).await.unwrap();
@@ -455,18 +488,18 @@ mod tests {
     async fn test_progress_subscription() {
         let tracker = RealTimeProgressTracker::new(None);
         let task_id = Uuid::new_v4();
-        
+
         // Subscribe to updates
         let mut rx = tracker.subscribe_to_updates(task_id).await.unwrap();
-        
+
         // Update progress
         let mut progress = ExecutionProgress::default();
         progress.task_id = task_id;
         progress.status = ExecutionStatus::Running;
         progress.percentage = 25.0;
-        
+
         tracker.update_progress(task_id, progress).await.unwrap();
-        
+
         // Receive update
         let received = rx.recv().await.unwrap();
         assert_eq!(received.percentage, 25.0);

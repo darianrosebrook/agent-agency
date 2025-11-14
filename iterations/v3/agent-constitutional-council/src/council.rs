@@ -7,12 +7,11 @@ use schemars::JsonSchema;
 use std::sync::Arc;
 use tracing::{info, instrument, warn};
 
-use agent_agency_contracts::{JudgeEngine, JudgeType, VerdictLabel, JudgeVerdict, WorkingSpec};
 use agent_agency_contracts::judge_io::Severity;
+use agent_agency_contracts::{JudgeEngine, JudgeType, JudgeVerdict, VerdictLabel, WorkingSpec};
 
-use crate::{Judges, FinalDecision, CouncilError, CouncilMetrics, CouncilResult, VerdictWriter};
 use crate::judges::common::Judge;
-
+use crate::{CouncilError, CouncilMetrics, CouncilResult, FinalDecision, Judges, VerdictWriter};
 
 /// Review context for a working spec
 #[derive(Debug, Clone, JsonSchema)]
@@ -38,8 +37,9 @@ pub enum ReviewPriority {
 
 /// Council coordinator generic over engine type
 #[derive(Debug)]
-pub struct CouncilCoordinator <E: JudgeEngine> {
+pub struct CouncilCoordinator<E: JudgeEngine> {
     /// Inference engine for judges
+    #[allow(dead_code)] // Reserved for v4 features
     engine: Arc<E>,
 
     /// The four constitutional judges
@@ -93,13 +93,19 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
         let start = std::time::Instant::now();
         self.metrics.record_session();
 
-        info!("🏛️  Constitutional Council evaluating spec {}", ctx.working_spec.id);
+        info!(
+            "🏛️  Constitutional Council evaluating spec {}",
+            ctx.working_spec.id
+        );
 
         // Collect verdicts from all four judges
         let judge_verdicts_with_types = self.collect_verdicts(ctx).await?;
 
         // Extract just the verdicts for aggregation
-        let judge_verdicts: Vec<_> = judge_verdicts_with_types.iter().map(|(_, v)| v.clone()).collect();
+        let judge_verdicts: Vec<_> = judge_verdicts_with_types
+            .iter()
+            .map(|(_, v)| v.clone())
+            .collect();
 
         // Aggregate into consensus
         let aggregation = self.aggregator.aggregate(&judge_verdicts)?;
@@ -109,7 +115,8 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
 
         // Record metrics
         let duration = start.elapsed();
-        self.metrics.record_evaluation(duration, &judge_verdicts_with_types, &decision);
+        self.metrics
+            .record_evaluation(duration, &judge_verdicts_with_types, &decision);
 
         info!(
             "🏛️  Council decision: {} (score: {:.2}, duration: {:.1}ms)",
@@ -124,12 +131,16 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
         );
 
         // Persist verdict to audit trail
-        if let Err(e) = self.verdict_writer.write_verdict(
-            &ctx.working_spec,
-            &format!("session_{}", start.elapsed().as_millis()), // Generate session ID
-            &decision,
-            duration,
-        ).await {
+        if let Err(e) = self
+            .verdict_writer
+            .write_verdict(
+                &ctx.working_spec,
+                &format!("session_{}", start.elapsed().as_millis()), // Generate session ID
+                &decision,
+                duration,
+            )
+            .await
+        {
             warn!("Failed to persist council verdict: {}", e);
             // Don't fail the evaluation if persistence fails - log and continue
         }
@@ -138,14 +149,23 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
     }
 
     /// Collect verdicts from all judges concurrently
-    async fn collect_verdicts(&self, ctx: &ReviewContext) -> CouncilResult<Vec<(JudgeType, JudgeVerdict)>> {
+    async fn collect_verdicts(
+        &self,
+        ctx: &ReviewContext,
+    ) -> CouncilResult<Vec<(JudgeType, JudgeVerdict)>> {
         use futures::future::join_all;
 
         let futures = vec![
-            (JudgeType::Constitutional, self.judges.constitutional.review_spec(ctx)),
+            (
+                JudgeType::Constitutional,
+                self.judges.constitutional.review_spec(ctx),
+            ),
             (JudgeType::Technical, self.judges.technical.review_spec(ctx)),
             (JudgeType::Quality, self.judges.quality.review_spec(ctx)),
-            (JudgeType::Integration, self.judges.integration.review_spec(ctx)),
+            (
+                JudgeType::Integration,
+                self.judges.integration.review_spec(ctx),
+            ),
         ];
 
         let results = join_all(futures.into_iter().map(|(jt, fut)| async move {
@@ -153,7 +173,8 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
                 Ok(verdict) => Ok((jt, verdict)),
                 Err(e) => Err((jt, e)),
             }
-        })).await;
+        }))
+        .await;
 
         // Check for judge failures
         let mut verdicts = Vec::new();
@@ -162,7 +183,10 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
                 Ok((judge_type, verdict)) => verdicts.push((judge_type, verdict)),
                 Err((judge_type, e)) => {
                     warn!("Judge {:?} returned error: {}", judge_type, e);
-                    return Err(CouncilError::Judge(format!("Judge {:?}: {}", judge_type, e)));
+                    return Err(CouncilError::Judge(format!(
+                        "Judge {:?}: {}",
+                        judge_type, e
+                    )));
                 }
             }
         }
@@ -178,13 +202,15 @@ impl<E: JudgeEngine> CouncilCoordinator<E> {
 
 /// Aggregates judge verdicts into consensus
 #[derive(Debug, Default, JsonSchema)]
-struct VerdictAggregator ;
+struct VerdictAggregator;
 
 impl VerdictAggregator {
     /// Aggregate multiple judge verdicts
     fn aggregate(&self, verdicts: &[JudgeVerdict]) -> CouncilResult<VerdictAggregation> {
         if verdicts.is_empty() {
-            return Err(CouncilError::Consensus("No verdicts to aggregate".to_string()));
+            return Err(CouncilError::Consensus(
+                "No verdicts to aggregate".to_string(),
+            ));
         }
 
         // Calculate weighted scores (some judges may have higher weight)
@@ -192,13 +218,15 @@ impl VerdictAggregator {
         let average_score = total_score / verdicts.len() as f32;
 
         // Determine consensus label
-        let label_counts = verdicts.iter()
+        let label_counts = verdicts
+            .iter()
             .fold(std::collections::HashMap::new(), |mut acc, v| {
                 *acc.entry(&v.label).or_insert(0) += 1;
                 acc
             });
 
-        let consensus_label = label_counts.iter()
+        let consensus_label = label_counts
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(label, _)| **label)
             .unwrap_or(VerdictLabel::NeedsInfo);
@@ -215,23 +243,27 @@ impl VerdictAggregator {
     }
 
     /// Check if there's significant disagreement among judges
-    fn check_consensus_violations(&self, verdicts: &[JudgeVerdict], consensus: &VerdictLabel) -> Vec<String> {
+    fn check_consensus_violations(
+        &self,
+        verdicts: &[JudgeVerdict],
+        consensus: &VerdictLabel,
+    ) -> Vec<String> {
         let mut violations = Vec::new();
 
         // Count dissenting votes
-        let dissent_count = verdicts.iter()
-            .filter(|v| &v.label != consensus)
-            .count();
+        let dissent_count = verdicts.iter().filter(|v| &v.label != consensus).count();
 
         if dissent_count > verdicts.len() / 2 {
             violations.push(format!(
                 "Majority disagreement: {} out of {} judges dissent from consensus",
-                dissent_count, verdicts.len()
+                dissent_count,
+                verdicts.len()
             ));
         }
 
         // Check for critical violations that override consensus
-        let critical_violations: Vec<_> = verdicts.iter()
+        let critical_violations: Vec<_> = verdicts
+            .iter()
             .flat_map(|v| &v.violations)
             .filter(|v| v.severity == Severity::Critical)
             .collect();
@@ -265,16 +297,23 @@ struct VerdictAggregation {
 
 /// Makes final decisions based on verdict aggregation
 #[derive(Debug, Default, JsonSchema)]
-struct DecisionEngine ;
+struct DecisionEngine;
 
 impl DecisionEngine {
     /// Make final decision from aggregated verdicts
-    fn decide(&self, ctx: &ReviewContext, aggregation: &VerdictAggregation) -> CouncilResult<FinalDecision> {
+    fn decide(
+        &self,
+        ctx: &ReviewContext,
+        aggregation: &VerdictAggregation,
+    ) -> CouncilResult<FinalDecision> {
         // Check for blocking consensus violations
         if !aggregation.consensus_violations.is_empty() {
             // If there are critical violations, always fail
-            let has_critical = aggregation.all_verdicts.iter()
-                .any(|v| v.violations.iter().any(|vi| vi.severity == Severity::Critical));
+            let has_critical = aggregation.all_verdicts.iter().any(|v| {
+                v.violations
+                    .iter()
+                    .any(|vi| vi.severity == Severity::Critical)
+            });
 
             if has_critical {
                 return Ok(FinalDecision {
@@ -346,7 +385,11 @@ impl DecisionEngine {
     }
 
     /// Generate recommended actions based on decision
-    fn generate_actions(&self, _ctx: &ReviewContext, aggregation: &VerdictAggregation) -> Vec<String> {
+    fn generate_actions(
+        &self,
+        _ctx: &ReviewContext,
+        aggregation: &VerdictAggregation,
+    ) -> Vec<String> {
         match aggregation.consensus_label {
             VerdictLabel::Pass => vec![
                 "Proceed with implementation".to_string(),

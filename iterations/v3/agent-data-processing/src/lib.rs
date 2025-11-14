@@ -24,17 +24,17 @@
 //!
 //! @author @darianrosebrook
 
+pub mod context;
+pub mod data_processing_types;
 pub mod enrichment;
 pub mod indexing;
 pub mod ingestion;
+pub mod ingestion_cleanup;
 pub mod ingestion_runtime;
 pub mod ingestion_util;
-pub mod ingestion_cleanup;
 pub mod knowledge;
 pub mod operations;
 pub mod pipeline;
-pub mod data_processing_types;
-pub mod context;
 
 #[cfg(feature = "memory-integration")]
 pub mod memory_hooks;
@@ -46,43 +46,43 @@ pub mod workspace_hooks;
 use schemars::JsonSchema;
 
 // Re-export main types
-pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
+#[cfg(feature = "embeddings")]
+pub use context::{ContextConfig, ContextData, ContextManager, ContextStats};
 pub use data_processing_types::ProcessingStats;
 pub use data_processing_types::*;
-#[cfg(feature = "embeddings")]
-pub use context::{ContextManager, ContextConfig, ContextData, ContextStats};
+pub use pipeline::{DataPipeline, PipelineConfig, PipelineResult};
 
 // Re-export block and enrichment types for orchestration
-pub use data_processing_types::{Block, BlockData, EnrichedBlock, EnrichedContent, ExtractedEntity, VisualElement, VisualElementType, ExtractedTopic, TextPosition};
+pub use data_processing_types::{
+    Block, BlockData, EnrichedBlock, EnrichedContent, ExtractedEntity, ExtractedTopic,
+    TextPosition, VisualElement, VisualElementType,
+};
 
 // Re-export stage traits and implementations
-pub use enrichment::{EnrichmentStage, EnrichmentResult};
-pub use indexing::{IndexingStage, IndexingResult, IndexQuery, IndexResult};
-pub use ingestion::{IngestionStage, IngestionResult};
 pub use data_processing_types::DataSource;
-pub use knowledge::{KnowledgeStage, KnowledgeResult, KnowledgeSource};
-pub use operations::{OperationsStage, OperationResult, FileOperation};
+pub use enrichment::{EnrichmentResult, EnrichmentStage};
+pub use indexing::{IndexQuery, IndexResult, IndexingResult, IndexingStage};
+pub use ingestion::{IngestionResult, IngestionStage};
+pub use knowledge::{KnowledgeResult, KnowledgeSource, KnowledgeStage};
+pub use operations::{FileOperation, OperationResult, OperationsStage};
 
 // Consolidated enrichment functionality from enrichers crate
 pub use enrichment::{
-    AsrEnricher, VisionEnricher, EntityEnricher, VisualCaptioningEnricher,
-    CircuitBreaker, CircuitState, EnrichmentCircuitBreakerConfig,
-    AsrEnrichmentResult, VisionEnrichmentResult, EntityExtractionResult, VisualCaptioningResult,
-    UnifiedEnrichmentStage, DefaultEnrichmentStage,
+    AsrEnricher, AsrEnrichmentResult, CircuitBreaker, CircuitState, DefaultEnrichmentStage,
+    EnrichmentCircuitBreakerConfig, EntityEnricher, EntityExtractionResult, UnifiedEnrichmentStage,
+    VisionEnricher, VisionEnrichmentResult, VisualCaptioningEnricher, VisualCaptioningResult,
 };
 
 // Consolidated ingestion functionality from ingestors crate
 pub use ingestion::{
-    CaptionsIngestor, DiagramsIngestor, VideoIngestor, SlidesIngestor,
-    FileWatcher, UnifiedIngestor,
+    CaptionsIngestor, DiagramsIngestor, FileWatcher, SlidesIngestor, UnifiedIngestor, VideoIngestor,
 };
 
 // Consolidated indexing functionality from indexers crate
 pub use indexing::{
-    Bm25Indexer, HnswIndexer, DatabasePool, VectorStore, JobScheduler,
-    JobType, JobPriority, JobStatus, UnifiedIndexer, SearchQuery, SearchResult,
-    VectorQuery, VectorSearchResult, HybridSearchResult, UnifiedIndexerStats,
-    IngestionJob, JobSchedulerStats,
+    Bm25Indexer, DatabasePool, HnswIndexer, HybridSearchResult, IngestionJob, JobPriority,
+    JobScheduler, JobSchedulerStats, JobStatus, JobType, SearchQuery, SearchResult, UnifiedIndexer,
+    UnifiedIndexerStats, VectorQuery, VectorSearchResult, VectorStore,
 };
 
 /// Unified data processing result type
@@ -161,7 +161,8 @@ impl DataProcessingSystem {
         let memory_hooks = memory_hooks::MemoryIntegrationHooks::new(&config.memory).await?;
 
         #[cfg(feature = "workspace-integration")]
-        let workspace_hooks = workspace_hooks::WorkspaceIntegrationHooks::new(&config.workspace).await?;
+        let workspace_hooks =
+            workspace_hooks::WorkspaceIntegrationHooks::new(&config.workspace).await?;
 
         Ok(Self {
             pipeline,
@@ -188,12 +189,16 @@ impl DataProcessingSystem {
 
                 // Commit workspace changes
                 #[cfg(feature = "workspace-integration")]
-                self.workspace_hooks.commit_processing_changes(workspace_snapshot).await?;
+                self.workspace_hooks
+                    .commit_processing_changes(workspace_snapshot)
+                    .await?;
             }
             Err(_) => {
                 // Rollback workspace changes on failure
                 #[cfg(feature = "workspace-integration")]
-                self.workspace_hooks.rollback_processing_changes(workspace_snapshot).await?;
+                self.workspace_hooks
+                    .rollback_processing_changes(workspace_snapshot)
+                    .await?;
             }
         }
 
@@ -213,14 +218,17 @@ impl DataProcessingSystem {
         #[cfg(feature = "memory-integration")]
         {
             // Convert AgentExperience to ContextualMemory once
-            let contextual_memories: Vec<agent_memory::ContextualMemory> = context_memories.into_iter().map(|exp| {
-                agent_memory::ContextualMemory {
-                    memory: exp,
-                    relevance_score: 0.8, // Default relevance
-                    context_match: agent_memory::ContextMatch::Semantic,
-                    reasoning_path: vec!["data_processing_context".to_string()],
-                }
-            }).collect();
+            let contextual_memories: Vec<agent_memory::ContextualMemory> = context_memories
+                .into_iter()
+                .map(|exp| {
+                    agent_memory::ContextualMemory {
+                        memory: exp,
+                        relevance_score: 0.8, // Default relevance
+                        context_match: agent_memory::ContextMatch::Semantic,
+                        reasoning_path: vec!["data_processing_context".to_string()],
+                    }
+                })
+                .collect();
 
             for result in &mut results {
                 result.enhance_with_context(&contextual_memories);

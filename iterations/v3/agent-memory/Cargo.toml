@@ -66,7 +66,8 @@ agent-agency-contracts = { path = "../agent-agency-contracts", default-features 
 # Integration with existing services
 # data-infrastructure = { path = "../data-infrastructure", optional = true }  # Removed to break circular dependency - now using direct sqlx
 agent-data-processing = { path = "../agent-data-processing", features = [] }  # Re-enabled for ContextManager integration
-data-infrastructure = { path = "../data-infrastructure", optional = true }  # For embedding service integration
+# CoreML can be disabled for tests - disable defaults, enable via features
+data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # For embedding service integration
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -74,8 +75,9 @@ tempfile = "3.8"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
-default = ["graph-reasoning", "database"]
-embeddings = ["data-infrastructure"]  # Enable embedding service integration
+default = ["graph-reasoning", "database", "embeddings"]  # Enable graph reasoning, database, and embeddings by default - no coreml
+embeddings = ["data-infrastructure"]  # Enable embedding service integration (without CoreML)
+embeddings-coreml = ["data-infrastructure", "data-infrastructure/coreml"]  # Enable embedding service with CoreML acceleration
 graph-reasoning = []
 temporal-analysis = []
 context-offloading = []

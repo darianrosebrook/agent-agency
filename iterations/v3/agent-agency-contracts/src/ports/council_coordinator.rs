@@ -5,14 +5,24 @@
 //!
 //! @author @darianrosebrook
 
-use uuid::Uuid;
-use schemars::JsonSchema;
-use crate::types::planning::TaskDescriptor;
-use crate::types::council::CouncilVerdict;
 use crate::errors::CouncilResult;
+use crate::types::council::CouncilVerdict;
+use crate::types::planning::TaskDescriptor;
+use schemars::JsonSchema;
+use uuid::Uuid;
 
 /// Session identifier for council review sessions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+)]
 #[serde(transparent)]
 pub struct SessionId(#[schemars(with = "String")] pub Uuid);
 
@@ -37,7 +47,11 @@ pub trait CouncilCoordinator: Send + Sync {
     ///
     /// # Returns
     /// Council verdict (Approved, ConditionalApproval, Rejected), or an error if review fails
-    async fn review_task(&self, session_id: &SessionId, task: &TaskDescriptor) -> CouncilResult<CouncilVerdict>;
+    async fn review_task(
+        &self,
+        session_id: &SessionId,
+        task: &TaskDescriptor,
+    ) -> CouncilResult<CouncilVerdict>;
 
     /// Get the status of a review session
     ///

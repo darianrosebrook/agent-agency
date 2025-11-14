@@ -6,9 +6,8 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Prompt frame with metadata
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptFrame {
     pub content: String,
     pub metadata: HashMap<String, String>,
@@ -18,7 +17,7 @@ pub struct PromptFrame {
 
 /// Patch action for prompt modification
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatchAction {
     pub action_type: String,
     pub target: String,
@@ -97,8 +96,14 @@ impl AdaptivePromptingStrategy {
     /// Optimize prompt for task
     pub fn optimize_for_task(&self, base_prompt: &str, task_type: &str) -> String {
         match task_type {
-            "coding" => format!("{} Focus on clean, efficient code with proper error handling.", base_prompt),
-            "analysis" => format!("{} Provide thorough analysis with evidence and examples.", base_prompt),
+            "coding" => format!(
+                "{} Focus on clean, efficient code with proper error handling.",
+                base_prompt
+            ),
+            "analysis" => format!(
+                "{} Provide thorough analysis with evidence and examples.",
+                base_prompt
+            ),
             "planning" => format!("{} Break down into clear, actionable steps.", base_prompt),
             _ => base_prompt.to_string(),
         }
@@ -136,7 +141,7 @@ impl AgentTelemetryCollector {
 
 /// Telemetry event
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TelemetryEvent {
     pub event_type: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -173,7 +178,7 @@ impl PromptOptimizer {
 
 /// Prompt analysis result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptAnalysis {
     pub original_prompt: String,
     pub quality_score: f64,

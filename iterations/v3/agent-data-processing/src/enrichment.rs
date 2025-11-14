@@ -14,7 +14,7 @@ use crate::{DataProcessingResult, DataProcessingError};
 use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn};
+use tracing::info;
 use uuid::Uuid;
 use chrono::Utc;
 use std::sync::Mutex;

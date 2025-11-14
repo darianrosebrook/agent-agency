@@ -1,7 +1,7 @@
 //! Common type patterns and structures
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Health status for components
@@ -121,7 +121,7 @@ pub struct ConfigError {
 
 /// Operation result with detailed information
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct OperationResult <T> {
+pub struct OperationResult<T> {
     /// Whether the operation succeeded
     pub success: bool,
     /// Result data (if successful)
@@ -216,7 +216,7 @@ pub enum SortDirection {
 
 /// Paginated response
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PaginatedResponse <T> {
+pub struct PaginatedResponse<T> {
     /// Items for this page
     pub items: Vec<T>,
     /// Total number of items across all pages
@@ -259,13 +259,15 @@ impl RateLimitInfo {
     /// Get time until reset in seconds
     pub fn seconds_until_reset(&self) -> i64 {
         let now = Utc::now();
-        now.signed_duration_since(self.reset_at).num_seconds().max(0)
+        now.signed_duration_since(self.reset_at)
+            .num_seconds()
+            .max(0)
     }
 }
 
 /// Cache entry with metadata
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct CacheEntry <T> {
+pub struct CacheEntry<T> {
     /// Cached data
     pub data: T,
     /// When this entry was created

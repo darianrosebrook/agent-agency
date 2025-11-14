@@ -50,4 +50,3 @@ pub struct EvidenceGate {
     /// Whether this gate is required
     pub required: bool,
 }
-

@@ -1,11 +1,11 @@
 //! Progress aggregation across all workers
 
+use crate::error::*;
+use crate::{Progress, WorkerProgress, WorkerProgressStatus};
+use crate::{SubTaskId, WorkerId};
+use parking_lot::RwLock;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::{SubTaskId, WorkerId};
-use crate::{Progress, WorkerProgress, WorkerProgressStatus};
-use crate::error::*;
-use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -25,11 +25,15 @@ impl ProgressAggregator {
     }
 
     /// Update overall progress from worker progress updates
-    pub fn update_from_worker_progress(&self, worker_progress: &WorkerProgress) -> ProgressResult<()> {
+    pub fn update_from_worker_progress(
+        &self,
+        worker_progress: &WorkerProgress,
+    ) -> ProgressResult<()> {
         let mut contributions = self.worker_contributions.write();
         let worker_id = worker_progress.worker_id.clone();
         let subtask_id = worker_progress.subtask_id.clone();
-        let contribution = contributions.entry(worker_id)
+        let contribution = contributions
+            .entry(worker_id)
             .or_insert_with(|| WorkerContribution {
                 worker_id,
                 subtask_id: subtask_id.clone(),
@@ -54,15 +58,23 @@ impl ProgressAggregator {
     }
 
     /// Register a new worker contribution
-    pub fn register_worker(&self, worker_id: WorkerId, subtask_id: SubTaskId, weight: f32) -> ProgressResult<()> {
+    pub fn register_worker(
+        &self,
+        worker_id: WorkerId,
+        subtask_id: SubTaskId,
+        weight: f32,
+    ) -> ProgressResult<()> {
         let mut contributions = self.worker_contributions.write();
-        contributions.insert(worker_id.clone(), WorkerContribution {
-            worker_id,
-            subtask_id,
-            weight,
-            current_progress: 0.0,
-            status: WorkerProgressStatus::Pending,
-        });
+        contributions.insert(
+            worker_id.clone(),
+            WorkerContribution {
+                worker_id,
+                subtask_id,
+                weight,
+                current_progress: 0.0,
+                status: WorkerProgressStatus::Pending,
+            },
+        );
 
         self.recalculate_overall_progress()?;
         Ok(())
@@ -104,7 +116,8 @@ impl ProgressAggregator {
         let mut pending = 0usize;
 
         for contribution in contributions.values() {
-            completed_weight += contribution.current_progress.clamp(0.0, 1.0) * contribution.weight.max(0.0);
+            completed_weight +=
+                contribution.current_progress.clamp(0.0, 1.0) * contribution.weight.max(0.0);
 
             match contribution.status {
                 WorkerProgressStatus::Pending => pending += 1,
@@ -126,7 +139,8 @@ impl ProgressAggregator {
         overall_progress.failed_tasks = to_u32(failed);
         overall_progress.in_progress_tasks = to_u32(running + blocked + pending);
         overall_progress.overall_percentage = overall_fraction * 100.0;
-        overall_progress.estimated_completion = compute_estimated_completion(overall_fraction, &contributions);
+        overall_progress.estimated_completion =
+            compute_estimated_completion(overall_fraction, &contributions);
         overall_progress.last_updated = chrono::Utc::now();
 
         Ok(())
@@ -150,7 +164,12 @@ impl ProgressAggregator {
     /// Check if task is completed (all workers done)
     pub fn is_task_completed(&self) -> bool {
         let contributions = self.worker_contributions.read();
-        contributions.values().all(|c| matches!(c.status, WorkerProgressStatus::Completed | WorkerProgressStatus::Failed))
+        contributions.values().all(|c| {
+            matches!(
+                c.status,
+                WorkerProgressStatus::Completed | WorkerProgressStatus::Failed
+            )
+        })
     }
 
     /// Get progress statistics
@@ -194,9 +213,7 @@ impl ProgressAggregator {
             return 0.0;
         }
 
-        let total_completion: f32 = contributions.values()
-            .map(|c| c.current_progress)
-            .sum();
+        let total_completion: f32 = contributions.values().map(|c| c.current_progress).sum();
 
         total_completion / contributions.len() as f32
     }

@@ -6,25 +6,19 @@
 use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Semaphore};
 use tokio::sync::RwLock;
-use tracing::{info, error};
+use tokio::sync::{mpsc, Semaphore};
+use tracing::{error, info};
 
-use crate::tool_chain_planner::{ToolChain, ToolNode};
-use petgraph::visit::EdgeRef;
 use crate::executor::{ChainExecutor, ExecutionResult};
+use crate::tool_chain_planner::{ToolChain, ToolNode};
 use crate::tool_execution::{ToolExecutor, ToolResult};
 use crate::tool_registry::ToolRegistry;
+use petgraph::visit::EdgeRef;
 
 use agent_workers::{
-    ParallelCoordinator,
-    ParallelCoordinatorConfig,
-    DecompositionEngine,
-    TaskAnalysis,
-    Dependency,
-    WorkerManager,
-    CommunicationHub,
-    communication::ChannelConfig,
+    communication::ChannelConfig, CommunicationHub, DecompositionEngine, Dependency,
+    ParallelCoordinator, ParallelCoordinatorConfig, TaskAnalysis, WorkerManager,
 };
 
 /// Parallel tool execution coordinator
@@ -52,7 +46,7 @@ impl ParallelToolCoordinator {
         let chain_executor = Arc::new(ChainExecutor::new(
             tool_executor.clone(),
             Arc::new(crate::schema_registry::JsonSchemaRegistry::new()),
-            8, // concurrency limit
+            8,     // concurrency limit
             30000, // default timeout
         ));
 
@@ -140,8 +134,14 @@ impl ParallelToolCoordinator {
             let _edge = chain.dag.edge_weight(edge_idx).unwrap();
 
             dependencies.push(Dependency {
-                from: agent_workers::SubTaskId(uuid::Uuid::parse_str(&self.node_id_to_task_id(source)).unwrap_or_else(|_| uuid::Uuid::new_v4())),
-                to: agent_workers::SubTaskId(uuid::Uuid::parse_str(&self.node_id_to_task_id(target)).unwrap_or_else(|_| uuid::Uuid::new_v4())),
+                from: agent_workers::SubTaskId(
+                    uuid::Uuid::parse_str(&self.node_id_to_task_id(source))
+                        .unwrap_or_else(|_| uuid::Uuid::new_v4()),
+                ),
+                to: agent_workers::SubTaskId(
+                    uuid::Uuid::parse_str(&self.node_id_to_task_id(target))
+                        .unwrap_or_else(|_| uuid::Uuid::new_v4()),
+                ),
                 dependency_type: agent_workers::DependencyType::Data,
             });
         }
@@ -181,10 +181,14 @@ impl ParallelToolCoordinator {
         let task_analysis = TaskAnalysis {
             task_id: agent_workers::TaskId::new(),
             complexity_score: 0.5, // Temporary: default until ComplexTask conversion is implemented
-            patterns: vec![], // Temporary: no patterns until DecompositionEngine analysis
+            patterns: vec![],      // Temporary: no patterns until DecompositionEngine analysis
             dependencies,
             subtask_scores: agent_workers::SubtaskScores {
-                parallelization_score: if self.can_chain_parallelize(chain) { 0.8 } else { 0.2 },
+                parallelization_score: if self.can_chain_parallelize(chain) {
+                    0.8
+                } else {
+                    0.2
+                },
                 complexity_scores: vec![], // Temporary: empty until decomposition analysis
                 estimated_durations: vec![], // Temporary: empty until decomposition analysis
             },
@@ -266,7 +270,8 @@ impl ParallelToolCoordinator {
                     task,
                     worker_manager,
                     communication_hub,
-                ).await;
+                )
+                .await;
 
                 let _ = result_tx.send(result).await;
             });
@@ -561,8 +566,16 @@ impl ParallelToolCoordinator {
         let mut sections = Vec::new();
 
         // Find nodes with no dependencies (roots)
-        let roots: Vec<_> = chain.dag.node_indices()
-            .filter(|&idx| chain.dag.edges_directed(idx, petgraph::Direction::Incoming).count() == 0)
+        let roots: Vec<_> = chain
+            .dag
+            .node_indices()
+            .filter(|&idx| {
+                chain
+                    .dag
+                    .edges_directed(idx, petgraph::Direction::Incoming)
+                    .count()
+                    == 0
+            })
             .collect();
 
         if roots.len() > 1 {
@@ -582,8 +595,14 @@ impl ParallelToolCoordinator {
     fn estimate_resource_requirements(&self, chain: &ToolChain) -> HashMap<String, u32> {
         let mut requirements = HashMap::new();
 
-        requirements.insert("cpu_cores".to_string(), chain.dag.node_count().min(8) as u32);
-        requirements.insert("memory_mb".to_string(), (chain.estimated_cost * 10.0) as u32);
+        requirements.insert(
+            "cpu_cores".to_string(),
+            chain.dag.node_count().min(8) as u32,
+        );
+        requirements.insert(
+            "memory_mb".to_string(),
+            (chain.estimated_cost * 10.0) as u32,
+        );
         requirements.insert("network_bandwidth".to_string(), 100); // Mbps
 
         requirements
@@ -604,7 +623,10 @@ impl ParallelToolCoordinator {
 
     /// Compute execution levels (topological levels)
     #[allow(dead_code)]
-    fn compute_execution_levels(&self, chain: &ToolChain) -> Result<HashMap<usize, Vec<petgraph::graph::NodeIndex>>, ParallelExecutionError> {
+    fn compute_execution_levels(
+        &self,
+        chain: &ToolChain,
+    ) -> Result<HashMap<usize, Vec<petgraph::graph::NodeIndex>>, ParallelExecutionError> {
         use petgraph::visit::EdgeRef;
         use std::collections::HashSet;
 
@@ -613,8 +635,16 @@ impl ParallelToolCoordinator {
         let mut current_level = 0;
 
         // Start with root nodes
-        let mut current_nodes: Vec<_> = chain.dag.node_indices()
-            .filter(|&idx| chain.dag.edges_directed(idx, petgraph::Direction::Incoming).count() == 0)
+        let mut current_nodes: Vec<_> = chain
+            .dag
+            .node_indices()
+            .filter(|&idx| {
+                chain
+                    .dag
+                    .edges_directed(idx, petgraph::Direction::Incoming)
+                    .count()
+                    == 0
+            })
             .collect();
 
         while !current_nodes.is_empty() {
@@ -626,10 +656,15 @@ impl ParallelToolCoordinator {
                 visited.insert(node_idx);
 
                 // Find nodes that depend on this node
-                for neighbor in chain.dag.neighbors_directed(node_idx, petgraph::Direction::Outgoing) {
+                for neighbor in chain
+                    .dag
+                    .neighbors_directed(node_idx, petgraph::Direction::Outgoing)
+                {
                     if !visited.contains(&neighbor) {
                         // Check if all dependencies of this neighbor are satisfied
-                        let all_deps_satisfied = chain.dag.edges_directed(neighbor, petgraph::Direction::Incoming)
+                        let all_deps_satisfied = chain
+                            .dag
+                            .edges_directed(neighbor, petgraph::Direction::Incoming)
                             .all(|edge| visited.contains(&edge.source()));
 
                         if all_deps_satisfied && !next_level.contains(&neighbor) {
@@ -653,8 +688,14 @@ impl ParallelToolCoordinator {
 
     /// Get node dependencies
     #[allow(dead_code)]
-    fn get_node_dependencies(&self, chain: &ToolChain, node_idx: petgraph::graph::NodeIndex) -> Vec<String> {
-        chain.dag.edges_directed(node_idx, petgraph::Direction::Incoming)
+    fn get_node_dependencies(
+        &self,
+        chain: &ToolChain,
+        node_idx: petgraph::graph::NodeIndex,
+    ) -> Vec<String> {
+        chain
+            .dag
+            .edges_directed(node_idx, petgraph::Direction::Incoming)
             .map(|edge| self.node_id_to_task_id(edge.source()))
             .collect()
     }
@@ -684,7 +725,7 @@ impl ParallelToolCoordinator {
         if task.execution_level == 0 {
             10 // Root tasks highest priority
         } else {
-            5  // Other tasks medium priority
+            5 // Other tasks medium priority
         }
     }
 }

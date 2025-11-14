@@ -7,10 +7,10 @@
 //! while other crates can depend on the interface for health checks.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::LazyLock;
-use chrono::{DateTime, Utc};
 
 use crate::{HealthStatus, Result};
 
@@ -202,9 +202,8 @@ impl<D: crate::database::DatabaseConnection> HealthCheck for DatabaseHealthCheck
     }
 
     fn tags(&self) -> &[String] {
-        static TAGS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
-            vec!["database".to_string(), "connectivity".to_string()]
-        });
+        static TAGS: std::sync::LazyLock<Vec<String>> =
+            std::sync::LazyLock::new(|| vec!["database".to_string(), "connectivity".to_string()]);
         TAGS.as_slice()
     }
 
@@ -235,7 +234,13 @@ impl HealthCheck for HttpHealthCheck {
                 let (status_health, message) = if status == expected_status {
                     (HealthStatus::Healthy, format!("HTTP {} response", status))
                 } else {
-                    (HealthStatus::Unhealthy, format!("Unexpected HTTP status: {} (expected {})", status, expected_status))
+                    (
+                        HealthStatus::Unhealthy,
+                        format!(
+                            "Unexpected HTTP status: {} (expected {})",
+                            status, expected_status
+                        ),
+                    )
                 };
 
                 Ok(HealthCheckResult {
@@ -275,9 +280,8 @@ impl HealthCheck for HttpHealthCheck {
     }
 
     fn tags(&self) -> &[String] {
-        static TAGS: LazyLock<Vec<String>> = LazyLock::new(|| {
-            vec!["http".to_string(), "external".to_string()]
-        });
+        static TAGS: LazyLock<Vec<String>> =
+            LazyLock::new(|| vec!["http".to_string(), "external".to_string()]);
         TAGS.as_slice()
     }
 

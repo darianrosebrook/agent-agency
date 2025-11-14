@@ -6,8 +6,8 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
-use std::path::Path;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Result type for file operations
 pub type FileResult<T> = Result<T, FileOpsError>;
@@ -36,7 +36,7 @@ pub enum FileOpsError {
 
 /// Unique identifier for a changeset
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct ChangesetId (pub String);
+pub struct ChangesetId(pub String);
 
 /// File operation patch
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,11 +196,7 @@ pub trait FileOperationsService: Send + Sync + std::fmt::Debug {
     async fn get_workspace_status(&self, task_id: &str) -> FileResult<WorkspaceStatus>;
 
     /// Read file content with security checks
-    async fn read_file(
-        &self,
-        file_path: &Path,
-        max_size: Option<u64>,
-    ) -> FileResult<Vec<u8>>;
+    async fn read_file(&self, file_path: &Path, max_size: Option<u64>) -> FileResult<Vec<u8>>;
 
     /// Check if a file or directory exists
     async fn file_exists(&self, file_path: &Path) -> FileResult<bool>;

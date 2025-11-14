@@ -6,10 +6,10 @@
 //!
 //! @author @darianrosebrook
 
-use agent_agency_contracts::types::planning::{TaskScope as ContractsTaskScope, BlastRadius};
 use agent_agency_contracts::planning_io::ChangeBudget as ContractsChangeBudget;
-use serde::{Deserialize, Serialize};
+use agent_agency_contracts::types::planning::{BlastRadius, TaskScope as ContractsTaskScope};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 // Local types from orchestration
 use crate::types::TaskScope;
@@ -90,7 +90,7 @@ impl ToContracts<ContractsChangeBudget> for ChangeBudget {
         ContractsChangeBudget {
             max_files: self.max_files as usize,
             max_loc: self.max_loc as usize,
-            max_migrations: 0, // Local type doesn't have this field
+            max_migrations: 0,             // Local type doesn't have this field
             allow_breaking_changes: false, // Local type doesn't have this field
             allow_new_dependencies: false, // Local type doesn't have this field
             enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict, // Default

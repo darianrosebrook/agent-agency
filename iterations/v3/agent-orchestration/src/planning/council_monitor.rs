@@ -5,15 +5,15 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use agent_agency_contracts::*;
 use anyhow::{anyhow, Result};
-use uuid::Uuid;
 use chrono::Utc;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use agent_agency_contracts::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use uuid::Uuid;
 // Council coordinator trait is now imported from contracts
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ReviewContext {
@@ -22,7 +22,6 @@ struct ReviewContext {
     pub execution_id: Uuid,
     pub review_type: String,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -33,7 +32,6 @@ enum ReviewPriority {
     Critical,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum FinalDecision {
     Proceed,
@@ -41,7 +39,7 @@ pub enum FinalDecision {
     Reject(String),
     Escalate(String),
 }
-use crate::planning::{DatabaseOperations, data_infrastructure_types::AuditTrailEntry};
+use crate::planning::{data_infrastructure_types::AuditTrailEntry, DatabaseOperations};
 
 /// Council monitor for constitutional oversight
 pub struct CouncilMonitor {
@@ -62,7 +60,14 @@ impl std::fmt::Debug for CouncilMonitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CouncilMonitor")
             .field("config", &self.config)
-            .field("active_sessions_count", &self.active_sessions.try_read().map(|s| s.len()).unwrap_or(0))
+            .field(
+                "active_sessions_count",
+                &self
+                    .active_sessions
+                    .try_read()
+                    .map(|s| s.len())
+                    .unwrap_or(0),
+            )
             .finish()
     }
 }
@@ -141,11 +146,7 @@ impl CouncilMonitor {
         council: Arc<dyn agent_agency_contracts::CouncilCoordinator>,
         db_ops: Arc<dyn DatabaseOperations>,
     ) -> Self {
-        Self::with_config(
-            council,
-            db_ops,
-            MonitorConfig::default(),
-        )
+        Self::with_config(council, db_ops, MonitorConfig::default())
     }
 
     /// Create with custom configuration
@@ -210,32 +211,37 @@ impl CouncilMonitor {
         // - CAWS Tier: 2 (council integration feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Council integration expertise
-        let session_result = self.council.start_session(&agent_agency_contracts::TaskDescriptor { // Temporary: basic approach until comprehensive implementation
-            task_id: uuid::Uuid::new_v4(),
-            description: format!("Monitor intervention for plan {}", context.plan_id),
-            change_budget: agent_agency_contracts::ChangeBudget {
-                max_files: 1,
-                max_loc: 10,
-                max_migrations: 0,
-                allow_breaking_changes: false,
-                allow_new_dependencies: false,
-                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
-            },
-            priority: agent_agency_contracts::TaskPriority::High,
-            execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-            risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier1),
-            blast_radius: agent_agency_contracts::BlastRadius {
-                modules: vec!["monitoring".to_string()],
-                data_migration: false,
-                external_deps: vec![],
-            },
-            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
-                allowed_paths: vec![],
-                blocked_paths: vec![],
-            },
-            scope_out: None,
-            acceptance: None,
-        }).await;
+        let session_result = self
+            .council
+            .start_session(&agent_agency_contracts::TaskDescriptor {
+                // Temporary: basic approach until comprehensive implementation
+                task_id: uuid::Uuid::new_v4(),
+                description: format!("Monitor intervention for plan {}", context.plan_id),
+                change_budget: agent_agency_contracts::ChangeBudget {
+                    max_files: 1,
+                    max_loc: 10,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                priority: agent_agency_contracts::TaskPriority::High,
+                execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier1),
+                blast_radius: agent_agency_contracts::BlastRadius {
+                    modules: vec!["monitoring".to_string()],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                },
+                scope_out: None,
+                acceptance: None,
+            })
+            .await;
 
         let decision = match session_result {
             Ok(_) => Ok(agent_agency_contracts::JudgeVerdict {
@@ -250,10 +256,14 @@ impl CouncilMonitor {
 
         match decision {
             Ok(final_decision) => {
-                let allowed = matches!(final_decision.label, agent_agency_contracts::VerdictLabel::Pass);
+                let allowed = matches!(
+                    final_decision.label,
+                    agent_agency_contracts::VerdictLabel::Pass
+                );
 
                 // Log the decision
-                self.log_council_decision(plan.id.to_string(), &final_decision).await?;
+                self.log_council_decision(plan.id.to_string(), &final_decision)
+                    .await?;
 
                 if allowed {
                     // Start monitoring session for this plan
@@ -265,13 +275,22 @@ impl CouncilMonitor {
             Err(e) => {
                 // Council evaluation failed - log and deny
                 self.log_council_error(plan.id.to_string(), &e).await?;
-                Err(anyhow!("Council evaluation failed for plan {}: {}", plan.id, e))
+                Err(anyhow!(
+                    "Council evaluation failed for plan {}: {}",
+                    plan.id,
+                    e
+                ))
             }
         }
     }
 
     /// Report execution progress to council for ongoing monitoring
-    pub async fn report_progress(&self, plan_id: &str, milestone_id: &str, status: &str) -> Result<()> {
+    pub async fn report_progress(
+        &self,
+        plan_id: &str,
+        milestone_id: &str,
+        status: &str,
+    ) -> Result<()> {
         // Check if we have an active session for this plan
         let mut sessions = self.active_sessions.write().await;
         if let Some(session) = sessions.get_mut(plan_id) {
@@ -279,18 +298,22 @@ impl CouncilMonitor {
             session.last_check = Utc::now();
 
             // Check for violations based on progress
-            let violations = self.check_progress_violations(plan_id, milestone_id, status).await?;
+            let violations = self
+                .check_progress_violations(plan_id, milestone_id, status)
+                .await?;
             session.violations.extend(violations);
 
             // Log progress event
-            self.log_progress_event(plan_id, milestone_id, status).await?;
+            self.log_progress_event(plan_id, milestone_id, status)
+                .await?;
 
             // Check if we need to intervene
             if !session.violations.is_empty() && self.config.block_on_violations {
                 session.status = SessionStatus::Terminated;
                 return Err(anyhow!(
                     "Plan {} terminated due to violations: {:?}",
-                    plan_id.to_string(), session.violations
+                    plan_id.to_string(),
+                    session.violations
                 ));
             }
 
@@ -318,37 +341,48 @@ impl CouncilMonitor {
             };
 
             // Submit for council review - using contracts methods
-            match self.council.start_session(&agent_agency_contracts::TaskDescriptor {
-                task_id: uuid::Uuid::new_v4(),
-                description: format!("Intervention review for plan {}", plan_id),
-                change_budget: agent_agency_contracts::ChangeBudget {
-                    max_files: 10,
-                    max_loc: 1000,
-                    max_migrations: 0,
-                    allow_breaking_changes: false,
-                    allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
-                },
-                priority: agent_agency_contracts::TaskPriority::High,
-                execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
-                blast_radius: agent_agency_contracts::BlastRadius {
-                    modules: vec!["council".to_string()],
-                    data_migration: false,
-                    external_deps: vec![],
-                },
-                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
-                allowed_paths: vec![],
-                blocked_paths: vec![],
-            },
-                scope_out: None,
-                acceptance: None,
-            }).await {
+            match self
+                .council
+                .start_session(&agent_agency_contracts::TaskDescriptor {
+                    task_id: uuid::Uuid::new_v4(),
+                    description: format!("Intervention review for plan {}", plan_id),
+                    change_budget: agent_agency_contracts::ChangeBudget {
+                        max_files: 10,
+                        max_loc: 1000,
+                        max_migrations: 0,
+                        allow_breaking_changes: false,
+                        allow_new_dependencies: false,
+                        enforcement_mode:
+                            agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    },
+                    priority: agent_agency_contracts::TaskPriority::High,
+                    execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+                    risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
+                    blast_radius: agent_agency_contracts::BlastRadius {
+                        modules: vec!["council".to_string()],
+                        data_migration: false,
+                        external_deps: vec![],
+                    },
+                    scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                        allowed_paths: vec![],
+                        blocked_paths: vec![],
+                    },
+                    scope_out: None,
+                    acceptance: None,
+                })
+                .await
+            {
                 Ok(session_id) => {
-                    info!("Council review session started for plan {} intervention: {:?}", plan_id, session_id);
+                    info!(
+                        "Council review session started for plan {} intervention: {:?}",
+                        plan_id, session_id
+                    );
                 }
                 Err(e) => {
-                    warn!("Failed to start council review session for plan {}: {}", plan_id, e);
+                    warn!(
+                        "Failed to start council review session for plan {}: {}",
+                        plan_id, e
+                    );
                 }
             }
 
@@ -372,7 +406,8 @@ impl CouncilMonitor {
     pub async fn notify(&self, phase: &str, plan: &ExecutionPlan) -> Result<()> {
         info!("Council notification: {} phase for plan {}", phase, plan.id);
         // Log the notification
-        self.log_progress_event(&plan.id.to_string(), "council_notification", phase).await?;
+        self.log_progress_event(&plan.id.to_string(), "council_notification", phase)
+            .await?;
         Ok(())
     }
 
@@ -380,13 +415,17 @@ impl CouncilMonitor {
     pub async fn observe(&self, phase: &str, plan: &ExecutionPlan) -> Result<()> {
         info!("Council observation: {} phase for plan {}", phase, plan.id);
         // Log the observation
-        self.log_progress_event(&plan.id.to_string(), "council_observation", phase).await?;
+        self.log_progress_event(&plan.id.to_string(), "council_observation", phase)
+            .await?;
         Ok(())
     }
 
     /// Request council approval for phase continuation
     pub async fn request_approval(&self, phase: &str, plan: &ExecutionPlan) -> Result<()> {
-        info!("Council approval requested: {} phase for plan {}", phase, plan.id);
+        info!(
+            "Council approval requested: {} phase for plan {}",
+            phase, plan.id
+        );
 
         // Create a review context for approval
         let _review_context = ReviewContext {
@@ -396,36 +435,45 @@ impl CouncilMonitor {
         };
 
         // Start council session for approval
-        match self.council.start_session(&agent_agency_contracts::TaskDescriptor {
-            task_id: uuid::Uuid::new_v4(),
-            description: format!("Approval request for {} phase of plan {}", phase, plan.id),
-            change_budget: agent_agency_contracts::ChangeBudget {
-                max_files: 1,
-                max_loc: 10,
-                max_migrations: 0,
-                allow_breaking_changes: false,
-                allow_new_dependencies: false,
-                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
-            },
-            priority: agent_agency_contracts::TaskPriority::High,
-            execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-            risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
-            blast_radius: agent_agency_contracts::BlastRadius {
-                modules: vec!["execution".to_string()],
-                data_migration: false,
-                external_deps: vec![],
-            },
-            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
-                allowed_paths: vec![],
-                blocked_paths: vec![],
-            },
-            scope_out: None,
-            acceptance: None,
-        }).await {
+        match self
+            .council
+            .start_session(&agent_agency_contracts::TaskDescriptor {
+                task_id: uuid::Uuid::new_v4(),
+                description: format!("Approval request for {} phase of plan {}", phase, plan.id),
+                change_budget: agent_agency_contracts::ChangeBudget {
+                    max_files: 1,
+                    max_loc: 10,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                priority: agent_agency_contracts::TaskPriority::High,
+                execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier2),
+                blast_radius: agent_agency_contracts::BlastRadius {
+                    modules: vec!["execution".to_string()],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                },
+                scope_out: None,
+                acceptance: None,
+            })
+            .await
+        {
             Ok(session_id) => {
                 info!("Council approval session started: {}", session_id.0);
                 // Log the approval request
-                self.log_intervention_request(&plan.id.to_string(), &format!("Approval requested for {} phase", phase)).await?;
+                self.log_intervention_request(
+                    &plan.id.to_string(),
+                    &format!("Approval requested for {} phase", phase),
+                )
+                .await?;
                 Ok(())
             }
             Err(e) => {
@@ -447,41 +495,48 @@ impl CouncilMonitor {
         };
 
         // Get council recommendations (mock implementation for migration)
-        match self.council.start_session(&agent_agency_contracts::TaskDescriptor {
-            task_id: uuid::Uuid::new_v4(),
-            description: "Mock session for recommendations".to_string(),
-            change_budget: agent_agency_contracts::ChangeBudget {
-                max_files: 1,
-                max_loc: 10,
-                max_migrations: 0,
-                allow_breaking_changes: false,
-                allow_new_dependencies: false,
-                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
-            },
-            priority: agent_agency_contracts::TaskPriority::Low,
-            execution_mode: agent_agency_contracts::ExecutionMode::Auto,
-            risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier3),
-            blast_radius: agent_agency_contracts::BlastRadius {
-                modules: vec![],
-                data_migration: false,
-                external_deps: vec![],
-            },
-            scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
-                allowed_paths: vec![],
-                blocked_paths: vec![],
-            },
-            scope_out: None,
-            acceptance: None,
-        }).await {
+        match self
+            .council
+            .start_session(&agent_agency_contracts::TaskDescriptor {
+                task_id: uuid::Uuid::new_v4(),
+                description: "Mock session for recommendations".to_string(),
+                change_budget: agent_agency_contracts::ChangeBudget {
+                    max_files: 1,
+                    max_loc: 10,
+                    max_migrations: 0,
+                    allow_breaking_changes: false,
+                    allow_new_dependencies: false,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                },
+                priority: agent_agency_contracts::TaskPriority::Low,
+                execution_mode: agent_agency_contracts::ExecutionMode::Auto,
+                risk_tier: Some(agent_agency_contracts::types::planning::RiskTier::Tier3),
+                blast_radius: agent_agency_contracts::BlastRadius {
+                    modules: vec![],
+                    data_migration: false,
+                    external_deps: vec![],
+                },
+                scope_in: agent_agency_contracts::task_request::ScopeRestrictions {
+                    allowed_paths: vec![],
+                    blocked_paths: vec![],
+                },
+                scope_out: None,
+                acceptance: None,
+            })
+            .await
+        {
             Ok(session_id) => {
                 // Generate recommendations based on violations
                 let mut recommendations = Vec::new();
 
                 if violations.is_empty() {
-                    recommendations.push("Plan execution approved - no violations detected".to_string());
+                    recommendations
+                        .push("Plan execution approved - no violations detected".to_string());
                     recommendations.push("Monitor execution for any issues".to_string());
                 } else {
-                    recommendations.push("Address identified violations to prevent termination".to_string());
+                    recommendations
+                        .push("Address identified violations to prevent termination".to_string());
 
                     for violation in &violations {
                         if violation.contains("scope") {
@@ -499,14 +554,18 @@ impl CouncilMonitor {
                 Ok(recommendations)
             }
             Err(e) => {
-                warn!("Failed to get council recommendations for plan {}: {}", plan_id, e);
+                warn!(
+                    "Failed to get council recommendations for plan {}: {}",
+                    plan_id, e
+                );
                 // Fallback to generic recommendations
                 let mut recommendations = Vec::new();
 
                 if violations.is_empty() {
                     recommendations.push("Plan execution proceeding normally".to_string());
                 } else {
-                    recommendations.push("Address identified violations to prevent termination".to_string());
+                    recommendations
+                        .push("Address identified violations to prevent termination".to_string());
 
                     for violation in &violations {
                         if violation.contains("scope") {
@@ -540,33 +599,50 @@ impl CouncilMonitor {
         sessions.insert(plan.id.to_string(), session);
 
         // Log session start
-        self.log_session_event(&plan.id.to_string(), "started").await?;
+        self.log_session_event(&plan.id.to_string(), "started")
+            .await?;
 
         Ok(())
     }
 
     /// End monitoring session for a plan
-    pub async fn end_monitoring_session(&self, plan_id: &str, final_status: SessionStatus) -> Result<()> {
+    pub async fn end_monitoring_session(
+        &self,
+        plan_id: &str,
+        final_status: SessionStatus,
+    ) -> Result<()> {
         let mut sessions = self.active_sessions.write().await;
         if let Some(session) = sessions.get_mut(plan_id) {
             session.status = final_status.clone();
 
             // Log session end
-            self.log_session_event(plan_id, &format!("ended with status {:?}", final_status)).await?;
+            self.log_session_event(plan_id, &format!("ended with status {:?}", final_status))
+                .await?;
         }
 
         Ok(())
     }
 
     /// Convert execution plan to working spec for council review
-    fn plan_to_working_spec(&self, plan: &ExecutionPlan) -> Result<agent_agency_contracts::WorkingSpec> {
+    fn plan_to_working_spec(
+        &self,
+        plan: &ExecutionPlan,
+    ) -> Result<agent_agency_contracts::WorkingSpec> {
         // Extract acceptance criteria from plan (milestones don't have acceptance_criteria)
         let acceptance_criteria = plan.contract_plan.acceptance_criteria.clone();
 
         // Extract file changes from plan scope
-        let file_changes = plan.contract_plan.scope.iter()
+        let file_changes = plan
+            .contract_plan
+            .scope
+            .iter()
             .flat_map(|scope| scope.allowed_paths.iter())
-            .chain(plan.contract_plan.scope.iter().flat_map(|scope| scope.blocked_paths.iter()))
+            .chain(
+                plan.contract_plan
+                    .scope
+                    .iter()
+                    .flat_map(|scope| scope.blocked_paths.iter()),
+            )
             .map(|path| agent_agency_contracts::working_spec::FileChange {
                 file: path.clone(),
                 change_type: agent_agency_contracts::working_spec::ChangeType::Modified,
@@ -650,18 +726,33 @@ impl CouncilMonitor {
     fn create_review_context(&self, plan: &ExecutionPlan) -> HashMap<String, serde_json::Value> {
         let mut context = HashMap::new();
 
-        context.insert("plan_id".to_string(), serde_json::Value::String(plan.id.to_string()));
-        context.insert("milestone_count".to_string(), serde_json::Value::Number(plan.contract_plan.milestones.len().into()));
-            context.insert("risk_tier".to_string(), serde_json::Value::Number(
-                plan.contract_plan.quality_gates.as_ref()
+        context.insert(
+            "plan_id".to_string(),
+            serde_json::Value::String(plan.id.to_string()),
+        );
+        context.insert(
+            "milestone_count".to_string(),
+            serde_json::Value::Number(plan.contract_plan.milestones.len().into()),
+        );
+        context.insert(
+            "risk_tier".to_string(),
+            serde_json::Value::Number(
+                plan.contract_plan
+                    .quality_gates
+                    .as_ref()
                     .map(|qg| qg.requires_manual_review as i64)
-                    .unwrap_or(0).into()
-            ));
+                    .unwrap_or(0)
+                    .into(),
+            ),
+        );
 
         // Add execution context if available
         // Note: ExecutionContext doesn't have parallel_batches field
         if plan.execution_context.is_some() {
-            context.insert("has_execution_context".to_string(), serde_json::Value::Bool(true));
+            context.insert(
+                "has_execution_context".to_string(),
+                serde_json::Value::Bool(true),
+            );
         }
 
         context
@@ -685,7 +776,12 @@ impl CouncilMonitor {
     }
 
     /// Check for violations based on progress updates
-    async fn check_progress_violations(&self, plan_id: &str, milestone_id: &str, status: &str) -> Result<Vec<String>> {
+    async fn check_progress_violations(
+        &self,
+        plan_id: &str,
+        milestone_id: &str,
+        status: &str,
+    ) -> Result<Vec<String>> {
         let mut violations = Vec::new();
 
         // Check for status violations
@@ -703,17 +799,22 @@ impl CouncilMonitor {
                 if milestone.id.to_string() == milestone_id {
                     // Calculate deadline from session start + estimated duration
                     if let Some(estimated_duration) = milestone.estimated_duration {
-                        let deadline = session.started_at + chrono::Duration::minutes(estimated_duration as i64);
+                        let deadline = session.started_at
+                            + chrono::Duration::minutes(estimated_duration as i64);
 
                         if now > deadline {
-                            violations.push(format!("Milestone {} exceeded deadline", milestone_id));
+                            violations
+                                .push(format!("Milestone {} exceeded deadline", milestone_id));
                         } else {
                             // Check if we're close to deadline (within 10% of time remaining)
                             let total_duration = estimated_duration as i64;
                             let remaining_minutes = (deadline - now).num_minutes();
 
                             if remaining_minutes < (total_duration / 10) && remaining_minutes > 0 {
-                                violations.push(format!("Milestone {} approaching deadline ({} minutes remaining)", milestone_id, remaining_minutes));
+                                violations.push(format!(
+                                    "Milestone {} approaching deadline ({} minutes remaining)",
+                                    milestone_id, remaining_minutes
+                                ));
                             }
                         }
                     }
@@ -758,10 +859,14 @@ impl CouncilMonitor {
         // - CAWS Tier: 2 (security validation feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Security and scope analysis expertise
-        if milestone_id.contains("file") || milestone_id.contains("io") { // Temporary: basic check until comprehensive detection
+        if milestone_id.contains("file") || milestone_id.contains("io") {
+            // Temporary: basic check until comprehensive detection
             // Basic validation that file-related milestones have proper scope
             if status == "permission_denied" || status == "access_denied" {
-                violations.push(format!("Milestone {} failed due to file access permissions", milestone_id));
+                violations.push(format!(
+                    "Milestone {} failed due to file access permissions",
+                    milestone_id
+                ));
             }
         }
 
@@ -771,12 +876,28 @@ impl CouncilMonitor {
     // Logging methods
 
     /// Log council decision to audit trail
-    async fn log_council_decision(&self, plan_id: String, decision: &agent_agency_contracts::JudgeVerdict) -> Result<()> {
+    async fn log_council_decision(
+        &self,
+        plan_id: String,
+        decision: &agent_agency_contracts::JudgeVerdict,
+    ) -> Result<()> {
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("task_id".to_string(), serde_json::Value::String(plan_id.clone()));
-        metadata.insert("actor".to_string(), serde_json::Value::String("council_monitor".to_string()));
-        metadata.insert("resource_id".to_string(), serde_json::Value::String(plan_id.clone()));
-        metadata.insert("resource_type".to_string(), serde_json::Value::String("execution_plan".to_string()));
+        metadata.insert(
+            "task_id".to_string(),
+            serde_json::Value::String(plan_id.clone()),
+        );
+        metadata.insert(
+            "actor".to_string(),
+            serde_json::Value::String("council_monitor".to_string()),
+        );
+        metadata.insert(
+            "resource_id".to_string(),
+            serde_json::Value::String(plan_id.clone()),
+        );
+        metadata.insert(
+            "resource_type".to_string(),
+            serde_json::Value::String("execution_plan".to_string()),
+        );
 
         // Add decision details to metadata
         let decision_value = serde_json::to_value(decision).unwrap_or_default();
@@ -844,14 +965,26 @@ impl CouncilMonitor {
     }
 
     /// Log council evaluation error
-    async fn log_council_error(&self, plan_id: String, error: &impl std::fmt::Display) -> Result<()> {
+    async fn log_council_error(
+        &self,
+        plan_id: String,
+        error: &impl std::fmt::Display,
+    ) -> Result<()> {
         println!("Council evaluation error for plan {}: {}", plan_id, error);
         Ok(())
     }
 
     /// Log progress event
-    async fn log_progress_event(&self, plan_id: &str, milestone_id: &str, status: &str) -> Result<()> {
-        println!("Progress update - Plan: {}, Milestone: {}, Status: {}", plan_id, milestone_id, status);
+    async fn log_progress_event(
+        &self,
+        plan_id: &str,
+        milestone_id: &str,
+        status: &str,
+    ) -> Result<()> {
+        println!(
+            "Progress update - Plan: {}, Milestone: {}, Status: {}",
+            plan_id, milestone_id, status
+        );
         Ok(())
     }
 
@@ -875,9 +1008,7 @@ impl CouncilMonitor {
         let mut sessions = self.active_sessions.write().await;
         let expired_count = sessions.len();
 
-        sessions.retain(|_, session| {
-            now.signed_duration_since(session.started_at) < max_age
-        });
+        sessions.retain(|_, session| now.signed_duration_since(session.started_at) < max_age);
 
         let cleaned_count = expired_count - sessions.len();
 
@@ -892,17 +1023,14 @@ impl CouncilMonitor {
     pub async fn get_monitoring_stats(&self) -> Result<MonitoringStats> {
         let sessions = self.active_sessions.read().await;
 
-        let active_sessions = sessions.values()
+        let active_sessions = sessions
+            .values()
             .filter(|s| s.status == SessionStatus::Active)
             .count();
 
-        let total_violations: usize = sessions.values()
-            .map(|s| s.violations.len())
-            .sum();
+        let total_violations: usize = sessions.values().map(|s| s.violations.len()).sum();
 
-        let total_interventions: usize = sessions.values()
-            .map(|s| s.interventions.len())
-            .sum();
+        let total_interventions: usize = sessions.values().map(|s| s.interventions.len()).sum();
 
         Ok(MonitoringStats {
             total_sessions: sessions.len(),
@@ -1027,7 +1155,7 @@ mod tests {
     //     async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::models::PlanningAuditEvent>> { Ok(vec![]) }
     //     async fn create_planning_telemetry(&self, _telemetry: crate::planning::CreatePlanningTelemetry) -> Result<crate::planning::models::PlanningTelemetry> { Err(anyhow!("Not implemented")) }
     //     async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::models::PlanningTelemetry>> { Ok(vec![]) }
-        
+
     //     // Waiver operations
     //     async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::models::Waiver>> { Ok(vec![]) }
     //     async fn create_waiver(&self, _waiver: crate::planning::CreateWaiver) -> Result<crate::planning::models::Waiver> { Err(anyhow!("Not implemented")) }

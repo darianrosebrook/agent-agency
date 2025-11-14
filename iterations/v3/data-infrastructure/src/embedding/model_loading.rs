@@ -30,13 +30,17 @@ impl SafeTensorsModel {
         let tensors = safetensors::SafeTensors::deserialize(data.as_slice())?;
 
         // Infer dimension from embeddings tensor
-        let embeddings_tensor = tensors.tensor("embeddings")
+        let embeddings_tensor = tensors
+            .tensor("embeddings")
             .or_else(|_| tensors.tensor("embed_tokens"))
             .or_else(|_| tensors.tensor("model.embed_tokens"))?;
 
         let shape = embeddings_tensor.shape();
         if shape.len() != 2 {
-            return Err(anyhow::anyhow!("Expected 2D embeddings tensor, got shape {:?}", shape));
+            return Err(anyhow::anyhow!(
+                "Expected 2D embeddings tensor, got shape {:?}",
+                shape
+            ));
         }
 
         let vocab_size = shape[0];
@@ -79,7 +83,8 @@ impl EmbeddingModel for SafeTensorsModel {
         //    - Use appropriate hardware acceleration (GPU/ANE)
         //    - Implement efficient batching strategies
         //    - Cache intermediate computations where possible
-        let embeddings_tensor = tensors.tensor("embeddings")
+        let embeddings_tensor = tensors
+            .tensor("embeddings")
             .or_else(|_| tensors.tensor("embed_tokens"))
             .or_else(|_| tensors.tensor("model.embed_tokens"))
             .map_err(|_| anyhow::anyhow!("No embeddings tensor found"))?;
@@ -127,7 +132,6 @@ impl EmbeddingModel for SafeTensorsModel {
     }
 }
 
-
 /// Placeholder model implementation for fallback
 pub struct PlaceholderModel {
     dimension: usize,
@@ -160,5 +164,3 @@ impl EmbeddingModel for PlaceholderModel {
         Ok(embedding)
     }
 }
-
-

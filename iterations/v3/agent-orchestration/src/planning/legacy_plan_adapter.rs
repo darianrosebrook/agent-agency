@@ -5,13 +5,14 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use anyhow::Result;
 use agent_agency_contracts::{
     planning_io::{ExecutionPlan as ContractExecutionPlan, Milestone as ContractMilestone},
     WorkingSpec,
 };
+use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Adapter for legacy planning agent
 pub struct LegacyPlanAdapter {
@@ -21,8 +22,7 @@ pub struct LegacyPlanAdapter {
 
 impl std::fmt::Debug for LegacyPlanAdapter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LegacyPlanAdapter")
-            .finish()
+        f.debug_struct("LegacyPlanAdapter").finish()
     }
 }
 
@@ -33,7 +33,10 @@ impl LegacyPlanAdapter {
     }
 
     /// Adapt working spec to legacy plan format
-    pub async fn adapt_working_spec(&self, working_spec: WorkingSpec) -> Result<ContractExecutionPlan> {
+    pub async fn adapt_working_spec(
+        &self,
+        _working_spec: WorkingSpec,
+    ) -> Result<ContractExecutionPlan> {
         // TODO: Implement working spec to legacy plan adaptation
         //       Currently placeholder; should extract task description, use planning agent to decompose, and convert to execution plan format.
         //
@@ -70,13 +73,17 @@ impl LegacyPlanAdapter {
         // - Change Budget: ~200 LOC
         // - Reviewer Requirements: Planning and adapter expertise
 
-        Err(anyhow::anyhow!("Legacy plan adapter not yet implemented - PLACEHOLDER"))
+        Err(anyhow::anyhow!(
+            "Legacy plan adapter not yet implemented - PLACEHOLDER"
+        ))
     }
 
     /// Convert execution plan to legacy format
     pub fn to_legacy_plan(&self, plan: &ContractExecutionPlan) -> Result<LegacyTaskPlan> {
         // Convert milestones to subtasks
-        let subtasks: Vec<LegacySubTask> = plan.milestones.iter()
+        let subtasks: Vec<LegacySubTask> = plan
+            .milestones
+            .iter()
             .enumerate()
             .map(|(i, milestone)| self.milestone_to_subtask(i, milestone))
             .collect::<Result<Vec<_>>>()?;
@@ -94,7 +101,11 @@ impl LegacyPlanAdapter {
     }
 
     /// Convert milestone to legacy subtask
-    fn milestone_to_subtask(&self, index: usize, milestone: &ContractMilestone) -> Result<LegacySubTask> {
+    fn milestone_to_subtask(
+        &self,
+        index: usize,
+        milestone: &ContractMilestone,
+    ) -> Result<LegacySubTask> {
         Ok(LegacySubTask {
             id: milestone.id.clone(),
             description: milestone.objective.clone(),
@@ -105,22 +116,35 @@ impl LegacyPlanAdapter {
     }
 
     /// Map milestone priority to legacy priority
-    fn map_priority(&self, priority: agent_agency_contracts::planning_io::MilestonePriority) -> LegacyTaskPriority {
+    fn map_priority(
+        &self,
+        priority: agent_agency_contracts::planning_io::MilestonePriority,
+    ) -> LegacyTaskPriority {
         match priority {
             agent_agency_contracts::planning_io::MilestonePriority::Low => LegacyTaskPriority::Low,
-            agent_agency_contracts::planning_io::MilestonePriority::Normal => LegacyTaskPriority::Medium,
-            agent_agency_contracts::planning_io::MilestonePriority::High => LegacyTaskPriority::High,
-            agent_agency_contracts::planning_io::MilestonePriority::Critical => LegacyTaskPriority::Critical,
+            agent_agency_contracts::planning_io::MilestonePriority::Normal => {
+                LegacyTaskPriority::Medium
+            }
+            agent_agency_contracts::planning_io::MilestonePriority::High => {
+                LegacyTaskPriority::High
+            }
+            agent_agency_contracts::planning_io::MilestonePriority::Critical => {
+                LegacyTaskPriority::Critical
+            }
         }
     }
 
     /// Extract legacy dependencies from dependency graph
-    fn extract_legacy_dependencies(&self, dependency_graph: &agent_agency_contracts::planning_io::DependencyGraph) -> Result<HashMap<String, Vec<String>>> {
+    fn extract_legacy_dependencies(
+        &self,
+        dependency_graph: &agent_agency_contracts::planning_io::DependencyGraph,
+    ) -> Result<HashMap<String, Vec<String>>> {
         // Convert edges to legacy dependency format
         let mut dependencies = HashMap::new();
 
         for edge in &dependency_graph.edges {
-            dependencies.entry(edge.to.clone())
+            dependencies
+                .entry(edge.to.clone())
                 .or_insert(vec![])
                 .push(edge.from.clone());
         }
@@ -218,9 +242,7 @@ mod tests {
                     required_resources: vec!["memory".to_string()],
                 },
             ],
-            dependencies: HashMap::from([
-                ("task2".to_string(), vec!["task1".to_string()])
-            ]),
+            dependencies: HashMap::from([("task2".to_string(), vec!["task1".to_string()])]),
             estimated_duration: 5400,
         };
 
@@ -234,9 +256,21 @@ mod tests {
     fn test_priority_mapping() {
         let adapter = LegacyPlanAdapter::new();
 
-        assert_eq!(adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Low), LegacyTaskPriority::Low);
-        assert_eq!(adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Normal), LegacyTaskPriority::Medium);
-        assert_eq!(adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::High), LegacyTaskPriority::High);
-        assert_eq!(adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Critical), LegacyTaskPriority::Critical);
+        assert_eq!(
+            adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Low),
+            LegacyTaskPriority::Low
+        );
+        assert_eq!(
+            adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Normal),
+            LegacyTaskPriority::Medium
+        );
+        assert_eq!(
+            adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::High),
+            LegacyTaskPriority::High
+        );
+        assert_eq!(
+            adapter.map_priority(agent_agency_contracts::planning_io::MilestonePriority::Critical),
+            LegacyTaskPriority::Critical
+        );
     }
 }

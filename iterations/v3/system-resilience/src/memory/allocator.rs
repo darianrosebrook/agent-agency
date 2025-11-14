@@ -3,9 +3,9 @@
 //! This module provides a custom global allocator that tracks memory allocations,
 //! deallocations, and usage statistics for monitoring and debugging.
 
+use serde::{Deserialize, Serialize};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicU64, Ordering};
-use serde::{Serialize, Deserialize};
 
 /// Global memory allocator instance
 #[global_allocator]
@@ -81,7 +81,12 @@ unsafe impl GlobalAlloc for MemoryTrackingAllocator {
             let current = self.allocated_bytes.load(Ordering::Relaxed);
             let mut peak = self.peak_usage.load(Ordering::Relaxed);
             while current > peak {
-                match self.peak_usage.compare_exchange(peak, current, Ordering::Relaxed, Ordering::Relaxed) {
+                match self.peak_usage.compare_exchange(
+                    peak,
+                    current,
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                ) {
                     Ok(_) => break,
                     Err(new_peak) => peak = new_peak,
                 }

@@ -1,17 +1,17 @@
 //! Core tool discovery types and service
 
-use schemars::JsonSchema;
 use crate::mcp_types::*;
 use crate::tool_discovery::validation::ValidationResult;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use glob::glob;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use glob::glob;
 use uuid::Uuid;
 
 /// Tool discovery service - core functionality
@@ -111,31 +111,31 @@ impl ToolDiscovery {
     /// Start automatic tool discovery
     pub async fn start_auto_discovery(&self) -> Result<()> {
         tracing::info!("Starting automatic tool discovery");
-        
+
         // Set discovery as active
         {
             let mut active = self.discovery_active.write().await;
             *active = true;
         }
-        
+
         // Start discovery loop
         let config = self.config.clone();
         let tools = self.discovered_tools.clone();
         let active = self.discovery_active.clone();
         let token = self.cancellation_token.clone();
-        
+
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                std::time::Duration::from_secs(config.cache_duration_seconds)
-            );
-            
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                config.cache_duration_seconds,
+            ));
+
             loop {
                 if token.is_cancelled() {
                     break;
                 }
-                
+
                 interval.tick().await;
-                
+
                 // Check if discovery is still active
                 {
                     let is_active = active.read().await;
@@ -143,7 +143,7 @@ impl ToolDiscovery {
                         break;
                     }
                 }
-                
+
                 // Perform discovery
                 match Self::perform_discovery(&config).await {
                     Ok(new_tools) => {
@@ -157,25 +157,25 @@ impl ToolDiscovery {
                 }
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// Discover tools from configured paths
     pub async fn discover_tools(&self) -> Result<ToolDiscoveryResult> {
         let start_time = Instant::now();
         let mut errors = Vec::new();
-        
+
         match Self::perform_discovery(&self.config).await {
             Ok(tools) => {
                 let execution_time_ms = start_time.elapsed().as_millis() as u64;
-                
+
                 // Update the cache
                 {
                     let mut tools_guard = self.discovered_tools.write().await;
                     *tools_guard = tools.clone();
                 }
-                
+
                 Ok(ToolDiscoveryResult {
                     discovered_tools: tools,
                     discovery_time_ms: execution_time_ms,
@@ -191,7 +191,7 @@ impl ToolDiscovery {
                     details: None,
                 });
                 let execution_time_ms = start_time.elapsed().as_millis() as u64;
-                
+
                 Ok(ToolDiscoveryResult {
                     discovered_tools: Vec::new(),
                     discovery_time_ms: execution_time_ms,
@@ -201,33 +201,36 @@ impl ToolDiscovery {
             }
         }
     }
-    
+
     /// Perform the actual discovery process
     async fn perform_discovery(config: &ToolDiscoveryConfig) -> Result<Vec<MCPTool>> {
         let mut tools = Vec::new();
-        
+
         for path in &config.discovery_paths {
             if let Ok(path_tools) = Self::discover_tools_in_path(path, config).await {
                 tools.extend(path_tools);
             }
         }
-        
+
         Ok(tools)
     }
-    
+
     /// Discover tools in a specific path
-    async fn discover_tools_in_path(path: &str, config: &ToolDiscoveryConfig) -> Result<Vec<MCPTool>> {
+    async fn discover_tools_in_path(
+        path: &str,
+        config: &ToolDiscoveryConfig,
+    ) -> Result<Vec<MCPTool>> {
         let mut tools = Vec::new();
-        
+
         tracing::debug!("Discovering tools in path: {}", path);
-        
+
         // Check if path exists
         let path_buf = std::path::PathBuf::from(path);
         if !path_buf.exists() {
             tracing::warn!("Discovery path does not exist: {}", path);
             return Ok(tools);
         }
-        
+
         // Search for manifest files matching patterns
         for pattern in &config.manifest_patterns {
             let glob_pattern = if config.recursive_discovery {
@@ -235,18 +238,20 @@ impl ToolDiscovery {
             } else {
                 format!("{}/{}", path, pattern.trim_start_matches("**/"))
             };
-            
+
             tracing::debug!("Searching for tools with pattern: {}", glob_pattern);
-            
+
             // Use glob to find matching files
             match glob::glob(&glob_pattern) {
                 Ok(paths) => {
                     for entry in paths {
                         match entry {
                             Ok(manifest_path) => {
-                                if let Some(tool) = Self::load_tool_from_manifest(&manifest_path, config).await {
+                                if let Some(tool) =
+                                    Self::load_tool_from_manifest(&manifest_path, config).await
+                                {
                                     tools.push(tool);
-                                    
+
                                     // Check max_tools limit
                                     if let Some(max) = config.max_tools {
                                         if tools.len() >= max {
@@ -267,65 +272,82 @@ impl ToolDiscovery {
                 }
             }
         }
-        
+
         tracing::info!("Discovered {} tools in path: {}", tools.len(), path);
         Ok(tools)
     }
-    
+
     /// Load a tool from a manifest file
-    async fn load_tool_from_manifest(manifest_path: &std::path::Path, config: &ToolDiscoveryConfig) -> Option<MCPTool> {
+    async fn load_tool_from_manifest(
+        manifest_path: &std::path::Path,
+        config: &ToolDiscoveryConfig,
+    ) -> Option<MCPTool> {
         tracing::debug!("Loading tool from manifest: {}", manifest_path.display());
-        
+
         // Read manifest file
         let contents = match tokio::fs::read_to_string(manifest_path).await {
             Ok(contents) => contents,
             Err(e) => {
-                tracing::warn!("Failed to read manifest file {}: {}", manifest_path.display(), e);
+                tracing::warn!(
+                    "Failed to read manifest file {}: {}",
+                    manifest_path.display(),
+                    e
+                );
                 return None;
             }
         };
-        
+
         // Parse JSON manifest
         let manifest: serde_json::Value = match serde_json::from_str(&contents) {
             Ok(value) => value,
             Err(e) => {
-                tracing::warn!("Failed to parse manifest JSON {}: {}", manifest_path.display(), e);
+                tracing::warn!(
+                    "Failed to parse manifest JSON {}: {}",
+                    manifest_path.display(),
+                    e
+                );
                 return None;
             }
         };
-        
+
         // Extract tool information from manifest
-        let tool_name = manifest.get("name")
+        let tool_name = manifest
+            .get("name")
             .or_else(|| manifest.get("tool_name"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| {
-                manifest_path.file_stem()
+                manifest_path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown_tool")
                     .to_string()
             });
-        
-        let tool_description = manifest.get("description")
+
+        let tool_description = manifest
+            .get("description")
             .or_else(|| manifest.get("tool_description"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| format!("Tool discovered from {}", manifest_path.display()));
-        
-        let tool_version = manifest.get("version")
+
+        let tool_version = manifest
+            .get("version")
             .or_else(|| manifest.get("tool_version"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "1.0.0".to_string());
-        
-        let tool_author = manifest.get("author")
+
+        let tool_author = manifest
+            .get("author")
             .or_else(|| manifest.get("tool_author"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| "Unknown".to_string());
-        
+
         // Extract tool type
-        let tool_type = manifest.get("type")
+        let tool_type = manifest
+            .get("type")
             .or_else(|| manifest.get("tool_type"))
             .and_then(|v| v.as_str())
             .and_then(|s| match s.to_lowercase().as_str() {
@@ -340,9 +362,10 @@ impl ToolDiscovery {
                 custom => Some(ToolType::Custom(custom.to_string())),
             })
             .unwrap_or(ToolType::Utility);
-        
+
         // Extract capabilities
-        let capabilities: Vec<ToolCapability> = manifest.get("capabilities")
+        let capabilities: Vec<ToolCapability> = manifest
+            .get("capabilities")
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
@@ -355,35 +378,41 @@ impl ToolDiscovery {
                     .collect()
             })
             .unwrap_or_default();
-        
+
         // Extract parameters schema
-        let parameters = manifest.get("parameters")
+        let parameters = manifest
+            .get("parameters")
             .or_else(|| manifest.get("schema"))
             .or_else(|| manifest.get("input_schema"))
-            .and_then(|v| {
-                serde_json::from_value::<ToolParameters>(v.clone()).ok()
-            })
+            .and_then(|v| serde_json::from_value::<ToolParameters>(v.clone()).ok())
             .unwrap_or_else(|| ToolParameters {
                 required: vec![],
                 optional: vec![],
                 constraints: vec![],
             });
-        
+
         // Extract output schema
-        let output_schema = manifest.get("output_schema")
+        let output_schema = manifest
+            .get("output_schema")
             .or_else(|| manifest.get("output"))
             .cloned()
-            .unwrap_or_else(|| serde_json::json!({
-                "type": "object"
-            }));
-        
+            .unwrap_or_else(|| {
+                serde_json::json!({
+                    "type": "object"
+                })
+            });
+
         // Extract metadata
-        let metadata = manifest.get("metadata")
-            .and_then(|v| serde_json::from_value::<HashMap<String, serde_json::Value>>(v.clone()).ok())
+        let metadata = manifest
+            .get("metadata")
+            .and_then(|v| {
+                serde_json::from_value::<HashMap<String, serde_json::Value>>(v.clone()).ok()
+            })
             .unwrap_or_default();
 
         // Extract endpoint
-        let endpoint = manifest.get("endpoint")
+        let endpoint = manifest
+            .get("endpoint")
             .or_else(|| manifest.get("url"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
@@ -406,7 +435,7 @@ impl ToolDiscovery {
             metadata: metadata.clone(),
             configuration_schema: serde_json::json!({}), // TODO: parse config schema
         };
-        
+
         // Create MCPTool instance
         let tool = MCPTool {
             id: uuid::Uuid::new_v4(),
@@ -426,13 +455,13 @@ impl ToolDiscovery {
             usage_count: 0,
             metadata,
         };
-        
+
         // Validate tool if configured
         if config.validate_tools {
             // TODO: Integrate with validation module when available
             tracing::debug!("Tool validation requested for: {}", tool_name);
         }
-        
+
         Some(tool)
     }
 }
@@ -523,7 +552,7 @@ impl ToolDiscovery {
     /// Validate a tool using basic validation
     pub async fn validate_tool(&self, tool: &MCPTool) -> Result<ValidationResult> {
         use crate::tool_discovery::validation::{BasicToolValidator, ToolValidator};
-        
+
         let validator = BasicToolValidator::new();
         validator.validate_tool(tool).await
     }
@@ -531,16 +560,16 @@ impl ToolDiscovery {
     /// Shutdown the tool discovery service
     pub async fn shutdown(&self) -> Result<()> {
         tracing::info!("Shutting down tool discovery");
-        
+
         // Cancel the cancellation token
         self.cancellation_token.cancel();
-        
+
         // Set discovery as inactive
         {
             let mut active = self.discovery_active.write().await;
             *active = false;
         }
-        
+
         tracing::info!("Tool discovery shutdown complete");
         Ok(())
     }
@@ -611,7 +640,6 @@ pub struct DiscoveryStats {
     #[schemars(with = "String")]
     pub collected_at: DateTime<Utc>,
 }
-
 
 impl Default for DiscoveryStats {
     fn default() -> Self {

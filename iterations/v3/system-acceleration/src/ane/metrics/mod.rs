@@ -6,6 +6,4 @@
 pub mod ewma;
 
 // Re-export commonly used types
-pub use ewma::{
-    Ewma, PerformanceTracker, PerformanceSummary, MetricAlphas, MetricCounts,
-};
+pub use ewma::{Ewma, MetricAlphas, MetricCounts, PerformanceSummary, PerformanceTracker};

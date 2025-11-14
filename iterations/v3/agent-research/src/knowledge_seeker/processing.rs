@@ -1,14 +1,13 @@
 //! Content processing and management
 
-use std::sync::Arc;
-use crate::research_types::{ConfigurationUpdate, ContentProcessingConfig, ResearchAgentConfig};
 use crate::content_processor::ContentProcessor;
+use crate::research_types::{ConfigurationUpdate, ContentProcessingConfig, ResearchAgentConfig};
 use anyhow::Result;
+use std::sync::Arc;
 
-/// Content processor manager
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+/// Content processor manager
+use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct ContentProcessorManager {
     processor: Arc<ContentProcessor>,
@@ -30,7 +29,10 @@ impl ContentProcessorManager {
     }
 
     /// Process content
-    pub async fn process_content(&self, content: &str) -> Result<Option<crate::research_types::ContentProcessingResult>> {
+    pub async fn process_content(
+        &self,
+        content: &str,
+    ) -> Result<Option<crate::research_types::ContentProcessingResult>> {
         Ok(Some(self.processor.process_content(content).await?))
     }
 

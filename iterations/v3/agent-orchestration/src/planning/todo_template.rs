@@ -5,12 +5,12 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
 
 /// TODO template with dependency tracking
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -45,12 +45,10 @@ pub struct TodoTemplate {
 
     /// Created timestamp
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -190,12 +188,10 @@ pub struct TodoInstance {
 
     /// Created timestamp
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 
     /// Last updated timestamp
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -266,7 +262,6 @@ pub struct QualityResult {
 
     /// Verified timestamp
     #[schemars(with = "String")]
-
     pub verified_at: DateTime<Utc>,
 
     /// Verified by
@@ -339,8 +334,15 @@ impl TodoTemplateSystem {
     }
 
     /// Create TODO instance from template
-    pub fn create_instance(&mut self, template_name: &str, plan_id: Uuid, milestone_id: Option<String>) -> Result<Uuid> {
-        let template = self.templates.get(template_name)
+    pub fn create_instance(
+        &mut self,
+        template_name: &str,
+        plan_id: Uuid,
+        milestone_id: Option<String>,
+    ) -> Result<Uuid> {
+        let template = self
+            .templates
+            .get(template_name)
             .ok_or_else(|| anyhow!("Template '{}' not found", template_name))?;
 
         let instance = TodoInstance {
@@ -365,23 +367,38 @@ impl TodoTemplateSystem {
     }
 
     /// Start working on a TODO step
-    pub async fn start_step(&mut self, instance_id: Uuid, step_id: &str, worker_id: Option<String>) -> Result<()> {
+    pub async fn start_step(
+        &mut self,
+        instance_id: Uuid,
+        step_id: &str,
+        worker_id: Option<String>,
+    ) -> Result<()> {
         // Check dependencies and quality gates before getting mutable reference
-        let instance = self.active_instances.get(&instance_id)
+        let instance = self
+            .active_instances
+            .get(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
-        
+
         // Check if step can be started (dependencies satisfied)
         if !self.can_start_step(instance, step_id)? {
-            return Err(anyhow!("Cannot start step '{}': dependencies not satisfied", step_id));
+            return Err(anyhow!(
+                "Cannot start step '{}': dependencies not satisfied",
+                step_id
+            ));
         }
 
         // Check quality gates for prerequisites
         if !self.quality_enforcer.can_start_step(instance, step_id)? {
-            return Err(anyhow!("Cannot start step '{}': quality gates not satisfied", step_id));
+            return Err(anyhow!(
+                "Cannot start step '{}': quality gates not satisfied",
+                step_id
+            ));
         }
-        
+
         // Now get mutable reference to update the instance
-        let instance = self.active_instances.get_mut(&instance_id)
+        let instance = self
+            .active_instances
+            .get_mut(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
 
         // Update step status
@@ -398,9 +415,16 @@ impl TodoTemplateSystem {
     }
 
     /// Complete a TODO step
-    pub async fn complete_step(&mut self, instance_id: Uuid, step_id: &str, notes: Option<String>) -> Result<()> {
+    pub async fn complete_step(
+        &mut self,
+        instance_id: Uuid,
+        step_id: &str,
+        notes: Option<String>,
+    ) -> Result<()> {
         // Get template info first (immutable borrow)
-        let instance_info = self.active_instances.get(&instance_id)
+        let instance_info = self
+            .active_instances
+            .get(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
         let template = self.get_template_for_instance(instance_info)?;
         let total_steps = template.steps.len();
@@ -409,8 +433,15 @@ impl TodoTemplateSystem {
         let instance = self.active_instances.get_mut(&instance_id).unwrap();
 
         // Verify quality gates are satisfied
-        if !self.quality_enforcer.verify_step_completion(instance, step_id).await? {
-            return Err(anyhow!("Cannot complete step '{}': quality gates failed", step_id));
+        if !self
+            .quality_enforcer
+            .verify_step_completion(instance, step_id)
+            .await?
+        {
+            return Err(anyhow!(
+                "Cannot complete step '{}': quality gates failed",
+                step_id
+            ));
         }
 
         // Update step status
@@ -439,8 +470,15 @@ impl TodoTemplateSystem {
     }
 
     /// Fail a TODO step
-    pub async fn fail_step(&mut self, instance_id: Uuid, step_id: &str, reason: &str) -> Result<()> {
-        let instance = self.active_instances.get_mut(&instance_id)
+    pub async fn fail_step(
+        &mut self,
+        instance_id: Uuid,
+        step_id: &str,
+        reason: &str,
+    ) -> Result<()> {
+        let instance = self
+            .active_instances
+            .get_mut(&instance_id)
             .ok_or_else(|| anyhow!("Instance {} not found", instance_id))?;
 
         if let Some(status) = instance.step_statuses.get_mut(step_id) {
@@ -458,7 +496,9 @@ impl TodoTemplateSystem {
         let template = self.get_template_for_instance(instance)?;
 
         // Find dependencies for this step
-        let dependencies: Vec<_> = template.dependencies.iter()
+        let dependencies: Vec<_> = template
+            .dependencies
+            .iter()
             .filter(|dep| dep.from_step == step_id)
             .collect();
 
@@ -529,7 +569,9 @@ impl TodoTemplateSystem {
         let template = self.get_template_for_instance(instance)?;
         let total_steps = template.steps.len();
         let completed_steps = instance.completed_steps.len();
-        let in_progress_steps = instance.step_statuses.values()
+        let in_progress_steps = instance
+            .step_statuses
+            .values()
             .filter(|s| s.status == StepStatus::InProgress)
             .count();
 
@@ -561,10 +603,16 @@ impl TodoTemplateSystem {
         // Check dependencies reference valid steps
         for dep in &template.dependencies {
             if !step_ids.contains(&dep.from_step) {
-                return Err(anyhow!("Dependency references invalid step: {}", dep.from_step));
+                return Err(anyhow!(
+                    "Dependency references invalid step: {}",
+                    dep.from_step
+                ));
             }
             if !step_ids.contains(&dep.to_step) {
-                return Err(anyhow!("Dependency references invalid step: {}", dep.to_step));
+                return Err(anyhow!(
+                    "Dependency references invalid step: {}",
+                    dep.to_step
+                ));
             }
         }
 
@@ -582,7 +630,8 @@ impl TodoTemplateSystem {
 
         // Build adjacency list
         for dep in &template.dependencies {
-            graph.entry(dep.from_step.clone())
+            graph
+                .entry(dep.from_step.clone())
                 .or_insert_with(Vec::new)
                 .push(dep.to_step.clone());
         }
@@ -647,34 +696,43 @@ impl TodoTemplateSystem {
         let mut statuses = HashMap::new();
 
         for step in &template.steps {
-            statuses.insert(step.id.clone(), TodoStepStatus {
-                step_id: step.id.clone(),
-                status: StepStatus::Pending,
-                assigned_worker: None,
-                started_at: None,
-                completed_at: None,
-                progress: 0,
-                notes: vec![],
-                quality_results: vec![],
-            });
+            statuses.insert(
+                step.id.clone(),
+                TodoStepStatus {
+                    step_id: step.id.clone(),
+                    status: StepStatus::Pending,
+                    assigned_worker: None,
+                    started_at: None,
+                    completed_at: None,
+                    progress: 0,
+                    notes: vec![],
+                    quality_results: vec![],
+                },
+            );
         }
 
         statuses
     }
 
     /// Initialize quality verifications
-    fn initialize_quality_verifications(&self, template: &TodoTemplate) -> HashMap<String, QualityVerification> {
+    fn initialize_quality_verifications(
+        &self,
+        template: &TodoTemplate,
+    ) -> HashMap<String, QualityVerification> {
         let mut verifications = HashMap::new();
 
         for gate in &template.quality_gates {
-            verifications.insert(gate.clone(), QualityVerification {
-                gate: gate.clone(),
-                required: true,
-                completed: false,
-                result: None,
-                last_verified: None,
-                attempts: 0,
-            });
+            verifications.insert(
+                gate.clone(),
+                QualityVerification {
+                    gate: gate.clone(),
+                    required: true,
+                    completed: false,
+                    result: None,
+                    last_verified: None,
+                    attempts: 0,
+                },
+            );
         }
 
         verifications
@@ -728,7 +786,11 @@ impl TodoTemplateSystem {
     }
 
     /// Check if step dependencies are satisfied for a milestone
-    pub fn can_progress_to_milestone_step(&self, instance: &TodoInstance, step_id: &str) -> Result<bool> {
+    pub fn can_progress_to_milestone_step(
+        &self,
+        instance: &TodoInstance,
+        step_id: &str,
+    ) -> Result<bool> {
         // Check if step can be started (dependencies satisfied)
         self.can_start_step(instance, step_id)?;
 
@@ -792,7 +854,11 @@ impl QualityGateEnforcer {
     }
 
     /// Verify step completion quality gates
-    pub async fn verify_step_completion(&self, instance: &TodoInstance, step_id: &str) -> Result<bool> {
+    pub async fn verify_step_completion(
+        &self,
+        instance: &TodoInstance,
+        step_id: &str,
+    ) -> Result<bool> {
         // Check quality verification results stored in the step status
         if let Some(step_status) = instance.step_statuses.get(step_id) {
             // Verify all quality results for this step
@@ -847,20 +913,18 @@ mod tests {
             version: "1.0.0".to_string(),
             risk_tier: 2,
             metadata: HashMap::new(),
-            steps: vec![
-                TodoStep {
-                    id: "step1".to_string(),
-                    title: "Step 1".to_string(),
-                    description: "First step".to_string(),
-                    priority: TodoPriority::High,
-                    estimated_hours: 2.0,
-                    required_capabilities: vec!["analysis".to_string()],
-                    quality_requirements: vec![],
-                    acceptance_criteria: vec!["Step 1 complete".to_string()],
-                    step_type: TodoStepType::Analysis,
-                    metadata: HashMap::new(),
-                },
-            ],
+            steps: vec![TodoStep {
+                id: "step1".to_string(),
+                title: "Step 1".to_string(),
+                description: "First step".to_string(),
+                priority: TodoPriority::High,
+                estimated_hours: 2.0,
+                required_capabilities: vec!["analysis".to_string()],
+                quality_requirements: vec![],
+                acceptance_criteria: vec!["Step 1 complete".to_string()],
+                step_type: TodoStepType::Analysis,
+                metadata: HashMap::new(),
+            }],
             dependencies: vec![],
             quality_gates: vec!["test_coverage".to_string()],
             created_at: Utc::now(),
@@ -942,6 +1006,3 @@ mod tests {
         assert!(enforcer.enforced_gates.contains("type_check"));
     }
 }
-
-
-

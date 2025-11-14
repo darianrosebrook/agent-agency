@@ -277,16 +277,27 @@ pub enum RoutingStrategy {
 #[async_trait]
 pub trait ModelOrchestrator: Send + Sync + std::fmt::Debug {
     /// Route an inference request to the appropriate model
-    async fn route_request(&self, request: &InferenceRequest) -> OrchestrationResult<RoutingDecision>;
+    async fn route_request(
+        &self,
+        request: &InferenceRequest,
+    ) -> OrchestrationResult<RoutingDecision>;
 
     /// Execute inference using the routed model
-    async fn execute_inference(&self, request: &InferenceRequest, routing_decision: &RoutingDecision) -> OrchestrationResult<InferenceResponse>;
+    async fn execute_inference(
+        &self,
+        request: &InferenceRequest,
+        routing_decision: &RoutingDecision,
+    ) -> OrchestrationResult<InferenceResponse>;
 
     /// Get available model instances
     async fn get_available_models(&self) -> OrchestrationResult<Vec<ModelInstance>>;
 
     /// Load a new model instance
-    async fn load_model(&self, model_id: &str, capabilities: &ModelCapabilities) -> OrchestrationResult<String>;
+    async fn load_model(
+        &self,
+        model_id: &str,
+        capabilities: &ModelCapabilities,
+    ) -> OrchestrationResult<String>;
 
     /// Unload a model instance
     async fn unload_model(&self, instance_id: &str) -> OrchestrationResult<()>;
@@ -341,7 +352,11 @@ pub trait ModelLifecycleManager: Send + Sync {
     async fn load_model_hotswap(&self, model_id: &str) -> OrchestrationResult<String>;
 
     /// Perform hot-swap of model
-    async fn hot_swap_model(&self, old_instance_id: &str, new_model_id: &str) -> OrchestrationResult<String>;
+    async fn hot_swap_model(
+        &self,
+        old_instance_id: &str,
+        new_model_id: &str,
+    ) -> OrchestrationResult<String>;
 
     /// Health check for model instance
     async fn health_check(&self, instance_id: &str) -> OrchestrationResult<ModelHealth>;

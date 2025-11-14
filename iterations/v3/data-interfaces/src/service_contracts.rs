@@ -4,21 +4,24 @@
 //! data-interfaces layer. This enables dependency injection and removes
 //! direct dependencies on implementation crates.
 
-use async_trait::async_trait;
 use agent_agency_contracts::{
-    TaskRequest, TaskResponse, WorkingSpec, TaskExecutionResult,
-    TaskSpec, TaskRequirements, TaskContext as ContractsTaskContext,
+    TaskContext as ContractsTaskContext, TaskExecutionResult, TaskRequest, TaskRequirements,
+    TaskResponse, TaskSpec, WorkingSpec,
 };
+use async_trait::async_trait;
 
 /// Research service for task planning and execution
 #[async_trait]
 pub trait ResearchService: Send + Sync {
     /// Execute a task request and return response
     async fn execute_task(&self, request: TaskRequest) -> Result<TaskResponse, ServiceError>;
-    
+
     /// Generate a working specification from a task request
-    async fn generate_working_spec(&self, request: &TaskRequest) -> Result<WorkingSpec, ServiceError>;
-    
+    async fn generate_working_spec(
+        &self,
+        request: &TaskRequest,
+    ) -> Result<WorkingSpec, ServiceError>;
+
     /// Refine a working specification based on validation issues
     async fn refine_working_spec(
         &self,
@@ -36,16 +39,16 @@ pub trait OrchestrationService: Send + Sync {
         spec: WorkingSpec,
         context: ContractsTaskContext,
     ) -> Result<TaskExecutionResult, ServiceError>;
-    
+
     /// Get task execution status
     async fn get_task_status(&self, task_id: &uuid::Uuid) -> Result<TaskStatus, ServiceError>;
-    
+
     /// Pause a running task
     async fn pause_task(&self, task_id: &uuid::Uuid) -> Result<(), ServiceError>;
-    
+
     /// Resume a paused task
     async fn resume_task(&self, task_id: &uuid::Uuid) -> Result<(), ServiceError>;
-    
+
     /// Cancel a task
     async fn cancel_task(&self, task_id: &uuid::Uuid) -> Result<(), ServiceError>;
 }
@@ -59,15 +62,12 @@ pub trait WorkerService: Send + Sync {
         spec: TaskSpec,
         requirements: TaskRequirements,
     ) -> Result<TaskExecutionResult, ServiceError>;
-    
+
     /// Get worker pool status
     async fn get_worker_status(&self) -> Result<WorkerPoolStatus, ServiceError>;
-    
+
     /// Register a worker
-    async fn register_worker(
-        &self,
-        registration: WorkerRegistration,
-    ) -> Result<(), ServiceError>;
+    async fn register_worker(&self, registration: WorkerRegistration) -> Result<(), ServiceError>;
 }
 
 /// Progress tracking service
@@ -79,10 +79,10 @@ pub trait ProgressTrackingService: Send + Sync {
         task_id: &uuid::Uuid,
         progress: ProgressUpdate,
     ) -> Result<(), ServiceError>;
-    
+
     /// Get progress for a task
     async fn get_progress(&self, task_id: &uuid::Uuid) -> Result<ProgressInfo, ServiceError>;
-    
+
     /// Subscribe to progress updates
     async fn subscribe_progress(
         &self,
@@ -100,18 +100,15 @@ pub trait MemoryService: Send + Sync {
         content: String,
         metadata: Option<serde_json::Value>,
     ) -> Result<agent_agency_contracts::types::memory::MemoryId, ServiceError>;
-    
+
     /// Retrieve memory
     async fn retrieve_memory(
         &self,
         memory_id: &agent_agency_contracts::types::memory::MemoryId,
     ) -> Result<MemoryContent, ServiceError>;
-    
+
     /// Query memories
-    async fn query_memories(
-        &self,
-        query: MemoryQuery,
-    ) -> Result<Vec<MemoryContent>, ServiceError>;
+    async fn query_memories(&self, query: MemoryQuery) -> Result<Vec<MemoryContent>, ServiceError>;
 }
 
 // Type definitions for service responses
@@ -200,17 +197,16 @@ pub struct MemoryQuery {
 pub enum ServiceError {
     #[error("Service unavailable: {0}")]
     Unavailable(String),
-    
+
     #[error("Task not found: {0}")]
     TaskNotFound(uuid::Uuid),
-    
+
     #[error("Invalid request: {0}")]
     InvalidRequest(String),
-    
+
     #[error("Service error: {0}")]
     Internal(String),
-    
+
     #[error("Timeout: {0}")]
     Timeout(String),
 }
-

@@ -6,12 +6,12 @@
 
 use async_trait::async_trait;
 use data_interfaces::service_contracts::{
-    ProgressTrackingService, ServiceError, ProgressUpdate, ProgressInfo, ProgressStream,
+    ProgressInfo, ProgressStream, ProgressTrackingService, ProgressUpdate, ServiceError,
 };
-use uuid::Uuid;
-use tokio::sync::{mpsc, RwLock};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{mpsc, RwLock};
+use uuid::Uuid;
 
 /// Adapter for progress tracking service
 pub struct ProgressTrackingServiceAdapter {
@@ -76,7 +76,10 @@ impl ProgressTrackingService for ProgressTrackingServiceAdapter {
         let progress_info = ProgressInfo {
             task_id: *task_id,
             progress_percent: progress.progress_percent,
-            current_stage: progress.status_message.clone().unwrap_or_else(|| "In progress".to_string()),
+            current_stage: progress
+                .status_message
+                .clone()
+                .unwrap_or_else(|| "In progress".to_string()),
             status_message: progress.status_message,
         };
 
@@ -101,14 +104,18 @@ impl ProgressTrackingService for ProgressTrackingServiceAdapter {
             }
         }
 
-        tracing::info!("Tracking progress for task {}: {}%", task_id, progress.progress_percent);
+        tracing::info!(
+            "Tracking progress for task {}: {}%",
+            task_id,
+            progress.progress_percent
+        );
         Ok(())
     }
-    
+
     async fn get_progress(&self, task_id: &Uuid) -> Result<ProgressInfo, ServiceError> {
         // Retrieve progress from in-memory store
         let store = self.progress_store.read().await;
-        
+
         match store.get(task_id) {
             Some(progress) => Ok(progress.clone()),
             None => {
@@ -122,18 +129,18 @@ impl ProgressTrackingService for ProgressTrackingServiceAdapter {
             }
         }
     }
-    
-    async fn subscribe_progress(
-        &self,
-        task_id: &Uuid,
-    ) -> Result<ProgressStream, ServiceError> {
+
+    async fn subscribe_progress(&self, task_id: &Uuid) -> Result<ProgressStream, ServiceError> {
         // Create channel for progress updates
         let (tx, rx) = mpsc::unbounded_channel();
 
         // Register sender for this task
         {
             let mut streams = self.active_streams.write().await;
-            streams.entry(*task_id).or_insert_with(Vec::new).push(tx.clone());
+            streams
+                .entry(*task_id)
+                .or_insert_with(Vec::new)
+                .push(tx.clone());
         }
 
         // Send current progress immediately if available
@@ -147,5 +154,3 @@ impl ProgressTrackingService for ProgressTrackingServiceAdapter {
         Ok(rx)
     }
 }
-
-

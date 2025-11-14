@@ -2,8 +2,8 @@
 //!
 //! Generates HTML-formatted evaluation reports for local viewing.
 
-use crate::evaluation::framework::EvaluationReport;
 use crate::evaluation::contracts::Reporter;
+use crate::evaluation::framework::EvaluationReport;
 
 /// HTML reporter for local viewing
 pub struct HtmlReporter {
@@ -16,11 +16,9 @@ impl HtmlReporter {
             include_charts: false,
         }
     }
-    
+
     pub fn with_charts(include_charts: bool) -> Self {
-        Self {
-            include_charts,
-        }
+        Self { include_charts }
     }
 }
 
@@ -34,17 +32,19 @@ impl Reporter for HtmlReporter {
     fn name(&self) -> &str {
         "html"
     }
-    
+
     fn render(&self, report: &EvaluationReport) -> Result<String, String> {
         let mut output = String::new();
-        
+
         // HTML header
-        output.push_str(r#"<!DOCTYPE html>
+        output.push_str(
+            r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluation Report: "#);
+    <title>Evaluation Report: "#,
+        );
         output.push_str(&html_escape(&report.scenario.name));
         output.push_str(r#"</title>
     <style>
@@ -72,16 +72,25 @@ impl Reporter for HtmlReporter {
 <body>
     <div class="container">
 "#);
-        
+
         // Header
-        output.push_str(&format!("<h1>Evaluation Report: {}</h1>\n", html_escape(&report.scenario.name)));
-        output.push_str(&format!("<p><strong>Scenario ID</strong>: <code>{}</code></p>\n", html_escape(&report.scenario.scenario_id)));
-        output.push_str(&format!("<p><strong>Description</strong>: {}</p>\n", html_escape(&report.scenario.description)));
-        
+        output.push_str(&format!(
+            "<h1>Evaluation Report: {}</h1>\n",
+            html_escape(&report.scenario.name)
+        ));
+        output.push_str(&format!(
+            "<p><strong>Scenario ID</strong>: <code>{}</code></p>\n",
+            html_escape(&report.scenario.scenario_id)
+        ));
+        output.push_str(&format!(
+            "<p><strong>Description</strong>: {}</p>\n",
+            html_escape(&report.scenario.description)
+        ));
+
         // Summary box
         output.push_str("<div class=\"summary-box\">\n");
         output.push_str("<h2>Summary</h2>\n");
-        
+
         let score_class = if report.summary.average_score >= 0.8 {
             "score-high"
         } else if report.summary.average_score >= 0.6 {
@@ -89,12 +98,13 @@ impl Reporter for HtmlReporter {
         } else {
             "score-low"
         };
-        
+
         output.push_str(&format!(
             "<p><strong>Average Score</strong>: <span class=\"{}\">{:.2}%</span></p>\n",
-            score_class, report.summary.average_score * 100.0
+            score_class,
+            report.summary.average_score * 100.0
         ));
-        
+
         // Score distribution table
         if !report.summary.score_distribution.is_empty() {
             output.push_str("<h3>Score Distribution</h3>\n");
@@ -110,14 +120,16 @@ impl Reporter for HtmlReporter {
                 };
                 output.push_str(&format!(
                     "<tr><td>{}</td><td class=\"{}\">{:.2}%</td></tr>\n",
-                    html_escape(dimension), dim_score_class, score * 100.0
+                    html_escape(dimension),
+                    dim_score_class,
+                    score * 100.0
                 ));
             }
             output.push_str("</table>\n");
         }
-        
+
         output.push_str("</div>\n");
-        
+
         // Strength areas
         if !report.summary.strength_areas.is_empty() {
             output.push_str("<h2>Strengths</h2>\n<ul>\n");
@@ -126,7 +138,7 @@ impl Reporter for HtmlReporter {
             }
             output.push_str("</ul>\n");
         }
-        
+
         // Improvement areas
         if !report.summary.improvement_areas.is_empty() {
             output.push_str("<h2>Areas for Improvement</h2>\n<ul>\n");
@@ -135,24 +147,27 @@ impl Reporter for HtmlReporter {
             }
             output.push_str("</ul>\n");
         }
-        
+
         // Detailed evaluations
         if !report.evaluations.is_empty() {
             output.push_str("<h2>Detailed Evaluations</h2>\n");
             for (idx, eval) in report.evaluations.iter().enumerate() {
                 output.push_str(&format!("<h3>Evaluation #{}</h3>\n", idx + 1));
-                
+
                 output.push_str("<table>\n");
                 output.push_str("<tr><th>Dimension</th><th>Score</th></tr>\n");
-                
+
                 let dimensions = [
-                    ("Functional Correctness", eval.dimensions.functional_correctness),
+                    (
+                        "Functional Correctness",
+                        eval.dimensions.functional_correctness,
+                    ),
                     ("Process Quality", eval.dimensions.process_quality),
                     ("Adaptability", eval.dimensions.adaptability),
                     ("Efficiency", eval.dimensions.efficiency),
                     ("Safety", eval.dimensions.safety),
                 ];
-                
+
                 for (name, score) in &dimensions {
                     let dim_score_class = if *score >= 0.8 {
                         "score-high"
@@ -163,14 +178,16 @@ impl Reporter for HtmlReporter {
                     };
                     output.push_str(&format!(
                         "<tr><td>{}</td><td class=\"{}\">{:.2}%</td></tr>\n",
-                        name, dim_score_class, score * 100.0
+                        name,
+                        dim_score_class,
+                        score * 100.0
                     ));
                 }
-                
+
                 output.push_str("</table>\n");
             }
         }
-        
+
         // Recommendations
         if !report.recommendations.is_empty() {
             output.push_str("<h2>Recommendations</h2>\n<ol>\n");
@@ -179,16 +196,18 @@ impl Reporter for HtmlReporter {
             }
             output.push_str("</ol>\n");
         }
-        
+
         // Footer
-        output.push_str(r#"
+        output.push_str(
+            r#"
     </div>
 </body>
-</html>"#);
-        
+</html>"#,
+        );
+
         Ok(output)
     }
-    
+
     fn format(&self) -> &str {
         "html"
     }
@@ -206,7 +225,10 @@ fn html_escape(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::evaluation::framework::{EvaluationReport, EvaluationScenario, ScenarioDifficulty, ProblemType, EvaluationSummary, TrendAnalysis, PerformanceTrend};
+    use crate::evaluation::framework::{
+        EvaluationReport, EvaluationScenario, EvaluationSummary, PerformanceTrend, ProblemType,
+        ScenarioDifficulty, TrendAnalysis,
+    };
 
     fn create_test_report() -> EvaluationReport {
         EvaluationReport {
@@ -241,16 +263,16 @@ mod tests {
     fn test_html_reporter() {
         let reporter = HtmlReporter::new();
         let report = create_test_report();
-        
+
         let result = reporter.render(&report);
         assert!(result.is_ok());
-        
+
         let html = result.unwrap();
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("Evaluation Report"));
         assert!(html.contains("85.00%"));
     }
-    
+
     #[test]
     fn test_html_escape() {
         assert_eq!(html_escape("test & test"), "test &amp; test");

@@ -1,33 +1,33 @@
 //! Core knowledge seeker functionality and configuration
 
+use chrono::{DateTime, Utc};
+use dashmap::DashMap;
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-use dashmap::DashMap;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::research_types::*;
 use crate::ContentProcessor;
-use anyhow::Result;
 use crate::ContextBuilder;
+use crate::MultimodalContext;
 use crate::VectorSearchEngine;
 use crate::WebScraper;
-use crate::MultimodalContext;
+use anyhow::Result;
 use data_infrastructure::DatabaseClient;
 
-use super::orchestration::QueryOrchestrator;
-use super::search::SearchCoordinator;
-use super::scraping::ScrapingCoordinator;
-use super::synthesis::ContextSynthesizer;
-use super::processing::ContentProcessorManager;
 use super::database::DatabaseManager;
-use super::knowledge_metrics::MetricsCollector;
-use super::sessions::SessionManager;
 use super::events::EventEmitter;
+use super::knowledge_metrics::MetricsCollector;
+use super::orchestration::QueryOrchestrator;
+use super::processing::ContentProcessorManager;
+use super::scraping::ScrapingCoordinator;
+use super::search::SearchCoordinator;
+use super::sessions::SessionManager;
+use super::synthesis::ContextSynthesizer;
 
 /// Main knowledge seeker for research coordination
 
@@ -51,26 +51,29 @@ pub struct KnowledgeSeeker {
 }
 
 /// Research events for monitoring and debugging
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ResearchEvent {
     QueryStarted(Uuid),
-    QueryCompleted(Uuid, usize), // query_id, result_count
-    QueryFailed(Uuid, String),   // query_id, error_message
-    ScrapingStarted(String),     // url
+    QueryCompleted(Uuid, usize),      // query_id, result_count
+    QueryFailed(Uuid, String),        // query_id, error_message
+    ScrapingStarted(String),          // url
     ScrapingCompleted(String, usize), // url, content_length
     ScrapingFailed(String, String),   // url, error_message
     ContextSynthesisStarted(Uuid),    // query_id
     ContextSynthesisCompleted(Uuid),  // query_id
-    SessionCreated(Uuid),       // session_id
-    SessionCompleted(Uuid),     // session_id
-    ErrorOccurred(String),      // error_message
+    SessionCreated(Uuid),             // session_id
+    SessionCompleted(Uuid),           // session_id
+    ErrorOccurred(String),            // error_message
     ConfigurationUpdated,
     ComponentHealthCheck(String, bool), // component_name, healthy
 }
 
 impl KnowledgeSeeker {
     /// Create a new knowledge seeker with database pool integration
-    pub async fn new(config: ResearchAgentConfig, database_pool: Arc<DatabaseClient>) -> Result<Self> {
+    pub async fn new(
+        config: ResearchAgentConfig,
+        database_pool: Arc<DatabaseClient>,
+    ) -> Result<Self> {
         info!("Initializing knowledge seeker with database pool integration");
 
         // Initialize event emitter
@@ -152,13 +155,21 @@ impl KnowledgeSeeker {
 
         // Update component configs
         self.orchestrator.update_config(update.clone()).await?;
-        self.search_coordinator.update_config(update.clone()).await?;
-        self.scraping_coordinator.update_config(update.clone()).await?;
-        self.context_synthesizer.update_config(update.clone()).await?;
+        self.search_coordinator
+            .update_config(update.clone())
+            .await?;
+        self.scraping_coordinator
+            .update_config(update.clone())
+            .await?;
+        self.context_synthesizer
+            .update_config(update.clone())
+            .await?;
         self.content_processor.update_config(update.clone()).await?;
 
         // Emit configuration update event
-        self.event_emitter.emit(ResearchEvent::ConfigurationUpdated).await;
+        self.event_emitter
+            .emit(ResearchEvent::ConfigurationUpdated)
+            .await;
 
         info!("Configuration updated successfully");
         Ok(())
@@ -172,7 +183,9 @@ impl KnowledgeSeeker {
                     return Err(anyhow::anyhow!("Vector dimension must be greater than 0"));
                 }
                 if config.similarity_threshold < 0.0 || config.similarity_threshold > 1.0 {
-                    return Err(anyhow::anyhow!("Similarity threshold must be between 0.0 and 1.0"));
+                    return Err(anyhow::anyhow!(
+                        "Similarity threshold must be between 0.0 and 1.0"
+                    ));
                 }
             }
             ConfigurationUpdate::WebScraping(config) => {

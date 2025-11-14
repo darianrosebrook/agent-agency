@@ -3,12 +3,12 @@
 //! Provides automated backup capabilities with encryption, compression,
 //! and recovery testing for production database hardening.
 
-use schemars::JsonSchema;
-use system_quality_security::DatabaseConfig;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use system_quality_security::DatabaseConfig;
 use tokio::fs;
 use tokio::process::Command;
 use tracing::{debug, info, warn};
@@ -52,7 +52,6 @@ pub struct BackupResult {
     pub backup_id: String,
     /// Backup timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Backup file path
     pub file_path: PathBuf,

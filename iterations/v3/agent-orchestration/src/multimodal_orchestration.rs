@@ -1,5 +1,5 @@
 //! Multimodal orchestration for document processing pipeline
-//! 
+//!
 //! Coordinates ingestors, enrichers, and indexers for multimodal RAG system
 //! with proper error handling, concurrency control, and monitoring.
 
@@ -9,19 +9,18 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 // Explicit imports from contracts (contracts-first: no wildcard imports)
-use agent_agency_contracts::types::planning::RiskTier;
 use agent_agency_contracts::types::data_processing::ProcessingPriority;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use uuid::Uuid;
+use agent_agency_contracts::types::planning::RiskTier;
 use chrono::Utc;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 // Import OrchestrationError from lib.rs
 use crate::OrchestrationError;
 
 // Local type definitions used instead of agent_data_processing
-use crate::audit_trail::{
-    AuditTrailManager, AuditSeverity, AuditResult,
-};
+use crate::audit_trail::{AuditResult, AuditSeverity, AuditTrailManager};
 use crate::error_handling::CircuitBreaker;
 use system_common_interfaces::DatabaseAuditOperations;
 use tracing::{info, warn};
@@ -69,7 +68,6 @@ impl ProcessingId {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 enum ContentType {
     Text,
@@ -81,7 +79,6 @@ enum ContentType {
     Unknown,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct FileSource {
     pub path: PathBuf,
@@ -91,14 +88,12 @@ struct FileSource {
     pub last_modified: chrono::DateTime<chrono::Utc>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 enum DataSource {
     File(FileSource),
     Url(String),
     Stream(Vec<u8>),
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct DataInput {
@@ -110,13 +105,11 @@ struct DataInput {
     pub processing_context: ProcessingContext,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ProcessingContext {
     pub priority: ProcessingPriority,
     pub timeout: Option<Duration>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 enum DataContent {
@@ -125,7 +118,6 @@ enum DataContent {
     Binary(Vec<u8>),
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
 enum ProcessedContentData {
@@ -133,7 +125,6 @@ enum ProcessedContentData {
     Binary(Vec<u8>),
     Structured(serde_json::Value),
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -145,14 +136,12 @@ struct ProcessedContent {
     pub audio_transcript: Option<String>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
 struct ProcessingOutput {
     pub processed_content: Vec<ProcessedContent>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ExtractedEntity {
@@ -163,7 +152,6 @@ struct ExtractedEntity {
     pub end_offset: usize,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
 struct VisualElement {
@@ -172,7 +160,6 @@ struct VisualElement {
     pub confidence: f64,
     pub text: Option<String>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -183,7 +170,6 @@ enum VisualElementType {
     Table,
     Diagram,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct ExtractedTopic {
@@ -207,22 +193,21 @@ struct ExtractedTopic {
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
-struct IngestionStage ;
+struct IngestionStage;
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
-struct EnrichmentStage ;
+struct EnrichmentStage;
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
-struct IndexingStage ;
-
+struct IndexingStage;
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedIngestor ;
+struct UnifiedIngestor;
 
 #[cfg(not(feature = "data-processing"))]
 impl UnifiedIngestor {
@@ -246,7 +231,7 @@ impl UnifiedIngestor {
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedEnrichmentStage ;
+struct UnifiedEnrichmentStage;
 
 #[cfg(not(feature = "data-processing"))]
 impl UnifiedEnrichmentStage {
@@ -270,7 +255,7 @@ impl UnifiedEnrichmentStage {
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedIndexer ;
+struct UnifiedIndexer;
 
 #[cfg(not(feature = "data-processing"))]
 impl UnifiedIndexer {
@@ -293,10 +278,9 @@ impl UnifiedIndexer {
     }
 }
 
-
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct FileWatcher ;
+struct FileWatcher;
 
 #[cfg(not(feature = "data-processing"))]
 impl FileWatcher {
@@ -322,7 +306,7 @@ impl FileWatcher {
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct JobScheduler ;
+struct JobScheduler;
 
 #[cfg(not(feature = "data-processing"))]
 impl JobScheduler {
@@ -338,24 +322,14 @@ impl JobScheduler {
 
 #[cfg(not(feature = "data-processing"))]
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct EnrichmentCircuitBreakerConfig ;
+struct EnrichmentCircuitBreakerConfig;
 
 // Local type definitions to avoid circular dependency with agent-workers
 // These mirror types from agent-workers crate
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct MCPWorkerPool ;
-
-impl MCPWorkerPool {
-    pub async fn new(_config: WorkerPoolConfig) -> Result<Self, String> {
-        // Placeholder implementation
-        Ok(MCPWorkerPool)
-    }
-}
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct WorkerPoolConfig ;
+pub struct WorkerPoolConfig;
 
 impl Default for WorkerPoolConfig {
     fn default() -> Self {
@@ -363,11 +337,9 @@ impl Default for WorkerPoolConfig {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
-struct WorkerHandle ;
-
+struct WorkerHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -378,17 +350,15 @@ enum WorkerSpecialty {
     Testing,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
-struct WorkerCapabilities ;
+struct WorkerCapabilities;
 
 impl Default for WorkerCapabilities {
     fn default() -> Self {
         WorkerCapabilities
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -399,7 +369,6 @@ enum WorkerHealth {
     Offline,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct Block {
     pub id: String,
@@ -409,7 +378,6 @@ struct Block {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct EnrichedBlock {
     pub block: Block,
@@ -417,13 +385,11 @@ struct EnrichedBlock {
     pub topics: Vec<ExtractedTopic>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 enum BlockData {
     Text(String),
     Blocks(Vec<Block>),
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -433,8 +399,8 @@ struct EnrichedContent {
     pub topics: Vec<ExtractedTopic>,
 }
 use crate::coreml::CoreMLManager;
-use std::path::{Path, PathBuf};
 use serde_json;
+use std::path::{Path, PathBuf};
 
 /// Multimodal document processing orchestrator
 #[derive(Clone)]
@@ -468,7 +434,8 @@ pub struct MultimodalOrchestrator {
     /// via `set_database_audit_operations()` or `with_db_audit_ops()`.
     db_audit_ops: Option<Arc<dyn DatabaseAuditOperations>>,
     /// Planning integration for planning-aware task execution
-    planning_integration: Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
+    planning_integration:
+        Option<Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>>,
 }
 
 impl std::fmt::Debug for MultimodalOrchestrator {
@@ -524,15 +491,13 @@ pub enum ProcessingStatus {
     Cancelled,
 }
 
-
 impl MultimodalOrchestrator {
     /// Create new multimodal orchestrator
     pub async fn new() -> Result<Self> {
         // Initialize unified components
         let unified_ingestor = UnifiedIngestor::new();
-        let unified_enricher = UnifiedEnrichmentStage::new(
-            EnrichmentCircuitBreakerConfig::default()
-        );
+        let unified_enricher =
+            UnifiedEnrichmentStage::new(EnrichmentCircuitBreakerConfig::default());
         let unified_indexer = UnifiedIndexer::new(768, 32); // 768-dim embeddings, 32 neighbors
 
         // Initialize Core ML manager
@@ -540,7 +505,11 @@ impl MultimodalOrchestrator {
             let manager = Arc::new(CoreMLManager::new(
                 std::env::var("COREML_MODELS_PATH")
                     .map(|p| PathBuf::from(p))
-                    .unwrap_or_else(|_| PathBuf::from("/Users/darianrosebrook/Desktop/Projects/agent-agency/models/coreml"))
+                    .unwrap_or_else(|_| {
+                        PathBuf::from(
+                            "/Users/darianrosebrook/Desktop/Projects/agent-agency/models/coreml",
+                        )
+                    }),
             ));
 
             // Try to load available models
@@ -592,7 +561,11 @@ impl MultimodalOrchestrator {
     }
 
     /// Set circuit breaker for external service protection
-    pub fn set_circuit_breaker(&mut self, service_name: String, circuit_breaker: Arc<CircuitBreaker>) {
+    pub fn set_circuit_breaker(
+        &mut self,
+        service_name: String,
+        circuit_breaker: Arc<CircuitBreaker>,
+    ) {
         self.circuit_breakers.insert(service_name, circuit_breaker);
     }
 
@@ -602,7 +575,10 @@ impl MultimodalOrchestrator {
     }
 
     /// Set database audit operations for audit persistence
-    pub fn set_database_audit_operations(&mut self, db_audit_ops: Arc<dyn DatabaseAuditOperations>) {
+    pub fn set_database_audit_operations(
+        &mut self,
+        db_audit_ops: Arc<dyn DatabaseAuditOperations>,
+    ) {
         self.db_audit_ops = Some(db_audit_ops);
     }
 
@@ -612,7 +588,12 @@ impl MultimodalOrchestrator {
     }
 
     /// Set planning integration for planning-aware task execution
-    pub fn set_planning_integration(&mut self, planning_integration: Arc<crate::planning::orchestrator_integration::OrchestratorPlanningIntegration>) {
+    pub fn set_planning_integration(
+        &mut self,
+        planning_integration: Arc<
+            crate::planning::orchestrator_integration::OrchestratorPlanningIntegration,
+        >,
+    ) {
         self.planning_integration = Some(planning_integration);
     }
 
@@ -639,21 +620,24 @@ impl MultimodalOrchestrator {
                 ip_address: None,
                 timestamp: Some(Utc::now()),
             };
-            
+
             if let Err(e) = db_audit_ops.create_audit_entry(audit_entry).await {
                 warn!("Failed to persist audit entry to database: {}", e);
             }
         }
 
-        if let Some(audit_manager) = &self.audit_trail {
+        if let Some(_audit_manager) = &self.audit_trail {
             let mut contexts = self.active_contexts.write().await;
-            contexts.insert(operation_id.to_string(), OperationContext {
-                operation_id: operation_id.to_string(),
-                start_time: Instant::now(),
-                operation_type: operation_type.to_string(),
-                parent_operation_id: None,
-                correlation_id: correlation_id.clone(),
-            });
+            contexts.insert(
+                operation_id.to_string(),
+                OperationContext {
+                    operation_id: operation_id.to_string(),
+                    start_time: Instant::now(),
+                    operation_type: operation_type.to_string(),
+                    parent_operation_id: None,
+                    correlation_id: correlation_id.clone(),
+                },
+            );
 
             // Audit trail is already recorded via db_audit_ops.create_audit_entry() above
             // The AuditTrailManager doesn't have a generic record_event method - it uses
@@ -689,17 +673,17 @@ impl MultimodalOrchestrator {
                     ip_address: None,
                     timestamp: Some(Utc::now()),
                 };
-                
+
                 if let Err(e) = db_audit_ops.create_audit_entry(audit_entry).await {
                     warn!("Failed to persist audit entry to database: {}", e);
                 }
             }
         }
 
-        if let Some(audit_manager) = &self.audit_trail {
+        if let Some(_audit_manager) = &self.audit_trail {
             let mut contexts = self.active_contexts.write().await;
-            if let Some(context) = contexts.remove(operation_id) {
-                let result = if success {
+            if let Some(_context) = contexts.remove(operation_id) {
+                let _result = if success {
                     AuditResult::Success { data: None }
                 } else {
                     AuditResult::Failure {
@@ -708,7 +692,11 @@ impl MultimodalOrchestrator {
                         recoverable: true,
                     }
                 };
-                let severity = if success { AuditSeverity::Info } else { AuditSeverity::Error };
+                let _severity = if success {
+                    AuditSeverity::Info
+                } else {
+                    AuditSeverity::Error
+                };
 
                 // Audit trail is already recorded via db_audit_ops.create_audit_entry() above
                 // The AuditTrailManager doesn't have a generic record_event method - it uses
@@ -732,11 +720,18 @@ impl MultimodalOrchestrator {
     ) -> Result<ProcessingResult> {
         let document_id = Uuid::new_v4();
         let start_time = std::time::Instant::now();
-        
-        info!("Starting multimodal document processing: {} (id: {})", file_path.display(), document_id);
+
+        info!(
+            "Starting multimodal document processing: {} (id: {})",
+            file_path.display(),
+            document_id
+        );
 
         // Check circuit breaker state
-        if matches!(self.circuit_breaker.get_state().await, crate::error_handling::CircuitBreakerState::Open) {
+        if matches!(
+            self.circuit_breaker.get_state().await,
+            crate::error_handling::CircuitBreakerState::Open
+        ) {
             warn!("Circuit breaker is open, skipping processing");
             return Ok(ProcessingResult {
                 document_id,
@@ -750,11 +745,10 @@ impl MultimodalOrchestrator {
         }
 
         // Stage 1: Ingest document using UnifiedIngestor
-        let file_metadata = std::fs::metadata(file_path)
-            .context("Failed to read file metadata")?;
-        
+        let file_metadata = std::fs::metadata(file_path).context("Failed to read file metadata")?;
+
         let content_type = detect_content_type_from_path(file_path);
-        
+
         // Create proper DataInput with real types
         // Using local type definitions
         let data_input = DataInput {
@@ -763,7 +757,8 @@ impl MultimodalOrchestrator {
                 path: file_path.to_path_buf(),
                 content_type: content_type.clone(),
                 size_bytes: file_metadata.len(),
-                last_modified: file_metadata.modified()
+                last_modified: file_metadata
+                    .modified()
                     .ok()
                     .and_then(|t| {
                         use std::time::UNIX_EPOCH;
@@ -783,7 +778,8 @@ impl MultimodalOrchestrator {
             },
         };
 
-        let ingestion_output = self.unified_ingestor
+        let ingestion_output = self
+            .unified_ingestor
             .ingest(data_input)
             .await
             .context("Failed to ingest document")?;
@@ -793,7 +789,11 @@ impl MultimodalOrchestrator {
             .context("Failed to convert ingestion output to blocks")?;
 
         let blocks_processed = blocks.len();
-        info!("Ingested {} blocks from {}", blocks_processed, file_path.display());
+        info!(
+            "Ingested {} blocks from {}",
+            blocks_processed,
+            file_path.display()
+        );
 
         // Stage 2: Enrich blocks with multimodal content
         let enriched_blocks = self.enrich_blocks(&blocks).await?;
@@ -835,7 +835,7 @@ impl MultimodalOrchestrator {
     /// Result indicating success or failure
     pub async fn watch_directory(&self, directory_path: &Path) -> Result<()> {
         info!("Starting directory watch: {}", directory_path.display());
-        
+
         self.file_watcher
             .watch(directory_path)
             .await
@@ -858,7 +858,11 @@ impl MultimodalOrchestrator {
         file_paths: &[&Path],
         max_concurrent: usize,
     ) -> Result<Vec<ProcessingResult>> {
-        info!("Processing {} documents with max concurrency: {}", file_paths.len(), max_concurrent);
+        info!(
+            "Processing {} documents with max concurrency: {}",
+            file_paths.len(),
+            max_concurrent
+        );
 
         let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrent));
         let mut tasks = Vec::new();
@@ -877,14 +881,23 @@ impl MultimodalOrchestrator {
                 // Record document processing started
                 if let Some(audit) = &audit_trail_clone {
                     let mut metadata = std::collections::HashMap::new();
-                    metadata.insert("file_path".to_string(), serde_json::Value::String(file_path_str.clone()));
-                    metadata.insert("event_type".to_string(), serde_json::Value::String("started".to_string()));
-                    let _ = audit.performance_auditor().record_operation_performance(
-                        "document_processing",
-                        std::time::Duration::from_millis(0),
-                        true,
-                        metadata
-                    ).await;
+                    metadata.insert(
+                        "file_path".to_string(),
+                        serde_json::Value::String(file_path_str.clone()),
+                    );
+                    metadata.insert(
+                        "event_type".to_string(),
+                        serde_json::Value::String("started".to_string()),
+                    );
+                    let _ = audit
+                        .performance_auditor()
+                        .record_operation_performance(
+                            "document_processing",
+                            std::time::Duration::from_millis(0),
+                            true,
+                            metadata,
+                        )
+                        .await;
                 }
 
                 let start_time = std::time::Instant::now();
@@ -893,22 +906,24 @@ impl MultimodalOrchestrator {
                 let result: Result<ProcessingResult, OrchestrationError> = async {
                     let path = Path::new(&file_path_str);
                     let content = tokio::fs::read_to_string(path).await?;
-                    let blocks = unified_ingestor.ingest(DataInput {
-                        id: ProcessingId::new(),
-                        source: DataSource::File(FileSource {
-                            path: PathBuf::from(&file_path_str),
+                    let blocks = unified_ingestor
+                        .ingest(DataInput {
+                            id: ProcessingId::new(),
+                            source: DataSource::File(FileSource {
+                                path: PathBuf::from(&file_path_str),
+                                content_type: ContentType::Document,
+                                size_bytes: 0, // TODO: Get actual file size
+                                last_modified: chrono::Utc::now(),
+                            }),
                             content_type: ContentType::Document,
-                            size_bytes: 0, // TODO: Get actual file size
-                            last_modified: chrono::Utc::now(),
-                        }),
-                        content_type: ContentType::Document,
-                        content: DataContent::Text(content),
-                        metadata: HashMap::new(),
-                        processing_context: ProcessingContext {
-                            priority: ProcessingPriority::Normal,
-                            timeout: None,
-                        },
-                    }).await?;
+                            content: DataContent::Text(content),
+                            metadata: HashMap::new(),
+                            processing_context: ProcessingContext {
+                                priority: ProcessingPriority::Normal,
+                                timeout: None,
+                            },
+                        })
+                        .await?;
                     let blocks_vec = match &blocks {
                         BlockData::Text(content) => vec![Block {
                             id: Uuid::new_v4().to_string(),
@@ -920,13 +935,20 @@ impl MultimodalOrchestrator {
                         BlockData::Blocks(existing_blocks) => existing_blocks.clone(),
                     };
                     let enriched = unified_enricher.enrich_blocks(blocks_vec).await?;
-                    unified_indexer.index_blocks(enriched.into_iter().map(|eb| Block {
-                        id: eb.block.id,
-                        content: eb.block.content,
-                        block_type: eb.block.block_type,
-                        content_type: eb.block.content_type,
-                        metadata: eb.block.metadata,
-                    }).collect()).await?;
+                    unified_indexer
+                        .index_blocks(
+                            enriched
+                                .into_iter()
+                                .map(|eb| Block {
+                                    id: eb.block.id,
+                                    content: eb.block.content,
+                                    block_type: eb.block.block_type,
+                                    content_type: eb.block.content_type,
+                                    metadata: eb.block.metadata,
+                                })
+                                .collect(),
+                        )
+                        .await?;
                     Ok(ProcessingResult {
                         document_id: Uuid::new_v4(),
                         status: ProcessingStatus::Completed,
@@ -936,7 +958,8 @@ impl MultimodalOrchestrator {
                         processing_time_ms: start_time.elapsed().as_millis() as u64,
                         error_message: None,
                     })
-                }.await;
+                }
+                .await;
 
                 // Record document processing finished or error
                 if let Some(audit) = &audit_trail_clone {
@@ -945,33 +968,60 @@ impl MultimodalOrchestrator {
                     let processing_time = start_time.elapsed();
 
                     let mut metadata = std::collections::HashMap::new();
-                    metadata.insert("file_path".to_string(), serde_json::Value::String(file_path_str.clone()));
-                    metadata.insert("event_type".to_string(), serde_json::Value::String(event_type.to_string()));
+                    metadata.insert(
+                        "file_path".to_string(),
+                        serde_json::Value::String(file_path_str.clone()),
+                    );
+                    metadata.insert(
+                        "event_type".to_string(),
+                        serde_json::Value::String(event_type.to_string()),
+                    );
 
                     match &result {
                         Ok(result) => {
-                            metadata.insert("document_id".to_string(), serde_json::Value::String(result.document_id.to_string()));
-                            metadata.insert("blocks_processed".to_string(), serde_json::Value::Number(result.blocks_processed.into()));
-                            metadata.insert("blocks_enriched".to_string(), serde_json::Value::Number(result.blocks_enriched.into()));
-                            metadata.insert("blocks_indexed".to_string(), serde_json::Value::Number(result.blocks_indexed.into()));
-                            metadata.insert("processing_time_ms".to_string(), serde_json::Value::Number(result.processing_time_ms.into()));
+                            metadata.insert(
+                                "document_id".to_string(),
+                                serde_json::Value::String(result.document_id.to_string()),
+                            );
+                            metadata.insert(
+                                "blocks_processed".to_string(),
+                                serde_json::Value::Number(result.blocks_processed.into()),
+                            );
+                            metadata.insert(
+                                "blocks_enriched".to_string(),
+                                serde_json::Value::Number(result.blocks_enriched.into()),
+                            );
+                            metadata.insert(
+                                "blocks_indexed".to_string(),
+                                serde_json::Value::Number(result.blocks_indexed.into()),
+                            );
+                            metadata.insert(
+                                "processing_time_ms".to_string(),
+                                serde_json::Value::Number(result.processing_time_ms.into()),
+                            );
                         }
                         Err(e) => {
-                            metadata.insert("error".to_string(), serde_json::Value::String(e.to_string()));
+                            metadata.insert(
+                                "error".to_string(),
+                                serde_json::Value::String(e.to_string()),
+                            );
                         }
                     }
 
-                    let _ = audit.performance_auditor().record_operation_performance(
-                        "document_processing",
-                        processing_time,
-                        success,
-                        metadata
-                    ).await;
+                    let _ = audit
+                        .performance_auditor()
+                        .record_operation_performance(
+                            "document_processing",
+                            processing_time,
+                            success,
+                            metadata,
+                        )
+                        .await;
                 }
 
                 result
             });
-            
+
             tasks.push(task);
         }
 
@@ -981,7 +1031,10 @@ impl MultimodalOrchestrator {
             results.push(result);
         }
 
-        info!("Completed parallel processing of {} documents", results.len());
+        info!(
+            "Completed parallel processing of {} documents",
+            results.len()
+        );
         Ok(results)
     }
 
@@ -1008,11 +1061,12 @@ impl MultimodalOrchestrator {
     /// Enrich blocks with multimodal content
     async fn enrich_blocks(&self, blocks: &[Block]) -> Result<Vec<EnrichedBlock>> {
         // Use unified enricher to handle enrichment
-        let enriched = self.unified_enricher
+        let enriched = self
+            .unified_enricher
             .enrich_blocks(blocks.to_vec())
             .await
             .context("Failed to enrich blocks")?;
-        
+
         Ok(enriched)
     }
 
@@ -1020,13 +1074,16 @@ impl MultimodalOrchestrator {
     async fn index_blocks(&self, blocks: &[EnrichedBlock]) -> Result<usize> {
         // Use unified indexer to handle indexing
         // UnifiedIndexer.index_blocks() takes Vec<EnrichedBlock>, not Vec<Block>
-        let raw_blocks: Vec<Block> = blocks.iter().map(|eb| Block {
-            id: eb.block.id.clone(),
-            content: eb.block.content.clone(),
-            block_type: eb.block.block_type.clone(),
-            content_type: eb.block.content_type.clone(),
-            metadata: eb.block.metadata.clone(),
-        }).collect();
+        let raw_blocks: Vec<Block> = blocks
+            .iter()
+            .map(|eb| Block {
+                id: eb.block.id.clone(),
+                content: eb.block.content.clone(),
+                block_type: eb.block.block_type.clone(),
+                content_type: eb.block.content_type.clone(),
+                metadata: eb.block.metadata.clone(),
+            })
+            .collect();
 
         self.unified_indexer
             .index_blocks(raw_blocks)
@@ -1040,7 +1097,7 @@ impl MultimodalOrchestrator {
     pub async fn execute_planning_with_audit(
         &self,
         task_description: &str,
-        context: Option<HashMap<String, serde_json::Value>>,
+        _context: Option<HashMap<String, serde_json::Value>>,
     ) -> Result<ProcessingResult, OrchestrationError> {
         let operation_id = Uuid::new_v4().to_string();
         let correlation_id = Some(operation_id.clone());
@@ -1052,11 +1109,14 @@ impl MultimodalOrchestrator {
             &operation_id,
             Some(task_description.to_string()),
             correlation_id.clone(),
-        ).await.map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
+        )
+        .await
+        .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
 
         // Track reasoning and decision making
         if let Some(audit_manager) = &self.audit_trail {
-            audit_manager.agent_thinking_auditor()
+            audit_manager
+                .agent_thinking_auditor()
                 .record_reasoning_step(
                     "task_analysis",
                     &format!("Analyzing task: {}", task_description),
@@ -1068,7 +1128,9 @@ impl MultimodalOrchestrator {
                     "Break down into subtasks",
                     0.85,
                     start_time.elapsed(),
-                ).await.map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
+                )
+                .await
+                .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
         }
 
         // Execute the actual planning operation with circuit breaker protection
@@ -1107,7 +1169,10 @@ impl MultimodalOrchestrator {
             };
 
             // Execute planning task with real planning system
-            match planning_integration.execute_planning_task(&task_descriptor).await {
+            match planning_integration
+                .execute_planning_task(&task_descriptor)
+                .await
+            {
                 Ok(planning_result) => {
                     // Convert PlanningTaskResult to ProcessingResult
                     ProcessingResult {
@@ -1123,7 +1188,7 @@ impl MultimodalOrchestrator {
                         processing_time_ms: planning_start.elapsed().as_millis() as u64,
                         error_message: None,
                     }
-                },
+                }
                 Err(e) => {
                     // Planning failed - return error result
                     ProcessingResult {
@@ -1190,18 +1255,27 @@ impl MultimodalOrchestrator {
 
         // Record successful performance metrics
         if let Some(audit_manager) = &self.audit_trail {
-            audit_manager.performance_auditor()
+            audit_manager
+                .performance_auditor()
                 .record_operation_performance(
                     "planning_execution",
                     planning_start.elapsed(),
                     true,
                     {
                         let mut metadata = HashMap::new();
-                        metadata.insert("task_length".to_string(), serde_json::Value::Number(task_description.len().into()));
-                        metadata.insert("result_type".to_string(), serde_json::Value::String("success".to_string()));
+                        metadata.insert(
+                            "task_length".to_string(),
+                            serde_json::Value::Number(task_description.len().into()),
+                        );
+                        metadata.insert(
+                            "result_type".to_string(),
+                            serde_json::Value::String("success".to_string()),
+                        );
                         metadata
-                    }
-                ).await.map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
+                    },
+                )
+                .await
+                .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
         }
 
         // Record operation completion
@@ -1210,10 +1284,18 @@ impl MultimodalOrchestrator {
             true,
             start_time.elapsed(),
             Some(HashMap::from([
-                ("task_description".to_string(), serde_json::Value::String(task_description.to_string())),
-                ("blocks_processed".to_string(), serde_json::Value::Number(result.blocks_processed.into())),
-            ]))
-        ).await.map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
+                (
+                    "task_description".to_string(),
+                    serde_json::Value::String(task_description.to_string()),
+                ),
+                (
+                    "blocks_processed".to_string(),
+                    serde_json::Value::Number(result.blocks_processed.into()),
+                ),
+            ])),
+        )
+        .await
+        .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
 
         Ok(result)
     }
@@ -1221,7 +1303,8 @@ impl MultimodalOrchestrator {
 
 /// Detect content type from file path
 fn detect_content_type_from_path(path: &Path) -> ContentType {
-    let extension = path.extension()
+    let extension = path
+        .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("")
         .to_lowercase();
@@ -1307,22 +1390,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_file_type_detection() {
-        
         let video_path = PathBuf::from("test.mp4");
-        assert_eq!(detect_content_type_from_path(&video_path), ContentType::Video);
-        
+        assert_eq!(
+            detect_content_type_from_path(&video_path),
+            ContentType::Video
+        );
+
         let slides_path = PathBuf::from("presentation.pptx");
-        assert_eq!(detect_content_type_from_path(&slides_path), ContentType::Document);
-        
+        assert_eq!(
+            detect_content_type_from_path(&slides_path),
+            ContentType::Document
+        );
+
         let unsupported_path = PathBuf::from("unknown.xyz");
-        assert_eq!(detect_content_type_from_path(&unsupported_path), ContentType::Text); // Default to text
+        assert_eq!(
+            detect_content_type_from_path(&unsupported_path),
+            ContentType::Text
+        ); // Default to text
     }
 
     #[tokio::test]
     async fn test_orchestrator_creation() {
         let orchestrator = MultimodalOrchestrator::new().await.unwrap();
         let stats = orchestrator.get_processing_stats().await.unwrap();
-        
+
         assert_eq!(stats.total_documents_processed, 0);
         assert_eq!(stats.total_blocks_processed, 0);
     }

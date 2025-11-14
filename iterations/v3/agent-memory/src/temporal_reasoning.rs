@@ -3,15 +3,15 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use sqlx::{PgPool, Row};
-use sqlx::postgres::PgRow;
-use std::sync::Arc;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
-use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn, error};
-use reqwest::Client;
 use anyhow::{Context, Result};
+use chrono::{DateTime, Duration, Utc};
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgRow;
+use sqlx::{PgPool, Row};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
 /// Real HTTP-based temporal analysis service
 #[derive(Debug)]
 pub struct HttpTemporalAnalysisService {
@@ -30,9 +30,12 @@ impl HttpTemporalAnalysisService {
     }
 
     /// Analyze temporal patterns via HTTP call to external service
-    pub async fn analyze_patterns(&self, data: &TemporalAnalysisRequest) -> Result<TemporalAnalysisResponse> {
+    pub async fn analyze_patterns(
+        &self,
+        data: &TemporalAnalysisRequest,
+    ) -> Result<TemporalAnalysisResponse> {
         let url = format!("{}/api/v1/temporal/analyze", self.base_url);
-        
+
         let payload = serde_json::json!({
             "agent_id": data.agent_id,
             "time_range": {
@@ -45,7 +48,8 @@ impl HttpTemporalAnalysisService {
 
         debug!("Analyzing temporal patterns for agent: {}", data.agent_id);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&payload)
             .timeout(std::time::Duration::from_millis(self.timeout_ms))
@@ -55,28 +59,47 @@ impl HttpTemporalAnalysisService {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Temporal analysis service error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Temporal analysis service error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let result: TemporalAnalysisResponse = response.json().await
+        let result: TemporalAnalysisResponse = response
+            .json()
+            .await
             .context("Failed to parse temporal analysis response")?;
 
-        debug!("Temporal analysis completed with {} patterns found", result.patterns.len());
+        debug!(
+            "Temporal analysis completed with {} patterns found",
+            result.patterns.len()
+        );
         Ok(result)
     }
 
     /// Detect causality relationships via HTTP call
-    pub async fn detect_causality(&self, events: &[TemporalEvent]) -> Result<Vec<CausalityRelationship>> {
+    pub async fn detect_causality(
+        &self,
+        events: &[TemporalEvent],
+    ) -> Result<Vec<CausalityRelationship>> {
         let url = format!("{}/api/v1/temporal/causality", self.base_url);
-        
+
         let payload = serde_json::json!({
             "events": events
         });
 
-        debug!("Detecting causality relationships for {} events", events.len());
+        debug!(
+            "Detecting causality relationships for {} events",
+            events.len()
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&payload)
             .timeout(std::time::Duration::from_millis(self.timeout_ms))
@@ -86,11 +109,20 @@ impl HttpTemporalAnalysisService {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Causality detection service error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Causality detection service error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .context("Failed to parse causality detection response")?;
 
         // Extract causality relationships from response
@@ -103,7 +135,10 @@ impl HttpTemporalAnalysisService {
                 effect_event: rel["effect_event"].as_str().unwrap_or("").to_string(),
                 confidence: rel["confidence"].as_f64().unwrap_or(0.0) as f32,
                 time_lag: rel["time_lag"].as_u64().unwrap_or(0) as i64,
-                relationship_type: rel["relationship_type"].as_str().unwrap_or("CAUSES").to_string(),
+                relationship_type: rel["relationship_type"]
+                    .as_str()
+                    .unwrap_or("CAUSES")
+                    .to_string(),
             })
             .collect::<Vec<CausalityRelationship>>();
 
@@ -217,18 +252,21 @@ impl TemporalReasoningEngine {
         let db_pool = Arc::new(
             PgPool::connect(&database_url)
                 .await
-                .context("Failed to connect to database for temporal reasoning")?
+                .context("Failed to connect to database for temporal reasoning")?,
         );
 
         // Get temporal analysis service URL from environment or use default
         let temporal_url = std::env::var("TEMPORAL_ANALYSIS_SERVICE_URL")
             .unwrap_or_else(|_| "http://localhost:9000".to_string());
 
-        info!("Initializing HTTP temporal analysis service at: {}", temporal_url);
+        info!(
+            "Initializing HTTP temporal analysis service at: {}",
+            temporal_url
+        );
 
         // Create HTTP-based temporal analysis service
         let temporal_service = Arc::new(HttpTemporalAnalysisService::new(temporal_url));
-        
+
         // Test connection
         if let Err(e) = temporal_service.health_check().await {
             warn!("Temporal analysis service health check failed: {}", e);
@@ -244,7 +282,11 @@ impl TemporalReasoningEngine {
     }
 
     /// Analyze performance patterns for an agent over time
-    pub async fn analyze_agent_performance(&self, agent_id: &str, time_range: &TimeRange) -> MemoryResult<TemporalAnalysis> {
+    pub async fn analyze_agent_performance(
+        &self,
+        agent_id: &str,
+        time_range: &TimeRange,
+    ) -> MemoryResult<TemporalAnalysis> {
         // Get performance metrics over time
         let performance_data = sqlx::query(
             r#"
@@ -282,9 +324,10 @@ impl TemporalReasoningEngine {
 
         // Analyze trends
         if performance_values.len() >= 3 {
-            let recent_performance: Vec<f32> = performance_values.iter()
+            let recent_performance: Vec<f32> = performance_values
+                .iter()
                 .rev()
-                .take(7)  // Last 7 days
+                .take(7) // Last 7 days
                 .map(|(_, perf, _)| *perf)
                 .collect();
 
@@ -299,29 +342,39 @@ impl TemporalReasoningEngine {
         }
 
         // Detect change points
-        let change_points = self.detect_performance_change_points(&performance_values).await?;
+        let change_points = self
+            .detect_performance_change_points(&performance_values)
+            .await?;
 
         // Find causality links
-        let causality_links = self.detect_performance_causality(agent_id, time_range).await?;
+        let causality_links = self
+            .detect_performance_causality(agent_id, time_range)
+            .await?;
 
         // Calculate performance summary
         let summary = self.calculate_performance_summary(&performance_values);
 
         // Convert complex structs to expected simple types
-        let trend_directions: Vec<TrendDirection> = trends.into_iter().map(|t| t.direction).collect();
-        let change_point_times: Vec<chrono::DateTime<chrono::Utc>> = change_points.into_iter().map(|cp| cp.timestamp).collect();
-        let causality_simple: Vec<(String, String, f32)> = causality_links.into_iter()
-            .map(|cl| (cl.cause, cl.effect, cl.confidence)).collect();
+        let trend_directions: Vec<TrendDirection> =
+            trends.into_iter().map(|t| t.direction).collect();
+        let change_point_times: Vec<chrono::DateTime<chrono::Utc>> =
+            change_points.into_iter().map(|cp| cp.timestamp).collect();
+        let causality_simple: Vec<(String, String, f32)> = causality_links
+            .into_iter()
+            .map(|cl| (cl.cause, cl.effect, cl.confidence))
+            .collect();
 
         Ok(TemporalAnalysis {
             time_range: (time_range.start, time_range.end),
             trends: trend_directions,
             change_points: change_point_times,
             causality_links: causality_simple,
-            performance_summary: format!("Overall score: {:.2}, Best: {:.2}, Worst: {:.2}", 
+            performance_summary: format!(
+                "Overall score: {:.2}, Best: {:.2}, Worst: {:.2}",
                 summary.overall_score,
                 summary.metric_scores.get("best").unwrap_or(&0.0),
-                summary.metric_scores.get("worst").unwrap_or(&0.0)),
+                summary.metric_scores.get("worst").unwrap_or(&0.0)
+            ),
             patterns: vec![],
             performance_metrics: HashMap::new(),
             recommendations: vec![],
@@ -334,8 +387,10 @@ impl TemporalReasoningEngine {
             return TrendDirection::Stable;
         }
 
-        let first_half: f32 = values.iter().take(values.len() / 2).sum::<f32>() / (values.len() / 2) as f32;
-        let second_half: f32 = values.iter().rev().take(values.len() / 2).sum::<f32>() / (values.len() / 2) as f32;
+        let first_half: f32 =
+            values.iter().take(values.len() / 2).sum::<f32>() / (values.len() / 2) as f32;
+        let second_half: f32 =
+            values.iter().rev().take(values.len() / 2).sum::<f32>() / (values.len() / 2) as f32;
 
         let change = second_half - first_half;
         let threshold = first_half * 0.1; // 10% change threshold
@@ -363,7 +418,10 @@ impl TemporalReasoningEngine {
     }
 
     /// Detect significant change points in performance data
-    async fn detect_performance_change_points(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> MemoryResult<Vec<ChangePoint>> {
+    async fn detect_performance_change_points(
+        &self,
+        performance_data: &[(DateTime<Utc>, f32, f32)],
+    ) -> MemoryResult<Vec<ChangePoint>> {
         let mut change_points = Vec::new();
 
         if performance_data.len() < 5 {
@@ -373,8 +431,14 @@ impl TemporalReasoningEngine {
         // Simple change point detection using moving averages
         let window_size = 3;
         for i in window_size..performance_data.len().saturating_sub(window_size) {
-            let before_window: Vec<f32> = performance_data[i-window_size..i].iter().map(|(_, perf, _)| *perf).collect();
-            let after_window: Vec<f32> = performance_data[i..i+window_size].iter().map(|(_, perf, _)| *perf).collect();
+            let before_window: Vec<f32> = performance_data[i - window_size..i]
+                .iter()
+                .map(|(_, perf, _)| *perf)
+                .collect();
+            let after_window: Vec<f32> = performance_data[i..i + window_size]
+                .iter()
+                .map(|(_, perf, _)| *perf)
+                .collect();
 
             let before_avg = before_window.iter().sum::<f32>() / before_window.len() as f32;
             let after_avg = after_window.iter().sum::<f32>() / after_window.len() as f32;
@@ -386,7 +450,11 @@ impl TemporalReasoningEngine {
                 change_points.push(ChangePoint {
                     timestamp,
                     confidence: 0.7,
-                    change_type: if change_magnitude > 0.0 { "Spike".to_string() } else { "Drop".to_string() },
+                    change_type: if change_magnitude > 0.0 {
+                        "Spike".to_string()
+                    } else {
+                        "Drop".to_string()
+                    },
                     magnitude: change_magnitude.abs(),
                 });
             }
@@ -396,7 +464,11 @@ impl TemporalReasoningEngine {
     }
 
     /// Detect causality relationships in performance data
-    async fn detect_performance_causality(&self, agent_id: &str, time_range: &TimeRange) -> MemoryResult<Vec<CausalityLink>> {
+    async fn detect_performance_causality(
+        &self,
+        agent_id: &str,
+        time_range: &TimeRange,
+    ) -> MemoryResult<Vec<CausalityLink>> {
         let mut causality_links = Vec::new();
 
         // Look for correlations between task types and outcomes
@@ -467,7 +539,10 @@ impl TemporalReasoningEngine {
     }
 
     /// Calculate performance summary statistics
-    fn calculate_performance_summary(&self, performance_data: &[(DateTime<Utc>, f32, f32)]) -> PerformanceSummary {
+    fn calculate_performance_summary(
+        &self,
+        performance_data: &[(DateTime<Utc>, f32, f32)],
+    ) -> PerformanceSummary {
         if performance_data.is_empty() {
             return PerformanceSummary {
                 overall_score: 0.0,
@@ -478,14 +553,23 @@ impl TemporalReasoningEngine {
             };
         }
 
-        let scores: Vec<f32> = performance_data.iter().map(|(_, score, _)| *score).collect();
+        let scores: Vec<f32> = performance_data
+            .iter()
+            .map(|(_, score, _)| *score)
+            .collect();
         let avg_score = scores.iter().sum::<f32>() / scores.len() as f32;
-        
+
         // Create metric scores map
         let mut metric_scores = HashMap::new();
         metric_scores.insert("average".to_string(), avg_score);
-        metric_scores.insert("best".to_string(), scores.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)));
-        metric_scores.insert("worst".to_string(), scores.iter().fold(f32::INFINITY, |a, &b| a.min(b)));
+        metric_scores.insert(
+            "best".to_string(),
+            scores.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)),
+        );
+        metric_scores.insert(
+            "worst".to_string(),
+            scores.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
+        );
 
         // Calculate improvement rate (linear trend)
         let improvement_rate = if scores.len() > 1 {
@@ -502,9 +586,14 @@ impl TemporalReasoningEngine {
         };
 
         // Calculate consistency (inverse of coefficient of variation)
-        let variance = scores.iter().map(|s| (s - avg_score).powi(2)).sum::<f32>() / scores.len() as f32;
+        let variance =
+            scores.iter().map(|s| (s - avg_score).powi(2)).sum::<f32>() / scores.len() as f32;
         let std_dev = variance.sqrt();
-        let consistency_score = if avg_score > 0.0 { 1.0 - (std_dev / avg_score).min(1.0) } else { 0.0 };
+        let consistency_score = if avg_score > 0.0 {
+            1.0 - (std_dev / avg_score).min(1.0)
+        } else {
+            0.0
+        };
 
         metric_scores.insert("improvement_rate".to_string(), improvement_rate);
         metric_scores.insert("consistency".to_string(), consistency_score);
@@ -519,7 +608,11 @@ impl TemporalReasoningEngine {
     }
 
     /// Analyze capability evolution over time
-    pub async fn analyze_capability_evolution(&self, agent_id: &str, time_range: &TimeRange) -> MemoryResult<Vec<CapabilityEvolution>> {
+    pub async fn analyze_capability_evolution(
+        &self,
+        agent_id: &str,
+        time_range: &TimeRange,
+    ) -> MemoryResult<Vec<CapabilityEvolution>> {
         let capabilities_over_time = sqlx::query(
             r#"
             SELECT
@@ -542,7 +635,10 @@ impl TemporalReasoningEngine {
         .await?;
 
         let mut capability_evolution = Vec::new();
-        let mut capability_timeline: std::collections::HashMap<String, Vec<(DateTime<Utc>, i64, f64)>> = std::collections::HashMap::new();
+        let mut capability_timeline: std::collections::HashMap<
+            String,
+            Vec<(DateTime<Utc>, i64, f64)>,
+        > = std::collections::HashMap::new();
 
         // Group by capability
         for row in capabilities_over_time {
@@ -551,7 +647,8 @@ impl TemporalReasoningEngine {
             let learning_events: i64 = row.try_get("learning_events")?;
             let avg_performance: Option<f64> = row.try_get("avg_performance")?;
 
-            capability_timeline.entry(capability)
+            capability_timeline
+                .entry(capability)
                 .or_insert_with(Vec::new)
                 .push((week, learning_events, avg_performance.unwrap_or(0.0)));
         }
@@ -559,7 +656,8 @@ impl TemporalReasoningEngine {
         // Analyze evolution for each capability
         for (capability, timeline) in capability_timeline {
             if timeline.len() >= 2 {
-                let learning_rates: Vec<f64> = timeline.windows(2)
+                let learning_rates: Vec<f64> = timeline
+                    .windows(2)
                     .map(|window| {
                         let (_, events1, _) = window[0];
                         let (_, events2, _) = window[1];
@@ -567,16 +665,21 @@ impl TemporalReasoningEngine {
                     })
                     .collect();
 
-                let avg_learning_rate = learning_rates.iter().sum::<f64>() / learning_rates.len() as f64;
-                let latest_performance = timeline.last().map(|(_, _, perf)| *perf as f32).unwrap_or(0.0);
+                let avg_learning_rate =
+                    learning_rates.iter().sum::<f64>() / learning_rates.len() as f64;
+                let latest_performance = timeline
+                    .last()
+                    .map(|(_, _, perf)| *perf as f32)
+                    .unwrap_or(0.0);
 
                 // Create evolution points from timeline
-                let evolution_points: Vec<EvolutionPoint> = timeline.iter()
+                let evolution_points: Vec<EvolutionPoint> = timeline
+                    .iter()
                     .map(|(timestamp, events, performance)| {
                         let mut metrics = HashMap::new();
                         metrics.insert("learning_events".to_string(), *events as f32);
                         metrics.insert("performance".to_string(), *performance as f32);
-                        
+
                         EvolutionPoint {
                             timestamp: *timestamp,
                             level: (*performance as f32).min(1.0).max(0.0),
@@ -590,7 +693,9 @@ impl TemporalReasoningEngine {
                     capability: capability,
                     timeline: evolution_points,
                     current_level: latest_performance.min(1.0).max(0.0),
-                    predicted_level: (latest_performance + avg_learning_rate as f32).min(1.0).max(0.0),
+                    predicted_level: (latest_performance + avg_learning_rate as f32)
+                        .min(1.0)
+                        .max(0.0),
                     learning_rate: avg_learning_rate as f32,
                 });
             }
@@ -600,7 +705,11 @@ impl TemporalReasoningEngine {
     }
 
     /// Predict future performance based on historical patterns
-    pub async fn predict_future_performance(&self, agent_id: &str, days_ahead: i64) -> MemoryResult<PerformancePrediction> {
+    pub async fn predict_future_performance(
+        &self,
+        agent_id: &str,
+        days_ahead: i64,
+    ) -> MemoryResult<PerformancePrediction> {
         let historical_data = sqlx::query(
             r#"
             SELECT
@@ -643,7 +752,11 @@ impl TemporalReasoningEngine {
         let n = x_values.len() as f64;
         let x_sum: f64 = x_values.iter().sum();
         let y_sum: f64 = y_values.iter().sum();
-        let xy_sum: f64 = x_values.iter().zip(y_values.iter()).map(|(x, y)| x * y).sum();
+        let xy_sum: f64 = x_values
+            .iter()
+            .zip(y_values.iter())
+            .map(|(x, y)| x * y)
+            .sum();
         let x_squared_sum: f64 = x_values.iter().map(|x| x * x).sum();
 
         let slope = (n * xy_sum - x_sum * y_sum) / (n * x_squared_sum - x_sum * x_sum);

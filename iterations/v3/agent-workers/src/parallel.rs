@@ -119,7 +119,7 @@ impl ParallelCoordinator {
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| "general-purpose".to_string());
-                
+
                 let context = TaskContext {
                     task_id: subtask.id.0,
                     worker_id: WorkerId::new().0,
@@ -191,7 +191,7 @@ impl ParallelCoordinator {
                         .and_then(|v| v.as_str())
                         .map(|s| s.to_string())
                         .unwrap_or_else(|| "general-purpose".to_string());
-                    
+
                     let context = TaskContext {
                         task_id: task.id.0,
                         worker_id: WorkerId::new().0,
@@ -251,7 +251,7 @@ impl ParallelCoordinator {
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| "general-purpose".to_string());
-                
+
                 let context = TaskContext {
                     task_id: subtask.id.0,
                     worker_id: WorkerId::new().0,
@@ -314,7 +314,7 @@ impl ParallelCoordinator {
             let (title, description) = self.extract_pattern_info(pattern);
             let complexity = self.calculate_pattern_complexity(pattern);
             let priority = self.convert_priority(&main_task.priority);
-            
+
             let subtask = SubTask {
                 id: SubTaskId::new(),
                 parent_task_id: task_id.clone(),
@@ -338,7 +338,7 @@ impl ParallelCoordinator {
 
         Ok(subtasks)
     }
-    
+
     /// Extract title and description from TaskPattern enum
     fn extract_pattern_info(&self, pattern: &crate::decomposition::TaskPattern) -> (String, String) {
         match pattern {
@@ -346,7 +346,7 @@ impl ParallelCoordinator {
                 let count: usize = error_groups.iter().map(|eg| eg.error_count).sum();
                 (
                     format!("Fix {} compilation errors", count),
-                    format!("Resolve {} compilation errors across {} files", 
+                    format!("Resolve {} compilation errors across {} files",
                         count, error_groups.len())
                 )
             }
@@ -370,21 +370,21 @@ impl ParallelCoordinator {
             }
         }
     }
-    
+
     /// Calculate complexity score for a pattern
     fn calculate_pattern_complexity(&self, pattern: &crate::decomposition::TaskPattern) -> f64 {
         match pattern {
-            crate::decomposition::TaskPattern::CompilationErrors { error_groups } => 
+            crate::decomposition::TaskPattern::CompilationErrors { error_groups } =>
                 error_groups.len() as f64 * 2.0,
-            crate::decomposition::TaskPattern::RefactoringOperations { operations } => 
+            crate::decomposition::TaskPattern::RefactoringOperations { operations } =>
                 operations.len() as f64 * 3.0,
-            crate::decomposition::TaskPattern::TestingGaps { missing_tests } => 
+            crate::decomposition::TaskPattern::TestingGaps { missing_tests } =>
                 missing_tests.len() as f64 * 1.5,
-            crate::decomposition::TaskPattern::DocumentationNeeds { files_needing_docs } => 
+            crate::decomposition::TaskPattern::DocumentationNeeds { files_needing_docs } =>
                 files_needing_docs.len() as f64 * 0.5,
         }
     }
-    
+
     /// Convert TaskPriority to ParallelPriority
     fn convert_priority(&self, priority: &TaskPriority) -> ParallelPriority {
         match priority {
@@ -394,7 +394,7 @@ impl ParallelCoordinator {
             TaskPriority::Critical => ParallelPriority::Critical,
         }
     }
-    
+
     /// Get pattern type name as string
     fn get_pattern_type_name(&self, pattern: &crate::decomposition::TaskPattern) -> String {
         match pattern {
@@ -413,19 +413,19 @@ impl ParallelCoordinator {
     /// - Tool-based dependencies
     async fn calculate_dependencies(&self, subtasks: &[SubTask]) -> Result<Vec<TaskDependency>, ParallelError> {
         use std::collections::{HashMap, HashSet};
-        
+
         let mut dependencies = Vec::new();
         let mut file_to_tasks: HashMap<String, HashSet<usize>> = HashMap::new();
 
         // Build file reference map from metadata and descriptions
         for (idx, subtask) in subtasks.iter().enumerate() {
             let mut files = HashSet::new();
-            
+
             // Extract files from description
             if let Some(files_in_desc) = self.extract_file_references(&subtask.description) {
                 files.extend(files_in_desc);
             }
-            
+
             // Extract files from metadata
             if let Some(files_metadata) = subtask.metadata.get("files")
                 .and_then(|v| v.as_array())
@@ -433,7 +433,7 @@ impl ParallelCoordinator {
             {
                 files.extend(files_metadata);
             }
-            
+
             // Extract input/output files from metadata
             if let Some(input_files) = subtask.metadata.get("input_files")
                 .and_then(|v| v.as_array())
@@ -441,14 +441,14 @@ impl ParallelCoordinator {
             {
                 files.extend(input_files);
             }
-            
+
             if let Some(output_files) = subtask.metadata.get("output_files")
                 .and_then(|v| v.as_array())
                 .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<HashSet<_>>())
             {
                 files.extend(output_files);
             }
-            
+
             // Map files to tasks
             for file in files {
                 file_to_tasks.entry(file).or_insert_with(HashSet::new).insert(idx);
@@ -469,26 +469,26 @@ impl ParallelCoordinator {
                     }
                 }
             }
-            
+
             // Check file-based dependencies
             let task1_files = self.get_task_files(subtask);
             for (j, subtask2) in subtasks.iter().enumerate() {
                 if j >= i {
                     continue;
                 }
-                
+
                 let task2_files = self.get_task_files(subtask2);
-                
+
                 // Data dependency: task1 reads files that task2 writes
-                let data_dependency = !task1_files.is_empty() && 
+                let data_dependency = !task1_files.is_empty() &&
                     !task2_files.is_empty() &&
                     task1_files.iter().any(|f| task2_files.contains(f));
-                
+
                 // Resource dependency: same files accessed
                 let resource_dependency = !task1_files.is_empty() &&
                     !task2_files.is_empty() &&
                     task1_files.iter().any(|f| task2_files.contains(f));
-                
+
                 // Use has_dependency for specialty/tool-based dependencies
                 if self.has_dependency(subtask, subtask2) || data_dependency || resource_dependency {
                     let dep_type = if data_dependency {
@@ -498,7 +498,7 @@ impl ParallelCoordinator {
                     } else {
                         DependencyType::Sequential
                     };
-                    
+
                     dependencies.push(TaskDependency {
                         dependent_task: subtask.id,
                         dependency_task: subtask2.id,
@@ -510,38 +510,38 @@ impl ParallelCoordinator {
 
         Ok(dependencies)
     }
-    
+
     /// Extract file references from description text
     fn extract_file_references(&self, description: &str) -> Option<HashSet<String>> {
         use regex::Regex;
-        
+
         // Match common file path patterns
         let file_pattern = Regex::new(r#"(?:^|\s)(?:\./)?([a-zA-Z0-9_\-./]+\.(?:rs|ts|tsx|js|jsx|py|go|java|cpp|h|hpp|md|json|yaml|yml|toml|sh|sql|css|html))(?:\s|$)"#)
             .ok()?;
-        
+
         let mut files = HashSet::new();
         for cap in file_pattern.captures_iter(description) {
             if let Some(file) = cap.get(1) {
                 files.insert(file.as_str().to_string());
             }
         }
-        
+
         if files.is_empty() {
             None
         } else {
             Some(files)
         }
     }
-    
+
     /// Get all files referenced by a task (from metadata and description)
     fn get_task_files(&self, subtask: &SubTask) -> HashSet<String> {
         let mut files = HashSet::new();
-        
+
         // Extract from description
         if let Some(desc_files) = self.extract_file_references(&subtask.description) {
             files.extend(desc_files);
         }
-        
+
         // Extract from metadata
         if let Some(files_array) = subtask.metadata.get("files")
             .and_then(|v| v.as_array())
@@ -552,7 +552,7 @@ impl ParallelCoordinator {
                 }
             }
         }
-        
+
         // Extract input/output files
         if let Some(input_files) = subtask.metadata.get("input_files")
             .and_then(|v| v.as_array())
@@ -563,7 +563,7 @@ impl ParallelCoordinator {
                 }
             }
         }
-        
+
         if let Some(output_files) = subtask.metadata.get("output_files")
             .and_then(|v| v.as_array())
         {
@@ -573,32 +573,32 @@ impl ParallelCoordinator {
                 }
             }
         }
-        
+
         files
     }
 
     /// Select coordination strategy based on task analysis
     fn select_coordination_strategy(&self, analysis: &crate::decomposition::TaskAnalysis) -> CoordinationStrategy {
         // Analyze task characteristics to determine optimal coordination strategy
-        
+
         // Factor 1: Parallelization score - higher score favors parallel execution
         let parallelization_score = analysis.subtask_scores.parallelization_score;
-        
+
         // Factor 2: Task complexity - high complexity may need sequential dependencies
         let complexity_score = analysis.complexity_score;
-        
+
         // Factor 3: Number of patterns - more patterns may benefit from parallel execution
         let pattern_count = analysis.patterns.len();
-        
+
         // Factor 4: Recommended workers - if few workers, sequential may be better
         let recommended_workers = analysis.recommended_workers;
-        
+
         // Decision logic:
         // - High parallelization score (>0.7) + many workers (>4) -> FullyParallel
         // - Medium parallelization (0.4-0.7) + dependencies -> SequentialDependencies
         // - Low parallelization (<0.4) or high complexity -> SequentialDependencies
         // - Otherwise -> Adaptive
-        
+
         if parallelization_score > 0.7 && recommended_workers > 4 && pattern_count > 2 {
             CoordinationStrategy::FullyParallel
         } else if parallelization_score < 0.4 || complexity_score > 0.8 {
@@ -625,24 +625,24 @@ impl ParallelCoordinator {
     /// Check if two subtasks have a dependency
     fn has_dependency(&self, task1: &SubTask, task2: &SubTask) -> bool {
         // Analyze task relationships to detect dependencies
-        
+
         // Dependency 1: Explicit dependency list
         // Check if task1 explicitly depends on task2
         if task1.dependencies.contains(&task2.id) {
             return true;
         }
-        
+
         // Dependency 2: Description-based dependencies
         // Some tasks naturally depend on others (e.g., testing depends on compilation)
         let desc1 = task1.description.to_lowercase();
         let desc2 = task2.description.to_lowercase();
-        
-        let specialty_dependency = 
+
+        let specialty_dependency =
             (desc1.contains("test") && desc2.contains("compile")) ||
             (desc1.contains("refactor") && desc2.contains("compile")) ||
             (desc1.contains("document") && desc2.contains("refactor")) ||
             (desc1.contains("document") && desc2.contains("compile"));
-        
+
         // Dependency 3: Tool-based dependencies (check metadata for tool info)
         // Some tools depend on outputs from other tools
         let tool_dependency = {
@@ -652,12 +652,12 @@ impl ParallelCoordinator {
             let tool2 = task2.metadata.get("pattern_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            
+
             (tool1.contains("test") && tool2.contains("compile")) ||
             (tool1.contains("document") && tool2.contains("refactor")) ||
             (tool1.contains("document") && tool2.contains("compile"))
         };
-        
+
         specialty_dependency || tool_dependency
     }
 }

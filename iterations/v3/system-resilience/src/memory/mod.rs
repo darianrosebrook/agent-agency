@@ -6,18 +6,18 @@
 //! Provides comprehensive memory monitoring, object pooling, leak detection,
 //! and garbage collection optimization for production workloads.
 
-pub mod integration;
-pub mod types;
-pub mod allocator;
-pub mod metrics;
-pub mod resources;
 pub mod allocation;
-pub mod monitor;
-pub mod manager;
-pub mod compaction;
-pub mod pool;
+pub mod allocator;
 pub mod cache;
+pub mod compaction;
+pub mod integration;
 pub mod leaks;
+pub mod manager;
+pub mod metrics;
+pub mod monitor;
+pub mod pool;
+pub mod resources;
+pub mod types;
 
 // Global registry for orphaned objects that couldn't be returned to pools
 // Used as a fallback when tokio runtime is unavailable
@@ -27,11 +27,10 @@ pub static ORPHANED_OBJECTS: std::sync::Mutex<Vec<Box<dyn std::any::Any + Send +
 
 // All functionality has been moved to focused submodules
 // Re-export all public APIs for backward compatibility
-pub use manager::{MemoryManager, MemoryManagementConfig};
-pub use types::MemoryLimitConfig;
+pub use allocation::{AllocationRecord, AllocationSite, AllocationSiteTracker};
+pub use manager::{MemoryManagementConfig, MemoryManager};
 pub use metrics::MemoryPressure;
-pub use allocation::{AllocationSiteTracker, AllocationSite, AllocationRecord};
-pub use types::TaskAllocationStats;
-pub use resources::{HandleType, HandleInfo, ResourceHandle};
+pub use resources::{HandleInfo, HandleType, ResourceHandle};
+pub use types::MemoryLimitConfig;
 pub use types::ObjectRef;
-
+pub use types::TaskAllocationStats;

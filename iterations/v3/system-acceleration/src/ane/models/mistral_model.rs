@@ -3,20 +3,20 @@
 //! This module provides Mistral-7B-Instruct-v0.3 CoreML model integration
 //! with tokenization, KV caching, and constitutional reasoning capabilities.
 
-use schemars::JsonSchema;
+use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
 use crate::ane::ane_errors::{ANEError, Result};
 use crate::ane::compat::coreml as coreml_bridge;
-use crate::ane::compat::coreml::{MLModelConfiguration, MLComputeUnits, KvStateHandle};
-use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
+use crate::ane::compat::coreml::{KvStateHandle, MLComputeUnits, MLModelConfiguration};
 use crate::telemetry::TelemetryCollector;
+use schemars::JsonSchema;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use std::sync::Arc;
+use std::time::Instant;
 
 /// Safe model reference that can be sent across threads
 /// The actual CoreML handle is stored in a thread-local registry
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]
-pub struct SafeModelHandle (crate::ane::compat::coreml::ModelRef);
+pub struct SafeModelHandle(crate::ane::compat::coreml::ModelRef);
 
 impl SafeModelHandle {
     pub fn new(model_ref: crate::ane::compat::coreml::ModelRef) -> Self {
@@ -192,7 +192,13 @@ impl KVCache {
 
     /// Configure cache with model architecture metadata and initialize Core ML state
     /// Called once model config is known
-    pub fn configure(&mut self, n_layers: usize, n_kv_heads: usize, head_dim: usize, model_handle: &SafeModelHandle) -> Result<()> {
+    pub fn configure(
+        &mut self,
+        n_layers: usize,
+        n_kv_heads: usize,
+        head_dim: usize,
+        model_handle: &SafeModelHandle,
+    ) -> Result<()> {
         self.n_layers = n_layers;
         self.n_kv_heads = n_kv_heads;
         self.head_dim = head_dim;
@@ -212,7 +218,10 @@ impl KVCache {
                 tracing::info!("Initialized Core ML KV cache state for {} layers", n_layers);
             }
             Err(e) => {
-                tracing::warn!("Failed to create Core ML KV state, falling back to CPU: {}", e);
+                tracing::warn!(
+                    "Failed to create Core ML KV state, falling back to CPU: {}",
+                    e
+                );
                 self.coreml_state = None;
             }
         }
@@ -303,9 +312,10 @@ fn validate_options(opts: &MistralCompilationOptions) -> Result<()> {
     if let Some(p) = &opts.precision {
         let valid_precisions = ["fp16", "int8", "int4"];
         if !valid_precisions.contains(&p.as_str()) {
-            return Err(ANEError::InvalidModelFormat(
-                format!("Unsupported precision '{}'. Valid values: {:?}", p, valid_precisions)
-            ));
+            return Err(ANEError::InvalidModelFormat(format!(
+                "Unsupported precision '{}'. Valid values: {:?}",
+                p, valid_precisions
+            )));
         }
     }
     Ok(())
@@ -319,7 +329,7 @@ pub async fn load_mistral_model(
 ) -> Result<MistralModel> {
     // Validate options before proceeding
     validate_options(options)?;
-    
+
     let start_time = Instant::now();
 
     // Load model through CoreML bridge
@@ -382,7 +392,8 @@ async fn compile_if_needed(
     source_path: &Path,
     options: &MistralCompilationOptions,
 ) -> Result<PathBuf> {
-    let ext = source_path.extension()
+    let ext = source_path
+        .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("");
 
@@ -390,43 +401,38 @@ async fn compile_if_needed(
         "mlmodelc" => {
             // Already compiled
             if !source_path.exists() {
-                return Err(ANEError::ModelNotFound(
-                    source_path.display().to_string()
-                ));
+                return Err(ANEError::ModelNotFound(source_path.display().to_string()));
             }
             Ok(source_path.to_path_buf())
         }
         "mlmodel" => {
             // Need to compile
             if !source_path.exists() {
-                return Err(ANEError::ModelNotFound(
-                    source_path.display().to_string()
-                ));
+                return Err(ANEError::ModelNotFound(source_path.display().to_string()));
             }
 
             // Compile Mistral model for ANE
             let compiled_path = source_path.with_extension("mlmodelc");
-            
+
             // Check if already compiled and up-to-date
             if compiled_path.exists() {
-                let source_modified = std::fs::metadata(source_path)?
-                    .modified()?;
-                let compiled_modified = std::fs::metadata(&compiled_path)?
-                    .modified()?;
-                
+                let source_modified = std::fs::metadata(source_path)?.modified()?;
+                let compiled_modified = std::fs::metadata(&compiled_path)?.modified()?;
+
                 if compiled_modified >= source_modified {
                     return Ok(compiled_path);
                 }
             }
-            
+
             // Compile the model with Mistral-specific optimizations
             compile_mistral_model(source_path, &compiled_path, options)?;
-            
+
             Ok(compiled_path)
         }
-        _ => Err(ANEError::InvalidModelFormat(
-            format!("Unsupported model format: {}", ext)
-        )),
+        _ => Err(ANEError::InvalidModelFormat(format!(
+            "Unsupported model format: {}",
+            ext
+        ))),
     }
 }
 
@@ -467,7 +473,9 @@ fn discover_context_len_or_default(default: usize) -> usize {
 }
 
 /// Extract model schema from loaded model
-async fn extract_model_schema(_handle: crate::ane::compat::coreml::ModelRef) -> Result<ModelSchema> {
+async fn extract_model_schema(
+    _handle: crate::ane::compat::coreml::ModelRef,
+) -> Result<ModelSchema> {
     // TODO: Extract actual model schema through CoreML bridge
     //       Currently returns default schema; should extract actual model schema from CoreML model handle.
     //
@@ -500,7 +508,8 @@ async fn extract_model_schema(_handle: crate::ane::compat::coreml::ModelRef) -> 
     // - CAWS Tier: 2 (model metadata feature)
     // - Change Budget: ~80 LOC
     // - Reviewer Requirements: Core ML expertise
-    Ok(ModelSchema { // Temporary: default Mistral schema until CoreML extraction is implemented
+    Ok(ModelSchema {
+        // Temporary: default Mistral schema until CoreML extraction is implemented
         inputs: vec![
             TensorSpec {
                 name: "input_ids".to_string(),
@@ -529,7 +538,7 @@ async fn extract_model_schema(_handle: crate::ane::compat::coreml::ModelRef) -> 
 pub fn estimate_memory_usage(model: &MistralModel) -> usize {
     // Parameters (typical Mistral-7B): n_params ≈ 7e9, n_layers=32, n_kv_heads=8, head_dim=128
     let n_params = 7_000_000_000usize;
-    
+
     // Precision is a property of the weights; assume int4 by default (0.5 bytes per param)
     let bytes_per_param = 1usize / 2; // 0.5 B for int4
     let model_bytes = n_params.saturating_mul(bytes_per_param);
@@ -539,14 +548,14 @@ pub fn estimate_memory_usage(model: &MistralModel) -> usize {
     let n_kv_heads = 8usize;
     let head_dim = 128usize;
     let bytes_per_val = 2usize; // fp16 cache (2 bytes)
-    
+
     // KV cache per token: 2 (K,V) * layers * heads * head_dim * bytes
     let kv_per_token = 2usize * n_layers * n_kv_heads * head_dim * bytes_per_val;
     let kv_bytes = kv_per_token.saturating_mul(ctx);
 
     let overhead_bytes = 512 * 1024 * 1024; // 512MB overhead
     let total_bytes = model_bytes + kv_bytes + overhead_bytes;
-    
+
     total_bytes / (1024 * 1024) // Return MB
 }
 
@@ -699,13 +708,12 @@ fn compile_mistral_model(
 ) -> Result<()> {
     #[cfg(target_os = "macos")]
     {
-        
         // Load the source model
         let model = crate::ane::compat::coreml::load_model(source_path.to_str().unwrap())?;
-        
+
         // Create compilation configuration optimized for Mistral
         let mut config = MLModelConfiguration::new();
-        
+
         // Note: Quantization level (int4/int8/fp16) is a property of the compiled model itself.
         // The configuration here only selects compute units and tolerance settings.
         // Map compute_units string to MLComputeUnits enum
@@ -715,28 +723,37 @@ fn compile_mistral_model(
             Some("cpuAndGpu") => config.set_compute_units(MLComputeUnits::CpuAndGpu),
             _ => config.set_compute_units(MLComputeUnits::All),
         }
-        
+
         // Enable low-precision accumulation for better performance
         config.set_allow_low_precision_accumulation_on_gpu(true);
-        
+
         // Set context length optimization
         if let Some(context_length) = options.context_length {
             // Configure for specific context length
             // This would be handled by the model's internal configuration
-            tracing::info!("Compiling Mistral model for context length: {}", context_length);
+            tracing::info!(
+                "Compiling Mistral model for context length: {}",
+                context_length
+            );
         }
-        
+
         // Save compiled model to disk using scoped access
-        model.save_to_path(compiled_path)
-            .map_err(|e| ANEError::CompilationFailed(format!("Failed to save compiled Mistral model: {:?}", e)))?;
-        
-        tracing::info!("Successfully compiled Mistral model to: {}", compiled_path.display());
+        model.save_to_path(compiled_path).map_err(|e| {
+            ANEError::CompilationFailed(format!("Failed to save compiled Mistral model: {:?}", e))
+        })?;
+
+        tracing::info!(
+            "Successfully compiled Mistral model to: {}",
+            compiled_path.display()
+        );
         Ok(())
     }
-    
+
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML compilation not available on this platform"))
+        Err(ANEError::Internal(
+            "Core ML compilation not available on this platform",
+        ))
     }
 }
 
@@ -748,7 +765,7 @@ mod tests {
     fn test_tokenizer_encode_decode() {
         let tokenizer = SafeMistralTokenizer::new();
         let test_text = "Hello, world!";
-        
+
         // Try to encode - may fail if tokenizer files aren't available
         let tokens = match tokenizer.encode(test_text) {
             Ok(tokens) => tokens,
@@ -757,7 +774,7 @@ mod tests {
                 return;
             }
         };
-        
+
         // Try to decode
         let decoded = match tokenizer.decode(&tokens) {
             Ok(decoded) => decoded,
@@ -766,7 +783,7 @@ mod tests {
                 return;
             }
         };
-        
+
         assert!(!tokens.is_empty());
         assert!(!decoded.is_empty());
     }
@@ -786,16 +803,14 @@ mod tests {
                     dtype: "int32".to_string(),
                 },
             ],
-            outputs: vec![
-                TensorSpec {
-                    name: "logits".to_string(),
-                    shape: vec![1, 32000],
-                    dtype: "float32".to_string(),
-                }
-            ],
+            outputs: vec![TensorSpec {
+                name: "logits".to_string(),
+                shape: vec![1, 32000],
+                dtype: "float32".to_string(),
+            }],
             context_length: 4096,
         };
-        
+
         assert_eq!(s.inputs[0].dtype, "int32");
         assert_eq!(s.outputs[0].shape, vec![1, 32000]);
     }

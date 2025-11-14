@@ -6,15 +6,15 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
-use uuid::Uuid;
-use tracing::debug;
 use chrono::Utc;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::debug;
+use uuid::Uuid;
 
 #[cfg(feature = "mcp")]
-use agent_mcp::{ToolRegistry, MCPTool, ToolType, ToolCapability};
+use agent_mcp::{MCPTool, ToolCapability, ToolRegistry, ToolType};
 
 /// CAWS-specific tool category for adjudication
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -38,25 +38,25 @@ pub enum CawsToolCategory {
 pub struct CawsToolMetadata {
     /// Tool ID
     pub tool_id: Uuid,
-    
+
     /// Tool name
     pub name: String,
-    
+
     /// Tool description
     pub description: String,
-    
+
     /// CAWS tool category
     pub category: CawsToolCategory,
-    
+
     /// CAWS compliance status
     pub is_caws_compliant: bool,
-    
+
     /// Tool capabilities relevant to CAWS
     pub caws_capabilities: Vec<CawsToolCapability>,
-    
+
     /// Last verification timestamp
     pub last_verified: Option<chrono::DateTime<Utc>>,
-    
+
     /// Usage count in adjudication cycles
     pub usage_count: u64,
 }
@@ -87,10 +87,10 @@ pub struct CawsToolRegistry {
     /// Underlying MCP tool registry
     #[cfg(feature = "mcp")]
     mcp_registry: Arc<ToolRegistry>,
-    
+
     /// CAWS tool metadata cache
     caws_tools: Arc<tokio::sync::RwLock<HashMap<Uuid, CawsToolMetadata>>>,
-    
+
     /// Tool category index
     category_index: Arc<tokio::sync::RwLock<HashMap<CawsToolCategory, Vec<Uuid>>>>,
 }
@@ -129,12 +129,15 @@ impl CawsToolRegistry {
             // Check if tool is CAWS-relevant
             if self.is_caws_relevant(&tool) {
                 let metadata = self.create_caws_metadata(&tool).await?;
-                
+
                 // Register in CAWS registry
                 self.register_caws_tool(metadata.clone()).await?;
-                
+
                 discovered_count += 1;
-                info!("Discovered CAWS tool: {} ({})", metadata.name, metadata.tool_id);
+                info!(
+                    "Discovered CAWS tool: {} ({})",
+                    metadata.name, metadata.tool_id
+                );
             }
         }
 
@@ -386,7 +389,7 @@ impl CawsToolRegistry {
         tool_id: &Uuid,
         parameters: std::collections::HashMap<String, serde_json::Value>,
     ) -> Result<ToolInvocationResult> {
-        use agent_mcp::{ToolExecutionRequest, ExecutionPriority};
+        use agent_mcp::{ExecutionPriority, ToolExecutionRequest};
         use chrono::Utc;
 
         // Create execution request
@@ -410,7 +413,8 @@ impl CawsToolRegistry {
             success: matches!(result.status, agent_mcp::ExecutionStatus::Completed),
             output: result.output,
             error: result.error,
-            caws_compliant: result.caws_compliance_result
+            caws_compliant: result
+                .caws_compliance_result
                 .as_ref()
                 .map(|r| matches!(r.status, agent_mcp::CawsComplianceStatus::Compliant))
                 .unwrap_or(true), // Assume compliant if no compliance check
@@ -427,4 +431,3 @@ pub struct ToolInvocationResult {
     pub error: Option<String>,
     pub caws_compliant: bool,
 }
-

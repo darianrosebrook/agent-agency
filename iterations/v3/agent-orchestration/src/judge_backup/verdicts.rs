@@ -3,8 +3,9 @@
 //! Core verdict types for judge evaluations, including approval,
 //! refinement, and rejection verdicts with associated metadata.
 
+use crate::judge_backup::risk::RiskAssessment;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use crate::judge_backup::risk::RiskAssessment;
+use serde::{Deserialize, Serialize};
 
 /// Judge verdict on a working specification
 

@@ -4,10 +4,10 @@
 //! stages and collect/aggregate validation results according to configurable policies.
 
 use crate::{
-    traits::ExecutablePipeline,
     config::ValidationPipelineConfig,
     error::{PipelineError, PipelineResult},
     metrics::PipelineMetrics,
+    traits::ExecutablePipeline,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ impl ValidationResult {
     pub fn fail(
         severity: ValidationSeverity,
         category: impl Into<String>,
-        message: impl Into<String>
+        message: impl Into<String>,
     ) -> Self {
         Self {
             passed: false,
@@ -120,7 +120,9 @@ impl ValidationResults {
         if config.stop_on_first_error {
             // Stop on any error or critical issue
             self.results.iter().any(|r| {
-                !r.passed && (r.severity >= ValidationSeverity::Error || r.severity >= config.severity_threshold)
+                !r.passed
+                    && (r.severity >= ValidationSeverity::Error
+                        || r.severity >= config.severity_threshold)
             })
         } else {
             false
@@ -272,13 +274,13 @@ impl ValidationPipeline {
 
             debug!("Running validation stage: {}", stage_name);
 
-            match tokio::time::timeout(
-                self.config.max_validation_time,
-                stage.validate(input)
-            ).await {
+            match tokio::time::timeout(self.config.max_validation_time, stage.validate(input)).await
+            {
                 Ok(Ok(stage_results)) => {
                     let stage_duration = stage_start.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(stage_name, stage_duration, true).await;
+                    self.metrics
+                        .record_stage_execution(stage_name, stage_duration, true)
+                        .await;
 
                     for result in stage_results {
                         results.add_result(result);
@@ -292,8 +294,12 @@ impl ValidationPipeline {
                 }
                 Ok(Err(e)) => {
                     let stage_duration = stage_start.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(stage_name, stage_duration, false).await;
-                    self.metrics.record_error(&format!("stage_{}", stage_name)).await;
+                    self.metrics
+                        .record_stage_execution(stage_name, stage_duration, false)
+                        .await;
+                    self.metrics
+                        .record_error(&format!("stage_{}", stage_name))
+                        .await;
 
                     warn!("Validation stage {} failed: {}", stage_name, e);
 
@@ -301,7 +307,7 @@ impl ValidationPipeline {
                     let error_result = ValidationResult::fail(
                         ValidationSeverity::Error,
                         format!("stage_{}", stage_name),
-                        format!("Stage failed: {}", e)
+                        format!("Stage failed: {}", e),
                     );
                     results.add_result(error_result);
 
@@ -311,7 +317,13 @@ impl ValidationPipeline {
                     }
                 }
                 Err(_) => {
-                    self.metrics.record_stage_execution(stage_name, self.config.max_validation_time.as_millis() as u64, false).await;
+                    self.metrics
+                        .record_stage_execution(
+                            stage_name,
+                            self.config.max_validation_time.as_millis() as u64,
+                            false,
+                        )
+                        .await;
                     self.metrics.record_error("stage_timeout").await;
 
                     warn!("Validation stage {} timed out", stage_name);
@@ -319,7 +331,7 @@ impl ValidationPipeline {
                     let timeout_result = ValidationResult::fail(
                         ValidationSeverity::Error,
                         format!("stage_{}", stage_name),
-                        "Stage timed out"
+                        "Stage timed out",
                     );
                     results.add_result(timeout_result);
 
@@ -343,7 +355,10 @@ impl ExecutablePipeline<serde_json::Value, ValidationResults> for ValidationPipe
     async fn execute(&self, input: serde_json::Value) -> PipelineResult<ValidationResults> {
         let start_time = std::time::Instant::now();
 
-        info!("Starting validation pipeline with {} stages", self.stages.len());
+        info!(
+            "Starting validation pipeline with {} stages",
+            self.stages.len()
+        );
 
         let result = self.run_validation(&input).await;
         let duration = start_time.elapsed().as_millis() as u64;
@@ -353,8 +368,10 @@ impl ExecutablePipeline<serde_json::Value, ValidationResults> for ValidationPipe
 
         match &result {
             Ok(results) => {
-                info!("Validation pipeline completed in {}ms: {} passed, {} failed",
-                      duration, results.summary.passed, results.summary.failed);
+                info!(
+                    "Validation pipeline completed in {}ms: {} passed, {} failed",
+                    duration, results.summary.passed, results.summary.failed
+                );
             }
             Err(e) => {
                 self.metrics.record_error("pipeline_execution").await;
@@ -366,9 +383,8 @@ impl ExecutablePipeline<serde_json::Value, ValidationResults> for ValidationPipe
     }
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
-        futures::executor::block_on(async {
-            self.metrics.to_json().await
-        }).map_err(|e| PipelineError::Metrics(e.to_string()))
+        futures::executor::block_on(async { self.metrics.to_json().await })
+            .map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 
     fn health_status(&self) -> PipelineResult<crate::PipelineHealth> {
@@ -388,7 +404,7 @@ mod tests {
 
     // Mock validation stage
     #[derive(Debug)]
-struct MockValidationStage {
+    struct MockValidationStage {
         name: String,
         results: Vec<ValidationResult>,
         should_fail: bool,
@@ -410,7 +426,7 @@ struct MockValidationStage {
                 results: vec![ValidationResult::fail(
                     ValidationSeverity::Error,
                     "test",
-                    "Mock failure"
+                    "Mock failure",
                 )],
                 should_fail: true,
             }
@@ -423,7 +439,10 @@ struct MockValidationStage {
             &self.name
         }
 
-        async fn validate(&self, _input: &serde_json::Value) -> PipelineResult<Vec<ValidationResult>> {
+        async fn validate(
+            &self,
+            _input: &serde_json::Value,
+        ) -> PipelineResult<Vec<ValidationResult>> {
             if self.should_fail {
                 return Err(PipelineError::Execution("Mock stage failure".to_string()));
             }
@@ -436,14 +455,18 @@ struct MockValidationStage {
         let config = ValidationPipelineConfig::default();
         let mut pipeline = ValidationPipeline::new(config);
 
-        let stage1 = Box::new(MockValidationStage::new("stage1", vec![
-            ValidationResult::pass("test1", "Test 1 passed"),
-            ValidationResult::pass("test2", "Test 2 passed"),
-        ]));
+        let stage1 = Box::new(MockValidationStage::new(
+            "stage1",
+            vec![
+                ValidationResult::pass("test1", "Test 1 passed"),
+                ValidationResult::pass("test2", "Test 2 passed"),
+            ],
+        ));
 
-        let stage2 = Box::new(MockValidationStage::new("stage2", vec![
-            ValidationResult::pass("test3", "Test 3 passed"),
-        ]));
+        let stage2 = Box::new(MockValidationStage::new(
+            "stage2",
+            vec![ValidationResult::pass("test3", "Test 3 passed")],
+        ));
 
         pipeline.add_stage(stage1);
         pipeline.add_stage(stage2);
@@ -468,14 +491,22 @@ struct MockValidationStage {
         };
         let mut pipeline = ValidationPipeline::new(config);
 
-        let stage1 = Box::new(MockValidationStage::new("stage1", vec![
-            ValidationResult::pass("test1", "Test 1 passed"),
-            ValidationResult::fail(ValidationSeverity::Warning, "test2", "Test 2 failed"),
-        ]));
+        let stage1 = Box::new(MockValidationStage::new(
+            "stage1",
+            vec![
+                ValidationResult::pass("test1", "Test 1 passed"),
+                ValidationResult::fail(ValidationSeverity::Warning, "test2", "Test 2 failed"),
+            ],
+        ));
 
-        let stage2 = Box::new(MockValidationStage::new("stage2", vec![
-            ValidationResult::fail(ValidationSeverity::Error, "test3", "Test 3 failed"),
-        ]));
+        let stage2 = Box::new(MockValidationStage::new(
+            "stage2",
+            vec![ValidationResult::fail(
+                ValidationSeverity::Error,
+                "test3",
+                "Test 3 failed",
+            )],
+        ));
 
         pipeline.add_stage(stage1);
         pipeline.add_stage(stage2);
@@ -502,13 +533,21 @@ struct MockValidationStage {
         };
         let mut pipeline = ValidationPipeline::new(config);
 
-        let stage1 = Box::new(MockValidationStage::new("stage1", vec![
-            ValidationResult::fail(ValidationSeverity::Error, "test1", "Test 1 failed"),
-        ]));
+        let stage1 = Box::new(MockValidationStage::new(
+            "stage1",
+            vec![ValidationResult::fail(
+                ValidationSeverity::Error,
+                "test1",
+                "Test 1 failed",
+            )],
+        ));
 
-        let stage2 = Box::new(MockValidationStage::new("stage2", vec![
-            ValidationResult::pass("test2", "Test 2 passed"), // This should not run
-        ]));
+        let stage2 = Box::new(MockValidationStage::new(
+            "stage2",
+            vec![
+                ValidationResult::pass("test2", "Test 2 passed"), // This should not run
+            ],
+        ));
 
         pipeline.add_stage(stage1);
         pipeline.add_stage(stage2);

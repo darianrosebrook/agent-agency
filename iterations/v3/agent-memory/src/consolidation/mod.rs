@@ -3,15 +3,15 @@
 //! Automatic memory consolidation through semantic clustering, summarization, and deduplication.
 
 use serde::{Deserialize, Serialize};
+pub mod consolidation_engine;
+pub mod deduplication;
 pub mod semantic_clustering;
 pub mod summarization;
-pub mod deduplication;
-pub mod consolidation_engine;
 
+pub use consolidation_engine::*;
+pub use deduplication::*;
 pub use semantic_clustering::*;
 pub use summarization::*;
-pub use deduplication::*;
-pub use consolidation_engine::*;
 
 /// Consolidation configuration
 #[derive(Debug, Clone)]
@@ -64,10 +64,17 @@ pub struct ConsolidationStats {
 #[async_trait::async_trait]
 pub trait ConsolidationEngine: Send + Sync {
     /// Run full consolidation cycle
-    async fn consolidate(&self, config: &ConsolidationConfig) -> crate::MemoryResult<ConsolidationResult>;
+    async fn consolidate(
+        &self,
+        config: &ConsolidationConfig,
+    ) -> crate::MemoryResult<ConsolidationResult>;
 
     /// Consolidate specific memory subset
-    async fn consolidate_subset(&self, memory_ids: &[crate::memory_types::MemoryId], config: &ConsolidationConfig) -> crate::MemoryResult<ConsolidationResult>;
+    async fn consolidate_subset(
+        &self,
+        memory_ids: &[crate::memory_types::MemoryId],
+        config: &ConsolidationConfig,
+    ) -> crate::MemoryResult<ConsolidationResult>;
 
     /// Get consolidation statistics
     async fn get_stats(&self) -> crate::MemoryResult<ConsolidationStats>;

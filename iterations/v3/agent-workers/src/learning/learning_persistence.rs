@@ -1,53 +1,63 @@
 //! Learning persistence trait and implementations
 
-use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use schemars::JsonSchema;
-use std::collections::{HashMap, HashSet};
 use anyhow::{Context, Result};
-use uuid::Uuid;
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use tracing::{info, warn, error, debug};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
-use crate::{TaskId, WorkerId, WorkerSpecialty};
 use crate::learning::types::*;
+use crate::{TaskId, WorkerId, WorkerSpecialty};
 
 /// Trait for persisting learning data
 #[async_trait]
 pub trait LearningPersistence: Send + Sync {
     /// Store execution records for analysis
     async fn store_execution_records(&self, records: Vec<ExecutionRecord>) -> Result<()>;
-    
+
     /// Get execution records matching a pattern
-    async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> Result<Vec<ExecutionRecord>>;
-    
+    async fn get_execution_records(
+        &self,
+        pattern: &TaskPattern,
+        limit: Option<usize>,
+    ) -> Result<Vec<ExecutionRecord>>;
+
     /// Store worker performance profiles
-    async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()>;
-    
+    async fn store_worker_profiles(
+        &self,
+        profiles: HashMap<WorkerId, WorkerPerformanceProfile>,
+    ) -> Result<()>;
+
     /// Get worker performance profile
-    async fn get_worker_profile(&self, worker_id: &WorkerId) -> Result<Option<WorkerPerformanceProfile>>;
-    
+    async fn get_worker_profile(
+        &self,
+        worker_id: &WorkerId,
+    ) -> Result<Option<WorkerPerformanceProfile>>;
+
     /// Store success patterns
     async fn store_success_patterns(&self, patterns: Vec<SuccessPattern>) -> Result<()>;
-    
+
     /// Get all success patterns
     async fn get_success_patterns(&self) -> Result<Vec<SuccessPattern>>;
-    
+
     /// Store failure patterns
     async fn store_failure_patterns(&self, patterns: Vec<FailurePattern>) -> Result<()>;
-    
+
     /// Get all failure patterns
     async fn get_failure_patterns(&self) -> Result<Vec<FailurePattern>>;
-    
+
     /// Store optimal configurations
     async fn store_optimal_configs(&self, configs: Vec<OptimalConfig>) -> Result<()>;
-    
+
     /// Get all optimal configurations
     async fn get_optimal_configs(&self) -> Result<Vec<OptimalConfig>>;
-    
+
     /// Store optimization events
     async fn store_optimization_events(&self, events: Vec<OptimizationEvent>) -> Result<()>;
-    
+
     /// Get optimization events for a config
     async fn get_optimization_events(&self, config_id: &Uuid) -> Result<Vec<OptimizationEvent>>;
 }
@@ -55,7 +65,8 @@ pub trait LearningPersistence: Send + Sync {
 /// In-memory learning persistence implementation
 pub struct InMemoryLearningPersistence {
     execution_records: std::sync::Arc<tokio::sync::RwLock<Vec<ExecutionRecord>>>,
-    worker_profiles: std::sync::Arc<tokio::sync::RwLock<HashMap<WorkerId, WorkerPerformanceProfile>>>,
+    worker_profiles:
+        std::sync::Arc<tokio::sync::RwLock<HashMap<WorkerId, WorkerPerformanceProfile>>>,
     success_patterns: std::sync::Arc<tokio::sync::RwLock<Vec<SuccessPattern>>>,
     failure_patterns: std::sync::Arc<tokio::sync::RwLock<Vec<FailurePattern>>>,
     optimal_configs: std::sync::Arc<tokio::sync::RwLock<Vec<OptimalConfig>>>,
@@ -82,10 +93,15 @@ impl LearningPersistence for InMemoryLearningPersistence {
         storage.extend(records);
         Ok(())
     }
-    
-    async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> Result<Vec<ExecutionRecord>> {
+
+    async fn get_execution_records(
+        &self,
+        pattern: &TaskPattern,
+        limit: Option<usize>,
+    ) -> Result<Vec<ExecutionRecord>> {
         let storage = self.execution_records.read().await;
-        let mut records: Vec<ExecutionRecord> = storage.iter()
+        let mut records: Vec<ExecutionRecord> = storage
+            .iter()
             .filter(|record| {
                 // TODO: Implement sophisticated pattern matching
                 //       Currently uses simple metadata key matching; should implement more sophisticated pattern matching with regex, fuzzy matching, and complex queries.
@@ -121,73 +137,82 @@ impl LearningPersistence for InMemoryLearningPersistence {
                 // - CAWS Tier: 2 (search feature)
                 // - Change Budget: ~200 LOC
                 // - Reviewer Requirements: Pattern matching expertise
-                record.metadata.contains_key(&pattern.pattern_type.to_string())
+                record
+                    .metadata
+                    .contains_key(&pattern.pattern_type.to_string())
             })
             .cloned()
             .collect();
-        
+
         if let Some(limit) = limit {
             records.truncate(limit);
         }
-        
+
         Ok(records)
     }
-    
-    async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
+
+    async fn store_worker_profiles(
+        &self,
+        profiles: HashMap<WorkerId, WorkerPerformanceProfile>,
+    ) -> Result<()> {
         let mut storage = self.worker_profiles.write().await;
         for (worker_id, profile) in &profiles {
             storage.insert(worker_id.clone(), profile.clone());
         }
         Ok(())
     }
-    
-    async fn get_worker_profile(&self, worker_id: &WorkerId) -> Result<Option<WorkerPerformanceProfile>> {
+
+    async fn get_worker_profile(
+        &self,
+        worker_id: &WorkerId,
+    ) -> Result<Option<WorkerPerformanceProfile>> {
         let storage = self.worker_profiles.read().await;
         Ok(storage.get(worker_id).cloned())
     }
-    
+
     async fn store_success_patterns(&self, patterns: Vec<SuccessPattern>) -> Result<()> {
         let mut storage = self.success_patterns.write().await;
         storage.extend(patterns);
         Ok(())
     }
-    
+
     async fn get_success_patterns(&self) -> Result<Vec<SuccessPattern>> {
         let storage = self.success_patterns.read().await;
         Ok(storage.clone())
     }
-    
+
     async fn store_failure_patterns(&self, patterns: Vec<FailurePattern>) -> Result<()> {
         let mut storage = self.failure_patterns.write().await;
         storage.extend(patterns);
         Ok(())
     }
-    
+
     async fn get_failure_patterns(&self) -> Result<Vec<FailurePattern>> {
         let storage = self.failure_patterns.read().await;
         Ok(storage.clone())
     }
-    
+
     async fn store_optimal_configs(&self, configs: Vec<OptimalConfig>) -> Result<()> {
         let mut storage = self.optimal_configs.write().await;
         storage.extend(configs);
         Ok(())
     }
-    
+
     async fn get_optimal_configs(&self) -> Result<Vec<OptimalConfig>> {
         let storage = self.optimal_configs.read().await;
         Ok(storage.clone())
     }
-    
+
     async fn store_optimization_events(&self, events: Vec<OptimizationEvent>) -> Result<()> {
         let mut storage = self.optimization_events.write().await;
         storage.extend(events);
         Ok(())
     }
-    
+
     async fn get_optimization_events(&self, config_id: &Uuid) -> Result<Vec<OptimizationEvent>> {
         let storage = self.optimization_events.read().await;
-        let events: Vec<OptimizationEvent> = storage.iter()
+        let events: Vec<OptimizationEvent> = storage
+            .iter()
             .filter(|event| event.config_id == *config_id)
             .cloned()
             .collect();
@@ -210,24 +235,25 @@ pub struct DatabaseLearningPersistence {
 impl DatabaseLearningPersistence {
     /// Create new database persistence layer
     pub async fn new(db_url: String) -> Result<Self> {
-        info!("Initializing database learning persistence with URL: {}", db_url);
-        
-        let pool = sqlx::PgPool::connect(&db_url).await
+        info!(
+            "Initializing database learning persistence with URL: {}",
+            db_url
+        );
+
+        let pool = sqlx::PgPool::connect(&db_url)
+            .await
             .context("Failed to connect to PostgreSQL database")?;
 
         // Initialize schema
         Self::initialize_schema(&pool).await?;
-        
-        Ok(Self {
-            db_url,
-            pool,
-        })
+
+        Ok(Self { db_url, pool })
     }
 
     /// Initialize database schema for learning data
     async fn initialize_schema(pool: &sqlx::PgPool) -> Result<()> {
         info!("Initializing learning persistence schema");
-        
+
         // Create execution records table
         sqlx::query(
             r#"
@@ -241,7 +267,7 @@ impl DatabaseLearningPersistence {
                 metadata JSONB,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -261,7 +287,7 @@ impl DatabaseLearningPersistence {
                 last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 metadata JSONB
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -281,7 +307,7 @@ impl DatabaseLearningPersistence {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -301,7 +327,7 @@ impl DatabaseLearningPersistence {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -321,7 +347,7 @@ impl DatabaseLearningPersistence {
                 expires_at TIMESTAMP WITH TIME ZONE,
                 metadata JSONB DEFAULT '{}'
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -337,7 +363,7 @@ impl DatabaseLearningPersistence {
                 event_data JSONB NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
-            "#
+            "#,
         )
         .execute(pool)
         .await
@@ -401,8 +427,15 @@ impl LearningPersistence for DatabaseLearningPersistence {
         Ok(())
     }
 
-    async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> Result<Vec<ExecutionRecord>> {
-        debug!("Retrieving execution records for pattern: {:?}", pattern.pattern_type);
+    async fn get_execution_records(
+        &self,
+        pattern: &TaskPattern,
+        limit: Option<usize>,
+    ) -> Result<Vec<ExecutionRecord>> {
+        debug!(
+            "Retrieving execution records for pattern: {:?}",
+            pattern.pattern_type
+        );
 
         let query = if let Some(limit) = limit {
             sqlx::query_as::<_, ExecutionRecord>(
@@ -437,7 +470,10 @@ impl LearningPersistence for DatabaseLearningPersistence {
         Ok(records)
     }
 
-    async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
+    async fn store_worker_profiles(
+        &self,
+        profiles: HashMap<WorkerId, WorkerPerformanceProfile>,
+    ) -> Result<()> {
         if profiles.is_empty() {
             return Ok(());
         }
@@ -482,12 +518,14 @@ impl LearningPersistence for DatabaseLearningPersistence {
         Ok(())
     }
 
-    async fn get_worker_profile(&self, worker_id: &WorkerId) -> Result<Option<WorkerPerformanceProfile>> {
+    async fn get_worker_profile(
+        &self,
+        worker_id: &WorkerId,
+    ) -> Result<Option<WorkerPerformanceProfile>> {
         debug!("Retrieving worker profile for: {}", worker_id.0);
 
-        
-#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
-struct WorkerProfileRow {
+        #[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+        struct WorkerProfileRow {
             worker_id: Uuid,
             total_executions: i64,
             successful_executions: i64,
@@ -495,7 +533,7 @@ struct WorkerProfileRow {
             success_rate: f64,
             metadata: serde_json::Value,
             #[schemars(with = "String")]
-    last_updated: DateTime<Utc>,
+            last_updated: DateTime<Utc>,
         }
 
         let row = sqlx::query_as::<_, WorkerProfileRow>(
@@ -512,19 +550,31 @@ struct WorkerProfileRow {
 
         if let Some(row) = row {
             // Deserialize the metadata JSON
-            let specialty_str = row.metadata.get("specialty")
+            let specialty_str = row
+                .metadata
+                .get("specialty")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown");
-            let specialty: WorkerSpecialty = serde_json::from_str(specialty_str).unwrap_or(WorkerSpecialty::General);
+            let specialty: WorkerSpecialty =
+                serde_json::from_str(specialty_str).unwrap_or(WorkerSpecialty::General);
 
-            let performance_trend_str = row.metadata.get("performance_trend")
+            let performance_trend_str = row
+                .metadata
+                .get("performance_trend")
                 .and_then(|v| v.as_str())
                 .unwrap_or("\"Unknown\"");
-            let performance_trend: PerformanceTrend = serde_json::from_str(performance_trend_str).unwrap_or(PerformanceTrend::Unknown);
+            let performance_trend: PerformanceTrend =
+                serde_json::from_str(performance_trend_str).unwrap_or(PerformanceTrend::Unknown);
 
-            let capability_scores: HashMap<String, f64> = row.metadata.get("capability_scores")
+            let capability_scores: HashMap<String, f64> = row
+                .metadata
+                .get("capability_scores")
                 .and_then(|v| v.as_object())
-                .map(|obj| obj.iter().filter_map(|(k, v)| v.as_f64().map(|f| (k.clone(), f))).collect())
+                .map(|obj| {
+                    obj.iter()
+                        .filter_map(|(k, v)| v.as_f64().map(|f| (k.clone(), f)))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             let profile = WorkerPerformanceProfile {
@@ -609,9 +659,8 @@ struct WorkerProfileRow {
     async fn get_success_patterns(&self) -> Result<Vec<SuccessPattern>> {
         debug!("Retrieving all success patterns from database");
 
-        
-#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
-struct SuccessPatternRow {
+        #[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+        struct SuccessPatternRow {
             id: Uuid,
             pattern_type: String,
             success_rate: f64,
@@ -619,7 +668,7 @@ struct SuccessPatternRow {
             frequency: i64,
             conditions: serde_json::Value,
             #[schemars(with = "String")]
-    created_at: DateTime<Utc>,
+            created_at: DateTime<Utc>,
         }
 
         let rows = sqlx::query_as::<_, SuccessPatternRow>(
@@ -633,26 +682,30 @@ struct SuccessPatternRow {
         .await
         .context("Failed to retrieve success patterns")?;
 
-        let patterns: Vec<SuccessPattern> = rows.into_iter().filter_map(|row| {
-            // Deserialize pattern_type from JSON string
-            let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
+        let patterns: Vec<SuccessPattern> = rows
+            .into_iter()
+            .filter_map(|row| {
+                // Deserialize pattern_type from JSON string
+                let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
 
-            // Convert conditions from JSON Value to HashMap
-            let conditions: HashMap<String, serde_json::Value> = row.conditions
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default();
+                // Convert conditions from JSON Value to HashMap
+                let conditions: HashMap<String, serde_json::Value> = row
+                    .conditions
+                    .as_object()
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default();
 
-            Some(SuccessPattern {
-                id: row.id,
-                pattern_type,
-                conditions,
-                success_rate: row.success_rate,
-                average_quality: row.average_quality,
-                frequency: row.frequency as u64,
-                created_at: row.created_at,
+                Some(SuccessPattern {
+                    id: row.id,
+                    pattern_type,
+                    conditions,
+                    success_rate: row.success_rate,
+                    average_quality: row.average_quality,
+                    frequency: row.frequency as u64,
+                    created_at: row.created_at,
+                })
             })
-        }).collect();
+            .collect();
 
         debug!("Retrieved {} success patterns", patterns.len());
         Ok(patterns)
@@ -696,9 +749,8 @@ struct SuccessPatternRow {
     async fn get_failure_patterns(&self) -> Result<Vec<FailurePattern>> {
         debug!("Retrieving all failure patterns from database");
 
-        
-#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
-struct FailurePatternRow {
+        #[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+        struct FailurePatternRow {
             id: Uuid,
             pattern_type: String,
             failure_rate: f64,
@@ -706,7 +758,7 @@ struct FailurePatternRow {
             conditions: serde_json::Value,
             common_errors: Vec<String>,
             #[schemars(with = "String")]
-    created_at: DateTime<Utc>,
+            created_at: DateTime<Utc>,
         }
 
         let rows = sqlx::query_as::<_, FailurePatternRow>(
@@ -714,32 +766,36 @@ struct FailurePatternRow {
             SELECT id, pattern_type, failure_rate, frequency, conditions, common_errors, created_at
             FROM failure_patterns
             ORDER BY failure_rate DESC, frequency DESC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve failure patterns")?;
 
-        let patterns: Vec<FailurePattern> = rows.into_iter().filter_map(|row| {
-            // Deserialize pattern_type from JSON string
-            let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
+        let patterns: Vec<FailurePattern> = rows
+            .into_iter()
+            .filter_map(|row| {
+                // Deserialize pattern_type from JSON string
+                let pattern_type: PatternType = serde_json::from_str(&row.pattern_type).ok()?;
 
-            // Convert conditions from JSON Value to HashMap
-            let conditions: HashMap<String, serde_json::Value> = row.conditions
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default();
+                // Convert conditions from JSON Value to HashMap
+                let conditions: HashMap<String, serde_json::Value> = row
+                    .conditions
+                    .as_object()
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default();
 
-            Some(FailurePattern {
-                id: row.id,
-                pattern_type,
-                conditions,
-                failure_rate: row.failure_rate,
-                common_errors: row.common_errors,
-                frequency: row.frequency as u64,
-                created_at: row.created_at,
+                Some(FailurePattern {
+                    id: row.id,
+                    pattern_type,
+                    conditions,
+                    failure_rate: row.failure_rate,
+                    common_errors: row.common_errors,
+                    frequency: row.frequency as u64,
+                    created_at: row.created_at,
+                })
             })
-        }).collect();
+            .collect();
 
         debug!("Retrieved {} failure patterns", patterns.len());
         Ok(patterns)
@@ -783,9 +839,8 @@ struct FailurePatternRow {
     async fn get_optimal_configs(&self) -> Result<Vec<OptimalConfig>> {
         debug!("Retrieving all optimal configs from database");
 
-        
-#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
-struct OptimalConfigRow {
+        #[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+        struct OptimalConfigRow {
             id: Uuid,
             config_type: String,
             parameters: serde_json::Value,
@@ -793,7 +848,7 @@ struct OptimalConfigRow {
             conditions: serde_json::Value,
             confidence: f64,
             #[schemars(with = "String")]
-    created_at: DateTime<Utc>,
+            created_at: DateTime<Utc>,
         }
 
         let rows = sqlx::query_as::<_, OptimalConfigRow>(
@@ -807,46 +862,53 @@ struct OptimalConfigRow {
         .await
         .context("Failed to retrieve optimal configs")?;
 
-        let configs: Vec<OptimalConfig> = rows.into_iter().filter_map(|row| {
-            // Deserialize config_type from JSON string
-            let config_type: ConfigType = serde_json::from_str(&row.config_type).ok()?;
+        let configs: Vec<OptimalConfig> = rows
+            .into_iter()
+            .filter_map(|row| {
+                // Deserialize config_type from JSON string
+                let config_type: ConfigType = serde_json::from_str(&row.config_type).ok()?;
 
-            // Convert parameters and conditions from JSON Value to HashMap
-            let parameters: HashMap<String, serde_json::Value> = row.parameters
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default();
+                // Convert parameters and conditions from JSON Value to HashMap
+                let parameters: HashMap<String, serde_json::Value> = row
+                    .parameters
+                    .as_object()
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default();
 
-            let conditions: HashMap<String, serde_json::Value> = row.conditions
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default();
+                let conditions: HashMap<String, serde_json::Value> = row
+                    .conditions
+                    .as_object()
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default();
 
-            // Deserialize performance_metrics from JSON
-            let performance_metrics: PerformanceMetrics = serde_json::from_value(row.performance_metrics)
-                .unwrap_or_else(|_| PerformanceMetrics {
-                    execution_time_ms: 0.0,
-                    quality_score: 0.0,
-                    success_rate: 0.0,
-                    resource_utilization: 0.0,
-                    cost_score: 0.0,
-                });
+                // Deserialize performance_metrics from JSON
+                let performance_metrics: PerformanceMetrics =
+                    serde_json::from_value(row.performance_metrics).unwrap_or_else(|_| {
+                        PerformanceMetrics {
+                            execution_time_ms: 0.0,
+                            quality_score: 0.0,
+                            success_rate: 0.0,
+                            resource_utilization: 0.0,
+                            cost_score: 0.0,
+                        }
+                    });
 
-            Some(OptimalConfig {
-                id: row.id,
-                config_type,
-                worker_type: "general".to_string(), // Default worker type
-                task_type: "general".to_string(), // Default task type
-                config: serde_json::Value::Object(serde_json::Map::new()), // Empty config
-                parameters,
-                conditions,
-                performance_metrics,
-                confidence: row.confidence,
-                expires_at: None,
-                metadata: serde_json::Value::Object(serde_json::Map::new()),
-                created_at: row.created_at,
+                Some(OptimalConfig {
+                    id: row.id,
+                    config_type,
+                    worker_type: "general".to_string(), // Default worker type
+                    task_type: "general".to_string(),   // Default task type
+                    config: serde_json::Value::Object(serde_json::Map::new()), // Empty config
+                    parameters,
+                    conditions,
+                    performance_metrics,
+                    confidence: row.confidence,
+                    expires_at: None,
+                    metadata: serde_json::Value::Object(serde_json::Map::new()),
+                    created_at: row.created_at,
+                })
             })
-        }).collect();
+            .collect();
 
         debug!("Retrieved {} optimal configs", configs.len());
         Ok(configs)
@@ -884,15 +946,14 @@ struct OptimalConfigRow {
     async fn get_optimization_events(&self, config_id: &Uuid) -> Result<Vec<OptimizationEvent>> {
         debug!("Retrieving optimization events for config: {}", config_id);
 
-        
-#[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
-struct OptimizationEventRow {
+        #[derive(Serialize, Deserialize, JsonSchema, sqlx::FromRow)]
+        struct OptimizationEventRow {
             id: Uuid,
             event_type: String,
             config_id: Uuid,
             performance_delta: serde_json::Value,
             #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+            timestamp: DateTime<Utc>,
             metadata: serde_json::Value,
         }
 
@@ -902,46 +963,53 @@ struct OptimizationEventRow {
             FROM optimization_events
             WHERE config_id = $1
             ORDER BY timestamp DESC
-            "#
+            "#,
         )
         .bind(config_id)
         .fetch_all(&self.pool)
         .await
         .context("Failed to retrieve optimization events")?;
 
-        let events: Vec<OptimizationEvent> = rows.into_iter().filter_map(|row| {
-            // Deserialize event_type from JSON string
-            let event_type: OptimizationEventType = serde_json::from_str(&row.event_type).ok()?;
+        let events: Vec<OptimizationEvent> = rows
+            .into_iter()
+            .filter_map(|row| {
+                // Deserialize event_type from JSON string
+                let event_type: OptimizationEventType =
+                    serde_json::from_str(&row.event_type).ok()?;
 
-            // Convert metadata from JSON Value to HashMap
-            let metadata: HashMap<String, serde_json::Value> = row.metadata
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default();
+                // Convert metadata from JSON Value to HashMap
+                let metadata: HashMap<String, serde_json::Value> = row
+                    .metadata
+                    .as_object()
+                    .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                    .unwrap_or_default();
 
-            // Deserialize performance_delta from JSON
-            let performance_delta: PerformanceMetrics = serde_json::from_value(row.performance_delta)
-                .unwrap_or_else(|_| PerformanceMetrics {
-                    execution_time_ms: 0.0,
-                    quality_score: 0.0,
-                    success_rate: 0.0,
-                    resource_utilization: 0.0,
-                    cost_score: 0.0,
-                });
+                // Deserialize performance_delta from JSON
+                let performance_delta: PerformanceMetrics =
+                    serde_json::from_value(row.performance_delta).unwrap_or_else(|_| {
+                        PerformanceMetrics {
+                            execution_time_ms: 0.0,
+                            quality_score: 0.0,
+                            success_rate: 0.0,
+                            resource_utilization: 0.0,
+                            cost_score: 0.0,
+                        }
+                    });
 
-            Some(OptimizationEvent {
-                id: row.id,
-                event_type,
-                config_id: row.config_id,
-                performance_delta,
-                timestamp: row.timestamp,
-                metadata,
-                config_before: None,
-                config_after: None,
-                performance_improvement: None,
-                optimization_type: None,
+                Some(OptimizationEvent {
+                    id: row.id,
+                    event_type,
+                    config_id: row.config_id,
+                    performance_delta,
+                    timestamp: row.timestamp,
+                    metadata,
+                    config_before: None,
+                    config_after: None,
+                    performance_improvement: None,
+                    optimization_type: None,
+                })
             })
-        }).collect();
+            .collect();
 
         debug!("Retrieved {} optimization events", events.len());
         Ok(events)

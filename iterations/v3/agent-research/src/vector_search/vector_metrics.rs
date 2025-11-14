@@ -2,11 +2,10 @@
 //!
 //! Performance metrics collection and reporting for vector search operations.
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 
 /// Performance metrics for vector search operations
-
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct VectorSearchMetrics {

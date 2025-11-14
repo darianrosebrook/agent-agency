@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 #[cfg(feature = "memory")]
 use agent_agency_contracts::{
+    errors::{MemoryError, MemoryResult},
+    types::memory::{Experience, ExperienceOutcome, MemoryId, TemporalContext, TemporalQuery},
     MemorySystem,
-    types::memory::{MemoryId, TemporalContext, ExperienceOutcome, TemporalQuery, Experience},
-    errors::{MemoryResult, MemoryError},
 };
 
 /// Adapter that wraps agent_memory::MemorySystem to implement contracts::MemorySystem
@@ -36,13 +36,13 @@ impl MemorySystemAdapter {
 #[async_trait]
 impl MemorySystem for MemorySystemAdapter {
     async fn store_experience(&self, experience: Experience) -> MemoryResult<MemoryId> {
-        
-        
         // Extract timestamp before moving temporal_context
-        let timestamp = experience.temporal_context.as_ref()
+        let timestamp = experience
+            .temporal_context
+            .as_ref()
             .map(|tc| tc.timestamp)
             .unwrap_or_else(|| chrono::Utc::now());
-        
+
         // Convert contracts Experience to agent_memory AgentExperience
         let memory_experience = agent_memory::memory_types::AgentExperience {
             id: experience.id,
@@ -58,15 +58,29 @@ impl MemorySystem for MemorySystemAdapter {
                 temporal_context: experience.temporal_context.map(|tc| {
                     agent_memory::memory_types::TemporalContext {
                         timestamp: tc.timestamp,
-                        duration: tc.duration_ms.map(|ms| chrono::Duration::milliseconds(ms as i64)),
+                        duration: tc
+                            .duration_ms
+                            .map(|ms| chrono::Duration::milliseconds(ms as i64)),
                         sequence_number: tc.sequence_number,
                         priority: match tc.priority {
-                            agent_agency_contracts::types::memory::TaskPriority::Low => agent_memory::memory_types::TaskPriority::Low,
-                            agent_agency_contracts::types::memory::TaskPriority::Normal => agent_memory::memory_types::TaskPriority::Normal,
-                            agent_agency_contracts::types::memory::TaskPriority::Medium => agent_memory::memory_types::TaskPriority::Normal, // Map Medium to Normal
-                            agent_agency_contracts::types::memory::TaskPriority::High => agent_memory::memory_types::TaskPriority::High,
-                            agent_agency_contracts::types::memory::TaskPriority::Urgent => agent_memory::memory_types::TaskPriority::Critical, // Map Urgent to Critical
-                            agent_agency_contracts::types::memory::TaskPriority::Critical => agent_memory::memory_types::TaskPriority::Critical,
+                            agent_agency_contracts::types::memory::TaskPriority::Low => {
+                                agent_memory::memory_types::TaskPriority::Low
+                            }
+                            agent_agency_contracts::types::memory::TaskPriority::Normal => {
+                                agent_memory::memory_types::TaskPriority::Normal
+                            }
+                            agent_agency_contracts::types::memory::TaskPriority::Medium => {
+                                agent_memory::memory_types::TaskPriority::Normal
+                            } // Map Medium to Normal
+                            agent_agency_contracts::types::memory::TaskPriority::High => {
+                                agent_memory::memory_types::TaskPriority::High
+                            }
+                            agent_agency_contracts::types::memory::TaskPriority::Urgent => {
+                                agent_memory::memory_types::TaskPriority::Critical
+                            } // Map Urgent to Critical
+                            agent_agency_contracts::types::memory::TaskPriority::Critical => {
+                                agent_memory::memory_types::TaskPriority::Critical
+                            }
                         },
                     }
                 }),
@@ -81,17 +95,28 @@ impl MemorySystem for MemorySystemAdapter {
                 learned_capabilities: experience.outcome.learned_capabilities,
             },
             memory_type: match experience.memory_type {
-                agent_agency_contracts::types::memory::MemoryType::Episodic => agent_memory::memory_types::MemoryType::Episodic,
-                agent_agency_contracts::types::memory::MemoryType::Semantic => agent_memory::memory_types::MemoryType::Semantic,
-                agent_agency_contracts::types::memory::MemoryType::Procedural => agent_memory::memory_types::MemoryType::Procedural,
-                agent_agency_contracts::types::memory::MemoryType::Working => agent_memory::memory_types::MemoryType::Working,
+                agent_agency_contracts::types::memory::MemoryType::Episodic => {
+                    agent_memory::memory_types::MemoryType::Episodic
+                }
+                agent_agency_contracts::types::memory::MemoryType::Semantic => {
+                    agent_memory::memory_types::MemoryType::Semantic
+                }
+                agent_agency_contracts::types::memory::MemoryType::Procedural => {
+                    agent_memory::memory_types::MemoryType::Procedural
+                }
+                agent_agency_contracts::types::memory::MemoryType::Working => {
+                    agent_memory::memory_types::MemoryType::Working
+                }
             },
             timestamp,
             metadata: experience.metadata,
         };
 
         // Store the experience using the real memory system
-        let memory_id = self.memory_system.store_experience(memory_experience).await
+        let memory_id = self
+            .memory_system
+            .store_experience(memory_experience)
+            .await
             .map_err(|e| MemoryError::OperationFailed {
                 operation: "store_experience".to_string(),
                 reason: e.to_string(),
@@ -100,7 +125,10 @@ impl MemorySystem for MemorySystemAdapter {
         Ok(MemoryId(memory_id))
     }
 
-    async fn retrieve_temporal_context(&self, query: TemporalQuery) -> MemoryResult<Vec<TemporalContext>> {
+    async fn retrieve_temporal_context(
+        &self,
+        query: TemporalQuery,
+    ) -> MemoryResult<Vec<TemporalContext>> {
         use agent_memory::memory_manager::MemoryQuery;
         use agent_memory::memory_types::{MemoryType, TimeRange};
         use chrono::Utc;
@@ -112,12 +140,16 @@ impl MemorySystem for MemorySystemAdapter {
             memory_type: query.memory_type_filter.map(|mt| match mt {
                 agent_agency_contracts::types::memory::MemoryType::Episodic => MemoryType::Episodic,
                 agent_agency_contracts::types::memory::MemoryType::Semantic => MemoryType::Semantic,
-                agent_agency_contracts::types::memory::MemoryType::Procedural => MemoryType::Procedural,
+                agent_agency_contracts::types::memory::MemoryType::Procedural => {
+                    MemoryType::Procedural
+                }
                 agent_agency_contracts::types::memory::MemoryType::Working => MemoryType::Working,
             }),
             time_range: if query.start_time.is_some() || query.end_time.is_some() {
                 Some(TimeRange {
-                    start: query.start_time.unwrap_or_else(|| Utc::now() - chrono::Duration::days(30)),
+                    start: query
+                        .start_time
+                        .unwrap_or_else(|| Utc::now() - chrono::Duration::days(30)),
                     end: query.end_time.unwrap_or_else(Utc::now),
                 })
             } else {
@@ -127,7 +159,11 @@ impl MemorySystem for MemorySystemAdapter {
         };
 
         // Search memories using the real memory system
-        let experiences = self.memory_system.manager().search_memories(memory_query).await
+        let experiences = self
+            .memory_system
+            .manager()
+            .search_memories(memory_query)
+            .await
             .map_err(|e| MemoryError::OperationFailed {
                 operation: "retrieve_temporal_context".to_string(),
                 reason: e.to_string(),
@@ -143,12 +179,24 @@ impl MemorySystem for MemorySystemAdapter {
                     duration_ms: tc.duration.map(|d| d.num_milliseconds() as u64),
                     sequence_number: tc.sequence_number.or(Some(idx as u64)),
                     priority: match tc.priority {
-                        agent_memory::memory_types::TaskPriority::Low => agent_agency_contracts::types::memory::TaskPriority::Low,
-                        agent_memory::memory_types::TaskPriority::Normal => agent_agency_contracts::types::memory::TaskPriority::Normal,
-                        agent_memory::memory_types::TaskPriority::Medium => agent_agency_contracts::types::memory::TaskPriority::Normal, // Map Medium to Normal
-                        agent_memory::memory_types::TaskPriority::High => agent_agency_contracts::types::memory::TaskPriority::High,
-                        agent_memory::memory_types::TaskPriority::Urgent => agent_agency_contracts::types::memory::TaskPriority::High, // Map Urgent to High
-                        agent_memory::memory_types::TaskPriority::Critical => agent_agency_contracts::types::memory::TaskPriority::Critical,
+                        agent_memory::memory_types::TaskPriority::Low => {
+                            agent_agency_contracts::types::memory::TaskPriority::Low
+                        }
+                        agent_memory::memory_types::TaskPriority::Normal => {
+                            agent_agency_contracts::types::memory::TaskPriority::Normal
+                        }
+                        agent_memory::memory_types::TaskPriority::Medium => {
+                            agent_agency_contracts::types::memory::TaskPriority::Normal
+                        } // Map Medium to Normal
+                        agent_memory::memory_types::TaskPriority::High => {
+                            agent_agency_contracts::types::memory::TaskPriority::High
+                        }
+                        agent_memory::memory_types::TaskPriority::Urgent => {
+                            agent_agency_contracts::types::memory::TaskPriority::High
+                        } // Map Urgent to High
+                        agent_memory::memory_types::TaskPriority::Critical => {
+                            agent_agency_contracts::types::memory::TaskPriority::Critical
+                        }
                     },
                 }
             } else {
@@ -166,10 +214,18 @@ impl MemorySystem for MemorySystemAdapter {
         Ok(contexts)
     }
 
-    async fn record_outcome(&self, memory_id: MemoryId, outcome: ExperienceOutcome) -> MemoryResult<()> {
+    async fn record_outcome(
+        &self,
+        memory_id: MemoryId,
+        outcome: ExperienceOutcome,
+    ) -> MemoryResult<()> {
         // Retrieve the existing experience
         let uuid_id = memory_id.0;
-        let mut experience = self.memory_system.manager().retrieve_memory(uuid_id).await
+        let mut experience = self
+            .memory_system
+            .manager()
+            .retrieve_memory(uuid_id)
+            .await
             .map_err(|e| MemoryError::NotFound {
                 memory_id: uuid_id.to_string(),
             })?;
@@ -187,7 +243,9 @@ impl MemorySystem for MemorySystemAdapter {
 
         // Store the updated experience back
         // Note: This creates a new memory entry - proper implementation would update in place
-        self.memory_system.store_experience(experience).await
+        self.memory_system
+            .store_experience(experience)
+            .await
             .map_err(|e| MemoryError::OperationFailed {
                 operation: "record_outcome".to_string(),
                 reason: e.to_string(),
@@ -199,7 +257,11 @@ impl MemorySystem for MemorySystemAdapter {
     async fn retrieve_experience(&self, memory_id: MemoryId) -> MemoryResult<Experience> {
         // Retrieve the experience using the memory manager
         let uuid_id = memory_id.0;
-        let memory_experience = self.memory_system.manager().retrieve_memory(uuid_id).await
+        let memory_experience = self
+            .memory_system
+            .manager()
+            .retrieve_memory(uuid_id)
+            .await
             .map_err(|e| MemoryError::NotFound {
                 memory_id: uuid_id.to_string(),
             })?;
@@ -211,10 +273,18 @@ impl MemorySystem for MemorySystemAdapter {
             id: memory_experience.id,
             description: memory_experience.context.description.clone(),
             memory_type: match memory_experience.memory_type {
-                agent_memory::memory_types::MemoryType::Episodic => agent_agency_contracts::types::memory::MemoryType::Episodic,
-                agent_memory::memory_types::MemoryType::Semantic => agent_agency_contracts::types::memory::MemoryType::Semantic,
-                agent_memory::memory_types::MemoryType::Procedural => agent_agency_contracts::types::memory::MemoryType::Procedural,
-                agent_memory::memory_types::MemoryType::Working => agent_agency_contracts::types::memory::MemoryType::Working,
+                agent_memory::memory_types::MemoryType::Episodic => {
+                    agent_agency_contracts::types::memory::MemoryType::Episodic
+                }
+                agent_memory::memory_types::MemoryType::Semantic => {
+                    agent_agency_contracts::types::memory::MemoryType::Semantic
+                }
+                agent_memory::memory_types::MemoryType::Procedural => {
+                    agent_agency_contracts::types::memory::MemoryType::Procedural
+                }
+                agent_memory::memory_types::MemoryType::Working => {
+                    agent_agency_contracts::types::memory::MemoryType::Working
+                }
             },
             temporal_context: memory_experience.context.temporal_context.map(|tc| {
                 TemporalContext {
@@ -222,12 +292,24 @@ impl MemorySystem for MemorySystemAdapter {
                     duration_ms: tc.duration.map(|d| d.num_milliseconds() as u64),
                     sequence_number: tc.sequence_number,
                     priority: match tc.priority {
-                        agent_memory::memory_types::TaskPriority::Low => agent_agency_contracts::types::memory::TaskPriority::Low,
-                        agent_memory::memory_types::TaskPriority::Normal => agent_agency_contracts::types::memory::TaskPriority::Normal,
-                        agent_memory::memory_types::TaskPriority::Medium => agent_agency_contracts::types::memory::TaskPriority::Medium,
-                        agent_memory::memory_types::TaskPriority::High => agent_agency_contracts::types::memory::TaskPriority::High,
-                        agent_memory::memory_types::TaskPriority::Urgent => agent_agency_contracts::types::memory::TaskPriority::Urgent,
-                        agent_memory::memory_types::TaskPriority::Critical => agent_agency_contracts::types::memory::TaskPriority::Critical,
+                        agent_memory::memory_types::TaskPriority::Low => {
+                            agent_agency_contracts::types::memory::TaskPriority::Low
+                        }
+                        agent_memory::memory_types::TaskPriority::Normal => {
+                            agent_agency_contracts::types::memory::TaskPriority::Normal
+                        }
+                        agent_memory::memory_types::TaskPriority::Medium => {
+                            agent_agency_contracts::types::memory::TaskPriority::Medium
+                        }
+                        agent_memory::memory_types::TaskPriority::High => {
+                            agent_agency_contracts::types::memory::TaskPriority::High
+                        }
+                        agent_memory::memory_types::TaskPriority::Urgent => {
+                            agent_agency_contracts::types::memory::TaskPriority::Urgent
+                        }
+                        agent_memory::memory_types::TaskPriority::Critical => {
+                            agent_agency_contracts::types::memory::TaskPriority::Critical
+                        }
                     },
                 }
             }),
@@ -255,13 +337,16 @@ impl MemorySystem for MemorySystemAdapter {
 
         // Parse query JSON to build MemoryQuery
         let memory_query = MemoryQuery {
-            agent_id: query.get("agent_id")
+            agent_id: query
+                .get("agent_id")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
-            task_type: query.get("task_type")
+            task_type: query
+                .get("task_type")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
-            memory_type: query.get("memory_type")
+            memory_type: query
+                .get("memory_type")
                 .and_then(|v| v.as_str())
                 .and_then(|s| match s {
                     "Episodic" => Some(MemoryType::Episodic),
@@ -272,12 +357,14 @@ impl MemorySystem for MemorySystemAdapter {
                 }),
             time_range: if query.get("start_time").is_some() || query.get("end_time").is_some() {
                 Some(TimeRange {
-                    start: query.get("start_time")
+                    start: query
+                        .get("start_time")
                         .and_then(|v| v.as_str())
                         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
                         .map(|dt| dt.with_timezone(&Utc))
                         .unwrap_or_else(|| Utc::now() - chrono::Duration::days(30)),
-                    end: query.get("end_time")
+                    end: query
+                        .get("end_time")
                         .and_then(|v| v.as_str())
                         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
                         .map(|dt| dt.with_timezone(&Utc))
@@ -286,13 +373,18 @@ impl MemorySystem for MemorySystemAdapter {
             } else {
                 None
             },
-            limit: query.get("limit")
+            limit: query
+                .get("limit")
                 .and_then(|v| v.as_u64())
                 .map(|u| u as usize),
         };
 
         // Search memories using the real memory system
-        let agent_experiences = self.memory_system.manager().search_memories(memory_query).await
+        let agent_experiences = self
+            .memory_system
+            .manager()
+            .search_memories(memory_query)
+            .await
             .map_err(|e| MemoryError::OperationFailed {
                 operation: "search_experiences".to_string(),
                 reason: e.to_string(),
@@ -307,10 +399,18 @@ impl MemorySystem for MemorySystemAdapter {
                 domain: agent_exp.context.domain.clone(),
                 task_type: agent_exp.context.task_type.clone(),
                 memory_type: match agent_exp.memory_type {
-                    MemoryType::Episodic => agent_agency_contracts::types::memory::MemoryType::Episodic,
-                    MemoryType::Semantic => agent_agency_contracts::types::memory::MemoryType::Semantic,
-                    MemoryType::Procedural => agent_agency_contracts::types::memory::MemoryType::Procedural,
-                    MemoryType::Working => agent_agency_contracts::types::memory::MemoryType::Working,
+                    MemoryType::Episodic => {
+                        agent_agency_contracts::types::memory::MemoryType::Episodic
+                    }
+                    MemoryType::Semantic => {
+                        agent_agency_contracts::types::memory::MemoryType::Semantic
+                    }
+                    MemoryType::Procedural => {
+                        agent_agency_contracts::types::memory::MemoryType::Procedural
+                    }
+                    MemoryType::Working => {
+                        agent_agency_contracts::types::memory::MemoryType::Working
+                    }
                 },
                 outcome: ExperienceOutcome {
                     success: agent_exp.outcome.success,
@@ -327,12 +427,24 @@ impl MemorySystem for MemorySystemAdapter {
                         duration_ms: tc.duration.map(|d| d.num_milliseconds() as u64),
                         sequence_number: tc.sequence_number,
                         priority: match tc.priority {
-                            agent_memory::memory_types::TaskPriority::Low => agent_agency_contracts::types::memory::TaskPriority::Low,
-                            agent_memory::memory_types::TaskPriority::Normal => agent_agency_contracts::types::memory::TaskPriority::Normal,
-                            agent_memory::memory_types::TaskPriority::Medium => agent_agency_contracts::types::memory::TaskPriority::Normal, // Map Medium to Normal
-                            agent_memory::memory_types::TaskPriority::High => agent_agency_contracts::types::memory::TaskPriority::High,
-                            agent_memory::memory_types::TaskPriority::Urgent => agent_agency_contracts::types::memory::TaskPriority::High, // Map Urgent to High
-                            agent_memory::memory_types::TaskPriority::Critical => agent_agency_contracts::types::memory::TaskPriority::Critical,
+                            agent_memory::memory_types::TaskPriority::Low => {
+                                agent_agency_contracts::types::memory::TaskPriority::Low
+                            }
+                            agent_memory::memory_types::TaskPriority::Normal => {
+                                agent_agency_contracts::types::memory::TaskPriority::Normal
+                            }
+                            agent_memory::memory_types::TaskPriority::Medium => {
+                                agent_agency_contracts::types::memory::TaskPriority::Normal
+                            } // Map Medium to Normal
+                            agent_memory::memory_types::TaskPriority::High => {
+                                agent_agency_contracts::types::memory::TaskPriority::High
+                            }
+                            agent_memory::memory_types::TaskPriority::Urgent => {
+                                agent_agency_contracts::types::memory::TaskPriority::High
+                            } // Map Urgent to High
+                            agent_memory::memory_types::TaskPriority::Critical => {
+                                agent_agency_contracts::types::memory::TaskPriority::Critical
+                            }
                         },
                     }
                 }),

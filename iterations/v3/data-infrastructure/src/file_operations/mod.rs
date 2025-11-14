@@ -6,15 +6,15 @@
 pub mod git_workspace;
 pub mod temp_workspace;
 
-use schemars::JsonSchema;
-use std::path::Path;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+use thiserror::Error;
 
 /// Unique identifier for a changeset operation
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-pub struct ChangeSetId (pub String);
+pub struct ChangeSetId(pub String);
 
 /// A single file patch operation
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -97,7 +97,6 @@ pub struct BudgetViolation {
 pub struct WaiverRequest {
     pub id: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub changeset_fingerprint: String,
     pub budget_violations: Vec<BudgetViolation>,
@@ -173,29 +172,40 @@ pub fn validate_changeset(
 ) -> Result<()> {
     // Check file count budget
     if changeset.patches.len() > budgets.max_files {
-        return Err(FileOpsError::BudgetExceeded(
-            format!("Too many files: {} > {}", changeset.patches.len(), budgets.max_files)
-        ));
+        return Err(FileOpsError::BudgetExceeded(format!(
+            "Too many files: {} > {}",
+            changeset.patches.len(),
+            budgets.max_files
+        )));
     }
 
     // Check allow-list compliance
     for patch in &changeset.patches {
         if !is_path_allowed(&patch.path, allowlist) {
-            return Err(FileOpsError::Blocked(
-                format!("Path not allowed: {}", patch.path)
-            ));
+            return Err(FileOpsError::Blocked(format!(
+                "Path not allowed: {}",
+                patch.path
+            )));
         }
     }
 
     // Check total LOC budget
-    let total_loc: usize = changeset.patches.iter()
-        .map(|p| p.hunks.iter().map(|h| h.lines.lines().count()).sum::<usize>())
+    let total_loc: usize = changeset
+        .patches
+        .iter()
+        .map(|p| {
+            p.hunks
+                .iter()
+                .map(|h| h.lines.lines().count())
+                .sum::<usize>()
+        })
         .sum();
 
     if total_loc > budgets.max_loc {
-        return Err(FileOpsError::BudgetExceeded(
-            format!("Too many lines changed: {} > {}", total_loc, budgets.max_loc)
-        ));
+        return Err(FileOpsError::BudgetExceeded(format!(
+            "Too many lines changed: {} > {}",
+            total_loc, budgets.max_loc
+        )));
     }
 
     Ok(())

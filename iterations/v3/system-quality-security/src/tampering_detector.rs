@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -100,7 +100,10 @@ impl TamperingDetector {
     }
 
     /// Create a new tampering detector with custom configuration and hash algorithm
-    pub fn with_config_and_hasher(config: TamperingDetectionConfig, algorithm: HashAlgorithm) -> Self {
+    pub fn with_config_and_hasher(
+        config: TamperingDetectionConfig,
+        algorithm: HashAlgorithm,
+    ) -> Self {
         Self {
             config,
             hasher: ContentHasher::new(algorithm),
@@ -223,14 +226,14 @@ impl TamperingDetector {
         // Check for common obfuscation patterns
         let obfuscation_patterns = [
             r#"\b[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*["']([^"']{100,})["']"#, // Very long string assignments
-            r#"\beval\s*\("#, // eval usage
-            r#"\bFunction\s*\("#, // Function constructor
-            r#"\bsetTimeout\s*\(\s*["']([^"']+)["']\s*,"#, // string-based setTimeout
-            r#"\bsetInterval\s*\(\s*["']([^"']+)["']\s*,"#, // string-based setInterval
-            r#"\batob\s*\("#, // base64 decode
-            r#"\bbtoa\s*\("#, // base64 encode
-            r#"\bescape\s*\("#, // escape function
-            r#"\bunescape\s*\("#, // unescape function
+            r#"\beval\s*\("#,                                          // eval usage
+            r#"\bFunction\s*\("#,                                      // Function constructor
+            r#"\bsetTimeout\s*\(\s*["']([^"']+)["']\s*,"#,             // string-based setTimeout
+            r#"\bsetInterval\s*\(\s*["']([^"']+)["']\s*,"#,            // string-based setInterval
+            r#"\batob\s*\("#,                                          // base64 decode
+            r#"\bbtoa\s*\("#,                                          // base64 encode
+            r#"\bescape\s*\("#,                                        // escape function
+            r#"\bunescape\s*\("#,                                      // unescape function
         ];
 
         for pattern in &obfuscation_patterns {
@@ -244,7 +247,8 @@ impl TamperingDetector {
         // Check for excessive minification (very long lines)
         let lines: Vec<&str> = content.lines().collect();
         let long_lines = lines.iter().filter(|line| line.len() > 1000).count();
-        if long_lines > lines.len() / 10 { // More than 10% of lines are very long
+        if long_lines > lines.len() / 10 {
+            // More than 10% of lines are very long
             return true;
         }
 
@@ -256,13 +260,13 @@ impl TamperingDetector {
         // Check for suspicious HTML/script injection patterns
         let markup_patterns = [
             r#"<script[^>]*>[\s\S]*?</script>"#, // inline scripts
-            r#"<iframe[^>]*>"#, // iframes
-            r#"<object[^>]*>"#, // object tags
-            r#"<embed[^>]*>"#, // embed tags
-            r#"javascript:"#, // javascript: URLs
-            r#"data:text/html"#, // data URLs with HTML
-            r#"vbscript:"#, // vbscript
-            r#"on\w+\s*="#, // event handlers
+            r#"<iframe[^>]*>"#,                  // iframes
+            r#"<object[^>]*>"#,                  // object tags
+            r#"<embed[^>]*>"#,                   // embed tags
+            r#"javascript:"#,                    // javascript: URLs
+            r#"data:text/html"#,                 // data URLs with HTML
+            r#"vbscript:"#,                      // vbscript
+            r#"on\w+\s*="#,                      // event handlers
         ];
 
         for pattern in &markup_patterns {
@@ -536,7 +540,10 @@ impl TamperingDetector {
             FileType::Executable
         } else if content.starts_with("PK\x03\x04") {
             FileType::Archive
-        } else if content.chars().all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace()) {
+        } else if content
+            .chars()
+            .all(|c| c.is_ascii_graphic() || c.is_ascii_whitespace())
+        {
             FileType::Text
         } else {
             FileType::Binary
@@ -553,9 +560,11 @@ impl TamperingDetector {
             b"\x48\x31\xc0",     // XOR rax, rax (shellcode start)
         ];
 
-        suspicious_exec_patterns
-            .iter()
-            .any(|pattern| content.windows(pattern.len()).any(|window| window == *pattern))
+        suspicious_exec_patterns.iter().any(|pattern| {
+            content
+                .windows(pattern.len())
+                .any(|window| window == *pattern)
+        })
     }
 
     /// Detect tampering in archive files
@@ -563,7 +572,7 @@ impl TamperingDetector {
         // TODO: Implement comprehensive archive structure parsing for tampering detection
         //       Currently uses basic pattern matching; should parse archive structure to detect tampering accurately.
         let suspicious_archive_patterns = [
-            "..",              // Directory traversal
+            "..",               // Directory traversal
             "\x00\x00\x00\x00", // Null padding anomalies
         ];
 
@@ -576,11 +585,11 @@ impl TamperingDetector {
     fn detect_text_file_tampering(&self, content: &str) -> bool {
         // Check for text file tampering indicators
         let suspicious_text_patterns = [
-            "\u{200B}",        // Zero-width space (used for obfuscation)
-            "\u{200C}",        // Zero-width non-joiner
-            "\u{200D}",        // Zero-width joiner
-            "\u{200E}",        // Left-to-right mark
-            "\u{200F}",        // Right-to-left mark
+            "\u{200B}", // Zero-width space (used for obfuscation)
+            "\u{200C}", // Zero-width non-joiner
+            "\u{200D}", // Zero-width joiner
+            "\u{200E}", // Left-to-right mark
+            "\u{200F}", // Right-to-left mark
         ];
 
         suspicious_text_patterns

@@ -14,36 +14,55 @@
 //! - `kb`: Enable real knowledge base integration
 //! - `ingest`: Enable knowledge ingestion capabilities
 
-pub mod types;
-pub mod patterns;
-pub mod detection;
-pub mod entities;
 pub mod context;
-pub mod stage;
+pub mod detection;
 pub mod disambiguation_types;
+pub mod entities;
+pub mod patterns;
+pub mod stage;
+pub mod types;
 
 // Re-export public API
 pub use types::{
-    // Core types
-    Language, DisambiguationResult, ReferentInfo,
     // Ambiguity types
-    Ambiguity, AmbiguityType, UnresolvableAmbiguity, UnresolvableReason,
-    // Entity types
-    EntityType, NamedEntity, EntityMatch,
-    // Knowledge base types
-    KbSource, KnowledgeBaseResult, RelatedEntity,
-    // Analysis helpers
-    HistoricalEntityAnalysis, EntityRelationship, ResolvedEntity, ContextAwareDisambiguation, DomainIntegration,
+    Ambiguity,
+    AmbiguityType,
+    ContextAwareDisambiguation,
+    DisambiguationResult,
+    DomainIntegration,
     // Traits
-    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    EmbeddingProvider,
+    EntityMatch,
+    EntityRelationship,
+    // Entity types
+    EntityType,
     // Supporting types
-    ExternalKnowledgeEntity, IngestionChannel, IngestionCandidate, IngestionCacheEntry, IngestionPipelineStats,
+    ExternalKnowledgeEntity,
+    // Analysis helpers
+    HistoricalEntityAnalysis,
+    IngestionCacheEntry,
+    IngestionCandidate,
+    IngestionChannel,
+    IngestionPipelineStats,
+    // Knowledge base types
+    KbSource,
+    KnowledgeBase,
+    KnowledgeBaseResult,
+    KnowledgeIngest,
+    // Core types
+    Language,
+    NamedEntity,
+    ReferentInfo,
+    RelatedEntity,
+    ResolvedEntity,
+    UnresolvableAmbiguity,
+    UnresolvableReason,
 };
 
-pub use detection::AmbiguityDetector;
-pub use patterns::EntityPatterns;
-pub use entities::NamedEntityRecognizer;
 pub use context::ContextResolver;
+pub use detection::AmbiguityDetector;
+pub use entities::NamedEntityRecognizer;
+pub use patterns::EntityPatterns;
 pub use stage::DisambiguationStage;
 
 // Convenience constructors for common configurations

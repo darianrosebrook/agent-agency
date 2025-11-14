@@ -3,13 +3,13 @@
 //! Provides real database integration with local PostgreSQL instance.
 //! NO mocks - actual database connections, queries, and transactions.
 
-use std::sync::Arc;
-use tokio_postgres::{Client, NoTls};
-use tracing::{info, warn, error};
-use std::time::Duration;
 use bb8::{Pool, PooledConnection};
 use bb8_postgres::PostgresConnectionManager;
 use refinery::embed_migrations;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio_postgres::{Client, NoTls};
+use tracing::{error, info, warn};
 
 // Embed migrations from the migrations directory
 embed_migrations!("migrations");
@@ -31,45 +31,63 @@ impl PostgresService {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         // Use environment variables if available, otherwise use defaults
         // This allows tests to connect to the actual running database
-        let database_url = std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgresql://postgres:agent_agency_secure_password_123@localhost:5433/agent_agency".to_string());
-        
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgresql://postgres:agent_agency_secure_password_123@localhost:5433/agent_agency"
+                .to_string()
+        });
+
         // Parse database URL if provided
-        let (host, port, database, username, password) = if database_url.starts_with("postgresql://") || database_url.starts_with("postgres://") {
-            // Parse postgres://user:pass@host:port/db format
-            let url = database_url.strip_prefix("postgresql://")
-                .or_else(|| database_url.strip_prefix("postgres://"))
-                .unwrap();
-            
-            let parts: Vec<&str> = url.split('@').collect();
-            if parts.len() == 2 {
-                let auth = parts[0];
-                let host_db = parts[1];
-                
-                let auth_parts: Vec<&str> = auth.split(':').collect();
-                let username = auth_parts[0].to_string();
-                let password = auth_parts.get(1).unwrap_or(&"").to_string();
-                
-                let host_db_parts: Vec<&str> = host_db.split('/').collect();
-                let host_port = host_db_parts[0];
-                let database = host_db_parts.get(1).unwrap_or(&"postgres").to_string();
-                
-                let host_port_parts: Vec<&str> = host_port.split(':').collect();
-                let host = host_port_parts[0].to_string();
-                let port = host_port_parts.get(1)
-                    .and_then(|p| p.parse::<u16>().ok())
-                    .unwrap_or(5432);
-                
-                (host, port, database, username, password)
+        let (host, port, database, username, password) =
+            if database_url.starts_with("postgresql://") || database_url.starts_with("postgres://")
+            {
+                // Parse postgres://user:pass@host:port/db format
+                let url = database_url
+                    .strip_prefix("postgresql://")
+                    .or_else(|| database_url.strip_prefix("postgres://"))
+                    .unwrap();
+
+                let parts: Vec<&str> = url.split('@').collect();
+                if parts.len() == 2 {
+                    let auth = parts[0];
+                    let host_db = parts[1];
+
+                    let auth_parts: Vec<&str> = auth.split(':').collect();
+                    let username = auth_parts[0].to_string();
+                    let password = auth_parts.get(1).unwrap_or(&"").to_string();
+
+                    let host_db_parts: Vec<&str> = host_db.split('/').collect();
+                    let host_port = host_db_parts[0];
+                    let database = host_db_parts.get(1).unwrap_or(&"postgres").to_string();
+
+                    let host_port_parts: Vec<&str> = host_port.split(':').collect();
+                    let host = host_port_parts[0].to_string();
+                    let port = host_port_parts
+                        .get(1)
+                        .and_then(|p| p.parse::<u16>().ok())
+                        .unwrap_or(5432);
+
+                    (host, port, database, username, password)
+                } else {
+                    // Fallback to defaults
+                    (
+                        "localhost".to_string(),
+                        5433,
+                        "agent_agency".to_string(),
+                        "postgres".to_string(),
+                        "agent_agency_secure_password_123".to_string(),
+                    )
+                }
             } else {
-                // Fallback to defaults
-                ("localhost".to_string(), 5433, "agent_agency".to_string(), "postgres".to_string(), "agent_agency_secure_password_123".to_string())
-            }
-        } else {
-            // Use defaults
-            ("localhost".to_string(), 5433, "agent_agency".to_string(), "postgres".to_string(), "agent_agency_secure_password_123".to_string())
-        };
-        
+                // Use defaults
+                (
+                    "localhost".to_string(),
+                    5433,
+                    "agent_agency".to_string(),
+                    "postgres".to_string(),
+                    "agent_agency_secure_password_123".to_string(),
+                )
+            };
+
         Ok(Self {
             host,
             port,
@@ -168,11 +186,18 @@ impl PostgresService {
             )
         };
 
-        info!("Connecting to PostgreSQL: {}:{} database: {} user: {}", 
-              self.host, self.port, self.database, self.username);
+        info!(
+            "Connecting to PostgreSQL: {}:{} database: {} user: {}",
+            self.host, self.port, self.database, self.username
+        );
 
         let manager = PostgresConnectionManager::new_from_stringlike(&connection_string, NoTls)
-            .map_err(|e| format!("Failed to create connection manager: {} (connection string: {})", e, connection_string))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to create connection manager: {} (connection string: {})",
+                    e, connection_string
+                )
+            })?;
 
         let pool = Pool::builder()
             .max_size(10) // Maximum connections in pool
@@ -183,7 +208,9 @@ impl PostgresService {
 
         // Test the pool by getting a connection
         let cloned_pool = pool.clone();
-        let _connection = cloned_pool.get().await
+        let _connection = cloned_pool
+            .get()
+            .await
             .map_err(|e| format!("Failed to get connection from pool: {}", e))?;
 
         self.pool = Some(pool);
@@ -208,12 +235,9 @@ impl PostgresService {
 
         // Apply migrations using refinery
         // Create a direct Client connection for migrations (refinery needs Client, not PooledConnection)
-        let (mut client, connection) = tokio_postgres::connect(
-            &connection_string,
-            NoTls,
-        )
-        .await
-        .map_err(|e| format!("Failed to create migration client: {}", e))?;
+        let (mut client, connection) = tokio_postgres::connect(&connection_string, NoTls)
+            .await
+            .map_err(|e| format!("Failed to create migration client: {}", e))?;
 
         // Spawn connection task
         tokio::spawn(async move {
@@ -222,12 +246,10 @@ impl PostgresService {
             }
         });
 
-        let migrations = vec![
-            refinery::Migration::unapplied(
-                "V1__initial_test_schema",
-                include_str!("../../migrations/V1__initial_test_schema.sql"),
-            )?,
-        ];
+        let migrations = vec![refinery::Migration::unapplied(
+            "V1__initial_test_schema",
+            include_str!("../../migrations/V1__initial_test_schema.sql"),
+        )?];
 
         let report = refinery::Runner::new(&migrations)
             .run_async(&mut client)
@@ -240,12 +262,18 @@ impl PostgresService {
     }
 
     /// Get a connection from the pool
-    pub async fn get_connection(&self) -> Result<PooledConnection<'_, PostgresConnectionManager<NoTls>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_connection(
+        &self,
+    ) -> Result<
+        PooledConnection<'_, PostgresConnectionManager<NoTls>>,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         match self.pool {
-            Some(ref pool) => {
-                pool.get().await.map_err(|e| format!("Failed to get connection from pool: {}", e).into())
-            }
-            None => Err("Connection pool not initialized".into())
+            Some(ref pool) => pool
+                .get()
+                .await
+                .map_err(|e| format!("Failed to get connection from pool: {}", e).into()),
+            None => Err("Connection pool not initialized".into()),
         }
     }
 
@@ -301,10 +329,13 @@ impl PostgresService {
         f: F,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnOnce(&Client) -> futures::future::BoxFuture<'_, Result<T, tokio_postgres::Error>> + Send,
+        F: FnOnce(&Client) -> futures::future::BoxFuture<'_, Result<T, tokio_postgres::Error>>
+            + Send,
     {
         let conn = self.get_connection().await?;
-        f(&*conn).await.map_err(|e| format!("Query execution failed: {}", e).into())
+        f(&*conn)
+            .await
+            .map_err(|e| format!("Query execution failed: {}", e).into())
     }
 
     /// Execute multiple queries in a transaction
@@ -313,25 +344,39 @@ impl PostgresService {
         f: F,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: for<'a> FnOnce(&'a tokio_postgres::Transaction<'a>) -> futures::future::BoxFuture<'a, Result<T, tokio_postgres::Error>> + Send,
+        F: for<'a> FnOnce(
+                &'a tokio_postgres::Transaction<'a>,
+            )
+                -> futures::future::BoxFuture<'a, Result<T, tokio_postgres::Error>>
+            + Send,
     {
         // Get a connection from the pool - PooledConnection dereferences to Client
-        let pool = self.pool.as_ref().ok_or("Connection pool not initialized")?;
-        let mut client = pool.get().await
+        let pool = self
+            .pool
+            .as_ref()
+            .ok_or("Connection pool not initialized")?;
+        let mut client = pool
+            .get()
+            .await
             .map_err(|e| format!("Failed to get connection from pool: {}", e))?;
-        
+
         // Start a transaction (PooledConnection derefs to Client)
-        let transaction = client.transaction().await
+        let transaction = client
+            .transaction()
+            .await
             .map_err(|e| format!("Failed to start transaction: {}", e))?;
-        
+
         // Execute the closure with the transaction
-        let result = f(&transaction).await
+        let result = f(&transaction)
+            .await
             .map_err(|e| format!("Transaction execution failed: {}", e))?;
-        
+
         // Commit the transaction
-        transaction.commit().await
+        transaction
+            .commit()
+            .await
             .map_err(|e| format!("Failed to commit transaction: {}", e))?;
-        
+
         Ok(result)
     }
 
@@ -356,12 +401,19 @@ impl PostgresService {
 
         self.execute_transaction(|client| {
             Box::pin(async move {
-                client.execute("DROP TABLE IF EXISTS test_research CASCADE", &[]).await?;
-                client.execute("DROP TABLE IF EXISTS test_code_changes CASCADE", &[]).await?;
-                client.execute("DROP TABLE IF EXISTS test_agent_runs CASCADE", &[]).await?;
+                client
+                    .execute("DROP TABLE IF EXISTS test_research CASCADE", &[])
+                    .await?;
+                client
+                    .execute("DROP TABLE IF EXISTS test_code_changes CASCADE", &[])
+                    .await?;
+                client
+                    .execute("DROP TABLE IF EXISTS test_agent_runs CASCADE", &[])
+                    .await?;
                 Ok(())
             })
-        }).await?;
+        })
+        .await?;
 
         info!("Test data cleaned up");
         Ok(())
@@ -378,19 +430,27 @@ impl PostgresService {
     }
 
     /// Manually apply migrations (useful for testing)
-    pub async fn apply_migrations_manual(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn apply_migrations_manual(
+        &mut self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         self.apply_migrations().await
     }
 
     /// Create a test database manager with lifecycle management
-    /// 
+    ///
     /// This creates an isolated test database for better test isolation and parallel execution.
-    pub async fn create_lifecycle_manager(&self, test_id: Option<String>) -> Result<crate::database_lifecycle::TestDatabaseManager, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn create_lifecycle_manager(
+        &self,
+        test_id: Option<String>,
+    ) -> Result<
+        crate::database_lifecycle::TestDatabaseManager,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         let base_url = format!(
             "postgres://{}:{}@{}:{}/postgres",
             self.username, self.password, self.host, self.port
         );
-        
+
         crate::database_lifecycle::TestDatabaseManager::new(&base_url, test_id)
             .await
             .map_err(|e| format!("Failed to create test database manager: {}", e).into())

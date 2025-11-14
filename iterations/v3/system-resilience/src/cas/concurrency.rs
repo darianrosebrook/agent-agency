@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, ChangeSource, ConflictClass};
+use crate::recovery_types::{ChangeSource, ConflictClass, Digest};
 
 /// Optimistic concurrency control for file changes
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -259,7 +259,8 @@ impl ConcurrencyManager {
             total_files: self.file_states.len(),
             pending_changes: self.pending_changes.len(),
             total_conflicts: self.conflict_history.len(),
-            recent_conflicts: self.conflict_history
+            recent_conflicts: self
+                .conflict_history
                 .iter()
                 .filter(|c| self.current_timestamp() - c.timestamp < 3600) // Last hour
                 .count(),
@@ -267,7 +268,11 @@ impl ConcurrencyManager {
     }
 
     /// Classify a conflict based on source and current state
-    fn classify_conflict(&self, source: &ChangeSource, current_digest: Option<Digest>) -> ConflictClass {
+    fn classify_conflict(
+        &self,
+        source: &ChangeSource,
+        current_digest: Option<Digest>,
+    ) -> ConflictClass {
         match source {
             ChangeSource::AgentIteration { .. } => {
                 if current_digest.is_some() {
@@ -304,7 +309,11 @@ impl ConcurrencyManager {
     }
 
     /// Attempt automatic merge
-    fn auto_merge_conflict(&mut self, path: &str, conflict: &ConflictInfo) -> Result<ConcurrencyResult> {
+    fn auto_merge_conflict(
+        &mut self,
+        path: &str,
+        conflict: &ConflictInfo,
+    ) -> Result<ConcurrencyResult> {
         // TODO: Implement automatic merge logic for conflicts
         //       Currently returns conflict for manual resolution; should implement merge logic to automatically resolve conflicts where possible.
         //
@@ -421,16 +430,26 @@ impl ConcurrencyManager {
     }
 
     /// Use the newer change
-    fn use_newer_change(&mut self, path: &str, conflict: &ConflictInfo) -> Result<ConcurrencyResult> {
+    fn use_newer_change(
+        &mut self,
+        path: &str,
+        conflict: &ConflictInfo,
+    ) -> Result<ConcurrencyResult> {
         // Use the current digest (newer)
-        self.file_states.insert(path.to_string(), conflict.current_digest);
+        self.file_states
+            .insert(path.to_string(), conflict.current_digest);
         Ok(ConcurrencyResult::Success)
     }
 
     /// Use the older change
-    fn use_older_change(&mut self, path: &str, conflict: &ConflictInfo) -> Result<ConcurrencyResult> {
+    fn use_older_change(
+        &mut self,
+        path: &str,
+        conflict: &ConflictInfo,
+    ) -> Result<ConcurrencyResult> {
         // Use the base digest (older)
-        self.file_states.insert(path.to_string(), conflict.base_digest);
+        self.file_states
+            .insert(path.to_string(), conflict.base_digest);
         Ok(ConcurrencyResult::Success)
     }
 
@@ -545,19 +564,21 @@ mod tests {
     fn test_optimistic_concurrency_success() {
         let mut manager = ConcurrencyManager::new();
         let digest = Digest::from_bytes([1; 32]);
-        
-        let result = manager.record_change(
-            "test.txt",
-            digest,
-            None, // No precondition
-            ChangeSource::AgentIteration {
-                iteration: 1,
-                agent_id: "agent1".to_string(),
-            },
-            "session1",
-            Some("agent1"),
-        ).unwrap();
-        
+
+        let result = manager
+            .record_change(
+                "test.txt",
+                digest,
+                None, // No precondition
+                ChangeSource::AgentIteration {
+                    iteration: 1,
+                    agent_id: "agent1".to_string(),
+                },
+                "session1",
+                Some("agent1"),
+            )
+            .unwrap();
+
         assert!(matches!(result, ConcurrencyResult::Success));
         assert!(manager.get_file_state("test.txt").is_some());
     }
@@ -567,37 +588,43 @@ mod tests {
         let mut manager = ConcurrencyManager::new();
         let digest1 = Digest::from_bytes([1; 32]);
         let digest2 = Digest::from_bytes([2; 32]);
-        
+
         // First change succeeds
-        let result1 = manager.record_change(
-            "test.txt",
-            digest1,
-            None,
-            ChangeSource::AgentIteration {
-                iteration: 1,
-                agent_id: "agent1".to_string(),
-            },
-            "session1",
-            Some("agent1"),
-        ).unwrap();
+        let result1 = manager
+            .record_change(
+                "test.txt",
+                digest1,
+                None,
+                ChangeSource::AgentIteration {
+                    iteration: 1,
+                    agent_id: "agent1".to_string(),
+                },
+                "session1",
+                Some("agent1"),
+            )
+            .unwrap();
         assert!(matches!(result1, ConcurrencyResult::Success));
-        
+
         // Simulate another change happening (making the precondition stale)
-        manager.file_states.insert("test.txt".to_string(), Digest::from_bytes([3; 32]));
+        manager
+            .file_states
+            .insert("test.txt".to_string(), Digest::from_bytes([3; 32]));
 
         // Second change with stale precondition should fail
-        let result2 = manager.record_change(
-            "test.txt",
-            digest2,
-            Some(digest1), // Precondition is now stale
-            ChangeSource::AgentIteration {
-                iteration: 2,
-                agent_id: "agent2".to_string(),
-            },
-            "session2",
-            Some("agent2"),
-        ).unwrap();
-        
+        let result2 = manager
+            .record_change(
+                "test.txt",
+                digest2,
+                Some(digest1), // Precondition is now stale
+                ChangeSource::AgentIteration {
+                    iteration: 2,
+                    agent_id: "agent2".to_string(),
+                },
+                "session2",
+                Some("agent2"),
+            )
+            .unwrap();
+
         assert!(matches!(result2, ConcurrencyResult::Conflict(_)));
     }
 
@@ -605,33 +632,37 @@ mod tests {
     fn test_conflict_classification() {
         let mut manager = ConcurrencyManager::new();
         let digest = Digest::from_bytes([3; 32]);
-        
+
         // Set up a file state
         manager.file_states.insert("test.txt".to_string(), digest);
-        
+
         // Test different conflict types
         let agent_source = ChangeSource::AgentIteration {
             iteration: 1,
             agent_id: "agent1".to_string(),
         };
-        
+
         let human_source = ChangeSource::HumanEdit {
             user_id: "user1".to_string(),
         };
-        
+
         // First, simulate another agent changing the file
-        manager.file_states.insert("test.txt".to_string(), Digest::from_bytes([5; 32]));
+        manager
+            .file_states
+            .insert("test.txt".to_string(), Digest::from_bytes([5; 32]));
 
         // Now try to change with stale precondition - this should create a conflict
-        let result = manager.record_change(
-            "test.txt",
-            Digest::from_bytes([4; 32]),
-            Some(digest), // This precondition is now stale
-            agent_source,
-            "session1",
-            Some("agent1"),
-        ).unwrap();
-        
+        let result = manager
+            .record_change(
+                "test.txt",
+                Digest::from_bytes([4; 32]),
+                Some(digest), // This precondition is now stale
+                agent_source,
+                "session1",
+                Some("agent1"),
+            )
+            .unwrap();
+
         if let ConcurrencyResult::Conflict(conflict) = result {
             assert_eq!(conflict.class, ConflictClass::AgentVsAgent);
         } else {
@@ -642,31 +673,35 @@ mod tests {
     #[test]
     fn test_concurrency_stats() {
         let mut manager = ConcurrencyManager::new();
-        
+
         // Add some changes
-        manager.record_change(
-            "test1.txt",
-            Digest::from_bytes([5; 32]),
-            None,
-            ChangeSource::AgentIteration {
-                iteration: 1,
-                agent_id: "agent1".to_string(),
-            },
-            "session1",
-            Some("agent1"),
-        ).unwrap();
-        
-        manager.record_change(
-            "test2.txt",
-            Digest::from_bytes([6; 32]),
-            None,
-            ChangeSource::HumanEdit {
-                user_id: "user1".to_string(),
-            },
-            "session2",
-            None,
-        ).unwrap();
-        
+        manager
+            .record_change(
+                "test1.txt",
+                Digest::from_bytes([5; 32]),
+                None,
+                ChangeSource::AgentIteration {
+                    iteration: 1,
+                    agent_id: "agent1".to_string(),
+                },
+                "session1",
+                Some("agent1"),
+            )
+            .unwrap();
+
+        manager
+            .record_change(
+                "test2.txt",
+                Digest::from_bytes([6; 32]),
+                None,
+                ChangeSource::HumanEdit {
+                    user_id: "user1".to_string(),
+                },
+                "session2",
+                None,
+            )
+            .unwrap();
+
         let stats = manager.get_stats();
         assert_eq!(stats.total_files, 2);
         assert_eq!(stats.pending_changes, 2);
@@ -675,7 +710,7 @@ mod tests {
     #[test]
     fn test_conflict_detector() {
         let mut detector = ConflictDetector::new();
-        
+
         // Add a pattern for configuration files
         detector.add_pattern(ConflictPattern {
             name: "Config files".to_string(),
@@ -683,7 +718,7 @@ mod tests {
             class: ConflictClass::HumanVsAgent,
             resolution: ConflictResolution::Manual,
         });
-        
+
         let conflicts = detector.detect_conflicts(
             "app.config",
             &ChangeSource::AgentIteration {
@@ -691,7 +726,7 @@ mod tests {
                 agent_id: "agent1".to_string(),
             },
         );
-        
+
         assert_eq!(conflicts.len(), 1);
         assert_eq!(conflicts[0].name, "Config files");
     }

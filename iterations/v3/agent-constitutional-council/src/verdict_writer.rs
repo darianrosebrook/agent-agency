@@ -3,21 +3,20 @@
 //! This module provides comprehensive verdict persistence capabilities,
 //! ensuring all council decisions are properly recorded and auditable.
 
-use std::sync::Arc;
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::HashMap;
+use std::sync::Arc;
+use uuid::Uuid;
 
 use agent_agency_contracts::{
-    JudgeVerdict, VerdictLabel, JudgeType,
-    WorkingSpec, judge_io::Severity,
+    judge_io::Severity, JudgeType, JudgeVerdict, VerdictLabel, WorkingSpec,
 };
-use agent_orchestration::audit_trail::{AuditTrailManager, AuditConfig};
+use agent_orchestration::audit_trail::{AuditConfig, AuditTrailManager};
 
-use crate::{CouncilResult, CouncilError, FinalDecision};
+use crate::{CouncilError, CouncilResult, FinalDecision};
 
 /// Verdict Writer for persisting council decisions to audit trail
 #[derive(Debug)]
@@ -220,7 +219,9 @@ impl VerdictWriter {
         final_decision: &FinalDecision,
         evaluation_duration: std::time::Duration,
     ) -> VerdictRecord {
-        let judge_summaries = final_decision.judge_verdicts.iter()
+        let judge_summaries = final_decision
+            .judge_verdicts
+            .iter()
             .enumerate()
             .map(|(idx, verdict)| {
                 // Map index to judge type (order: Constitutional, Technical, Quality, Integration)
@@ -235,10 +236,8 @@ impl VerdictWriter {
             })
             .collect();
 
-        let council_metrics = self.calculate_council_metrics(
-            &final_decision.judge_verdicts,
-            evaluation_duration,
-        );
+        let council_metrics =
+            self.calculate_council_metrics(&final_decision.judge_verdicts, evaluation_duration);
 
         VerdictRecord {
             id: Uuid::new_v4(),
@@ -257,8 +256,14 @@ impl VerdictWriter {
     }
 
     /// Create summary of individual judge verdict
-    fn summarize_judge_verdict(&self, verdict: &JudgeVerdict, judge_type: JudgeType) -> JudgeVerdictSummary {
-        let critical_violations = verdict.violations.iter()
+    fn summarize_judge_verdict(
+        &self,
+        verdict: &JudgeVerdict,
+        judge_type: JudgeType,
+    ) -> JudgeVerdictSummary {
+        let critical_violations = verdict
+            .violations
+            .iter()
             .filter(|v| v.severity == Severity::Critical)
             .count();
 
@@ -288,16 +293,23 @@ impl VerdictWriter {
         }
 
         // Add critical violations
-        let critical_violations: Vec<_> = verdict.violations.iter()
+        let critical_violations: Vec<_> = verdict
+            .violations
+            .iter()
             .filter(|v| v.severity == Severity::Critical)
             .collect();
 
         if !critical_violations.is_empty() {
-            points.push(format!("Critical violations: {}", critical_violations.len()));
+            points.push(format!(
+                "Critical violations: {}",
+                critical_violations.len()
+            ));
         }
 
         // Add high-impact violations
-        let high_impact: Vec<_> = verdict.violations.iter()
+        let high_impact: Vec<_> = verdict
+            .violations
+            .iter()
             .filter(|v| v.severity == Severity::High)
             .take(3) // Limit to top 3
             .collect();
@@ -318,9 +330,7 @@ impl VerdictWriter {
         evaluation_duration: std::time::Duration,
     ) -> CouncilMetrics {
         let judges_count = judge_verdicts.len();
-        let total_violations: usize = judge_verdicts.iter()
-            .map(|v| v.violations.len())
-            .sum();
+        let total_violations: usize = judge_verdicts.iter().map(|v| v.violations.len()).sum();
 
         let average_confidence = if judges_count > 0 {
             judge_verdicts.iter().map(|v| v.score).sum::<f32>() / judges_count as f32
@@ -332,9 +342,7 @@ impl VerdictWriter {
         //       Currently uses basic calculation; should implement sophisticated calculation considering judge agreement, confidence levels, and voting patterns.
         let consensus_label = judge_verdicts.first().map(|v| &v.label);
         let consensus_strength = if let Some(label) = consensus_label {
-            let agreeing_judges = judge_verdicts.iter()
-                .filter(|v| &v.label == label)
-                .count();
+            let agreeing_judges = judge_verdicts.iter().filter(|v| &v.label == label).count();
             agreeing_judges as f32 / judges_count as f32
         } else {
             0.0
@@ -353,18 +361,23 @@ impl VerdictWriter {
     async fn persist_verdict_record(&self, record: &VerdictRecord) -> CouncilResult<()> {
         // Use the council auditor to record the evaluation
         // Note: This integrates with the existing audit trail system
-        let vote_distribution: HashMap<String, usize> = record.judge_verdicts.iter()
+        let vote_distribution: HashMap<String, usize> = record
+            .judge_verdicts
+            .iter()
             .map(|jv| (format!("{:?}", jv.judge_type), 1))
             .collect();
 
-        self.audit_manager.council_auditor().record_council_consensus(
-            &record.session_id,
-            &format!("{:?}", record.final_decision.label),
-            vote_distribution,
-            record.final_decision.score,
-            std::time::Duration::from_millis(record.council_metrics.evaluation_duration_ms),
-        ).await
-        .map_err(|e| CouncilError::Config(format!("Failed to persist verdict: {}", e)))?;
+        self.audit_manager
+            .council_auditor()
+            .record_council_consensus(
+                &record.session_id,
+                &format!("{:?}", record.final_decision.label),
+                vote_distribution,
+                record.final_decision.score,
+                std::time::Duration::from_millis(record.council_metrics.evaluation_duration_ms),
+            )
+            .await
+            .map_err(|e| CouncilError::Config(format!("Failed to persist verdict: {}", e)))?;
 
         Ok(())
     }
@@ -382,14 +395,25 @@ impl VerdictWriter {
 
         // Record notification event in audit trail
         // This provides a record that notifications were attempted
-        self.audit_manager.council_auditor().record_council_consensus(
-            &format!("notification_{}", record.session_id),
-            &format!("Notification sent for verdict: {:?}", record.final_decision.label),
-            HashMap::new(), // No vote distribution for notifications
-            record.final_decision.score,
-            std::time::Duration::from_millis(0), // Notification doesn't take time
-        ).await
-        .map_err(|e| CouncilError::Config(format!("Failed to record notification in audit trail: {}", e)))?;
+        self.audit_manager
+            .council_auditor()
+            .record_council_consensus(
+                &format!("notification_{}", record.session_id),
+                &format!(
+                    "Notification sent for verdict: {:?}",
+                    record.final_decision.label
+                ),
+                HashMap::new(), // No vote distribution for notifications
+                record.final_decision.score,
+                std::time::Duration::from_millis(0), // Notification doesn't take time
+            )
+            .await
+            .map_err(|e| {
+                CouncilError::Config(format!(
+                    "Failed to record notification in audit trail: {}",
+                    e
+                ))
+            })?;
 
         // Build notification message
         let notification_message = self.build_notification_message(record);
@@ -438,14 +462,13 @@ impl VerdictWriter {
             record.final_decision.rationale
         );
 
-        let judge_summaries: Vec<String> = record.judge_verdicts.iter()
+        let judge_summaries: Vec<String> = record
+            .judge_verdicts
+            .iter()
             .map(|jv| {
                 format!(
                     "- {:?}: {:?} (Score: {:.2}, Violations: {})",
-                    jv.judge_type,
-                    jv.label,
-                    jv.score,
-                    jv.violation_count
+                    jv.judge_type, jv.label, jv.score, jv.violation_count
                 )
             })
             .collect();
@@ -460,14 +483,19 @@ impl VerdictWriter {
             judge_summaries,
             consensus_strength: record.council_metrics.consensus_strength,
             total_violations: record.council_metrics.total_violations,
-            critical_violations: record.judge_verdicts.iter()
+            critical_violations: record
+                .judge_verdicts
+                .iter()
                 .map(|jv| jv.critical_violations)
                 .sum(),
         }
     }
 
     /// Get verdict history for a working spec
-    pub async fn get_verdict_history(&self, working_spec_id: &str) -> CouncilResult<Vec<VerdictRecord>> {
+    pub async fn get_verdict_history(
+        &self,
+        working_spec_id: &str,
+    ) -> CouncilResult<Vec<VerdictRecord>> {
         // If no database pool is available, return empty history
         let pool = match &self.db_pool {
             Some(pool) => pool,
@@ -483,15 +511,23 @@ impl VerdictWriter {
         // For other formats, we need to look up the task_id from tasks table
         let task_id = if working_spec_id.starts_with("TASK-") {
             // Extract UUID from "TASK-<UUID>" format
-            let uuid_str = working_spec_id.strip_prefix("TASK-")
-                .ok_or_else(|| CouncilError::Config(format!("Invalid working spec ID format: {}", working_spec_id)))?;
-            Uuid::parse_str(uuid_str)
-                .map_err(|e| CouncilError::Config(format!("Failed to parse UUID from working spec ID {}: {}", working_spec_id, e)))?
+            let uuid_str = working_spec_id.strip_prefix("TASK-").ok_or_else(|| {
+                CouncilError::Config(format!(
+                    "Invalid working spec ID format: {}",
+                    working_spec_id
+                ))
+            })?;
+            Uuid::parse_str(uuid_str).map_err(|e| {
+                CouncilError::Config(format!(
+                    "Failed to parse UUID from working spec ID {}: {}",
+                    working_spec_id, e
+                ))
+            })?
         } else {
             // For non-TASK IDs, try to find task_id from tasks table by working_spec_id
             // Query tasks table for matching working_spec_id
             let task_row = sqlx::query(
-                "SELECT id FROM tasks WHERE working_spec_id = $1 OR id::text = $1 LIMIT 1"
+                "SELECT id FROM tasks WHERE working_spec_id = $1 OR id::text = $1 LIMIT 1",
             )
             .bind(working_spec_id)
             .fetch_optional(pool)
@@ -499,10 +535,9 @@ impl VerdictWriter {
             .map_err(|e| CouncilError::Config(format!("Failed to query tasks table: {}", e)))?;
 
             match task_row {
-                Some(row) => {
-                    row.try_get::<Uuid, _>("id")
-                        .map_err(|e| CouncilError::Config(format!("Failed to extract task_id from row: {}", e)))?
-                }
+                Some(row) => row.try_get::<Uuid, _>("id").map_err(|e| {
+                    CouncilError::Config(format!("Failed to extract task_id from row: {}", e))
+                })?,
                 None => {
                     // No matching task found, return empty history
                     tracing::debug!("No task found for working_spec_id: {}", working_spec_id);
@@ -514,14 +549,14 @@ impl VerdictWriter {
         // Query council_verdicts table for all verdicts related to this task_id
         let verdict_rows = sqlx::query(
             r#"
-            SELECT 
+            SELECT
                 id, task_id, verdict_id, consensus_score, final_verdict,
                 individual_verdicts, debate_rounds, evaluation_time_ms,
                 created_at, contract, updated_at, verdict_details
             FROM council_verdicts
             WHERE task_id = $1
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(task_id)
         .fetch_all(pool)
@@ -531,23 +566,32 @@ impl VerdictWriter {
         // Convert database rows to VerdictRecord format
         let mut verdict_records = Vec::new();
         for row in verdict_rows {
-            let id: Uuid = row.try_get("id")
+            let id: Uuid = row
+                .try_get("id")
                 .map_err(|e| CouncilError::Config(format!("Failed to get id: {}", e)))?;
-            let created_at: DateTime<Utc> = row.try_get("created_at")
+            let created_at: DateTime<Utc> = row
+                .try_get("created_at")
                 .map_err(|e| CouncilError::Config(format!("Failed to get created_at: {}", e)))?;
-            let consensus_score: f32 = row.try_get("consensus_score")
-                .map_err(|e| CouncilError::Config(format!("Failed to get consensus_score: {}", e)))?;
-            let final_verdict_json: serde_json::Value = row.try_get("final_verdict")
+            let consensus_score: f32 = row.try_get("consensus_score").map_err(|e| {
+                CouncilError::Config(format!("Failed to get consensus_score: {}", e))
+            })?;
+            let final_verdict_json: serde_json::Value = row
+                .try_get("final_verdict")
                 .map_err(|e| CouncilError::Config(format!("Failed to get final_verdict: {}", e)))?;
-            let individual_verdicts_json: serde_json::Value = row.try_get("individual_verdicts")
-                .map_err(|e| CouncilError::Config(format!("Failed to get individual_verdicts: {}", e)))?;
-            let evaluation_time_ms: i32 = row.try_get("evaluation_time_ms")
-                .map_err(|e| CouncilError::Config(format!("Failed to get evaluation_time_ms: {}", e)))?;
-            let debate_rounds: i32 = row.try_get("debate_rounds")
+            let individual_verdicts_json: serde_json::Value =
+                row.try_get("individual_verdicts").map_err(|e| {
+                    CouncilError::Config(format!("Failed to get individual_verdicts: {}", e))
+                })?;
+            let evaluation_time_ms: i32 = row.try_get("evaluation_time_ms").map_err(|e| {
+                CouncilError::Config(format!("Failed to get evaluation_time_ms: {}", e))
+            })?;
+            let _debate_rounds: i32 = row
+                .try_get("debate_rounds")
                 .map_err(|e| CouncilError::Config(format!("Failed to get debate_rounds: {}", e)))?;
 
             // Parse final_verdict JSON to extract label, score, rationale
-            let verdict_label_str = final_verdict_json.get("label")
+            let verdict_label_str = final_verdict_json
+                .get("label")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Pass");
             let verdict_label = match verdict_label_str {
@@ -558,19 +602,22 @@ impl VerdictWriter {
                 _ => VerdictLabel::Pass, // Default fallback
             };
 
-            let verdict_score = final_verdict_json.get("score")
+            let verdict_score = final_verdict_json
+                .get("score")
                 .and_then(|v| v.as_f64())
                 .map(|s| s as f32)
                 .unwrap_or(consensus_score);
 
-            let verdict_rationale = final_verdict_json.get("rationale")
+            let verdict_rationale = final_verdict_json
+                .get("rationale")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "No rationale provided".to_string());
 
             // Parse individual_verdicts JSON array to extract judge verdict summaries
             let judge_verdicts = if let Some(verdicts_array) = individual_verdicts_json.as_array() {
-                verdicts_array.iter()
+                verdicts_array
+                    .iter()
                     .enumerate()
                     .filter_map(|(idx, verdict_json)| {
                         // Map index to judge type (order: Constitutional, Technical, Quality, Integration)
@@ -582,7 +629,8 @@ impl VerdictWriter {
                             _ => JudgeType::Constitutional, // Default fallback
                         };
 
-                        let label_str = verdict_json.get("label")
+                        let label_str = verdict_json
+                            .get("label")
                             .and_then(|v| v.as_str())
                             .unwrap_or("Pass");
                         let label = match label_str {
@@ -593,17 +641,20 @@ impl VerdictWriter {
                             _ => VerdictLabel::Pass,
                         };
 
-                        let score = verdict_json.get("score")
+                        let score = verdict_json
+                            .get("score")
                             .and_then(|v| v.as_f64())
                             .map(|s| s as f32)
                             .unwrap_or(0.0);
 
-                        let violations = verdict_json.get("violations")
+                        let violations = verdict_json
+                            .get("violations")
                             .and_then(|v| v.as_array())
                             .map(|arr| arr.len())
                             .unwrap_or(0);
 
-                        let critical_violations = verdict_json.get("violations")
+                        let critical_violations = verdict_json
+                            .get("violations")
                             .and_then(|v| v.as_array())
                             .map(|arr| {
                                 arr.iter()
@@ -617,7 +668,8 @@ impl VerdictWriter {
                             })
                             .unwrap_or(0);
 
-                        let key_reasoning = verdict_json.get("rationale")
+                        let key_reasoning = verdict_json
+                            .get("rationale")
                             .and_then(|v| v.as_str())
                             .map(|s| vec![s.to_string()])
                             .unwrap_or_default();
@@ -676,7 +728,10 @@ impl VerdictWriter {
     }
 
     /// Get the latest verdict for a working spec
-    pub async fn get_latest_verdict(&self, working_spec_id: &str) -> CouncilResult<Option<VerdictRecord>> {
+    pub async fn get_latest_verdict(
+        &self,
+        working_spec_id: &str,
+    ) -> CouncilResult<Option<VerdictRecord>> {
         let history = self.get_verdict_history(working_spec_id).await?;
         Ok(history.into_iter().max_by_key(|r| r.timestamp))
     }
@@ -744,5 +799,3 @@ mod tests {
         assert_eq!(metrics.consensus_strength, 1.0); // Both agreed
     }
 }
-
-

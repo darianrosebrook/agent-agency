@@ -20,18 +20,18 @@
 //! 3. **LLM Technical Analysis**: Use inference for architecture/design review
 //! 4. **Verdict Merging**: Combine automated checks with expert reasoning
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use tracing::{debug, instrument};
 use serde_json;
+use std::sync::Arc;
+use tracing::{debug, instrument};
 
 use agent_agency_contracts::{
-    JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, judge_io::Severity, RubricItem, WorkingSpecEvidence,
+    judge_io::Severity, JudgeEngine, JudgePrompt, JudgeType, JudgeVerdict, RubricItem,
+    VerdictLabel, Violation, WorkingSpecEvidence,
 };
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::common::{Judge, JudgeUtils};
+use super::common::JudgeUtils;
+use crate::{CouncilError, CouncilResult, ReviewContext};
 
 /// Technical Auditor for code quality and architecture evaluation
 #[derive(Debug)]
@@ -65,7 +65,8 @@ impl Default for TechnicalRubric {
             quality_items: vec![
                 RubricItem {
                     id: "QUALITY-001".to_string(),
-                    description: "Code follows clean code principles and best practices".to_string(),
+                    description: "Code follows clean code principles and best practices"
+                        .to_string(),
                     weight: 0.8,
                     evidence_requirements: vec!["code_review".to_string()],
                 },
@@ -214,7 +215,10 @@ impl super::common::Judge for TechnicalAuditor {
     // Override review_spec to use custom implementation
     #[instrument(skip(self, ctx), fields(judge = "technical", spec_id = %ctx.working_spec.id))]
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
-        debug!("🔧 Technical Auditor reviewing spec {}", ctx.working_spec.id);
+        debug!(
+            "🔧 Technical Auditor reviewing spec {}",
+            ctx.working_spec.id
+        );
 
         // TODO: Enhance deterministic technical checks implementation
         // - [ ] Expand deterministic checks to cover all CAWS invariants
@@ -233,7 +237,8 @@ impl super::common::Judge for TechnicalAuditor {
                 score: 0.0,
                 rationale: format!(
                     "Rejected due to critical technical violations: {}",
-                    technical_violations.iter()
+                    technical_violations
+                        .iter()
                         .map(|v| v.description.as_str())
                         .collect::<Vec<_>>()
                         .join(", ")
@@ -248,7 +253,10 @@ impl super::common::Judge for TechnicalAuditor {
 
         // STEP 4: Execute engine
         let req = JudgeUtils::build_request(prompt, 256);
-        let llm_verdict = self.engine.complete(req).await
+        let llm_verdict = self
+            .engine
+            .complete(req)
+            .await
             .map_err(|e| CouncilError::Engine(e))?;
 
         // STEP 5: Merge findings
@@ -276,12 +284,18 @@ impl TechnicalAuditor {
 
         // TODO: Implement comprehensive security checks
         //       Currently uses basic checks; should implement comprehensive security validation for working specs.
-        let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+        let spec_text = format!(
+            "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
             ctx.working_spec.title,
             ctx.working_spec.description,
             ctx.working_spec.goals.join("\n- "),
-            ctx.working_spec.acceptance_criteria.iter()
-                .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+            ctx.working_spec
+                .acceptance_criteria
+                .iter()
+                .map(|ac| format!(
+                    "{}: Given {}, When {}, Then {}",
+                    ac.id, ac.given, ac.when, ac.then
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );

@@ -1,17 +1,17 @@
 //! Adaptive worker selector
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::error;
 
-use crate::worker_types::TaskId;
-use crate::{WorkerId, WorkerSpecialty, SubTask};
 use crate::learning::types::*;
 use crate::learning::PatternAnalyzer;
+use crate::worker_types::TaskId;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
+use crate::{SubTask, WorkerId, WorkerSpecialty};
 
 /// Strategy for worker selection
 
@@ -63,20 +63,21 @@ impl AdaptiveWorkerSelector {
 
         let selection = match self.strategy {
             WorkerSelectionStrategy::PerformanceBased => {
-                self.select_by_performance(subtask, available_workers).await?
+                self.select_by_performance(subtask, available_workers)
+                    .await?
             }
             WorkerSelectionStrategy::CapabilityBased => {
-                self.select_by_capability(subtask, available_workers).await?
+                self.select_by_capability(subtask, available_workers)
+                    .await?
             }
             WorkerSelectionStrategy::FairnessBased => {
                 self.select_by_fairness(subtask, available_workers).await?
             }
             WorkerSelectionStrategy::LoadBalanced => {
-                self.select_by_load_balance(subtask, available_workers).await?
+                self.select_by_load_balance(subtask, available_workers)
+                    .await?
             }
-            WorkerSelectionStrategy::Random => {
-                self.select_randomly(available_workers)
-            }
+            WorkerSelectionStrategy::Random => self.select_randomly(available_workers),
         };
 
         Ok(selection)
@@ -89,7 +90,7 @@ impl AdaptiveWorkerSelector {
         available_workers: &[WorkerId],
     ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
         let profiles = self.worker_profiles.read().await;
-        
+
         let mut best_worker = None;
         let mut best_score = 0.0;
 
@@ -113,7 +114,7 @@ impl AdaptiveWorkerSelector {
         available_workers: &[WorkerId],
     ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
         let profiles = self.worker_profiles.read().await;
-        
+
         let mut best_worker = None;
         let mut best_match_score = 0.0;
 
@@ -137,7 +138,7 @@ impl AdaptiveWorkerSelector {
         available_workers: &[WorkerId],
     ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
         let fairness_metrics = self.fairness_monitor.get_fairness_metrics().await?;
-        
+
         let mut best_worker = None;
         let mut lowest_utilization = 1.0;
 
@@ -213,7 +214,11 @@ impl AdaptiveWorkerSelector {
     }
 
     /// Calculate performance score for a worker
-    fn calculate_performance_score(&self, profile: &WorkerPerformanceProfile, subtask: &SubTask) -> f64 {
+    fn calculate_performance_score(
+        &self,
+        profile: &WorkerPerformanceProfile,
+        subtask: &SubTask,
+    ) -> f64 {
         let success_rate = if profile.total_executions > 0 {
             profile.successful_executions as f64 / profile.total_executions as f64
         } else {
@@ -232,7 +237,11 @@ impl AdaptiveWorkerSelector {
     }
 
     /// Calculate capability match score
-    fn calculate_capability_match(&self, profile: &WorkerPerformanceProfile, subtask: &SubTask) -> f64 {
+    fn calculate_capability_match(
+        &self,
+        profile: &WorkerPerformanceProfile,
+        subtask: &SubTask,
+    ) -> f64 {
         // Check if worker has the required specialty capability
         let specialty_str = format!("{:?}", subtask.specialty);
 
@@ -244,7 +253,10 @@ impl AdaptiveWorkerSelector {
     }
 
     /// Update worker profiles
-    pub async fn update_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
+    pub async fn update_worker_profiles(
+        &self,
+        profiles: HashMap<WorkerId, WorkerPerformanceProfile>,
+    ) -> Result<()> {
         let mut current_profiles = self.worker_profiles.write().await;
         for (worker_id, profile) in profiles {
             current_profiles.insert(worker_id, profile);
@@ -266,8 +278,14 @@ impl AdaptiveWorkerSelector {
 /// Trait for fairness monitoring
 #[async_trait::async_trait]
 pub trait FairnessMonitor: Send + Sync {
-    async fn get_fairness_metrics(&self) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>>;
-    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::worker_types::TaskId) -> Result<()>;
+    async fn get_fairness_metrics(
+        &self,
+    ) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>>;
+    async fn record_task_assignment(
+        &self,
+        worker_id: WorkerId,
+        task_id: crate::worker_types::TaskId,
+    ) -> Result<()>;
 }
 
 // RealFairnessMonitor implementation moved to fairness_monitor.rs

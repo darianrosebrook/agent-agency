@@ -60,7 +60,7 @@ pub struct ComplianceValidationResult {
 }
 
 /// Placeholder compliance validator that panics
-/// 
+///
 /// This is a placeholder indicating that a real ComplianceValidator implementation
 /// must be provided via QualityGateValidator::with_compliance_validator().
 /// Real CAWS compliance validator using policy enforcement tools
@@ -204,7 +204,7 @@ impl QualityGateValidator {
         constraints: &OptimizationConstraints,
     ) -> Result<ValidationResult> {
         let baseline = self.get_baseline(task_type).await?;
-        
+
         // 1. Trust region check
         let temp_delta = (proposed.temperature - baseline.temperature).abs();
         if temp_delta > constraints.max_delta_temperature {
@@ -216,7 +216,7 @@ impl QualityGateValidator {
                 severity: ValidationSeverity::Error,
             });
         }
-        
+
         let tokens_delta = (proposed.max_tokens as i64 - baseline.max_tokens as i64).abs();
         if tokens_delta > constraints.max_delta_max_tokens as i64 {
             return Ok(ValidationResult::Rejected {
@@ -227,7 +227,7 @@ impl QualityGateValidator {
                 severity: ValidationSeverity::Error,
             });
         }
-        
+
         // 2. Quality floor check (expected quality ≥ baseline - threshold)
         let expected_quality = self.estimate_quality(proposed, &baseline).await?;
         if expected_quality < baseline.avg_quality - self.quality_threshold {
@@ -239,7 +239,7 @@ impl QualityGateValidator {
                 severity: ValidationSeverity::Warning,
             });
         }
-        
+
         // 3. Hard constraint checks
         if proposed.max_tokens > constraints.max_tokens {
             return Ok(ValidationResult::Rejected {
@@ -250,7 +250,7 @@ impl QualityGateValidator {
                 severity: ValidationSeverity::Error,
             });
         }
-        
+
         // 4. CAWS compliance
         if constraints.require_caws_compliance {
             let compliance = self.compliance_validator
@@ -263,12 +263,12 @@ impl QualityGateValidator {
                 });
             }
         }
-        
+
         // Calculate deltas for approved parameters
         let quality_delta = expected_quality - baseline.avg_quality;
         let latency_delta = self.estimate_latency_delta(proposed, &baseline) as i64;
         let token_delta = proposed.max_tokens as f64 - baseline.avg_tokens;
-        
+
         Ok(ValidationResult::Approved {
             quality_delta,
             latency_delta,
@@ -316,10 +316,10 @@ impl QualityGateValidator {
         // - Reviewer Requirements: ML model integration expertise
         let temp_similarity = 1.0 - (params.temperature - baseline.temperature).abs() / 2.0; // Temporary: similarity-based until model integration
         let token_similarity = 1.0 - (params.max_tokens as f64 - baseline.avg_tokens).abs() / baseline.avg_tokens;
-        
+
         // Weighted combination of similarities
         let estimated_quality = baseline.avg_quality * (0.7 * temp_similarity + 0.3 * token_similarity);
-        
+
         Ok(estimated_quality.max(0.0).min(1.0))
     }
 
@@ -362,7 +362,7 @@ impl QualityGateValidator {
         // - Reviewer Requirements: Performance modeling expertise
         let temp_factor = (params.temperature - baseline.temperature) * 100.0; // Temporary: basic until comprehensive estimation
         let token_factor = (params.max_tokens as f64 - baseline.avg_tokens) * 0.1;
-        
+
         temp_factor + token_factor
     }
 
@@ -371,11 +371,11 @@ impl QualityGateValidator {
         // Confidence based on how close parameters are to known good baselines
         let temp_distance = (params.temperature - baseline.temperature).abs();
         let token_distance = (params.max_tokens as f64 - baseline.avg_tokens).abs() / baseline.avg_tokens;
-        
+
         // Closer to baseline = higher confidence
         let temp_confidence = (1.0 - temp_distance / 2.0).max(0.0);
         let token_confidence = (1.0 - token_distance).max(0.0);
-        
+
         (temp_confidence + token_confidence) / 2.0
     }
 
@@ -386,10 +386,10 @@ impl QualityGateValidator {
         params: &ParameterSet,
     ) -> Result<ValidationResult> {
         let baseline = self.get_baseline(task_type).await?;
-        
+
         // Check if parameters are within historical performance bounds
         let quality_estimate = self.estimate_quality(params, &baseline).await?;
-        
+
         if quality_estimate < baseline.avg_quality * 0.8 {
             return Ok(ValidationResult::Rejected {
                 reason: format!(
@@ -399,7 +399,7 @@ impl QualityGateValidator {
                 severity: ValidationSeverity::Warning,
             });
         }
-        
+
         Ok(ValidationResult::Approved {
             quality_delta: quality_estimate - baseline.avg_quality,
             latency_delta: self.estimate_latency_delta(params, &baseline) as i64,
@@ -411,7 +411,7 @@ impl QualityGateValidator {
     /// Get validation statistics for a task type
     pub async fn get_validation_stats(&self, task_type: &str) -> Result<ValidationStats> {
         let baseline = self.get_baseline(task_type).await?;
-        
+
         Ok(ValidationStats {
             task_type: task_type.to_string(),
             baseline_quality: baseline.avg_quality,
@@ -442,7 +442,7 @@ mod tests {
     #[tokio::test]
     async fn test_quality_gate_validation() {
         let validator = QualityGateValidator::new(0.1);
-        
+
         let baseline = BaselineMetrics {
             avg_quality: 0.8,
             avg_latency: 1000,
@@ -450,11 +450,11 @@ mod tests {
             temperature: 0.7,
             max_tokens: 1000,
         };
-        
+
         validator.set_baseline("test_task".to_string(), baseline).await;
-        
+
         let constraints = OptimizationConstraints::default();
-        
+
         let params = ParameterSet {
             temperature: 0.75, // Within trust region
             max_tokens: 800,    // Within trust region
@@ -467,9 +467,9 @@ mod tests {
             policy_version: "1.0.0".to_string(),
             created_at: Utc::now(),
         };
-        
+
         let result = validator.validate_pre_deployment("test_task", &params, &constraints).await.unwrap();
-        
+
         match result {
             ValidationResult::Approved { quality_delta, .. } => {
                 assert!(quality_delta >= -0.1, "Quality delta should be reasonable");
@@ -483,7 +483,7 @@ mod tests {
     #[tokio::test]
     async fn test_trust_region_violation() {
         let validator = QualityGateValidator::new(0.1);
-        
+
         let baseline = BaselineMetrics {
             avg_quality: 0.8,
             avg_latency: 1000,
@@ -491,15 +491,15 @@ mod tests {
             temperature: 0.7,
             max_tokens: 1000,
         };
-        
+
         validator.set_baseline("test_task".to_string(), baseline).await;
-        
+
         let constraints = OptimizationConstraints {
             max_delta_temperature: 0.1, // Very restrictive
             max_delta_max_tokens: 50,
             ..Default::default()
         };
-        
+
         let params = ParameterSet {
             temperature: 1.0, // Way outside trust region
             max_tokens: 1000,
@@ -512,9 +512,9 @@ mod tests {
             policy_version: "1.0.0".to_string(),
             created_at: Utc::now(),
         };
-        
+
         let result = validator.validate_pre_deployment("test_task", &params, &constraints).await.unwrap();
-        
+
         match result {
             ValidationResult::Rejected { reason, .. } => {
                 assert!(reason.contains("Temperature delta"), "Should reject due to temperature delta");

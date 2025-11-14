@@ -1,17 +1,18 @@
 //! Code analysis evidence collection
 
-use super::types::*;
 use super::evidence_analysis::CodeAnalysisEngine;
-use crate::extraction_types::{AtomicClaim, Evidence, EvidenceType, EvidenceSource, ProcessingContext};
+use super::types::*;
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
+use crate::extraction_types::{
+    AtomicClaim, Evidence, EvidenceSource, EvidenceType, ProcessingContext,
+};
 use anyhow::Result;
 use tracing::debug;
 
-/// Code analysis evidence collector
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-#[derive(Debug, Serialize, Deserialize) ]
+/// Code analysis evidence collector
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CodeAnalysisCollector {
     config: EvidenceCollectorConfig,
     analysis_engine: CodeAnalysisEngine,
@@ -84,7 +85,10 @@ impl CodeAnalysisCollector {
         let mut relevant_findings = Vec::new();
 
         for line in clippy_output.lines() {
-            if line.contains(&claim.claim_text) || line.contains("warning") || line.contains("error") {
+            if line.contains(&claim.claim_text)
+                || line.contains("warning")
+                || line.contains("error")
+            {
                 if line.contains("warning") {
                     warning_count += 1;
                 } else if line.contains("error") {
@@ -94,7 +98,13 @@ impl CodeAnalysisCollector {
             }
         }
 
-        let confidence = if error_count > 0 { 0.3 } else if warning_count > 0 { 0.6 } else { 0.9 };
+        let confidence = if error_count > 0 {
+            0.3
+        } else if warning_count > 0 {
+            0.6
+        } else {
+            0.9
+        };
         let content = format!(
             "Clippy analysis: {} warnings, {} errors. Relevant findings: {}",
             warning_count,
@@ -105,7 +115,11 @@ impl CodeAnalysisCollector {
         Ok(Evidence {
             id: uuid::Uuid::new_v4(),
             claim_id: claim.id,
-            evidence_type: if error_count > 0 { EvidenceType::SecurityScan } else { EvidenceType::CodeAnalysis },
+            evidence_type: if error_count > 0 {
+                EvidenceType::SecurityScan
+            } else {
+                EvidenceType::CodeAnalysis
+            },
             content,
             source: EvidenceSource::CodeSearch {
                 location: "workspace".to_string(),
@@ -121,7 +135,8 @@ impl CodeAnalysisCollector {
     /// Analyze code metrics for the claim
     async fn analyze_code_metrics(&self, claim: &AtomicClaim) -> Result<Vec<Evidence>> {
         // Analyze code complexity and structure related to the claim
-        let (complexity_score, _maintainability, doc_coverage, _test_coverage) = self.analysis_engine.analyze_code_metrics(claim).await?;
+        let (complexity_score, _maintainability, doc_coverage, _test_coverage) =
+            self.analysis_engine.analyze_code_metrics(claim).await?;
 
         let mut evidence = Vec::new();
 
@@ -149,7 +164,10 @@ impl CodeAnalysisCollector {
                 id: uuid::Uuid::new_v4(),
                 claim_id: claim.id,
                 evidence_type: EvidenceType::Documentation,
-                content: format!("Low documentation coverage: {:.1}%. Consider adding more documentation.", doc_coverage * 100.0),
+                content: format!(
+                    "Low documentation coverage: {:.1}%. Consider adding more documentation.",
+                    doc_coverage * 100.0
+                ),
                 source: EvidenceSource::CodeSearch {
                     location: "analysis".to_string(),
                     authority: "documentation-analysis".to_string(),
@@ -166,7 +184,8 @@ impl CodeAnalysisCollector {
 
     /// Analyze documentation quality
     async fn analyze_documentation_quality(&self, claim: &AtomicClaim) -> Result<Evidence> {
-        let (has_readme, has_api_docs, completeness, comment_ratio, missing_docs) = self.analysis_engine.analyze_documentation(claim).await?;
+        let (has_readme, has_api_docs, completeness, comment_ratio, missing_docs) =
+            self.analysis_engine.analyze_documentation(claim).await?;
 
         let evidence_type = if completeness > 0.7 {
             EvidenceType::Documentation

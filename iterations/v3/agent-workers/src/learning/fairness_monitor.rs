@@ -1,14 +1,14 @@
 //! Fairness monitor for tracking worker utilization fairness
 
-use std::sync::Arc;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use sqlx::Row;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use crate::{WorkerId, TaskId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
+use crate::{TaskId, WorkerId};
 use data_infrastructure::ApiDatabaseClient as DatabaseClient;
 
 /// Monitors fairness in worker utilization and task distribution
@@ -26,18 +26,24 @@ impl FairnessMonitor {
     }
 
     /// Record a task assignment to a worker
-    pub async fn record_task_assignment(&self, worker_id: WorkerId, task_id: TaskId) -> anyhow::Result<()> {
+    pub async fn record_task_assignment(
+        &self,
+        worker_id: WorkerId,
+        task_id: TaskId,
+    ) -> anyhow::Result<()> {
         let mut assignments = self.task_assignments.write().await;
         assignments.entry(worker_id).or_default().push(task_id);
-        
+
         let mut last_updated = self.last_updated.write().await;
         *last_updated = Utc::now();
-        
+
         Ok(())
     }
 
     /// Get fairness metrics
-    pub async fn get_fairness_metrics(&self) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_fairness_metrics(
+        &self,
+    ) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>> {
         let assignments = self.task_assignments.read().await;
         let last_updated = *self.last_updated.read().await;
 
@@ -82,7 +88,7 @@ impl FairnessMonitor {
 
         let n = values.len();
         let sum: f64 = values.iter().sum();
-        
+
         if sum == 0.0 {
             return 0.0;
         }
@@ -96,15 +102,20 @@ impl FairnessMonitor {
     }
 
     /// Check if worker utilization is fair
-    pub async fn is_utilization_fair(&self, threshold: f64) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn is_utilization_fair(
+        &self,
+        threshold: f64,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_fairness_metrics().await?;
         Ok(metrics.gini_coefficient <= threshold)
     }
 
     /// Get worker with lowest utilization
-    pub async fn get_least_utilized_worker(&self) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_least_utilized_worker(
+        &self,
+    ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_fairness_metrics().await?;
-        
+
         let mut least_utilized = None;
         let mut min_utilization = 1.0;
 
@@ -119,9 +130,11 @@ impl FairnessMonitor {
     }
 
     /// Get worker with highest utilization
-    pub async fn get_most_utilized_worker(&self) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_most_utilized_worker(
+        &self,
+    ) -> Result<Option<WorkerId>, Box<dyn std::error::Error + Send + Sync>> {
         let metrics = self.get_fairness_metrics().await?;
-        
+
         let mut most_utilized = None;
         let mut max_utilization = 0.0;
 
@@ -139,10 +152,10 @@ impl FairnessMonitor {
     pub async fn reset(&self) -> anyhow::Result<()> {
         let mut assignments = self.task_assignments.write().await;
         assignments.clear();
-        
+
         let mut last_updated = self.last_updated.write().await;
         *last_updated = Utc::now();
-        
+
         Ok(())
     }
 }
@@ -166,7 +179,9 @@ impl RealFairnessMonitor {
 
 #[async_trait::async_trait]
 impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor {
-    async fn get_fairness_metrics(&self) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_fairness_metrics(
+        &self,
+    ) -> Result<FairnessMetrics, Box<dyn std::error::Error + Send + Sync>> {
         // Query worker utilization from database
         let query = r#"
             SELECT
@@ -203,7 +218,8 @@ impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor
                 }
 
                 // Calculate Gini coefficient for fairness
-                let mut utilization_values: Vec<f64> = worker_utilization.values().cloned().collect();
+                let mut utilization_values: Vec<f64> =
+                    worker_utilization.values().cloned().collect();
                 utilization_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
                 let gini_coefficient = if utilization_values.is_empty() {
@@ -240,7 +256,11 @@ impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor
         }
     }
 
-    async fn record_task_assignment(&self, worker_id: WorkerId, task_id: crate::worker_types::TaskId) -> Result<()> {
+    async fn record_task_assignment(
+        &self,
+        worker_id: WorkerId,
+        task_id: crate::worker_types::TaskId,
+    ) -> Result<()> {
         // Record task assignment in database for fairness tracking
         let query = r#"
             INSERT INTO worker_task_assignments (worker_id, task_id, assigned_at)
@@ -249,7 +269,14 @@ impl crate::learning::adaptive_selector::FairnessMonitor for RealFairnessMonitor
         "#;
 
         let now = chrono::Utc::now();
-        match self.db_client.execute(query, &[&worker_id.0.to_string(), &task_id.0.to_string(), &now]).await {
+        match self
+            .db_client
+            .execute(
+                query,
+                &[&worker_id.0.to_string(), &task_id.0.to_string(), &now],
+            )
+            .await
+        {
             Ok(_) => Ok(()),
             Err(e) => {
                 tracing::error!("Failed to record task assignment: {}", e);

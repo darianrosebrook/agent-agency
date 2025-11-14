@@ -1,6 +1,6 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use schemars::JsonSchema;
 
 use crate::contract_errors::{ContractError, ContractKind, ValidationIssue};
 use crate::schema::ROUTER_DECISION_SCHEMA;

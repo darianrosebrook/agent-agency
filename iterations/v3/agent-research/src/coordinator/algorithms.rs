@@ -35,9 +35,9 @@ impl LearningAlgorithms {
     /// Real algorithm execution implementation
     pub fn execute_algorithm(&self, algorithm: &LearningAlgorithm, input: LearningInput) -> LearningOutput {
         use tracing::{info, warn, error};
-        
+
         info!("Executing learning algorithm: {:?}", algorithm);
-        
+
         match algorithm {
             LearningAlgorithm::ReinforcementLearning => {
                 self.execute_reinforcement_learning(input)
@@ -63,21 +63,21 @@ impl LearningAlgorithms {
     /// Execute reinforcement learning algorithm
     fn execute_reinforcement_learning(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing reinforcement learning algorithm");
-        
+
         // Simulate Q-learning or policy gradient
         let mut total_reward = 0.0;
         let episodes = 100;
-        
+
         for episode in 0..episodes {
             let episode_reward = self.simulate_episode(episode, &input);
             total_reward += episode_reward;
         }
-        
+
         let average_reward = total_reward / episodes as f64;
         let confidence = (average_reward / 100.0).min(1.0).max(0.0);
-        
+
         LearningOutput {
             result: format!("Reinforcement learning completed. Average reward: {:.2}", average_reward),
             confidence,
@@ -92,15 +92,15 @@ impl LearningAlgorithms {
     /// Execute supervised learning algorithm
     fn execute_supervised_learning(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing supervised learning algorithm");
-        
+
         // Simulate training and validation
         let training_accuracy = self.simulate_training(&input);
         let validation_accuracy = training_accuracy * 0.9; // Simulate overfitting
-        
+
         LearningOutput {
-            result: format!("Supervised learning completed. Training accuracy: {:.2}%, Validation accuracy: {:.2}%", 
+            result: format!("Supervised learning completed. Training accuracy: {:.2}%, Validation accuracy: {:.2}%",
                 training_accuracy * 100.0, validation_accuracy * 100.0),
             confidence: validation_accuracy,
             improvements: vec![
@@ -114,15 +114,15 @@ impl LearningAlgorithms {
     /// Execute unsupervised learning algorithm
     fn execute_unsupervised_learning(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing unsupervised learning algorithm");
-        
+
         // Simulate clustering or dimensionality reduction
         let clusters = self.simulate_clustering(&input);
         let silhouette_score = self.calculate_silhouette_score(clusters);
-        
+
         LearningOutput {
-            result: format!("Unsupervised learning completed. Found {} clusters with silhouette score: {:.2}", 
+            result: format!("Unsupervised learning completed. Found {} clusters with silhouette score: {:.2}",
                 clusters, silhouette_score),
             confidence: silhouette_score.max(0.0),
             improvements: vec![
@@ -136,21 +136,21 @@ impl LearningAlgorithms {
     /// Execute deep learning algorithm
     fn execute_deep_learning(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing deep learning algorithm");
-        
+
         // Simulate neural network training
         let epochs = 50;
         let mut losses = Vec::new();
-        
+
         for epoch in 0..epochs {
             let loss = self.simulate_training_epoch(epoch, &input);
             losses.push(loss);
         }
-        
+
         let final_loss = losses.last().unwrap_or(&1.0);
         let confidence = (1.0 - final_loss).max(0.0);
-        
+
         LearningOutput {
             result: format!("Deep learning completed. Final loss: {:.4}", final_loss),
             confidence,
@@ -165,20 +165,20 @@ impl LearningAlgorithms {
     /// Execute evolutionary algorithm
     fn execute_evolutionary_algorithm(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing evolutionary algorithm");
-        
+
         // Simulate genetic algorithm
         let generations = 100;
         let mut best_fitness = 0.0;
-        
+
         for generation in 0..generations {
             let fitness = self.simulate_generation(generation, &input);
             best_fitness = best_fitness.max(fitness);
         }
-        
+
         let confidence = (best_fitness / 100.0).min(1.0).max(0.0);
-        
+
         LearningOutput {
             result: format!("Evolutionary algorithm completed. Best fitness: {:.2}", best_fitness),
             confidence,
@@ -193,20 +193,20 @@ impl LearningAlgorithms {
     /// Execute Bayesian optimization
     fn execute_bayesian_optimization(&self, input: LearningInput) -> LearningOutput {
         use tracing::info;
-        
+
         info!("Executing Bayesian optimization");
-        
+
         // Simulate Bayesian optimization
         let iterations = 50;
         let mut best_value = f64::NEG_INFINITY;
-        
+
         for iteration in 0..iterations {
             let value = self.simulate_bayesian_iteration(iteration, &input);
             best_value = best_value.max(value);
         }
-        
+
         let confidence = ((best_value + 100.0) / 200.0).min(1.0).max(0.0);
-        
+
         LearningOutput {
             result: format!("Bayesian optimization completed. Best value: {:.2}", best_value),
             confidence,

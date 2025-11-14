@@ -1,9 +1,9 @@
 //! Context synthesis and summarization
 
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use std::sync::Arc;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::research_types::*;
 use crate::ContextBuilder;
@@ -39,7 +39,11 @@ impl ContextSynthesizer {
         query_id: Uuid,
         results: Vec<ResearchResult>,
     ) -> Result<SynthesizedContext> {
-        info!("Synthesizing context for query {} with {} results", query_id, results.len());
+        info!(
+            "Synthesizing context for query {} with {} results",
+            query_id,
+            results.len()
+        );
 
         if results.is_empty() {
             return Ok(SynthesizedContext {
@@ -59,8 +63,12 @@ impl ContextSynthesizer {
         let combined_content = self.combine_results_content(&results);
 
         // Generate synthesis using context builder
-        let synthesis_result = self.context_builder
-            .build_context(&combined_content, self.config.context_synthesis.max_context_size)
+        let synthesis_result = self
+            .context_builder
+            .build_context(
+                &combined_content,
+                self.config.context_synthesis.max_context_size,
+            )
             .await?;
 
         // Extract key insights
@@ -91,7 +99,10 @@ impl ContextSynthesizer {
 
         for (i, result) in results.iter().enumerate() {
             combined.push_str(&format!("=== Source {}: {} ===\n", i + 1, result.title));
-            combined.push_str(&format!("URL: {}\n", result.url.as_deref().unwrap_or("N/A")));
+            combined.push_str(&format!(
+                "URL: {}\n",
+                result.url.as_deref().unwrap_or("N/A")
+            ));
             combined.push_str(&format!("Relevance: {:.2}\n", result.relevance_score));
             combined.push_str(&format!("Content:\n{}\n\n", result.content));
         }
@@ -127,8 +138,10 @@ impl ContextSynthesizer {
             return 0.0;
         }
 
-        let avg_relevance: f32 = results.iter().map(|r| r.relevance_score).sum::<f32>() / results.len() as f32;
-        let avg_confidence: f32 = results.iter().map(|r| r.confidence_score).sum::<f32>() / results.len() as f32;
+        let avg_relevance: f32 =
+            results.iter().map(|r| r.relevance_score).sum::<f32>() / results.len() as f32;
+        let avg_confidence: f32 =
+            results.iter().map(|r| r.confidence_score).sum::<f32>() / results.len() as f32;
 
         // Weighted combination
         (avg_relevance * 0.6) + (avg_confidence * 0.4)

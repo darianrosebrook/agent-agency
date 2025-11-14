@@ -34,16 +34,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod council;
-pub mod judges;
-pub mod verdict_writer;
 pub mod invariants;
+pub mod judges;
 pub mod metrics;
+pub mod verdict_writer;
 
 pub use council::{CouncilCoordinator, ReviewContext};
-pub use judges::{Judges, Judge, ConstitutionalJudge, TechnicalAuditor, QualityEvaluator, IntegrationValidator};
-pub use verdict_writer::{VerdictWriter, VerdictWriterConfig, VerdictRecord};
 pub use invariants::run_caws_invariants;
+pub use judges::{
+    ConstitutionalJudge, IntegrationValidator, Judge, Judges, QualityEvaluator, TechnicalAuditor,
+};
 pub use metrics::CouncilMetrics;
+pub use verdict_writer::{VerdictRecord, VerdictWriter, VerdictWriterConfig};
 
 /// Council decision result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -91,4 +93,3 @@ pub type Result<T> = std::result::Result<T, CouncilError>;
 
 /// Council result type for operations
 pub type CouncilResult<T> = Result<T>;
-

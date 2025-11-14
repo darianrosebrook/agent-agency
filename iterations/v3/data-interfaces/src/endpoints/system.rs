@@ -115,9 +115,9 @@ impl SystemHandler {
         };
 
         let runtime_info = RuntimeInfo {
-            uptime_seconds: 3600, // Placeholder
-            active_connections: 5, // Placeholder
-            memory_usage_mb: 512.0, // Placeholder
+            uptime_seconds: 3600,    // Placeholder
+            active_connections: 5,   // Placeholder
+            memory_usage_mb: 512.0,  // Placeholder
             cpu_usage_percent: 35.0, // Placeholder
         };
 
@@ -191,10 +191,13 @@ impl SystemHandler {
             match log_level.as_str() {
                 "error" | "warn" | "info" | "debug" | "trace" => {
                     // Valid log level
-                },
-                _ => return Err(InterfaceError::ConfigurationError(
-                    format!("Invalid log level: {}", log_level)
-                )),
+                }
+                _ => {
+                    return Err(InterfaceError::ConfigurationError(format!(
+                        "Invalid log level: {}",
+                        log_level
+                    )))
+                }
             }
         }
 
@@ -202,10 +205,13 @@ impl SystemHandler {
             match environment.as_str() {
                 "development" | "staging" | "production" => {
                     // Valid environment
-                },
-                _ => return Err(InterfaceError::ConfigurationError(
-                    format!("Invalid environment: {}", environment)
-                )),
+                }
+                _ => {
+                    return Err(InterfaceError::ConfigurationError(format!(
+                        "Invalid environment: {}",
+                        environment
+                    )))
+                }
             }
         }
 
@@ -214,7 +220,10 @@ impl SystemHandler {
     }
 
     /// Handle system API request
-    pub async fn handle_system_request(&self, request: ApiRequest) -> Result<ApiResponse, InterfaceError> {
+    pub async fn handle_system_request(
+        &self,
+        request: ApiRequest,
+    ) -> Result<ApiResponse, InterfaceError> {
         match request.path.as_str() {
             "/api/system/info" => {
                 if request.method == "GET" {
@@ -223,17 +232,24 @@ impl SystemHandler {
                         status_code: 200,
                         headers: std::collections::HashMap::new(),
                         body: serde_json::to_string(&info).map_err(|e| {
-                            InterfaceError::ApiError(format!("Failed to serialize system info: {}", e))
+                            InterfaceError::ApiError(format!(
+                                "Failed to serialize system info: {}",
+                                e
+                            ))
                         })?,
                     })
                 } else {
-                    Err(InterfaceError::ApiError(format!("Method {} not allowed for /api/system/info", request.method)))
+                    Err(InterfaceError::ApiError(format!(
+                        "Method {} not allowed for /api/system/info",
+                        request.method
+                    )))
                 }
-            },
+            }
             "/api/system/config" => {
                 if request.method == "PUT" {
-                    let body_str = request.body.as_ref()
-                        .ok_or_else(|| InterfaceError::ApiError("Missing request body".to_string()))?;
+                    let body_str = request.body.as_ref().ok_or_else(|| {
+                        InterfaceError::ApiError("Missing request body".to_string())
+                    })?;
 
                     let update: SystemConfigUpdate = serde_json::from_str(body_str)
                         .map_err(|e| InterfaceError::ApiError(format!("Invalid JSON: {}", e)))?;
@@ -242,13 +258,19 @@ impl SystemHandler {
                     Ok(ApiResponse {
                         status_code: 200,
                         headers: std::collections::HashMap::new(),
-                        body: serde_json::json!({"message": "System configuration updated"}).to_string(),
+                        body: serde_json::json!({"message": "System configuration updated"})
+                            .to_string(),
                     })
                 } else {
-                    Err(InterfaceError::ApiError(format!("Method {} not allowed for /api/system/config", request.method)))
+                    Err(InterfaceError::ApiError(format!(
+                        "Method {} not allowed for /api/system/config",
+                        request.method
+                    )))
                 }
-            },
-            _ => Err(InterfaceError::ApiError("Unknown system endpoint".to_string())),
+            }
+            _ => Err(InterfaceError::ApiError(
+                "Unknown system endpoint".to_string(),
+            )),
         }
     }
 }

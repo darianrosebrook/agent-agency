@@ -15,32 +15,29 @@ pub enum WorkspaceStateEvent {
         path: PathBuf,
         state_id: Option<StateId>,
     },
-    
+
     /// File was modified
     FileModified {
         path: PathBuf,
         state_id: Option<StateId>,
     },
-    
+
     /// File was deleted
     FileDeleted {
         path: PathBuf,
         state_id: Option<StateId>,
     },
-    
+
     /// State was captured
-    StateCaptured {
-        state_id: StateId,
-        duration_ms: u64,
-    },
-    
+    StateCaptured { state_id: StateId, duration_ms: u64 },
+
     /// Embedding was generated
     EmbeddingGenerated {
         path: PathBuf,
         success: bool,
         duration_ms: u64,
     },
-    
+
     /// Context was generated
     ContextGenerated {
         context_type: ContextType,
@@ -68,4 +65,3 @@ impl std::fmt::Display for ContextType {
         }
     }
 }
-

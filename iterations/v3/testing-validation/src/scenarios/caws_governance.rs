@@ -7,11 +7,14 @@
 //! - Scope boundary enforcement
 //! - CAWS verdict generation and provenance
 
+use serde_json::json;
 use std::time::Instant;
 use tracing::info;
-use serde_json::json;
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 
 /// Run the CAWS governance E2E test
 pub async fn run_caws_governance_test(
@@ -37,7 +40,10 @@ pub async fn run_caws_governance_test(
             caws_compliance_checks += result.compliance_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Working spec validation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Working spec validation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -55,7 +61,10 @@ pub async fn run_caws_governance_test(
             caws_compliance_checks += result.compliance_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Budget enforcement failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Budget enforcement failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -73,7 +82,10 @@ pub async fn run_caws_governance_test(
             caws_compliance_checks += result.compliance_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Scope boundary enforcement failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Scope boundary enforcement failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -90,7 +102,10 @@ pub async fn run_caws_governance_test(
             caws_compliance_checks += result.compliance_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Waiver workflow failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Waiver workflow failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -105,7 +120,10 @@ pub async fn run_caws_governance_test(
             caws_compliance_checks += result.compliance_checks;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Provenance chain validation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Provenance chain validation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -136,7 +154,9 @@ pub async fn run_caws_governance_test(
 }
 
 /// Test working spec validation
-async fn test_working_spec_validation(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_working_spec_validation(
+    _env: &TestEnvironment,
+) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing working spec validation");
 
     let mut compliance_checks = 0;
@@ -159,7 +179,10 @@ async fn test_working_spec_validation(_env: &TestEnvironment) -> Result<TestSubR
     if !validation_result.is_valid {
         return Ok(TestSubResult {
             passed: false,
-            error: Some(format!("Valid working spec failed validation: {:?}", validation_result.errors)),
+            error: Some(format!(
+                "Valid working spec failed validation: {:?}",
+                validation_result.errors
+            )),
             waiver_requests: 0,
             waiver_approvals: 0,
             budget_violations: 0,
@@ -193,13 +216,18 @@ async fn test_working_spec_validation(_env: &TestEnvironment) -> Result<TestSubR
     }
 
     // Check that violations include missing risk_tier
-    let has_risk_tier_violation = invalid_validation.errors.iter()
+    let has_risk_tier_violation = invalid_validation
+        .errors
+        .iter()
         .any(|e| e.contains("risk_tier"));
 
     if !has_risk_tier_violation {
         return Ok(TestSubResult {
             passed: false,
-            error: Some(format!("Invalid spec didn't report risk_tier violation. Errors: {:?}", invalid_validation.errors)),
+            error: Some(format!(
+                "Invalid spec didn't report risk_tier violation. Errors: {:?}",
+                invalid_validation.errors
+            )),
             waiver_requests: 0,
             waiver_approvals: 0,
             budget_violations: 0,
@@ -226,7 +254,9 @@ struct ValidationResult {
 }
 
 /// Basic working spec validator
-fn validate_working_spec(spec: &serde_json::Value) -> Result<ValidationResult, Box<dyn std::error::Error + Send + Sync>> {
+fn validate_working_spec(
+    spec: &serde_json::Value,
+) -> Result<ValidationResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut errors = Vec::new();
 
     // Check required fields
@@ -279,7 +309,9 @@ fn validate_working_spec(spec: &serde_json::Value) -> Result<ValidationResult, B
 }
 
 /// Test budget enforcement
-async fn test_budget_enforcement(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_budget_enforcement(
+    _env: &TestEnvironment,
+) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing budget enforcement");
 
     let mut waiver_requests = 0;
@@ -310,7 +342,10 @@ async fn test_budget_enforcement(_env: &TestEnvironment) -> Result<TestSubResult
     if !result.within_limits {
         return Ok(TestSubResult {
             passed: false,
-            error: Some(format!("Valid budget incorrectly flagged as violation: {:?}", result.violations)),
+            error: Some(format!(
+                "Valid budget incorrectly flagged as violation: {:?}",
+                result.violations
+            )),
             waiver_requests,
             waiver_approvals,
             budget_violations,
@@ -322,7 +357,7 @@ async fn test_budget_enforcement(_env: &TestEnvironment) -> Result<TestSubResult
     // Test 2: Budget exceeding limits
     let over_limit_state = BudgetState {
         files_used: 15, // Over max_files (10)
-        loc_used: 600, // Over max_loc (500)
+        loc_used: 600,  // Over max_loc (500)
         time_used_seconds: 60,
         memory_used_mb: 128,
         cost_used_cents: 100,
@@ -391,28 +426,46 @@ struct BudgetCheckResult {
 }
 
 /// Simple budget checker
-fn check_budget(limits: &BudgetLimits, state: &BudgetState) -> Result<BudgetCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+fn check_budget(
+    limits: &BudgetLimits,
+    state: &BudgetState,
+) -> Result<BudgetCheckResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut violations = Vec::new();
 
     if state.files_used > limits.max_files {
-        violations.push(format!("Files used ({}) exceeds limit ({})", state.files_used, limits.max_files));
+        violations.push(format!(
+            "Files used ({}) exceeds limit ({})",
+            state.files_used, limits.max_files
+        ));
     }
 
     if state.loc_used > limits.max_loc {
-        violations.push(format!("LOC used ({}) exceeds limit ({})", state.loc_used, limits.max_loc));
+        violations.push(format!(
+            "LOC used ({}) exceeds limit ({})",
+            state.loc_used, limits.max_loc
+        ));
     }
 
     if state.time_used_seconds > limits.max_time_seconds {
-        violations.push(format!("Time used ({}) exceeds limit ({})", state.time_used_seconds, limits.max_time_seconds));
+        violations.push(format!(
+            "Time used ({}) exceeds limit ({})",
+            state.time_used_seconds, limits.max_time_seconds
+        ));
     }
 
     if state.memory_used_mb > limits.max_memory_mb {
-        violations.push(format!("Memory used ({}) exceeds limit ({})", state.memory_used_mb, limits.max_memory_mb));
+        violations.push(format!(
+            "Memory used ({}) exceeds limit ({})",
+            state.memory_used_mb, limits.max_memory_mb
+        ));
     }
 
     if let Some(max_cost) = limits.max_cost_cents {
         if state.cost_used_cents > max_cost {
-            violations.push(format!("Cost used ({}) exceeds limit ({})", state.cost_used_cents, max_cost));
+            violations.push(format!(
+                "Cost used ({}) exceeds limit ({})",
+                state.cost_used_cents, max_cost
+            ));
         }
     }
 
@@ -423,7 +476,9 @@ fn check_budget(limits: &BudgetLimits, state: &BudgetState) -> Result<BudgetChec
 }
 
 /// Test scope boundary enforcement
-async fn test_scope_boundary_enforcement(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_scope_boundary_enforcement(
+    _env: &TestEnvironment,
+) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing scope boundary enforcement");
 
     let mut waiver_requests = 0;
@@ -444,7 +499,10 @@ async fn test_scope_boundary_enforcement(_env: &TestEnvironment) -> Result<TestS
     if !scope_check.within_scope {
         return Ok(TestSubResult {
             passed: false,
-            error: Some(format!("Allowed files incorrectly flagged as out of scope: {:?}", scope_check.violations)),
+            error: Some(format!(
+                "Allowed files incorrectly flagged as out of scope: {:?}",
+                scope_check.violations
+            )),
             waiver_requests,
             waiver_approvals,
             budget_violations: 0,
@@ -495,7 +553,11 @@ struct ScopeCheckResult {
 }
 
 /// Simple scope checker
-fn check_scope(scope_in: &[String], scope_out: &[String], files: &[&str]) -> Result<ScopeCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+fn check_scope(
+    scope_in: &[String],
+    scope_out: &[String],
+    files: &[&str],
+) -> Result<ScopeCheckResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut violations = Vec::new();
 
     for file in files {
@@ -531,7 +593,9 @@ fn check_scope(scope_in: &[String], scope_out: &[String], files: &[&str]) -> Res
 }
 
 /// Test waiver workflow
-async fn test_waiver_workflow(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_waiver_workflow(
+    _env: &TestEnvironment,
+) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing waiver workflow");
 
     let mut waiver_requests = 0;
@@ -614,7 +678,9 @@ enum ApprovalDecision {
 }
 
 /// Test provenance chain validation
-async fn test_provenance_chain(_env: &TestEnvironment) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_provenance_chain(
+    _env: &TestEnvironment,
+) -> Result<TestSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing provenance chain validation");
 
     let mut compliance_checks = 0;
@@ -658,7 +724,10 @@ async fn test_provenance_chain(_env: &TestEnvironment) -> Result<TestSubResult, 
     if !validation_result.is_valid {
         return Ok(TestSubResult {
             passed: false,
-            error: Some(format!("Provenance chain validation failed: {:?}", validation_result.errors)),
+            error: Some(format!(
+                "Provenance chain validation failed: {:?}",
+                validation_result.errors
+            )),
             waiver_requests: 0,
             waiver_approvals: 0,
             budget_violations: 0,
@@ -737,7 +806,9 @@ struct ChronologicalCheckResult {
 }
 
 /// Validate provenance chain
-fn validate_provenance_chain(chain: &ProvenanceChain) -> Result<ChainValidationResult, Box<dyn std::error::Error + Send + Sync>> {
+fn validate_provenance_chain(
+    chain: &ProvenanceChain,
+) -> Result<ChainValidationResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut errors = Vec::new();
 
     if chain.entries.is_empty() {
@@ -766,14 +837,19 @@ fn validate_provenance_chain(chain: &ProvenanceChain) -> Result<ChainValidationR
 }
 
 /// Check chronological order
-fn check_chronological_order(chain: &ProvenanceChain) -> Result<ChronologicalCheckResult, Box<dyn std::error::Error + Send + Sync>> {
+fn check_chronological_order(
+    chain: &ProvenanceChain,
+) -> Result<ChronologicalCheckResult, Box<dyn std::error::Error + Send + Sync>> {
     let mut violations = Vec::new();
     let mut prev_timestamp = None;
 
     for entry in &chain.entries {
         if let Some(prev) = prev_timestamp {
             if entry.timestamp < prev {
-                violations.push(format!("Entry {} timestamp {} is before previous entry", entry.id, entry.timestamp));
+                violations.push(format!(
+                    "Entry {} timestamp {} is before previous entry",
+                    entry.id, entry.timestamp
+                ));
             }
         }
         prev_timestamp = Some(entry.timestamp);

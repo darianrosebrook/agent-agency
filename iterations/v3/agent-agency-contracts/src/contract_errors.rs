@@ -1,5 +1,5 @@
-use std::fmt;
 use schemars::JsonSchema;
+use std::fmt;
 
 /// Contract artifact categories handled by the interoperability layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, JsonSchema)]

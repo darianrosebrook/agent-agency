@@ -3,14 +3,14 @@
 //! This module provides the main Core ML framework integration including
 //! ModelRef, registry management, inference operations, and FFI declarations.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
 use candle_core::Device;
-use std::ptr::NonNull;
+use schemars::JsonSchema;
+use serde_json;
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::path::Path;
-use std::collections::HashMap;
-use serde_json;
+use std::ptr::NonNull;
 
 // Import types from the types module
 use super::types::*;
@@ -19,8 +19,8 @@ use super::types::*;
 use super::model::{coreml_runtime_available, coreml_unavailable_error};
 
 // Import registry types and functions
-use super::registry::{CoreMlHandle, ModelRef};
 use super::registry::registry;
+use super::registry::{CoreMlHandle, ModelRef};
 
 // Import safety utilities
 
@@ -42,7 +42,9 @@ pub fn driver_version() -> Option<String> {
 /// Compile a .mlmodel file to .mlmodelc format
 pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
     if !coreml_runtime_available() {
-        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+        return Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ));
     }
 
     #[cfg(target_os = "macos")]
@@ -51,7 +53,10 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
 
         // Validate input file exists
         if !source_path.exists() {
-            return Err(ANEError::InvalidInput(format!("Source model file does not exist: {:?}", source_path)));
+            return Err(ANEError::InvalidInput(format!(
+                "Source model file does not exist: {:?}",
+                source_path
+            )));
         }
 
         // Check if it's already a compiled model (.mlmodelc)
@@ -66,12 +71,14 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
         output_path.set_extension("mlmodelc");
 
         // Convert paths to C strings
-        let source_path_cstr = source_path.to_str()
+        let source_path_cstr = source_path
+            .to_str()
             .ok_or_else(|| ANEError::InvalidInput("Invalid source path encoding".to_string()))?;
         let source_path_cstr = CString::new(source_path_cstr)
             .map_err(|e| ANEError::InvalidInput(format!("Invalid source path: {}", e)))?;
 
-        let output_path_str = output_path.to_str()
+        let output_path_str = output_path
+            .to_str()
             .ok_or_else(|| ANEError::InvalidInput("Invalid output path encoding".to_string()))?;
         let _output_path_cstr = CString::new(output_path_str)
             .map_err(|e| ANEError::InvalidInput(format!("Invalid output path: {}", e)))?;
@@ -110,11 +117,16 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
             } else {
                 "Unknown error creating model".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to create model: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to create model: {}",
+                error_msg
+            )));
         }
 
         if model_ref == 0 {
-            return Err(ANEError::Internal("Model creation returned null reference".to_string()));
+            return Err(ANEError::Internal(
+                "Model creation returned null reference".to_string(),
+            ));
         }
 
         // Verify the compiled model was created
@@ -123,19 +135,27 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
             unsafe {
                 agentbridge_model_destroy(model_ref);
             }
-            return Err(ANEError::Internal(format!("Compiled model file was not created: {:?}", output_path)));
+            return Err(ANEError::Internal(format!(
+                "Compiled model file was not created: {:?}",
+                output_path
+            )));
         }
 
         // Verify the file has content
-        let metadata = std::fs::metadata(&output_path)
-            .map_err(|e| {
-                unsafe { agentbridge_model_destroy(model_ref); }
-                ANEError::Internal(format!("Failed to verify compiled model: {}", e))
-            })?;
+        let metadata = std::fs::metadata(&output_path).map_err(|e| {
+            unsafe {
+                agentbridge_model_destroy(model_ref);
+            }
+            ANEError::Internal(format!("Failed to verify compiled model: {}", e))
+        })?;
 
         if metadata.len() == 0 {
-            unsafe { agentbridge_model_destroy(model_ref); }
-            return Err(ANEError::Internal("Compiled model file is empty".to_string()));
+            unsafe {
+                agentbridge_model_destroy(model_ref);
+            }
+            return Err(ANEError::Internal(
+                "Compiled model file is empty".to_string(),
+            ));
         }
 
         // Clean up the model reference (we don't need it for the compiled file)
@@ -148,7 +168,9 @@ pub fn compile_model(source_path: &Path) -> Result<std::path::PathBuf> {
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -175,17 +197,27 @@ pub fn load_model_with_config(path: &str, compute_units: Option<ComputeUnits>) -
 
         // Create model configuration with specified compute units
         let config = MLModelConfiguration {
-            compute_units: compute_units.map(|cu| match cu {
-                ComputeUnits::CpuOnly => MLComputeUnits::CpuOnly,
-                ComputeUnits::CpuAndGpu => MLComputeUnits::CpuAndGpu,
-                ComputeUnits::CpuAndNeuralEngine => MLComputeUnits::CpuAndNeuralEngine,
-                ComputeUnits::All => MLComputeUnits::All,
-            }).unwrap_or(MLComputeUnits::CpuAndNeuralEngine),
+            compute_units: compute_units
+                .map(|cu| match cu {
+                    ComputeUnits::CpuOnly => MLComputeUnits::CpuOnly,
+                    ComputeUnits::CpuAndGpu => MLComputeUnits::CpuAndGpu,
+                    ComputeUnits::CpuAndNeuralEngine => MLComputeUnits::CpuAndNeuralEngine,
+                    ComputeUnits::All => MLComputeUnits::All,
+                })
+                .unwrap_or(MLComputeUnits::CpuAndNeuralEngine),
             allow_low_precision_accumulation_on_gpu: true,
         };
 
         let config_json = serde_json::to_string(&config)
             .map_err(|e| ANEError::Internal(format!("Failed to serialize config: {}", e)))?;
+        
+        // Log compute unit configuration for verification
+        tracing::debug!(
+            "Loading model with compute units: {:?} (config: {})",
+            config.compute_units,
+            config_json
+        );
+        
         let config_json_cstr = std::ffi::CString::new(config_json)
             .map_err(|e| ANEError::InvalidInput(format!("Invalid config JSON: {}", e)))?;
 
@@ -208,7 +240,10 @@ pub fn load_model_with_config(path: &str, compute_units: Option<ComputeUnits>) -
             } else {
                 "Unknown Core ML error".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to load Core ML model: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to load Core ML model: {}",
+                error_msg
+            )));
         }
 
         // Register the handle in the thread-local registry
@@ -216,12 +251,21 @@ pub fn load_model_with_config(path: &str, compute_units: Option<ComputeUnits>) -
         let handle = CoreMlHandle::new(raw_ptr)
             .ok_or_else(|| ANEError::Internal("Null model handle".into()))?;
         let id = registry::register_model(handle);
+        
+        tracing::debug!(
+            "Model loaded successfully with compute units: {:?}, model_ref: {}",
+            config.compute_units,
+            model_ref
+        );
+        
         Ok(id)
     }
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -287,12 +331,7 @@ fn create_input_features(
         let mut provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_dict_provider_create(
-                &mut provider_ref,
-                &mut error_ptr,
-            )
-        };
+        let result = unsafe { agentbridge_dict_provider_create(&mut provider_ref, &mut error_ptr) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -304,7 +343,10 @@ fn create_input_features(
             } else {
                 "Unknown Core ML error".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to create MLFeatureProvider: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to create MLFeatureProvider: {}",
+                error_msg
+            )));
         }
 
         let ptr = NonNull::new(provider_ref as *mut std::ffi::c_void)
@@ -314,7 +356,9 @@ fn create_input_features(
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -327,11 +371,7 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
         let output_json_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
         let error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_dict_provider_destroy(
-                _prediction.ptr() as u64,
-            )
-        };
+        let result = unsafe { agentbridge_dict_provider_destroy(_prediction.ptr() as u64) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -343,7 +383,10 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
             } else {
                 "Unknown Core ML error".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to extract output tensor: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to extract output tensor: {}",
+                error_msg
+            )));
         }
 
         // Parse the output JSON
@@ -361,13 +404,15 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
             .map_err(|e| ANEError::Internal(format!("Failed to parse output JSON: {}", e)))?;
 
         // Extract tensor data and shape
-        let data = output_data["data"].as_array()
+        let data = output_data["data"]
+            .as_array()
             .ok_or_else(|| ANEError::Internal("Invalid output data format".to_string()))?
             .iter()
             .map(|v| v.as_f64().unwrap_or(0.0) as f32)
             .collect::<Vec<f32>>();
 
-        let _shape = output_data["shape"].as_array()
+        let _shape = output_data["shape"]
+            .as_array()
             .ok_or_else(|| ANEError::Internal("Invalid output shape format".to_string()))?
             .iter()
             .map(|v| v.as_i64().unwrap_or(1) as usize)
@@ -380,7 +425,9 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -392,7 +439,9 @@ pub fn run_inference(
     input_shape: &[usize],
 ) -> Result<Tensor> {
     if !coreml_runtime_available() {
-        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+        return Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ));
     }
 
     #[cfg(target_os = "macos")]
@@ -406,28 +455,33 @@ pub fn run_inference(
 
         // Create input feature dictionary
         let mut input_features = HashMap::new();
-        input_features.insert(input_name.to_string(), MLFeatureValue::MultiArray(input_array));
+        input_features.insert(
+            input_name.to_string(),
+            MLFeatureValue::MultiArray(input_array),
+        );
 
         // Create input provider
         // Get model handle for state features if needed
-        let model_handle = registry::with_model_handle(model_ref.clone(), |handle| handle.as_ptr() as u64);
-        let input_provider = MLDictionaryFeatureProvider::from_dictionary(&input_features, model_handle)
-            .map_err(|e| ANEError::Internal(format!("Failed to create input provider: {}", e)))?;
+        let model_handle =
+            registry::with_model_handle(model_ref.clone(), |handle| handle.as_ptr() as u64);
+        let input_provider =
+            MLDictionaryFeatureProvider::from_dictionary(&input_features, model_handle).map_err(
+                |e| ANEError::Internal(format!("Failed to create input provider: {}", e)),
+            )?;
 
         // Run inference using scoped handle access
         let mut output_provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let inference_result = registry::with_model_handle(model_ref, |model_handle| {
-            unsafe {
-                agentbridge_model_run_inference(
-                    model_handle.as_ptr() as u64,
-                    input_provider.ptr() as u64,
-                    &mut output_provider_ref,
-                    &mut error_ptr,
-                )
-            }
-        }).ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+        let inference_result = registry::with_model_handle(model_ref, |model_handle| unsafe {
+            agentbridge_model_run_inference(
+                model_handle.as_ptr() as u64,
+                input_provider.ptr() as u64,
+                &mut output_provider_ref,
+                &mut error_ptr,
+            )
+        })
+        .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
 
         if inference_result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -444,7 +498,9 @@ pub fn run_inference(
         }
 
         if output_provider_ref == 0 {
-            return Err(ANEError::Internal("No output provider returned from inference".to_string()));
+            return Err(ANEError::Internal(
+                "No output provider returned from inference".to_string(),
+            ));
         }
 
         // TODO: Make output feature name configurable
@@ -519,38 +575,40 @@ pub fn run_inference(
         if output_data_ptr.is_null() || output_data_length <= 0 {
             // Clean up the output provider
             unsafe { agentbridge_provider_destroy(output_provider_ref) };
-            return Err(ANEError::Internal("No output data returned from inference".to_string()));
+            return Err(ANEError::Internal(
+                "No output data returned from inference".to_string(),
+            ));
         }
 
         // Create candle tensor from the output data
-        let output_data = unsafe {
-            std::slice::from_raw_parts(output_data_ptr, output_data_length as usize)
-        };
+        let output_data =
+            unsafe { std::slice::from_raw_parts(output_data_ptr, output_data_length as usize) };
 
-        let output_tensor = Tensor::new(output_data, &Device::Cpu)
-            .map_err(|e| {
-                // Clean up the output provider and data
-                unsafe {
-                    agentbridge_provider_destroy(output_provider_ref);
-                    agentbridge_free_array_data(output_data_ptr);
-                    agentbridge_free_array_data(output_shape_ptr as *mut f32);
-                }
-                ANEError::Internal(format!("Failed to create output tensor: {}", e))
-            })?;
+        let output_tensor = Tensor::new(output_data, &Device::Cpu).map_err(|e| {
+            // Clean up the output provider and data
+            unsafe {
+                agentbridge_provider_destroy(output_provider_ref);
+                agentbridge_free_array_data(output_data_ptr);
+                agentbridge_free_array_data(output_shape_ptr as *mut f32);
+            }
+            ANEError::Internal(format!("Failed to create output tensor: {}", e))
+        })?;
 
-                // Clean up resources
-                unsafe {
-                    agentbridge_provider_destroy(output_provider_ref);
-                    agentbridge_free_array_data(output_data_ptr);
-                    agentbridge_free_array_data(output_shape_ptr as *mut f32);
-                }
+        // Clean up resources
+        unsafe {
+            agentbridge_provider_destroy(output_provider_ref);
+            agentbridge_free_array_data(output_data_ptr);
+            agentbridge_free_array_data(output_shape_ptr as *mut f32);
+        }
 
         Ok(output_tensor)
     }
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -574,7 +632,9 @@ pub struct ModelIOSpec {
 /// Query model inputs
 pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
     if !coreml_runtime_available() {
-        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+        return Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ));
     }
 
     #[cfg(target_os = "macos")]
@@ -583,15 +643,10 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let info_result = registry::with_model_handle(model_ref, |model_handle| {
-            unsafe {
-                agentbridge_model_get_info(
-                    model_handle.as_ptr() as u64,
-                    &mut info_ptr,
-                    &mut error_ptr,
-                )
-            }
-        }).ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+        let info_result = registry::with_model_handle(model_ref, |model_handle| unsafe {
+            agentbridge_model_get_info(model_handle.as_ptr() as u64, &mut info_ptr, &mut error_ptr)
+        })
+        .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
 
         if info_result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -604,7 +659,10 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
             } else {
                 "Unknown error getting model info".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to get model info: {}",
+                error_msg
+            )));
         }
 
         if info_ptr.is_null() {
@@ -623,9 +681,9 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         let info_json: serde_json::Value = serde_json::from_str(&info_json_str)
             .map_err(|e| ANEError::Internal(format!("Failed to parse model info JSON: {}", e)))?;
 
-        let input_descriptions = info_json["inputDescriptions"]
-            .as_array()
-            .ok_or_else(|| ANEError::Internal("inputDescriptions not found or not an array".to_string()))?;
+        let input_descriptions = info_json["inputDescriptions"].as_array().ok_or_else(|| {
+            ANEError::Internal("inputDescriptions not found or not an array".to_string())
+        })?;
 
         // Check if this is a stateful model (Mistral, etc.)
         // State features like keyCache may not appear in inputDescriptions but are still required
@@ -641,14 +699,14 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_lowercase();
-        
+
         // Also check the model path/identifier if available
         let model_identifier = info_json["modelDescription"]["metadata"]["identifier"]
             .as_str()
             .unwrap_or("")
             .to_lowercase();
-        
-        let is_stateful_model = model_name.contains("mistral") 
+
+        let is_stateful_model = model_name.contains("mistral")
             || model_name.contains("stateful")
             || model_desc.contains("mistral")
             || model_desc.contains("stateful")
@@ -660,16 +718,15 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         for input_desc in input_descriptions {
             let name = input_desc["name"]
                 .as_str()
-                .ok_or_else(|| ANEError::Internal("Input description missing 'name' field".to_string()))?
+                .ok_or_else(|| {
+                    ANEError::Internal("Input description missing 'name' field".to_string())
+                })?
                 .to_string();
 
-            let feature_type = input_desc["type"]
-                .as_str()
-                .unwrap_or("unknown")
-                .to_string();
+            let feature_type = input_desc["type"].as_str().unwrap_or("unknown").to_string();
 
             // Check if this is a state feature (MLState)
-            let is_state_feature = feature_type.to_lowercase().contains("state") 
+            let is_state_feature = feature_type.to_lowercase().contains("state")
                 || name.to_lowercase().contains("keycache")
                 || name.to_lowercase().contains("valuecache");
 
@@ -695,8 +752,10 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
                 (data_type_str, shape, batch_capable)
             } else if input_desc["imageConstraint"].is_object() {
                 // Image type
-                let image_constraint = input_desc["imageConstraint"].as_object()
-                    .ok_or_else(|| ANEError::Internal("imageConstraint is not an object".to_string()))?;
+                let image_constraint =
+                    input_desc["imageConstraint"].as_object().ok_or_else(|| {
+                        ANEError::Internal("imageConstraint is not an object".to_string())
+                    })?;
 
                 let width = image_constraint["width"]
                     .as_i64()
@@ -732,10 +791,16 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         // Note: Core ML state features don't appear in inputDescriptions but are still required
         // Heuristic: If we have inputIds and causalMask but no keyCache, this is likely a Mistral model
         // that requires keyCache as a state feature
-        let has_input_ids = input_specs.iter().any(|spec| spec.name.to_lowercase() == "inputids");
-        let has_causal_mask = input_specs.iter().any(|spec| spec.name.to_lowercase() == "causalmask");
-        let has_keycache = input_specs.iter().any(|spec| spec.name.to_lowercase().contains("keycache"));
-        
+        let has_input_ids = input_specs
+            .iter()
+            .any(|spec| spec.name.to_lowercase() == "inputids");
+        let has_causal_mask = input_specs
+            .iter()
+            .any(|spec| spec.name.to_lowercase() == "causalmask");
+        let has_keycache = input_specs
+            .iter()
+            .any(|spec| spec.name.to_lowercase().contains("keycache"));
+
         // Mistral models typically have inputIds and causalMask but keyCache is required as state
         // Always add keyCache if we detect this pattern (safe heuristic for Mistral models)
         if has_input_ids && has_causal_mask && !has_keycache {
@@ -746,7 +811,7 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
                 batch_capable: false,
             });
         }
-        
+
         // Also check metadata-based detection for other stateful models
         if is_stateful_model && !has_keycache {
             input_specs.push(ModelIOSpec {
@@ -758,7 +823,9 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         }
 
         if input_specs.is_empty() {
-            return Err(ANEError::Internal("No input descriptions found in model info".to_string()));
+            return Err(ANEError::Internal(
+                "No input descriptions found in model info".to_string(),
+            ));
         }
 
         Ok(input_specs)
@@ -766,14 +833,18 @@ pub fn query_model_inputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
 /// Query model outputs
 pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
     if !coreml_runtime_available() {
-        return Err(ANEError::Internal("Core ML not available on this platform".to_string()));
+        return Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ));
     }
 
     #[cfg(target_os = "macos")]
@@ -782,15 +853,10 @@ pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let info_result = registry::with_model_handle(model_ref, |model_handle| {
-            unsafe {
-                agentbridge_model_get_info(
-                    model_handle.as_ptr() as u64,
-                    &mut info_ptr,
-                    &mut error_ptr,
-                )
-            }
-        }).ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+        let info_result = registry::with_model_handle(model_ref, |model_handle| unsafe {
+            agentbridge_model_get_info(model_handle.as_ptr() as u64, &mut info_ptr, &mut error_ptr)
+        })
+        .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
 
         if info_result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -803,7 +869,10 @@ pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
             } else {
                 "Unknown error getting model info".to_string()
             };
-            return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+            return Err(ANEError::Internal(format!(
+                "Failed to get model info: {}",
+                error_msg
+            )));
         }
 
         if info_ptr.is_null() {
@@ -822,16 +891,18 @@ pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
         let info_json: serde_json::Value = serde_json::from_str(&info_json_str)
             .map_err(|e| ANEError::Internal(format!("Failed to parse model info JSON: {}", e)))?;
 
-        let output_descriptions = info_json["outputDescriptions"]
-            .as_array()
-            .ok_or_else(|| ANEError::Internal("outputDescriptions not found or not an array".to_string()))?;
+        let output_descriptions = info_json["outputDescriptions"].as_array().ok_or_else(|| {
+            ANEError::Internal("outputDescriptions not found or not an array".to_string())
+        })?;
 
         let mut output_specs = Vec::new();
 
         for output_desc in output_descriptions {
             let name = output_desc["name"]
                 .as_str()
-                .ok_or_else(|| ANEError::Internal("Output description missing 'name' field".to_string()))?
+                .ok_or_else(|| {
+                    ANEError::Internal("Output description missing 'name' field".to_string())
+                })?
                 .to_string();
 
             let _feature_type = output_desc["type"]
@@ -840,47 +911,50 @@ pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
                 .to_string();
 
             // Determine data type and shape
-            let (dtype, shape, batch_capable) = if let Some(shape_array) = output_desc["shape"].as_array() {
-                // MultiArray type
-                let shape: Vec<i32> = shape_array
-                    .iter()
-                    .filter_map(|v| v.as_i64().map(|i| i as i32))
-                    .collect();
+            let (dtype, shape, batch_capable) =
+                if let Some(shape_array) = output_desc["shape"].as_array() {
+                    // MultiArray type
+                    let shape: Vec<i32> = shape_array
+                        .iter()
+                        .filter_map(|v| v.as_i64().map(|i| i as i32))
+                        .collect();
 
-                let data_type_str = output_desc["dataType"]
-                    .as_str()
-                    .unwrap_or("float32")
-                    .to_string();
+                    let data_type_str = output_desc["dataType"]
+                        .as_str()
+                        .unwrap_or("float32")
+                        .to_string();
 
-                // Determine if batch-capable (first dimension is variable or -1)
-                let batch_capable = shape.is_empty() || shape[0] == -1 || shape[0] == 1;
+                    // Determine if batch-capable (first dimension is variable or -1)
+                    let batch_capable = shape.is_empty() || shape[0] == -1 || shape[0] == 1;
 
-                (data_type_str, shape, batch_capable)
-            } else if output_desc["imageConstraint"].is_object() {
-                // Image type
-                let image_constraint = output_desc["imageConstraint"].as_object()
-                    .ok_or_else(|| ANEError::Internal("imageConstraint is not an object".to_string()))?;
+                    (data_type_str, shape, batch_capable)
+                } else if output_desc["imageConstraint"].is_object() {
+                    // Image type
+                    let image_constraint =
+                        output_desc["imageConstraint"].as_object().ok_or_else(|| {
+                            ANEError::Internal("imageConstraint is not an object".to_string())
+                        })?;
 
-                let width = image_constraint["width"]
-                    .as_i64()
-                    .map(|w| w as i32)
-                    .unwrap_or(-1);
-                let height = image_constraint["height"]
-                    .as_i64()
-                    .map(|h| h as i32)
-                    .unwrap_or(-1);
+                    let width = image_constraint["width"]
+                        .as_i64()
+                        .map(|w| w as i32)
+                        .unwrap_or(-1);
+                    let height = image_constraint["height"]
+                        .as_i64()
+                        .map(|h| h as i32)
+                        .unwrap_or(-1);
 
-                let shape = if width > 0 && height > 0 {
-                    vec![height, width, 3] // Default to RGB
+                    let shape = if width > 0 && height > 0 {
+                        vec![height, width, 3] // Default to RGB
+                    } else {
+                        vec![-1, -1, 3] // Variable size
+                    };
+
+                    ("image".to_string(), shape, true)
                 } else {
-                    vec![-1, -1, 3] // Variable size
+                    // Unknown or unsupported type - default to float32
+                    ("float32".to_string(), vec![-1], false)
                 };
-
-                ("image".to_string(), shape, true)
-            } else {
-                // Unknown or unsupported type - default to float32
-                ("float32".to_string(), vec![-1], false)
-            };
 
             output_specs.push(ModelIOSpec {
                 name,
@@ -905,7 +979,9 @@ pub fn query_model_outputs(model_ref: ModelRef) -> Result<Vec<ModelIOSpec>> {
 
     #[cfg(not(target_os = "macos"))]
     {
-        Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+        Err(ANEError::Internal(
+            "Core ML not available on this platform".to_string(),
+        ))
     }
 }
 
@@ -927,34 +1003,32 @@ extern "C" {
         identifier: *const std::ffi::c_char,
         channel: *const std::ffi::c_char,
         out_model_path: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_model_is_cached(
         identifier: *const std::ffi::c_char,
-        channel: *const std::ffi::c_char
+        channel: *const std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_model_remove_cached(
         identifier: *const std::ffi::c_char,
         channel: *const std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_model_get_cache_stats(
         out_stats: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
-    pub fn agentbridge_model_clear_cache(
-        out_error: *mut *mut std::ffi::c_char
-    ) -> i32;
+    pub fn agentbridge_model_clear_cache(out_error: *mut *mut std::ffi::c_char) -> i32;
 
     pub fn agentbridge_model_create(
         model_path: *const std::ffi::c_char,
         config_json: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_model_destroy(model_ref: u64) -> i32;
@@ -962,13 +1036,13 @@ extern "C" {
     pub fn agentbridge_model_get_info(
         model_ref: u64,
         out_info: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_mistral_create(
         model_path: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_mistral_generate(
@@ -977,21 +1051,21 @@ extern "C" {
         max_tokens: i32,
         temperature: f32,
         out_text: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_mistral_encode(
         text: *const std::ffi::c_char,
         out_tokens: *mut *mut i32,
         out_token_count: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_mistral_decode(
         tokens: *const i32,
         token_count: i32,
         out_text: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_mistral_free_tokens(tokens: *mut i32, count: i32);
@@ -1004,7 +1078,7 @@ extern "C" {
         shape: *const i32,
         shape_length: i32,
         out_array_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_array_destroy(array_ref: u64) -> i32;
@@ -1018,12 +1092,12 @@ extern "C" {
         out_output_data: *mut *mut f32,
         out_output_shape: *mut *mut i32,
         out_output_shape_len: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_dict_provider_create(
         out_provider_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_dict_provider_set_feature_float32(
@@ -1032,7 +1106,7 @@ extern "C" {
         data: *const f32,
         shape: *const i32,
         shape_length: i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_dict_provider_set_feature_multiarray(
@@ -1048,7 +1122,7 @@ extern "C" {
         model_ref: u64,
         input_provider_ref: u64,
         out_output_provider_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     // KV cache state management functions
@@ -1059,7 +1133,7 @@ extern "C" {
         head_dim: i32,
         max_seq_len: i32,
         out_state_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_kv_state_destroy(state_ref: u64) -> i32;
@@ -1069,17 +1143,17 @@ extern "C" {
         input_provider_ref: u64,
         kv_state_ref: u64,
         out_output_provider_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_kv_state_step(
         kv_state_ref: u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_kv_state_reset(
         kv_state_ref: u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_provider_destroy(provider_ref: u64) -> i32;
@@ -1091,7 +1165,7 @@ extern "C" {
         out_shape: *mut *mut i32,
         out_shape_length: *mut i32,
         out_data_length: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_free_array_data(data: *mut f32) -> i32;
@@ -1100,7 +1174,7 @@ extern "C" {
         model_path: *const std::ffi::c_char,
         model_size: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_audio_whisper_transcribe(
@@ -1110,13 +1184,13 @@ extern "C" {
         out_text: *mut *mut std::ffi::c_char,
         out_segments_json: *mut *mut std::ffi::c_char,
         out_confidence: *mut f32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_audio_speech_create(
         language: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_audio_speech_transcribe(
@@ -1124,13 +1198,13 @@ extern "C" {
         audio_path: *const std::ffi::c_char,
         out_text: *mut *mut std::ffi::c_char,
         out_confidence: *mut f32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_vision_yolo_create(
         model_path: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_vision_yolo_detect(
@@ -1140,13 +1214,13 @@ extern "C" {
         confidence_threshold: f32,
         out_detections_json: *mut *mut std::ffi::c_char,
         out_detection_count: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_vision_ocr_create(
         language: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_vision_ocr_extract(
@@ -1155,13 +1229,13 @@ extern "C" {
         data_length: i32,
         out_text: *mut *mut std::ffi::c_char,
         out_confidence: *mut f32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_diffusion_create(
         model_path: *const std::ffi::c_char,
         out_model_ref: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_diffusion_generate(
@@ -1174,25 +1248,25 @@ extern "C" {
         seed: u64,
         out_image_data: *mut *mut u8,
         out_data_length: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_text_diffusion_free_image(image_data: *mut u8);
 
     pub fn agentbridge_system_get_metrics(
         out_metrics: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_system_profile_start(
         session_name: *const std::ffi::c_char,
         out_session_id: *mut u64,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     pub fn agentbridge_system_profile_stop(
         session_id: u64,
         out_report: *mut *mut std::ffi::c_char,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 }

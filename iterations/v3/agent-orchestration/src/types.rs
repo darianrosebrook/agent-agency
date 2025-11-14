@@ -5,8 +5,8 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Import contracts types directly
@@ -163,12 +163,11 @@ impl Default for RetryConfig {
 // TaskDescriptor is now imported from agent_agency_contracts::types::planning::TaskDescriptor
 // (removed duplicate definition)
 
-
 // ExecutionMode is now imported from agent_agency_contracts::types::planning
 // (removed duplicate definition)
 
 /// Task type classification for CAWS working specs
-/// 
+///
 /// This type is used for categorizing tasks in the orchestration system.
 /// If this becomes shared across crates, it should be moved to contracts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

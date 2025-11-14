@@ -6,8 +6,6 @@
 pub mod federated_learning;
 
 pub use federated_learning::{
-    FederatedLearningEngine, FederatedLearningConfig, TenantContribution,
-    AggregatedLearningModel, WorkerPerformanceMetrics, RoutingPolicyUpdates,
-    QualityTrends, PrivacyMetrics,
+    AggregatedLearningModel, FederatedLearningConfig, FederatedLearningEngine, PrivacyMetrics,
+    QualityTrends, RoutingPolicyUpdates, TenantContribution, WorkerPerformanceMetrics,
 };
-

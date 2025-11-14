@@ -95,19 +95,41 @@ pub enum SearchStrategy {
 #[async_trait::async_trait]
 pub trait VectorSearchEngine: Send + Sync {
     /// Search memories using vector similarity
-    async fn vector_search(&self, query_embedding: &[f32], top_k: usize, filters: &SearchFilters) -> crate::MemoryResult<Vec<SearchResult>>;
+    async fn vector_search(
+        &self,
+        query_embedding: &[f32],
+        top_k: usize,
+        filters: &SearchFilters,
+    ) -> crate::MemoryResult<Vec<SearchResult>>;
 
     /// Search memories using text similarity
-    async fn text_search(&self, query_text: &str, top_k: usize, filters: &SearchFilters) -> crate::MemoryResult<Vec<SearchResult>>;
+    async fn text_search(
+        &self,
+        query_text: &str,
+        top_k: usize,
+        filters: &SearchFilters,
+    ) -> crate::MemoryResult<Vec<SearchResult>>;
 
     /// Perform hybrid search combining vector and text
-    async fn hybrid_search(&self, query: &SearchQuery, config: &VectorSearchConfig) -> crate::MemoryResult<SearchResponse>;
+    async fn hybrid_search(
+        &self,
+        query: &SearchQuery,
+        config: &VectorSearchConfig,
+    ) -> crate::MemoryResult<SearchResponse>;
 
     /// Add memory to search index
-    async fn index_memory(&self, memory_id: &crate::memory_types::MemoryId, embedding: &[f32], text_content: &str) -> crate::MemoryResult<()>;
+    async fn index_memory(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+        embedding: &[f32],
+        text_content: &str,
+    ) -> crate::MemoryResult<()>;
 
     /// Remove memory from search index
-    async fn remove_from_index(&self, memory_id: &crate::memory_types::MemoryId) -> crate::MemoryResult<()>;
+    async fn remove_from_index(
+        &self,
+        memory_id: &crate::memory_types::MemoryId,
+    ) -> crate::MemoryResult<()>;
 
     /// Rebuild search index
     async fn rebuild_index(&self) -> crate::MemoryResult<()>;

@@ -6,7 +6,9 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, FileMode, RestoreAction, RestorePlan, RestoreResult, StreamingHasher};
+use crate::recovery_types::{
+    Digest, FileMode, RestoreAction, RestorePlan, RestoreResult, StreamingHasher,
+};
 
 /// Atomic restore manager for safely restoring files
 pub struct AtomicRestore {
@@ -50,8 +52,7 @@ impl Default for RestoreConfig {
 }
 
 /// Statistics for restore operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RestoreStats {
     /// Total number of files restored
     pub files_restored: usize,
@@ -64,7 +65,6 @@ pub struct RestoreStats {
     /// Total restore time (milliseconds)
     pub total_time_ms: u64,
 }
-
 
 impl Default for AtomicRestore {
     fn default() -> Self {
@@ -150,7 +150,10 @@ impl AtomicRestore {
             return Ok(RestoredFile {
                 path: path.clone(),
                 size: size as usize,
-                digest: action.expected_digest().cloned().unwrap_or(Digest::from_bytes([0; 32])),
+                digest: action
+                    .expected_digest()
+                    .cloned()
+                    .unwrap_or(Digest::from_bytes([0; 32])),
                 mode: action.mode().cloned().unwrap_or_default(),
                 restored_at: self.current_timestamp(),
             });
@@ -167,7 +170,13 @@ impl AtomicRestore {
         }
 
         match action {
-            RestoreAction::WriteFile { path, mode, expected, source, size } => {
+            RestoreAction::WriteFile {
+                path,
+                mode,
+                expected,
+                source,
+                size,
+            } => {
                 // TODO: Load content from source ObjectRef
                 let content = b"placeholder content"; // This would need to be loaded from the CAS
 
@@ -343,12 +352,12 @@ impl AtomicRestore {
     fn backup_existing_file(&self, path: &Path) -> Result<()> {
         if let Some(backup_dir) = &self.config.backup_dir {
             fs::create_dir_all(backup_dir)?;
-            
+
             let backup_path = backup_dir.join(path);
             if let Some(parent) = backup_path.parent() {
                 fs::create_dir_all(parent)?;
             }
-            
+
             fs::copy(path, &backup_path)?;
         }
         Ok(())
@@ -470,7 +479,7 @@ impl RestoreProgress {
         let elapsed = self.current_time - self.start_time;
         let rate = self.restored_files as f64 / elapsed as f64;
         let remaining_files = self.total_files - self.restored_files - self.failed_files;
-        
+
         if rate > 0.0 {
             Some((remaining_files as f64 / rate) as u64)
         } else {
@@ -502,7 +511,7 @@ mod tests {
         let test_file = temp_dir.path().join("test.txt");
         let content = b"Hello, world!";
         let digest = Digest::from_bytes([8; 32]);
-        
+
         // Create restore with verify_digest disabled (since we're using placeholder content)
         let mut restore = AtomicRestore::with_config(RestoreConfig {
             verify_digest: false, // Disable digest verification for test with placeholder content
@@ -540,11 +549,11 @@ mod tests {
         let test_file = temp_dir.path().join("test.txt");
         let content = b"Hello, world!";
         let digest = Digest::from_bytes([8; 32]);
-        
+
         let mut config = RestoreConfig::default();
         config.dry_run = true;
         let mut restore = AtomicRestore::with_config(config);
-        
+
         let plan = RestorePlan {
             target: "test-commit-dry".to_string(),
             actions: vec![RestoreAction::WriteFile {
@@ -572,7 +581,7 @@ mod tests {
         assert_eq!(progress.total_files, 100);
         assert_eq!(progress.total_bytes, 1024 * 1024);
         assert_eq!(progress.progress_percentage(), 0.0);
-        
+
         progress.update(50, 5, 512 * 1024);
         // Use approximate comparison for floating point
         assert!((progress.progress_percentage() - 55.0).abs() < 0.01);

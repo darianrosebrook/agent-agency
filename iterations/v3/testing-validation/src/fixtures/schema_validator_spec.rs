@@ -62,56 +62,68 @@ pub fn get_user_profile_schema() -> JsonSchema {
             let mut props = HashMap::new();
 
             // Name property
-            props.insert("name".to_string(), JsonSchemaProperty {
-                property_type: Some("string".to_string()),
-                description: Some("User's full name".to_string()),
-                minimum: None,
-                maximum: None,
-                min_length: Some(2),
-                max_length: Some(100),
-                pattern: Some(r"^[a-zA-Z\s]+$".to_string()),
-                format: None,
-                required: None,
-            });
+            props.insert(
+                "name".to_string(),
+                JsonSchemaProperty {
+                    property_type: Some("string".to_string()),
+                    description: Some("User's full name".to_string()),
+                    minimum: None,
+                    maximum: None,
+                    min_length: Some(2),
+                    max_length: Some(100),
+                    pattern: Some(r"^[a-zA-Z\s]+$".to_string()),
+                    format: None,
+                    required: None,
+                },
+            );
 
             // Age property
-            props.insert("age".to_string(), JsonSchemaProperty {
-                property_type: Some("integer".to_string()),
-                description: Some("User's age in years".to_string()),
-                minimum: Some(0.0),
-                maximum: Some(150.0),
-                min_length: None,
-                max_length: None,
-                pattern: None,
-                format: None,
-                required: None,
-            });
+            props.insert(
+                "age".to_string(),
+                JsonSchemaProperty {
+                    property_type: Some("integer".to_string()),
+                    description: Some("User's age in years".to_string()),
+                    minimum: Some(0.0),
+                    maximum: Some(150.0),
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    format: None,
+                    required: None,
+                },
+            );
 
             // Email property
-            props.insert("email".to_string(), JsonSchemaProperty {
-                property_type: Some("string".to_string()),
-                description: Some("User's email address".to_string()),
-                minimum: None,
-                maximum: None,
-                min_length: Some(5),
-                max_length: Some(254),
-                pattern: Some(r"^[^@]+@[^@]+\.[^@]+$".to_string()),
-                format: Some("email".to_string()),
-                required: None,
-            });
+            props.insert(
+                "email".to_string(),
+                JsonSchemaProperty {
+                    property_type: Some("string".to_string()),
+                    description: Some("User's email address".to_string()),
+                    minimum: None,
+                    maximum: None,
+                    min_length: Some(5),
+                    max_length: Some(254),
+                    pattern: Some(r"^[^@]+@[^@]+\.[^@]+$".to_string()),
+                    format: Some("email".to_string()),
+                    required: None,
+                },
+            );
 
             // Tags property (array of strings)
-            props.insert("tags".to_string(), JsonSchemaProperty {
-                property_type: Some("array".to_string()),
-                description: Some("User tags/keywords".to_string()),
-                minimum: None,
-                maximum: None,
-                min_length: None,
-                max_length: None,
-                pattern: None,
-                format: None,
-                required: None,
-            });
+            props.insert(
+                "tags".to_string(),
+                JsonSchemaProperty {
+                    property_type: Some("array".to_string()),
+                    description: Some("User tags/keywords".to_string()),
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    format: None,
+                    required: None,
+                },
+            );
 
             props
         }),
@@ -142,7 +154,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: true,
             description: "Complete valid user profile".to_string(),
         },
-
         ValidationTestCase {
             name: "valid_minimal_profile".to_string(),
             input: serde_json::json!({
@@ -152,7 +163,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: true,
             description: "Minimal valid profile with required fields only".to_string(),
         },
-
         ValidationTestCase {
             name: "valid_with_age_zero".to_string(),
             input: serde_json::json!({
@@ -163,7 +173,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: true,
             description: "Valid profile with minimum age".to_string(),
         },
-
         // Invalid cases
         ValidationTestCase {
             name: "missing_required_name".to_string(),
@@ -174,7 +183,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Missing required name field".to_string(),
         },
-
         ValidationTestCase {
             name: "missing_required_email".to_string(),
             input: serde_json::json!({
@@ -184,7 +192,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Missing required email field".to_string(),
         },
-
         ValidationTestCase {
             name: "name_too_short".to_string(),
             input: serde_json::json!({
@@ -194,7 +201,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Name shorter than minimum length".to_string(),
         },
-
         ValidationTestCase {
             name: "name_too_long".to_string(),
             input: serde_json::json!({
@@ -204,7 +210,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Name longer than maximum length".to_string(),
         },
-
         ValidationTestCase {
             name: "name_invalid_characters".to_string(),
             input: serde_json::json!({
@@ -214,7 +219,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Name contains invalid characters (numbers)".to_string(),
         },
-
         ValidationTestCase {
             name: "age_negative".to_string(),
             input: serde_json::json!({
@@ -225,7 +229,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Negative age value".to_string(),
         },
-
         ValidationTestCase {
             name: "age_too_high".to_string(),
             input: serde_json::json!({
@@ -236,7 +239,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Age exceeds maximum allowed".to_string(),
         },
-
         ValidationTestCase {
             name: "email_invalid_format".to_string(),
             input: serde_json::json!({
@@ -246,7 +248,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Invalid email format".to_string(),
         },
-
         ValidationTestCase {
             name: "email_too_short".to_string(),
             input: serde_json::json!({
@@ -256,7 +257,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Email shorter than minimum length".to_string(),
         },
-
         ValidationTestCase {
             name: "email_too_long".to_string(),
             input: serde_json::json!({
@@ -266,7 +266,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Email longer than maximum length".to_string(),
         },
-
         // Edge cases
         ValidationTestCase {
             name: "age_not_integer".to_string(),
@@ -278,7 +277,6 @@ pub fn get_schema_test_cases() -> Vec<ValidationTestCase> {
             expected_valid: false,
             description: "Age is not an integer".to_string(),
         },
-
         ValidationTestCase {
             name: "tags_wrong_type".to_string(),
             input: serde_json::json!({
@@ -361,6 +359,3 @@ pub fn get_mutation_config() -> serde_json::Value {
         ]
     })
 }
-
-
-

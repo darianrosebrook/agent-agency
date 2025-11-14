@@ -34,7 +34,7 @@ impl Default for QualityGateConfig {
             max_enum_variants: 15,
             max_duplicate_names: 5,
             exclude_patterns: vec![
-                "*.pb.rs".to_string(), // Generated protobuf files
+                "*.pb.rs".to_string(),        // Generated protobuf files
                 "*generated*.rs".to_string(), // Generated files
                 "target/".to_string(),
                 "node_modules/".to_string(),
@@ -50,7 +50,9 @@ impl Default for QualityGateConfig {
 }
 
 /// Quality gate severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
 pub enum Severity {
     Info,
     Warning,
@@ -97,14 +99,23 @@ impl QualityGateResults {
     }
 
     pub fn error_count(&self) -> usize {
-        self.violations.iter().filter(|v| v.severity == Severity::Error).count()
+        self.violations
+            .iter()
+            .filter(|v| v.severity == Severity::Error)
+            .count()
     }
 
     pub fn warning_count(&self) -> usize {
-        self.violations.iter().filter(|v| v.severity == Severity::Warning).count()
+        self.violations
+            .iter()
+            .filter(|v| v.severity == Severity::Warning)
+            .count()
     }
 
     pub fn info_count(&self) -> usize {
-        self.violations.iter().filter(|v| v.severity == Severity::Info).count()
+        self.violations
+            .iter()
+            .filter(|v| v.severity == Severity::Info)
+            .count()
     }
 }

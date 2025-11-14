@@ -1,5 +1,5 @@
 //! Waiver Management API handlers
-//! 
+//!
 //! This module contains all API handlers related to waiver management,
 //! including CRUD operations, approval workflows, and audit trails.
 
@@ -9,32 +9,37 @@ use axum::{
     Json,
 };
 use serde_json;
-use tracing::{info, error};
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::api::ApiState;
 
 /// List all waivers with optional filtering
-pub async fn list_waivers(State(state): State<ApiState>) -> Result<Json<serde_json::Value>, StatusCode> {
+pub async fn list_waivers(
+    State(state): State<ApiState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
     match state.api.db_client.list_waivers().await {
         Ok(waivers) => {
-            let waiver_list: Vec<serde_json::Value> = waivers.into_iter().map(|waiver| {
-                serde_json::json!({
-                    "id": waiver.id,
-                    "title": waiver.title,
-                    "reason": waiver.reason,
-                    "description": waiver.description,
-                    "gates": waiver.gates,
-                    "approved_by": waiver.approved_by,
-                    "impact_level": waiver.impact_level,
-                    "mitigation_plan": waiver.mitigation_plan,
-                    "expires_at": waiver.expires_at,
-                    "created_at": waiver.created_at,
-                    "updated_at": waiver.updated_at,
-                    "status": waiver.status,
-                    "metadata": waiver.metadata
+            let waiver_list: Vec<serde_json::Value> = waivers
+                .into_iter()
+                .map(|waiver| {
+                    serde_json::json!({
+                        "id": waiver.id,
+                        "title": waiver.title,
+                        "reason": waiver.reason,
+                        "description": waiver.description,
+                        "gates": waiver.gates,
+                        "approved_by": waiver.approved_by,
+                        "impact_level": waiver.impact_level,
+                        "mitigation_plan": waiver.mitigation_plan,
+                        "expires_at": waiver.expires_at,
+                        "created_at": waiver.created_at,
+                        "updated_at": waiver.updated_at,
+                        "status": waiver.status,
+                        "metadata": waiver.metadata
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "waivers": waiver_list,
@@ -55,32 +60,44 @@ pub async fn create_waiver(
     Json(waiver_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     // Extract waiver data from JSON
-    let title = waiver_data.get("title")
+    let title = waiver_data
+        .get("title")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let reason = waiver_data.get("reason")
+
+    let reason = waiver_data
+        .get("reason")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let description = waiver_data.get("description")
+
+    let description = waiver_data
+        .get("description")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let gates = waiver_data.get("gates")
+
+    let gates = waiver_data
+        .get("gates")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect()
+        })
         .unwrap_or_default();
-    
-    let impact_level = waiver_data.get("impact_level")
+
+    let impact_level = waiver_data
+        .get("impact_level")
         .and_then(|v| v.as_str())
         .unwrap_or("medium");
-    
-    let mitigation_plan = waiver_data.get("mitigation_plan")
+
+    let mitigation_plan = waiver_data
+        .get("mitigation_plan")
         .and_then(|v| v.as_str())
         .unwrap_or("");
-    
-    let expires_at = waiver_data.get("expires_at")
+
+    let expires_at = waiver_data
+        .get("expires_at")
         .and_then(|v| v.as_str())
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&chrono::Utc));
@@ -136,14 +153,15 @@ pub async fn approve_waiver(
     Path(waiver_id): Path<String>,
     Json(approval_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
-    let approved_by = approval_data.get("approved_by")
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let approved_by = approval_data
+        .get("approved_by")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let _approval_notes = approval_data.get("approval_notes")
+
+    let _approval_notes = approval_data
+        .get("approval_notes")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
@@ -168,30 +186,27 @@ pub async fn approve_waiver(
 /// Get a specific waiver by ID
 pub async fn get_waiver(
     State(state): State<ApiState>,
-    Path(waiver_id): Path<String>
+    Path(waiver_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     match state.api.db_client.get_waiver(&waiver_uuid).await {
-        Ok(Some(waiver)) => {
-            Ok(Json(serde_json::json!({
-                "id": waiver.id,
-                "title": waiver.title,
-                "reason": waiver.reason,
-                "description": waiver.description,
-                "gates": waiver.gates,
-                "approved_by": waiver.approved_by,
-                "impact_level": waiver.impact_level,
-                "mitigation_plan": waiver.mitigation_plan,
-                "expires_at": waiver.expires_at,
-                "created_at": waiver.created_at,
-                "updated_at": waiver.updated_at,
-                "status": waiver.status,
-                "metadata": waiver.metadata,
-                "status": "success"
-            })))
-        }
+        Ok(Some(waiver)) => Ok(Json(serde_json::json!({
+            "id": waiver.id,
+            "title": waiver.title,
+            "reason": waiver.reason,
+            "description": waiver.description,
+            "gates": waiver.gates,
+            "approved_by": waiver.approved_by,
+            "impact_level": waiver.impact_level,
+            "mitigation_plan": waiver.mitigation_plan,
+            "expires_at": waiver.expires_at,
+            "created_at": waiver.created_at,
+            "updated_at": waiver.updated_at,
+            "status": waiver.status,
+            "metadata": waiver.metadata,
+            "status": "success"
+        }))),
         Ok(None) => {
             error!("Waiver not found: {}", waiver_id);
             Err(StatusCode::NOT_FOUND)
@@ -209,9 +224,8 @@ pub async fn update_waiver(
     Path(waiver_id): Path<String>,
     Json(update_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     // Build dynamic update query based on provided fields
     let mut update_fields = Vec::new();
     let mut update_values: Vec<Box<dyn std::fmt::Display + Send + Sync>> = Vec::new();
@@ -279,11 +293,10 @@ pub async fn update_waiver(
 /// Delete a waiver
 pub async fn delete_waiver(
     State(state): State<ApiState>,
-    Path(waiver_id): Path<String>
+    Path(waiver_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
     match state.api.db_client.delete_waiver(&waiver_uuid).await {
         Ok(_) => {
             info!("Deleted waiver: {}", waiver_id);
@@ -305,18 +318,24 @@ pub async fn revoke_waiver(
     Path(waiver_id): Path<String>,
     Json(revocation_data): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
-    let revoked_by = revocation_data.get("revoked_by")
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let revoked_by = revocation_data
+        .get("revoked_by")
         .and_then(|v| v.as_str())
         .ok_or(StatusCode::BAD_REQUEST)?;
-    
-    let revocation_reason = revocation_data.get("revocation_reason")
+
+    let revocation_reason = revocation_data
+        .get("revocation_reason")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    match state.api.db_client.revoke_waiver(&waiver_uuid, revoked_by, revocation_reason).await {
+    match state
+        .api
+        .db_client
+        .revoke_waiver(&waiver_uuid, revoked_by, revocation_reason)
+        .await
+    {
         Ok(()) => {
             info!("Revoked waiver: {}", waiver_id);
             Ok(Json(serde_json::json!({
@@ -338,21 +357,28 @@ pub async fn revoke_waiver(
 /// Get audit trail for a waiver
 pub async fn get_waiver_audit_trail(
     State(state): State<ApiState>,
-    Path(waiver_id): Path<String>
+    Path(waiver_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    
-    match state.api.db_client.get_waiver_audit_trail(&waiver_uuid).await {
+    let waiver_uuid = uuid::Uuid::parse_str(&waiver_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    match state
+        .api
+        .db_client
+        .get_waiver_audit_trail(&waiver_uuid)
+        .await
+    {
         Ok(audit_records) => {
-            let audit_trail: Vec<serde_json::Value> = audit_records.into_iter().map(|record| {
-                serde_json::json!({
-                    "action": record["action"],
-                    "actor": record["actor"],
-                    "timestamp": record["timestamp"],
-                    "metadata": record["metadata"]
+            let audit_trail: Vec<serde_json::Value> = audit_records
+                .into_iter()
+                .map(|record| {
+                    serde_json::json!({
+                        "action": record["action"],
+                        "actor": record["actor"],
+                        "timestamp": record["timestamp"],
+                        "metadata": record["metadata"]
+                    })
                 })
-            }).collect();
+                .collect();
 
             Ok(Json(serde_json::json!({
                 "waiver_id": waiver_id,
@@ -385,14 +411,19 @@ pub async fn validate_waiver(
         validation_errors.push("Reason is required".to_string());
     }
 
-    if !waiver_data.get("description").and_then(|v| v.as_str()).is_some() {
+    if !waiver_data
+        .get("description")
+        .and_then(|v| v.as_str())
+        .is_some()
+    {
         validation_errors.push("Description is required".to_string());
     }
 
     // Validate impact level
     if let Some(impact_level) = waiver_data.get("impact_level").and_then(|v| v.as_str()) {
         if !["low", "medium", "high", "critical"].contains(&impact_level) {
-            validation_errors.push("Impact level must be one of: low, medium, high, critical".to_string());
+            validation_errors
+                .push("Impact level must be one of: low, medium, high, critical".to_string());
         }
     }
 

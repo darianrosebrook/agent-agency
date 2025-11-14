@@ -1,23 +1,22 @@
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::Json,
+    routing::{delete, get, post},
+    Router,
+};
 /**
  * Sandbox API Endpoints - P0-8 Implementation
  *
  * REST API endpoints for sandbox operations with security controls and audit logging.
  */
-
 use schemars::JsonSchema;
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::Json,
-    routing::{get, post, delete},
-    Router,
-};
 use serde::{Deserialize, Serialize};
 
-use crate::AppState;
 use crate::audit::extract_audit_context;
-use system_quality_security::{SandboxMode, SandboxContext, ExecutionRequest};
+use crate::AppState;
 use system_quality_security::sandbox::SandboxStatus;
+use system_quality_security::{ExecutionRequest, SandboxContext, SandboxMode};
 
 /// Request to create and execute in a sandbox
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -33,7 +32,7 @@ pub struct ExecuteRequest {
 
 /// API response for successful operations
 #[derive(Debug, Serialize, JsonSchema)]
-pub struct ApiResponse <T> {
+pub struct ApiResponse<T> {
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,
@@ -89,13 +88,11 @@ pub async fn execute_command(
                 error: None,
             }))
         }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Sandbox execution failed: {:?}", e)),
-            }))
-        }
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Sandbox execution failed: {:?}", e)),
+        })),
     }
 }
 
@@ -104,20 +101,16 @@ pub async fn get_sandbox_status(
     State(state): State<AppState>,
 ) -> Result<Json<ApiResponse<SandboxStatus>>, StatusCode> {
     match state.sandbox.get_status().await {
-        Ok(status) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(status),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to get sandbox status: {:?}", e)),
-            }))
-        }
+        Ok(status) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(status),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to get sandbox status: {:?}", e)),
+        })),
     }
 }
 
@@ -127,26 +120,22 @@ pub async fn validate_sandbox_config(
     Json(context): Json<SandboxContext>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, StatusCode> {
     match state.sandbox.validate_config(&context).await {
-        Ok(_) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "valid": true,
-                    "message": "Sandbox configuration is valid"
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: Some(serde_json::json!({
-                    "valid": false,
-                    "message": format!("Invalid configuration: {:?}", e)
-                })),
-                error: Some(format!("Configuration validation failed: {:?}", e)),
-            }))
-        }
+        Ok(_) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "valid": true,
+                "message": "Sandbox configuration is valid"
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: Some(serde_json::json!({
+                "valid": false,
+                "message": format!("Invalid configuration: {:?}", e)
+            })),
+            error: Some(format!("Configuration validation failed: {:?}", e)),
+        })),
     }
 }
 
@@ -167,23 +156,19 @@ pub async fn cleanup_sandbox(
     };
 
     match state.sandbox.cleanup(&uuid).await {
-        Ok(_) => {
-            Ok(Json(ApiResponse {
-                success: true,
-                data: Some(serde_json::json!({
-                    "sandbox_id": sandbox_id,
-                    "cleaned_up_at": chrono::Utc::now().to_rfc3339()
-                })),
-                error: None,
-            }))
-        }
-        Err(e) => {
-            Ok(Json(ApiResponse {
-                success: false,
-                data: None,
-                error: Some(format!("Failed to cleanup sandbox: {:?}", e)),
-            }))
-        }
+        Ok(_) => Ok(Json(ApiResponse {
+            success: true,
+            data: Some(serde_json::json!({
+                "sandbox_id": sandbox_id,
+                "cleaned_up_at": chrono::Utc::now().to_rfc3339()
+            })),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ApiResponse {
+            success: false,
+            data: None,
+            error: Some(format!("Failed to cleanup sandbox: {:?}", e)),
+        })),
     }
 }
 

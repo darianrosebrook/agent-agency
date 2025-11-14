@@ -45,14 +45,22 @@ pub(crate) static TASK_RESPONSE_SCHEMA: Lazy<JSONSchema> =
 pub(crate) static WORKING_SPEC_SCHEMA: Lazy<JSONSchema> =
     Lazy::new(|| compile(ContractKind::WorkingSpec, WORKING_SPEC_SCHEMA_RAW));
 
-pub(crate) static EXECUTION_ARTIFACTS_SCHEMA: Lazy<JSONSchema> =
-    Lazy::new(|| compile(ContractKind::ExecutionArtifacts, EXECUTION_ARTIFACTS_SCHEMA_RAW));
+pub(crate) static EXECUTION_ARTIFACTS_SCHEMA: Lazy<JSONSchema> = Lazy::new(|| {
+    compile(
+        ContractKind::ExecutionArtifacts,
+        EXECUTION_ARTIFACTS_SCHEMA_RAW,
+    )
+});
 
 pub(crate) static QUALITY_REPORT_SCHEMA: Lazy<JSONSchema> =
     Lazy::new(|| compile(ContractKind::QualityReport, QUALITY_REPORT_SCHEMA_RAW));
 
-pub(crate) static REFINEMENT_DECISION_SCHEMA: Lazy<JSONSchema> =
-    Lazy::new(|| compile(ContractKind::RefinementDecision, REFINEMENT_DECISION_SCHEMA_RAW));
+pub(crate) static REFINEMENT_DECISION_SCHEMA: Lazy<JSONSchema> = Lazy::new(|| {
+    compile(
+        ContractKind::RefinementDecision,
+        REFINEMENT_DECISION_SCHEMA_RAW,
+    )
+});
 
 pub(crate) static WORKER_OUTPUT_SCHEMA: Lazy<JSONSchema> =
     Lazy::new(|| compile(ContractKind::WorkerOutput, WORKER_OUTPUT_SCHEMA_RAW));

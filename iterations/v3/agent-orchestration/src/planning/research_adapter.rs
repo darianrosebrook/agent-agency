@@ -13,13 +13,16 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 #[cfg(feature = "research")]
-use agent_agency_contracts::{
-    ResearchEvidenceCollector as ContractsResearchEvidenceCollector,
-    types::research::{Evidence, EvidenceType, EvidenceQuery, ValidationResult, EvidenceStats},
-    errors::ResearchResult,
+use crate::planning::evidence::{
+    ProcessingContext as PlanningProcessingContext, ResearchEvidence as PlanningResearchEvidence,
+    ResearchEvidenceCollector,
 };
 #[cfg(feature = "research")]
-use crate::planning::evidence::{ResearchEvidenceCollector, ResearchEvidence as PlanningResearchEvidence, ProcessingContext as PlanningProcessingContext};
+use agent_agency_contracts::{
+    errors::ResearchResult,
+    types::research::{Evidence, EvidenceQuery, EvidenceStats, EvidenceType, ValidationResult},
+    ResearchEvidenceCollector as ContractsResearchEvidenceCollector,
+};
 
 /// Adapter that wraps agent-research::EvidenceCollector to implement contracts::ResearchEvidenceCollector
 #[cfg(feature = "research")]
@@ -32,7 +35,9 @@ pub struct ResearchEvidenceAdapter {
 #[cfg(feature = "research")]
 impl ResearchEvidenceAdapter {
     /// Create a new research evidence adapter
-    pub fn new(evidence_collector: Arc<agent_research::evidence::collector::EvidenceCollector>) -> Self {
+    pub fn new(
+        evidence_collector: Arc<agent_research::evidence::collector::EvidenceCollector>,
+    ) -> Self {
         Self { evidence_collector }
     }
 }
@@ -84,18 +89,21 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
         // Note: EvidenceCollector requires &mut self, but we have Arc
         // Create a new instance for this call since we can't mutate through Arc
         let mut collector = agent_research::evidence::collector::EvidenceCollector::new();
-        let research_evidence = collector.collect_evidence(&atomic_claim, &processing_context).await
+        let research_evidence = collector
+            .collect_evidence(&atomic_claim, &processing_context)
+            .await
             .map_err(|e| {
                 let error_msg = format!("{}", e);
                 agent_agency_contracts::errors::PlanningError::PlanGenerationFailed {
-                    reason: format!("Research evidence collection failed: {}", error_msg)
+                    reason: format!("Research evidence collection failed: {}", error_msg),
                 }
             })?;
 
         // Convert back to contracts types
-        let contracts_evidence = research_evidence.into_iter().map(|ev| {
-            self.convert_research_evidence_to_contracts(ev)
-        }).collect();
+        let contracts_evidence = research_evidence
+            .into_iter()
+            .map(|ev| self.convert_research_evidence_to_contracts(ev))
+            .collect();
 
         Ok(contracts_evidence)
     }
@@ -232,51 +240,95 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
 #[cfg(feature = "research")]
 #[async_trait]
 impl ResearchEvidenceCollector for ResearchEvidenceAdapter {
-    async fn collect_evidence(&self, context: &PlanningProcessingContext) -> anyhow::Result<Vec<PlanningResearchEvidence>> {
+    async fn collect_evidence(
+        &self,
+        context: &PlanningProcessingContext,
+    ) -> anyhow::Result<Vec<PlanningResearchEvidence>> {
         // Convert planning ProcessingContext to contracts EvidenceQuery
         let query = EvidenceQuery {
-            query: format!("Task {} milestone {}", context.task_id, context.milestone_id),
-            evidence_types: context.evidence_types.iter().map(|et| match et {
-                crate::planning::evidence::ResearchEvidenceType::CodeReview | crate::planning::evidence::ResearchEvidenceType::CodeAnalysis => EvidenceType::CodeAnalysis,
-                crate::planning::evidence::ResearchEvidenceType::TestExecution => EvidenceType::TestResults,
-                crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics | crate::planning::evidence::ResearchEvidenceType::Performance => EvidenceType::PerformanceMetrics,
-                crate::planning::evidence::ResearchEvidenceType::SecurityScan | crate::planning::evidence::ResearchEvidenceType::Security => EvidenceType::SecurityScan,
-                crate::planning::evidence::ResearchEvidenceType::Constitutional => EvidenceType::ConstitutionalReference,
-                crate::planning::evidence::ResearchEvidenceType::Documentation => EvidenceType::Documentation,
-            }).collect(),
+            query: format!(
+                "Task {} milestone {}",
+                context.task_id, context.milestone_id
+            ),
+            evidence_types: context
+                .evidence_types
+                .iter()
+                .map(|et| match et {
+                    crate::planning::evidence::ResearchEvidenceType::CodeReview
+                    | crate::planning::evidence::ResearchEvidenceType::CodeAnalysis => {
+                        EvidenceType::CodeAnalysis
+                    }
+                    crate::planning::evidence::ResearchEvidenceType::TestExecution => {
+                        EvidenceType::TestResults
+                    }
+                    crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics
+                    | crate::planning::evidence::ResearchEvidenceType::Performance => {
+                        EvidenceType::PerformanceMetrics
+                    }
+                    crate::planning::evidence::ResearchEvidenceType::SecurityScan
+                    | crate::planning::evidence::ResearchEvidenceType::Security => {
+                        EvidenceType::SecurityScan
+                    }
+                    crate::planning::evidence::ResearchEvidenceType::Constitutional => {
+                        EvidenceType::ConstitutionalReference
+                    }
+                    crate::planning::evidence::ResearchEvidenceType::Documentation => {
+                        EvidenceType::Documentation
+                    }
+                })
+                .collect(),
             context: std::collections::HashMap::new(),
             limit: None,
             min_confidence: None,
         };
 
         // Use the contracts implementation via ContractsResearchEvidenceCollector trait
-        let contracts_evidence = ContractsResearchEvidenceCollector::collect_evidence(self, query).await
+        let contracts_evidence = ContractsResearchEvidenceCollector::collect_evidence(self, query)
+            .await
             .map_err(|e| anyhow::anyhow!("Research evidence collection failed: {:?}", e))?;
 
         // Convert contracts Evidence to planning ResearchEvidence
-        Ok(contracts_evidence.into_iter().map(|ev| PlanningResearchEvidence {
-            id: Uuid::parse_str(&ev.id).unwrap_or_else(|_| Uuid::new_v4()),
-            content: ev.content,
-            evidence_type: match ev.evidence_type {
-                EvidenceType::CodeAnalysis => crate::planning::evidence::ResearchEvidenceType::CodeAnalysis,
-                EvidenceType::TestResults => crate::planning::evidence::ResearchEvidenceType::TestExecution,
-                EvidenceType::PerformanceMetrics => crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics,
-                EvidenceType::SecurityScan => crate::planning::evidence::ResearchEvidenceType::SecurityScan,
-                EvidenceType::ConstitutionalReference => crate::planning::evidence::ResearchEvidenceType::Constitutional,
-                EvidenceType::Documentation => crate::planning::evidence::ResearchEvidenceType::Documentation,
-                _ => crate::planning::evidence::ResearchEvidenceType::CodeAnalysis, // Default
-            },
-            confidence: ev.confidence,
-            source: ev.source,
-            timestamp: ev.timestamp,
-        }).collect())
+        Ok(contracts_evidence
+            .into_iter()
+            .map(|ev| PlanningResearchEvidence {
+                id: Uuid::parse_str(&ev.id).unwrap_or_else(|_| Uuid::new_v4()),
+                content: ev.content,
+                evidence_type: match ev.evidence_type {
+                    EvidenceType::CodeAnalysis => {
+                        crate::planning::evidence::ResearchEvidenceType::CodeAnalysis
+                    }
+                    EvidenceType::TestResults => {
+                        crate::planning::evidence::ResearchEvidenceType::TestExecution
+                    }
+                    EvidenceType::PerformanceMetrics => {
+                        crate::planning::evidence::ResearchEvidenceType::PerformanceMetrics
+                    }
+                    EvidenceType::SecurityScan => {
+                        crate::planning::evidence::ResearchEvidenceType::SecurityScan
+                    }
+                    EvidenceType::ConstitutionalReference => {
+                        crate::planning::evidence::ResearchEvidenceType::Constitutional
+                    }
+                    EvidenceType::Documentation => {
+                        crate::planning::evidence::ResearchEvidenceType::Documentation
+                    }
+                    _ => crate::planning::evidence::ResearchEvidenceType::CodeAnalysis, // Default
+                },
+                confidence: ev.confidence,
+                source: ev.source,
+                timestamp: ev.timestamp,
+            })
+            .collect())
     }
 }
 
 #[cfg(feature = "research")]
 impl ResearchEvidenceAdapter {
     /// Convert agent-research Evidence to contracts Evidence
-    fn convert_research_evidence_to_contracts(&self, research_ev: agent_research::extraction_types::Evidence) -> Evidence {
+    fn convert_research_evidence_to_contracts(
+        &self,
+        research_ev: agent_research::extraction_types::Evidence,
+    ) -> Evidence {
         Evidence {
             id: research_ev.id.to_string(),
             evidence_type: self.map_research_evidence_type_to_contracts(research_ev.evidence_type),
@@ -290,15 +342,28 @@ impl ResearchEvidenceAdapter {
     }
 
     /// Map contracts EvidenceType to agent-research ClaimType
-    fn map_evidence_type_to_claim_type(&self, evidence_type: EvidenceType) -> agent_research::extraction_types::ClaimType {
+    fn map_evidence_type_to_claim_type(
+        &self,
+        evidence_type: EvidenceType,
+    ) -> agent_research::extraction_types::ClaimType {
         match evidence_type {
-            EvidenceType::CodeAnalysis | EvidenceType::TestResults => agent_research::extraction_types::ClaimType::Factual,
+            EvidenceType::CodeAnalysis | EvidenceType::TestResults => {
+                agent_research::extraction_types::ClaimType::Factual
+            }
             EvidenceType::Documentation => agent_research::extraction_types::ClaimType::Factual, // Definitional -> Factual
-            EvidenceType::ResearchFindings | EvidenceType::PerformanceMetrics => agent_research::extraction_types::ClaimType::Quantitative, // Comparative -> Quantitative
+            EvidenceType::ResearchFindings | EvidenceType::PerformanceMetrics => {
+                agent_research::extraction_types::ClaimType::Quantitative
+            } // Comparative -> Quantitative
             EvidenceType::SecurityScan => agent_research::extraction_types::ClaimType::Security,
-            EvidenceType::ConstitutionalReference => agent_research::extraction_types::ClaimType::Constitutional, // Normative -> Constitutional
-            EvidenceType::CouncilDecision => agent_research::extraction_types::ClaimType::Constitutional, // Normative -> Constitutional
-            EvidenceType::MultiModalAnalysis => agent_research::extraction_types::ClaimType::Factual,
+            EvidenceType::ConstitutionalReference => {
+                agent_research::extraction_types::ClaimType::Constitutional
+            } // Normative -> Constitutional
+            EvidenceType::CouncilDecision => {
+                agent_research::extraction_types::ClaimType::Constitutional
+            } // Normative -> Constitutional
+            EvidenceType::MultiModalAnalysis => {
+                agent_research::extraction_types::ClaimType::Factual
+            }
             EvidenceType::ExternalSource => agent_research::extraction_types::ClaimType::Factual,
             EvidenceType::TestResult => agent_research::extraction_types::ClaimType::Factual,
             EvidenceType::UserFeedback => agent_research::extraction_types::ClaimType::Behavioral, // Evaluative -> Behavioral
@@ -309,23 +374,54 @@ impl ResearchEvidenceAdapter {
     }
 
     /// Map agent-research EvidenceType to contracts EvidenceType
-    fn map_research_evidence_type_to_contracts(&self, research_type: agent_research::extraction_types::EvidenceType) -> EvidenceType {
+    fn map_research_evidence_type_to_contracts(
+        &self,
+        research_type: agent_research::extraction_types::EvidenceType,
+    ) -> EvidenceType {
         match research_type {
-            agent_research::extraction_types::EvidenceType::CodeAnalysis => EvidenceType::CodeAnalysis,
-            agent_research::extraction_types::EvidenceType::TestResults => EvidenceType::TestResults,
-            agent_research::extraction_types::EvidenceType::TestExecution => EvidenceType::TestResults, // Map TestExecution to TestResults
-            agent_research::extraction_types::EvidenceType::Documentation => EvidenceType::Documentation,
-            agent_research::extraction_types::EvidenceType::ResearchFindings => EvidenceType::ResearchFindings,
-            agent_research::extraction_types::EvidenceType::PerformanceMetrics => EvidenceType::PerformanceMetrics,
-            agent_research::extraction_types::EvidenceType::SecurityScan => EvidenceType::SecurityScan,
-            agent_research::extraction_types::EvidenceType::ConstitutionalReference => EvidenceType::ConstitutionalReference,
-            agent_research::extraction_types::EvidenceType::CouncilDecision => EvidenceType::CouncilDecision,
-            agent_research::extraction_types::EvidenceType::MultiModalAnalysis => EvidenceType::MultiModalAnalysis,
-            agent_research::extraction_types::EvidenceType::ExternalSource => EvidenceType::ExternalSource,
+            agent_research::extraction_types::EvidenceType::CodeAnalysis => {
+                EvidenceType::CodeAnalysis
+            }
+            agent_research::extraction_types::EvidenceType::TestResults => {
+                EvidenceType::TestResults
+            }
+            agent_research::extraction_types::EvidenceType::TestExecution => {
+                EvidenceType::TestResults
+            } // Map TestExecution to TestResults
+            agent_research::extraction_types::EvidenceType::Documentation => {
+                EvidenceType::Documentation
+            }
+            agent_research::extraction_types::EvidenceType::ResearchFindings => {
+                EvidenceType::ResearchFindings
+            }
+            agent_research::extraction_types::EvidenceType::PerformanceMetrics => {
+                EvidenceType::PerformanceMetrics
+            }
+            agent_research::extraction_types::EvidenceType::SecurityScan => {
+                EvidenceType::SecurityScan
+            }
+            agent_research::extraction_types::EvidenceType::ConstitutionalReference => {
+                EvidenceType::ConstitutionalReference
+            }
+            agent_research::extraction_types::EvidenceType::CouncilDecision => {
+                EvidenceType::CouncilDecision
+            }
+            agent_research::extraction_types::EvidenceType::MultiModalAnalysis => {
+                EvidenceType::MultiModalAnalysis
+            }
+            agent_research::extraction_types::EvidenceType::ExternalSource => {
+                EvidenceType::ExternalSource
+            }
             agent_research::extraction_types::EvidenceType::TestResult => EvidenceType::TestResult,
-            agent_research::extraction_types::EvidenceType::UserFeedback => EvidenceType::UserFeedback,
-            agent_research::extraction_types::EvidenceType::Measurement => EvidenceType::Measurement,
-            agent_research::extraction_types::EvidenceType::LogicalAnalysis => EvidenceType::LogicalAnalysis,
+            agent_research::extraction_types::EvidenceType::UserFeedback => {
+                EvidenceType::UserFeedback
+            }
+            agent_research::extraction_types::EvidenceType::Measurement => {
+                EvidenceType::Measurement
+            }
+            agent_research::extraction_types::EvidenceType::LogicalAnalysis => {
+                EvidenceType::LogicalAnalysis
+            }
             agent_research::extraction_types::EvidenceType::Supporting => EvidenceType::Supporting,
         }
     }

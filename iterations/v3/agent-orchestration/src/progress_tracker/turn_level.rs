@@ -5,19 +5,19 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
-use crate::progress_tracker::{ProgressTracker, ExecutionProgress};
+use crate::progress_tracker::{ExecutionProgress, ProgressTracker};
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 
-use crate::progress_tracker::trajectory_analyzer::TrajectoryAnalyzer;
 use crate::progress_tracker::credit_assignment::AdvancedCreditAssigner;
+use crate::progress_tracker::trajectory_analyzer::TrajectoryAnalyzer;
 
 /// Represents an agent action taken during a turn
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,7 +194,8 @@ impl TurnLevelProgressTracker {
         final_outcome: &TaskOutcome,
     ) -> Vec<CreditAssignment> {
         // Use advanced TD(λ) credit assignment
-        self.credit_assigner.assign_credit_hybrid(trajectory, final_outcome)
+        self.credit_assigner
+            .assign_credit_hybrid(trajectory, final_outcome)
     }
 
     /// Detect plateau: check if quality hasn't improved in recent turns
@@ -204,7 +205,8 @@ impl TurnLevelProgressTracker {
         }
 
         let recent_turns = &turns[turns.len().saturating_sub(window_size)..];
-        let qualities: Vec<f64> = recent_turns.iter()
+        let qualities: Vec<f64> = recent_turns
+            .iter()
             .map(|t| t.outcome.quality_score)
             .collect();
 
@@ -235,7 +237,7 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
             task_id,
             action: action.clone(),
             outcome: outcome.clone(),
-            reward: None, // Will be assigned later via credit assignment
+            reward: None,            // Will be assigned later via credit assignment
             credit_assignment: None, // Will be assigned when task completes
             started_at: action.timestamp,
             completed_at: Utc::now(),
@@ -266,9 +268,7 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
         let cumulative_quality = {
             let storage = self.turn_storage.read().await;
             if let Some(turns) = storage.get(&task_id) {
-                turns.iter()
-                    .map(|t| t.outcome.quality_score)
-                    .sum::<f64>() / turns.len() as f64
+                turns.iter().map(|t| t.outcome.quality_score).sum::<f64>() / turns.len() as f64
             } else {
                 outcome.quality_score
             }
@@ -276,7 +276,11 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
 
         base_progress.metrics.processing_rate = cumulative_quality;
 
-        if let Err(e) = self.base_tracker.update_progress(task_id, base_progress).await {
+        if let Err(e) = self
+            .base_tracker
+            .update_progress(task_id, base_progress)
+            .await
+        {
             return Err(anyhow::anyhow!("Failed to update base progress: {}", e));
         }
 
@@ -303,8 +307,10 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
             let mut storage = self.turn_storage.write().await;
             if let Some(turns) = storage.get_mut(&task_id) {
                 for assignment in &assignments {
-                    if let Some(turn) = turns.iter_mut()
-                        .find(|t| t.turn_number == assignment.turn_number) {
+                    if let Some(turn) = turns
+                        .iter_mut()
+                        .find(|t| t.turn_number == assignment.turn_number)
+                    {
                         turn.credit_assignment = Some(assignment.clone());
                     }
                 }
@@ -326,7 +332,11 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
         }
 
         // Analyze trajectory for patterns and insights
-        if let Ok(insights) = self.trajectory_analyzer.analyze_trajectory(&trajectory_obj).await {
+        if let Ok(insights) = self
+            .trajectory_analyzer
+            .analyze_trajectory(&trajectory_obj)
+            .await
+        {
             tracing::info!(
                 "Trajectory analysis for task {}: {} patterns detected, {} recommendations",
                 task_id,
@@ -354,7 +364,8 @@ impl TurnLevelTracker for TurnLevelProgressTracker {
 
     async fn analyze_trajectory(&self, task_id: Uuid) -> Result<TurnTrajectory> {
         let storage = self.trajectory_storage.read().await;
-        storage.get(&task_id)
+        storage
+            .get(&task_id)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("No trajectory found for task {}", task_id))
     }
@@ -376,4 +387,3 @@ impl TurnLevelProgressTracker {
         storage.get(&task_id).map(|t| t.total_turns)
     }
 }
-

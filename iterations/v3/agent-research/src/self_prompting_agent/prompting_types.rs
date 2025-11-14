@@ -1,13 +1,13 @@
 //! Core type definitions for the self-prompting agent system
 
-use schemars::JsonSchema;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Simple evaluation report stub (replace with real evaluation when available)
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvalReport {
     pub score: f64,
     pub status: EvalStatus,
@@ -16,7 +16,7 @@ pub struct EvalReport {
 }
 
 /// Evaluation status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EvalStatus {
     Pass,
     Fail,
@@ -25,24 +25,24 @@ pub enum EvalStatus {
 
 /// Autonomous execution modes for the self-prompting agent
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AutonomousMode {
-    Strict,    // Ask for approval before each change
-    Auto,      // Apply changes automatically, promote only when gates pass
-    DryRun,    // Simulate execution without making changes
+    Strict, // Ask for approval before each change
+    Auto,   // Apply changes automatically, promote only when gates pass
+    DryRun, // Simulate execution without making changes
 }
 
 /// Safety modes for the sandbox
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SafetyMode {
-    Strict,      // No file operations allowed
-    Sandbox,     // Limited operations within workspace
-    Autonomous,  // Full autonomous operations
+    Strict,     // No file operations allowed
+    Sandbox,    // Limited operations within workspace
+    Autonomous, // Full autonomous operations
 }
 
 /// Task definition for self-prompting execution
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: Uuid,
     pub description: String,
@@ -53,7 +53,7 @@ pub struct Task {
 }
 
 /// Task types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TaskType {
     CodeGeneration,
     CodeReview,
@@ -78,7 +78,7 @@ impl Task {
 }
 
 /// Task execution result
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResult {
     pub task_id: Uuid,
     pub task_type: TaskType,
@@ -88,7 +88,7 @@ pub struct TaskResult {
 }
 
 /// Execution artifact
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Artifact {
     pub id: Uuid,
     pub file_path: String,
@@ -98,7 +98,7 @@ pub struct Artifact {
 }
 
 /// Artifact types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ArtifactType {
     Code,
     Test,
@@ -109,7 +109,7 @@ pub enum ArtifactType {
 }
 
 /// Change set for task execution
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChangeSet {
     pub id: Uuid,
     pub task_id: Uuid,
@@ -119,7 +119,7 @@ pub struct ChangeSet {
 }
 
 /// File change in a change set
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileChange {
     pub file_path: String,
     pub change_type: ChangeType,
@@ -128,7 +128,7 @@ pub struct FileChange {
 }
 
 /// Change types
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ChangeType {
     Create,
     Modify,

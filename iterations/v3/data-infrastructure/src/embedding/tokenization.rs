@@ -79,18 +79,20 @@ impl HfTokenizer {
 #[async_trait]
 impl Tokenizer for HfTokenizer {
     async fn encode(&self, text: &str) -> Result<Vec<u32>> {
-        let encoding = self.tokenizer.encode(text, true)
+        let encoding = self
+            .tokenizer
+            .encode(text, true)
             .map_err(|e| anyhow::anyhow!("Failed to encode text: {}", e))?;
 
         Ok(encoding.get_ids().to_vec())
     }
 
     async fn decode(&self, tokens: &[u32]) -> Result<String> {
-        let decoded = self.tokenizer.decode(tokens, true)
+        let decoded = self
+            .tokenizer
+            .decode(tokens, true)
             .map_err(|e| anyhow::anyhow!("Failed to decode tokens: {}", e))?;
 
         Ok(decoded)
     }
 }
-
-

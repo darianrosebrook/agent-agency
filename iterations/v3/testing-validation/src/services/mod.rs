@@ -7,13 +7,13 @@
 //! - ServiceManager: Comprehensive service management with automatic startup
 //! - Database lifecycle management for test isolation and fixture management
 
-pub mod orchestrator;
 pub mod ollama;
+pub mod orchestrator;
 pub mod postgres;
 pub mod service_manager;
 
-pub use orchestrator::OrchestratorService;
+pub use crate::database_lifecycle::{DatabaseSnapshot, TestDatabaseManager, TestFixtures};
 pub use ollama::OllamaService;
+pub use orchestrator::OrchestratorService;
 pub use postgres::PostgresService;
 pub use service_manager::{ServiceManager, ServiceStatus};
-pub use crate::database_lifecycle::{TestDatabaseManager, TestFixtures, DatabaseSnapshot};

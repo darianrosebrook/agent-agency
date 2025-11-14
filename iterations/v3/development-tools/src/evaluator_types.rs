@@ -302,7 +302,9 @@ pub enum ChangeCategory {
 }
 
 /// Risk level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema,
+)]
 pub enum RiskLevel {
     /// Very low risk
     VeryLow,

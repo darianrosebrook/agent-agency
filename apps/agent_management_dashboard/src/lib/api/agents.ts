@@ -239,12 +239,12 @@ export async function getModelContributions(params?: {
   const url = `${API_BASE}/telemetry/model-contributions${
     queryString ? `?${queryString}` : ""
   }`;
-  
+
   // If group_by=month, return the full response with monthly breakdown
   if (params?.group_by === "month") {
     return apiGet<ModelContributionsResponse>(url);
   }
-  
+
   // Otherwise return legacy format (for backwards compatibility)
   return apiGet<ModelContribution[]>(url);
 }
@@ -288,12 +288,12 @@ export async function getContributions(params?: {
   const url = `${API_BASE}/telemetry/contributions${
     queryString ? `?${queryString}` : ""
   }`;
-  
+
   // If group_by=day, return the full response with daily breakdown
   if (params?.group_by === "day") {
     return apiGet<ContributionsResponse>(url);
   }
-  
+
   // Otherwise return legacy format (for backwards compatibility)
   return apiGet<ContributionStats[]>(url);
 }

@@ -17,8 +17,7 @@ import {
   TestTube,
   Bell,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Tooltip,
   TooltipContent,
@@ -27,13 +26,34 @@ import {
 } from "../primitives/tooltip";
 import { cn } from "../primitives/utils";
 import { getUnreadCount } from "@/lib/stores/notificationStore";
+import { listProjects, type ProjectListItem } from "../../lib/api/projects";
 import styles from "./NavigationSidebar.module.scss";
 
+// Helper function to map project state to status dot color
+function getStatusDotClass(state?: string | null): string {
+  switch (state?.toLowerCase()) {
+    case "active":
+    case "in_progress":
+      return styles.folderStatusDotBlue;
+    case "completed":
+    case "done":
+      return styles.folderStatusDotYellow;
+    case "paused":
+    case "on_hold":
+      return styles.folderStatusDotGray;
+    default:
+      return styles.folderStatusDotBlue;
+  }
+}
+
 export function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const location = useLocation();
+  const pathname = location.pathname;
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [recentProjects, setRecentProjects] = useState<ProjectListItem[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
   const isActive = useCallback(
     (path: string) => {
@@ -44,6 +64,30 @@ export function Sidebar() {
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    async function fetchRecentProjects() {
+      try {
+        const response = await listProjects();
+        // Sort by updated_at (most recently updated first) and take top 3
+        const sorted = response.projects
+          .sort((a, b) => {
+            const aTime = new Date(a.updated_at || a.created_at).getTime();
+            const bTime = new Date(b.updated_at || b.created_at).getTime();
+            return bTime - aTime;
+          })
+          .slice(0, 3);
+        setRecentProjects(sorted);
+      } catch (error) {
+        console.error("Failed to fetch recent projects:", error);
+        setRecentProjects([]);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    }
+
+    fetchRecentProjects();
   }, []);
 
   useEffect(() => {
@@ -97,13 +141,13 @@ export function Sidebar() {
         {!isCollapsed && (
           <div 
             className={styles.searchContainer}
-            onClick={() => router.push('/search')}
+            onClick={() => navigate('/search')}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                router.push('/search');
+                navigate('/search');
               }
             }}
           >
@@ -115,7 +159,7 @@ export function Sidebar() {
               readOnly
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/search');
+                navigate('/search');
               }}
             />
             <kbd className={styles.searchKeyboard}>/</kbd>
@@ -132,7 +176,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/chat"
+                  to="/chat"
                   className={cn(
                     styles.quickLink,
                     isCollapsed
@@ -155,7 +199,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/projects"
+                  to="/projects"
                   className={cn(
                     styles.quickLink,
                     isCollapsed
@@ -191,7 +235,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/"
+                  to="/"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -217,7 +261,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/agent-stats"
+                  to="/agent-stats"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -243,7 +287,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/rules-governance"
+                  to="/rules-governance"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -271,7 +315,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/agent-health"
+                  to="/agent-health"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -297,7 +341,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/phase-planner"
+                  to="/phase-planner"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -323,7 +367,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/testing"
+                  to="/testing"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -349,7 +393,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/notifications"
+                  to="/notifications"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -382,7 +426,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/settings"
+                  to="/settings"
                   className={cn(
                     styles.navLink,
                     isCollapsed
@@ -410,60 +454,28 @@ export function Sidebar() {
           {/* Folders */}
           {!isCollapsed && (
             <div className={styles.folders}>
-              {/* TODO: Replace hardcoded recent projects with dynamic project list from v3 database with the following requirements:
-              // 1. Recent projects fetching: Load recent projects sorted by last_accessed
-              //    - Data source: GET /api/projects?limit=3&sort=last_accessed endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-              //    - Database table: PostgreSQL `projects` table
-              //    - Include project name, ID, and status for display
-              // 2. Project navigation: Make project buttons link to project detail view
-              //    - Link to /projects/:projectId route
-              //    - Update last_accessed timestamp when project is clicked
-              // 3. Project status indicators: Show project status with color-coded dots
-              //    - Use project.status field to determine dot color
-              //    - Map status values to colors (active=blue, paused=gray, completed=yellow, etc.)
-              // 4. New Project button: Open new project modal
-              //    - Trigger NewProjectModal component
-              //    - Handle project creation and refresh recent projects list
-              // 5. Expandable project items: Show project details on hover/click
-              //    - Display project description or summary
-              //    - Show project progress or task count
-              //    - Allow quick actions (open, archive, delete) */}
-              <button
-                className={cn(styles.folderButton, styles.folderButtonGroup)}
-              >
-                <div
-                  className={cn(
-                    styles.folderStatusDot,
-                    styles.folderStatusDotBlue
-                  )}
-                ></div>
-                <span className={styles.folderName}>Recent Project</span>
-                <ChevronDown className={styles.folderChevron} />
-              </button>
-              <button
-                className={cn(styles.folderButton, styles.folderButtonGroup)}
-              >
-                <div
-                  className={cn(
-                    styles.folderStatusDot,
-                    styles.folderStatusDotGray
-                  )}
-                ></div>
-                <span className={styles.folderName}>Recent Project</span>
-                <ChevronDown className={styles.folderChevron} />
-              </button>
-              <button
-                className={cn(styles.folderButton, styles.folderButtonGroup)}
-              >
-                <div
-                  className={cn(
-                    styles.folderStatusDot,
-                    styles.folderStatusDotYellow
-                  )}
-                ></div>
-                <span className={styles.folderName}>Recent Project</span>
-                <ChevronDown className={styles.folderChevron} />
-              </button>
+              {isLoadingProjects ? (
+                <div className={styles.loadingProjects}>Loading projects...</div>
+              ) : recentProjects.length > 0 ? (
+                recentProjects.map((project) => (
+                  <Link
+                    key={project.project_id}
+                    to={`/projects/${project.project_id}`}
+                    className={cn(styles.folderButton, styles.folderButtonGroup)}
+                  >
+                    <div
+                      className={cn(
+                        styles.folderStatusDot,
+                        getStatusDotClass(project.state)
+                      )}
+                    ></div>
+                    <span className={styles.folderName}>{project.name}</span>
+                    <ChevronDown className={styles.folderChevron} />
+                  </Link>
+                ))
+              ) : (
+                <div className={styles.noProjects}>No recent projects</div>
+              )}
               <button className={styles.newProjectButton}>
                 <FolderPlus className={styles.icon} />
                 <span className={styles.newProjectText}>New Project</span>

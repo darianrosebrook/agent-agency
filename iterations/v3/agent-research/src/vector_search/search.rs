@@ -8,12 +8,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use super::vector_core::VectorSearchEngine;
-use super::vector_search_cache::CacheManager;
-use super::vector_metrics::VectorSearchMetrics;
 use super::embedding::EmbeddingProcessor;
 use super::qdrant::QdrantClient;
 use super::text_processing::TextProcessor;
+use super::vector_core::VectorSearchEngine;
+use super::vector_metrics::VectorSearchMetrics;
+use super::vector_search_cache::CacheManager;
 use data_infrastructure::embedding::embedding_service::EmbeddingServiceFactory;
 use data_infrastructure::embedding::embedding_types::EmbeddingConfig;
 use data_infrastructure::embedding::EmbeddingService;
@@ -55,19 +55,24 @@ impl SearchOperations {
 
     /// Initialize embedding service (lazy initialization)
     async fn get_embedding_service(&self) -> Result<&dyn EmbeddingService> {
-        self.embedding_service.get_or_try_init(|| async {
-            let config = EmbeddingConfig {
-                model_name: "embeddinggemma".to_string(),
-                dimension: 768,
-                batch_size: 32,
-                cache_size: 1000,
-                timeout_ms: 30000,
-            };
-            
-            Ok(EmbeddingServiceFactory::create_with_auto_detect(config, Some("embeddinggemma".to_string())).await)
-        })
-        .await
-        .map(|s| s.as_ref())
+        self.embedding_service
+            .get_or_try_init(|| async {
+                let config = EmbeddingConfig {
+                    model_name: "embeddinggemma".to_string(),
+                    dimension: 768,
+                    batch_size: 32,
+                    cache_size: 1000,
+                    timeout_ms: 30000,
+                };
+
+                Ok(EmbeddingServiceFactory::create_with_auto_detect(
+                    config,
+                    Some("embeddinggemma".to_string()),
+                )
+                .await)
+            })
+            .await
+            .map(|s| s.as_ref())
     }
 
     /// Perform semantic search
@@ -81,11 +86,17 @@ impl SearchOperations {
 
         // Generate embedding for query
         let query_embedding = self.generate_query_embedding(query).await?;
-        self.embedding_processor.validate_embedding_quality(&query_embedding)?;
+        self.embedding_processor
+            .validate_embedding_quality(&query_embedding)?;
 
         // Search in Qdrant
-        let results = self.qdrant_client
-            .search_similar(&query_embedding, self.max_results, self.similarity_threshold)
+        let results = self
+            .qdrant_client
+            .search_similar(
+                &query_embedding,
+                self.max_results,
+                self.similarity_threshold,
+            )
             .await?;
 
         // Skip caching for now - type mismatch
@@ -97,7 +108,10 @@ impl SearchOperations {
         let mut metrics = self.metrics.write().await;
         metrics.record_search(duration_ms, result_count);
 
-        info!("Search completed in {:.2}ms, found {} results", duration_ms, result_count);
+        info!(
+            "Search completed in {:.2}ms, found {} results",
+            duration_ms, result_count
+        );
 
         Ok(results)
     }
@@ -110,11 +124,15 @@ impl SearchOperations {
         let embedding = self.generate_embedding(&entry.content).await?;
 
         // Store in Qdrant
-        self.qdrant_client.add_knowledge_entry(entry, &embedding).await?;
+        self.qdrant_client
+            .add_knowledge_entry(entry, &embedding)
+            .await?;
 
         // Cache embedding for future use
         let content_hash = self.text_processor.create_cache_key(&entry.content);
-        self.cache_manager.put_embedding_cache(content_hash, embedding).await;
+        self.cache_manager
+            .put_embedding_cache(content_hash, embedding)
+            .await;
 
         Ok(())
     }
@@ -127,11 +145,15 @@ impl SearchOperations {
         let embedding = self.generate_embedding(&entry.content).await?;
 
         // Update in Qdrant
-        self.qdrant_client.update_knowledge_entry(entry, &embedding).await?;
+        self.qdrant_client
+            .update_knowledge_entry(entry, &embedding)
+            .await?;
 
         // Update cache
         let content_hash = self.text_processor.create_cache_key(&entry.content);
-        self.cache_manager.put_embedding_cache(content_hash, embedding).await;
+        self.cache_manager
+            .put_embedding_cache(content_hash, embedding)
+            .await;
 
         Ok(())
     }
@@ -192,7 +214,8 @@ impl SearchOperations {
         let content_hash = self.text_processor.create_cache_key(text);
 
         // Check cache first
-        if let Some(cached_embedding) = self.cache_manager.get_embedding_cache(&content_hash).await {
+        if let Some(cached_embedding) = self.cache_manager.get_embedding_cache(&content_hash).await
+        {
             debug!("Embedding cache hit for text hash: {}", content_hash);
             return Ok(cached_embedding);
         }
@@ -203,10 +226,13 @@ impl SearchOperations {
 
         // Process and validate embedding
         let processed_embedding = self.embedding_processor.process_embedding(embedding)?;
-        self.embedding_processor.validate_embedding_quality(&processed_embedding)?;
+        self.embedding_processor
+            .validate_embedding_quality(&processed_embedding)?;
 
         // Cache for future use
-        self.cache_manager.put_embedding_cache(content_hash, processed_embedding.clone()).await;
+        self.cache_manager
+            .put_embedding_cache(content_hash, processed_embedding.clone())
+            .await;
 
         Ok(processed_embedding)
     }
@@ -224,14 +250,16 @@ impl SearchOperations {
 
         // Get embedding service (lazy initialization)
         let service = self.get_embedding_service().await?;
-        
+
         // Generate embedding
-        let stored_embedding = service.generate_embedding(
-            text,
-            data_infrastructure::embedding::ContentType::Text,
-            "vector_search"
-        ).await?;
-        
+        let stored_embedding = service
+            .generate_embedding(
+                text,
+                data_infrastructure::embedding::ContentType::Text,
+                "vector_search",
+            )
+            .await?;
+
         // Extract vector values from EmbeddingVector
         Ok(stored_embedding.vector.values)
     }

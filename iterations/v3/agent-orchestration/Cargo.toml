@@ -11,6 +11,7 @@ readme = "README.md"
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml = "0.9"
+ron = "0.8"
 tokio.workspace = true
 async-trait.workspace = true
 
@@ -82,12 +83,17 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-evaluation = { path = "../agent-evaluation" }
 system-common-interfaces = { path = "../system-common-interfaces" }
 # data-infrastructure = { path = "../data-infrastructure", optional = true, default-features = false }  # Circular dependency - using local type definitions instead
+# CoreML can be enabled/disabled via feature flag - disable by default, enable with coreml feature
 data-infrastructure = { path = "../data-infrastructure", default-features = false }  # Required for main.rs database initialization
 # data-interfaces-adapters removed to break circular dependency - using inline adapter instead
-system-acceleration = { path = "../system-acceleration" }
-agent-memory = { path = "../agent-memory", optional = true, features = ["database", "embeddings", "contracts"] }
+# CoreML controlled via agent-orchestration's "coreml" feature
+# When coreml feature is disabled, system-acceleration won't have CoreML
+system-acceleration = { path = "../system-acceleration", default-features = false }
+# Memory with embeddings but without CoreML (for tests)
+agent-memory = { path = "../agent-memory", optional = true, default-features = false, features = ["database", "embeddings", "contracts"] }
 system-resilience = { path = "../system-resilience" }
-agent-research = { path = "../agent-research", optional = true }
+# Research without CoreML (for tests) - disable defaults, enable only required features
+agent-research = { path = "../agent-research", optional = true, default-features = false }
 agent-model-management = { path = "../agent-model-management", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead
 system-federated-ml = { path = "../system-federated-ml", optional = true }
@@ -98,17 +104,23 @@ development-tools = { path = "../development-tools", optional = true }
 # Observability dependency
 system-observability = { path = "../system-observability" }
 
+# System monitoring
+sysinfo = "0.30"
+
 [features]
-default = ["research"]  # Research (claim extraction) is always-on per arbiter stack requirements
+default = ["research", "coreml"]  # Research (claim extraction) is always-on per arbiter stack requirements
+coreml = ["system-acceleration/coreml", "data-infrastructure/coreml", "agent-memory/embeddings-coreml"]  # CoreML/ANE acceleration for production
+system-acceleration = ["coreml"]  # Enable system acceleration features (alias for coreml)
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
 full = ["dep:rust-bert", "development-tools"]
 with_bert = ["dep:rust-bert"]
 development = ["development-tools"]
-memory = ["agent-memory"]  # Gate memory functionality behind feature flag
+memory = ["agent-memory/database", "agent-memory/embeddings", "agent-memory/contracts"]  # Gate memory functionality behind feature flag - no coreml
 research = ["agent-research"]  # Research functionality (claim extraction) - now in default features
 data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
 evaluation = []  # Gate evaluation framework behind feature flag
 council = []  # Feature flag for council functionality
+task-queue = []  # Enable task queue integration with data-infrastructure
 tool-chain = []  # Feature flag for tool-chain functionality
 mcp = []  # Feature flag for MCP functionality
 runtime-optimization = ["dep:system-federated-ml"]  # Feature flag for runtime optimization (ArbiterPipelineOptimizer)

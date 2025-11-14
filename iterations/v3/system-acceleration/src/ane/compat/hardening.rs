@@ -102,9 +102,15 @@ impl DeviceMatrix {
         }
 
         // Adjust based on supported precisions
-        if capabilities.supported_precisions.contains(&"FP16".to_string()) {
+        if capabilities
+            .supported_precisions
+            .contains(&"FP16".to_string())
+        {
             adjusted_caps.recommended_precision = "FP16".to_string();
-        } else if capabilities.supported_precisions.contains(&"FP32".to_string()) {
+        } else if capabilities
+            .supported_precisions
+            .contains(&"FP32".to_string())
+        {
             adjusted_caps.recommended_precision = "FP32".to_string();
         }
 
@@ -155,7 +161,9 @@ impl DeviceMatrix {
 
         #[cfg(not(target_arch = "aarch64"))]
         {
-            Err(ANEError::Internal("Not running on Apple Silicon".to_string()))
+            Err(ANEError::Internal(
+                "Not running on Apple Silicon".to_string(),
+            ))
         }
     }
 
@@ -250,7 +258,7 @@ impl HardenedInferenceExecutor {
     /// Create a new hardened executor
     pub fn new() -> Result<Self> {
         let circuit_breaker = Arc::new(CircuitBreaker::new(
-            3, // failure threshold
+            3,                       // failure threshold
             Duration::from_secs(60), // recovery timeout
         ));
 
@@ -272,7 +280,9 @@ impl HardenedInferenceExecutor {
     {
         // Check circuit breaker
         if !self.circuit_breaker.can_attempt() {
-            return Err(ANEError::Internal("Circuit breaker open - too many failures".to_string()));
+            return Err(ANEError::Internal(
+                "Circuit breaker open - too many failures".to_string(),
+            ));
         }
 
         let start_time = Instant::now();
@@ -374,7 +384,9 @@ impl HardenedInferenceExecutor {
         //    - Propagate errors if CPU inference also fails
         //    - Update metrics to reflect fallback usage
 
-        Err(ANEError::Internal("Fallback inference not implemented".to_string()))
+        Err(ANEError::Internal(
+            "Fallback inference not implemented".to_string(),
+        ))
     }
 
     /// Get current metrics
@@ -495,12 +507,18 @@ impl InferenceMetrics {
     fn record_latency(&self, latency: Duration) {
         let latency_ns = latency.as_nanos() as u64;
 
-        self.total_latency_ns.fetch_add(latency_ns, Ordering::Relaxed);
+        self.total_latency_ns
+            .fetch_add(latency_ns, Ordering::Relaxed);
 
         // Update min/max (these are approximate due to race conditions)
         let mut current_min = self.min_latency_ns.load(Ordering::Relaxed);
         while latency_ns < current_min {
-            match self.min_latency_ns.compare_exchange(current_min, latency_ns, Ordering::Relaxed, Ordering::Relaxed) {
+            match self.min_latency_ns.compare_exchange(
+                current_min,
+                latency_ns,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => break,
                 Err(new_min) => current_min = new_min,
             }
@@ -508,7 +526,12 @@ impl InferenceMetrics {
 
         let mut current_max = self.max_latency_ns.load(Ordering::Relaxed);
         while latency_ns > current_max {
-            match self.max_latency_ns.compare_exchange(current_max, latency_ns, Ordering::Relaxed, Ordering::Relaxed) {
+            match self.max_latency_ns.compare_exchange(
+                current_max,
+                latency_ns,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => break,
                 Err(new_max) => current_max = new_max,
             }
@@ -530,9 +553,21 @@ impl InferenceMetrics {
             successful_inferences: successful,
             failed_inferences: failed,
             timeout_inferences: timeouts,
-            success_rate: if total > 0 { successful as f64 / total as f64 } else { 0.0 },
-            avg_latency_ms: if successful > 0 { (total_latency / successful) as f64 / 1_000_000.0 } else { 0.0 },
-            min_latency_ms: if min_latency == u64::MAX { 0.0 } else { min_latency as f64 / 1_000_000.0 },
+            success_rate: if total > 0 {
+                successful as f64 / total as f64
+            } else {
+                0.0
+            },
+            avg_latency_ms: if successful > 0 {
+                (total_latency / successful) as f64 / 1_000_000.0
+            } else {
+                0.0
+            },
+            min_latency_ms: if min_latency == u64::MAX {
+                0.0
+            } else {
+                min_latency as f64 / 1_000_000.0
+            },
             max_latency_ms: max_latency as f64 / 1_000_000.0,
         }
     }
@@ -574,12 +609,21 @@ pub mod platform_optimizations {
         // ANE optimizations
         if device_caps.ane_performance_score > 0.8 {
             optimizations.insert("preferred_compute_units".to_string(), "all".to_string());
-            optimizations.insert("precision".to_string(), device_caps.recommended_precision.clone());
+            optimizations.insert(
+                "precision".to_string(),
+                device_caps.recommended_precision.clone(),
+            );
         } else if device_caps.ane_performance_score > 0.5 {
-            optimizations.insert("preferred_compute_units".to_string(), "cpu_and_gpu".to_string());
+            optimizations.insert(
+                "preferred_compute_units".to_string(),
+                "cpu_and_gpu".to_string(),
+            );
             optimizations.insert("precision".to_string(), "FP32".to_string()); // More compatible
         } else {
-            optimizations.insert("preferred_compute_units".to_string(), "cpu_only".to_string());
+            optimizations.insert(
+                "preferred_compute_units".to_string(),
+                "cpu_only".to_string(),
+            );
             optimizations.insert("precision".to_string(), "FP32".to_string());
         }
 
@@ -619,7 +663,10 @@ pub mod graceful_degradation {
     }
 
     /// Apply graceful degradation based on system constraints
-    pub fn apply_degradation(strategy: DegradationStrategy, current_config: &mut HashMap<String, String>) {
+    pub fn apply_degradation(
+        strategy: DegradationStrategy,
+        current_config: &mut HashMap<String, String>,
+    ) {
         match strategy {
             DegradationStrategy::ReducePrecision => {
                 current_config.insert("precision".to_string(), "FP32".to_string());
@@ -634,7 +681,10 @@ pub mod graceful_degradation {
                 current_config.insert("model_parallelism".to_string(), "disabled".to_string());
             }
             DegradationStrategy::CpuOnlyFallback => {
-                current_config.insert("preferred_compute_units".to_string(), "cpu_only".to_string());
+                current_config.insert(
+                    "preferred_compute_units".to_string(),
+                    "cpu_only".to_string(),
+                );
                 current_config.insert("ane_acceleration".to_string(), "disabled".to_string());
             }
             DegradationStrategy::ErrorOnUnsupported => {
@@ -664,14 +714,14 @@ pub mod graceful_degradation {
 pub mod health_monitoring {
     use super::*;
 
-/// Health status of the Core ML system
-#[derive(Debug, Clone, PartialEq)]
-pub enum HealthStatus {
-    Healthy,
-    Degraded,
-    Critical,
-    Offline,
-}
+    /// Health status of the Core ML system
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum HealthStatus {
+        Healthy,
+        Degraded,
+        Critical,
+        Offline,
+    }
 
     /// Health monitor for Core ML operations
     pub struct HealthMonitor {
@@ -777,13 +827,16 @@ pub mod resource_management {
         /// Check if we can allocate more resources
         pub fn can_allocate(&self, requested_bytes: u64) -> bool {
             let current_usage = self.memory_usage_bytes.load(Ordering::Relaxed);
-            current_usage + requested_bytes <= (self.max_memory_bytes as f64 * self.cleanup_threshold) as u64
+            current_usage + requested_bytes
+                <= (self.max_memory_bytes as f64 * self.cleanup_threshold) as u64
         }
 
         /// Allocate resources
         pub fn allocate(&self, bytes: u64) -> Result<()> {
             if !self.can_allocate(bytes) {
-                return Err(ANEError::Internal("Insufficient memory for allocation".to_string()));
+                return Err(ANEError::Internal(
+                    "Insufficient memory for allocation".to_string(),
+                ));
             }
 
             self.memory_usage_bytes.fetch_add(bytes, Ordering::Relaxed);

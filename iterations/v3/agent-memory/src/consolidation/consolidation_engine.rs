@@ -3,8 +3,8 @@
 //! Orchestrates the complete memory consolidation pipeline.
 
 use crate::consolidation::*;
-use crate::MemoryResult;
 use crate::memory_manager::MemoryManager;
+use crate::MemoryResult;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
@@ -39,7 +39,7 @@ impl MemoryConsolidationEngine {
     ) -> Self {
         // Set database pool on summarizer so it can fetch memory content
         summarization.set_db_pool(memory_manager.db_pool().clone());
-        
+
         Self {
             semantic_clustering,
             summarization,
@@ -69,7 +69,9 @@ impl MemoryConsolidationEngine {
         // Step 1: Semantic clustering
         let clusters = if config.enable_semantic_clustering {
             let num_clusters = (memory_embeddings.len() as f32 * 0.1).max(1.0) as usize; // 10% of memories as clusters
-            self.semantic_clustering.cluster_memories(memory_embeddings.clone(), num_clusters).await?
+            self.semantic_clustering
+                .cluster_memories(memory_embeddings.clone(), num_clusters)
+                .await?
         } else {
             Vec::new()
         };
@@ -93,34 +95,34 @@ impl MemoryConsolidationEngine {
             // Uses cosine similarity between embeddings to detect near-duplicate memories
             let mut duplicate_count = 0;
             let mut processed_ids = std::collections::HashSet::new();
-            
+
             // Compare all pairs of memories for semantic similarity
             for i in 0..memory_embeddings.len() {
                 let (id_a, embedding_a) = &memory_embeddings[i];
-                
+
                 // Skip if already marked as duplicate
                 if processed_ids.contains(id_a) {
                     continue;
                 }
-                
+
                 // Compare with all other memories
                 for j in (i + 1)..memory_embeddings.len() {
                     let (id_b, embedding_b) = &memory_embeddings[j];
-                    
+
                     // Skip if already marked as duplicate
                     if processed_ids.contains(id_b) {
                         continue;
                     }
-                    
+
                     // Calculate cosine similarity between embeddings
                     let similarity = Self::cosine_similarity(embedding_a, embedding_b);
-                    
+
                     // If similarity exceeds threshold, mark as duplicate
                     if similarity >= config.deduplication_threshold {
                         // Mark the later memory as duplicate (keep the earlier one)
                         processed_ids.insert(id_b.clone());
                         duplicate_count += 1;
-                        
+
                         debug!(
                             "Found duplicate memory pair: {} and {} (similarity: {:.3})",
                             id_a, id_b, similarity
@@ -128,9 +130,9 @@ impl MemoryConsolidationEngine {
                     }
                 }
             }
-            
+
             result.removed_duplicates = duplicate_count;
-            
+
             if duplicate_count > 0 {
                 info!(
                     "Deduplication completed: {} duplicate memories identified using semantic similarity (threshold: {:.3})",
@@ -169,15 +171,22 @@ impl MemoryConsolidationEngine {
         let mut time_groups = std::collections::HashMap::new();
 
         for memory in memories {
-            let window_start = memory.created_at.timestamp() / window_duration.num_seconds() * window_duration.num_seconds();
-            time_groups.entry(window_start).or_insert_with(Vec::new).push(memory);
+            let window_start = memory.created_at.timestamp() / window_duration.num_seconds()
+                * window_duration.num_seconds();
+            time_groups
+                .entry(window_start)
+                .or_insert_with(Vec::new)
+                .push(memory);
         }
 
         for (_window, window_memories) in time_groups {
             let window_size = window_memories.len();
             if window_size >= config.summarization_threshold {
                 // Generate temporal summary
-                let summary = self.summarization.summarize_temporal_sequence(window_memories).await?;
+                let summary = self
+                    .summarization
+                    .summarize_temporal_sequence(window_memories)
+                    .await?;
                 result.generated_summaries += 1;
             }
 
@@ -220,19 +229,19 @@ impl MemoryConsolidationEngine {
             warn!("Embedding dimension mismatch: {} vs {}", a.len(), b.len());
             return 0.0;
         }
-        
+
         // Calculate dot product
         let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-        
+
         // Calculate norms
         let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
         let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-        
+
         // Handle zero vectors
         if norm_a == 0.0 || norm_b == 0.0 {
             return 0.0;
         }
-        
+
         // Cosine similarity: dot product / (norm_a * norm_b)
         dot_product / (norm_a * norm_b)
     }
@@ -264,7 +273,7 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         // Implemented: Fetch memories with embeddings from MemoryManager
         if let Some(manager) = &self.memory_manager {
             use tracing::{debug, warn};
-            
+
             // Fetch all memories and their embeddings
             match manager.get_all_memories_with_embeddings().await {
                 Ok(memory_embeddings) => {
@@ -279,14 +288,21 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
                             consolidation_timestamp: chrono::Utc::now(),
                         });
                     }
-                    
-                    debug!("Fetched {} memories with embeddings for consolidation", memory_embeddings.len());
-                    
+
+                    debug!(
+                        "Fetched {} memories with embeddings for consolidation",
+                        memory_embeddings.len()
+                    );
+
                     // Use the internal consolidate_with_embeddings method
-                    self.consolidate_with_embeddings(memory_embeddings, config).await
+                    self.consolidate_with_embeddings(memory_embeddings, config)
+                        .await
                 }
                 Err(e) => {
-                    warn!("Failed to fetch memories with embeddings: {}. Consolidation skipped.", e);
+                    warn!(
+                        "Failed to fetch memories with embeddings: {}. Consolidation skipped.",
+                        e
+                    );
                     Err(crate::MemoryError::Other(format!(
                         "Failed to fetch memories with embeddings for consolidation: {}",
                         e
@@ -298,21 +314,29 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
             Err(crate::MemoryError::Other(
                 "ConsolidationEngine::consolidate requires memory access. \
                 Initialize with MemoryConsolidationEngine::with_memory_manager() \
-                or use consolidate() method with explicit memory_embeddings parameter.".to_string()
+                or use consolidate() method with explicit memory_embeddings parameter."
+                    .to_string(),
             ))
         }
     }
 
-    async fn consolidate_subset(&self, memory_ids: &[crate::memory_types::MemoryId], config: &ConsolidationConfig) -> MemoryResult<ConsolidationResult> {
+    async fn consolidate_subset(
+        &self,
+        memory_ids: &[crate::memory_types::MemoryId],
+        config: &ConsolidationConfig,
+    ) -> MemoryResult<ConsolidationResult> {
         // Implemented: Fetch embeddings for specific memory IDs from MemoryManager
         if let Some(manager) = &self.memory_manager {
             use tracing::{debug, warn};
-            
+
             // Fetch embeddings for the specified memory IDs
             match manager.get_embeddings_by_ids(memory_ids).await {
                 Ok(memory_embeddings) => {
                     if memory_embeddings.is_empty() {
-                        debug!("No embeddings found for {} requested memory IDs", memory_ids.len());
+                        debug!(
+                            "No embeddings found for {} requested memory IDs",
+                            memory_ids.len()
+                        );
                         return Ok(ConsolidationResult {
                             consolidated_memories: 0,
                             created_clusters: 0,
@@ -322,14 +346,23 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
                             consolidation_timestamp: chrono::Utc::now(),
                         });
                     }
-                    
-                    debug!("Fetched {} embeddings for {} requested memory IDs", memory_embeddings.len(), memory_ids.len());
-                    
+
+                    debug!(
+                        "Fetched {} embeddings for {} requested memory IDs",
+                        memory_embeddings.len(),
+                        memory_ids.len()
+                    );
+
                     // Use the internal consolidate_with_embeddings method
-                    self.consolidate_with_embeddings(memory_embeddings, config).await
+                    self.consolidate_with_embeddings(memory_embeddings, config)
+                        .await
                 }
                 Err(e) => {
-                    warn!("Failed to fetch embeddings for {} memory IDs: {}. Consolidation skipped.", memory_ids.len(), e);
+                    warn!(
+                        "Failed to fetch embeddings for {} memory IDs: {}. Consolidation skipped.",
+                        memory_ids.len(),
+                        e
+                    );
                     Err(crate::MemoryError::Other(format!(
                         "Failed to fetch embeddings for memory IDs: {}",
                         e
@@ -340,50 +373,54 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
             Err(crate::MemoryError::Other(
                 "ConsolidationEngine::consolidate_subset requires memory access. \
                 Initialize with MemoryConsolidationEngine::with_memory_manager() \
-                or use consolidate() method with explicit memory_embeddings parameter.".to_string()
+                or use consolidate() method with explicit memory_embeddings parameter."
+                    .to_string(),
             ))
         }
     }
 
     async fn get_stats(&self) -> MemoryResult<ConsolidationStats> {
         // Implemented: Real stats tracking using MemoryManager stats API and consolidation component stats
-        
+
         // Get total memories processed from MemoryManager
         let total_memories_processed = if let Some(ref manager) = self.memory_manager {
             match manager.get_memory_stats().await {
                 Ok(stats) => stats.total_memories,
                 Err(e) => {
-                    tracing::warn!("Failed to get memory stats from MemoryManager: {:?}, using 0", e);
+                    tracing::warn!(
+                        "Failed to get memory stats from MemoryManager: {:?}, using 0",
+                        e
+                    );
                     0
                 }
             }
         } else {
             0
         };
-        
+
         // Get deduplication stats
         // Note: MemoryDeduplicator doesn't implement DeduplicationEngine trait yet,
         // so we can't call get_stats(). This will be available when the trait is implemented.
         // For now, deduplication_savings is tracked during consolidation runs via ConsolidationResult.
         let deduplication_savings = 0; // Requires DeduplicationEngine trait implementation on MemoryDeduplicator
-        
+
         // Get cluster stats by attempting to retrieve clusters
         // Note: Clusters are not persisted, so we can't get exact counts without running consolidation
         // For now, we'll use 0 for active_clusters and total_summaries since they require cluster storage
         // This is a limitation that will be addressed when cluster persistence is implemented
         let active_clusters = 0; // Requires cluster storage implementation
         let total_summaries = 0; // Requires cluster storage with summaries
-        
+
         // Calculate average cluster size (0.0 if no clusters)
         let average_cluster_size = if active_clusters > 0 {
             total_memories_processed as f64 / active_clusters as f64
         } else {
             0.0
         };
-        
+
         // Last consolidation timestamp is not tracked yet - would require consolidation history storage
         let last_consolidation = None;
-        
+
         Ok(ConsolidationStats {
             total_memories_processed,
             active_clusters,
@@ -399,14 +436,16 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         if self.memory_manager.is_none() {
             return Err(crate::MemoryError::Other(
                 "ConsolidationEngine::rebuild_clusters requires memory access. \
-                Initialize with MemoryConsolidationEngine::with_memory_manager().".to_string()
+                Initialize with MemoryConsolidationEngine::with_memory_manager()."
+                    .to_string(),
             ));
         }
-        
+
         // TODO: Implement cluster rebuilding when cluster storage is available
         Err(crate::MemoryError::Other(
             "ConsolidationEngine::rebuild_clusters requires cluster storage integration. \
-            This feature needs cluster persistence layer implementation.".to_string()
+            This feature needs cluster persistence layer implementation."
+                .to_string(),
         ))
     }
 
@@ -415,14 +454,16 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         if self.memory_manager.is_none() {
             return Err(crate::MemoryError::Other(
                 "ConsolidationEngine::get_clusters requires memory access. \
-                Initialize with MemoryConsolidationEngine::with_memory_manager().".to_string()
+                Initialize with MemoryConsolidationEngine::with_memory_manager()."
+                    .to_string(),
             ));
         }
-        
+
         // TODO: Implement cluster retrieval when cluster storage is available
         Err(crate::MemoryError::Other(
             "ConsolidationEngine::get_clusters requires cluster storage integration. \
-            This feature needs cluster persistence layer implementation.".to_string()
+            This feature needs cluster persistence layer implementation."
+                .to_string(),
         ))
     }
 }
@@ -455,7 +496,11 @@ pub struct ProgressiveConsolidator {
 }
 
 impl ProgressiveConsolidator {
-    pub fn new(engine: MemoryConsolidationEngine, batch_size: usize, checkpoint_interval: usize) -> Self {
+    pub fn new(
+        engine: MemoryConsolidationEngine,
+        batch_size: usize,
+        checkpoint_interval: usize,
+    ) -> Self {
         Self {
             engine,
             batch_size,

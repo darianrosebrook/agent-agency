@@ -30,7 +30,7 @@ use system_acceleration::ane::compat::coreml::{
     MLDictionaryFeatureProvider, MLFeatureValue, MLMultiArray,
 };
 use system_acceleration::ane::compat::testing::{
-    BenchmarkConfig, BenchmarkRunner, PerformanceMetrics,
+    BenchmarkConfig, BenchmarkRunner, LatencyBreakdown, PerformanceMetrics,
 };
 
 /// ANE performance benchmark configuration
@@ -327,9 +327,126 @@ async fn test_ane_acceleration_performance() {
         println!("   - {}", model.name);
     }
 
+    // Separate micro-models from full models for different testing strategies
+    let (micro_models, full_models): (Vec<_>, Vec<_>) = available_models
+        .iter()
+        .partition(|m| m.name.starts_with("Micro"));
+    
+    // Test micro-models first (ANE baseline sanity check)
+    if !micro_models.is_empty() {
+        println!("\n3. Testing micro-models (ANE baseline sanity check)...");
+        println!("   Micro-models help separate platform performance from model-specific issues");
+        
+        // Store results for summary table
+        // Format: (model_name, cpu_latency, ane_latency, speedup, cpu_breakdown, ane_breakdown, ane_utilization)
+        let mut micro_results: Vec<(String, f64, f64, f64, Option<LatencyBreakdown>, Option<LatencyBreakdown>, Option<f64>)> = Vec::new();
+        
+        for model_info in &micro_models {
+            println!("\n   Testing: {}", model_info.name);
+            match test_model_performance(model_info, &config).await {
+                Ok((cpu_metrics, ane_metrics)) => {
+                    let speedup = cpu_metrics.avg_latency_ms / ane_metrics.avg_latency_ms;
+                    
+                    println!("   Results:");
+                    println!("     CPU: {:.2}ms avg latency, {:.1} IPS throughput",
+                        cpu_metrics.avg_latency_ms, cpu_metrics.throughput_ips);
+                    println!("     ANE: {:.2}ms avg latency, {:.1} IPS throughput",
+                        ane_metrics.avg_latency_ms, ane_metrics.throughput_ips);
+                    println!("     Speedup: {:.2}x", speedup);
+                    
+                    // Interpret results based on expert analysis
+                    if speedup >= 2.0 {
+                        println!("     ✅ 2-3x speedup → Runtime path is fine, limitation is Mistral 7B architecture");
+                    } else if speedup >= 1.1 {
+                        println!("     ⚠️  ~1.1x speedup → This is what ANE vs CPU looks like for FP32/FP16 workloads on this chip");
+                    } else if speedup < 1.0 {
+                        println!("     ❌ <1x speedup → Something is wrong with conversion or CoreML mapping");
+                    }
+                    
+                    // Log breakdown if available
+                    if let Some(ref breakdown) = ane_metrics.breakdown {
+                        println!("     ANE Breakdown: {}", breakdown.summary());
+                    }
+                    if let Some(ref breakdown) = cpu_metrics.breakdown {
+                        println!("     CPU Breakdown: {}", breakdown.summary());
+                    }
+                    
+                    // Show ANE utilization if available
+                    if let Some(util) = ane_metrics.ane_utilization {
+                        println!("     ANE Utilization: {:.1}%", util * 100.0);
+                    }
+                    
+                    // Store for summary table
+                    micro_results.push((
+                        model_info.name.clone(),
+                        cpu_metrics.avg_latency_ms,
+                        ane_metrics.avg_latency_ms,
+                        speedup,
+                        cpu_metrics.breakdown.clone(),
+                        ane_metrics.breakdown.clone(),
+                        ane_metrics.ane_utilization,
+                    ));
+                }
+                Err(e) => {
+                    println!("   ❌ Failed to test {}: {}", model_info.name, e);
+                }
+            }
+        }
+        
+        // Print comprehensive micro-model metrics table
+        if !micro_results.is_empty() {
+            println!("\n   =========================================");
+            println!("   Micro-Model Performance Summary Table");
+            println!("   =========================================");
+            println!("   {:<25} | {:>12} | {:>12} | {:>10} | {:>10}", 
+                "Model", "CPU (ms)", "ANE (ms)", "Speedup", "ANE Util");
+            println!("   {:-<25}-+-{:-<12}-+-{:-<12}-+-{:-<10}-+-{:-<10}", "", "", "", "", "");
+            
+            for (name, cpu_latency, ane_latency, speedup, cpu_breakdown, ane_breakdown, ane_util) in &micro_results {
+                // Format ANE utilization for display
+                let ane_util_str = if let Some(util) = ane_util {
+                    format!("{:.1}%", util * 100.0)
+                } else {
+                    "N/A".to_string()
+                };
+                
+                println!("   {:<25} | {:>12.2} | {:>12.2} | {:>10.2}x | {:>10}",
+                    name, cpu_latency, ane_latency, speedup, ane_util_str);
+                
+                // Print detailed breakdown if available
+                if let (Some(ref cpu_bd), Some(ref ane_bd)) = (cpu_breakdown, ane_breakdown) {
+                    println!("   {:<25} | CPU: {}", name, cpu_bd.summary());
+                    println!("   {:<25} | ANE: {}", "", ane_bd.summary());
+                }
+            }
+            
+            // Interpretation summary
+            println!("\n   Interpretation:");
+            let avg_speedup = micro_results.iter().map(|r| r.3).sum::<f64>() / micro_results.len() as f64;
+            if avg_speedup >= 2.0 {
+                println!("     ✅ Average {:.2}x speedup → Runtime path is fine, limitation is Mistral 7B architecture", avg_speedup);
+                println!("     → Focus optimization on Mistral 7B model conversion/partitioning");
+            } else if avg_speedup >= 1.1 {
+                println!("     ⚠️  Average {:.2}x speedup → This is the platform limit for FP32/FP16 workloads", avg_speedup);
+                println!("     → Consider INT8 quantization or smaller models for better ANE performance");
+            } else if avg_speedup < 1.0 {
+                println!("     ❌ Average {:.2}x speedup → Conversion or CoreML mapping issue detected", avg_speedup);
+                println!("     → Investigate model conversion settings and CoreML op mapping");
+            }
+        }
+    }
+    
+    // Test full models (production workloads)
+    println!("\n4. Testing full models (production workloads)...");
+    let models_to_test: Vec<_> = if full_models.is_empty() {
+        available_models.iter().collect()
+    } else {
+        full_models
+    };
+    
     // Test each model
-    for model_info in &available_models {
-        println!("\n3. Testing {} model performance...", model_info.name);
+    for model_info in &models_to_test {
+        println!("\n   Testing {} model performance...", model_info.name);
         
         // For Mistral model, also run sequence length sweep
         if model_info.name.contains("Mistral") {
@@ -456,6 +573,34 @@ async fn find_available_models(models_dir: &str) -> Vec<ModelInfo> {
             // This suggests the model may not be fully optimized for ANE
             input_shape: vec![1, 128], // Default size for this model's ANE performance
             _input_dtype: "I32".to_string(),
+        });
+    }
+
+    // Micro-models for ANE baseline testing
+    // These small models help separate "CoreML+ANE as platform" from "Mistral 7B converted to CoreML"
+    let micro_dir = Path::new(models_dir).join("micro");
+    
+    // Dense layer model (single linear layer)
+    let dense_path = micro_dir
+        .join("micro_dense_layer.mlpackage.mlmodelc");
+    if dense_path.exists() {
+        models.push(ModelInfo {
+            name: "Micro Dense Layer".to_string(),
+            path: dense_path.to_string_lossy().to_string(),
+            input_shape: vec![1, 128, 4096], // [batch, seq_len, hidden_size]
+            _input_dtype: "F32".to_string(),
+        });
+    }
+    
+    // Attention block model (single self-attention block)
+    let attention_path = micro_dir
+        .join("micro_attention_block.mlpackage.mlmodelc");
+    if attention_path.exists() {
+        models.push(ModelInfo {
+            name: "Micro Attention Block".to_string(),
+            path: attention_path.to_string_lossy().to_string(),
+            input_shape: vec![1, 128, 4096], // [batch, seq_len, hidden_size]
+            _input_dtype: "F32".to_string(),
         });
     }
 

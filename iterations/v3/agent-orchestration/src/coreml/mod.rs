@@ -3,33 +3,28 @@
 //! This module provides integration with Apple's Core ML framework
 //! for accelerated inference on Apple Silicon devices.
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 
 use tracing::{error, info, warn};
 
 // Import Core ML types from system-acceleration
-use system_acceleration::ane::{
-    MistralModel, MistralCompilationOptions,
-    load_mistral_model,
-};
-use system_acceleration::ane::models::{
-    LoadedWhisperModel, WhisperConfig,
-    LoadedYOLOModel, YOLOConfig,
-    load_whisper_model,
-    load_yolo_model,
-};
 use system_acceleration::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
-use system_acceleration::telemetry::TelemetryCollector;
-use system_acceleration::ane::infer::MistralInferenceOptions;
 use system_acceleration::ane::infer::mistral::generate_text as mistral_generate_text;
+use system_acceleration::ane::infer::mistral::ConstitutionalVerdict;
+use system_acceleration::ane::infer::MistralInferenceOptions;
 use system_acceleration::ane::models::whisper_model::WhisperInferenceOptions as WhisperInferenceOpts;
 use system_acceleration::ane::models::yolo_model::YOLOInferenceOptions as YOLOInferenceOpts;
-use system_acceleration::ane::infer::mistral::ConstitutionalVerdict;
+use system_acceleration::ane::models::{
+    load_whisper_model, load_yolo_model, LoadedWhisperModel, LoadedYOLOModel, WhisperConfig,
+    YOLOConfig,
+};
+use system_acceleration::ane::{load_mistral_model, MistralCompilationOptions, MistralModel};
+use system_acceleration::telemetry::TelemetryCollector;
 
 // External C functions for Core ML bridge
 extern "C" {
@@ -43,7 +38,7 @@ extern "C" {
         out_output_data: *mut *mut f32,
         out_output_shape: *mut *mut i32,
         out_output_shape_len: *mut i32,
-        out_error: *mut *mut std::ffi::c_char
+        out_error: *mut *mut std::ffi::c_char,
     ) -> i32;
 
     #[allow(dead_code)] // Reserved for future use
@@ -145,30 +140,35 @@ impl CoreMLManager {
     }
 
     /// Load all available Core ML models
-    pub async fn load_available_models(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Loading available Core ML models from {:?}", self.model_base_path);
-        
+    pub async fn load_available_models(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!(
+            "Loading available Core ML models from {:?}",
+            self.model_base_path
+        );
+
         // Try loading each model type
         let mut loaded = 0;
-        
+
         // Try Mistral
         if let Ok(_) = self.load_mistral_model().await {
             loaded += 1;
             info!("Loaded Mistral model");
         }
-        
+
         // Try Whisper
         if let Ok(_) = self.load_whisper_model().await {
             loaded += 1;
             info!("Loaded Whisper model");
         }
-        
+
         // Try YOLO
         if let Ok(_) = self.load_yolo_model().await {
             loaded += 1;
             info!("Loaded YOLO model");
         }
-        
+
         info!("Loaded {} Core ML models", loaded);
         Ok(())
     }
@@ -198,10 +198,10 @@ impl CoreMLManager {
                 }
             }
         };
-        
+
         let telemetry = TelemetryCollector::new();
         let options = MistralCompilationOptions::default();
-        
+
         match load_mistral_model(&model_path, &options, telemetry).await {
             Ok(mistral_model) => {
                 let metadata = ModelMetadata {
@@ -213,7 +213,7 @@ impl CoreMLManager {
                     supports_ane: self.ane_available,
                     performance_score: None,
                 };
-                
+
                 let coreml_model = CoreMLModel {
                     metadata,
                     model_path: model_path.clone(),
@@ -221,12 +221,12 @@ impl CoreMLManager {
                     whisper_model: None,
                     yolo_model: None,
                 };
-                
+
                 self.models.write().await.insert(
                     (CoreMLModelType::Language, "mistral-7b-instruct".to_string()),
                     Arc::new(coreml_model),
                 );
-                
+
                 Ok(())
             }
             Err(e) => {
@@ -249,15 +249,17 @@ impl CoreMLManager {
                 if mlmodel.exists() {
                     mlmodel
                 } else {
-                    return Err(format!("Whisper encoder model not found in {:?}", whisper_dir).into());
+                    return Err(
+                        format!("Whisper encoder model not found in {:?}", whisper_dir).into(),
+                    );
                 }
             }
         };
-        
+
         let telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let config = WhisperConfig::default();
-        
+
         match load_whisper_model(&model_path, config, telemetry, circuit_breaker) {
             Ok(whisper_model) => {
                 let metadata = ModelMetadata {
@@ -269,7 +271,7 @@ impl CoreMLManager {
                     supports_ane: self.ane_available,
                     performance_score: None,
                 };
-                
+
                 let coreml_model = CoreMLModel {
                     metadata,
                     model_path: model_path.clone(),
@@ -277,12 +279,15 @@ impl CoreMLManager {
                     whisper_model: Some(Arc::new(whisper_model)),
                     yolo_model: None,
                 };
-                
+
                 self.models.write().await.insert(
-                    (CoreMLModelType::SpeechToText, "whisper-large-v3".to_string()),
+                    (
+                        CoreMLModelType::SpeechToText,
+                        "whisper-large-v3".to_string(),
+                    ),
                     Arc::new(coreml_model),
                 );
-                
+
                 Ok(())
             }
             Err(e) => {
@@ -309,11 +314,11 @@ impl CoreMLManager {
                 }
             }
         };
-        
+
         let telemetry = TelemetryCollector::new();
         let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::default());
         let config = YOLOConfig::default();
-        
+
         match load_yolo_model(&model_path, config, telemetry, circuit_breaker).await {
             Ok(yolo_model) => {
                 let metadata = ModelMetadata {
@@ -325,7 +330,7 @@ impl CoreMLManager {
                     supports_ane: self.ane_available,
                     performance_score: None,
                 };
-                
+
                 let coreml_model = CoreMLModel {
                     metadata,
                     model_path: model_path.clone(),
@@ -333,12 +338,12 @@ impl CoreMLManager {
                     whisper_model: None,
                     yolo_model: Some(Arc::new(yolo_model)),
                 };
-                
+
                 self.models.write().await.insert(
                     (CoreMLModelType::ObjectDetection, "yolov3".to_string()),
                     Arc::new(coreml_model),
                 );
-                
+
                 Ok(())
             }
             Err(e) => {
@@ -349,13 +354,24 @@ impl CoreMLManager {
     }
 
     /// Get a loaded model by type and name
-    pub async fn get_model(&self, model_type: CoreMLModelType, name: &str) -> Option<Arc<CoreMLModel>> {
-        self.models.read().await.get(&(model_type, name.to_string())).cloned()
+    pub async fn get_model(
+        &self,
+        model_type: CoreMLModelType,
+        name: &str,
+    ) -> Option<Arc<CoreMLModel>> {
+        self.models
+            .read()
+            .await
+            .get(&(model_type, name.to_string()))
+            .cloned()
     }
 
     /// Get all models of a specific type
     pub async fn get_models_by_type(&self, model_type: CoreMLModelType) -> Vec<Arc<CoreMLModel>> {
-        self.models.read().await.values()
+        self.models
+            .read()
+            .await
+            .values()
             .filter(|model| model.metadata.model_type == model_type)
             .cloned()
             .collect()
@@ -367,27 +383,30 @@ impl CoreMLManager {
     }
 
     /// Get Mistral model instance for direct inference
-    /// 
+    ///
     /// Returns the Arc-wrapped, mutex-protected Mistral model for thread-safe inference.
     /// Use `generate_text()` method for general text generation, or lock the mutex
     /// and use `deliberate_constitution()` from `system_acceleration::ane::infer::mistral` module.
-    pub async fn get_mistral_model(&self, name: &str) -> Option<Arc<tokio::sync::Mutex<MistralModel>>> {
+    pub async fn get_mistral_model(
+        &self,
+        name: &str,
+    ) -> Option<Arc<tokio::sync::Mutex<MistralModel>>> {
         self.get_model(CoreMLModelType::Language, name)
             .await
             .and_then(|model| model.mistral_model.clone())
     }
 
     /// Generate text using Mistral model
-    /// 
+    ///
     /// This is a general-purpose text generation method that can be used for planning,
     /// reasoning, and other text generation tasks. The model is automatically locked
     /// for thread-safe inference.
-    /// 
+    ///
     /// # Arguments
     /// * `model_name` - Name of the Mistral model to use (e.g., "mistral-7b-instruct")
     /// * `prompt` - The text prompt to generate from
     /// * `options` - Inference options (max_tokens, temperature, etc.)
-    /// 
+    ///
     /// # Returns
     /// Generated text string, or error if model not loaded or inference fails
     pub async fn generate_text(
@@ -396,17 +415,20 @@ impl CoreMLManager {
         prompt: &str,
         options: &MistralInferenceOptions,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let model_arc = self.get_mistral_model(model_name).await
+        let model_arc = self
+            .get_mistral_model(model_name)
+            .await
             .ok_or_else(|| format!("Mistral model '{}' not loaded", model_name))?;
-        
+
         let mut model_guard = model_arc.lock().await;
-        
-        mistral_generate_text(&mut *model_guard, prompt, options).await
+
+        mistral_generate_text(&mut *model_guard, prompt, options)
+            .await
             .map_err(|e| format!("Mistral inference failed: {}", e).into())
     }
 
     /// Get Whisper model instance for direct inference
-    /// 
+    ///
     /// Returns the Arc-wrapped Whisper model. To create an executor:
     /// ```rust
     /// use system_acceleration::ane::infer::create_whisper_executor;
@@ -420,7 +442,7 @@ impl CoreMLManager {
     }
 
     /// Get YOLO model instance for direct inference
-    /// 
+    ///
     /// Returns the Arc-wrapped YOLO model. To create an executor:
     /// ```rust
     /// use system_acceleration::ane::infer::create_yolo_executor;
@@ -434,7 +456,7 @@ impl CoreMLManager {
     }
 
     /// Run Mistral constitutional reasoning
-    /// 
+    ///
     /// TODO: Implement comprehensive interior mutability for MistralModel access
     ///       Currently requires direct model access; should implement comprehensive interior mutability pattern that allows mutable access to MistralModel stored in Arc without requiring Arc::try_unwrap.
     ///
@@ -483,7 +505,7 @@ impl CoreMLManager {
     }
 
     /// Run Whisper transcription
-    /// 
+    ///
     /// Note: LoadedWhisperModel doesn't implement Clone, so creating executors requires
     /// moving the model out of Arc. Use `get_whisper_model()` and create executor directly.
     pub async fn run_whisper_transcription(
@@ -492,14 +514,17 @@ impl CoreMLManager {
         _audio_data: &[f32],
         _sample_rate: usize,
         _options: &WhisperInferenceOpts,
-    ) -> Result<system_acceleration::ane::models::whisper_model::WhisperTranscription, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<
+        system_acceleration::ane::models::whisper_model::WhisperTranscription,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         // Whisper inference requires creating executor from model
         // Since LoadedWhisperModel doesn't implement Clone, use get_whisper_model() directly
         Err("Use get_whisper_model() and create_whisper_executor() directly. Models need to be moved out of Arc.".into())
     }
 
     /// Run YOLO object detection
-    /// 
+    ///
     /// Note: LoadedYOLOModel doesn't implement Clone, so creating executors requires
     /// moving the model out of Arc. Use `get_yolo_model()` and create executor directly.
     pub async fn run_yolo_detection(
@@ -507,7 +532,10 @@ impl CoreMLManager {
         _model_name: &str,
         _image: &[u8], // Image data as bytes
         _options: &YOLOInferenceOpts,
-    ) -> Result<system_acceleration::ane::models::yolo_model::YOLODetectionResult, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<
+        system_acceleration::ane::models::yolo_model::YOLODetectionResult,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         // YOLO inference requires creating executor from model
         // Since LoadedYOLOModel doesn't implement Clone, use get_yolo_model() directly
         Err("Use get_yolo_model() and create_yolo_executor() directly. Models need to be moved out of Arc.".into())

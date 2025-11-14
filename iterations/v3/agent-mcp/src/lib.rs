@@ -7,18 +7,18 @@
 //! modular extension, and seamless integration with external tools and services.
 
 pub mod mcp_caws_integration;
+pub mod mcp_types;
+pub mod prompting_types;
 pub mod server;
 pub mod tool_discovery;
 pub mod tool_registry;
 pub mod tools;
-pub mod prompting_types;
-pub mod mcp_types;
 
 // Import schemars for JsonSchema derive
 use schemars::JsonSchema;
 
 pub use mcp_caws_integration::CawsIntegration;
-pub use server::{MCPServer, AuthRateLimitStats};
+pub use server::{AuthRateLimitStats, MCPServer};
 // Local circuit breaker implementation to avoid cyclic dependencies
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
 pub struct CircuitBreakerStats {
@@ -47,19 +47,14 @@ impl Default for CircuitBreakerStats {
         }
     }
 }
+pub use mcp_types::*;
+pub use prompting_types::{
+    CawsComplianceResult, MCPConnection, MCPServerStatus, MCPTool, ToolDiscoveryResult,
+    ToolExecutionResult, ToolRegistryStats,
+};
 pub use tool_discovery::ToolDiscovery;
 pub use tool_registry::ToolRegistry;
 pub use tools::*;
-pub use mcp_types::*;
-pub use prompting_types::{
-    MCPTool,
-    ToolExecutionResult,
-    ToolDiscoveryResult,
-    ToolRegistryStats,
-    CawsComplianceResult,
-    MCPConnection,
-    MCPServerStatus,
-};
 
 /// MCP integration configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]

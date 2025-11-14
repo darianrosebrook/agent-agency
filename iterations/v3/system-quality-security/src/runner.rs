@@ -34,7 +34,10 @@ impl QualityGateRunner {
     }
 
     /// Run quality gates on a directory
-    pub async fn run_on_directory(&self, dir_path: &Path) -> Result<QualityGateResults, anyhow::Error> {
+    pub async fn run_on_directory(
+        &self,
+        dir_path: &Path,
+    ) -> Result<QualityGateResults, anyhow::Error> {
         let start_time = Instant::now();
         let mut results = QualityGateResults::new();
 
@@ -85,7 +88,10 @@ impl QualityGateRunner {
         let mut results = QualityGateResults::new();
 
         if !file_path.exists() {
-            return Err(anyhow::anyhow!("File does not exist: {}", file_path.display()));
+            return Err(anyhow::anyhow!(
+                "File does not exist: {}",
+                file_path.display()
+            ));
         }
 
         let content = std::fs::read_to_string(file_path)?;
@@ -107,7 +113,10 @@ impl QualityGateRunner {
     }
 
     /// Collect all source files in a directory
-    fn collect_source_files(&self, dir_path: &Path) -> Result<HashMap<String, String>, anyhow::Error> {
+    fn collect_source_files(
+        &self,
+        dir_path: &Path,
+    ) -> Result<HashMap<String, String>, anyhow::Error> {
         let mut files = HashMap::new();
 
         for entry in WalkDir::new(dir_path).into_iter().filter_map(|e| e.ok()) {
@@ -168,7 +177,10 @@ pub async fn run_quality_gates(dir_path: &Path) -> Result<QualityGateResults, an
 }
 
 /// Run quality gates with custom configuration
-pub async fn run_quality_gates_with_config(dir_path: &Path, config: QualityGateConfig) -> Result<QualityGateResults, anyhow::Error> {
+pub async fn run_quality_gates_with_config(
+    dir_path: &Path,
+    config: QualityGateConfig,
+) -> Result<QualityGateResults, anyhow::Error> {
     let runner = QualityGateRunner::with_config(config);
     runner.run_on_directory(dir_path).await
 }

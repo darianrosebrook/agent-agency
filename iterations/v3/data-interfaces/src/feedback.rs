@@ -26,7 +26,10 @@ impl ProgressReporter {
 
     fn display(&self) {
         let percentage = (self.current as f64 / self.total as f64 * 100.0) as usize;
-        print!("\rProgress: {}% ({}/{})", percentage, self.current, self.total);
+        print!(
+            "\rProgress: {}% ({}/{})",
+            percentage, self.current, self.total
+        );
         io::stdout().flush().unwrap();
     }
 }

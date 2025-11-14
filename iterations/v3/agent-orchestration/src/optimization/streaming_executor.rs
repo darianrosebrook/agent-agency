@@ -5,12 +5,12 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
-use uuid::Uuid;
-use tracing::{info, debug};
 use chrono::Utc;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, info};
+use uuid::Uuid;
 
 use agent_agency_contracts::planning_io::Milestone;
 
@@ -38,16 +38,16 @@ pub enum TaskExecutionState {
 pub struct TaskChunk {
     /// Chunk ID
     pub chunk_id: Uuid,
-    
+
     /// Chunk index (0-based)
     pub index: usize,
-    
+
     /// Total number of chunks
     pub total_chunks: usize,
-    
+
     /// Chunk data/content
     pub data: Vec<u8>,
-    
+
     /// Chunk metadata
     pub metadata: HashMap<String, String>,
 }
@@ -57,25 +57,25 @@ pub struct TaskChunk {
 pub struct ExecutionCheckpoint {
     /// Checkpoint ID
     pub checkpoint_id: Uuid,
-    
+
     /// Task ID this checkpoint belongs to
     pub task_id: Uuid,
-    
+
     /// Current execution state
     pub state: TaskExecutionState,
-    
+
     /// Completed chunk indices
     pub completed_chunks: Vec<usize>,
-    
+
     /// Current chunk index
     pub current_chunk_index: Option<usize>,
-    
+
     /// Checkpoint timestamp
     pub timestamp: chrono::DateTime<Utc>,
-    
+
     /// Checkpoint metadata
     pub metadata: HashMap<String, String>,
-    
+
     /// Execution progress (0.0 - 1.0)
     pub progress: f64,
 }
@@ -85,16 +85,16 @@ pub struct ExecutionCheckpoint {
 pub struct StreamingConfig {
     /// Chunk size in bytes
     pub chunk_size_bytes: usize,
-    
+
     /// Enable pre-computation phase
     pub enable_precomputation: bool,
-    
+
     /// Pre-computation timeout in seconds
     pub precomputation_timeout_sec: u64,
-    
+
     /// Enable checkpointing for resumability
     pub enable_checkpointing: bool,
-    
+
     /// Checkpoint interval (number of chunks)
     pub checkpoint_interval_chunks: usize,
 }
@@ -115,10 +115,10 @@ impl Default for StreamingConfig {
 pub struct StreamingTaskExecutor {
     /// Execution configuration
     config: StreamingConfig,
-    
+
     /// Active task executions
     active_executions: Arc<tokio::sync::RwLock<HashMap<Uuid, TaskExecution>>>,
-    
+
     /// Execution checkpoints
     checkpoints: Arc<tokio::sync::RwLock<HashMap<Uuid, ExecutionCheckpoint>>>,
 }
@@ -129,27 +129,27 @@ struct TaskExecution {
     /// Task ID
     #[allow(dead_code)] // Reserved for future use
     task_id: Uuid,
-    
+
     /// Milestone being executed
     #[allow(dead_code)] // Reserved for future use
     milestone: Milestone,
-    
+
     /// Current execution state
     state: TaskExecutionState,
-    
+
     /// Task chunks
     chunks: Vec<TaskChunk>,
-    
+
     /// Completed chunk indices
     completed_chunks: Vec<usize>,
-    
+
     /// Current chunk index
     current_chunk_index: Option<usize>,
-    
+
     /// Execution start time
     #[allow(dead_code)] // Reserved for future use
     start_time: chrono::DateTime<Utc>,
-    
+
     /// Last update time
     last_update: chrono::DateTime<Utc>,
 }
@@ -205,11 +205,7 @@ impl StreamingTaskExecutor {
     }
 
     /// Chunk task data into smaller pieces
-    async fn chunk_task_data(
-        &self,
-        task_id: Uuid,
-        data: Vec<u8>,
-    ) -> Result<Vec<TaskChunk>> {
+    async fn chunk_task_data(&self, task_id: Uuid, data: Vec<u8>) -> Result<Vec<TaskChunk>> {
         let chunk_size = self.config.chunk_size_bytes;
         let total_chunks = (data.len() + chunk_size - 1) / chunk_size; // Ceiling division
 
@@ -283,78 +279,77 @@ impl StreamingTaskExecutor {
     }
 
     /// Execute next chunk
-    fn execute_next_chunk(&self, task_id: Uuid) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
+    fn execute_next_chunk(
+        &self,
+        task_id: Uuid,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>> {
         Box::pin(async move {
-        let execution = {
-            let mut executions = self.active_executions.write().await;
-            executions.get_mut(&task_id).cloned()
-        };
+            let execution = {
+                let mut executions = self.active_executions.write().await;
+                executions.get_mut(&task_id).cloned()
+            };
 
-        let execution = match execution {
-            Some(e) => e,
-            None => return Err(anyhow::anyhow!("Task execution not found: {}", task_id)),
-        };
+            let execution = match execution {
+                Some(e) => e,
+                None => return Err(anyhow::anyhow!("Task execution not found: {}", task_id)),
+            };
 
-        // Find next chunk to execute
-        let next_chunk_index = execution
-            .current_chunk_index
-            .map(|idx| idx + 1)
-            .unwrap_or(0);
+            // Find next chunk to execute
+            let next_chunk_index = execution
+                .current_chunk_index
+                .map(|idx| idx + 1)
+                .unwrap_or(0);
 
-        if next_chunk_index >= execution.chunks.len() {
-            // All chunks completed
-            self.complete_execution(task_id).await?;
-            return Ok(());
-        }
+            if next_chunk_index >= execution.chunks.len() {
+                // All chunks completed
+                self.complete_execution(task_id).await?;
+                return Ok(());
+            }
 
-        // Execute chunk
-        let chunk = &execution.chunks[next_chunk_index];
-        debug!(
-            "Executing chunk {}/{} for task {}",
-            next_chunk_index + 1,
-            execution.chunks.len(),
-            task_id
-        );
+            // Execute chunk
+            let chunk = &execution.chunks[next_chunk_index];
+            debug!(
+                "Executing chunk {}/{} for task {}",
+                next_chunk_index + 1,
+                execution.chunks.len(),
+                task_id
+            );
 
-        // In a full implementation, this would:
-        // - Send chunk to worker
-        // - Wait for chunk completion
-        // - Process chunk results
-        // - Update execution state
+            // In a full implementation, this would:
+            // - Send chunk to worker
+            // - Wait for chunk completion
+            // - Process chunk results
+            // - Update execution state
 
-        // Simulate chunk execution
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            // Simulate chunk execution
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Update execution state
-        {
-            let mut executions = self.active_executions.write().await;
-            if let Some(exec) = executions.get_mut(&task_id) {
-                exec.current_chunk_index = Some(next_chunk_index);
-                exec.completed_chunks.push(next_chunk_index);
-                exec.last_update = Utc::now();
+            // Update execution state
+            {
+                let mut executions = self.active_executions.write().await;
+                if let Some(exec) = executions.get_mut(&task_id) {
+                    exec.current_chunk_index = Some(next_chunk_index);
+                    exec.completed_chunks.push(next_chunk_index);
+                    exec.last_update = Utc::now();
 
-                // Create checkpoint if needed
-                if self.config.enable_checkpointing
-                    && exec.completed_chunks.len() % self.config.checkpoint_interval_chunks == 0
-                {
-                    self.create_checkpoint(task_id, exec).await?;
+                    // Create checkpoint if needed
+                    if self.config.enable_checkpointing
+                        && exec.completed_chunks.len() % self.config.checkpoint_interval_chunks == 0
+                    {
+                        self.create_checkpoint(task_id, exec).await?;
+                    }
                 }
             }
-        }
 
-        // Continue with next chunk
-        self.execute_next_chunk(task_id).await?;
+            // Continue with next chunk
+            self.execute_next_chunk(task_id).await?;
 
-        Ok(())
+            Ok(())
         })
     }
 
     /// Create execution checkpoint
-    async fn create_checkpoint(
-        &self,
-        task_id: Uuid,
-        execution: &TaskExecution,
-    ) -> Result<()> {
+    async fn create_checkpoint(&self, task_id: Uuid, execution: &TaskExecution) -> Result<()> {
         let checkpoint = ExecutionCheckpoint {
             checkpoint_id: Uuid::new_v4(),
             task_id,
@@ -377,7 +372,8 @@ impl StreamingTaskExecutor {
 
         debug!(
             "Created checkpoint for task {}: {:.1}% complete",
-            task_id, checkpoint.progress * 100.0
+            task_id,
+            checkpoint.progress * 100.0
         );
 
         Ok(())
@@ -397,7 +393,8 @@ impl StreamingTaskExecutor {
         }
 
         // Create final checkpoint
-        self.create_checkpoint(task_id, &self.get_execution(task_id).await?).await?;
+        self.create_checkpoint(task_id, &self.get_execution(task_id).await?)
+            .await?;
 
         Ok(())
     }
@@ -465,7 +462,7 @@ impl StreamingTaskExecutor {
     /// Get execution progress (0.0 - 1.0)
     pub async fn get_progress(&self, task_id: Uuid) -> Result<f64> {
         let execution = self.get_execution(task_id).await?;
-        
+
         if execution.chunks.is_empty() {
             return Ok(0.0);
         }
@@ -479,4 +476,3 @@ impl StreamingTaskExecutor {
         checkpoints.get(&task_id).cloned()
     }
 }
-

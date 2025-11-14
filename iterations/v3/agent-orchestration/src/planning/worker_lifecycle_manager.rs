@@ -5,12 +5,12 @@
 //!
 //! @author @darianrosebrook
 
-use std::sync::Arc;
-use std::collections::HashMap;
 use anyhow::Result;
-use uuid::Uuid;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
 use agent_agency_contracts::planning_io::Milestone;
@@ -26,14 +26,14 @@ pub enum WorkerLifecycleEvent {
         milestone_id: String,
         assigned_at: chrono::DateTime<chrono::Utc>,
     },
-    
+
     /// Worker started execution
     Started {
         worker_id: Uuid,
         milestone_id: String,
         started_at: chrono::DateTime<chrono::Utc>,
     },
-    
+
     /// Worker completed execution
     Completed {
         worker_id: Uuid,
@@ -41,7 +41,7 @@ pub enum WorkerLifecycleEvent {
         artifacts: ExecutionArtifacts,
         completed_at: chrono::DateTime<chrono::Utc>,
     },
-    
+
     /// Worker failed execution
     Failed {
         worker_id: Uuid,
@@ -77,7 +77,7 @@ enum AssignmentStatus {
 pub struct WorkerLifecycleManager {
     /// Active worker assignments
     assignments: Arc<RwLock<HashMap<Uuid, WorkerAssignment>>>,
-    
+
     /// Council integration for presenting completed work
     council_integration: Arc<dyn CouncilIntegration>,
 }
@@ -92,12 +92,11 @@ impl WorkerLifecycleManager {
     }
 
     /// Handle worker assignment
-    pub async fn handle_assignment(
-        &self,
-        worker_id: Uuid,
-        milestone: &Milestone,
-    ) -> Result<()> {
-        info!("Worker {} assigned to milestone {}", worker_id, milestone.id);
+    pub async fn handle_assignment(&self, worker_id: Uuid, milestone: &Milestone) -> Result<()> {
+        info!(
+            "Worker {} assigned to milestone {}",
+            worker_id, milestone.id
+        );
 
         let assignment = WorkerAssignment {
             worker_id,
@@ -130,26 +129,23 @@ impl WorkerLifecycleManager {
                 assignment.milestone_id.clone()
             } else {
                 warn!("No assignment found for worker {}", worker_id);
-                return Err(anyhow::anyhow!("No assignment found for worker {}", worker_id));
+                return Err(anyhow::anyhow!(
+                    "No assignment found for worker {}",
+                    worker_id
+                ));
             }
         };
 
         // Present completed work to council (CAWS Pleading stage)
-        self.council_integration.present_work(
-            &[artifacts],
-            &milestone_id,
-            worker_id,
-        ).await?;
+        self.council_integration
+            .present_work(&[artifacts], &milestone_id, worker_id)
+            .await?;
 
         Ok(())
     }
 
     /// Handle worker failure
-    pub async fn handle_failure(
-        &self,
-        worker_id: Uuid,
-        error: String,
-    ) -> Result<()> {
+    pub async fn handle_failure(&self, worker_id: Uuid, error: String) -> Result<()> {
         warn!("Worker {} failed execution: {}", worker_id, error);
 
         let mut assignments = self.assignments.write().await;
@@ -176,11 +172,11 @@ impl WorkerLifecycleManager {
     pub async fn cleanup_completed(&self) -> Result<()> {
         let mut assignments = self.assignments.write().await;
         assignments.retain(|_, assignment| {
-            !matches!(assignment.status, AssignmentStatus::Completed | AssignmentStatus::Failed)
+            !matches!(
+                assignment.status,
+                AssignmentStatus::Completed | AssignmentStatus::Failed
+            )
         });
         Ok(())
     }
 }
-
-
-

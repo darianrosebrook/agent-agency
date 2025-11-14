@@ -1,11 +1,11 @@
 //! Channel-based communication infrastructure
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use crate::error::*;
 use crate::parallel_types::*;
 use crate::worker_types::WorkerId;
 use crate::WorkerMessage;
-use crate::error::*;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Channel configuration for communication
 
@@ -37,7 +37,10 @@ struct ReliableSender {
 }
 
 impl ReliableSender {
-    pub fn new(sender: tokio::sync::mpsc::UnboundedSender<WorkerMessage>, config: ChannelConfig) -> Self {
+    pub fn new(
+        sender: tokio::sync::mpsc::UnboundedSender<WorkerMessage>,
+        config: ChannelConfig,
+    ) -> Self {
         Self { sender, config }
     }
 
@@ -49,7 +52,10 @@ impl ReliableSender {
                 Ok(()) => return Ok(()),
                 Err(_) if attempts < self.config.retry_attempts => {
                     attempts += 1;
-                    tokio::time::sleep(std::time::Duration::from_millis(self.config.retry_delay_ms)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(
+                        self.config.retry_delay_ms,
+                    ))
+                    .await;
                     continue;
                 }
                 Err(_) => {
@@ -63,9 +69,11 @@ impl ReliableSender {
 
     /// Send a message without retry (fire and forget)
     pub fn send(&self, message: WorkerMessage) -> CommunicationResult<()> {
-        self.sender.send(message).map_err(|_| CommunicationError::ChannelSendFailed {
-            message: "Channel send failed".to_string(),
-        })
+        self.sender
+            .send(message)
+            .map_err(|_| CommunicationError::ChannelSendFailed {
+                message: "Channel send failed".to_string(),
+            })
     }
 
     /// Check if the channel is closed
@@ -81,7 +89,10 @@ pub struct TimeoutReceiver {
 }
 
 impl TimeoutReceiver {
-    pub fn new(receiver: tokio::sync::mpsc::UnboundedReceiver<WorkerMessage>, config: ChannelConfig) -> Self {
+    pub fn new(
+        receiver: tokio::sync::mpsc::UnboundedReceiver<WorkerMessage>,
+        config: ChannelConfig,
+    ) -> Self {
         Self { receiver, config }
     }
 
@@ -90,7 +101,9 @@ impl TimeoutReceiver {
         match tokio::time::timeout(
             std::time::Duration::from_millis(self.config.timeout_ms),
             self.receiver.recv(),
-        ).await {
+        )
+        .await
+        {
             Ok(message) => Ok(message),
             Err(_) => Err(CommunicationError::CommunicationTimeout {
                 timeout_secs: self.config.timeout_ms / 1000,
@@ -194,11 +207,17 @@ impl ChannelRegistry {
 
     /// Get a channel for sending messages to a worker
     pub fn get_sender(&self, worker_id: &WorkerId) -> Option<ReliableSender> {
-        self.channels.get(worker_id).map(|channel| channel.sender.clone())
+        self.channels
+            .get(worker_id)
+            .map(|channel| channel.sender.clone())
     }
 
     /// Send a message to a specific worker
-    pub async fn send_to_worker(&self, worker_id: &WorkerId, message: WorkerMessage) -> CommunicationResult<()> {
+    pub async fn send_to_worker(
+        &self,
+        worker_id: &WorkerId,
+        message: WorkerMessage,
+    ) -> CommunicationResult<()> {
         if let Some(channel) = self.channels.get(worker_id) {
             channel.sender.send_with_retry(message).await
         } else {
@@ -234,7 +253,10 @@ impl ChannelRegistry {
 
     /// Get all active worker IDs
     pub fn active_workers(&self) -> Vec<WorkerId> {
-        self.channels.iter().map(|entry| entry.key().clone()).collect()
+        self.channels
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 
     /// Check if a worker has an active channel
@@ -292,7 +314,10 @@ pub struct ChannelMonitor {
 }
 
 impl ChannelMonitor {
-    pub fn new(registry: std::sync::Arc<ChannelRegistry>, health_check_interval: std::time::Duration) -> Self {
+    pub fn new(
+        registry: std::sync::Arc<ChannelRegistry>,
+        health_check_interval: std::time::Duration,
+    ) -> Self {
         Self {
             registry,
             health_check_interval,

@@ -3,17 +3,17 @@
 //! Provides command-line interface for submitting tasks, monitoring execution,
 //! and managing the autonomous development system.
 
+use chrono::Utc;
+use clap::{Parser, Subcommand};
 use schemars::JsonSchema;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
-use clap::{Parser, Subcommand};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
-use chrono::Utc;
 
-use crate::api::{Orchestrator, ProgressTracker};
 use crate::api::TaskSubmissionRequest;
+use crate::api::{Orchestrator, ProgressTracker};
 
 /// Safety modes for execution with different guardrail levels
 #[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
@@ -118,7 +118,10 @@ pub enum Commands {
     /// List all tasks
     List {
         /// Filter by status
-        #[arg(long, help = "Filter tasks by status (pending, running, completed, failed)")]
+        #[arg(
+            long,
+            help = "Filter tasks by status (pending, running, completed, failed)"
+        )]
         status: Option<String>,
 
         /// Limit number of results
@@ -182,11 +185,19 @@ pub enum SelfPromptCommands {
         watch: bool,
 
         /// Maximum iterations
-        #[arg(long, default_value = "5", help = "Maximum number of self-prompting iterations")]
+        #[arg(
+            long,
+            default_value = "5",
+            help = "Maximum number of self-prompting iterations"
+        )]
         max_iterations: usize,
 
         /// Safety mode with guardrail levels
-        #[arg(long, default_value = "auto", help = "Safety mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)")]
+        #[arg(
+            long,
+            default_value = "auto",
+            help = "Safety mode: strict (manual approval), auto (automatic with gates), dry-run (no changes)"
+        )]
         mode: SafetyMode,
 
         /// Enable dashboard during execution
@@ -230,7 +241,10 @@ pub enum QualityCommands {
     /// Run quality gates on current directory
     Check {
         /// Quality gates to run (comma-separated)
-        #[arg(long, help = "Specific gates to run (caws,lint,test,coverage,mutation)")]
+        #[arg(
+            long,
+            help = "Specific gates to run (caws,lint,test,coverage,mutation)"
+        )]
         gates: Option<String>,
 
         /// Risk tier for thresholds
@@ -286,36 +300,30 @@ impl CliInterface {
                     priority,
                     watch,
                     output,
-                ).await
+                )
+                .await
             }
 
-            Commands::Status { task_id, watch, interval } => {
-                self.get_task_status(task_id, watch, interval).await
-            }
+            Commands::Status {
+                task_id,
+                watch,
+                interval,
+            } => self.get_task_status(task_id, watch, interval).await,
 
-            Commands::List { status, limit } => {
-                self.list_tasks(status, limit).await
-            }
+            Commands::List { status, limit } => self.list_tasks(status, limit).await,
 
-            Commands::Result { task_id, save_artifacts } => {
-                self.get_task_result(task_id, save_artifacts).await
-            }
+            Commands::Result {
+                task_id,
+                save_artifacts,
+            } => self.get_task_result(task_id, save_artifacts).await,
 
-            Commands::Cancel { task_id } => {
-                self.cancel_task(task_id).await
-            }
+            Commands::Cancel { task_id } => self.cancel_task(task_id).await,
 
-            Commands::Metrics => {
-                self.get_metrics().await
-            }
+            Commands::Metrics => self.get_metrics().await,
 
-            Commands::Quality { command } => {
-                self.handle_quality_command(command).await
-            }
+            Commands::Quality { command } => self.handle_quality_command(command).await,
 
-            Commands::SelfPrompt { command } => {
-                self.handle_self_prompt_command(command).await
-            }
+            Commands::SelfPrompt { command } => self.handle_self_prompt_command(command).await,
         }
     }
 
@@ -331,8 +339,7 @@ impl CliInterface {
     ) -> Result<()> {
         // Read context file if provided
         let _context = if let Some(context_path) = context_file {
-            Some(std::fs::read_to_string(context_path)
-                .map_err(|e| CliError::IoError(e))?)
+            Some(std::fs::read_to_string(context_path).map_err(|e| CliError::IoError(e))?)
         } else {
             None
         };
@@ -362,12 +369,18 @@ impl CliInterface {
             .map_err(|e| CliError::NetworkError(format!("Failed to submit task: {}", e)))?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(CliError::ApiError(format!("Task submission failed: {}", error_text)));
+            return Err(CliError::ApiError(format!(
+                "Task submission failed: {}",
+                error_text
+            )));
         }
 
-        let response_body: serde_json::Value = response.json()
+        let response_body: serde_json::Value = response
+            .json()
             .await
             .map_err(|e| CliError::NetworkError(format!("Failed to parse response: {}", e)))?;
 
@@ -391,7 +404,10 @@ impl CliInterface {
 
         println!("\n Task submitted successfully!");
         println!(" Task ID: {}", task_id);
-        println!(" Status: https://localhost:{}/tasks/{}", self.config.port, task_id);
+        println!(
+            " Status: https://localhost:{}/tasks/{}",
+            self.config.port, task_id
+        );
 
         if watch {
             println!("\n Watching execution progress...\n");
@@ -406,12 +422,7 @@ impl CliInterface {
     }
 
     /// Get task status
-    async fn get_task_status(
-        &self,
-        task_id_str: String,
-        watch: bool,
-        interval: u64,
-    ) -> Result<()> {
+    async fn get_task_status(&self, task_id_str: String, watch: bool, interval: u64) -> Result<()> {
         let task_id = Uuid::parse_str(&task_id_str)
             .map_err(|_| CliError::InvalidTaskId(task_id_str.clone()))?;
 
@@ -452,14 +463,16 @@ impl CliInterface {
 
         match response {
             Ok(resp) if resp.status().is_success() => {
-                let status_data: serde_json::Value = resp.json()
-                    .await
-                    .map_err(|e| CliError::NetworkError(format!("Failed to parse response: {}", e)))?;
+                let status_data: serde_json::Value = resp.json().await.map_err(|e| {
+                    CliError::NetworkError(format!("Failed to parse response: {}", e))
+                })?;
 
                 self.display_real_task_status(&status_data)?;
             }
             Ok(resp) => {
-                let error_text = resp.text().await
+                let error_text = resp
+                    .text()
+                    .await
                     .unwrap_or_else(|_| "Unknown error".to_string());
                 println!("⚠️  Could not fetch live status: {}", error_text);
                 println!("Falling back to cached/local status...");
@@ -477,13 +490,28 @@ impl CliInterface {
 
     /// Display task status from real API response
     fn display_real_task_status(&self, status_data: &serde_json::Value) -> Result<()> {
-        println!(" Task Status: {}", status_data.get("id").and_then(|v| v.as_str()).unwrap_or("unknown"));
+        println!(
+            " Task Status: {}",
+            status_data
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+        );
         println!("{}", "═".repeat(50));
 
-        let status = status_data.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
-        let progress = status_data.get("progress").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let status = status_data
+            .get("status")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        let progress = status_data
+            .get("progress")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         let current_step = status_data.get("current_step").and_then(|v| v.as_str());
-        let description = status_data.get("description").and_then(|v| v.as_str()).unwrap_or("No description");
+        let description = status_data
+            .get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or("No description");
 
         let status_icon = match status {
             "pending" => "",
@@ -525,10 +553,30 @@ impl CliInterface {
         // Simulate different status scenarios for demo purposes
         let statuses = vec![
             ("pending", " Waiting to start", 0.0, None),
-            ("planning", " Generating execution plan", 25.0, Some("Planning phase")),
-            ("executing", "⚙️  Executing implementation", 60.0, Some("Code generation")),
-            ("quality_check", " Running quality gates", 85.0, Some("Testing")),
-            ("refining", " Applying refinements", 95.0, Some("Code cleanup")),
+            (
+                "planning",
+                " Generating execution plan",
+                25.0,
+                Some("Planning phase"),
+            ),
+            (
+                "executing",
+                "⚙️  Executing implementation",
+                60.0,
+                Some("Code generation"),
+            ),
+            (
+                "quality_check",
+                " Running quality gates",
+                85.0,
+                Some("Testing"),
+            ),
+            (
+                "refining",
+                " Applying refinements",
+                95.0,
+                Some("Code cleanup"),
+            ),
             ("completed", " Task completed successfully", 100.0, None),
         ];
 
@@ -565,7 +613,10 @@ impl CliInterface {
                 match tracker.get_progress(task_id).await {
                     Ok(progress) => {
                         if progress.progress as f64 != last_progress {
-                            self.display_progress_bar(progress.progress as f32, &Some(progress.current_step.clone()));
+                            self.display_progress_bar(
+                                progress.progress as f32,
+                                &Some(progress.current_step.clone()),
+                            );
                             last_progress = progress.progress as f64;
 
                             if progress.progress >= 100 {
@@ -575,7 +626,10 @@ impl CliInterface {
                         }
                     }
                     Err(e) => {
-                        return Err(CliError::InternalError(format!("Progress tracking error: {:?}", e)));
+                        return Err(CliError::InternalError(format!(
+                            "Progress tracking error: {:?}",
+                            e
+                        )));
                     }
                 }
             }
@@ -593,9 +647,18 @@ impl CliInterface {
         let empty = width - filled;
 
         let bar = "█".repeat(filled) + &"░".repeat(empty);
-        let phase_str = phase.as_ref().map(|p| format!(" - {}", p)).unwrap_or_default();
+        let phase_str = phase
+            .as_ref()
+            .map(|p| format!(" - {}", p))
+            .unwrap_or_default();
 
-        print!("\r [{}{}] {:.1}%{}", bar, " ".repeat(10), percentage, phase_str);
+        print!(
+            "\r [{}{}] {:.1}%{}",
+            bar,
+            " ".repeat(10),
+            percentage,
+            phase_str
+        );
         io::stdout().flush().unwrap();
     }
 
@@ -606,10 +669,34 @@ impl CliInterface {
         println!("{}", "═".repeat(80));
 
         let sample_tasks = vec![
-            ("550e8400-e29b-41d4-a716-446655440000", "completed", "95.2%", "User auth system", "2 min ago"),
-            ("550e8400-e29b-41d4-a716-446655440001", "running", "67.8%", "API integration", "5 min ago"),
-            ("550e8400-e29b-41d4-a716-446655440002", "pending", "0.0%", "Database migration", "1 min ago"),
-            ("550e8400-e29b-41d4-a716-446655440003", "failed", "0.0%", "Payment processor", "10 min ago"),
+            (
+                "550e8400-e29b-41d4-a716-446655440000",
+                "completed",
+                "95.2%",
+                "User auth system",
+                "2 min ago",
+            ),
+            (
+                "550e8400-e29b-41d4-a716-446655440001",
+                "running",
+                "67.8%",
+                "API integration",
+                "5 min ago",
+            ),
+            (
+                "550e8400-e29b-41d4-a716-446655440002",
+                "pending",
+                "0.0%",
+                "Database migration",
+                "1 min ago",
+            ),
+            (
+                "550e8400-e29b-41d4-a716-446655440003",
+                "failed",
+                "0.0%",
+                "Payment processor",
+                "10 min ago",
+            ),
         ];
 
         let mut count = 0;
@@ -632,7 +719,8 @@ impl CliInterface {
                 _ => "",
             };
 
-            println!("{:<40} {:<10} {:<8} {:<20} {:<10}",
+            println!(
+                "{:<40} {:<10} {:<8} {:<20} {:<10}",
                 format!("{} {}", status_icon, &id[..8]),
                 status,
                 quality,
@@ -689,8 +777,7 @@ impl CliInterface {
         if let Some(save_path) = save_artifacts {
             println!(" Saving artifacts to: {}", save_path.display());
             // In practice, this would download and save artifacts
-            std::fs::create_dir_all(&save_path)
-                .map_err(|e| CliError::IoError(e))?;
+            std::fs::create_dir_all(&save_path).map_err(|e| CliError::IoError(e))?;
             println!(" Artifacts saved successfully");
         }
 
@@ -749,24 +836,20 @@ impl CliInterface {
                     max_iterations,
                     mode,
                     dashboard,
-                ).await
+                )
+                .await
             }
 
-            SelfPromptCommands::Models => {
-                self.list_available_models().await
-            }
+            SelfPromptCommands::Models => self.list_available_models().await,
 
-            SelfPromptCommands::Swap { old_model, new_model } => {
-                self.swap_model(old_model, new_model).await
-            }
+            SelfPromptCommands::Swap {
+                old_model,
+                new_model,
+            } => self.swap_model(old_model, new_model).await,
 
-            SelfPromptCommands::Playground { test } => {
-                self.run_playground_test(test).await
-            }
+            SelfPromptCommands::Playground { test } => self.run_playground_test(test).await,
 
-            SelfPromptCommands::History { limit } => {
-                self.show_execution_history(limit).await
-            }
+            SelfPromptCommands::History { limit } => self.show_execution_history(limit).await,
         }
     }
 
@@ -786,15 +869,36 @@ impl CliInterface {
         match mode {
             SafetyMode::Strict => {
                 println!(" Strict mode: Manual approval required for each changeset");
-                self.execute_strict_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
+                self.execute_strict_mode(
+                    description.clone(),
+                    files.clone(),
+                    model.clone(),
+                    watch,
+                    max_iterations,
+                )
+                .await?;
             }
             SafetyMode::Auto => {
                 println!(" Auto mode: Automatic execution with quality gate validation");
-                self.execute_auto_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
+                self.execute_auto_mode(
+                    description.clone(),
+                    files.clone(),
+                    model.clone(),
+                    watch,
+                    max_iterations,
+                )
+                .await?;
             }
             SafetyMode::DryRun => {
                 println!("👁️  Dry-run mode: Generating artifacts without filesystem changes");
-                self.execute_dry_run_mode(description.clone(), files.clone(), model.clone(), watch, max_iterations).await?;
+                self.execute_dry_run_mode(
+                    description.clone(),
+                    files.clone(),
+                    model.clone(),
+                    watch,
+                    max_iterations,
+                )
+                .await?;
             }
         }
 
@@ -810,7 +914,6 @@ impl CliInterface {
         println!(" Max iterations: {}", max_iterations);
         println!(" Watch: {}", watch);
 
-        // Placeholder implementation
         println!("⚠️  Self-prompting execution not yet fully implemented");
         println!(" Guardrail modes and dashboard options configured");
 
@@ -868,7 +971,10 @@ impl CliInterface {
         // - CAWS Tier: 2 (API integration feature)
         // - Change Budget: ~80 LOC
         // - Reviewer Requirements: API integration expertise
-        println!(" Task submitted with ID: strict-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
+        println!(
+            " Task submitted with ID: strict-task-{}",
+            uuid::Uuid::new_v4()
+        ); // Temporary: simulate until API integration
 
         if watch {
             println!(" Entering interactive approval mode...");
@@ -932,7 +1038,10 @@ impl CliInterface {
         // - CAWS Tier: 2 (API integration feature)
         // - Change Budget: ~80 LOC
         // - Reviewer Requirements: API integration expertise
-        println!(" Task submitted with ID: auto-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
+        println!(
+            " Task submitted with ID: auto-task-{}",
+            uuid::Uuid::new_v4()
+        ); // Temporary: simulate until API integration
         println!(" Quality gates enabled: test coverage, mutation testing, linting");
 
         if watch {
@@ -994,7 +1103,10 @@ impl CliInterface {
         // - CAWS Tier: 2 (API integration feature)
         // - Change Budget: ~80 LOC
         // - Reviewer Requirements: API integration expertise
-        println!(" Task submitted with ID: dry-run-task-{}", uuid::Uuid::new_v4()); // Temporary: simulate until API integration
+        println!(
+            " Task submitted with ID: dry-run-task-{}",
+            uuid::Uuid::new_v4()
+        ); // Temporary: simulate until API integration
         println!("🛡️  Dry-run mode: No filesystem changes will be applied");
         println!(" All artifacts will be generated for review");
 
@@ -1031,7 +1143,12 @@ impl CliInterface {
             Some("rust") => println!(" Running Rust playground test"),
             Some("python") => println!(" Running Python playground test"),
             None => println!(" Running all playground tests"),
-            _ => return Err(CliError::InvalidArgument(format!("Unknown test: {}", test.unwrap()))),
+            _ => {
+                return Err(CliError::InvalidArgument(format!(
+                    "Unknown test: {}",
+                    test.unwrap()
+                )))
+            }
         }
         println!(" Playground test completed");
         Ok(())
@@ -1065,15 +1182,18 @@ impl CliInterface {
             }
 
             QualityCommands::Check { gates, risk_tier } => {
-                let gates_list = gates.as_ref()
+                let gates_list = gates
+                    .as_ref()
                     .map(|g| g.split(',').map(|s| s.trim().to_string()).collect())
-                    .unwrap_or_else(|| vec![
-                        "caws".to_string(),
-                        "lint".to_string(),
-                        "type".to_string(),
-                        "test".to_string(),
-                        "coverage".to_string(),
-                    ]);
+                    .unwrap_or_else(|| {
+                        vec![
+                            "caws".to_string(),
+                            "lint".to_string(),
+                            "type".to_string(),
+                            "test".to_string(),
+                            "coverage".to_string(),
+                        ]
+                    });
 
                 let tier = risk_tier.unwrap_or_else(|| "standard".to_string());
 

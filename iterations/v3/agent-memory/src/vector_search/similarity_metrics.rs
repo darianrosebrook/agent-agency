@@ -52,7 +52,8 @@ impl SimilarityCalculator {
             return 0.0;
         }
 
-        let distance = a.iter()
+        let distance = a
+            .iter()
             .zip(b.iter())
             .map(|(x, y)| (x - y).powi(2))
             .sum::<f32>()
@@ -125,7 +126,8 @@ impl SimilarityCalculator {
             return 0.0;
         }
 
-        let distance = a.iter()
+        let distance = a
+            .iter()
             .zip(b.iter())
             .map(|(x, y)| if (*x - *y).abs() > f32::EPSILON { 1 } else { 0 })
             .sum::<i32>();
@@ -152,7 +154,12 @@ impl SimilarityCalculator {
     }
 
     /// Find k nearest neighbors
-    pub fn knn(metric: SimilarityMetric, query: &[f32], vectors: &[Vec<f32>], k: usize) -> Vec<(usize, f32)> {
+    pub fn knn(
+        metric: SimilarityMetric,
+        query: &[f32],
+        vectors: &[Vec<f32>],
+        k: usize,
+    ) -> Vec<(usize, f32)> {
         let mut similarities: Vec<(usize, f32)> = vectors
             .iter()
             .enumerate()
@@ -185,7 +192,9 @@ impl SimilarityCalculator {
         }
 
         let min_val = similarities.iter().fold(f32::INFINITY, |a, &b| a.min(b));
-        let max_val = similarities.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let max_val = similarities
+            .iter()
+            .fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
         let range = max_val - min_val;
         if range > 0.0 {
@@ -233,12 +242,20 @@ impl DistanceCalculator {
                 if a.len() != b.len() {
                     return f32::INFINITY;
                 }
-                a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum::<f32>().sqrt()
+                a.iter()
+                    .zip(b.iter())
+                    .map(|(x, y)| (x - y).powi(2))
+                    .sum::<f32>()
+                    .sqrt()
             }
             SimilarityMetric::DotProduct => {
                 // Convert similarity to distance (negative dot product becomes distance)
                 let dot = SimilarityCalculator::dot_product_similarity(a, b);
-                if dot >= 0.0 { 1.0 / (1.0 + dot) } else { 1.0 - dot }
+                if dot >= 0.0 {
+                    1.0 / (1.0 + dot)
+                } else {
+                    1.0 - dot
+                }
             }
             SimilarityMetric::Manhattan => {
                 if a.len() != b.len() {
@@ -251,8 +268,15 @@ impl DistanceCalculator {
                 if a.len() != b.len() {
                     return f32::INFINITY;
                 }
-                a.iter().zip(b.iter())
-                    .map(|(x, y)| if (*x - *y).abs() > f32::EPSILON { 1.0 } else { 0.0 })
+                a.iter()
+                    .zip(b.iter())
+                    .map(|(x, y)| {
+                        if (*x - *y).abs() > f32::EPSILON {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    })
                     .sum()
             }
         }
@@ -307,7 +331,8 @@ impl VectorNormalizer {
         }
 
         let mean: f32 = vector.iter().sum::<f32>() / vector.len() as f32;
-        let variance: f32 = vector.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / vector.len() as f32;
+        let variance: f32 =
+            vector.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / vector.len() as f32;
         let std_dev = variance.sqrt();
 
         if std_dev > 0.0 {

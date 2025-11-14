@@ -1,14 +1,14 @@
 //! Main disambiguation stage orchestrator
 
-use std::sync::Arc;
-use anyhow::Result;
-use tracing::debug;
-use crate::disambiguation::types::{Ambiguity, AmbiguityType};
-use crate::disambiguation::disambiguation_types::*;
-use crate::ProcessingContext;
-use crate::disambiguation::detection::AmbiguityDetector;
 use crate::disambiguation::context::ContextResolver;
+use crate::disambiguation::detection::AmbiguityDetector;
+use crate::disambiguation::disambiguation_types::*;
 use crate::disambiguation::entities::NamedEntityRecognizer;
+use crate::disambiguation::types::{Ambiguity, AmbiguityType};
+use crate::ProcessingContext;
+use anyhow::Result;
+use std::sync::Arc;
+use tracing::debug;
 // Explicit imports from contracts - use fully qualified names to avoid conflicts
 use agent_agency_contracts::types::research::{
     EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
@@ -137,7 +137,9 @@ impl DisambiguationStage {
         for ambiguity in ambiguities {
             match ambiguity.ambiguity_type {
                 AmbiguityType::Pronoun => {
-                    if let Some(resolution) = self.resolver.resolve_ambiguity(ambiguity, context).await? {
+                    if let Some(resolution) =
+                        self.resolver.resolve_ambiguity(ambiguity, context).await?
+                    {
                         // TODO: Implement sophisticated text replacement for disambiguation
                         //       Currently uses simple string replacement; should use more sophisticated replacement that preserves context, handles multiple occurrences, and maintains grammatical correctness.
                         //
@@ -177,29 +179,32 @@ impl DisambiguationStage {
                             // For pronouns, replace case-insensitively
                             let ambiguity_lower = ambiguity.original_text.to_lowercase();
                             let text_lower = disambiguated.to_lowercase();
-                            
+
                             if let Some(start) = text_lower.find(&ambiguity_lower) {
                                 let actual_end = start + ambiguity.original_text.len();
-                                let mut result = String::with_capacity(disambiguated.len() + resolution.len());
+                                let mut result =
+                                    String::with_capacity(disambiguated.len() + resolution.len());
                                 result.push_str(&disambiguated[..start]);
                                 result.push_str(&resolution);
                                 result.push_str(&disambiguated[actual_end..]);
                                 disambiguated = result;
                             } else {
                                 // Fallback to case-sensitive replacement
-                                disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
+                                disambiguated =
+                                    disambiguated.replace(&ambiguity.original_text, &resolution);
                             }
                         } else {
-                            disambiguated = disambiguated.replace(&ambiguity.original_text, &resolution);
+                            disambiguated =
+                                disambiguated.replace(&ambiguity.original_text, &resolution);
                         }
                     }
                 }
-                AmbiguityType::TechnicalTerm |
-                AmbiguityType::ScopeBoundary |
-                AmbiguityType::TemporalReference |
-                AmbiguityType::Quantifier |
-                AmbiguityType::EntityReference |
-                AmbiguityType::Other(_) => {
+                AmbiguityType::TechnicalTerm
+                | AmbiguityType::ScopeBoundary
+                | AmbiguityType::TemporalReference
+                | AmbiguityType::Quantifier
+                | AmbiguityType::EntityReference
+                | AmbiguityType::Other(_) => {
                     // TODO: Implement comprehensive text replacement for resolved ambiguities
                     //       Currently these are handled by resolver but not replaced in text; should implement comprehensive replacement that replaces resolved ambiguities in text for complete disambiguation.
                     //
@@ -251,17 +256,19 @@ impl DisambiguationStage {
         ambiguities
             .iter()
             .filter_map(|ambiguity| {
-                if let Some(reason) = self.resolver.detect_unresolvable_ambiguity(ambiguity, context) {
+                if let Some(reason) = self
+                    .resolver
+                    .detect_unresolvable_ambiguity(ambiguity, context)
+                {
                     Some(ContractsUnresolvableAmbiguity {
                         ambiguity: ambiguity.original_text.clone(),
                         suggested_context: {
-                                let resolutions = self.resolver.get_pronoun_resolutions(
-                                    &ambiguity.original_text,
-                                    context,
-                                );
-                                if resolutions.is_empty() {
+                            let resolutions = self
+                                .resolver
+                                .get_pronoun_resolutions(&ambiguity.original_text, context);
+                            if resolutions.is_empty() {
                                 Some("no resolution available".to_string())
-                                } else {
+                            } else {
                                 Some(format!("{:?}", resolutions))
                             }
                         },
@@ -323,7 +330,10 @@ mod tests {
             language: None,
         };
 
-        let result = stage.process("The system works well.", &context).await.unwrap();
+        let result = stage
+            .process("The system works well.", &context)
+            .await
+            .unwrap();
 
         assert_eq!(result.original_sentence, "The system works well.");
         assert_eq!(result.disambiguated_sentence, "The system works well.");

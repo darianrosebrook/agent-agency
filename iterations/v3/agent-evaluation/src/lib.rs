@@ -6,8 +6,6 @@
 pub mod evaluation;
 
 pub use evaluation::{
-    EvaluationConfig, EvaluationOrchestrator, IterationEvaluation, StopReason,
-    EvaluationHook, NoOpEvaluationHook,
+    EvaluationConfig, EvaluationHook, EvaluationOrchestrator, IterationEvaluation,
+    NoOpEvaluationHook, StopReason,
 };
-
-

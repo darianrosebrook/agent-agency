@@ -4,10 +4,10 @@
 //! for testing scenarios. These implementations use real file system operations
 //! and can be extended with observability and advanced file operations as needed.
 
-use std::path::PathBuf;
-use std::collections::HashMap;
-use std::sync::Arc;
 use anyhow::Result;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::sync::RwLock;
 
@@ -134,7 +134,7 @@ impl TestWorkspace {
 /// Create a default process output for error cases
 pub fn default_process_output() -> std::process::Output {
     use std::process::{Command, ExitStatus};
-    
+
     // Create a default exit status by running a command that fails
     // This is cross-platform compatible
     let status = Command::new("false")
@@ -167,11 +167,10 @@ pub fn default_process_output() -> std::process::Output {
                     })
             }
         });
-    
+
     std::process::Output {
         status,
         stdout: vec![],
         stderr: vec![],
     }
 }
-

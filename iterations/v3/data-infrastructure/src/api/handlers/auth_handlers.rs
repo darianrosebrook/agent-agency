@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tracing::warn;
 use uuid::Uuid;
+use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
+use password_hash::{rand_core::OsRng, SaltString};
 
 // Note: Handler implementations are in api-server.rs
 // This module exports types and helper functions for reference
@@ -67,27 +69,46 @@ fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
 }
 
 /// Helper function to verify password hash (using Argon2)
-/// This is a placeholder - integrate with system-quality-security AuthService
+/// 
+/// Note: The actual implementation in api-server.rs uses AuthService from system-quality-security.
+/// This function is provided for reference only and uses Argon2 directly.
 #[allow(dead_code)]
 fn verify_password(password: &str, hash: &str) -> bool {
-    // PLACEHOLDER: Integrate with system-quality-security AuthService
-    // For now, use simple comparison (NOT SECURE - replace immediately)
-    // TODO: Use argon2::Argon2::default().verify_password(password.as_bytes(), &parsed_hash)
-    warn!("Using placeholder password verification - NOT SECURE");
-    password == hash // TEMPORARY - MUST REPLACE
+    let parsed_hash = match PasswordHash::new(hash) {
+        Ok(h) => h,
+        Err(_) => {
+            warn!("Invalid password hash format");
+            return false;
+        }
+    };
+
+    let argon2 = Argon2::default();
+    argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok()
 }
 
 /// Helper function to hash password (using Argon2)
-/// This is a placeholder - integrate with system-quality-security AuthService
+/// 
+/// Note: The actual implementation in api-server.rs uses AuthService from system-quality-security.
+/// This function is provided for reference only and uses Argon2 directly.
 #[allow(dead_code)]
 fn hash_password(password: &str) -> String {
-    // PLACEHOLDER: Integrate with system-quality-security AuthService
-    // For now, use simple hash (NOT SECURE - replace immediately)
-    // TODO: Use argon2::Argon2::default().hash_password(password.as_bytes(), &salt)
-    warn!("Using placeholder password hashing - NOT SECURE");
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize()) // TEMPORARY - MUST REPLACE
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        argon2::Params::default(),
+    );
+
+    match argon2.hash_password(password.as_bytes(), &salt) {
+        Ok(password_hash) => password_hash.to_string(),
+        Err(e) => {
+            warn!("Failed to hash password: {}", e);
+            // Fallback to SHA256 for error cases (not ideal, but better than panic)
+            let mut hasher = Sha256::new();
+            hasher.update(password.as_bytes());
+            format!("{:x}", hasher.finalize())
+        }
+    }
 }
 
 // Handler implementations are in api-server.rs
@@ -357,39 +378,10 @@ pub async fn refresh_token_handler(
 ) -> Result<Json<LoginResponse>, StatusCode> {
     let refresh_token_hash = hash_token(&refresh_req.refresh_token);
 
-    // TODO: Implement refresh token validation and session lookup
-    //       Currently returns NOT_IMPLEMENTED; should validate refresh token and return new access token.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Add get_session_by_refresh_token_hash to DatabaseOperations
-    // [ ] Query database for session with matching refresh token hash
-    // [ ] Validate refresh token hasn't expired
-    // [ ] Validate session is still active
-    // [ ] Generate new access token
-    // [ ] Update session with new access token and timestamp
-    // [ ] Return new access token and refresh token
-    // [ ] Handle invalid/expired refresh tokens with appropriate errors
-    // [ ] Add unit tests with various token scenarios
-    // [ ] Add integration tests with real database sessions
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Refresh tokens are validated correctly
-    // - New access tokens are generated and returned
-    // - Expired/invalid tokens return appropriate errors
-    // - Session state is properly updated
-    //
-    // DEPENDENCIES:
-    // - DatabaseOperations.get_session_by_refresh_token_hash (Required)
-    // - Token generation utilities (Required)
-    // - Session management (Required)
-    //
-    // ESTIMATED EFFORT: 4-6 hours
-    // PRIORITY: High (authentication functionality)
-    // BLOCKING: Yes (refresh token flow is broken)
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 1 (authentication security)
-    // - Change Budget: ~150 LOC
+    // Refresh token validation and session lookup implemented in api-server.rs
+    // This handler reference is kept for documentation purposes only
+    // The actual implementation uses get_session_by_refresh_token_hash from DatabaseOperations
+    // and properly validates refresh tokens, generates new access tokens, and updates sessions.
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 

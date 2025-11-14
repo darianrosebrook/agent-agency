@@ -5,20 +5,21 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{Semaphore, RwLock};
-use tokio::time::{timeout, Duration};
-use futures::future::join_all;
 use anyhow::{anyhow, Result};
-use uuid::Uuid;
 use chrono::Utc;
+use futures::future::join_all;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{RwLock, Semaphore};
+use tokio::time::{timeout, Duration};
+use uuid::Uuid;
 
-use crate::planning::plan_types::{ExecutionPlan, BatchStatus};
-use crate::planning::plan_executor::PlanExecutor;
-use crate::planning::scope_guard::ScopeGuard;
 use crate::planning::council_monitor::CouncilMonitor;
+use crate::planning::plan_executor::PlanExecutor;
+use crate::planning::plan_types::{BatchStatus, ExecutionPlan};
+use crate::planning::scope_guard::ScopeGuard;
 use crate::planning::worker_assignment::WorkerAssignmentStrategy;
 use crate::planning::worktree_manager::WorktreeManager;
 use agent_agency_contracts::planning_io::{Milestone, MilestoneState};
@@ -152,7 +153,6 @@ pub struct ParallelExecutionResult {
 
     /// Collected execution artifacts from milestone execution
     pub artifacts: Vec<agent_agency_contracts::execution_artifacts::ExecutionArtifacts>,
-
 }
 
 impl ParallelCoordinator {
@@ -197,7 +197,10 @@ impl ParallelCoordinator {
     }
 
     /// Execute plan with parallel coordination
-    pub async fn execute_plan_parallel(&self, plan: &mut ExecutionPlan) -> Result<ParallelExecutionResult> {
+    pub async fn execute_plan_parallel(
+        &self,
+        plan: &mut ExecutionPlan,
+    ) -> Result<ParallelExecutionResult> {
         let start_time = std::time::Instant::now();
         let plan_id_uuid = plan.contract_plan.id;
 
@@ -217,8 +220,9 @@ impl ParallelCoordinator {
         let mut all_artifacts = Vec::new();
 
         // Collect batch indices first to avoid borrowing issues
-        let batch_indices: Vec<usize> = (0..plan.execution_context.parallel_batches.len()).collect();
-        
+        let batch_indices: Vec<usize> =
+            (0..plan.execution_context.parallel_batches.len()).collect();
+
         for batch_index in batch_indices {
             // Check for emergency stop
             if emergency_stops > 0 {
@@ -285,9 +289,12 @@ impl ParallelCoordinator {
 
         for (milestone_index, milestone_id) in batch.milestone_ids.iter().enumerate() {
             // Find milestone in plan
-            if let Some(milestone) = plan.contract_plan.milestones.iter_mut()
-                .find(|m| m.id == *milestone_id) {
-
+            if let Some(milestone) = plan
+                .contract_plan
+                .milestones
+                .iter_mut()
+                .find(|m| m.id == *milestone_id)
+            {
                 milestone_indices.push((milestone_index, milestone_id.clone()));
 
                 let permit = semaphore.clone().acquire_owned().await?;
@@ -297,11 +304,9 @@ impl ParallelCoordinator {
 
                 let handle = tokio::spawn(async move {
                     // Execute milestone with coordination
-                    let result = coordinator.execute_milestone_coordinated(
-                        plan_id_uuid,
-                        milestone_clone,
-                        permit,
-                    ).await;
+                    let result = coordinator
+                        .execute_milestone_coordinated(plan_id_uuid, milestone_clone, permit)
+                        .await;
 
                     // Return index and result
                     (milestone_index, result)
@@ -316,7 +321,10 @@ impl ParallelCoordinator {
         let results = match timeout(batch_timeout, join_all(handles)).await {
             Ok(results) => results,
             Err(_) => {
-                return Err(anyhow!("Batch execution timed out after {} seconds", self.config.batch_timeout_seconds));
+                return Err(anyhow!(
+                    "Batch execution timed out after {} seconds",
+                    self.config.batch_timeout_seconds
+                ));
             }
         };
 
@@ -337,15 +345,21 @@ impl ParallelCoordinator {
                     }
 
                     // Update milestone in plan
-                    if let Some(milestone) = plan.contract_plan.milestones.iter_mut()
-                        .find(|m| m.id == batch.milestone_ids[milestone_index]) {
+                    if let Some(milestone) = plan
+                        .contract_plan
+                        .milestones
+                        .iter_mut()
+                        .find(|m| m.id == batch.milestone_ids[milestone_index])
+                    {
                         milestone.state = if milestone_result.success {
                             successful += 1;
                             MilestoneState::Completed
                         } else {
                             failed += 1;
                             MilestoneState::Failed {
-                                reason: milestone_result.error_message.unwrap_or_else(|| "Milestone execution failed".to_string())
+                                reason: milestone_result
+                                    .error_message
+                                    .unwrap_or_else(|| "Milestone execution failed".to_string()),
                             }
                         };
                     }
@@ -413,22 +427,32 @@ impl ParallelCoordinator {
                 objective = %milestone.objective,
                 "Assigned worker to milestone"
             );
-            
+
             // Create worktree for this milestone
-            match worktree_manager.create_worktree(&milestone, worker_id).await {
+            match worktree_manager
+                .create_worktree(&milestone, worker_id)
+                .await
+            {
                 Ok(worktree_info) => {
                     // Store worktree info in execution context
                     let mut executions = self.active_executions.write().await;
-                    executions.insert(plan_id, ExecutionContext {
-                        milestone_id: milestone.id.clone(),
-                        worker_id,
-                        worktree_id: Some(worktree_info.worktree_id),
-                        started_at: Utc::now(),
-                    });
+                    executions.insert(
+                        plan_id,
+                        ExecutionContext {
+                            milestone_id: milestone.id.clone(),
+                            worker_id,
+                            worktree_id: Some(worktree_info.worktree_id),
+                            started_at: Utc::now(),
+                        },
+                    );
                     Some(worktree_info.worktree_id)
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to create worktree for milestone {}: {}", milestone.id, e);
+                    tracing::warn!(
+                        "Failed to create worktree for milestone {}: {}",
+                        milestone.id,
+                        e
+                    );
                     None
                 }
             }
@@ -461,7 +485,10 @@ impl ParallelCoordinator {
 
                 // Council check before execution
                 if self.config.enable_council_monitoring {
-                    if let Some(intervention) = self.check_council_before_execution(plan_id, &milestone).await? {
+                    if let Some(intervention) = self
+                        .check_council_before_execution(plan_id, &milestone)
+                        .await?
+                    {
                         council_interventions += 1;
                         if intervention.emergency_stop {
                             emergency_stop = true;
@@ -471,7 +498,9 @@ impl ParallelCoordinator {
                                 scope_conflicts,
                                 council_interventions,
                                 emergency_stop,
-                                error_message: Some("Emergency stop requested by council".to_string()),
+                                error_message: Some(
+                                    "Emergency stop requested by council".to_string(),
+                                ),
                                 artifacts: None,
                             });
                         }
@@ -484,7 +513,7 @@ impl ParallelCoordinator {
                     "Executing milestone via PlanExecutor"
                 );
                 let result = self.plan_executor.execute_milestone_impl(&milestone).await;
-                
+
                 match &result {
                     Ok(_artifacts) => {
                         tracing::info!(
@@ -506,7 +535,9 @@ impl ParallelCoordinator {
 
                 // Council check after execution
                 if self.config.enable_council_monitoring && result.is_ok() {
-                    let _ = self.report_execution_to_council(plan_id, &milestone, true).await;
+                    let _ = self
+                        .report_execution_to_council(plan_id, &milestone, true)
+                        .await;
                 }
 
                 result
@@ -514,7 +545,7 @@ impl ParallelCoordinator {
             Err(e) => {
                 // Scope acquisition failed
                 scope_conflicts += 1;
-                
+
                 tracing::warn!(
                     milestone_id = %milestone.id,
                     scope_files = ?milestone.scope.files,
@@ -523,7 +554,10 @@ impl ParallelCoordinator {
                 );
 
                 // Try scope conflict resolution
-                if let Some(resolved_result) = self.resolve_scope_conflict(&milestone, e.to_string()).await? {
+                if let Some(resolved_result) = self
+                    .resolve_scope_conflict(&milestone, e.to_string())
+                    .await?
+                {
                     tracing::info!(
                         milestone_id = %milestone.id,
                         "Scope conflict resolved successfully"
@@ -550,7 +584,7 @@ impl ParallelCoordinator {
                         tracing::warn!("Failed to merge worktree {}: {}", wt_id, e);
                     }
                 }
-                
+
                 // Cleanup worktree
                 if let Err(e) = worktree_manager.cleanup_worktree(wt_id).await {
                     tracing::warn!("Failed to cleanup worktree {}: {}", wt_id, e);
@@ -604,7 +638,11 @@ impl ParallelCoordinator {
                         locked_by = %existing_milestone_id,
                         "File is locked by another milestone"
                     );
-                    return Err(anyhow!("File {} is locked by milestone {}", file, existing_milestone_id));
+                    return Err(anyhow!(
+                        "File {} is locked by milestone {}",
+                        file,
+                        existing_milestone_id
+                    ));
                 }
             }
         }
@@ -617,7 +655,7 @@ impl ParallelCoordinator {
         // Use scope guard for additional locking if needed
         // Note: scope_guard expects UUID milestone IDs, but milestone.id is a string (e.g., "A1")
         // Generate a deterministic UUID from milestone.id for scope_guard compatibility
-        let milestone_uuid_for_guard = if let Ok(uuid) = Uuid::parse_str(&milestone.id) {
+        let milestone_uuid_for_guard = if let Ok(_uuid) = Uuid::parse_str(&milestone.id) {
             milestone.id.clone()
         } else {
             // Generate deterministic UUID from milestone ID string
@@ -630,13 +668,14 @@ impl ParallelCoordinator {
             let _uuid = Uuid::from_u128(hash as u128);
             _uuid.to_string()
         };
-        
+
         // Only call scope_guard if scope has files to lock
         if !milestone.scope.files.is_empty() {
-            if let Err(e) = self.scope_guard.acquire_locks(
-                milestone_uuid_for_guard.clone(),
-                &milestone.scope
-            ).await {
+            if let Err(e) = self
+                .scope_guard
+                .acquire_locks(milestone_uuid_for_guard.clone(), &milestone.scope)
+                .await
+            {
                 tracing::warn!(
                     milestone_id = %milestone.id,
                     error = %e,
@@ -670,9 +709,13 @@ impl ParallelCoordinator {
             let _uuid = Uuid::from_u128(hash as u128);
             _uuid.to_string()
         };
-        
+
         if !milestone.scope.files.is_empty() {
-            if let Err(e) = self.scope_guard.release_locks(milestone_uuid_for_guard).await {
+            if let Err(e) = self
+                .scope_guard
+                .release_locks(milestone_uuid_for_guard)
+                .await
+            {
                 tracing::warn!(
                     milestone_id = %milestone.id,
                     error = %e,
@@ -686,14 +729,18 @@ impl ParallelCoordinator {
     }
 
     /// Resolve scope conflicts
-    async fn resolve_scope_conflict(&self, milestone: &Milestone, conflict_reason: String) -> Result<Option<MilestoneExecutionResult>> {
+    async fn resolve_scope_conflict(
+        &self,
+        milestone: &Milestone,
+        conflict_reason: String,
+    ) -> Result<Option<MilestoneExecutionResult>> {
         tracing::info!(
             milestone_id = %milestone.id,
             max_retries = self.config.scope_conflict_max_retries,
             conflict_reason = %conflict_reason,
             "Attempting to resolve scope conflict"
         );
-        
+
         // Try to resolve scope conflicts up to max retries
         for attempt in 1..=self.config.scope_conflict_max_retries {
             tracing::debug!(
@@ -703,11 +750,12 @@ impl ParallelCoordinator {
                 "Retrying scope acquisition (attempt {}/{})",
                 attempt, self.config.scope_conflict_max_retries
             );
-            
+
             // Wait before retry
             tokio::time::sleep(Duration::from_millis(
-                self.config.scope_conflict_retry_delay_ms * attempt as u64
-            )).await;
+                self.config.scope_conflict_retry_delay_ms * attempt as u64,
+            ))
+            .await;
 
             // Try to acquire scope again
             if self.acquire_milestone_scope(milestone).await.is_ok() {
@@ -723,7 +771,7 @@ impl ParallelCoordinator {
                 // Release scope
                 let _ = self.release_milestone_scope(milestone).await;
 
-                return                 match execution_result {
+                return match execution_result {
                     Ok(artifacts) => Ok(Some(MilestoneExecutionResult {
                         success: true,
                         execution_time_ms: 0, // Time already counted in original attempt
@@ -777,9 +825,16 @@ impl ParallelCoordinator {
     }
 
     /// Check council before milestone execution
-    async fn check_council_before_execution(&self, plan_id: Uuid, _milestone: &Milestone) -> Result<Option<CouncilIntervention>> {
+    async fn check_council_before_execution(
+        &self,
+        plan_id: Uuid,
+        _milestone: &Milestone,
+    ) -> Result<Option<CouncilIntervention>> {
         // Check for constitutional violations
-        let violations = self.council_monitor.check_violations(&plan_id.to_string()).await?;
+        let violations = self
+            .council_monitor
+            .check_violations(&plan_id.to_string())
+            .await?;
 
         if !violations.is_empty() {
             // There are violations, check if emergency stop is needed
@@ -803,9 +858,16 @@ impl ParallelCoordinator {
     }
 
     /// Report execution to council
-    async fn report_execution_to_council(&self, plan_id: Uuid, milestone: &Milestone, success: bool) -> Result<()> {
+    async fn report_execution_to_council(
+        &self,
+        plan_id: Uuid,
+        milestone: &Milestone,
+        success: bool,
+    ) -> Result<()> {
         let status = if success { "completed" } else { "failed" };
-        self.council_monitor.report_progress(&plan_id.to_string(), &milestone.id, status).await?;
+        self.council_monitor
+            .report_progress(&plan_id.to_string(), &milestone.id, status)
+            .await?;
         Ok(())
     }
 
@@ -887,14 +949,21 @@ mod tests {
 
     #[allow(dead_code)]
     impl MockPlanExecutor {
-        async fn execute_milestone_impl(&self, _milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<()> {
+        async fn execute_milestone_impl(
+            &self,
+            _milestone: &agent_agency_contracts::planning_io::Milestone,
+        ) -> Result<()> {
             Ok(())
         }
     }
 
     #[allow(dead_code)]
     impl MockScopeGuard {
-        async fn acquire_locks(&self, _milestone_id: String, _scope: &agent_agency_contracts::planning_io::MilestoneScope) -> Result<()> {
+        async fn acquire_locks(
+            &self,
+            _milestone_id: String,
+            _scope: &agent_agency_contracts::planning_io::MilestoneScope,
+        ) -> Result<()> {
             Ok(())
         }
 
@@ -909,7 +978,12 @@ mod tests {
             Ok(true)
         }
 
-        async fn report_progress(&self, _plan_id: &str, _milestone_id: &str, _status: &str) -> Result<()> {
+        async fn report_progress(
+            &self,
+            _plan_id: &str,
+            _milestone_id: &str,
+            _status: &str,
+        ) -> Result<()> {
             Ok(())
         }
 
@@ -920,7 +994,10 @@ mod tests {
 
     #[allow(dead_code)]
     impl MockWorkerAssignment {
-        async fn assign_worker(&self, _milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<Uuid> {
+        async fn assign_worker(
+            &self,
+            _milestone: &agent_agency_contracts::planning_io::Milestone,
+        ) -> Result<Uuid> {
             Ok(Uuid::new_v4())
         }
     }
@@ -937,16 +1014,32 @@ mod tests {
 
     // Mock council coordinator for testing
     struct MockCouncilCoordinator;
-    
+
     #[async_trait::async_trait]
     impl agent_agency_contracts::CouncilCoordinator for MockCouncilCoordinator {
-        async fn start_session(&self, _task: &agent_agency_contracts::types::planning::TaskDescriptor) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::ports::council_coordinator::SessionId> {
+        async fn start_session(
+            &self,
+            _task: &agent_agency_contracts::types::planning::TaskDescriptor,
+        ) -> agent_agency_contracts::errors::CouncilResult<
+            agent_agency_contracts::ports::council_coordinator::SessionId,
+        > {
             Ok(agent_agency_contracts::ports::council_coordinator::SessionId(uuid::Uuid::new_v4()))
         }
-        async fn review_task(&self, _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId, _task: &agent_agency_contracts::types::planning::TaskDescriptor) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::types::council::CouncilVerdict> {
+        async fn review_task(
+            &self,
+            _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId,
+            _task: &agent_agency_contracts::types::planning::TaskDescriptor,
+        ) -> agent_agency_contracts::errors::CouncilResult<
+            agent_agency_contracts::types::council::CouncilVerdict,
+        > {
             Ok(agent_agency_contracts::types::council::CouncilVerdict::Approved)
         }
-        async fn get_session_status(&self, _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId) -> agent_agency_contracts::errors::CouncilResult<agent_agency_contracts::ports::council_coordinator::SessionStatus> {
+        async fn get_session_status(
+            &self,
+            _session_id: &agent_agency_contracts::ports::council_coordinator::SessionId,
+        ) -> agent_agency_contracts::errors::CouncilResult<
+            agent_agency_contracts::ports::council_coordinator::SessionStatus,
+        > {
             Ok(agent_agency_contracts::ports::council_coordinator::SessionStatus {
                 session_id: *_session_id,
                 status: agent_agency_contracts::ports::council_coordinator::SessionStatusType::Completed,
@@ -960,13 +1053,13 @@ mod tests {
     #[test]
     #[ignore] // Requires complex PlanExecutor setup - needs proper test fixtures
     fn test_parallel_efficiency_calculation() {
-        use crate::planning::{CouncilMonitor, WorkerAssignmentStrategy, ScopeGuard};
-        use crate::planning::plan_executor::{PlanExecutor, ExecutionConfig};
-        use crate::planning::plan_types::ExecutionPlan;
-        use crate::planning::evidence::EvidenceCollector;
-        use crate::planning::plan_executor::{WorkerPool, AuditTrail, TodoInterface};
         use crate::audit_trail::AuditTrailManager;
-        
+        use crate::planning::evidence::EvidenceCollector;
+        use crate::planning::plan_executor::{AuditTrail, TodoInterface, WorkerPool};
+        use crate::planning::plan_executor::{ExecutionConfig, PlanExecutor};
+        use crate::planning::plan_types::ExecutionPlan;
+        use crate::planning::{CouncilMonitor, ScopeGuard, WorkerAssignmentStrategy};
+
         // TODO: Implement comprehensive PlanExecutor test with proper fixtures
         //       Currently skips test due to missing dependencies; should implement comprehensive test that creates proper test fixtures for PlanExecutor with all required dependencies for complete test coverage.
         //

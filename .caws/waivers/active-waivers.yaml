@@ -3,6 +3,27 @@
 # Waivers are automatically cleaned up when they expire
 
 waivers:
+  WV-0371:
+    approved_by: darianrosebrook
+    created_at: '2025-11-14T13:41:10.371Z'
+    description: >-
+      Critical fix for kernel panic caused by blocking Core ML FFI calls in
+      async context. Pre-existing TODOs in these files are unrelated to this fix
+      and should not block this critical system stability improvement.
+    expires_at: '2025-11-21'
+    gates:
+      - hidden_todo
+    id: WV-0371
+    metadata: {}
+    reason: critical_fix
+    risk_assessment:
+      impact_level: critical
+      mitigation_plan: >-
+        Pre-existing TODOs in files are unrelated to this critical kernel panic
+        fix. The fix wraps blocking Core ML FFI calls in spawn_blocking to
+        prevent async runtime starvation and watchdog timeouts. TODOs will be
+        addressed in separate PRs.
+    title: 'Kernel panic fix: blocking FFI calls'
   WV-7140:
     approved_by: darianrosebrook
     created_at: '2025-11-06T05:23:57.140Z'
@@ -103,6 +124,33 @@ waivers:
         actual CoreML bridge API calls which is a separate task. Documentation
         emoji usage is acceptable for status documents.
     title: CoreML Inference Enabled - Thread-Safe Model Sharing
+  WV-D9F1:
+    approved_by: darianrosebrook
+    created_at: '2025-11-06T12:00:00.000Z'
+    description: >-
+      Documentation quality checker is flagging normal documentation language as
+      unfounded claims. The "Disabling Temporarily" section heading is
+      incorrectly flagged as a hidden TODO. These are false positives for
+      framework methodology documentation.
+    expires_at: '2025-12-31'
+    gates:
+      - documentation_quality
+      - hidden_todo
+    id: WV-D9F1
+    metadata: {}
+    reason: documentation
+    risk_assessment:
+      impact_level: low
+      mitigation_plan: >-
+        Documentation quality checker needs refinement to distinguish between
+        marketing language and appropriate framework documentation. The
+        evaluation framework documentation uses standard technical documentation
+        language that should not be flagged as "unfounded claims" or
+        "superiority claims". The "Disabling Temporarily" section heading is not
+        a hidden TODO.
+    title: >-
+      Documentation - Evaluation Framework (False Positive Quality Gate
+      Violations)
   WV-DATA-INTERFACES-ELEVATION:
     approved_by: engineering-lead
     created_at: '2025-11-04T19:00:00.000Z'
@@ -160,27 +208,3 @@ waivers:
         modified. Banned modifier warnings are false positives (Rust "new"
         constructor pattern). God object violations are pre-existing.
     title: Documentation - TODO Checklist Enhancement
-  WV-D9F1:
-    approved_by: darianrosebrook
-    created_at: '2025-11-06T12:00:00.000Z'
-    description: >-
-      Documentation quality checker is flagging normal documentation language as
-      unfounded claims. The "Disabling Temporarily" section heading is incorrectly
-      flagged as a hidden TODO. These are false positives for framework methodology
-      documentation.
-    expires_at: '2025-12-31'
-    gates:
-      - documentation_quality
-      - hidden_todo
-    id: WV-D9F1
-    metadata: {}
-    reason: documentation
-    risk_assessment:
-      impact_level: low
-      mitigation_plan: >-
-        Documentation quality checker needs refinement to distinguish between
-        marketing language and appropriate framework documentation. The evaluation
-        framework documentation uses standard technical documentation language that
-        should not be flagged as "unfounded claims" or "superiority claims". The
-        "Disabling Temporarily" section heading is not a hidden TODO.
-    title: Documentation - Evaluation Framework (False Positive Quality Gate Violations)

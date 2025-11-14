@@ -18,7 +18,10 @@
 use std::time::Instant;
 use tracing::{info, warn};
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 
 /// Run the performance & scalability E2E test
 pub async fn run_performance_test(
@@ -45,7 +48,10 @@ pub async fn run_performance_test(
             memory_usage_mb.extend(result.memory_usage_mb);
             if !result.passed {
                 passed = false;
-                errors.push(format!("Resource utilization failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Resource utilization failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -62,7 +68,10 @@ pub async fn run_performance_test(
             throughput_operations_per_sec.extend(result.throughput);
             if !result.passed {
                 passed = false;
-                errors.push(format!("Concurrent load failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Concurrent load failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -77,7 +86,10 @@ pub async fn run_performance_test(
             response_times_ms.extend(result.response_times_ms);
             if !result.passed {
                 passed = false;
-                errors.push(format!("SLA compliance failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "SLA compliance failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -92,7 +104,10 @@ pub async fn run_performance_test(
             memory_usage_mb.extend(result.memory_usage_mb);
             if !result.passed {
                 passed = false;
-                errors.push(format!("Memory leak prevention failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Memory leak prevention failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -123,25 +138,28 @@ pub async fn run_performance_test(
 }
 
 /// Test resource utilization monitoring using real system metrics
-async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_resource_utilization(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing resource utilization monitoring");
 
     let mut resource_utilization = Vec::new();
     let mut memory_usage_mb = Vec::new();
 
     // Use exported MetricsCollector from system-observability
+    use sysinfo::{Pid, System};
     use system_observability::MetricsCollector;
-    use sysinfo::{System, Pid};
-    
+
     let collector = MetricsCollector::new();
     let mut system = System::new_all();
     let current_pid = Pid::from(std::process::id() as usize);
-    
+
     // Collect real system metrics during operation
     for _ in 0..3 {
         // Simulate some work
         simulate_cpu_work(10).await?;
-        
+
         // Get real system metrics using MetricsCollector
         match collector.collect_system_metrics().await {
             Ok(metrics) => {
@@ -158,7 +176,10 @@ async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServ
                 }
             }
             Err(e) => {
-                warn!("Failed to collect metrics via MetricsCollector: {}. Falling back to sysinfo", e);
+                warn!(
+                    "Failed to collect metrics via MetricsCollector: {}. Falling back to sysinfo",
+                    e
+                );
                 // Fallback to direct sysinfo usage
                 system.refresh_all();
                 let cpu_usage = system.global_cpu_usage() as f64;
@@ -176,7 +197,7 @@ async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServ
             }
         }
     }
-    
+
     // Verify CPU usage is within acceptable bounds (< 80%)
     for usage in &resource_utilization {
         if *usage > 80.0 {
@@ -198,7 +219,10 @@ async fn test_resource_utilization(_env: &TestEnvironment, _services: &LocalServ
         if *usage > 2_000.0 {
             return Ok(PerformanceSubResult {
                 passed: false,
-                error: Some(format!("Process memory usage {} MB exceeds 2 GB threshold", usage)),
+                error: Some(format!(
+                    "Process memory usage {} MB exceeds 2 GB threshold",
+                    usage
+                )),
                 concurrent_operations: 0,
                 response_times_ms: vec![],
                 resource_utilization,
@@ -245,7 +269,9 @@ impl ResourceMonitor {
         Ok(usage)
     }
 
-    async fn get_memory_usage_mb(&mut self) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_memory_usage_mb(
+        &mut self,
+    ) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
         // Simulate memory usage measurement
         let usage = 128.0 + (self.memory_readings.len() as f64 * 7.0);
         self.memory_readings.push(usage);
@@ -254,7 +280,9 @@ impl ResourceMonitor {
 }
 
 /// Simulate CPU-intensive work
-async fn simulate_cpu_work(duration_ms: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn simulate_cpu_work(
+    duration_ms: u64,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let start = std::time::Instant::now();
     // Simulate CPU work by busy-waiting
     while start.elapsed().as_millis() < duration_ms as u128 {
@@ -265,7 +293,10 @@ async fn simulate_cpu_work(duration_ms: u64) -> Result<(), Box<dyn std::error::E
 }
 
 /// Test concurrent load handling
-async fn test_concurrent_load(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_concurrent_load(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing concurrent load handling");
 
     let concurrent_operations = 5;
@@ -319,7 +350,11 @@ async fn test_concurrent_load(_env: &TestEnvironment, _services: &LocalServiceMa
     if response_times_ms.len() != concurrent_operations {
         return Ok(PerformanceSubResult {
             passed: false,
-            error: Some(format!("Expected {} operations, got {}", concurrent_operations, response_times_ms.len())),
+            error: Some(format!(
+                "Expected {} operations, got {}",
+                concurrent_operations,
+                response_times_ms.len()
+            )),
             concurrent_operations,
             response_times_ms,
             resource_utilization: vec![],
@@ -361,7 +396,10 @@ async fn simulate_operation(id: usize) {
 }
 
 /// Test SLA compliance
-async fn test_sla_compliance(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_sla_compliance(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing SLA compliance");
 
     let sla_p95_ms = 250; // P95 response time SLA: 250ms
@@ -389,7 +427,10 @@ async fn test_sla_compliance(_env: &TestEnvironment, _services: &LocalServiceMan
     if p95_time > sla_p95_ms {
         return Ok(PerformanceSubResult {
             passed: false,
-            error: Some(format!("P95 response time {} ms exceeds SLA of {} ms", p95_time, sla_p95_ms)),
+            error: Some(format!(
+                "P95 response time {} ms exceeds SLA of {} ms",
+                p95_time, sla_p95_ms
+            )),
             concurrent_operations: 0,
             response_times_ms,
             resource_utilization: vec![],
@@ -418,7 +459,10 @@ async fn simulate_sla_operation(id: usize) -> Result<(), Box<dyn std::error::Err
 }
 
 /// Test memory leak prevention
-async fn test_memory_leak_prevention(_env: &TestEnvironment, _services: &LocalServiceManager) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
+async fn test_memory_leak_prevention(
+    _env: &TestEnvironment,
+    _services: &LocalServiceManager,
+) -> Result<PerformanceSubResult, Box<dyn std::error::Error + Send + Sync>> {
     info!("Testing memory leak prevention");
 
     let mut memory_usage_mb = Vec::new();
@@ -428,11 +472,11 @@ async fn test_memory_leak_prevention(_env: &TestEnvironment, _services: &LocalSe
     for i in 0..5 {
         // Simulate operation that might leak memory
         simulate_operation_with_memory(i).await?;
-        
+
         // Measure memory after each iteration
         let current_memory = memory_tracker.measure().await?;
         memory_usage_mb.push(current_memory);
-        
+
         // Small delay between iterations
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
@@ -440,7 +484,7 @@ async fn test_memory_leak_prevention(_env: &TestEnvironment, _services: &LocalSe
     // Check for continuous memory growth (indicator of leak)
     let mut continuous_growth = true;
     for i in 1..memory_usage_mb.len() {
-        if memory_usage_mb[i] < memory_usage_mb[i-1] {
+        if memory_usage_mb[i] < memory_usage_mb[i - 1] {
             continuous_growth = false;
             break;
         }
@@ -448,12 +492,16 @@ async fn test_memory_leak_prevention(_env: &TestEnvironment, _services: &LocalSe
 
     // If memory continuously grows, it might indicate a leak
     if continuous_growth {
-        let growth_rate = (memory_usage_mb.last().unwrap() - memory_usage_mb.first().unwrap()) / memory_usage_mb.len() as f64;
+        let growth_rate = (memory_usage_mb.last().unwrap() - memory_usage_mb.first().unwrap())
+            / memory_usage_mb.len() as f64;
         // Only fail if growth rate is significant (> 5 MB per iteration)
         if growth_rate > 5.0 {
             return Ok(PerformanceSubResult {
                 passed: false,
-                error: Some(format!("Memory leak detected: growth rate {} MB/iteration", growth_rate)),
+                error: Some(format!(
+                    "Memory leak detected: growth rate {} MB/iteration",
+                    growth_rate
+                )),
                 concurrent_operations: 0,
                 response_times_ms: vec![],
                 resource_utilization: vec![],
@@ -497,7 +545,9 @@ impl MemoryTracker {
 }
 
 /// Simulate operation that might leak memory
-async fn simulate_operation_with_memory(_id: usize) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn simulate_operation_with_memory(
+    _id: usize,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Simulate operation (in real implementation, would test actual memory allocation patterns)
     tokio::time::sleep(std::time::Duration::from_millis(5)).await;
     Ok(())

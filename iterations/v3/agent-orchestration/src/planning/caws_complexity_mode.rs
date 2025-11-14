@@ -6,10 +6,10 @@
 //!
 //! @author @darianrosebrook
 
-use anyhow::{anyhow, Result, Context};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 use tracing::info;
 
 /// CAWS complexity mode
@@ -18,10 +18,10 @@ use tracing::info;
 pub enum CawsComplexityMode {
     /// Simple mode: 70% coverage, 30% mutation (small projects, quick prototyping)
     Simple,
-    
+
     /// Standard mode: 80% coverage, 50% mutation (balanced teams, standard projects)
     Standard,
-    
+
     /// Enterprise mode: 90% coverage, 70% mutation (large teams, regulated projects)
     Enterprise,
 }
@@ -30,7 +30,7 @@ impl CawsComplexityMode {
     /// Detect mode from .caws/config.yaml or .caws/mode file
     pub fn detect(project_root: &Path) -> Result<Self> {
         let caws_dir = project_root.join(".caws");
-        
+
         // Try .caws/config.yaml first
         let config_path = caws_dir.join("config.yaml");
         if config_path.exists() {
@@ -80,24 +80,26 @@ impl CawsComplexityMode {
 
     /// Read mode from config.yaml
     fn from_config_file(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)
-            .context("Failed to read config.yaml")?;
-        
-        let config: CawsConfig = serde_yaml::from_str(&content)
-            .context("Failed to parse config.yaml")?;
-        
-        config.mode.ok_or_else(|| anyhow!("No mode field in config.yaml"))
+        let content = fs::read_to_string(path).context("Failed to read config.yaml")?;
+
+        let config: CawsConfig =
+            serde_yaml::from_str(&content).context("Failed to parse config.yaml")?;
+
+        config
+            .mode
+            .ok_or_else(|| anyhow!("No mode field in config.yaml"))
     }
 
     /// Read mode from config.json
     fn from_config_json(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)
-            .context("Failed to read config.json")?;
-        
-        let config: CawsConfigJson = serde_json::from_str(&content)
-            .context("Failed to parse config.json")?;
-        
-        config.mode.ok_or_else(|| anyhow!("No mode field in config.json"))
+        let content = fs::read_to_string(path).context("Failed to read config.json")?;
+
+        let config: CawsConfigJson =
+            serde_json::from_str(&content).context("Failed to parse config.json")?;
+
+        config
+            .mode
+            .ok_or_else(|| anyhow!("No mode field in config.json"))
     }
 
     /// Read mode from simple text file
@@ -106,7 +108,7 @@ impl CawsComplexityMode {
             .context("Failed to read mode file")?
             .trim()
             .to_lowercase();
-        
+
         match content.as_str() {
             "simple" => Ok(Self::Simple),
             "standard" => Ok(Self::Standard),
@@ -171,16 +173,16 @@ impl Default for CawsComplexityMode {
 pub struct QualityRequirements {
     /// Minimum line coverage (0.0 to 1.0)
     pub line_coverage: f64,
-    
+
     /// Minimum branch coverage (0.0 to 1.0)
     pub branch_coverage: f64,
-    
+
     /// Minimum mutation score (0.0 to 1.0)
     pub mutation_score: f64,
-    
+
     /// Whether contracts are required
     pub contracts_required: bool,
-    
+
     /// Whether manual review is required
     pub manual_review_required: bool,
 }
@@ -222,10 +224,7 @@ mod tests {
         fs::create_dir_all(&caws_dir).unwrap();
 
         // Create config.yaml
-        fs::write(
-            caws_dir.join("config.yaml"),
-            "mode: simple\n"
-        ).unwrap();
+        fs::write(caws_dir.join("config.yaml"), "mode: simple\n").unwrap();
 
         let mode = CawsComplexityMode::detect(temp_dir.path()).unwrap();
         assert_eq!(mode, CawsComplexityMode::Simple);
@@ -234,7 +233,7 @@ mod tests {
     #[test]
     fn test_default_to_standard() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // No config files
         let mode = CawsComplexityMode::detect(temp_dir.path()).unwrap();
         assert_eq!(mode, CawsComplexityMode::Standard);
@@ -244,7 +243,7 @@ mod tests {
     fn test_quality_requirements_simple() {
         let mode = CawsComplexityMode::Simple;
         let reqs = mode.quality_requirements(2);
-        
+
         assert_eq!(reqs.line_coverage, 0.70 * 0.95);
         assert_eq!(reqs.mutation_score, 0.30 * 0.95);
         assert!(!reqs.contracts_required);
@@ -254,7 +253,7 @@ mod tests {
     fn test_quality_requirements_standard() {
         let mode = CawsComplexityMode::Standard;
         let reqs = mode.quality_requirements(2);
-        
+
         assert_eq!(reqs.line_coverage, 0.80 * 0.95);
         assert_eq!(reqs.mutation_score, 0.50 * 0.95);
         assert!(reqs.contracts_required);
@@ -264,11 +263,10 @@ mod tests {
     fn test_quality_requirements_enterprise() {
         let mode = CawsComplexityMode::Enterprise;
         let reqs = mode.quality_requirements(1);
-        
+
         assert_eq!(reqs.line_coverage, 0.90);
         assert_eq!(reqs.mutation_score, 0.70);
         assert!(reqs.contracts_required);
         assert!(reqs.manual_review_required);
     }
 }
-

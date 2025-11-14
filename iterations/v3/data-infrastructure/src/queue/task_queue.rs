@@ -3,14 +3,14 @@
 //! Provides a robust task queue service for processing tasks asynchronously
 //! with priority support, persistence, and monitoring capabilities.
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::collections::BinaryHeap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, Notify};
-use chrono::{DateTime, Utc};
+use tokio::sync::{Notify, RwLock};
+use tracing::{debug, error, info};
 use uuid::Uuid;
-use serde::{Deserialize, Serialize};
-use tracing::{info, error, debug};
-use sqlx::Row;
 
 use crate::DatabaseClient;
 
@@ -40,7 +40,9 @@ struct PrioritizedTask {
 impl Ord for PrioritizedTask {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // Higher priority first, then earlier ID for stability
-        other.priority.cmp(&self.priority)
+        other
+            .priority
+            .cmp(&self.priority)
             .then_with(|| self.id.cmp(&other.id))
     }
 }
@@ -141,8 +143,10 @@ impl TaskQueueService {
 
     /// Enqueue a new task
     pub async fn enqueue_task(&self, task: QueuedTask) -> Result<(), TaskQueueError> {
-        debug!("Enqueuing task: {} (type: {}, priority: {})",
-               task.id, task.task_type, task.priority);
+        debug!(
+            "Enqueuing task: {} (type: {}, priority: {})",
+            task.id, task.task_type, task.priority
+        );
 
         // Insert into database for persistence
         self.persist_task(&task).await?;
@@ -166,8 +170,11 @@ impl TaskQueueService {
         // Notify waiting workers
         self.notify.notify_one();
 
-        info!("Task enqueued successfully: {} (queue depth: {})",
-              task.id, self.metrics.read().await.queue_depth);
+        info!(
+            "Task enqueued successfully: {} (queue depth: {})",
+            task.id,
+            self.metrics.read().await.queue_depth
+        );
 
         Ok(())
     }
@@ -182,10 +189,15 @@ impl TaskQueueService {
 
         if let Some(prioritized_task) = prioritized_task {
             // Update task status to processing
-            self.update_task_status(prioritized_task.task.id, TaskStatus::Processing).await?;
+            self.update_task_status(prioritized_task.task.id, TaskStatus::Processing)
+                .await?;
 
             // Generate acknowledgement token
-            let ack_token = format!("ack_{}_{}", prioritized_task.task.id, Utc::now().timestamp());
+            let ack_token = format!(
+                "ack_{}_{}",
+                prioritized_task.task.id,
+                Utc::now().timestamp()
+            );
 
             // Update metrics
             {
@@ -193,8 +205,11 @@ impl TaskQueueService {
                 metrics.queue_depth = self.priority_queue.read().await.len();
             }
 
-            debug!("Task dequeued: {} (remaining queue depth: {})",
-                   prioritized_task.task.id, self.metrics.read().await.queue_depth);
+            debug!(
+                "Task dequeued: {} (remaining queue depth: {})",
+                prioritized_task.task.id,
+                self.metrics.read().await.queue_depth
+            );
 
             Ok(Some(DequeueResult {
                 task: prioritized_task.task,
@@ -206,10 +221,19 @@ impl TaskQueueService {
     }
 
     /// Acknowledge task completion
-    pub async fn acknowledge_task(&self, task_id: Uuid, _ack_token: &str, success: bool) -> Result<(), TaskQueueError> {
+    pub async fn acknowledge_task(
+        &self,
+        task_id: Uuid,
+        _ack_token: &str,
+        success: bool,
+    ) -> Result<(), TaskQueueError> {
         debug!("Acknowledging task: {} (success: {})", task_id, success);
 
-        let new_status = if success { TaskStatus::Completed } else { TaskStatus::Failed };
+        let new_status = if success {
+            TaskStatus::Completed
+        } else {
+            TaskStatus::Failed
+        };
 
         // Update task status in database
         self.update_task_status(task_id, new_status.clone()).await?;
@@ -225,8 +249,10 @@ impl TaskQueueService {
                 if let Some(task) = self.get_task(task_id).await? {
                     if task.retry_count < task.max_retries {
                         let retry_count = task.retry_count + 1;
-                        debug!("Task {} re-queued for retry (attempt {}/{})",
-                               task_id, retry_count, task.max_retries);
+                        debug!(
+                            "Task {} re-queued for retry (attempt {}/{})",
+                            task_id, retry_count, task.max_retries
+                        );
 
                         let mut retry_task = task;
                         retry_task.retry_count = retry_count;
@@ -274,21 +300,49 @@ impl TaskQueueService {
         match row_result {
             Ok(Some(row)) => {
                 let task = QueuedTask {
-                    id: row.try_get("id").map_err(|e| TaskQueueError::Generic(format!("Failed to get id: {}", e)))?,
-                    task_type: row.try_get("task_type").map_err(|e| TaskQueueError::Generic(format!("Failed to get task_type: {}", e)))?,
-                    priority: row.try_get("priority").map_err(|e| TaskQueueError::Generic(format!("Failed to get priority: {}", e)))?,
-                    payload: row.try_get("payload").map_err(|e| TaskQueueError::Generic(format!("Failed to get payload: {}", e)))?,
-                    created_at: row.try_get("created_at").map_err(|e| TaskQueueError::Generic(format!("Failed to get created_at: {}", e)))?,
-                    updated_at: row.try_get("updated_at").map_err(|e| TaskQueueError::Generic(format!("Failed to get updated_at: {}", e)))?,
+                    id: row
+                        .try_get("id")
+                        .map_err(|e| TaskQueueError::Generic(format!("Failed to get id: {}", e)))?,
+                    task_type: row.try_get("task_type").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get task_type: {}", e))
+                    })?,
+                    priority: row.try_get("priority").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get priority: {}", e))
+                    })?,
+                    payload: row.try_get("payload").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get payload: {}", e))
+                    })?,
+                    created_at: row.try_get("created_at").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get created_at: {}", e))
+                    })?,
+                    updated_at: row.try_get("updated_at").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get updated_at: {}", e))
+                    })?,
                     status: {
-                        let status_val: serde_json::Value = row.try_get("status").map_err(|e| TaskQueueError::Generic(format!("Failed to get status: {}", e)))?;
-                        serde_json::from_value(status_val).map_err(|e| TaskQueueError::Generic(format!("Failed to parse status: {}", e)))?
+                        let status_val: serde_json::Value = row.try_get("status").map_err(|e| {
+                            TaskQueueError::Generic(format!("Failed to get status: {}", e))
+                        })?;
+                        serde_json::from_value(status_val).map_err(|e| {
+                            TaskQueueError::Generic(format!("Failed to parse status: {}", e))
+                        })?
                     },
-                    retry_count: row.try_get::<i32, _>("retry_count").map_err(|e| TaskQueueError::Generic(format!("Failed to get retry_count: {}", e)))? as u32,
-                    max_retries: row.try_get::<i32, _>("max_retries").map_err(|e| TaskQueueError::Generic(format!("Failed to get max_retries: {}", e)))? as u32,
-                    process_at: row.try_get("process_at").map_err(|e| TaskQueueError::Generic(format!("Failed to get process_at: {}", e)))?,
+                    retry_count: row.try_get::<i32, _>("retry_count").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get retry_count: {}", e))
+                    })? as u32,
+                    max_retries: row.try_get::<i32, _>("max_retries").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get max_retries: {}", e))
+                    })? as u32,
+                    process_at: row.try_get("process_at").map_err(|e| {
+                        TaskQueueError::Generic(format!("Failed to get process_at: {}", e))
+                    })?,
                     timeout_seconds: {
-                        let timeout_opt: Option<i32> = row.try_get("timeout_seconds").map_err(|e| TaskQueueError::Generic(format!("Failed to get timeout_seconds: {}", e)))?;
+                        let timeout_opt: Option<i32> =
+                            row.try_get("timeout_seconds").map_err(|e| {
+                                TaskQueueError::Generic(format!(
+                                    "Failed to get timeout_seconds: {}",
+                                    e
+                                ))
+                            })?;
                         timeout_opt.map(|t| t as u64)
                     },
                 };
@@ -316,26 +370,35 @@ impl TaskQueueService {
 
         let status_value = serde_json::to_value(&task.status)?;
 
-        self.db_client.execute(query, &[
-            &task.id,
-            &task.task_type,
-            &task.priority,
-            &task.payload,
-            &task.created_at,
-            &task.updated_at,
-            &status_value,
-            &(task.retry_count as i32),
-            &(task.max_retries as i32),
-            &task.process_at,
-            &(task.timeout_seconds.map(|t| t as i32)),
-        ]).await
-        .map_err(TaskQueueError::from_anyhow)?;
+        self.db_client
+            .execute(
+                query,
+                &[
+                    &task.id,
+                    &task.task_type,
+                    &task.priority,
+                    &task.payload,
+                    &task.created_at,
+                    &task.updated_at,
+                    &status_value,
+                    &(task.retry_count as i32),
+                    &(task.max_retries as i32),
+                    &task.process_at,
+                    &(task.timeout_seconds.map(|t| t as i32)),
+                ],
+            )
+            .await
+            .map_err(TaskQueueError::from_anyhow)?;
 
         Ok(())
     }
 
     /// Update task status in database
-    async fn update_task_status(&self, task_id: Uuid, status: TaskStatus) -> Result<(), TaskQueueError> {
+    async fn update_task_status(
+        &self,
+        task_id: Uuid,
+        status: TaskStatus,
+    ) -> Result<(), TaskQueueError> {
         let query = r#"
             UPDATE tasks
             SET status = $1, updated_at = NOW()
@@ -343,8 +406,10 @@ impl TaskQueueService {
         "#;
 
         let status_value = serde_json::to_value(&status)?;
-        self.db_client.execute(query, &[&status_value, &task_id]).await
-        .map_err(TaskQueueError::from_anyhow)?;
+        self.db_client
+            .execute(query, &[&status_value, &task_id])
+            .await
+            .map_err(TaskQueueError::from_anyhow)?;
 
         Ok(())
     }

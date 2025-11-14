@@ -5,12 +5,12 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::HashMap;
-use petgraph::{Graph, Direction, algo};
-use petgraph::graph::NodeIndex;
+use agent_agency_contracts::planning_io::{DependencyEdge, DependencyNode};
 use anyhow::Result;
+use petgraph::graph::NodeIndex;
+use petgraph::{algo, Direction, Graph};
+use std::collections::HashMap;
 use tracing::warn;
-use agent_agency_contracts::planning_io::{DependencyNode, DependencyEdge};
 
 /// Calculate critical path through dependency graph using longest path algorithm (CPM - Critical Path Method)
 ///
@@ -36,32 +36,38 @@ pub fn calculate_critical_path(
     // Build graph from nodes and edges
     let mut graph = Graph::<String, f64>::new();
     let mut node_indices: HashMap<String, NodeIndex> = HashMap::new();
-    
+
     // Add nodes to graph
     for (node_id, _node) in nodes {
         let idx = graph.add_node(node_id.clone());
         node_indices.insert(node_id.clone(), idx);
     }
-    
+
     // Add edges with weights (estimated_time_ms as weight)
     for edge in edges {
-        if let (Some(&from_idx), Some(&to_idx)) = (
-            node_indices.get(&edge.from),
-            node_indices.get(&edge.to),
-        ) {
+        if let (Some(&from_idx), Some(&to_idx)) =
+            (node_indices.get(&edge.from), node_indices.get(&edge.to))
+        {
             // Use estimated_time_ms from target node as edge weight
-            let weight = nodes.get(&edge.to)
+            let weight = nodes
+                .get(&edge.to)
                 .map(|n| n.estimated_time_ms as f64)
                 .unwrap_or(edge.weight);
             graph.add_edge(from_idx, to_idx, weight);
         }
     }
-    
+
     // Find source nodes (nodes with no incoming edges)
-    let source_nodes: Vec<NodeIndex> = graph.node_indices()
-        .filter(|&idx| graph.edges_directed(idx, Direction::Incoming).next().is_none())
+    let source_nodes: Vec<NodeIndex> = graph
+        .node_indices()
+        .filter(|&idx| {
+            graph
+                .edges_directed(idx, Direction::Incoming)
+                .next()
+                .is_none()
+        })
         .collect();
-    
+
     if source_nodes.is_empty() {
         // No source nodes - return empty path or all nodes if no dependencies
         if nodes.is_empty() {
@@ -71,15 +77,16 @@ pub fn calculate_critical_path(
         // Return first node as fallback
         return Ok(nodes.keys().take(1).cloned().collect());
     }
-    
+
     // Calculate longest path from each source node
     let mut max_path_length = 0.0;
     let mut critical_path = Vec::new();
-    
+
     for &source_idx in &source_nodes {
         // Use DFS to find longest path from this source
         let path = find_longest_path(&graph, source_idx, &node_indices);
-        let path_length: f64 = path.iter()
+        let path_length: f64 = path
+            .iter()
             .enumerate()
             .skip(1)
             .map(|(i, node_id)| {
@@ -93,13 +100,13 @@ pub fn calculate_critical_path(
                 0.0
             })
             .sum();
-        
+
         if path_length > max_path_length {
             max_path_length = path_length;
             critical_path = path;
         }
     }
-    
+
     Ok(critical_path)
 }
 
@@ -117,47 +124,51 @@ fn find_longest_path(
             return vec![graph[source].clone()];
         }
     };
-    
+
     // Find source position in topological order
     let source_pos = topo.iter().position(|&idx| idx == source);
     if source_pos.is_none() {
         return vec![graph[source].clone()];
     }
-    
+
     // Calculate longest distances from source using dynamic programming
     let mut distances: HashMap<NodeIndex, (f64, Option<NodeIndex>)> = HashMap::new();
     distances.insert(source, (0.0, None));
-    
+
     // Process nodes in topological order starting from source
     for &node_idx in topo.iter().skip(source_pos.unwrap()) {
         let current_dist = distances.get(&node_idx).map(|(d, _)| *d).unwrap_or(0.0);
-        
+
         // Update distances for neighbors
         for neighbor in graph.neighbors_directed(node_idx, Direction::Outgoing) {
             if let Some(edge) = graph.find_edge(node_idx, neighbor) {
                 let edge_weight = graph[edge];
                 let new_dist = current_dist + edge_weight;
-                
-                let should_update = distances.get(&neighbor)
+
+                let should_update = distances
+                    .get(&neighbor)
                     .map(|(d, _)| new_dist > *d)
                     .unwrap_or(true);
-                
+
                 if should_update {
                     distances.insert(neighbor, (new_dist, Some(node_idx)));
                 }
             }
         }
     }
-    
+
     // Find node with maximum distance (end of critical path)
-    let (end_node, _) = distances.iter()
-        .max_by(|(_, (d1, _)), (_, (d2, _))| d1.partial_cmp(d2).unwrap_or(std::cmp::Ordering::Equal))
+    let (end_node, _) = distances
+        .iter()
+        .max_by(|(_, (d1, _)), (_, (d2, _))| {
+            d1.partial_cmp(d2).unwrap_or(std::cmp::Ordering::Equal)
+        })
         .unwrap_or((&source, &(0.0, None)));
-    
+
     // Reconstruct path from source to end_node
     let mut path = Vec::new();
     let mut current = *end_node;
-    
+
     while let Some((_, prev)) = distances.get(&current) {
         path.push(graph[current].clone());
         if let Some(prev_idx) = prev {
@@ -166,7 +177,7 @@ fn find_longest_path(
             break;
         }
     }
-    
+
     path.reverse();
     path
 }
@@ -194,23 +205,22 @@ pub fn identify_parallel_groups(
     // Build graph from nodes and edges
     let mut graph = Graph::<String, ()>::new();
     let mut node_indices: HashMap<String, NodeIndex> = HashMap::new();
-    
+
     // Add nodes to graph
     for (node_id, _node) in nodes {
         let idx = graph.add_node(node_id.clone());
         node_indices.insert(node_id.clone(), idx);
     }
-    
+
     // Add edges
     for edge in edges {
-        if let (Some(&from_idx), Some(&to_idx)) = (
-            node_indices.get(&edge.from),
-            node_indices.get(&edge.to),
-        ) {
+        if let (Some(&from_idx), Some(&to_idx)) =
+            (node_indices.get(&edge.from), node_indices.get(&edge.to))
+        {
             graph.add_edge(from_idx, to_idx, ());
         }
     }
-    
+
     // Perform topological sort to get dependency levels
     let topo_order = match algo::toposort(&graph, None) {
         Ok(order) => order,
@@ -220,17 +230,18 @@ pub fn identify_parallel_groups(
             return Ok(vec![nodes.keys().cloned().collect()]);
         }
     };
-    
+
     // Group nodes by dependency level (nodes at same level can run in parallel)
     // Level 0: nodes with no dependencies
     // Level N: nodes that depend on nodes at level N-1
     let mut levels: Vec<Vec<String>> = Vec::new();
     let mut node_levels: HashMap<NodeIndex, usize> = HashMap::new();
-    
+
     for &node_idx in &topo_order {
         // Find maximum level of dependencies
         // Iterate over all nodes to find which ones have edges pointing to this node
-        let max_dep_level = graph.node_indices()
+        let max_dep_level = graph
+            .node_indices()
             .filter_map(|other_idx| {
                 // Check if there's an edge from other_idx to node_idx
                 if graph.find_edge(other_idx, node_idx).is_some() {
@@ -242,29 +253,30 @@ pub fn identify_parallel_groups(
             .max()
             .map(|l| l + 1)
             .unwrap_or(0);
-        
+
         node_levels.insert(node_idx, max_dep_level);
-        
+
         // Ensure levels vector is large enough
         while levels.len() <= max_dep_level {
             levels.push(Vec::new());
         }
-        
+
         levels[max_dep_level].push(graph[node_idx].clone());
     }
-    
+
     // Filter out empty levels
-    let parallel_groups: Vec<Vec<String>> = levels.into_iter()
+    let parallel_groups: Vec<Vec<String>> = levels
+        .into_iter()
         .filter(|group| !group.is_empty())
         .collect();
-    
+
     Ok(parallel_groups)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agent_agency_contracts::planning_io::{DependencyNodeType, DependencyEdgeType};
+    use agent_agency_contracts::planning_io::{DependencyEdgeType, DependencyNodeType};
 
     fn create_test_node(id: &str, time_ms: u64) -> DependencyNode {
         DependencyNode {
@@ -361,4 +373,3 @@ mod tests {
         assert_eq!(groups[0].len(), 3);
     }
 }
-

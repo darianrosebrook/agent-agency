@@ -208,11 +208,18 @@ impl DatasetManager {
                 if version == dataset.current_version {
                     Ok(dataset.tasks.clone())
                 } else {
-                    warn!("Requested version {} not found, returning current version", version);
+                    warn!(
+                        "Requested version {} not found, returning current version",
+                        version
+                    );
                     Ok(dataset.tasks.clone())
                 }
             } else {
-                Err(anyhow::anyhow!("Version {} not found for dataset {}", version, dataset_id))
+                Err(anyhow::anyhow!(
+                    "Version {} not found for dataset {}",
+                    version,
+                    dataset_id
+                ))
             }
         } else {
             // Return current version tasks
@@ -259,7 +266,10 @@ impl DatasetManager {
             warnings.push(format!("{} tasks have empty inputs", empty_inputs));
         }
         if empty_outputs > 0 {
-            warnings.push(format!("{} tasks have empty expected outputs", empty_outputs));
+            warnings.push(format!(
+                "{} tasks have empty expected outputs",
+                empty_outputs
+            ));
         }
 
         // Check version consistency
@@ -329,4 +339,3 @@ impl Default for DatasetManager {
         Self::new()
     }
 }
-

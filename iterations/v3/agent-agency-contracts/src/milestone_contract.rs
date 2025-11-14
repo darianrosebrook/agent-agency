@@ -5,9 +5,9 @@
 //!
 //! @author @darianrosebrook
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 // Import consolidated types
@@ -1081,7 +1081,10 @@ mod tests {
 
         assert_eq!(contract.milestone_id, "M1");
         assert_eq!(contract.version, "1.0.0");
-        assert!(matches!(contract.execution_spec.strategy, ExecutionStrategy::Parallel));
+        assert!(matches!(
+            contract.execution_spec.strategy,
+            ExecutionStrategy::Parallel
+        ));
         assert_eq!(contract.quality_spec.quality_threshold, 0.8);
     }
 
@@ -1135,7 +1138,10 @@ mod tests {
 
         assert_eq!(evidence_spec.required_artifacts.len(), 1);
         assert_eq!(evidence_spec.validation_rules.len(), 1);
-        assert!(matches!(evidence_spec.collection_strategy, EvidenceCollectionStrategy::Comprehensive));
+        assert!(matches!(
+            evidence_spec.collection_strategy,
+            EvidenceCollectionStrategy::Comprehensive
+        ));
         assert_eq!(evidence_spec.retention_policy.retention_days, 90);
     }
 
@@ -1180,6 +1186,9 @@ mod tests {
         assert_eq!(resource_spec.memory.min_memory_mb, 2048);
         assert_eq!(resource_spec.disk.min_disk_mb, 10240);
         assert_eq!(resource_spec.external_services.len(), 1);
-        assert!(matches!(resource_spec.allocation_strategy, ResourceAllocationStrategy::PreAllocated));
+        assert!(matches!(
+            resource_spec.allocation_strategy,
+            ResourceAllocationStrategy::PreAllocated
+        ));
     }
 }

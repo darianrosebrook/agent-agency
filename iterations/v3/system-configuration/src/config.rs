@@ -261,10 +261,10 @@ pub struct AlertThresholds {
 impl Default for AlertThresholds {
     fn default() -> Self {
         Self {
-            error_rate_threshold: 5.0, // 5%
-            latency_threshold_ms: 1000, // 1 second
+            error_rate_threshold: 5.0,      // 5%
+            latency_threshold_ms: 1000,     // 1 second
             memory_threshold_percent: 90.0, // 90%
-            cpu_threshold_percent: 85.0, // 85%
+            cpu_threshold_percent: 85.0,    // 85%
         }
     }
 }

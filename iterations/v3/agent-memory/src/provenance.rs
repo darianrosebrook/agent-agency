@@ -3,13 +3,13 @@
 //! Tracks the provenance of memory operations and decisions
 //! for explainable AI and audit trails.
 
-use crate::memory_types::{MemoryId, AgentExperience};
+use crate::memory_types::{AgentExperience, MemoryId};
 use crate::MemoryResult;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 #[cfg(feature = "database")]
 use sqlx::{PgPool, Row};
+use std::sync::Arc;
 
 /// Provenance record for memory operations
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
@@ -83,10 +83,10 @@ impl ProvenanceTracker {
                     ProvenanceOperation::Consolidated => "consolidated",
                     ProvenanceOperation::Decayed => "decayed",
                 };
-                
+
                 sqlx::query(
                     r#"
-                    INSERT INTO provenance_records 
+                    INSERT INTO provenance_records
                     (id, memory_id, operation, timestamp, agent_id, task_id, decision_reasoning, confidence_score)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     ON CONFLICT (id) DO UPDATE SET
@@ -107,11 +107,11 @@ impl ProvenanceTracker {
                 .execute(pool.as_ref())
                 .await
                 .map_err(|e| crate::MemoryError::Database(e))?;
-                
+
                 return Ok(());
             }
         }
-        
+
         #[cfg(not(feature = "database"))]
         {
             // In-memory storage fallback
@@ -119,7 +119,7 @@ impl ProvenanceTracker {
             records.push(record);
             Ok(())
         }
-        
+
         #[cfg(feature = "database")]
         {
             // Database feature enabled but no pool provided - use in-memory fallback
@@ -129,7 +129,10 @@ impl ProvenanceTracker {
     }
 
     /// Get provenance history for a memory
-    pub async fn get_provenance_history(&self, memory_id: &MemoryId) -> MemoryResult<Vec<ProvenanceRecord>> {
+    pub async fn get_provenance_history(
+        &self,
+        memory_id: &MemoryId,
+    ) -> MemoryResult<Vec<ProvenanceRecord>> {
         #[cfg(feature = "database")]
         {
             if let Some(ref pool) = self.db_pool {
@@ -145,7 +148,7 @@ impl ProvenanceTracker {
                 .fetch_all(pool.as_ref())
                 .await
                 .map_err(|e| crate::MemoryError::Database(e))?;
-                
+
                 let mut records = Vec::new();
                 for row in rows {
                     let operation_str: String = row.get("operation");
@@ -158,7 +161,7 @@ impl ProvenanceTracker {
                         "decayed" => ProvenanceOperation::Decayed,
                         _ => ProvenanceOperation::Created, // Default fallback
                     };
-                    
+
                     records.push(ProvenanceRecord {
                         id: row.get("id"),
                         memory_id: memory_id.clone(),
@@ -172,11 +175,11 @@ impl ProvenanceTracker {
                         },
                     });
                 }
-                
+
                 return Ok(records);
             }
         }
-        
+
         #[cfg(not(feature = "database"))]
         {
             // In-memory storage fallback
@@ -187,7 +190,7 @@ impl ProvenanceTracker {
                 .cloned()
                 .collect())
         }
-        
+
         #[cfg(feature = "database")]
         {
             // Database feature enabled but no pool provided

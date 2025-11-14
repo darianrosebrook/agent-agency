@@ -3,10 +3,10 @@
 //! Intelligent archival and retrieval of long-term memories.
 
 use crate::long_term_management::*;
-use flate2::write::GzEncoder;
 use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
 use flate2::Compression;
-use std::io::{Write, Read};
+use std::io::{Read, Write};
 
 /// Memory archival configuration
 #[derive(Debug, Clone)]
@@ -54,7 +54,8 @@ impl MemoryArchivalManager {
             let memory_id = memory.id.clone();
             match self.archive_single_memory(memory).await {
                 Ok(archived_memory) => {
-                    self.archived_memories.insert(archived_memory.memory_id.clone(), archived_memory.clone());
+                    self.archived_memories
+                        .insert(archived_memory.memory_id.clone(), archived_memory.clone());
                     archived.push(archived_memory);
                 }
                 Err(e) => failed.push((memory_id, e.to_string())),
@@ -107,7 +108,11 @@ impl MemoryArchivalManager {
         let mut results = Vec::new();
 
         for archived in self.archived_memories.values() {
-            if archived.search_text.to_lowercase().contains(&query.to_lowercase()) {
+            if archived
+                .search_text
+                .to_lowercase()
+                .contains(&query.to_lowercase())
+            {
                 results.push(archived.clone());
                 if results.len() >= limit {
                     break;
@@ -132,10 +137,14 @@ impl MemoryArchivalManager {
 
         // Suggest moving old memories to cheaper tiers
         for (tier, count) in tier_usage {
-            if count > 1000 { // Arbitrary threshold
+            if count > 1000 {
+                // Arbitrary threshold
                 optimizations.push(StorageOptimization {
                     optimization_type: OptimizationType::TierMigration,
-                    description: format!("Consider migrating {} memories from {} tier", count, tier),
+                    description: format!(
+                        "Consider migrating {} memories from {} tier",
+                        count, tier
+                    ),
                     estimated_savings: count as f64 * 0.1, // 10% cost reduction
                 });
             }
@@ -155,7 +164,10 @@ impl MemoryArchivalManager {
     }
 
     /// Archive single memory
-    async fn archive_single_memory(&self, memory: crate::memory_types::Memory) -> crate::MemoryResult<ArchivedMemory> {
+    async fn archive_single_memory(
+        &self,
+        memory: crate::memory_types::Memory,
+    ) -> crate::MemoryResult<ArchivedMemory> {
         let search_text = self.extract_search_text(&memory);
         let compressed_data = if self.config.compression_enabled {
             self.compress_memory_data(&memory).await?
@@ -180,7 +192,10 @@ impl MemoryArchivalManager {
     }
 
     /// Retrieve single memory
-    async fn retrieve_single_memory(&self, archived: &ArchivedMemory) -> crate::MemoryResult<crate::memory_types::Memory> {
+    async fn retrieve_single_memory(
+        &self,
+        archived: &ArchivedMemory,
+    ) -> crate::MemoryResult<crate::memory_types::Memory> {
         let memory = if self.config.compression_enabled {
             // Try to decompress, but fall back to direct deserialization if decompression fails
             // This handles backward compatibility with uncompressed data
@@ -189,13 +204,18 @@ impl MemoryArchivalManager {
                 Err(_) => {
                     // Fallback: try to deserialize as uncompressed JSON
                     // This handles cases where old data wasn't compressed
-                    serde_json::from_slice(&archived.compressed_data)
-                        .map_err(|e| crate::MemoryError::Other(format!("Failed to decompress or deserialize memory: {}", e)))?
+                    serde_json::from_slice(&archived.compressed_data).map_err(|e| {
+                        crate::MemoryError::Other(format!(
+                            "Failed to decompress or deserialize memory: {}",
+                            e
+                        ))
+                    })?
                 }
             }
         } else {
-            serde_json::from_slice(&archived.compressed_data)
-                .map_err(|e| crate::MemoryError::Other(format!("Failed to deserialize memory: {}", e)))?
+            serde_json::from_slice(&archived.compressed_data).map_err(|e| {
+                crate::MemoryError::Other(format!("Failed to deserialize memory: {}", e))
+            })?
         };
 
         Ok(memory)
@@ -210,55 +230,76 @@ impl MemoryArchivalManager {
 
     /// Compress memory data using gzip compression
     /// Implemented: Real compression using flate2 gzip encoder with configurable compression level
-    async fn compress_memory_data(&self, memory: &crate::memory_types::Memory) -> crate::MemoryResult<Vec<u8>> {
+    async fn compress_memory_data(
+        &self,
+        memory: &crate::memory_types::Memory,
+    ) -> crate::MemoryResult<Vec<u8>> {
         // Serialize memory to JSON bytes first
-        let json_data = serde_json::to_vec(memory)
-            .map_err(|e| crate::MemoryError::Other(format!("Failed to serialize memory for compression: {}", e)))?;
-        
+        let json_data = serde_json::to_vec(memory).map_err(|e| {
+            crate::MemoryError::Other(format!("Failed to serialize memory for compression: {}", e))
+        })?;
+
         // Use default compression level (6) - balanced between speed and compression ratio
         // Compression levels: 0 (no compression) to 9 (maximum compression)
         let compression_level = Compression::default(); // Level 6
-        
+
         // Create gzip encoder
         let mut encoder = GzEncoder::new(Vec::new(), compression_level);
-        
+
         // Write JSON data to encoder
-        encoder.write_all(&json_data)
-            .map_err(|e| crate::MemoryError::Other(format!("Failed to write data to compression encoder: {}", e)))?;
-        
+        encoder.write_all(&json_data).map_err(|e| {
+            crate::MemoryError::Other(format!(
+                "Failed to write data to compression encoder: {}",
+                e
+            ))
+        })?;
+
         // Finish compression and get compressed bytes
-        let compressed_data = encoder.finish()
-            .map_err(|e| crate::MemoryError::Other(format!("Failed to finish compression: {}", e)))?;
-        
+        let compressed_data = encoder.finish().map_err(|e| {
+            crate::MemoryError::Other(format!("Failed to finish compression: {}", e))
+        })?;
+
         Ok(compressed_data)
     }
 
     /// Decompress memory data using gzip decompression
     /// Implemented: Real decompression using flate2 gzip decoder with error handling and data validation
-    async fn decompress_memory_data(&self, data: &[u8]) -> crate::MemoryResult<crate::memory_types::Memory> {
+    async fn decompress_memory_data(
+        &self,
+        data: &[u8],
+    ) -> crate::MemoryResult<crate::memory_types::Memory> {
         // Create gzip decoder
         let mut decoder = GzDecoder::new(data);
-        
+
         // Read decompressed data into buffer
         let mut decompressed_data = Vec::new();
-        decoder.read_to_end(&mut decompressed_data)
-            .map_err(|e| crate::MemoryError::Other(format!("Failed to decompress memory data: {}", e)))?;
-        
+        decoder.read_to_end(&mut decompressed_data).map_err(|e| {
+            crate::MemoryError::Other(format!("Failed to decompress memory data: {}", e))
+        })?;
+
         // Validate that we got some data
         if decompressed_data.is_empty() {
-            return Err(crate::MemoryError::Other("Decompressed data is empty".to_string()));
+            return Err(crate::MemoryError::Other(
+                "Decompressed data is empty".to_string(),
+            ));
         }
-        
+
         // Deserialize JSON back to Memory struct
         let memory: crate::memory_types::Memory = serde_json::from_slice(&decompressed_data)
-            .map_err(|e| crate::MemoryError::Other(format!("Failed to deserialize decompressed memory data: {}", e)))?;
-        
+            .map_err(|e| {
+                crate::MemoryError::Other(format!(
+                    "Failed to deserialize decompressed memory data: {}",
+                    e
+                ))
+            })?;
+
         Ok(memory)
     }
 
     /// Select appropriate storage tier
     async fn select_storage_tier(&self, memory: &crate::memory_types::Memory) -> String {
-        let age_days = (chrono::Utc::now() - memory.created_at).as_seconds_f32() as f64 / (24.0 * 3600.0);
+        let age_days =
+            (chrono::Utc::now() - memory.created_at).as_seconds_f32() as f64 / (24.0 * 3600.0);
 
         // Select tier based on age and importance
         for tier in &self.config.storage_tiers {
@@ -270,7 +311,9 @@ impl MemoryArchivalManager {
         }
 
         // Default to first tier
-        self.config.storage_tiers.first()
+        self.config
+            .storage_tiers
+            .first()
             .map(|t| t.name.clone())
             .unwrap_or_else(|| "default".to_string())
     }

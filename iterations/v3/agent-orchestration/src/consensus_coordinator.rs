@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use uuid::Uuid;
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Configuration for consensus coordination
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -27,7 +27,7 @@ impl Default for ConsensusConfig {
 pub trait ConsensusCoordinator: Send + Sync {
     fn make_decision(&self, context: DecisionContext) -> ConsensusDecision;
     fn coordinate_consensus(&self, decision: ConsensusDecision) -> ConsensusResult;
-    
+
     /// Check the health status of the consensus coordinator
     /// Returns true if healthy, false otherwise
     async fn health_check(&self) -> Result<bool, String>;
@@ -75,7 +75,7 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
             data: HashMap::new(),
         }
     }
-    
+
     fn coordinate_consensus(&self, _decision: ConsensusDecision) -> ConsensusResult {
         ConsensusResult {
             approved: true,
@@ -84,7 +84,7 @@ impl ConsensusCoordinator for RealTimeConsensusCoordinator {
             reasoning: "Default consensus".to_string(),
         }
     }
-    
+
     async fn health_check(&self) -> Result<bool, String> {
         // Real-time consensus coordinator is always healthy if it can respond
         // TODO: Implement comprehensive health checking with the following requirements:

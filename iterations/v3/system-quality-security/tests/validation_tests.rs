@@ -169,7 +169,12 @@ mod file_upload_tests {
     #[test]
     fn test_validate_file_upload_valid() {
         let allowed_types = &["application/pdf", "text/plain"];
-        let result = validate_file_upload("document.pdf", "application/pdf", 1024 * 1024, allowed_types);
+        let result = validate_file_upload(
+            "document.pdf",
+            "application/pdf",
+            1024 * 1024,
+            allowed_types,
+        );
 
         assert!(result.is_valid);
         assert!(result.errors.is_empty());
@@ -178,7 +183,12 @@ mod file_upload_tests {
     #[test]
     fn test_validate_file_upload_invalid_type() {
         let allowed_types = &["application/pdf"];
-        let result = validate_file_upload("script.exe", "application/x-msdownload", 1024, allowed_types);
+        let result = validate_file_upload(
+            "script.exe",
+            "application/x-msdownload",
+            1024,
+            allowed_types,
+        );
 
         assert!(!result.is_valid);
         assert!(result.errors.len() == 1);
@@ -188,7 +198,12 @@ mod file_upload_tests {
     #[test]
     fn test_validate_file_upload_too_large() {
         let allowed_types = &["application/pdf"];
-        let result = validate_file_upload("large.pdf", "application/pdf", MAX_FILE_SIZE_BYTES + 1, allowed_types);
+        let result = validate_file_upload(
+            "large.pdf",
+            "application/pdf",
+            MAX_FILE_SIZE_BYTES + 1,
+            allowed_types,
+        );
 
         assert!(!result.is_valid);
         assert!(result.errors.len() == 1);
@@ -236,9 +251,7 @@ mod api_validation_tests {
     #[test]
     fn test_validate_query_params_too_long() {
         let long_param = "a".repeat(MAX_QUERY_PARAM_LENGTH + 1);
-        let params = vec![
-            ("action".to_string(), long_param),
-        ];
+        let params = vec![("action".to_string(), long_param)];
 
         let result = validate_query_params(&params);
 
@@ -263,9 +276,7 @@ mod api_validation_tests {
     #[test]
     fn test_validate_http_headers_too_long() {
         let long_value = "a".repeat(MAX_HEADER_VALUE_LENGTH + 1);
-        let headers = vec![
-            ("x-custom".to_string(), long_value),
-        ];
+        let headers = vec![("x-custom".to_string(), long_value)];
 
         let result = validate_http_headers(&headers);
 

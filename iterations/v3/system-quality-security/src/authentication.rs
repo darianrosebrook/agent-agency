@@ -9,13 +9,15 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
-use argon2::{Argon2, PasswordHash, PasswordVerifier, PasswordHasher, Algorithm, Version};
-use password_hash::{SaltString, rand_core::OsRng};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation, Algorithm as JwtAlgorithm};
+use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
+use chrono::{DateTime, Utc};
+use jsonwebtoken::{
+    decode, encode, Algorithm as JwtAlgorithm, DecodingKey, EncodingKey, Header, Validation,
+};
+use password_hash::{rand_core::OsRng, SaltString};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 use tracing::{info, warn};
 
@@ -100,10 +102,8 @@ pub struct UserCredentials {
     pub failed_attempts: u32,
     pub locked_until: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -164,14 +164,18 @@ impl AuthService {
     /// Authenticate user and return JWT token
     pub async fn authenticate(&self, username: &str, password: &str) -> Result<String> {
         let users = self.users.read().await;
-        let user = users.values()
+        let user = users
+            .values()
             .find(|u| u.username == username)
             .context("User not found")?;
 
         // Check if account is locked
         if let Some(locked_until) = user.locked_until {
             if Utc::now() < locked_until {
-                warn!("Account locked due to failed attempts: {} ({})", username, user.user_id);
+                warn!(
+                    "Account locked due to failed attempts: {} ({})",
+                    username, user.user_id
+                );
                 return Err(anyhow::anyhow!("Account is temporarily locked"));
             }
         }
@@ -191,12 +195,19 @@ impl AuthService {
                 // Lock account if too many failed attempts
                 if user_mut.failed_attempts >= self.config.max_failed_attempts {
                     user_mut.locked_until = Some(
-                        Utc::now() + chrono::Duration::seconds(self.config.lockout_duration_seconds as i64)
+                        Utc::now()
+                            + chrono::Duration::seconds(
+                                self.config.lockout_duration_seconds as i64,
+                            ),
                     );
                 }
             }
 
-            warn!("Failed login attempt for user: {} (attempt {})", username, failed_attempts + 1);
+            warn!(
+                "Failed login attempt for user: {} (attempt {})",
+                username,
+                failed_attempts + 1
+            );
 
             return Err(anyhow::anyhow!("Invalid credentials"));
         }
@@ -236,8 +247,8 @@ impl AuthService {
         let mut validation = Validation::new(JwtAlgorithm::HS256);
         validation.set_issuer(&["agent-agency"]);
 
-        let token_data = decode::<Claims>(token, &decoding_key, &validation)
-            .context("Invalid token")?;
+        let token_data =
+            decode::<Claims>(token, &decoding_key, &validation).context("Invalid token")?;
 
         Ok(token_data.claims)
     }
@@ -277,11 +288,15 @@ impl AuthService {
 
         // Character requirements
         if policy.require_uppercase && !password.chars().any(|c| c.is_uppercase()) {
-            return Err(anyhow::anyhow!("Password must contain at least one uppercase letter"));
+            return Err(anyhow::anyhow!(
+                "Password must contain at least one uppercase letter"
+            ));
         }
 
         if policy.require_lowercase && !password.chars().any(|c| c.is_lowercase()) {
-            return Err(anyhow::anyhow!("Password must contain at least one lowercase letter"));
+            return Err(anyhow::anyhow!(
+                "Password must contain at least one lowercase letter"
+            ));
         }
 
         if policy.require_digit && !password.chars().any(|c| c.is_ascii_digit()) {
@@ -289,17 +304,29 @@ impl AuthService {
         }
 
         if policy.require_special && !password.chars().any(|c| !c.is_alphanumeric()) {
-            return Err(anyhow::anyhow!("Password must contain at least one special character"));
+            return Err(anyhow::anyhow!(
+                "Password must contain at least one special character"
+            ));
         }
 
         // Check for common weak passwords
         let common_passwords = [
-            "password", "123456", "qwerty", "admin", "letmein", "welcome",
-            "monkey", "dragon", "password1", "qwerty123"
+            "password",
+            "123456",
+            "qwerty",
+            "admin",
+            "letmein",
+            "welcome",
+            "monkey",
+            "dragon",
+            "password1",
+            "qwerty123",
         ];
 
         if common_passwords.contains(&password.to_lowercase().as_str()) {
-            return Err(anyhow::anyhow!("Password is too common and easily guessable"));
+            return Err(anyhow::anyhow!(
+                "Password is too common and easily guessable"
+            ));
         }
 
         Ok(())
@@ -314,7 +341,8 @@ impl AuthService {
             self.config.password_hash_params.clone(),
         );
 
-        let password_hash = argon2.hash_password(password.as_bytes(), &salt)
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)
             .map_err(|e| anyhow::anyhow!("Failed to hash password: {}", e))?;
 
         Ok(password_hash.to_string())
@@ -322,11 +350,13 @@ impl AuthService {
 
     /// Verify a password against an Argon2 hash
     pub fn verify_password(&self, password: &str, hash: &str) -> Result<bool> {
-        let parsed_hash = PasswordHash::new(hash)
-            .map_err(|e| anyhow::anyhow!("Invalid password hash: {}", e))?;
+        let parsed_hash =
+            PasswordHash::new(hash).map_err(|e| anyhow::anyhow!("Invalid password hash: {}", e))?;
 
         let argon2 = Argon2::default();
-        Ok(argon2.verify_password(password.as_bytes(), &parsed_hash).is_ok())
+        Ok(argon2
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_ok())
     }
 
     /// Generate a JWT token for a user
@@ -348,8 +378,7 @@ impl AuthService {
         let encoding_key = EncodingKey::from_secret(self.config.jwt_secret.as_bytes());
         let header = Header::new(JwtAlgorithm::HS256);
 
-        encode(&header, &claims, &encoding_key)
-            .context("Failed to encode JWT token")
+        encode(&header, &claims, &encoding_key).context("Failed to encode JWT token")
     }
 }
 
@@ -460,13 +489,21 @@ mod tests {
         let auth_service = AuthService::new(config);
 
         // Test valid password
-        assert!(auth_service.validate_password_strength("ValidPass123").is_ok());
+        assert!(auth_service
+            .validate_password_strength("ValidPass123")
+            .is_ok());
 
         // Test invalid passwords
         assert!(auth_service.validate_password_strength("short").is_err());
-        assert!(auth_service.validate_password_strength("nouppercase123").is_err());
-        assert!(auth_service.validate_password_strength("NOLOWERCASE123").is_err());
-        assert!(auth_service.validate_password_strength("NoNumbers").is_err());
+        assert!(auth_service
+            .validate_password_strength("nouppercase123")
+            .is_err());
+        assert!(auth_service
+            .validate_password_strength("NOLOWERCASE123")
+            .is_err());
+        assert!(auth_service
+            .validate_password_strength("NoNumbers")
+            .is_err());
     }
 
     #[tokio::test]
@@ -484,14 +521,16 @@ mod tests {
         let auth_service = AuthService::new(config);
 
         // Register user
-        let user_id = auth_service.register_user(
-            "testuser",
-            "ValidPass123",
-            vec!["user".to_string()]
-        ).await.unwrap();
+        let user_id = auth_service
+            .register_user("testuser", "ValidPass123", vec!["user".to_string()])
+            .await
+            .unwrap();
 
         // Authenticate user
-        let token = auth_service.authenticate("testuser", "ValidPass123").await.unwrap();
+        let token = auth_service
+            .authenticate("testuser", "ValidPass123")
+            .await
+            .unwrap();
         assert!(!token.is_empty());
 
         // Validate token

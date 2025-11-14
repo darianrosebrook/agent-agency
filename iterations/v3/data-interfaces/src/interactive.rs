@@ -42,19 +42,13 @@ impl InteractiveSession {
         self.history.push(input.to_string());
 
         match input.trim() {
-            "help" => {
-                Ok("Available commands: help, status, quit".to_string())
-            }
-            "status" => {
-                Ok("System status: Running".to_string())
-            }
+            "help" => Ok("Available commands: help, status, quit".to_string()),
+            "status" => Ok("System status: Running".to_string()),
             "quit" => {
                 self.stop().await?;
                 Ok("Session ended".to_string())
             }
-            _ => {
-                Ok(format!("Unknown command: {}", input))
-            }
+            _ => Ok(format!("Unknown command: {}", input)),
         }
     }
 }

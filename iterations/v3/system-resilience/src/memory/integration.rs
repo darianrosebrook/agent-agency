@@ -6,12 +6,12 @@
 //! - HTTP client pooling
 //! - Cache memory management
 
+use crate::memory::allocator::MemoryStats;
+use crate::memory::metrics::MemoryPressure;
 use schemars::JsonSchema;
 use std::sync::Arc;
+use tracing::{info, warn};
 use uuid::Uuid;
-use tracing::{warn, info};
-use crate::memory::metrics::MemoryPressure;
-use crate::memory::allocator::MemoryStats;
 
 /// Generic object pool for resource management
 pub struct ObjectPool<T> {
@@ -170,14 +170,12 @@ pub struct LlmClientPool {
 
 impl LlmClientPool {
     pub fn new(max_clients: usize, api_key: String, model: String) -> Self {
-        let factory = move || {
-            LlmClient {
-                id: Uuid::new_v4(),
-                api_key: api_key.clone(),
-                model: model.clone(),
-                created_at: std::time::Instant::now(),
-                request_count: 0,
-            }
+        let factory = move || LlmClient {
+            id: Uuid::new_v4(),
+            api_key: api_key.clone(),
+            model: model.clone(),
+            created_at: std::time::Instant::now(),
+            request_count: 0,
         };
 
         let pool = ObjectPool::new(factory, max_clients);
@@ -210,8 +208,10 @@ impl LlmClient {
         // Simulate API call
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        Ok(format!("Generated response for '{}' using {} (client: {})",
-                  prompt, self.model, self.id))
+        Ok(format!(
+            "Generated response for '{}' using {} (client: {})",
+            prompt, self.model, self.id
+        ))
     }
 
     pub fn is_healthy(&self) -> bool {
@@ -227,14 +227,12 @@ pub struct HttpClientPool {
 
 impl HttpClientPool {
     pub fn new(max_clients: usize, base_url: String, timeout_seconds: u64) -> Self {
-        let factory = move || {
-            HttpClient {
-                id: Uuid::new_v4(),
-                base_url: base_url.clone(),
-                timeout_seconds,
-                created_at: std::time::Instant::now(),
-                request_count: 0,
-            }
+        let factory = move || HttpClient {
+            id: Uuid::new_v4(),
+            base_url: base_url.clone(),
+            timeout_seconds,
+            created_at: std::time::Instant::now(),
+            request_count: 0,
         };
 
         let pool = ObjectPool::new(factory, max_clients);
@@ -267,7 +265,10 @@ impl HttpClient {
         // Simulate HTTP request
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        Ok(format!("Response from {}{} (client: {})", self.base_url, path, self.id))
+        Ok(format!(
+            "Response from {}{} (client: {})",
+            self.base_url, path, self.id
+        ))
     }
 
     pub fn is_healthy(&self) -> bool {
@@ -288,7 +289,8 @@ impl SmartCache {
         max_memory_mb: usize,
         ttl_seconds: u64,
     ) -> Self {
-        let cache = memory_manager.create_cache("smart_cache", max_entries, max_memory_mb, ttl_seconds);
+        let cache =
+            memory_manager.create_cache("smart_cache", max_entries, max_memory_mb, ttl_seconds);
         Self {
             cache,
             memory_manager,
@@ -412,9 +414,15 @@ pub struct MemoryPressureManager {
 impl MemoryPressureManager {
     pub fn new(memory_manager: Arc<dyn MemoryManager>) -> Self {
         let strategies = vec![
-            (MemoryPressure::Moderate, MemoryPressureStrategy::ReduceCaches),
+            (
+                MemoryPressure::Moderate,
+                MemoryPressureStrategy::ReduceCaches,
+            ),
             (MemoryPressure::High, MemoryPressureStrategy::ForceGC),
-            (MemoryPressure::Critical, MemoryPressureStrategy::RejectRequests),
+            (
+                MemoryPressure::Critical,
+                MemoryPressureStrategy::RejectRequests,
+            ),
         ];
 
         Self {
@@ -512,8 +520,16 @@ impl MemoryPerformanceMonitor {
             return MemoryTrend::Stable;
         }
 
-        let recent_avg = recent.iter().map(|(_, stats)| stats.allocated_bytes).sum::<u64>() / recent.len() as u64;
-        let older_avg = older.iter().map(|(_, stats)| stats.allocated_bytes).sum::<u64>() / older.len() as u64;
+        let recent_avg = recent
+            .iter()
+            .map(|(_, stats)| stats.allocated_bytes)
+            .sum::<u64>()
+            / recent.len() as u64;
+        let older_avg = older
+            .iter()
+            .map(|(_, stats)| stats.allocated_bytes)
+            .sum::<u64>()
+            / older.len() as u64;
 
         let change_percent = ((recent_avg as f64 - older_avg as f64) / older_avg as f64) * 100.0;
 
@@ -528,7 +544,8 @@ impl MemoryPerformanceMonitor {
 
     pub fn get_peak_memory_usage(&self) -> u64 {
         let history = self.metrics_history.read().unwrap();
-        history.iter()
+        history
+            .iter()
             .map(|(_, stats)| stats.allocated_bytes)
             .max()
             .unwrap_or(0)
@@ -539,7 +556,11 @@ impl MemoryPerformanceMonitor {
         if history.is_empty() {
             0.0
         } else {
-            history.iter().map(|(_, stats)| stats.allocated_bytes as f64).sum::<f64>() / history.len() as f64
+            history
+                .iter()
+                .map(|(_, stats)| stats.allocated_bytes as f64)
+                .sum::<f64>()
+                / history.len() as f64
         }
     }
 }

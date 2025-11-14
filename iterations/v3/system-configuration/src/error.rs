@@ -108,7 +108,10 @@ impl PipelineError {
 
     /// Check if this is an execution error
     pub fn is_execution_error(&self) -> bool {
-        matches!(self, PipelineError::Execution(_) | PipelineError::StageError { .. })
+        matches!(
+            self,
+            PipelineError::Execution(_) | PipelineError::StageError { .. }
+        )
     }
 
     /// Get the error category for metrics/logging

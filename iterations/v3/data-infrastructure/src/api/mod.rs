@@ -11,28 +11,33 @@
 //!
 //! The public interface remains compatible with the original monolithic version.
 
-pub mod api_types;
 pub mod api_errors;
-pub mod middleware;
-pub mod server;
+pub mod api_types;
 #[cfg(feature = "orchestration")]
 pub mod handlers;
-pub mod types;
-pub mod transform;
 pub mod health;
-pub mod pagination;
 pub mod metrics;
+pub mod middleware;
+pub mod pagination;
+pub mod server;
+pub mod transform;
+pub mod types;
 
 // Re-export public types and functions for backward compatibility
-pub use api_types::*;
 pub use api_errors::{ApiError, Result};
+pub use api_types::*;
+pub use middleware::auth::{
+    has_all_roles, has_any_role, has_role, roles, AdminUser, VerifiedUser, ViewerUser,
+};
 pub use middleware::*;
-pub use middleware::auth::{VerifiedUser, AdminUser, ViewerUser, roles, has_role, has_any_role, has_all_roles};
-pub use pagination::{PaginationParams, CursorPaginationParams, PaginatedResponse, CursorPaginatedResponse, extract_pagination, extract_cursor_pagination};
+pub use pagination::{
+    extract_cursor_pagination, extract_pagination, CursorPaginatedResponse, CursorPaginationParams,
+    PaginatedResponse, PaginationParams,
+};
 
 // Conditionally re-export server types if orchestration feature is enabled
 #[cfg(feature = "orchestration")]
-pub use server::{RestApi, ApiState};
+pub use server::{ApiState, RestApi};
 
 // Re-export commonly used handler functions (only available with orchestration feature)
 #[cfg(feature = "orchestration")]

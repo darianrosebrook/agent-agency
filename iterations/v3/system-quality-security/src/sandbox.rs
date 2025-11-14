@@ -1,22 +1,21 @@
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 /**
  * Sandbox Module - P0-8 Implementation
  *
  * Isolated execution environment for safe code and task execution.
  * Provides containerized/sandboxed environments to prevent security risks.
  */
-
 use schemars::JsonSchema;
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::time::Duration;
 use tokio::process::Command;
+use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use std::path::PathBuf;
-use std::time::Duration;
 
 /// Sandbox execution modes
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -180,10 +179,15 @@ impl ProductionSandbox {
 
         // Build Docker command
         let mut docker_cmd = Command::new("docker");
-        docker_cmd.arg("run")
+        docker_cmd
+            .arg("run")
             .arg("--rm")
             .arg("--network")
-            .arg(if request.context.network_access { "bridge" } else { "none" });
+            .arg(if request.context.network_access {
+                "bridge"
+            } else {
+                "none"
+            });
 
         // Add resource limits
         if let Some(cpu) = request.context.limits.cpu_cores {
@@ -205,7 +209,10 @@ impl ProductionSandbox {
         docker_cmd.args(&request.command);
 
         // Set timeout
-        let timeout_duration = request.context.limits.timeout_seconds
+        let timeout_duration = request
+            .context
+            .limits
+            .timeout_seconds
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(300)); // 5 minutes default
 
@@ -223,14 +230,18 @@ impl ProductionSandbox {
                     stderr,
                     execution_time_ms: execution_time,
                     success: output.status.success(),
-                    error_message: if output.status.success() { None } else { Some("Command failed".to_string()) },
+                    error_message: if output.status.success() {
+                        None
+                    } else {
+                        Some("Command failed".to_string())
+                    },
                 })
             }
             Ok(Err(e)) => Err(SandboxError::ExecutionFailed {
-                message: format!("Docker execution error: {:?}", e)
+                message: format!("Docker execution error: {:?}", e),
             }),
             Err(_) => Err(SandboxError::Timeout {
-                timeout_seconds: timeout_duration.as_secs()
+                timeout_seconds: timeout_duration.as_secs(),
             }),
         }
     }
@@ -244,7 +255,8 @@ impl ProductionSandbox {
 
         // Add resource limits
         if let Some(memory) = request.context.limits.memory_mb {
-            cmd.arg("--rlimit-as").arg((memory * 1024 * 1024).to_string());
+            cmd.arg("--rlimit-as")
+                .arg((memory * 1024 * 1024).to_string());
         }
 
         // Network restrictions
@@ -259,7 +271,10 @@ impl ProductionSandbox {
         cmd.args(&request.command);
 
         // Set timeout
-        let timeout_duration = request.context.limits.timeout_seconds
+        let timeout_duration = request
+            .context
+            .limits
+            .timeout_seconds
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(300));
 
@@ -276,20 +291,27 @@ impl ProductionSandbox {
                     stderr,
                     execution_time_ms: execution_time,
                     success: output.status.success(),
-                    error_message: if output.status.success() { None } else { Some("Command failed".to_string()) },
+                    error_message: if output.status.success() {
+                        None
+                    } else {
+                        Some("Command failed".to_string())
+                    },
                 })
             }
             Ok(Err(e)) => Err(SandboxError::ExecutionFailed {
-                message: format!("Firejail execution error: {:?}", e)
+                message: format!("Firejail execution error: {:?}", e),
             }),
             Err(_) => Err(SandboxError::Timeout {
-                timeout_seconds: timeout_duration.as_secs()
+                timeout_seconds: timeout_duration.as_secs(),
             }),
         }
     }
 
     /// Execute without sandboxing (for testing only)
-    async fn execute_unrestricted(&self, request: &ExecutionRequest) -> SandboxResult<ExecutionResult> {
+    async fn execute_unrestricted(
+        &self,
+        request: &ExecutionRequest,
+    ) -> SandboxResult<ExecutionResult> {
         warn!("Executing command without sandboxing - this should only be used for testing");
 
         let start_time = std::time::Instant::now();
@@ -302,7 +324,10 @@ impl ProductionSandbox {
         }
 
         // Set timeout
-        let timeout_duration = request.context.limits.timeout_seconds
+        let timeout_duration = request
+            .context
+            .limits
+            .timeout_seconds
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(300));
 
@@ -319,14 +344,18 @@ impl ProductionSandbox {
                     stderr,
                     execution_time_ms: execution_time,
                     success: output.status.success(),
-                    error_message: if output.status.success() { None } else { Some("Command failed".to_string()) },
+                    error_message: if output.status.success() {
+                        None
+                    } else {
+                        Some("Command failed".to_string())
+                    },
                 })
             }
             Ok(Err(e)) => Err(SandboxError::ExecutionFailed {
-                message: format!("Unrestricted execution error: {:?}", e)
+                message: format!("Unrestricted execution error: {:?}", e),
             }),
             Err(_) => Err(SandboxError::Timeout {
-                timeout_seconds: timeout_duration.as_secs()
+                timeout_seconds: timeout_duration.as_secs(),
             }),
         }
     }
@@ -368,7 +397,7 @@ impl Sandbox for ProductionSandbox {
             SandboxMode::None => self.execute_unrestricted(&request).await,
             SandboxMode::Nspawn | SandboxMode::Bubblewrap => {
                 Err(SandboxError::SandboxUnavailable {
-                    mode: request.context.mode.clone()
+                    mode: request.context.mode.clone(),
                 })
             }
         };
@@ -383,7 +412,7 @@ impl Sandbox for ProductionSandbox {
         // Check if the sandbox mode is available
         if !self.check_mode_availability(&context.mode).await {
             return Err(SandboxError::SandboxUnavailable {
-                mode: context.mode.clone()
+                mode: context.mode.clone(),
             });
         }
 
@@ -391,24 +420,26 @@ impl Sandbox for ProductionSandbox {
         if let Some(cpu) = context.limits.cpu_cores {
             if cpu <= 0.0 || cpu > 64.0 {
                 return Err(SandboxError::InvalidConfig {
-                    message: "CPU cores must be between 0.1 and 64.0".to_string()
+                    message: "CPU cores must be between 0.1 and 64.0".to_string(),
                 });
             }
         }
 
         if let Some(memory) = context.limits.memory_mb {
-            if memory == 0 || memory > 65536 { // 64GB max
+            if memory == 0 || memory > 65536 {
+                // 64GB max
                 return Err(SandboxError::InvalidConfig {
-                    message: "Memory limit must be between 1MB and 65536MB".to_string()
+                    message: "Memory limit must be between 1MB and 65536MB".to_string(),
                 });
             }
         }
 
         // Validate timeout
         if let Some(timeout) = context.limits.timeout_seconds {
-            if timeout == 0 || timeout > 3600 { // 1 hour max
+            if timeout == 0 || timeout > 3600 {
+                // 1 hour max
                 return Err(SandboxError::InvalidConfig {
-                    message: "Timeout must be between 1 and 3600 seconds".to_string()
+                    message: "Timeout must be between 1 and 3600 seconds".to_string(),
                 });
             }
         }
@@ -420,7 +451,12 @@ impl Sandbox for ProductionSandbox {
         let mut available_modes = Vec::new();
 
         // Check which sandbox modes are available
-        for mode in &[SandboxMode::Docker, SandboxMode::Firejail, SandboxMode::Nspawn, SandboxMode::Bubblewrap] {
+        for mode in &[
+            SandboxMode::Docker,
+            SandboxMode::Firejail,
+            SandboxMode::Nspawn,
+            SandboxMode::Bubblewrap,
+        ] {
             if self.check_mode_availability(mode).await {
                 available_modes.push(mode.clone());
             }

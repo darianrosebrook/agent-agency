@@ -3,10 +3,10 @@
 //! Manages the Mistral CoreML model instance used for task orchestration
 //! in autonomous testing scenarios.
 
-use tracing::info;
 #[cfg(feature = "full")]
 use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 use std::path::PathBuf;
+use tracing::info;
 
 /// Service for managing Mistral CoreML orchestrator
 pub struct OrchestratorService {
@@ -30,7 +30,10 @@ impl OrchestratorService {
             // Initialize CoreML manager
             let coreml_manager = Arc::new(CoreMLManager::new(model_path.clone()));
 
-            info!("Orchestrator service initialized with CoreML manager, model path: {:?}", model_path);
+            info!(
+                "Orchestrator service initialized with CoreML manager, model path: {:?}",
+                model_path
+            );
 
             Ok(Self {
                 coreml_manager: Some(coreml_manager),
@@ -41,10 +44,11 @@ impl OrchestratorService {
 
         #[cfg(not(feature = "full"))]
         {
-            info!("Orchestrator service initialized in basic mode (no CoreML), model path: {:?}", model_path);
-            Ok(Self {
-                model_path,
-            })
+            info!(
+                "Orchestrator service initialized in basic mode (no CoreML), model path: {:?}",
+                model_path
+            );
+            Ok(Self { model_path })
         }
     }
 
@@ -59,19 +63,25 @@ impl OrchestratorService {
                 manager.load_available_models().await?;
 
                 // Get the Mistral model
-                self.mistral_model = manager.get_model(CoreMLModelType::Language, "Mistral-7B-Instruct-FP16").await;
+                self.mistral_model = manager
+                    .get_model(CoreMLModelType::Language, "Mistral-7B-Instruct-FP16")
+                    .await;
 
                 if let Some(model) = &self.mistral_model {
-                    info!("Mistral CoreML model loaded: {}, ANE supported: {}",
-                        model.metadata.name, model.metadata.supports_ane);
+                    info!(
+                        "Mistral CoreML model loaded: {}, ANE supported: {}",
+                        model.metadata.name, model.metadata.supports_ane
+                    );
                 } else {
                     warn!("Mistral model not found, service will operate in CPU-only mode");
                 }
 
                 let model_count = manager.model_count().await;
                 let ane_available = manager.is_ane_available();
-                info!("CoreML orchestrator service started with {} models loaded, ANE available: {}",
-                    model_count, ane_available);
+                info!(
+                    "CoreML orchestrator service started with {} models loaded, ANE available: {}",
+                    model_count, ane_available
+                );
             } else {
                 return Err("CoreML manager not initialized".into());
             }
@@ -118,7 +128,10 @@ impl OrchestratorService {
                     info!("Orchestrator healthy: ANE available with Mistral model loaded");
                     true
                 } else if model_count {
-                    info!("Orchestrator healthy: CPU models loaded (ANE: {})", ane_available);
+                    info!(
+                        "Orchestrator healthy: CPU models loaded (ANE: {})",
+                        ane_available
+                    );
                     true
                 } else {
                     warn!("Orchestrator unhealthy: no models loaded");
@@ -155,4 +168,3 @@ impl OrchestratorService {
         &self.model_path
     }
 }
-

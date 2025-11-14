@@ -37,27 +37,27 @@
 //!
 //! @author @darianrosebrook
 
-pub mod traits;
-pub mod metrics;
+pub mod cache;
 pub mod config;
 pub mod error;
-pub mod cache;
-pub mod sequential;
-pub mod parallel;
-pub mod streaming;
-pub mod validation;
-pub mod geometry;
-pub mod types;
-pub mod pattern_types;
 pub mod file_locking;
+pub mod geometry;
+pub mod metrics;
+pub mod parallel;
+pub mod pattern_types;
+pub mod sequential;
+pub mod streaming;
+pub mod traits;
+pub mod types;
+pub mod validation;
 
 // Re-export main types
-pub use traits::*;
-pub use metrics::*;
+pub use cache::*;
 pub use config::*;
 pub use error::*;
-pub use cache::*;
-pub use sequential::*;
+pub use metrics::*;
 pub use parallel::*;
+pub use sequential::*;
 pub use streaming::*;
+pub use traits::*;
 pub use validation::*;

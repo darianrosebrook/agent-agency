@@ -2,16 +2,16 @@
 //!
 //! Orchestrates the generate → evaluate → refine cycle for autonomous task execution.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
 use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
-use crate::self_prompting_agent::models::ModelRegistry;
-use crate::self_prompting_agent::prompting_types::{Task, TaskResult, SelfPromptingAgentError};
 use crate::self_prompting_agent::learning_bridge::{LearningBridge, LearningSignal};
+use crate::self_prompting_agent::models::ModelRegistry;
+use crate::self_prompting_agent::prompting_types::{SelfPromptingAgentError, Task, TaskResult};
 use crate::self_prompting_agent::rl_signals::RLTrainer;
 use chrono::Utc;
 
@@ -21,8 +21,7 @@ pub struct SelfPromptingLoop {
     event_sender: mpsc::UnboundedSender<SelfPromptingEvent>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SelfPromptingEvent {
     IterationStarted { iteration: usize, task_id: String },
     PromptGenerated { iteration: usize, prompt: String },
@@ -32,8 +31,7 @@ pub enum SelfPromptingEvent {
     Error { iteration: usize, error: String },
 }
 
-
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SelfPromptingResult {
     pub task: Task,
     pub result: TaskResult,
@@ -86,11 +84,15 @@ impl SelfPromptingLoop {
             let _ = self.event_sender.send(event);
 
             // Execute task iteration using model registry
-            let result = self.execute_single_iteration(&current_task, &prompt, &model_registry).await?;
+            let result = self
+                .execute_single_iteration(&current_task, &prompt, &model_registry)
+                .await?;
             let score = result.final_report.score;
 
             // Evaluate result
-            let evaluation = evaluator.evaluate_result(&result).await
+            let evaluation = evaluator
+                .evaluate_result(&result)
+                .await
                 .map_err(|e| format!("Evaluation failed: {}", e))?;
 
             let event = SelfPromptingEvent::EvaluationCompleted {
@@ -110,12 +112,20 @@ impl SelfPromptingLoop {
             if let Some(ref learning_bridge) = learning_bridge {
                 let success = evaluation.score >= 0.9;
                 let signal = LearningSignal {
-                    signal_type: if success { "task_success" } else { "task_failure" }.to_string(),
+                    signal_type: if success {
+                        "task_success"
+                    } else {
+                        "task_failure"
+                    }
+                    .to_string(),
                     value: if success { 1.0 } else { 0.0 },
-                    context: format!("{:?}_code_fixing_iteration_{}", current_task.task_type, iteration),
+                    context: format!(
+                        "{:?}_code_fixing_iteration_{}",
+                        current_task.task_type, iteration
+                    ),
                     timestamp: Utc::now(),
                 };
-                
+
                 if let Err(e) = learning_bridge.process_signal(signal).await {
                     warn!("Failed to send learning signal: {}", e);
                 }
@@ -125,9 +135,16 @@ impl SelfPromptingLoop {
                     let state = format!("{:?}_code_fixing", current_task.task_type);
                     let action = format!("iteration_{}_strategy", iteration);
                     let reward = if success { 1.0 } else { 0.0 };
-                    let next_state = format!("{:?}_code_fixing_result_{}", current_task.task_type, if success { "success" } else { "failure" });
-                    
-                    if let Err(e) = trainer.train_on_experience(&state, &action, reward, &next_state).await {
+                    let next_state = format!(
+                        "{:?}_code_fixing_result_{}",
+                        current_task.task_type,
+                        if success { "success" } else { "failure" }
+                    );
+
+                    if let Err(e) = trainer
+                        .train_on_experience(&state, &action, reward, &next_state)
+                        .await
+                    {
                         warn!("Failed to train RL on experience: {}", e);
                     }
                 }
@@ -156,7 +173,7 @@ impl SelfPromptingLoop {
             let original_context_len = current_task.refinement_context.len();
             current_task = self.refine_task(&current_task, &evaluation).await?;
             let changes = current_task.refinement_context.len() - original_context_len;
-            
+
             let event = SelfPromptingEvent::RefinementApplied {
                 iteration,
                 changes: changes.max(1), // Track actual changes made during refinement
@@ -169,31 +186,37 @@ impl SelfPromptingLoop {
     }
 
     /// Generate prompt for the current iteration
-    async fn generate_prompt(&self, task: &Task, iteration: usize) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    async fn generate_prompt(
+        &self,
+        task: &Task,
+        iteration: usize,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         use crate::self_prompting_agent::prompting::AdaptivePromptingStrategy;
-        
+
         // Build comprehensive prompt with iteration context and refinement history
         let mut prompt_parts = Vec::new();
-        
+
         // Task description
         prompt_parts.push(format!("Task: {}", task.description));
-        
+
         // Add task type context
         prompt_parts.push(format!("Task Type: {:?}", task.task_type));
-        
+
         // Add target files if specified
         if !task.target_files.is_empty() {
             prompt_parts.push(format!("Target Files: {}", task.target_files.join(", ")));
         }
-        
+
         // Add constraints if any
         if !task.constraints.is_empty() {
-            let constraint_lines: Vec<String> = task.constraints.iter()
+            let constraint_lines: Vec<String> = task
+                .constraints
+                .iter()
                 .map(|(k, v)| format!("{}: {}", k, v))
                 .collect();
             prompt_parts.push(format!("Constraints:\n{}", constraint_lines.join("\n")));
         }
-        
+
         // Add refinement context from previous iterations
         if !task.refinement_context.is_empty() {
             prompt_parts.push("Previous Iteration Feedback:".to_string());
@@ -201,15 +224,15 @@ impl SelfPromptingLoop {
                 prompt_parts.push(format!("  Iteration {}: {}", idx + 1, context));
             }
         }
-        
+
         // Add iteration-specific instructions
         prompt_parts.push(format!(
             "\nIteration {} of self-prompting loop. Please provide a high-quality solution that addresses all requirements.",
             iteration
         ));
-        
+
         let base_prompt = prompt_parts.join("\n\n");
-        
+
         // Optimize prompt for task type using adaptive prompting strategy
         let strategy = AdaptivePromptingStrategy::new();
         let task_type_str = match task.task_type {
@@ -221,9 +244,9 @@ impl SelfPromptingLoop {
             crate::self_prompting_agent::prompting_types::TaskType::Research => "analysis",
             crate::self_prompting_agent::prompting_types::TaskType::Planning => "planning",
         };
-        
+
         let optimized_prompt = strategy.optimize_for_task(&base_prompt, task_type_str);
-        
+
         Ok(optimized_prompt)
     }
 
@@ -234,12 +257,14 @@ impl SelfPromptingLoop {
         prompt: &str,
         model_registry: &Arc<ModelRegistry>,
     ) -> Result<TaskResult, Box<dyn std::error::Error + Send + Sync>> {
-        use crate::self_prompting_agent::prompting_types::{EvalReport, EvalStatus, Artifact, ArtifactType};
         use crate::self_prompting_agent::models::GenerationOptions;
+        use crate::self_prompting_agent::prompting_types::{
+            Artifact, ArtifactType, EvalReport, EvalStatus,
+        };
         use std::time::Instant;
-        
+
         let start_time = Instant::now();
-        
+
         // Generate response using model registry
         let generation_options = GenerationOptions {
             max_tokens: Some(4096),
@@ -248,7 +273,7 @@ impl SelfPromptingLoop {
             stop_sequences: vec![],
             model_name: None, // Use default model
         };
-        
+
         let generated_content = match model_registry.generate(prompt, &generation_options).await {
             Ok(content) => content,
             Err(e) => {
@@ -267,17 +292,23 @@ impl SelfPromptingLoop {
                 });
             }
         };
-        
+
         let execution_time_ms = start_time.elapsed().as_millis() as u64;
-        
+
         // Create artifacts from generated content
         let artifact_type = match task.task_type {
-            crate::self_prompting_agent::prompting_types::TaskType::CodeGeneration => ArtifactType::Code,
-            crate::self_prompting_agent::prompting_types::TaskType::CodeReview => ArtifactType::Documentation,
-            crate::self_prompting_agent::prompting_types::TaskType::Documentation => ArtifactType::Documentation,
+            crate::self_prompting_agent::prompting_types::TaskType::CodeGeneration => {
+                ArtifactType::Code
+            }
+            crate::self_prompting_agent::prompting_types::TaskType::CodeReview => {
+                ArtifactType::Documentation
+            }
+            crate::self_prompting_agent::prompting_types::TaskType::Documentation => {
+                ArtifactType::Documentation
+            }
             _ => ArtifactType::Text,
         };
-        
+
         let artifact = Artifact {
             id: uuid::Uuid::new_v4(),
             file_path: if !task.target_files.is_empty() {
@@ -289,14 +320,14 @@ impl SelfPromptingLoop {
             artifact_type,
             created_at: chrono::Utc::now(),
         };
-        
+
         // Initial score based on content quality (will be refined by evaluator)
         let initial_score = if generated_content.len() > 100 {
             0.7 // Good starting score for substantial content
         } else {
             0.4 // Lower score for minimal content
         };
-        
+
         let result = TaskResult {
             task_id: task.id,
             task_type: task.task_type.clone(),
@@ -323,13 +354,13 @@ impl SelfPromptingLoop {
 
         // Build comprehensive feedback context
         let mut feedback_parts = Vec::new();
-        
+
         // Score feedback
         feedback_parts.push(format!("Score: {:.2}/1.0", evaluation.score));
-        
+
         // Status feedback
         feedback_parts.push(format!("Status: {:?}", evaluation.status));
-        
+
         // Issues to address
         if !evaluation.issues.is_empty() {
             feedback_parts.push("Issues to address:".to_string());
@@ -337,7 +368,7 @@ impl SelfPromptingLoop {
                 feedback_parts.push(format!("  - {}", issue));
             }
         }
-        
+
         // Recommendations for improvement
         if !evaluation.recommendations.is_empty() {
             feedback_parts.push("Recommendations:".to_string());
@@ -345,17 +376,18 @@ impl SelfPromptingLoop {
                 feedback_parts.push(format!("  - {}", rec));
             }
         }
-        
+
         // Add refined constraints based on issues
         if evaluation.score < 0.7 {
-            refined_task.constraints.insert(
-                "strict_validation".to_string(),
-                "true".to_string()
-            );
+            refined_task
+                .constraints
+                .insert("strict_validation".to_string(), "true".to_string());
         }
-        
+
         // Add feedback to refinement context
-        refined_task.refinement_context.push(feedback_parts.join("\n"));
+        refined_task
+            .refinement_context
+            .push(feedback_parts.join("\n"));
 
         Ok(refined_task)
     }

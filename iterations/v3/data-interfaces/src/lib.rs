@@ -20,8 +20,8 @@ pub mod interactive;
 // API interface modules
 pub mod api;
 pub mod endpoints;
-pub mod websocket;
 pub mod middleware;
+pub mod websocket;
 
 // Data contract modules
 pub mod contracts;
@@ -32,9 +32,9 @@ pub mod validation;
 pub mod service_contracts;
 
 // User experience modules
-pub mod ux;
 pub mod feedback;
 pub mod formatting;
+pub mod ux;
 
 // External imports
 use schemars::JsonSchema;
@@ -70,17 +70,16 @@ pub struct DataInterfacesService {
 impl DataInterfacesService {
     /// Create a new data interfaces service
     pub async fn new() -> Result<Self, InterfaceError> {
-        let cli_interface = CliInterface::new()
-            .map_err(|e| InterfaceError::CliError(e.to_string()))?;
+        let cli_interface =
+            CliInterface::new().map_err(|e| InterfaceError::CliError(e.to_string()))?;
 
-        let api_server = ApiServer::new()
-            .map_err(|e| InterfaceError::ApiError(e.to_string()))?;
+        let api_server = ApiServer::new().map_err(|e| InterfaceError::ApiError(e.to_string()))?;
 
-        let websocket_manager = WebSocketManager::new()
-            .map_err(|e| InterfaceError::WebSocketError(e.to_string()))?;
+        let websocket_manager =
+            WebSocketManager::new().map_err(|e| InterfaceError::WebSocketError(e.to_string()))?;
 
-        let contract_validator = ContractValidator::new()
-            .map_err(|e| InterfaceError::ContractError(e.to_string()))?;
+        let contract_validator =
+            ContractValidator::new().map_err(|e| InterfaceError::ContractError(e.to_string()))?;
 
         Ok(Self {
             cli_interface,
@@ -91,24 +90,29 @@ impl DataInterfacesService {
     }
 
     /// Initialize the interface layer with configuration
-    pub async fn initialize(
-        &mut self,
-        config: InterfaceConfig,
-    ) -> Result<(), InterfaceError> {
+    pub async fn initialize(&mut self, config: InterfaceConfig) -> Result<(), InterfaceError> {
         // Initialize CLI interface
-        self.cli_interface.initialize(config.cli_config).await
+        self.cli_interface
+            .initialize(config.cli_config)
+            .await
             .map_err(|e| InterfaceError::CliError(e.to_string()))?;
 
         // Initialize API server
-        self.api_server.initialize(config.api_config).await
+        self.api_server
+            .initialize(config.api_config)
+            .await
             .map_err(|e| InterfaceError::ApiError(e.to_string()))?;
 
         // Initialize WebSocket manager
-        self.websocket_manager.initialize(config.websocket_config).await
+        self.websocket_manager
+            .initialize(config.websocket_config)
+            .await
             .map_err(|e| InterfaceError::WebSocketError(e.to_string()))?;
 
         // Initialize contract validator
-        self.contract_validator.initialize(config.contract_config).await
+        self.contract_validator
+            .initialize(config.contract_config)
+            .await
             .map_err(|e| InterfaceError::ContractError(e.to_string()))?;
 
         Ok(())
@@ -117,15 +121,21 @@ impl DataInterfacesService {
     /// Start all interface services
     pub async fn start(&mut self) -> Result<(), InterfaceError> {
         // Start API server first
-        self.api_server.start().await
+        self.api_server
+            .start()
+            .await
             .map_err(|e| InterfaceError::ApiError(e.to_string()))?;
 
         // Start WebSocket manager
-        self.websocket_manager.start().await
+        self.websocket_manager
+            .start()
+            .await
             .map_err(|e| InterfaceError::WebSocketError(e.to_string()))?;
 
         // Start CLI interface
-        self.cli_interface.start().await
+        self.cli_interface
+            .start()
+            .await
             .map_err(|e| InterfaceError::CliError(e.to_string()))?;
 
         Ok(())
@@ -134,13 +144,19 @@ impl DataInterfacesService {
     /// Stop all interface services
     pub async fn stop(&mut self) -> Result<(), InterfaceError> {
         // Stop in reverse order
-        self.cli_interface.stop().await
+        self.cli_interface
+            .stop()
+            .await
             .map_err(|e| InterfaceError::CliError(e.to_string()))?;
 
-        self.websocket_manager.stop().await
+        self.websocket_manager
+            .stop()
+            .await
             .map_err(|e| InterfaceError::WebSocketError(e.to_string()))?;
 
-        self.api_server.stop().await
+        self.api_server
+            .stop()
+            .await
             .map_err(|e| InterfaceError::ApiError(e.to_string()))?;
 
         Ok(())
@@ -152,7 +168,9 @@ impl DataInterfacesService {
         command: &str,
         args: &[String],
     ) -> Result<CliResponse, InterfaceError> {
-        self.cli_interface.execute_command(command, args).await
+        self.cli_interface
+            .execute_command(command, args)
+            .await
             .map_err(|e| InterfaceError::CliError(e.to_string()))
     }
 
@@ -161,7 +179,9 @@ impl DataInterfacesService {
         &self,
         request: ApiRequest,
     ) -> Result<ApiResponse, InterfaceError> {
-        self.api_server.handle_request(request).await
+        self.api_server
+            .handle_request(request)
+            .await
             .map_err(|e| InterfaceError::ApiError(e.to_string()))
     }
 
@@ -170,7 +190,9 @@ impl DataInterfacesService {
         &self,
         contract: &InterfaceContract,
     ) -> Result<ValidationResult, InterfaceError> {
-        self.contract_validator.validate_contract(contract).await
+        self.contract_validator
+            .validate_contract(contract)
+            .await
             .map_err(|e| InterfaceError::ContractError(e.to_string()))
     }
 
@@ -220,7 +242,6 @@ pub struct InterfaceConfig {
     pub contract_config: ContractConfig,
 }
 
-
 /// API configuration
 #[derive(Debug, Clone, JsonSchema)]
 pub struct ApiConfig {
@@ -245,7 +266,6 @@ pub struct ContractConfig {
     pub schema_cache_size: usize,
     pub validation_timeout_seconds: u64,
 }
-
 
 /// Interface errors
 #[derive(Debug, thiserror::Error, JsonSchema)]

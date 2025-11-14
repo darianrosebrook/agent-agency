@@ -11,11 +11,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use system_common_interfaces::learning::{
-        LearningService, LearningResult, LearningContext, TaskPerformance,
-        LearningInsights, Pattern, Improvement, OptimizationRecommendation,
-        LearningStatistics, OptimizationGoal, RecommendationType, Priority,
-        PatternType, ImprovementType, Difficulty,
-    };
+    Difficulty, Improvement, ImprovementType, LearningContext, LearningInsights, LearningResult,
+    LearningService, LearningStatistics, OptimizationGoal, OptimizationRecommendation, Pattern,
+    PatternType, Priority, RecommendationType, TaskPerformance,
+};
 
 /// Simple Q-learning based learning service
 #[derive(Debug)]
@@ -93,7 +92,7 @@ impl SimpleLearningService {
         let q_table = self.q_table.read().await;
         let mut total_confidence = 0.0;
         let mut confidence_count = 0;
-        
+
         for (_state, actions) in q_table.iter() {
             for (_action, q_value) in actions.iter() {
                 // Convert Q-value to confidence (normalize to 0-1 range)
@@ -103,7 +102,7 @@ impl SimpleLearningService {
                 confidence_count += 1;
             }
         }
-        
+
         stats.average_confidence = if confidence_count > 0 {
             total_confidence / confidence_count as f64
         } else {
@@ -111,15 +110,13 @@ impl SimpleLearningService {
         };
 
         // Generate some top recommendations based on learned patterns
-        stats.top_recommendations = vec![
-            OptimizationRecommendation {
-                recommendation_type: RecommendationType::ChangeModel,
-                description: "Use faster model for similar tasks".to_string(),
-                expected_improvement: 0.3,
-                confidence: 0.8,
-                priority: Priority::Medium,
-            },
-        ];
+        stats.top_recommendations = vec![OptimizationRecommendation {
+            recommendation_type: RecommendationType::ChangeModel,
+            description: "Use faster model for similar tasks".to_string(),
+            expected_improvement: 0.3,
+            confidence: 0.8,
+            priority: Priority::Medium,
+        }];
     }
 }
 
@@ -144,9 +141,10 @@ impl LearningService for SimpleLearningService {
         } else {
             0.0
         };
-        
+
         // Q-learning update: Q(s,a) = Q(s,a) + α[r + γ*max(Q(s',a')) - Q(s,a)]
-        let new_q = current_q + self.learning_rate * (reward + self.discount_factor * next_state_q - current_q);
+        let new_q = current_q
+            + self.learning_rate * (reward + self.discount_factor * next_state_q - current_q);
 
         // Update Q-table
         self.set_q_value(&context.state, "current", new_q).await;
@@ -155,33 +153,27 @@ impl LearningService for SimpleLearningService {
         self.update_statistics(1).await;
 
         // Generate insights
-        let patterns = vec![
-            Pattern {
-                pattern_type: PatternType::TimingOptimization,
-                description: format!("Task {} shows performance pattern", context.task_id),
-                frequency: 1.0,
-                impact: performance.quality_score,
-            },
-        ];
+        let patterns = vec![Pattern {
+            pattern_type: PatternType::TimingOptimization,
+            description: format!("Task {} shows performance pattern", context.task_id),
+            frequency: 1.0,
+            impact: performance.quality_score,
+        }];
 
-        let improvements = vec![
-            Improvement {
-                improvement_type: ImprovementType::ResourceAllocation,
-                expected_benefit: 0.2,
-                difficulty: Difficulty::Moderate,
-                description: "Optimize resource allocation for better performance".to_string(),
-            },
-        ];
+        let improvements = vec![Improvement {
+            improvement_type: ImprovementType::ResourceAllocation,
+            expected_benefit: 0.2,
+            difficulty: Difficulty::Moderate,
+            description: "Optimize resource allocation for better performance".to_string(),
+        }];
 
-        let recommendations = vec![
-            OptimizationRecommendation {
-                recommendation_type: RecommendationType::AdjustResources,
-                description: "Increase memory allocation for similar tasks".to_string(),
-                expected_improvement: 0.25,
-                confidence: 0.75,
-                priority: Priority::Medium,
-            },
-        ];
+        let recommendations = vec![OptimizationRecommendation {
+            recommendation_type: RecommendationType::AdjustResources,
+            description: "Increase memory allocation for similar tasks".to_string(),
+            expected_improvement: 0.25,
+            confidence: 0.75,
+            priority: Priority::Medium,
+        }];
 
         Ok(LearningInsights {
             patterns,
@@ -243,18 +235,26 @@ impl LearningService for SimpleLearningService {
         Ok(recommendations)
     }
 
-    async fn update_model(&self, experiences: Vec<system_common_interfaces::learning::Experience>) -> LearningResult<()> {
+    async fn update_model(
+        &self,
+        experiences: Vec<system_common_interfaces::learning::Experience>,
+    ) -> LearningResult<()> {
         // Update learning model with batch of experiences
         // Process each experience using Q-learning update
         for experience in &experiences {
-            let current_q = self.get_q_value(&experience.state, &experience.action).await;
+            let current_q = self
+                .get_q_value(&experience.state, &experience.action)
+                .await;
             let next_q = self.get_q_value(&experience.next_state, "best").await;
-            
+
             // Q-learning update: Q(s,a) = Q(s,a) + α[r + γ*max(Q(s',a')) - Q(s,a)]
-            let new_q = current_q + self.learning_rate * (experience.reward + self.discount_factor * next_q - current_q);
-            self.set_q_value(&experience.state, &experience.action, new_q).await;
+            let new_q = current_q
+                + self.learning_rate
+                    * (experience.reward + self.discount_factor * next_q - current_q);
+            self.set_q_value(&experience.state, &experience.action, new_q)
+                .await;
         }
-        
+
         // Update statistics
         let experience_count = experiences.len();
         self.update_statistics(experience_count).await;

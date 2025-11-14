@@ -5,18 +5,18 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 #[cfg(feature = "memory")]
-use agent_memory::MemorySystem;
-#[cfg(feature = "memory")]
 use agent_memory::memory_types::TaskContext;
+#[cfg(feature = "memory")]
+use agent_memory::MemorySystem;
 
 /// Represents a session context for multi-session continuity
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,10 +67,7 @@ pub struct SessionManager {
 
 impl SessionManager {
     /// Create a new session manager
-    pub fn new(
-        #[cfg(feature = "memory")]
-        memory_system: Option<Arc<MemorySystem>>,
-    ) -> Self {
+    pub fn new(#[cfg(feature = "memory")] memory_system: Option<Arc<MemorySystem>>) -> Self {
         Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             task_to_session: Arc::new(RwLock::new(HashMap::new())),
@@ -162,7 +159,8 @@ impl SessionManager {
             // Get all tasks in this session
             let task_ids = {
                 let sessions = self.sessions.read().await;
-                sessions.get(&session_id)
+                sessions
+                    .get(&session_id)
                     .map(|s| s.task_ids.clone())
                     .unwrap_or_default()
             };
@@ -182,15 +180,19 @@ impl SessionManager {
                 };
 
                 // Retrieve contextual memories
-                match memory.retrieve_contextual_memories(&search_context, limit).await {
+                match memory
+                    .retrieve_contextual_memories(&search_context, limit)
+                    .await
+                {
                     Ok(memories) => {
                         // Extract TaskContext from contextual memories
                         // Process memories in order (already sorted by relevance)
                         for contextual_memory in memories {
                             let agent_experience = &contextual_memory.memory;
-                            
+
                             // Extract keywords and entities from metadata if available
-                            let keywords: Vec<String> = agent_experience.metadata
+                            let keywords: Vec<String> = agent_experience
+                                .metadata
                                 .get("keywords")
                                 .and_then(|v| v.as_array())
                                 .map(|arr| {
@@ -202,8 +204,9 @@ impl SessionManager {
                                     // Fallback: extract keywords from context.domain
                                     agent_experience.context.domain.clone()
                                 });
-                            
-                            let entities: Vec<String> = agent_experience.metadata
+
+                            let entities: Vec<String> = agent_experience
+                                .metadata
                                 .get("entities")
                                 .and_then(|v| v.as_array())
                                 .map(|arr| {
@@ -212,7 +215,7 @@ impl SessionManager {
                                         .collect()
                                 })
                                 .unwrap_or_default();
-                            
+
                             // Create TaskContext from AgentExperience fields
                             let extracted_context = agent_memory::memory_types::TaskContext {
                                 task_id: agent_experience.task_id.clone(),
@@ -223,15 +226,15 @@ impl SessionManager {
                                 timestamp: agent_experience.timestamp,
                                 description: agent_experience.context.description.clone(),
                             };
-                            
+
                             contexts.push(extracted_context);
-                            
+
                             // Stop if we've reached the limit
                             if contexts.len() >= limit {
                                 break;
                             }
                         }
-                        
+
                         // If no contexts were extracted, use search context as fallback
                         if contexts.is_empty() {
                             tracing::debug!("No TaskContext extracted from contextual memories, using search context as fallback");
@@ -239,7 +242,11 @@ impl SessionManager {
                         }
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to retrieve contextual memories for task {}: {}", task_id, e);
+                        tracing::warn!(
+                            "Failed to retrieve contextual memories for task {}: {}",
+                            task_id,
+                            e
+                        );
                     }
                 }
             }
@@ -282,7 +289,8 @@ impl SessionManager {
     /// Get all active sessions for a tenant
     pub async fn get_active_sessions(&self, tenant_id: Uuid) -> Vec<SessionContext> {
         let sessions = self.sessions.read().await;
-        sessions.values()
+        sessions
+            .values()
             .filter(|s| s.tenant_id == tenant_id && s.status == SessionStatus::Active)
             .cloned()
             .collect()
@@ -290,12 +298,14 @@ impl SessionManager {
 
     /// Archive a session
     pub async fn archive_session(&self, session_id: Uuid) -> Result<()> {
-        self.update_session_context(session_id, SessionUpdate::Status(SessionStatus::Archived)).await
+        self.update_session_context(session_id, SessionUpdate::Status(SessionStatus::Archived))
+            .await
     }
 
     /// Complete a session
     pub async fn complete_session(&self, session_id: Uuid) -> Result<()> {
-        self.update_session_context(session_id, SessionUpdate::Status(SessionStatus::Completed)).await
+        self.update_session_context(session_id, SessionUpdate::Status(SessionStatus::Completed))
+            .await
     }
 }
 
@@ -325,11 +335,14 @@ mod tests {
 
         // Create a session
         let tenant_id = Uuid::new_v4();
-        let session_id = manager.create_session(
-            tenant_id,
-            "Test Session".to_string(),
-            Some("Test description".to_string()),
-        ).await.unwrap();
+        let session_id = manager
+            .create_session(
+                tenant_id,
+                "Test Session".to_string(),
+                Some("Test description".to_string()),
+            )
+            .await
+            .unwrap();
 
         // Get session context
         let session = manager.get_session_context(session_id).await.unwrap();
@@ -338,7 +351,10 @@ mod tests {
 
         // Link a task to the session
         let task_id = Uuid::new_v4();
-        manager.link_task_to_session(task_id, session_id).await.unwrap();
+        manager
+            .link_task_to_session(task_id, session_id)
+            .await
+            .unwrap();
 
         // Verify task is linked
         let linked_session = manager.get_session_for_task(task_id).await;
@@ -349,4 +365,3 @@ mod tests {
         assert_eq!(active_sessions.len(), 1);
     }
 }
-

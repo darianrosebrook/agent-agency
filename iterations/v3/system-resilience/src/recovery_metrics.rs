@@ -2,10 +2,10 @@
 //!
 //! Provides recovery-specific metrics that integrate with the v3 observability system.
 
-use schemars::JsonSchema;
-use crate::recovery_types::{RecoveryMetrics, ChangeStats};
+use crate::recovery_types::{ChangeStats, RecoveryMetrics};
 use anyhow::Result;
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -75,19 +75,35 @@ impl RecoveryMetricsCollector {
 
         // Record metrics
         self.metrics_backend
-            .gauge("recovery_dedupe_ratio", &[("session_id", session_id)], dedupe_ratio)
+            .gauge(
+                "recovery_dedupe_ratio",
+                &[("session_id", session_id)],
+                dedupe_ratio,
+            )
             .await;
 
         self.metrics_backend
-            .histogram("recovery_deduplication_duration_ms", &[("session_id", session_id)], duration_ms)
+            .histogram(
+                "recovery_deduplication_duration_ms",
+                &[("session_id", session_id)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_input_bytes", &[("session_id", session_id)], input_bytes as f64)
+            .gauge(
+                "recovery_input_bytes",
+                &[("session_id", session_id)],
+                input_bytes as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_output_bytes", &[("session_id", session_id)], output_bytes as f64)
+            .gauge(
+                "recovery_output_bytes",
+                &[("session_id", session_id)],
+                output_bytes as f64,
+            )
             .await;
 
         // Update global metrics
@@ -112,25 +128,35 @@ impl RecoveryMetricsCollector {
 
         // Record operation metrics
         self.metrics_backend
-            .histogram("recovery_restore_duration_ms", &[
-                ("session_id", session_id),
-                ("status", status),
-            ], duration_ms)
+            .histogram(
+                "recovery_restore_duration_ms",
+                &[("session_id", session_id), ("status", status)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .counter("recovery_restore_operations_total", &[
-                ("session_id", session_id),
-                ("status", status),
-            ], 1)
+            .counter(
+                "recovery_restore_operations_total",
+                &[("session_id", session_id), ("status", status)],
+                1,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_files_restored", &[("session_id", session_id)], files_restored as f64)
+            .gauge(
+                "recovery_files_restored",
+                &[("session_id", session_id)],
+                files_restored as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_bytes_restored", &[("session_id", session_id)], bytes_restored as f64)
+            .gauge(
+                "recovery_bytes_restored",
+                &[("session_id", session_id)],
+                bytes_restored as f64,
+            )
             .await;
 
         if success {
@@ -171,7 +197,9 @@ impl RecoveryMetricsCollector {
             // - Reviewer Requirements: Statistics expertise
             {
                 let mut global = self.global_metrics.write().await; // Temporary: basic until proper percentile calculation
-                if global.restore_latency_p50_ms == 0 || duration_ms < global.restore_latency_p50_ms as f64 {
+                if global.restore_latency_p50_ms == 0
+                    || duration_ms < global.restore_latency_p50_ms as f64
+                {
                     global.restore_latency_p50_ms = duration_ms as u64;
                 }
                 if duration_ms > global.restore_latency_p95_ms as f64 {
@@ -191,11 +219,15 @@ impl RecoveryMetricsCollector {
         resolution: &str,
     ) -> Result<()> {
         self.metrics_backend
-            .counter("recovery_conflicts_total", &[
-                ("session_id", session_id),
-                ("conflict_type", conflict_type),
-                ("resolution", resolution),
-            ], 1)
+            .counter(
+                "recovery_conflicts_total",
+                &[
+                    ("session_id", session_id),
+                    ("conflict_type", conflict_type),
+                    ("resolution", resolution),
+                ],
+                1,
+            )
             .await;
 
         // TODO: Calculate actual conflict rate from metrics
@@ -249,17 +281,25 @@ impl RecoveryMetricsCollector {
         content_size: u64,
     ) -> Result<()> {
         self.metrics_backend
-            .counter("recovery_redactions_total", &[
-                ("session_id", session_id),
-                ("redaction_type", redaction_type),
-            ], 1)
+            .counter(
+                "recovery_redactions_total",
+                &[
+                    ("session_id", session_id),
+                    ("redaction_type", redaction_type),
+                ],
+                1,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_redacted_content_size", &[
-                ("session_id", session_id),
-                ("redaction_type", redaction_type),
-            ], content_size as f64)
+            .gauge(
+                "recovery_redacted_content_size",
+                &[
+                    ("session_id", session_id),
+                    ("redaction_type", redaction_type),
+                ],
+                content_size as f64,
+            )
             .await;
 
         // Update global redaction hits
@@ -281,19 +321,35 @@ impl RecoveryMetricsCollector {
         duration_ms: f64,
     ) -> Result<()> {
         self.metrics_backend
-            .histogram("recovery_gc_duration_ms", &[("session_id", session_id)], duration_ms)
+            .histogram(
+                "recovery_gc_duration_ms",
+                &[("session_id", session_id)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_gc_objects_marked", &[("session_id", session_id)], objects_marked as f64)
+            .gauge(
+                "recovery_gc_objects_marked",
+                &[("session_id", session_id)],
+                objects_marked as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_gc_objects_swept", &[("session_id", session_id)], objects_swept as f64)
+            .gauge(
+                "recovery_gc_objects_swept",
+                &[("session_id", session_id)],
+                objects_swept as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_gc_bytes_freed", &[("session_id", session_id)], bytes_freed as f64)
+            .gauge(
+                "recovery_gc_bytes_freed",
+                &[("session_id", session_id)],
+                bytes_freed as f64,
+            )
             .await;
 
         // Update global GC metrics
@@ -321,23 +377,43 @@ impl RecoveryMetricsCollector {
         };
 
         self.metrics_backend
-            .histogram("recovery_pack_duration_ms", &[("session_id", session_id)], duration_ms)
+            .histogram(
+                "recovery_pack_duration_ms",
+                &[("session_id", session_id)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_pack_efficiency", &[("session_id", session_id)], efficiency)
+            .gauge(
+                "recovery_pack_efficiency",
+                &[("session_id", session_id)],
+                efficiency,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_pack_original_size", &[("session_id", session_id)], original_size as f64)
+            .gauge(
+                "recovery_pack_original_size",
+                &[("session_id", session_id)],
+                original_size as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_pack_packed_size", &[("session_id", session_id)], packed_size as f64)
+            .gauge(
+                "recovery_pack_packed_size",
+                &[("session_id", session_id)],
+                packed_size as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_pack_objects_count", &[("session_id", session_id)], objects_packed as f64)
+            .gauge(
+                "recovery_pack_objects_count",
+                &[("session_id", session_id)],
+                objects_packed as f64,
+            )
             .await;
 
         // Update global pack efficiency
@@ -363,15 +439,27 @@ impl RecoveryMetricsCollector {
         };
 
         self.metrics_backend
-            .gauge("recovery_storage_usage_mb", &[("session_id", session_id)], current_usage_mb as f64)
+            .gauge(
+                "recovery_storage_usage_mb",
+                &[("session_id", session_id)],
+                current_usage_mb as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_storage_budget_mb", &[("session_id", session_id)], budget_limit_mb as f64)
+            .gauge(
+                "recovery_storage_budget_mb",
+                &[("session_id", session_id)],
+                budget_limit_mb as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_budget_usage_percent", &[("session_id", session_id)], usage_percent)
+            .gauge(
+                "recovery_budget_usage_percent",
+                &[("session_id", session_id)],
+                usage_percent,
+            )
             .await;
 
         // Update global budget usage
@@ -384,11 +472,7 @@ impl RecoveryMetricsCollector {
     }
 
     /// Record file change metrics
-    pub async fn record_file_changes(
-        &self,
-        session_id: &str,
-        stats: &ChangeStats,
-    ) -> Result<()> {
+    pub async fn record_file_changes(&self, session_id: &str, stats: &ChangeStats) -> Result<()> {
         // Update session stats
         {
             let mut session_stats = self.session_stats.write().await;
@@ -397,27 +481,51 @@ impl RecoveryMetricsCollector {
 
         // Record individual metrics
         self.metrics_backend
-            .gauge("recovery_files_added", &[("session_id", session_id)], stats.files_added as f64)
+            .gauge(
+                "recovery_files_added",
+                &[("session_id", session_id)],
+                stats.files_added as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_files_changed", &[("session_id", session_id)], stats.files_changed as f64)
+            .gauge(
+                "recovery_files_changed",
+                &[("session_id", session_id)],
+                stats.files_changed as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_files_deleted", &[("session_id", session_id)], stats.files_deleted as f64)
+            .gauge(
+                "recovery_files_deleted",
+                &[("session_id", session_id)],
+                stats.files_deleted as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_bytes_added", &[("session_id", session_id)], stats.bytes_added as f64)
+            .gauge(
+                "recovery_bytes_added",
+                &[("session_id", session_id)],
+                stats.bytes_added as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_bytes_changed", &[("session_id", session_id)], stats.bytes_changed as f64)
+            .gauge(
+                "recovery_bytes_changed",
+                &[("session_id", session_id)],
+                stats.bytes_changed as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_session_dedupe_ratio", &[("session_id", session_id)], stats.dedupe_ratio)
+            .gauge(
+                "recovery_session_dedupe_ratio",
+                &[("session_id", session_id)],
+                stats.dedupe_ratio,
+            )
             .await;
 
         Ok(())
@@ -438,19 +546,35 @@ impl RecoveryMetricsCollector {
         };
 
         self.metrics_backend
-            .histogram("recovery_diff_duration_ms", &[("session_id", session_id)], duration_ms)
+            .histogram(
+                "recovery_diff_duration_ms",
+                &[("session_id", session_id)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_diff_ratio", &[("session_id", session_id)], diff_ratio)
+            .gauge(
+                "recovery_diff_ratio",
+                &[("session_id", session_id)],
+                diff_ratio,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_diff_original_size", &[("session_id", session_id)], original_size as f64)
+            .gauge(
+                "recovery_diff_original_size",
+                &[("session_id", session_id)],
+                original_size as f64,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_diff_size", &[("session_id", session_id)], diff_size as f64)
+            .gauge(
+                "recovery_diff_size",
+                &[("session_id", session_id)],
+                diff_size as f64,
+            )
             .await;
 
         // Update global diff ratio
@@ -485,21 +609,27 @@ impl RecoveryMetricsCollector {
         let status = if success { "success" } else { "failure" };
 
         self.metrics_backend
-            .histogram("recovery_cas_operation_duration_ms", &[
-                ("operation", operation),
-                ("status", status),
-            ], duration_ms)
+            .histogram(
+                "recovery_cas_operation_duration_ms",
+                &[("operation", operation), ("status", status)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .counter("recovery_cas_operations_total", &[
-                ("operation", operation),
-                ("status", status),
-            ], 1)
+            .counter(
+                "recovery_cas_operations_total",
+                &[("operation", operation), ("status", status)],
+                1,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_cas_object_size", &[("operation", operation)], object_size as f64)
+            .gauge(
+                "recovery_cas_object_size",
+                &[("operation", operation)],
+                object_size as f64,
+            )
             .await;
 
         Ok(())
@@ -516,21 +646,27 @@ impl RecoveryMetricsCollector {
         let status = if success { "success" } else { "failure" };
 
         self.metrics_backend
-            .histogram("recovery_wal_operation_duration_ms", &[
-                ("operation", operation),
-                ("status", status),
-            ], duration_ms)
+            .histogram(
+                "recovery_wal_operation_duration_ms",
+                &[("operation", operation), ("status", status)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .counter("recovery_wal_operations_total", &[
-                ("operation", operation),
-                ("status", status),
-            ], 1)
+            .counter(
+                "recovery_wal_operations_total",
+                &[("operation", operation), ("status", status)],
+                1,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_wal_record_size", &[("operation", operation)], record_size as f64)
+            .gauge(
+                "recovery_wal_record_size",
+                &[("operation", operation)],
+                record_size as f64,
+            )
             .await;
 
         Ok(())
@@ -547,21 +683,27 @@ impl RecoveryMetricsCollector {
         let status = if success { "success" } else { "failure" };
 
         self.metrics_backend
-            .histogram("recovery_index_operation_duration_ms", &[
-                ("operation", operation),
-                ("status", status),
-            ], duration_ms)
+            .histogram(
+                "recovery_index_operation_duration_ms",
+                &[("operation", operation), ("status", status)],
+                duration_ms,
+            )
             .await;
 
         self.metrics_backend
-            .counter("recovery_index_operations_total", &[
-                ("operation", operation),
-                ("status", status),
-            ], 1)
+            .counter(
+                "recovery_index_operations_total",
+                &[("operation", operation), ("status", status)],
+                1,
+            )
             .await;
 
         self.metrics_backend
-            .gauge("recovery_index_records_processed", &[("operation", operation)], records_processed as f64)
+            .gauge(
+                "recovery_index_records_processed",
+                &[("operation", operation)],
+                records_processed as f64,
+            )
             .await;
 
         Ok(())
@@ -578,7 +720,7 @@ pub trait MetricsBackend: Send + Sync {
 
 /// No-op metrics backend for testing
 #[derive(Debug, Clone, JsonSchema)]
-pub struct NoOpMetricsBackend ;
+pub struct NoOpMetricsBackend;
 
 #[async_trait]
 impl MetricsBackend for NoOpMetricsBackend {
@@ -598,25 +740,46 @@ mod tests {
         let collector = RecoveryMetricsCollector::new(backend);
 
         // Test deduplication metrics
-        collector.record_deduplication("session1", 1000, 500, 10.0).await.unwrap();
+        collector
+            .record_deduplication("session1", 1000, 500, 10.0)
+            .await
+            .unwrap();
 
         // Test restore metrics
-        collector.record_restore_operation("session1", 5, 1000, 50.0, true).await.unwrap();
+        collector
+            .record_restore_operation("session1", 5, 1000, 50.0, true)
+            .await
+            .unwrap();
 
         // Test conflict metrics
-        collector.record_conflict("session1", "concurrent_edit", "merge").await.unwrap();
+        collector
+            .record_conflict("session1", "concurrent_edit", "merge")
+            .await
+            .unwrap();
 
         // Test redaction metrics
-        collector.record_redaction("session1", "api_key", 100).await.unwrap();
+        collector
+            .record_redaction("session1", "api_key", 100)
+            .await
+            .unwrap();
 
         // Test GC metrics
-        collector.record_gc_operation("session1", 100, 50, 1024, 25.0).await.unwrap();
+        collector
+            .record_gc_operation("session1", 100, 50, 1024, 25.0)
+            .await
+            .unwrap();
 
         // Test pack metrics
-        collector.record_pack_operation("session1", 1000, 500, 10, 15.0).await.unwrap();
+        collector
+            .record_pack_operation("session1", 1000, 500, 10, 15.0)
+            .await
+            .unwrap();
 
         // Test budget metrics
-        collector.record_budget_usage("session1", 100, 1000).await.unwrap();
+        collector
+            .record_budget_usage("session1", 100, 1000)
+            .await
+            .unwrap();
 
         // Test file change metrics
         let stats = ChangeStats {
@@ -628,24 +791,41 @@ mod tests {
             bytes_added: 500,
             bytes_changed: 200,
             dedupe_ratio: 0.3,
-            timestamp: Some(std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()),
+            timestamp: Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+            ),
         };
-        collector.record_file_changes("session1", &stats).await.unwrap();
+        collector
+            .record_file_changes("session1", &stats)
+            .await
+            .unwrap();
 
         // Test diff metrics
-        collector.record_diff_operation("session1", 1000, 200, 5.0).await.unwrap();
+        collector
+            .record_diff_operation("session1", 1000, 200, 5.0)
+            .await
+            .unwrap();
 
         // Test CAS metrics
-        collector.record_cas_operation("store", 500, 10.0, true).await.unwrap();
+        collector
+            .record_cas_operation("store", 500, 10.0, true)
+            .await
+            .unwrap();
 
         // Test WAL metrics
-        collector.record_wal_operation("append", 100, 2.0, true).await.unwrap();
+        collector
+            .record_wal_operation("append", 100, 2.0, true)
+            .await
+            .unwrap();
 
         // Test index metrics
-        collector.record_index_operation("update", 50, 5.0, true).await.unwrap();
+        collector
+            .record_index_operation("update", 50, 5.0, true)
+            .await
+            .unwrap();
 
         // Verify session stats
         let session_stats = collector.get_session_stats("session1").await;

@@ -6,19 +6,16 @@
 //! 3. Council validates accuracy, citations, and hallucination detection
 //! 4. Verifies output structure and reusability
 
-use std::time::Instant;
-use tracing::{info, error};
 use std::sync::Arc;
+use std::time::Instant;
+use tracing::{error, info};
 
-use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
 use crate::fixtures::research_sources::{create_source_files, get_research_sources};
-use crate::{TestResult, TestMetrics, Scenario};
+use crate::harness::{AssertionFramework, LocalServiceManager, TestEnvironment};
+use crate::{Scenario, TestMetrics, TestResult};
 
 /// Run the research scenario test
-pub async fn run_test(
-    env: &TestEnvironment,
-    services: &LocalServiceManager,
-) -> TestResult {
+pub async fn run_test(env: &TestEnvironment, services: &LocalServiceManager) -> TestResult {
     let start_time = Instant::now();
     let mut assertions = AssertionFramework::new();
 
@@ -53,17 +50,18 @@ pub async fn run_test(
 
     // Get expected sources for validation
     let sources = get_research_sources();
-    let source_files: Vec<_> = sources.iter().map(|s| {
-        crate::harness::SourceFile {
+    let source_files: Vec<_> = sources
+        .iter()
+        .map(|s| crate::harness::SourceFile {
             name: s.filename.clone(),
             content: s.content.clone(),
-        }
-    }).collect();
+        })
+        .collect();
 
     // Initialize real KnowledgeSeeker for research
     let postgres_service = services.postgres();
     let postgres_guard = postgres_service.lock().await;
-    
+
     // Create DatabaseClient from PostgresService connection info
     #[cfg(feature = "full")]
     use data_infrastructure::{DatabaseClient, DatabaseConfig};
@@ -104,11 +102,14 @@ pub async fn run_test(
             };
         }
     };
-    
+
+    #[cfg(feature = "full")]
+    use agent_research::research_types::{
+        ContextSynthesisConfig, FuzzyMatchingConfig, PerformanceConfig, ResearchAgentConfig,
+        VectorSearchConfig, WebScrapingConfig,
+    };
     #[cfg(feature = "full")]
     use agent_research::KnowledgeSeeker;
-    #[cfg(feature = "full")]
-    use agent_research::research_types::{ResearchAgentConfig, VectorSearchConfig, WebScrapingConfig, ContextSynthesisConfig, PerformanceConfig, FuzzyMatchingConfig};
     #[cfg(feature = "full")]
     let knowledge_seeker = match KnowledgeSeeker::new(
         ResearchAgentConfig {
@@ -153,7 +154,9 @@ pub async fn run_test(
             },
         },
         db_client,
-    ).await {
+    )
+    .await
+    {
         Ok(seeker) => seeker,
         Err(e) => {
             return TestResult {
@@ -167,7 +170,9 @@ pub async fn run_test(
     };
 
     // Execute research task
-    use agent_research::research_types::{ResearchQuery, QueryType, ResearchPriority, KnowledgeSource};
+    use agent_research::research_types::{
+        KnowledgeSource, QueryType, ResearchPriority, ResearchQuery,
+    };
     use chrono::Utc;
     use std::collections::HashMap;
     let research_query = ResearchQuery {
@@ -184,7 +189,11 @@ pub async fn run_test(
     };
 
     #[cfg(feature = "full")]
-    let research_results = match knowledge_seeker.orchestrator().execute_query(research_query.clone()).await {
+    let research_results = match knowledge_seeker
+        .orchestrator()
+        .execute_query(research_query.clone())
+        .await
+    {
         Ok(results) => results,
         Err(e) => {
             return TestResult {
@@ -196,7 +205,7 @@ pub async fn run_test(
             };
         }
     };
-    
+
     #[cfg(not(feature = "full"))]
     let research_results = Vec::new();
 
@@ -206,7 +215,8 @@ pub async fn run_test(
         "No research results available.".to_string()
     } else {
         // Use context synthesizer to create summary from results
-        match knowledge_seeker.context_synthesizer()
+        match knowledge_seeker
+            .context_synthesizer()
             .synthesize(research_query.id, research_results.clone())
             .await
         {
@@ -222,13 +232,14 @@ pub async fn run_test(
             }
         }
     };
-    
+
     #[cfg(not(feature = "full"))]
     let synthesized_context = "Research not available (full feature disabled)".to_string();
-    
+
     // Extract citations from research results
     #[cfg(feature = "full")]
-    let citations: Vec<crate::harness::Citation> = research_results.iter()
+    let citations: Vec<crate::harness::Citation> = research_results
+        .iter()
         .take(10) // Limit citations
         .map(|r| crate::harness::Citation {
             source_name: format!("{:?}", r.source),
@@ -236,26 +247,29 @@ pub async fn run_test(
             quote: Some(r.content.chars().take(200).collect::<String>()), // First 200 chars as quote
         })
         .collect();
-    
+
     #[cfg(not(feature = "full"))]
     let citations = Vec::new();
-    
+
     let summary = synthesized_context;
 
     // Record metrics
-    env.record_metric("sources_processed", sources.len() as f64).await;
-    env.record_metric("citations_found", citations.len() as f64).await;
+    env.record_metric("sources_processed", sources.len() as f64)
+        .await;
+    env.record_metric("citations_found", citations.len() as f64)
+        .await;
 
     // Validate citations
     assertions.assert_citation_integrity(
         &citations,
         &source_files,
-        "Summary should have valid citations"
+        "Summary should have valid citations",
     );
 
     // Check hallucination detection
     // Extract known facts from research sources for fact checking
-    let known_facts: Vec<String> = sources.iter()
+    let known_facts: Vec<String> = sources
+        .iter()
         .flat_map(|s| s.content.lines())
         .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
         .map(|s| s.to_string())
@@ -273,22 +287,26 @@ pub async fn run_test(
             };
         }
     };
-    assertions.assert_no_hallucination(
-        &summary,
-        &fact_checker,
-        "Summary should not contain hallucinations"
-    ).await;
+    assertions
+        .assert_no_hallucination(
+            &summary,
+            &fact_checker,
+            "Summary should not contain hallucinations",
+        )
+        .await;
 
     // Validate minimum citations
     assertions.assert_citation_integrity(
         &citations,
         &source_files,
-        &format!("Should have at least {} citations", 3)
+        &format!("Should have at least {} citations", 3),
     );
 
     // Check logical structure (basic check for required sections)
     let has_overview = summary.contains("Overview") || summary.contains("overview");
-    let has_applications = summary.contains("Applications") || summary.contains("applications") || summary.contains("Key Applications");
+    let has_applications = summary.contains("Applications")
+        || summary.contains("applications")
+        || summary.contains("Key Applications");
     let has_challenges = summary.contains("Challenges") || summary.contains("challenges");
 
     if !(has_overview && has_applications && has_challenges) {

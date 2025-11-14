@@ -8,10 +8,10 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use std::collections::HashMap;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Tool chain planner interface (local implementation)
 
@@ -32,7 +32,7 @@ impl Default for ToolChainPlanner {
 #[cfg(not(feature = "tool-chain"))]
 impl ToolChainPlanner {
     /// Plan a tool chain (basic implementation without ML dependencies)
-    /// 
+    ///
     /// This implementation creates a functional tool chain based on:
     /// - Available tools from the planning context
     /// - Planning constraints (max length, prohibited tools, etc.)
@@ -44,7 +44,8 @@ impl ToolChainPlanner {
         constraints: &PlanningConstraints,
     ) -> Result<ToolChain, anyhow::Error> {
         // Filter available tools based on constraints
-        let mut candidate_tools: Vec<String> = context.available_tools
+        let mut candidate_tools: Vec<String> = context
+            .available_tools
             .iter()
             .filter(|tool| {
                 // Exclude prohibited tools
@@ -57,53 +58,52 @@ impl ToolChainPlanner {
         if !constraints.required_capabilities.is_empty() {
             // Simple capability matching - tools that contain capability keywords
             candidate_tools.retain(|tool| {
-                constraints.required_capabilities.iter().any(|cap| {
-                    tool.to_lowercase().contains(&cap.to_lowercase())
-                })
+                constraints
+                    .required_capabilities
+                    .iter()
+                    .any(|cap| tool.to_lowercase().contains(&cap.to_lowercase()))
             });
         }
 
         // Apply max chain length constraint
-        let max_length = constraints.max_chain_length
+        let max_length = constraints
+            .max_chain_length
             .unwrap_or(10)
             .min(candidate_tools.len());
-        
-        let selected_tools: Vec<String> = candidate_tools
-            .into_iter()
-            .take(max_length)
-            .collect();
+
+        let selected_tools: Vec<String> = candidate_tools.into_iter().take(max_length).collect();
 
         // Build tool nodes with sequential dependencies
         let mut nodes = Vec::new();
         let mut roots = Vec::new();
         let mut sinks = Vec::new();
-        
+
         for (index, tool_name) in selected_tools.iter().enumerate() {
             let node_id = format!("node-{}", index);
-            
+
             // First node has no dependencies (root)
             if index == 0 {
                 roots.push(index);
             }
-            
+
             // Last node is a sink
             if index == selected_tools.len() - 1 {
                 sinks.push(index);
             }
-            
+
             // Dependencies: previous node (for sequential execution)
             let dependencies = if index > 0 {
                 vec![format!("node-{}", index - 1)]
             } else {
                 vec![]
             };
-            
+
             nodes.push(ToolNode {
                 id: node_id.clone(),
                 tool_name: tool_name.clone(),
                 tool_version: "1.0.0".to_string(), // Default version
-                inputs: HashMap::new(), // Inputs would be populated by caller
-                output_schema: None, // Schema would be determined by tool registry
+                inputs: HashMap::new(),            // Inputs would be populated by caller
+                output_schema: None,               // Schema would be determined by tool registry
                 dependencies,
             });
         }
@@ -112,9 +112,7 @@ impl ToolChainPlanner {
         // Simple heuristic: 5 seconds per tool + 2 seconds overhead per dependency
         let base_time_per_tool = 5u64;
         let overhead_per_dependency = 2u64;
-        let total_dependencies: usize = nodes.iter()
-            .map(|n| n.dependencies.len())
-            .sum();
+        let total_dependencies: usize = nodes.iter().map(|n| n.dependencies.len()).sum();
         let estimated_duration_secs = (nodes.len() as u64 * base_time_per_tool)
             + (total_dependencies as u64 * overhead_per_dependency);
 
@@ -128,7 +126,7 @@ impl ToolChainPlanner {
         // Check node properties before moving nodes into ToolChain
         let nodes_is_empty = nodes.is_empty();
         let nodes_len = nodes.len();
-        
+
         Ok(ToolChain {
             id: format!("local-chain-{}", uuid::Uuid::new_v4()),
             nodes,
@@ -305,28 +303,21 @@ impl Default for ToolRegistry {
 // Feature-gated re-exports for compatibility
 #[cfg(feature = "tool-chain")]
 pub use system_federated_ml::{
-    tool_chain_planner::{
-        ToolChainPlanner as ExternalToolChainPlanner,
-        PlanningContext as ExternalPlanningContext,
-        PlanningConstraints as ExternalPlanningConstraints,
-        ToolChain as ExternalToolChain,
-        ToolNode as ExternalToolNode,
-        TaskComplexity as ExternalTaskComplexity,
-        RiskLevel as ExternalRiskLevel,
-    },
     tool_chain_planner::SchemaRegistry as ExternalSchemaRegistry,
+    tool_chain_planner::{
+        PlanningConstraints as ExternalPlanningConstraints,
+        PlanningContext as ExternalPlanningContext, RiskLevel as ExternalRiskLevel,
+        TaskComplexity as ExternalTaskComplexity, ToolChain as ExternalToolChain,
+        ToolChainPlanner as ExternalToolChainPlanner, ToolNode as ExternalToolNode,
+    },
     tool_registry::ToolRegistry as ExternalToolRegistry,
 };
 
 #[cfg(not(feature = "tool-chain"))]
 pub use self::{
-    ToolChainPlanner as ExternalToolChainPlanner,
-    PlanningContext as ExternalPlanningContext,
-    PlanningConstraints as ExternalPlanningConstraints,
-    ToolChain as ExternalToolChain,
-    ToolNode as ExternalToolNode,
-    TaskComplexity as ExternalTaskComplexity,
-    RiskLevel as ExternalRiskLevel,
-    SchemaRegistry as ExternalSchemaRegistry,
+    PlanningConstraints as ExternalPlanningConstraints, PlanningContext as ExternalPlanningContext,
+    RiskLevel as ExternalRiskLevel, SchemaRegistry as ExternalSchemaRegistry,
+    TaskComplexity as ExternalTaskComplexity, ToolChain as ExternalToolChain,
+    ToolChainPlanner as ExternalToolChainPlanner, ToolNode as ExternalToolNode,
     ToolRegistry as ExternalToolRegistry,
 };

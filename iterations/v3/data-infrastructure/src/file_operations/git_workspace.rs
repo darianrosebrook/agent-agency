@@ -3,11 +3,14 @@
 //! Uses Git worktrees for safe, versioned file editing with automatic rollback
 //! capabilities and integration with Git's change tracking.
 
+use crate::file_operations::{
+    validate_changeset, AllowList, Budgets, ChangeSet, ChangeSetId, FileOpsError, Hunk, Patch,
+    Result, Workspace,
+};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tokio::fs;
 use uuid::Uuid;
-use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
 
 /// Git worktree-based workspace for safe file operations
 pub struct GitWorktreeWorkspace {
@@ -26,7 +29,8 @@ pub struct GitWorktreeWorkspace {
 impl GitWorktreeWorkspace {
     /// Create a new Git worktree workspace
     pub async fn new(repo_path: &Path, task_id: &str) -> Result<Self> {
-        let repo_root = repo_path.canonicalize()
+        let repo_root = repo_path
+            .canonicalize()
             .map_err(|e| FileOpsError::Path(format!("Cannot canonicalize repo path: {}", e)))?;
 
         // Verify this is a Git repository
@@ -41,7 +45,9 @@ impl GitWorktreeWorkspace {
         let worktree_branch = format!("caws/{}", task_id);
 
         // Create worktree directory
-        let worktree_path = repo_root.join("..").join(format!("caws-worktree-{}", task_id));
+        let worktree_path = repo_root
+            .join("..")
+            .join(format!("caws-worktree-{}", task_id));
 
         // Clean up any existing worktree
         let _ = fs::remove_dir_all(&worktree_path).await;
@@ -64,13 +70,17 @@ impl GitWorktreeWorkspace {
             .args(["branch", "--show-current"])
             .current_dir(repo_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get current branch: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to get current branch: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
-            return Err(FileOpsError::Path("Failed to get current Git branch".to_string()));
+            return Err(FileOpsError::Path(
+                "Failed to get current Git branch".to_string(),
+            ));
         }
 
         Ok(String::from_utf8(output.stdout)
@@ -80,44 +90,68 @@ impl GitWorktreeWorkspace {
     }
 
     /// Create a Git worktree
-    fn create_git_worktree(repo_path: &Path, branch_name: &str, worktree_path: &Path) -> Result<()> {
-        tracing::info!("Creating Git worktree: branch={}, path={:?}", branch_name, worktree_path);
-        
+    fn create_git_worktree(
+        repo_path: &Path,
+        branch_name: &str,
+        worktree_path: &Path,
+    ) -> Result<()> {
+        tracing::info!(
+            "Creating Git worktree: branch={}, path={:?}",
+            branch_name,
+            worktree_path
+        );
+
         // List all existing worktrees and remove any that use this branch
         let list_output = Command::new("git")
             .args(["worktree", "list"])
             .current_dir(repo_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to list worktrees: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to list worktrees: {}", e),
+                ))
+            })?;
 
         if list_output.status.success() {
             let worktree_list = String::from_utf8_lossy(&list_output.stdout);
             tracing::debug!("Existing worktrees:\n{}", worktree_list);
-            
+
             for line in worktree_list.lines() {
                 // Format: <path> <commit> [<branch>]
-                if line.contains(&format!("[{}]", branch_name)) || line.contains(&format!(" {}", branch_name)) {
+                if line.contains(&format!("[{}]", branch_name))
+                    || line.contains(&format!(" {}", branch_name))
+                {
                     // Extract worktree path (first field)
                     if let Some(path_str) = line.split_whitespace().next() {
                         let existing_worktree_path = PathBuf::from(path_str);
-                        tracing::info!("Removing existing worktree at: {:?}", existing_worktree_path);
+                        tracing::info!(
+                            "Removing existing worktree at: {:?}",
+                            existing_worktree_path
+                        );
                         // Remove the worktree
                         let remove_output = Command::new("git")
-                            .args(["worktree", "remove", "--force", &existing_worktree_path.to_string_lossy()])
+                            .args([
+                                "worktree",
+                                "remove",
+                                "--force",
+                                &existing_worktree_path.to_string_lossy(),
+                            ])
                             .current_dir(repo_path)
                             .output()
-                            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                format!("Failed to remove existing worktree: {}", e)
-                            )))?;
+                            .map_err(|e| {
+                                FileOpsError::Io(std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    format!("Failed to remove existing worktree: {}", e),
+                                ))
+                            })?;
 
                         if !remove_output.status.success() {
-                            tracing::warn!("Failed to remove worktree at {}: {}", 
+                            tracing::warn!(
+                                "Failed to remove worktree at {}: {}",
                                 existing_worktree_path.display(),
-                                String::from_utf8_lossy(&remove_output.stderr));
+                                String::from_utf8_lossy(&remove_output.stderr)
+                            );
                         } else {
                             tracing::info!("Successfully removed existing worktree");
                         }
@@ -137,10 +171,12 @@ impl GitWorktreeWorkspace {
             .args(["branch", "--list", branch_name])
             .current_dir(repo_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to check branch existence: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to check branch existence: {}", e),
+                ))
+            })?;
 
         if branch_exists_output.status.success() {
             let branch_output = String::from_utf8_lossy(&branch_exists_output.stdout);
@@ -151,14 +187,20 @@ impl GitWorktreeWorkspace {
                     .args(["branch", "-D", branch_name])
                     .current_dir(repo_path)
                     .output()
-                    .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Failed to delete existing branch: {}", e)
-                    )))?;
+                    .map_err(|e| {
+                        FileOpsError::Io(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!("Failed to delete existing branch: {}", e),
+                        ))
+                    })?;
 
                 if !delete_output.status.success() {
                     let stderr = String::from_utf8_lossy(&delete_output.stderr);
-                    tracing::warn!("Failed to delete existing branch {}: {}", branch_name, stderr);
+                    tracing::warn!(
+                        "Failed to delete existing branch {}: {}",
+                        branch_name,
+                        stderr
+                    );
                     // Don't fail here - try to create worktree anyway
                 } else {
                     tracing::info!("Successfully deleted branch {}", branch_name);
@@ -167,34 +209,55 @@ impl GitWorktreeWorkspace {
         }
 
         // Create the worktree with new branch
-        tracing::info!("Creating worktree with branch {} at {:?}", branch_name, worktree_path);
+        tracing::info!(
+            "Creating worktree with branch {} at {:?}",
+            branch_name,
+            worktree_path
+        );
         let output = Command::new("git")
-            .args(["worktree", "add", "-b", branch_name, &worktree_path.to_string_lossy()])
+            .args([
+                "worktree",
+                "add",
+                "-b",
+                branch_name,
+                &worktree_path.to_string_lossy(),
+            ])
             .current_dir(repo_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to create worktree: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to create worktree: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            tracing::error!("Git worktree creation failed. stderr: {}, stdout: {}", stderr, stdout);
-            return Err(FileOpsError::Path(format!("Git worktree creation failed: {}", stderr)));
+            tracing::error!(
+                "Git worktree creation failed. stderr: {}, stdout: {}",
+                stderr,
+                stdout
+            );
+            return Err(FileOpsError::Path(format!(
+                "Git worktree creation failed: {}",
+                stderr
+            )));
         }
 
         tracing::info!("Successfully created Git worktree at {:?}", worktree_path);
-        
+
         // Verify worktree was created
         let verify_output = Command::new("git")
             .args(["worktree", "list"])
             .current_dir(repo_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to verify worktree: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to verify worktree: {}", e),
+                ))
+            })?;
 
         if verify_output.status.success() {
             let verify_list = String::from_utf8_lossy(&verify_output.stdout);
@@ -227,7 +290,8 @@ impl GitWorktreeWorkspace {
         let new_content = self.apply_hunks_to_content(&current_content, &patch.hunks)?;
 
         // Write new content
-        fs::write(&file_path, new_content).await
+        fs::write(&file_path, new_content)
+            .await
             .map_err(FileOpsError::Io)?;
 
         Ok(())
@@ -257,7 +321,8 @@ impl GitWorktreeWorkspace {
             // Add new lines
             if hunk.new_lines > 0 {
                 let insert_pos = std::cmp::min(start_line, lines.len());
-                let new_lines: Vec<String> = hunk.lines
+                let new_lines: Vec<String> = hunk
+                    .lines
                     .lines()
                     .filter(|line| line.starts_with('+') || line.starts_with(' '))
                     .map(|line| line[1..].to_string())
@@ -279,10 +344,12 @@ impl GitWorktreeWorkspace {
             .args(["add", "."])
             .current_dir(&self.worktree_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to add files: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to add files: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -295,10 +362,12 @@ impl GitWorktreeWorkspace {
             .args(["commit", "-m", &commit_msg])
             .current_dir(&self.worktree_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to commit: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to commit: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -345,10 +414,12 @@ impl Workspace for GitWorktreeWorkspace {
             .args(["reset", "--hard", "HEAD~1"])
             .current_dir(&self.worktree_path)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to reset: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to reset: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -364,10 +435,12 @@ impl Workspace for GitWorktreeWorkspace {
             .args(["merge", &self.worktree_branch])
             .current_dir(&self.repo_root)
             .output()
-            .map_err(|e| FileOpsError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to merge: {}", e)
-            )))?;
+            .map_err(|e| {
+                FileOpsError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to merge: {}", e),
+                ))
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -384,10 +457,13 @@ impl Drop for GitWorktreeWorkspace {
         // In production, the worktree should be cleaned up, but for E2E tests we need
         // to keep it alive so tests can verify the changes
         if std::env::var("CAWS_KEEP_WORKTREES").is_ok() || std::env::var("TEST_MODE").is_ok() {
-            tracing::info!("Keeping worktree alive for testing: {:?}", self.worktree_path);
+            tracing::info!(
+                "Keeping worktree alive for testing: {:?}",
+                self.worktree_path
+            );
             return;
         }
-        
+
         // Clean up worktree on drop
         let _ = Command::new("git")
             .args(["worktree", "remove", &self.worktree_path.to_string_lossy()])
@@ -443,20 +519,20 @@ mod tests {
         Ok((temp_dir, repo_path))
     }
 
-      // TODO: Implement comprehensive async testing infrastructure
-      // - Add tokio-test dependency and configuration
-      // - Create async test utilities and fixtures
-      // - Implement proper async test cleanup and teardown
-      // - Add async test timeouts and cancellation handling
-      // - Support concurrent test execution
-      // - Add async test debugging and profiling tools
-      // PLACEHOLDER: Implement comprehensive unit tests
-      // - Add isolated unit tests for core git operations
-      // - Implement mock repositories for testing
-      // - Add unit tests for error conditions and edge cases
-      // - Support test fixtures and deterministic test data
-      // - Add performance testing for git operations
-      // - Implement test coverage analysis and improvement
+    // TODO: Implement comprehensive async testing infrastructure
+    // - Add tokio-test dependency and configuration
+    // - Create async test utilities and fixtures
+    // - Implement proper async test cleanup and teardown
+    // - Add async test timeouts and cancellation handling
+    // - Support concurrent test execution
+    // - Add async test debugging and profiling tools
+    // PLACEHOLDER: Implement comprehensive unit tests
+    // - Add isolated unit tests for core git operations
+    // - Implement mock repositories for testing
+    // - Add unit tests for error conditions and edge cases
+    // - Support test fixtures and deterministic test data
+    // - Add performance testing for git operations
+    // - Implement test coverage analysis and improvement
 
     #[test]
     fn test_git_workspace_types() {

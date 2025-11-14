@@ -11,14 +11,14 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{interval, Duration as TokioDuration};
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::benchmark_types::{
-    BenchmarkReport, BenchmarkResult, BenchmarkType, ModelSpecification, BenchmarkMetrics,
-    PerformanceSummary, PerformanceTrend, RegressionAlert, ModelRecommendation,
-};
 use crate::benchmark_runner::BenchmarkRunner;
+use crate::benchmark_types::{
+    BenchmarkMetrics, BenchmarkReport, BenchmarkResult, BenchmarkType, ModelRecommendation,
+    ModelSpecification, PerformanceSummary, PerformanceTrend, RegressionAlert,
+};
 use crate::performance_tracker::PerformanceTracker;
 use crate::scoring_system::MultiDimensionalScoringSystem;
 
@@ -125,7 +125,10 @@ impl ContinuousBenchmarker {
                         } else {
                             // Mark as executed
                             if let Err(e) = scheduler_clone.mark_executed(scheduled.id).await {
-                                error!("Failed to mark benchmark {} as executed: {}", scheduled.id, e);
+                                error!(
+                                    "Failed to mark benchmark {} as executed: {}",
+                                    scheduled.id, e
+                                );
                             }
                         }
                     });
@@ -154,8 +157,7 @@ impl ContinuousBenchmarker {
     ) -> Result<()> {
         info!(
             "Executing scheduled benchmark {} (type: {:?})",
-            scheduled.id,
-            scheduled.benchmark_type
+            scheduled.id, scheduled.benchmark_type
         );
 
         // Get dataset tasks
@@ -214,9 +216,8 @@ impl ContinuousBenchmarker {
             .await
             .unwrap_or_else(|_| PerformanceSummary {
                 overall_performance: if !benchmark_results.is_empty() {
-                    benchmark_results.iter()
-                        .map(|r| r.score)
-                        .sum::<f64>() / benchmark_results.len() as f64
+                    benchmark_results.iter().map(|r| r.score).sum::<f64>()
+                        / benchmark_results.len() as f64
                 } else {
                     0.0
                 },
@@ -254,7 +255,10 @@ impl ContinuousBenchmarker {
         models: Vec<ModelSpecification>,
         dataset_version: Option<String>,
     ) -> Result<Uuid> {
-        info!("Manually triggering {} benchmark", format!("{:?}", benchmark_type));
+        info!(
+            "Manually triggering {} benchmark",
+            format!("{:?}", benchmark_type)
+        );
 
         // Create a one-time scheduled benchmark
         let scheduled_id = self
@@ -313,4 +317,3 @@ pub struct BenchmarkingStatus {
     pub total_scheduled: usize,
     pub active_scheduled: usize,
 }
-

@@ -8,20 +8,25 @@
 //! - Consensus formation
 
 use std::time::Instant;
-use tracing::{info, error};
+use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
-#[cfg(feature = "full")]
-use agent_orchestration::council::create_default_council;
-#[cfg(feature = "full")]
-use agent_agency_contracts::types::prelude::{TaskDescriptor, ExecutionMode, BlastRadius, TaskPriority, AcceptanceCriterion};
-#[cfg(feature = "full")]
-use agent_agency_contracts::types::planning::{TaskScope, RiskTier};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 #[cfg(feature = "full")]
 use agent_agency_contracts::planning_io::ChangeBudget;
 #[cfg(feature = "full")]
 use agent_agency_contracts::task_request::ScopeRestrictions;
+#[cfg(feature = "full")]
+use agent_agency_contracts::types::planning::{RiskTier, TaskScope};
+#[cfg(feature = "full")]
+use agent_agency_contracts::types::prelude::{
+    AcceptanceCriterion, BlastRadius, ExecutionMode, TaskDescriptor, TaskPriority,
+};
+#[cfg(feature = "full")]
+use agent_orchestration::council::create_default_council;
 // TaskType doesn't exist in contracts - using string or removing if not needed
 use std::sync::Arc;
 
@@ -44,7 +49,10 @@ pub async fn run_multi_agent_test(
             metrics.agent_communications += result.communications as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Agent communication failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Agent communication failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -59,7 +67,10 @@ pub async fn run_multi_agent_test(
             metrics.arbitration_events += result.arbitration_events as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Arbitration mechanism failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Arbitration mechanism failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -74,7 +85,10 @@ pub async fn run_multi_agent_test(
             metrics.task_decompositions += result.task_decompositions as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Task decomposition failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Task decomposition failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -90,7 +104,10 @@ pub async fn run_multi_agent_test(
             metrics.consensus_achieved += result.consensus_achieved as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Conflict resolution failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Conflict resolution failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -150,12 +167,12 @@ async fn test_agent_communication(
     info!("Testing agent communication");
 
     // Create council for agent coordination
-    let council = create_default_council()
-        .map_err(|e| format!("Failed to create council: {}", e))?;
+    let council =
+        create_default_council().map_err(|e| format!("Failed to create council: {}", e))?;
 
     // Test that multiple judges can communicate
     let judge_count = council.available_judges().len();
-    
+
     if judge_count == 0 {
         return Ok(MultiAgentTestResult {
             passed: false,
@@ -168,7 +185,10 @@ async fn test_agent_communication(
         });
     }
 
-    info!("Council has {} judges available for communication", judge_count);
+    info!(
+        "Council has {} judges available for communication",
+        judge_count
+    );
 
     Ok(MultiAgentTestResult {
         passed: true,
@@ -189,8 +209,8 @@ async fn test_arbitration_mechanism(
     info!("Testing arbitration mechanism");
 
     // Create council for arbitration
-    let council = create_default_council()
-        .map_err(|e| format!("Failed to create council: {}", e))?;
+    let council =
+        create_default_council().map_err(|e| format!("Failed to create council: {}", e))?;
 
     // Create a test task descriptor
     let task_descriptor = TaskDescriptor {
@@ -225,7 +245,7 @@ async fn test_arbitration_mechanism(
 
     // Start a council session to test arbitration
     let session_result = council.start_session(&task_descriptor).await;
-    
+
     match session_result {
         Ok(session) => {
             info!("Council session started successfully for arbitration test");
@@ -239,17 +259,15 @@ async fn test_arbitration_mechanism(
                 consensus_achieved: 0,
             })
         }
-        Err(e) => {
-            Ok(MultiAgentTestResult {
-                passed: false,
-                error: Some(format!("Failed to start council session: {}", e)),
-                communications: 0,
-                arbitration_events: 0,
-                conflict_resolutions: 0,
-                task_decompositions: 0,
-                consensus_achieved: 0,
-            })
-        }
+        Err(e) => Ok(MultiAgentTestResult {
+            passed: false,
+            error: Some(format!("Failed to start council session: {}", e)),
+            communications: 0,
+            arbitration_events: 0,
+            conflict_resolutions: 0,
+            task_decompositions: 0,
+            consensus_achieved: 0,
+        }),
     }
 }
 
@@ -296,13 +314,24 @@ async fn test_task_decomposition(
     };
 
     // Check that task has acceptance criteria indicating decomposition capability
-    let decomposition_count = complex_task.acceptance.as_ref().map(|s| s.len()).unwrap_or(0);
+    let decomposition_count = complex_task
+        .acceptance
+        .as_ref()
+        .map(|s| s.len())
+        .unwrap_or(0);
 
-    info!("Task has {} acceptance criteria indicating {} potential decompositions", decomposition_count, decomposition_count);
+    info!(
+        "Task has {} acceptance criteria indicating {} potential decompositions",
+        decomposition_count, decomposition_count
+    );
 
     Ok(MultiAgentTestResult {
         passed: decomposition_count > 1,
-        error: if decomposition_count <= 1 { Some("Task does not support decomposition".to_string()) } else { None },
+        error: if decomposition_count <= 1 {
+            Some("Task does not support decomposition".to_string())
+        } else {
+            None
+        },
         communications: 0,
         arbitration_events: 0,
         conflict_resolutions: 0,
@@ -319,8 +348,8 @@ async fn test_conflict_resolution(
     info!("Testing conflict resolution");
 
     // Create council for conflict resolution
-    let council = create_default_council()
-        .map_err(|e| format!("Failed to create council: {}", e))?;
+    let council =
+        create_default_council().map_err(|e| format!("Failed to create council: {}", e))?;
 
     // Create two conflicting task descriptors that might conflict
     let task1 = TaskDescriptor {
@@ -384,23 +413,33 @@ async fn test_conflict_resolution(
     };
 
     // Check for scope conflicts
-    let conflict_detected = task1.scope_in.allowed_paths.iter().any(|file| {
-        task2.scope_in.allowed_paths.contains(file)
-    });
+    let conflict_detected = task1
+        .scope_in
+        .allowed_paths
+        .iter()
+        .any(|file| task2.scope_in.allowed_paths.contains(file));
 
     if conflict_detected {
         info!("Conflict detected between tasks - testing resolution mechanism");
-        
+
         // Start sessions for both tasks to test conflict resolution
         let session1_result = council.start_session(&task1).await;
         let session2_result = council.start_session(&task2).await;
 
-        let resolutions = if session1_result.is_ok() && session2_result.is_ok() { 1 } else { 0 };
+        let resolutions = if session1_result.is_ok() && session2_result.is_ok() {
+            1
+        } else {
+            0
+        };
         let consensus = if resolutions > 0 { 1 } else { 0 };
 
         Ok(MultiAgentTestResult {
             passed: resolutions > 0,
-            error: if resolutions == 0 { Some("Conflict resolution failed".to_string()) } else { None },
+            error: if resolutions == 0 {
+                Some("Conflict resolution failed".to_string())
+            } else {
+                None
+            },
             communications: 0,
             arbitration_events: 0,
             conflict_resolutions: resolutions,

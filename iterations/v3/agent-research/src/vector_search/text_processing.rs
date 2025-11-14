@@ -99,12 +99,13 @@ impl TextProcessor {
     /// Remove common stop words
     pub fn remove_stop_words(&self, text: &str) -> String {
         let stop_words: HashSet<&str> = [
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
-            "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does",
-            "did", "will", "would", "could", "should", "may", "might", "must", "can", "shall",
-            "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they", "me",
-            "him", "her", "us", "them", "my", "your", "his", "its", "our", "their"
-        ].into();
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+            "by", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do",
+            "does", "did", "will", "would", "could", "should", "may", "might", "must", "can",
+            "shall", "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they",
+            "me", "him", "her", "us", "them", "my", "your", "his", "its", "our", "their",
+        ]
+        .into();
 
         text.split_whitespace()
             .filter(|word| !stop_words.contains(&word.to_lowercase().as_str()))

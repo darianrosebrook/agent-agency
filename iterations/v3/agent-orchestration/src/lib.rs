@@ -20,14 +20,13 @@
 #[macro_use]
 extern crate tracing;
 
-
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-pub mod progress_tracker;
-pub mod learning;
 pub mod consensus_coordinator;
+pub mod learning;
+pub mod progress_tracker;
 mod quality_gates;
 
 #[cfg(any(feature = "data-processing", feature = "memory"))]
@@ -35,18 +34,20 @@ pub mod workspace_integration;
 
 // Re-export types for convenience - use contracts types
 pub use agent_agency_contracts::types::prelude::{
-    TaskDescriptor, ExecutionMode, BlastRadius, ExecutionContext,
-    TaskPriority, RiskTier, AcceptanceCriterion
+    AcceptanceCriterion, BlastRadius, ExecutionContext, ExecutionMode, RiskTier, TaskDescriptor,
+    TaskPriority,
 };
 // Re-export contracts WorkingSpec (local WorkingSpec is deprecated - use contracts)
 pub use agent_agency_contracts::WorkingSpec;
 // Import from contracts - TaskExecutionResult and QualityReport are now in contracts
-pub use agent_agency_contracts::task_executor::TaskExecutionResult;
 pub use agent_agency_contracts::quality_report::QualityReport;
+pub use agent_agency_contracts::task_executor::TaskExecutionResult;
 pub use agent_agency_contracts::ExecutionArtifacts;
 
 // Task executor factory
-pub use planning::task_executor_factory::{TaskExecutorFactory, TaskExecutorConfig, ExecutionStrategy, TaskExecutorFactoryError};
+pub use planning::task_executor_factory::{
+    ExecutionStrategy, TaskExecutorConfig, TaskExecutorFactory, TaskExecutorFactoryError,
+};
 
 // ============================================================================
 // COUNCIL MODULES (Decision Making & Arbitration)
@@ -59,9 +60,9 @@ pub mod verdict_aggregation;
 // pub mod verdict;
 pub mod workflow;
 // pub mod risk_scorer; // TEMPORARILY DISABLED: Missing type definitions
-pub mod error_handling;
 pub mod council_errors;
 pub mod council_types;
+pub mod error_handling;
 pub mod evidence_enrichment;
 pub mod planning;
 // pub mod coordinator;
@@ -76,19 +77,47 @@ pub mod restored_examples;
 // Test utilities
 #[cfg(test)]
 mod test_utils {
-    use std::sync::Arc;
-    use std::collections::HashMap;
-    use async_trait::async_trait;
-    use uuid::Uuid;
     use crate::planning::DatabaseOperations;
+    use async_trait::async_trait;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use uuid::Uuid;
 
     // Mock database operations for testing with in-memory storage
     pub struct MockDatabaseOps {
         // In-memory storage
-        sessions: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::PlanningSession>>>,
-        plans: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::ExecutionPlan>>>,
-        execution_results: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::PlanExecutionResult>>>,
-        audit_trails: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, crate::planning::data_infrastructure_types::models::AuditTrailEntry>>>,
+        sessions: Arc<
+            tokio::sync::RwLock<
+                std::collections::HashMap<
+                    Uuid,
+                    crate::planning::data_infrastructure_types::models::PlanningSession,
+                >,
+            >,
+        >,
+        plans: Arc<
+            tokio::sync::RwLock<
+                std::collections::HashMap<
+                    Uuid,
+                    crate::planning::data_infrastructure_types::models::ExecutionPlan,
+                >,
+            >,
+        >,
+        execution_results: Arc<
+            tokio::sync::RwLock<
+                std::collections::HashMap<
+                    Uuid,
+                    crate::planning::data_infrastructure_types::models::PlanExecutionResult,
+                >,
+            >,
+        >,
+        audit_trails: Arc<
+            tokio::sync::RwLock<
+                std::collections::HashMap<
+                    Uuid,
+                    crate::planning::data_infrastructure_types::models::AuditTrailEntry,
+                >,
+            >,
+        >,
     }
 
     impl Default for MockDatabaseOps {
@@ -103,7 +132,9 @@ mod test_utils {
             Self {
                 sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
                 plans: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
-                execution_results: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+                execution_results: Arc::new(tokio::sync::RwLock::new(
+                    std::collections::HashMap::new(),
+                )),
                 audit_trails: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
             }
         }
@@ -111,13 +142,19 @@ mod test_utils {
 
     #[async_trait]
     impl DatabaseOperations for MockDatabaseOps {
-        async fn create_execution_plan(&self, plan: crate::planning::data_infrastructure_types::CreateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+        async fn create_execution_plan(
+            &self,
+            plan: crate::planning::data_infrastructure_types::CreateExecutionPlan,
+        ) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error>
+        {
             use chrono::Utc;
             let now = Utc::now();
             let db_plan = crate::planning::data_infrastructure_types::models::ExecutionPlan {
                 id: plan.id,
                 session_id: Uuid::new_v4(),
-                working_spec_id: plan.working_spec_id.unwrap_or_else(|| format!("PLAN-{}", plan.id)),
+                working_spec_id: plan
+                    .working_spec_id
+                    .unwrap_or_else(|| format!("PLAN-{}", plan.id)),
                 title: plan.title,
                 overview: Some(plan.overview),
                 state: "draft".to_string(),
@@ -133,22 +170,39 @@ mod test_utils {
                 approved_at: None,
                 completed_at: None,
             };
-            
+
             self.plans.write().await.insert(plan.id, db_plan.clone());
             Ok(db_plan)
         }
-        async fn get_execution_plan(&self, id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+        async fn get_execution_plan(
+            &self,
+            id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::ExecutionPlan>,
+            anyhow::Error,
+        > {
             Ok(self.plans.read().await.get(&id).cloned())
         }
-        async fn get_execution_plans(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>, anyhow::Error> {
+        async fn get_execution_plans(
+            &self,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::ExecutionPlan>,
+            anyhow::Error,
+        > {
             Ok(self.plans.read().await.values().cloned().collect())
         }
-        async fn update_execution_plan(&self, id: Uuid, update: crate::planning::data_infrastructure_types::UpdateExecutionPlan) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error> {
+        async fn update_execution_plan(
+            &self,
+            id: Uuid,
+            update: crate::planning::data_infrastructure_types::UpdateExecutionPlan,
+        ) -> Result<crate::planning::data_infrastructure_types::models::ExecutionPlan, anyhow::Error>
+        {
             use chrono::Utc;
             let mut plans = self.plans.write().await;
-            let plan = plans.get_mut(&id)
+            let plan = plans
+                .get_mut(&id)
                 .ok_or_else(|| anyhow::anyhow!("Execution plan not found: {}", id))?;
-            
+
             if let Some(title) = update.title {
                 plan.title = title;
             }
@@ -159,10 +213,16 @@ mod test_utils {
                 plan.state = status;
             }
             plan.updated_at = Utc::now();
-            
+
             Ok(plan.clone())
         }
-        async fn create_audit_trail_entry(&self, entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry) -> Result<crate::planning::data_infrastructure_types::models::AuditTrailEntry, anyhow::Error> {
+        async fn create_audit_trail_entry(
+            &self,
+            entry: crate::planning::data_infrastructure_types::CreateAuditTrailEntry,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::AuditTrailEntry,
+            anyhow::Error,
+        > {
             use chrono::Utc;
             let id = Uuid::new_v4();
             let db_entry = crate::planning::data_infrastructure_types::models::AuditTrailEntry {
@@ -172,34 +232,54 @@ mod test_utils {
                 timestamp: Utc::now(),
                 metadata: entry.metadata,
             };
-            
+
             self.audit_trails.write().await.insert(id, db_entry.clone());
             Ok(db_entry)
         }
-        async fn get_audit_trail_entries(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+        async fn get_audit_trail_entries(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::AuditTrailEntry>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
-        async fn get_audit_trail_entry(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>, anyhow::Error> {
+        async fn get_audit_trail_entry(
+            &self,
+            _id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::AuditTrailEntry>,
+            anyhow::Error,
+        > {
             Ok(None)
         }
-        async fn create_planning_session(&self, session: crate::planning::data_infrastructure_types::CreatePlanningSession) -> Result<crate::planning::data_infrastructure_types::models::PlanningSession, anyhow::Error> {
+        async fn create_planning_session(
+            &self,
+            session: crate::planning::data_infrastructure_types::CreatePlanningSession,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanningSession,
+            anyhow::Error,
+        > {
             use chrono::Utc;
             // Extract session_id from metadata if present (PlanningStorage generates it and stores it there)
             // Otherwise generate a new one
-            let id = session.metadata
+            let id = session
+                .metadata
                 .get("session_id")
                 .and_then(|v| v.as_str())
                 .and_then(|s| Uuid::parse_str(s).ok())
                 .unwrap_or_else(Uuid::new_v4);
             let now = Utc::now();
-            
+
             // Extract status from metadata if present, otherwise default to "active"
-            let status = session.metadata
+            let status = session
+                .metadata
                 .get("status")
                 .and_then(|v| v.as_str())
                 .unwrap_or("active")
                 .to_string();
-            
+
             let db_session = crate::planning::data_infrastructure_types::models::PlanningSession {
                 id,
                 plan_id: session.plan_id,
@@ -208,19 +288,30 @@ mod test_utils {
                 updated_at: now,
                 metadata: session.metadata,
             };
-            
+
             self.sessions.write().await.insert(id, db_session.clone());
             Ok(db_session)
         }
-        async fn get_planning_session(&self, id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanningSession>, anyhow::Error> {
+        async fn get_planning_session(
+            &self,
+            id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::PlanningSession>,
+            anyhow::Error,
+        > {
             Ok(self.sessions.read().await.get(&id).cloned())
         }
-        async fn update_planning_session(&self, id: Uuid, session: crate::planning::data_infrastructure_types::UpdatePlanningSession) -> Result<(), anyhow::Error> {
+        async fn update_planning_session(
+            &self,
+            id: Uuid,
+            session: crate::planning::data_infrastructure_types::UpdatePlanningSession,
+        ) -> Result<(), anyhow::Error> {
             use chrono::Utc;
             let mut sessions = self.sessions.write().await;
-            let db_session = sessions.get_mut(&id)
+            let db_session = sessions
+                .get_mut(&id)
                 .ok_or_else(|| anyhow::anyhow!("Planning session not found: {}", id))?;
-            
+
             if let Some(status) = session.status {
                 db_session.status = status;
             }
@@ -228,77 +319,162 @@ mod test_utils {
                 db_session.metadata = metadata;
             }
             db_session.updated_at = Utc::now();
-            
+
             Ok(())
         }
-        async fn create_planning_telemetry(&self, _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry) -> Result<crate::planning::data_infrastructure_types::models::PlanningTelemetry, anyhow::Error> {
+        async fn create_planning_telemetry(
+            &self,
+            _telemetry: crate::planning::data_infrastructure_types::CreatePlanningTelemetry,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanningTelemetry,
+            anyhow::Error,
+        > {
             Err(anyhow::anyhow!("Not implemented"))
         }
-        async fn get_planning_telemetry(&self, _plan_id: Uuid, _metric_type: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>, anyhow::Error> {
+        async fn get_planning_telemetry(
+            &self,
+            _plan_id: Uuid,
+            _metric_type: Option<String>,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::PlanningTelemetry>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
-        async fn create_planning_audit_event(&self, _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent) -> Result<(), anyhow::Error> {
+        async fn create_planning_audit_event(
+            &self,
+            _event: crate::planning::data_infrastructure_types::CreatePlanningAuditEvent,
+        ) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        async fn get_planning_audit_events(&self, _plan_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>, anyhow::Error> {
+        async fn get_planning_audit_events(
+            &self,
+            _plan_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::PlanningAuditEvent>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
         async fn delete_execution_plan(&self, _id: Uuid) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        async fn create_judge(&self, _judge: crate::planning::data_infrastructure_types::CreateJudge) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error> {
+        async fn create_judge(
+            &self,
+            _judge: crate::planning::data_infrastructure_types::CreateJudge,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Judge, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
-        async fn get_judge(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+        async fn get_judge(
+            &self,
+            _id: Uuid,
+        ) -> Result<Option<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error>
+        {
             Ok(None)
         }
-        async fn get_judges(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error> {
+        async fn get_judges(
+            &self,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Judge>, anyhow::Error>
+        {
             Ok(vec![])
         }
-        async fn create_judge_evaluation(&self, _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation) -> Result<crate::planning::data_infrastructure_types::models::JudgeEvaluation, anyhow::Error> {
+        async fn create_judge_evaluation(
+            &self,
+            _evaluation: crate::planning::data_infrastructure_types::CreateJudgeEvaluation,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::JudgeEvaluation,
+            anyhow::Error,
+        > {
             Err(anyhow::anyhow!("Not implemented"))
         }
-        async fn get_judge_evaluations(&self, _task_id: Uuid) -> Result<Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>, anyhow::Error> {
+        async fn get_judge_evaluations(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Vec<crate::planning::data_infrastructure_types::models::JudgeEvaluation>,
+            anyhow::Error,
+        > {
             Ok(vec![])
         }
-        async fn get_workers(&self) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+        async fn get_workers(
+            &self,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error>
+        {
             Ok(vec![])
         }
-        async fn get_worker(&self, _id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error> {
+        async fn get_worker(
+            &self,
+            _id: Uuid,
+        ) -> Result<Option<crate::planning::data_infrastructure_types::models::Worker>, anyhow::Error>
+        {
             Ok(None)
         }
-        async fn create_worker(&self, _worker: crate::planning::data_infrastructure_types::CreateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+        async fn create_worker(
+            &self,
+            _worker: crate::planning::data_infrastructure_types::CreateWorker,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
-        async fn update_worker(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWorker) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error> {
+        async fn update_worker(
+            &self,
+            _id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateWorker,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Worker, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
-        async fn create_execution_result(&self, result: crate::planning::data_infrastructure_types::CreateExecutionResult) -> Result<crate::planning::data_infrastructure_types::models::PlanExecutionResult, anyhow::Error> {
+        async fn create_execution_result(
+            &self,
+            result: crate::planning::data_infrastructure_types::CreateExecutionResult,
+        ) -> Result<
+            crate::planning::data_infrastructure_types::models::PlanExecutionResult,
+            anyhow::Error,
+        > {
             use chrono::Utc;
             let now = Utc::now();
-            let db_result = crate::planning::data_infrastructure_types::models::PlanExecutionResult {
-                plan_id: result.plan_id,
-                success: result.success,
-                milestones_completed: result.milestones_completed as i32,
-                total_duration_ms: result.total_duration_ms as i64,
-                evidence: result.evidence,
-                metrics: result.metrics,
-                final_state: result.final_state,
-                timeline: result.timeline,
-                created_at: now,
-                updated_at: now,
-            };
-            
-            self.execution_results.write().await.insert(result.plan_id, db_result.clone());
+            let db_result =
+                crate::planning::data_infrastructure_types::models::PlanExecutionResult {
+                    plan_id: result.plan_id,
+                    success: result.success,
+                    milestones_completed: result.milestones_completed as i32,
+                    total_duration_ms: result.total_duration_ms as i64,
+                    evidence: result.evidence,
+                    metrics: result.metrics,
+                    final_state: result.final_state,
+                    timeline: result.timeline,
+                    created_at: now,
+                    updated_at: now,
+                };
+
+            self.execution_results
+                .write()
+                .await
+                .insert(result.plan_id, db_result.clone());
             Ok(db_result)
         }
-        async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>, anyhow::Error> {
+        async fn get_execution_result(
+            &self,
+            plan_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::PlanExecutionResult>,
+            anyhow::Error,
+        > {
             Ok(self.execution_results.read().await.get(&plan_id).cloned())
         }
-        async fn get_waivers(&self, _status: Option<String>) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error> {
+        async fn get_waivers(
+            &self,
+            _status: Option<String>,
+        ) -> Result<Vec<crate::planning::data_infrastructure_types::models::Waiver>, anyhow::Error>
+        {
             Ok(vec![])
         }
-        async fn create_waiver(&self, waiver: crate::planning::data_infrastructure_types::CreateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+        async fn create_waiver(
+            &self,
+            waiver: crate::planning::data_infrastructure_types::CreateWaiver,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error>
+        {
             use chrono::Utc;
             use std::collections::HashMap;
             let id = Uuid::new_v4();
@@ -317,10 +493,74 @@ mod test_utils {
                 expires_at: None,
                 metadata: HashMap::new(),
             };
-            
+
             Ok(db_waiver)
         }
-        async fn update_waiver(&self, _id: Uuid, _update: crate::planning::data_infrastructure_types::UpdateWaiver) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error> {
+        async fn update_waiver(
+            &self,
+            _id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateWaiver,
+        ) -> Result<crate::planning::data_infrastructure_types::models::Waiver, anyhow::Error>
+        {
+            Err(anyhow::anyhow!("Not implemented"))
+        }
+        async fn create_council_session(
+            &self,
+            _session: crate::planning::data_infrastructure_types::CreateCouncilSession,
+        ) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession, anyhow::Error>
+        {
+            use chrono::Utc;
+            let id = Uuid::new_v4();
+            let now = Utc::now();
+            Ok(
+                crate::planning::data_infrastructure_types::models::CouncilSession {
+                    id,
+                    session_id: _session.session_id,
+                    task_id: _session.task_id,
+                    working_spec_id: _session.working_spec_id,
+                    review_context: _session.review_context,
+                    status: _session.status.unwrap_or_else(|| "initialized".to_string()),
+                    selected_judges: _session
+                        .selected_judges
+                        .unwrap_or_else(|| serde_json::json!([])),
+                    contributions: _session
+                        .contributions
+                        .unwrap_or_else(|| serde_json::json!([])),
+                    aggregation_result: None,
+                    final_decision: None,
+                    progress: _session.progress.unwrap_or(0.0),
+                    started_at: now,
+                    completed_at: None,
+                    created_at: now,
+                    updated_at: now,
+                    metadata: _session.metadata.unwrap_or_else(|| serde_json::json!({})),
+                },
+            )
+        }
+        async fn get_council_session(
+            &self,
+            _session_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::CouncilSession>,
+            anyhow::Error,
+        > {
+            Ok(None)
+        }
+        async fn get_council_session_by_task(
+            &self,
+            _task_id: Uuid,
+        ) -> Result<
+            Option<crate::planning::data_infrastructure_types::models::CouncilSession>,
+            anyhow::Error,
+        > {
+            Ok(None)
+        }
+        async fn update_council_session(
+            &self,
+            _session_id: Uuid,
+            _update: crate::planning::data_infrastructure_types::UpdateCouncilSession,
+        ) -> Result<crate::planning::data_infrastructure_types::models::CouncilSession, anyhow::Error>
+        {
             Err(anyhow::anyhow!("Not implemented"))
         }
     }
@@ -369,8 +609,8 @@ pub mod judge_backup;
 
 // Restored orchestration modules
 pub mod adapter;
-pub mod types;
 pub mod frontier;
+pub mod types;
 // pub mod task_api;
 // pub mod arbiter;
 // pub mod cqrs_router;
@@ -390,14 +630,14 @@ pub mod autonomous_integration;
 // pub mod worker_registry;
 // pub mod refinement;
 // pub mod tracking;
-pub mod multimodal_orchestration;
 pub mod coreml;
+pub mod multimodal_orchestration;
 // pub mod enrichers;
 pub mod audit_trail;
 pub mod chain_of_thought;
-pub mod workers;
-pub mod orchestration;
 pub mod optimization;
+pub mod orchestration;
+pub mod workers;
 
 // Evaluation framework (feature-gated)
 #[cfg(feature = "evaluation")]
@@ -410,7 +650,7 @@ mod playground {
     #[cfg(feature = "evaluation")]
     #[allow(ambiguous_glob_reexports)]
     pub use crate::evaluation::playground::*;
-    
+
     // TODO: Implement comprehensive test support without evaluation feature
     //       Currently tests only work with evaluation feature enabled; should implement comprehensive support that allows tests to work without evaluation feature by including playground directly or providing alternative test infrastructure.
     //
@@ -449,37 +689,43 @@ mod playground {
 }
 
 #[cfg(feature = "evaluation")]
-pub use evaluation::{run_scenario, EvaluationReport, EvaluationEngine, AgentEvaluation, EvaluationDimensions, EvaluationScenario};
+pub use evaluation::{
+    run_scenario, AgentEvaluation, EvaluationDimensions, EvaluationEngine, EvaluationReport,
+    EvaluationScenario,
+};
 
 // ============================================================================
 // RE-EXPORTS - Council (Decision Making)
 // ============================================================================
 
+pub use council::{Council, CouncilConfig, CouncilSession};
 pub use council_errors::{CouncilError, CouncilResult};
+pub use decision_making::{ConsensusStrategy, DecisionEngine, RiskThresholds};
 pub use judge_backup::{
-    Judge, JudgeVerdict, JudgeContribution,
     // Ethical analysis types
-    risk::{EthicalAssessment, EthicalConcern, EthicalCategory, EthicalSeverity,
-           StakeholderImpact, EthicalTradeoff, ConsequenceAssessment},
+    risk::{
+        ConsequenceAssessment, EthicalAssessment, EthicalCategory, EthicalConcern, EthicalSeverity,
+        EthicalTradeoff, StakeholderImpact,
+    },
     // Ethics judge
     EthicsJudge,
+    Judge,
+    JudgeContribution,
+    JudgeVerdict,
     // Mock judge
     MockJudge,
 };
-pub use council::{Council, CouncilConfig, CouncilSession};
-pub use decision_making::{DecisionEngine, ConsensusStrategy, RiskThresholds};
-pub use verdict_aggregation::{VerdictAggregator, AggregationResult, CouncilDecision};
+pub use verdict_aggregation::{AggregationResult, CouncilDecision, VerdictAggregator};
 pub use workflow::{CouncilWorkflow, WorkflowState};
 // pub use risk_scorer::{RiskScorer, TechnicalRiskWeights, EthicalRiskWeights, OperationalRiskWeights, BusinessRiskWeights, DimensionWeights}; // TEMPORARILY DISABLED
 pub use error_handling::{
-    AgencyError, ErrorCategory, ErrorSeverity, RecoveryStrategy, RecoveryStrategyType,
-    CircuitBreaker, ErrorHandlingCircuitBreakerConfig, CircuitBreakerStats, CircuitBreakerState,
-    ErrorHandlingRetryConfig, with_retry, DegradationManager, DegradationState, DegradationPolicy,
-    DegradationLevel, RecoveryOrchestrator, SystemHealth, HealthStatus,
-    error_factory,
+    error_factory, with_retry, AgencyError, CircuitBreaker, CircuitBreakerState,
+    CircuitBreakerStats, DegradationLevel, DegradationManager, DegradationPolicy, DegradationState,
+    ErrorCategory, ErrorHandlingCircuitBreakerConfig, ErrorHandlingRetryConfig, ErrorSeverity,
+    HealthStatus, RecoveryOrchestrator, RecoveryStrategy, RecoveryStrategyType, SystemHealth,
 };
 // Council types including ConsensusResult
-pub use council_types::{ConsensusResult, FinalVerdict, Task, ChangeBudget};
+pub use council_types::{ChangeBudget, ConsensusResult, FinalVerdict, Task};
 // Items from restored modules are available through their module declarations above
 
 // Frontier items are available through the module declaration above
@@ -497,13 +743,13 @@ pub use council_types::{ConsensusResult, FinalVerdict, Task, ChangeBudget};
 
 // Multimodal orchestration exports
 pub use multimodal_orchestration::{
-    MultimodalOrchestrator, ProcessingResult, ProcessingStatus, ProcessingStats,
+    MultimodalOrchestrator, ProcessingResult, ProcessingStats, ProcessingStatus,
 };
 
 // Autonomous file editor exports
 pub use autonomous_file_editor::{
-    AutonomousFileEditor, FileChange, ChangeType, RiskAssessment, RiskLevel,
-    ChangesetPreview, AutonomousFileEditError,
+    AutonomousFileEditError, AutonomousFileEditor, ChangeType, ChangesetPreview, FileChange,
+    RiskAssessment, RiskLevel,
 };
 
 // Autonomous integration exports
@@ -514,17 +760,14 @@ pub use autonomous_integration::{
 
 // Audit trail exports
 pub use audit_trail::{
-    AuditTrailManager, AuditConfig, AuditLogLevel, AuditOutputFormat,
-    FileOperationsAuditor, TerminalAuditor, CouncilAuditor, AgentThinkingAuditor,
-    PerformanceAuditor, ErrorRecoveryAuditor, LearningAuditor,
-    AuditEvent, AuditCategory, AuditSeverity, AuditResult, AuditPerformance,
-    AuditQuery, AuditError,
+    AgentThinkingAuditor, AuditCategory, AuditConfig, AuditError, AuditEvent, AuditLogLevel,
+    AuditOutputFormat, AuditPerformance, AuditQuery, AuditResult, AuditSeverity, AuditTrailManager,
+    CouncilAuditor, ErrorRecoveryAuditor, FileOperationsAuditor, LearningAuditor,
+    PerformanceAuditor, TerminalAuditor,
 };
 
 // Restored frontier exports (now available)
-pub use frontier::{
-    Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus,
-};
+pub use frontier::{Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus};
 
 // TODO: These re-exports reference missing modules
 // Arbiter exports
@@ -533,7 +776,7 @@ pub use frontier::{
 //     WorkerOutput, EvidenceManifest, DebateResult, ArbiterError,
 // };
 
-pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig, DiffStats};
+pub use types::{DiffStats, MultimodalProcessingResult, MultimodalTask, OrchestratorConfig};
 
 // ============================================================================
 // CONDITIONAL EXPORTS - API Server
@@ -546,7 +789,6 @@ pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig, 
 //     get_tasks, get_task_detail, get_task_events, cancel_task,
 //     TaskResponse, TaskDetail, TaskEvent, TaskApiError,
 // };
-
 #[cfg(feature = "api-server")]
 // TODO: These re-exports reference missing modules
 // Re-export CQRS router functions
@@ -563,7 +805,6 @@ pub use types::{MultimodalTask, MultimodalProcessingResult, OrchestratorConfig, 
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
 #[cfg(feature = "api-server")]
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct AgentOrchestrationService {
     /// Audit trail manager for tracking all operations
@@ -603,17 +844,16 @@ impl AgentOrchestrationService {
             config.council_config,
             available_judges,
             verdict_aggregator,
-            decision_engine
+            decision_engine,
         );
-        
-        let _orchestrator = multimodal_orchestration::MultimodalOrchestrator::new().await
+
+        let _orchestrator = multimodal_orchestration::MultimodalOrchestrator::new()
+            .await
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
-        
+
         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
 
-        Ok(Self {
-            audit_trail,
-        })
+        Ok(Self { audit_trail })
     }
 
     /// Execute a task with full orchestration and governance
@@ -632,26 +872,36 @@ impl AgentOrchestrationService {
         todo!("Re-enable when struct fields are restored");
         // Convert OrchestratedTask to TaskDescriptor for council review
         let task_descriptor = self.to_task_descriptor(&task);
-        
+
         // 1. Council review and approval
-        let council_session = self.council.start_session(&task_descriptor).await
+        let council_session = self
+            .council
+            .start_session(&task_descriptor)
+            .await
             .map_err(|e| OrchestrationError::CouncilError(e))?;
-        
-        let consensus_result = council_session.review_task(&task).await
+
+        let consensus_result = council_session
+            .review_task(&task)
+            .await
             .map_err(|e| OrchestrationError::CouncilError(e))?;
 
         if !consensus_result.approved {
-            return Err(OrchestrationError::CouncilRejection(consensus_result.reason));
+            return Err(OrchestrationError::CouncilRejection(
+                consensus_result.reason,
+            ));
         }
 
         // Convert ConsensusResult to CouncilDecision for result
         let council_decision = self.convert_consensus_to_decision(&consensus_result);
 
         // 2. Execute task using planning orchestrator
-        let execution_result = self.orchestrator.execute_planning_with_audit(
-            &task.description,
-            None, // No additional context
-        ).await
+        let execution_result = self
+            .orchestrator
+            .execute_planning_with_audit(
+                &task.description,
+                None, // No additional context
+            )
+            .await
             .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
 
         // 3. Create TaskExecutionResult for audit trail (contract type - artifacts stored separately)
@@ -661,12 +911,18 @@ impl AgentOrchestrationService {
         let task_execution_result = TaskExecutionResult {
             execution_id,
             task_id: task.id.clone(),
-            success: execution_result.status == multimodal_orchestration::ProcessingStatus::Completed,
-            output: format!("Multimodal processing: {} blocks processed", execution_result.blocks_processed),
-            errors: if execution_result.status == multimodal_orchestration::ProcessingStatus::Completed { 
-                vec![] 
-            } else { 
-                vec!["Processing failed".to_string()] 
+            success: execution_result.status
+                == multimodal_orchestration::ProcessingStatus::Completed,
+            output: format!(
+                "Multimodal processing: {} blocks processed",
+                execution_result.blocks_processed
+            ),
+            errors: if execution_result.status
+                == multimodal_orchestration::ProcessingStatus::Completed
+            {
+                vec![]
+            } else {
+                vec!["Processing failed".to_string()]
             },
             metadata: std::collections::HashMap::new(),
             started_at: Utc::now(),
@@ -676,7 +932,9 @@ impl AgentOrchestrationService {
         };
 
         // 4. Record audit trail
-        self.audit_trail.record_execution(&task_execution_result).await
+        self.audit_trail
+            .record_execution(&task_execution_result)
+            .await
             .map_err(|e| OrchestrationError::AuditError(e.to_string()))?;
 
         // 5. Return comprehensive result
@@ -689,7 +947,10 @@ impl AgentOrchestrationService {
 
     /// Convert OrchestratedTask to TaskDescriptor
     #[cfg(feature = "api-server")]
-    fn to_task_descriptor(&self, task: &OrchestratedTask) -> agent_agency_contracts::TaskDescriptor {
+    fn to_task_descriptor(
+        &self,
+        task: &OrchestratedTask,
+    ) -> agent_agency_contracts::TaskDescriptor {
         agent_agency_contracts::TaskDescriptor {
             task_id: Uuid::parse_str(&task.id).unwrap_or_else(|_| Uuid::new_v4()),
             description: task.description.clone(),
@@ -717,8 +978,12 @@ impl AgentOrchestrationService {
             priority: task.priority.clone(),
             execution_mode: agent_agency_contracts::ExecutionMode::Auto,
             risk_tier: Some(match task.priority {
-                TaskPriority::Critical | TaskPriority::High | TaskPriority::Urgent => agent_agency_contracts::task_request::RiskTier::Tier1,
-                TaskPriority::Normal | TaskPriority::Medium => agent_agency_contracts::RiskTier::Tier2,
+                TaskPriority::Critical | TaskPriority::High | TaskPriority::Urgent => {
+                    agent_agency_contracts::task_request::RiskTier::Tier1
+                }
+                TaskPriority::Normal | TaskPriority::Medium => {
+                    agent_agency_contracts::RiskTier::Tier2
+                }
                 TaskPriority::Low => agent_agency_contracts::RiskTier::Tier3,
             }),
             acceptance: Some("Orchestrated task".to_string()),
@@ -726,7 +991,10 @@ impl AgentOrchestrationService {
     }
 
     /// Convert ConsensusResult to CouncilDecision
-    fn convert_consensus_to_decision(&self, consensus: &crate::council_types::ConsensusResult) -> verdict_aggregation::CouncilDecision {
+    fn convert_consensus_to_decision(
+        &self,
+        consensus: &crate::council_types::ConsensusResult,
+    ) -> verdict_aggregation::CouncilDecision {
         if consensus.approved {
             verdict_aggregation::CouncilDecision::Approve {
                 confidence: consensus.confidence as f64,
@@ -755,7 +1023,6 @@ impl AgentOrchestrationService {
 
 /// Configuration for the Agent Orchestration Service
 #[cfg(feature = "api-server")]
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct OrchestrationConfig {
     pub council_config: council::CouncilConfig,
@@ -765,7 +1032,6 @@ struct OrchestrationConfig {
 
 /// Orchestrated task input
 #[cfg(feature = "api-server")]
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct OrchestratedTask {
     pub id: String,
@@ -774,10 +1040,8 @@ struct OrchestratedTask {
     pub priority: TaskPriority,
 }
 
-
 /// Orchestration execution result
 #[cfg(feature = "api-server")]
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct OrchestrationResult {
     pub council_decision: verdict_aggregation::CouncilDecision,

@@ -3,8 +3,8 @@
 //! Defines the input contract for requesting autonomous task execution
 //! with comprehensive constraints, context, and validation requirements.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Task request for autonomous execution
@@ -162,7 +162,9 @@ pub struct TaskMetadata {
 pub use crate::types::planning::TaskPriority;
 
 /// Validate a task request value against the JSON schema
-pub fn validate_task_request_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_task_request_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::TASK_REQUEST_SCHEMA;
 

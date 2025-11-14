@@ -6,9 +6,9 @@
 //! @author @darianrosebrook
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
 use schemars::JsonSchema;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// Validation severity levels - unified across all validation contexts
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -48,7 +48,9 @@ impl ValidationSeverity {
             ValidationSeverity::Critical | ValidationSeverity::High | ValidationSeverity::Error => {
                 SimpleIssueSeverity::Error
             }
-            ValidationSeverity::Warning | ValidationSeverity::Medium => SimpleIssueSeverity::Warning,
+            ValidationSeverity::Warning | ValidationSeverity::Medium => {
+                SimpleIssueSeverity::Warning
+            }
             ValidationSeverity::Low | ValidationSeverity::Info => SimpleIssueSeverity::Info,
         }
     }
@@ -302,7 +304,10 @@ mod tests {
     #[test]
     fn validation_category_from_string() {
         let cat = ValidationCategory::from_string("dependency".to_string());
-        assert!(matches!(cat, ValidationCategory::Enum(ValidationCategoryEnum::Dependency)));
+        assert!(matches!(
+            cat,
+            ValidationCategory::Enum(ValidationCategoryEnum::Dependency)
+        ));
 
         let cat = ValidationCategory::from_string("custom_category".to_string());
         assert!(matches!(cat, ValidationCategory::String(_)));
@@ -322,4 +327,3 @@ mod tests {
         ));
     }
 }
-

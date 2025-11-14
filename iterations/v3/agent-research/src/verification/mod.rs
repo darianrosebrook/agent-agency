@@ -28,53 +28,60 @@
 #![allow(clippy::result_large_err)] // adjust as needed
 
 // --- Submodules (internal implementation details) ---
-mod types;
-mod verifier;
-mod coreference;
-mod disambiguation;
 mod authority_validator;
-mod semantic_analyzer;
-mod keyword_matcher;
 mod code_extractor;
-mod documentation_extractor;
+mod coreference;
 mod data_extractor;
-mod spec_analysis;
-mod historical;
+mod disambiguation;
+mod documentation_extractor;
 mod fs_utils;
+mod historical;
+mod keyword_matcher;
+mod semantic_analyzer;
+mod spec_analysis;
+mod types;
 mod verification_types;
+mod verifier;
 
 // --- Public re-exports (crate-facing API surface) ---
 
 // Re-export Entity types from verification_types
-pub use verification_types::{
-    Entity, EntityType, EntityDisambiguation, EntityCandidate,
-};
+pub use verification_types::{Entity, EntityCandidate, EntityDisambiguation, EntityType};
 
 // Engine / primary entrypoints
 pub use verifier::MultiModalVerificationEngine;
 
 // Internal verification models used by callers (stable API)
 pub use types::{
-    // Entity & coref
-    CoreferenceChain, CoreferenceResolution, CoreferenceType,
-    // Disambiguation
-    DisambiguationMethod,
-    // Code/doc/data outputs & specs
-    CodeOutput, CodeSpecification, DocumentationOutput, DocumentationStandards,
-    DataAnalysisOutput, DataSchema,
-    // Pattern/statistics/correlations containers
-    StatisticalResult, PatternResult, CorrelationResult,
-    // Matching
-    KeywordMatch, MatchType,
     // Helpers
     CheckResult,
+    // Code/doc/data outputs & specs
+    CodeOutput,
+    CodeSpecification,
+    // Entity & coref
+    CoreferenceChain,
+    CoreferenceResolution,
+    CoreferenceType,
+    CorrelationResult,
+    DataAnalysisOutput,
+    DataSchema,
+    // Disambiguation
+    DisambiguationMethod,
+    DocumentationOutput,
+    DocumentationStandards,
+    // Matching
+    KeywordMatch,
+    MatchType,
+    PatternResult,
+    // Pattern/statistics/correlations containers
+    StatisticalResult,
 };
 
 // Re-export verification_types
 pub use verification_types::{
-    TestOutput, FunctionDefinition, CodeStructure, TypeDefinition,
-    ImplementationBlock, DocumentationStructure, UsageExample,
-    TestConsistency, TestCoverage, TestRelevance, TestQuality,
+    CodeStructure, DocumentationStructure, FunctionDefinition, ImplementationBlock,
+    TestConsistency, TestCoverage, TestOutput, TestQuality, TestRelevance, TypeDefinition,
+    UsageExample,
 };
 
 // Frequently-used utilities optionally exposed (keep narrow)
@@ -86,8 +93,7 @@ pub mod prelude {
     pub use super::{
         CoreferenceResolution, CoreferenceType, DataAnalysisOutput, DataSchema,
         DisambiguationMethod, Entity, EntityCandidate, EntityDisambiguation, EntityType,
-        KeywordMatch, MatchType, MultiModalVerificationEngine, PatternResult,
-        StatisticalResult,
+        KeywordMatch, MatchType, MultiModalVerificationEngine, PatternResult, StatisticalResult,
     };
 }
 

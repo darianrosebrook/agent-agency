@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::progress_tracker::turn_level::{TurnProgress, TaskOutcome, CreditAssignment};
+use crate::progress_tracker::turn_level::{CreditAssignment, TaskOutcome, TurnProgress};
 
 /// TD learning configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,9 +33,9 @@ pub struct TdLearningConfig {
 impl Default for TdLearningConfig {
     fn default() -> Self {
         Self {
-            gamma: 0.9,      // Standard discount factor
-            lambda: 0.7,     // TD(λ) with moderate eligibility traces
-            alpha: 0.1,      // Conservative learning rate
+            gamma: 0.9,  // Standard discount factor
+            lambda: 0.7, // TD(λ) with moderate eligibility traces
+            alpha: 0.1,  // Conservative learning rate
             recency_weight: 0.3,
             quality_weight: 0.4,
             success_weight: 0.2,
@@ -115,7 +115,8 @@ impl AdvancedCreditAssigner {
         value_function.reset_eligibility();
 
         // Extract rewards from trajectory
-        let rewards: Vec<f64> = trajectory.iter()
+        let rewards: Vec<f64> = trajectory
+            .iter()
             .map(|turn| self.compute_immediate_reward(turn, final_outcome))
             .collect();
 
@@ -239,7 +240,10 @@ impl AdvancedCreditAssigner {
         // Normalize values to sum to 1.0 (credit distribution)
         let total_value: f64 = values.iter().sum();
         let normalized_values = if total_value > 0.0 {
-            values.iter().map(|&v| v / total_value).collect::<Vec<f64>>()
+            values
+                .iter()
+                .map(|&v| v / total_value)
+                .collect::<Vec<f64>>()
         } else {
             // Fallback: equal distribution
             vec![1.0 / num_turns as f64; num_turns]
@@ -308,26 +312,29 @@ impl AdvancedCreditAssigner {
         let mut assignments = Vec::new();
 
         // Compute advantages (how much better/worse than baseline)
-        let baseline_quality = trajectory.iter()
+        let baseline_quality = trajectory
+            .iter()
             .map(|t| t.outcome.quality_score)
-            .sum::<f64>() / num_turns as f64;
+            .sum::<f64>()
+            / num_turns as f64;
 
-        let advantages: Vec<f64> = trajectory.iter()
+        let advantages: Vec<f64> = trajectory
+            .iter()
             .map(|t| t.outcome.quality_score - baseline_quality)
             .collect();
 
         // Compute weights using softmax with temperature
         let temperature = 2.0; // Controls sharpness of distribution
-        let weights: Vec<f64> = advantages.iter()
+        let weights: Vec<f64> = advantages
+            .iter()
             .map(|&adv| (adv / temperature).exp())
             .collect();
         let weight_sum: f64 = weights.iter().sum();
-        let normalized_weights: Vec<f64> = weights.iter()
-            .map(|&w| w / weight_sum)
-            .collect();
+        let normalized_weights: Vec<f64> = weights.iter().map(|&w| w / weight_sum).collect();
 
         // Apply recency discount
-        let final_weights: Vec<f64> = normalized_weights.iter()
+        let final_weights: Vec<f64> = normalized_weights
+            .iter()
             .enumerate()
             .map(|(idx, &w)| {
                 let recency_factor = (idx + 1) as f64 / num_turns as f64;
@@ -337,16 +344,14 @@ impl AdvancedCreditAssigner {
 
         // Normalize again
         let final_sum: f64 = final_weights.iter().sum();
-        let credit_values: Vec<f64> = final_weights.iter()
-            .map(|&w| w / final_sum)
-            .collect();
+        let credit_values: Vec<f64> = final_weights.iter().map(|&w| w / final_sum).collect();
 
         // Create assignments
         for (idx, turn) in trajectory.iter().enumerate() {
             let mut factors = Vec::new();
             factors.push(format!("Advantage: {:.4}", advantages[idx]));
             factors.push(format!("Baseline quality: {:.2}", baseline_quality));
-            
+
             if turn.outcome.success {
                 factors.push("Successful turn".to_string());
             }
@@ -383,12 +388,15 @@ impl AdvancedCreditAssigner {
         let mut combined = Vec::new();
         for (td, adv) in td_credits.iter().zip(advantage_credits.iter()) {
             let combined_credit = td.credit_value * td_weight + adv.credit_value * advantage_weight;
-            
+
             let mut factors = td.factors.clone();
             factors.push(format!("TD credit: {:.4}", td.credit_value));
             factors.push(format!("Advantage credit: {:.4}", adv.credit_value));
-            factors.push(format!("Combined ({}% TD, {}% advantage)", 
-                td_weight * 100.0, advantage_weight * 100.0));
+            factors.push(format!(
+                "Combined ({}% TD, {}% advantage)",
+                td_weight * 100.0,
+                advantage_weight * 100.0
+            ));
 
             combined.push(CreditAssignment {
                 turn_number: td.turn_number,
@@ -457,7 +465,7 @@ mod tests {
     #[test]
     fn test_td_lambda_credit_assignment() {
         let assigner = AdvancedCreditAssigner::default();
-        
+
         let trajectory = vec![
             create_test_turn(1, 0.5, true),
             create_test_turn(2, 0.6, true),
@@ -473,25 +481,28 @@ mod tests {
         };
 
         let credits = assigner.assign_credit_td_lambda(&trajectory, &final_outcome);
-        
+
         assert_eq!(credits.len(), 4);
-        
+
         // Credits should sum to approximately 1.0
         let total: f64 = credits.iter().map(|c| c.credit_value).sum();
         assert!((total - 1.0).abs() < 0.01);
-        
+
         // Later turns should generally get more credit (but not always)
         // This depends on the TD learning dynamics
         println!("TD(λ) Credits:");
         for credit in &credits {
-            println!("  Turn {}: {:.4} - {}", credit.turn_number, credit.credit_value, credit.reasoning);
+            println!(
+                "  Turn {}: {:.4} - {}",
+                credit.turn_number, credit.credit_value, credit.reasoning
+            );
         }
     }
 
     #[test]
     fn test_hybrid_credit_assignment() {
         let assigner = AdvancedCreditAssigner::default();
-        
+
         let trajectory = vec![
             create_test_turn(1, 0.5, true),
             create_test_turn(2, 0.6, true),
@@ -507,17 +518,19 @@ mod tests {
         };
 
         let credits = assigner.assign_credit_hybrid(&trajectory, &final_outcome);
-        
+
         assert_eq!(credits.len(), 4);
-        
+
         // Credits should sum to approximately 1.0
         let total: f64 = credits.iter().map(|c| c.credit_value).sum();
         assert!((total - 1.0).abs() < 0.01);
-        
+
         println!("Hybrid Credits:");
         for credit in &credits {
-            println!("  Turn {}: {:.4} - {}", credit.turn_number, credit.credit_value, credit.reasoning);
+            println!(
+                "  Turn {}: {:.4} - {}",
+                credit.turn_number, credit.credit_value, credit.reasoning
+            );
         }
     }
 }
-

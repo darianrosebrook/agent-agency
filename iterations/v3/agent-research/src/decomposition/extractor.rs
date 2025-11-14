@@ -1,10 +1,10 @@
 //! Atomic claim extraction functionality
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::debug;
 use uuid::Uuid;
@@ -42,7 +42,10 @@ impl ClaimExtractor {
             let clauses = self.split_into_clauses(compound);
 
             for (clause_offset, clause) in clauses.iter().enumerate() {
-                if let Some(claim) = self.process_clause(clause, context, compound_index, clause_offset).await? {
+                if let Some(claim) = self
+                    .process_clause(clause, context, compound_index, clause_offset)
+                    .await?
+                {
                     claims.push(claim);
                 }
             }
@@ -59,7 +62,8 @@ impl ClaimExtractor {
         let mut parts = vec![sentence.to_string()];
 
         for conj in &conjunctions {
-            parts = parts.into_iter()
+            parts = parts
+                .into_iter()
                 .flat_map(|part| {
                     if part.to_lowercase().contains(&format!(" {} ", conj)) {
                         part.split(&format!(" {} ", conj))
@@ -73,7 +77,8 @@ impl ClaimExtractor {
                 .collect();
         }
 
-        parts.into_iter()
+        parts
+            .into_iter()
             .flat_map(|part| {
                 part.split(';')
                     .map(|s| s.trim().to_string())
@@ -86,14 +91,18 @@ impl ClaimExtractor {
     /// Split compound sentence into clauses
     fn split_into_clauses(&self, compound: &str) -> Vec<String> {
         // Split on relative pronouns and conjunctions
-        let separators = ["that", "which", "who", "whom", "whose", "where", "when", "why", "how"];
+        let separators = [
+            "that", "which", "who", "whom", "whose", "where", "when", "why", "how",
+        ];
         let mut clauses = vec![compound.to_string()];
 
         for sep in &separators {
-            clauses = clauses.into_iter()
+            clauses = clauses
+                .into_iter()
                 .flat_map(|clause| {
                     if clause.to_lowercase().contains(&format!(" {} ", sep)) {
-                        clause.split(&format!(" {} ", sep))
+                        clause
+                            .split(&format!(" {} ", sep))
                             .map(|s| s.trim().to_string())
                             .filter(|s| !s.is_empty())
                             .collect::<Vec<_>>()
@@ -152,10 +161,10 @@ impl ClaimExtractor {
             },
             confidence: confidence.into(),
             contextual_brackets: vec![], // No contextual brackets by default
-            subject: None, // Will be extracted later if needed
-            predicate: None, // Will be extracted later if needed
-            object: None, // Will be extracted later if needed
-            context_brackets: vec![], // No context brackets by default
+            subject: None,               // Will be extracted later if needed
+            predicate: None,             // Will be extracted later if needed
+            object: None,                // Will be extracted later if needed
+            context_brackets: vec![],    // No context brackets by default
             verification_requirements: vec![], // No specific requirements by default
             position: (0, normalized_clause.len()), // Full clause position
             sentence_fragment: normalized_clause.clone(), // The original clause
@@ -172,7 +181,8 @@ impl ClaimExtractor {
     /// Normalize a clause for processing
     fn normalize_clause(&self, clause: &str) -> String {
         // Basic normalization - remove extra whitespace, fix punctuation
-        clause.trim()
+        clause
+            .trim()
             .replace(" ,", ",")
             .replace(" .", ".")
             .replace("  ", " ")
@@ -181,7 +191,9 @@ impl ClaimExtractor {
     /// Check if clause has subject-verb structure
     fn has_subject_verb_structure(&self, clause: &str) -> bool {
         // Simple check for subject-verb pattern
-        self.subject_verb_patterns.iter().any(|pattern| pattern.is_match(clause))
+        self.subject_verb_patterns
+            .iter()
+            .any(|pattern| pattern.is_match(clause))
     }
 
     /// Generate a unique claim ID
@@ -237,11 +249,17 @@ impl ClaimExtractor {
     fn infer_claim_type(&self, clause: &str) -> ClaimType {
         let clause_lower = clause.to_lowercase();
 
-        if clause_lower.contains("must") || clause_lower.contains("should") || clause_lower.contains("required") {
+        if clause_lower.contains("must")
+            || clause_lower.contains("should")
+            || clause_lower.contains("required")
+        {
             ClaimType::Requirement
         } else if clause_lower.contains("when") || clause_lower.contains("if") {
             ClaimType::Conditional
-        } else if clause_lower.contains("causes") || clause_lower.contains("leads to") || clause_lower.contains("results in") {
+        } else if clause_lower.contains("causes")
+            || clause_lower.contains("leads to")
+            || clause_lower.contains("results in")
+        {
             ClaimType::Causal
         } else {
             ClaimType::Factual
@@ -274,7 +292,8 @@ impl ClaimExtractor {
     fn build_negation_patterns() -> Vec<Regex> {
         vec![
             Regex::new(r"\b(not|no|never|none|neither|nor)\b").unwrap(),
-            Regex::new(r"\b(can't|cannot|won't|wouldn't|shouldn't|doesn't|don't|isn't|aren't)\b").unwrap(),
+            Regex::new(r"\b(can't|cannot|won't|wouldn't|shouldn't|doesn't|don't|isn't|aren't)\b")
+                .unwrap(),
         ]
     }
 }

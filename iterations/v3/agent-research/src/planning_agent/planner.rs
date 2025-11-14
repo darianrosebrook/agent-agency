@@ -3,29 +3,29 @@
 //! The PlanningAgent is responsible for transforming TaskRequests into
 //! validated WorkingSpecs through a multi-stage planning pipeline.
 
+use lru::LruCache;
+use once_cell::sync::Lazy;
+use priority_queue::PriorityQueue;
+use regex::Regex;
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
+use strsim::{jaro_winkler, levenshtein};
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
-use std::collections::{HashMap, HashSet, VecDeque};
-use regex::Regex;
-use once_cell::sync::Lazy;
-use strsim::{jaro_winkler, levenshtein};
-use priority_queue::PriorityQueue;
-use lru::LruCache;
-use serde::{Deserialize, Serialize};
 
-use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use crate::planning_agent::planning_caws_integration::CawsValidator;
-use crate::planning_agent::validation_pipeline::ValidationPipeline;
+use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use crate::planning_agent::refinement_engine::RefinementEngine;
-use crate::planning_agent::types::{
-    PlanningConfig, PlanningRequest, PlanningResponse, PlanningMetadata,
-    ValidationResults, RefinementRecord, RiskAssessment,
-};
-use system_configuration::types::*;
-use crate::planning_agent::validation::*;
 use crate::planning_agent::spec_generation::*;
+use crate::planning_agent::types::{
+    PlanningConfig, PlanningMetadata, PlanningRequest, PlanningResponse, RefinementRecord,
+    RiskAssessment, ValidationResults,
+};
+use crate::planning_agent::validation::*;
+use crate::planning_agent::validation_pipeline::ValidationPipeline;
+use system_configuration::types::*;
 
 /// The main Planning Agent
 pub struct PlanningAgent {
@@ -54,7 +54,9 @@ impl PlanningAgent {
     /// Plan a task by transforming TaskRequest into validated WorkingSpec
     pub async fn plan_task(&self, request: PlanningRequest) -> PlanningResult<PlanningResponse> {
         let start_time = std::time::Instant::now();
-        let config = request.config_override.unwrap_or_else(|| self.config.clone());
+        let config = request
+            .config_override
+            .unwrap_or_else(|| self.config.clone());
 
         // Validate input task request
         validate_task_request(&request.task_request)?;
@@ -65,7 +67,10 @@ impl PlanningAgent {
         // Check for immediate escalation
         if risk_assessment.escalation_recommended {
             return Err(PlanningError::RiskEscalation {
-                reason: format!("Risk assessment indicates escalation required: {:?}", risk_assessment.risk_factors),
+                reason: format!(
+                    "Risk assessment indicates escalation required: {:?}",
+                    risk_assessment.risk_factors
+                ),
             });
         }
 
@@ -75,9 +80,15 @@ impl PlanningAgent {
         // Run planning pipeline with validation and refinement
         let planning_result = timeout(
             Duration::from_secs(config.max_planning_time_seconds),
-            self.run_planning_pipeline(&mut working_spec, &config)
-        ).await
-        .map_err(|_| PlanningError::Timeout(format!("Planning exceeded {} seconds", config.max_planning_time_seconds)))?;
+            self.run_planning_pipeline(&mut working_spec, &config),
+        )
+        .await
+        .map_err(|_| {
+            PlanningError::Timeout(format!(
+                "Planning exceeded {} seconds",
+                config.max_planning_time_seconds
+            ))
+        })?;
 
         let (validation_results, refinement_history) = planning_result?;
 
@@ -97,7 +108,6 @@ impl PlanningAgent {
         })
     }
 
-
     /// Run the complete planning pipeline with validation and refinement
     async fn run_planning_pipeline(
         &self,
@@ -111,10 +121,15 @@ impl PlanningAgent {
             iteration += 1;
 
             // Run validation pipeline
-            let validation_result = self.validation_pipeline.validate_working_spec(working_spec).await?;
+            let validation_result = self
+                .validation_pipeline
+                .validate_working_spec(working_spec)
+                .await?;
 
             // Check if validation passed
-            if validation_result.overall_status == crate::planning_agent::types::planning_types::ValidationStatus::Passed {
+            if validation_result.overall_status
+                == crate::planning_agent::types::planning_types::ValidationStatus::Passed
+            {
                 return Ok((validation_result, refinement_history));
             }
 
@@ -133,14 +148,18 @@ impl PlanningAgent {
             }
 
             // Attempt refinement
-            let refinement_result = self.refinement_engine.refine_working_spec(
-                working_spec,
-                &validation_result.issues
-            ).await?;
+            let refinement_result = self
+                .refinement_engine
+                .refine_working_spec(working_spec, &validation_result.issues)
+                .await?;
 
             let record = RefinementRecord {
                 iteration,
-                triggering_issues: validation_result.issues.iter().map(|i| i.description.clone()).collect(),
+                triggering_issues: validation_result
+                    .issues
+                    .iter()
+                    .map(|i| i.description.clone())
+                    .collect(),
                 applied_actions: refinement_result.applied_actions,
                 successful: refinement_result.successful,
             };
@@ -161,9 +180,10 @@ impl PlanningAgent {
     fn extract_goals_from_description(&self, description: &str) -> PlanningResult<Vec<String>> {
         // Extract goals using pattern matching and sentence analysis
         let mut goals: Vec<String> = Vec::new();
-        
+
         // Split into sentences for better goal extraction
-        let sentences: Vec<&str> = description.split(|c: char| c == '.' || c == '!' || c == '?')
+        let sentences: Vec<&str> = description
+            .split(|c: char| c == '.' || c == '!' || c == '?')
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
             .collect();
@@ -171,13 +191,27 @@ impl PlanningAgent {
         for sentence in sentences {
             // Look for action verbs and goal indicators
             let sentence_lower = sentence.to_lowercase();
-            
+
             // Goal patterns: "need to", "should", "must", "implement", "create", "add", "build"
-            let goal_keywords = ["need to", "should", "must", "implement", "create", "add", "build", 
-                                 "develop", "establish", "set up", "configure", "integrate"];
-            
-            let is_goal_sentence = goal_keywords.iter().any(|keyword| sentence_lower.contains(keyword));
-            
+            let goal_keywords = [
+                "need to",
+                "should",
+                "must",
+                "implement",
+                "create",
+                "add",
+                "build",
+                "develop",
+                "establish",
+                "set up",
+                "configure",
+                "integrate",
+            ];
+
+            let is_goal_sentence = goal_keywords
+                .iter()
+                .any(|keyword| sentence_lower.contains(keyword));
+
             if is_goal_sentence {
                 // Extract goal by finding the core action
                 let goal = self.extract_core_goal_from_sentence(sentence);
@@ -209,37 +243,48 @@ impl PlanningAgent {
     fn extract_core_goal_from_sentence(&self, sentence: &str) -> String {
         // Remove common prefixes and extract the action
         let mut goal = sentence.trim().to_string();
-        
+
         // Remove leading "we need to", "we should", etc.
-        let prefixes = ["we need to ", "we should ", "we must ", "need to ", "should ", "must "];
+        let prefixes = [
+            "we need to ",
+            "we should ",
+            "we must ",
+            "need to ",
+            "should ",
+            "must ",
+        ];
         for prefix in &prefixes {
             if goal.to_lowercase().starts_with(prefix) {
                 goal = goal[prefix.len()..].trim().to_string();
                 break;
             }
         }
-        
+
         // Capitalize first letter
         if !goal.is_empty() {
             let mut chars: Vec<char> = goal.chars().collect();
             chars[0] = chars[0].to_uppercase().next().unwrap_or(chars[0]);
             goal = chars.into_iter().collect();
         }
-        
+
         goal
     }
 
     /// Extract key phrases from description
     fn extract_key_phrases(&self, description: &str) -> Vec<String> {
         let mut phrases = Vec::new();
-        
+
         // Look for bullet points or numbered lists
         for line in description.lines() {
             let trimmed = line.trim();
-            if trimmed.starts_with("- ") || trimmed.starts_with("* ") || 
-               trimmed.matches(char::is_numeric).next().is_some() && trimmed.contains('.') {
+            if trimmed.starts_with("- ")
+                || trimmed.starts_with("* ")
+                || trimmed.matches(char::is_numeric).next().is_some() && trimmed.contains('.')
+            {
                 let phrase = trimmed
-                    .trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ' || c.is_numeric() || c == '.')
+                    .trim_start_matches(|c: char| {
+                        c == '-' || c == '*' || c == ' ' || c.is_numeric() || c == '.'
+                    })
                     .trim()
                     .to_string();
                 if !phrase.is_empty() {
@@ -247,39 +292,43 @@ impl PlanningAgent {
                 }
             }
         }
-        
+
         phrases
     }
 
     /// Validate and deduplicate goals
     fn validate_and_deduplicate_goals(&self, goals: Vec<String>) -> Vec<String> {
         let mut unique_goals: Vec<String> = Vec::new();
-        
+
         for goal in goals {
             // Skip empty or too short goals
             if goal.trim().len() < 5 {
                 continue;
             }
-            
+
             // Check for duplicates using similarity
-            let is_duplicate = unique_goals.iter().any(|existing| {
-                jaro_winkler(existing, &goal) > 0.85
-            });
-            
+            let is_duplicate = unique_goals
+                .iter()
+                .any(|existing| jaro_winkler(existing, &goal) > 0.85);
+
             if !is_duplicate {
                 unique_goals.push(goal);
             }
         }
-        
+
         unique_goals
     }
 
-    fn generate_acceptance_criteria(&self, description: &str) -> PlanningResult<Vec<agent_agency_contracts::working_spec::AcceptanceCriterion>> {
+    fn generate_acceptance_criteria(
+        &self,
+        description: &str,
+    ) -> PlanningResult<Vec<agent_agency_contracts::working_spec::AcceptanceCriterion>> {
         // Generate acceptance criteria based on description analysis
         let mut criteria = Vec::new();
-        
+
         // Extract key actions and outcomes from description
-        let sentences: Vec<&str> = description.split(|c: char| c == '.' || c == '!' || c == '?')
+        let sentences: Vec<&str> = description
+            .split(|c: char| c == '.' || c == '!' || c == '?')
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
             .collect();
@@ -287,18 +336,19 @@ impl PlanningAgent {
         for (idx, sentence) in sentences.iter().enumerate() {
             // Create acceptance criterion for each meaningful sentence
             let sentence_lower = sentence.to_lowercase();
-            
+
             // Skip if it's just a conjunction or filler
-            if sentence_lower.len() < 10 || 
-               sentence_lower.starts_with("and ") || 
-               sentence_lower.starts_with("or ") ||
-               sentence_lower.starts_with("but ") {
+            if sentence_lower.len() < 10
+                || sentence_lower.starts_with("and ")
+                || sentence_lower.starts_with("or ")
+                || sentence_lower.starts_with("but ")
+            {
                 continue;
             }
-            
+
             // Extract the "when" condition and "then" outcome
             let (given, when, then) = self.parse_acceptance_criterion(sentence);
-            
+
             criteria.push(agent_agency_contracts::working_spec::AcceptanceCriterion {
                 id: format!("A{}", idx + 1),
                 given,
@@ -325,7 +375,7 @@ impl PlanningAgent {
     /// Parse a sentence into acceptance criterion components
     fn parse_acceptance_criterion(&self, sentence: &str) -> (String, String, String) {
         let sentence_lower = sentence.to_lowercase();
-        
+
         // Try to find "when" and "then" patterns
         if let Some(when_idx) = sentence_lower.find("when ") {
             let when_part = &sentence[when_idx + 5..];
@@ -334,14 +384,14 @@ impl PlanningAgent {
             } else {
                 "expected outcome occurs"
             };
-            
+
             return (
                 "Given the system state".to_string(),
                 when_part.trim().to_string(),
                 then_part.trim().to_string(),
             );
         }
-        
+
         // Fallback: split sentence into given/when/then
         let words: Vec<&str> = sentence.split_whitespace().collect();
         if words.len() >= 3 {
@@ -349,7 +399,7 @@ impl PlanningAgent {
             let given_words = words[..split_point].join(" ");
             let when_words = words[split_point..split_point * 2].join(" ");
             let then_words = words[split_point * 2..].join(" ");
-            
+
             (
                 format!("Given {}", given_words),
                 format!("When {}", when_words),
@@ -365,12 +415,18 @@ impl PlanningAgent {
     }
 
     /// Determine priority for acceptance criterion
-    fn determine_criterion_priority(&self, sentence: &str) -> Option<agent_agency_contracts::working_spec::MoSCoWPriority> {
+    fn determine_criterion_priority(
+        &self,
+        sentence: &str,
+    ) -> Option<agent_agency_contracts::working_spec::MoSCoWPriority> {
         let sentence_lower = sentence.to_lowercase();
-        
+
         // Check for priority indicators
-        if sentence_lower.contains("must") || sentence_lower.contains("required") || 
-           sentence_lower.contains("critical") || sentence_lower.contains("essential") {
+        if sentence_lower.contains("must")
+            || sentence_lower.contains("required")
+            || sentence_lower.contains("critical")
+            || sentence_lower.contains("essential")
+        {
             Some(agent_agency_contracts::working_spec::MoSCoWPriority::Must)
         } else if sentence_lower.contains("should") || sentence_lower.contains("important") {
             Some(agent_agency_contracts::working_spec::MoSCoWPriority::Should)
@@ -391,28 +447,37 @@ impl PlanningAgent {
         }
     }
 
-    fn create_working_spec_constraints(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecConstraints> {
+    fn create_working_spec_constraints(
+        &self,
+        task_request: &agent_agency_contracts::task_request::TaskRequest,
+    ) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecConstraints> {
         let constraints = task_request.constraints.as_ref();
 
-        Ok(agent_agency_contracts::working_spec::WorkingSpecConstraints {
-            max_duration_minutes: constraints.and_then(|c| c.max_duration_minutes),
-            max_iterations: constraints.and_then(|c| c.max_iterations),
-            budget_limits: constraints.and_then(|c| c.budget_limits.as_ref()).map(|b| {
-                agent_agency_contracts::working_spec::BudgetLimits {
-                    max_files: b.max_files,
-                    max_loc: b.max_loc,
-                }
-            }),
-            scope_restrictions: constraints.and_then(|c| c.scope_restrictions.as_ref()).map(|s| {
-                agent_agency_contracts::working_spec::ScopeRestrictions {
-                    allowed_paths: s.allowed_paths.clone(),
-                    blocked_paths: s.blocked_paths.clone(),
-                }
-            }),
-        })
+        Ok(
+            agent_agency_contracts::working_spec::WorkingSpecConstraints {
+                max_duration_minutes: constraints.and_then(|c| c.max_duration_minutes),
+                max_iterations: constraints.and_then(|c| c.max_iterations),
+                budget_limits: constraints.and_then(|c| c.budget_limits.as_ref()).map(|b| {
+                    agent_agency_contracts::working_spec::BudgetLimits {
+                        max_files: b.max_files,
+                        max_loc: b.max_loc,
+                    }
+                }),
+                scope_restrictions: constraints.and_then(|c| c.scope_restrictions.as_ref()).map(
+                    |s| agent_agency_contracts::working_spec::ScopeRestrictions {
+                        allowed_paths: s.allowed_paths.clone(),
+                        blocked_paths: s.blocked_paths.clone(),
+                    },
+                ),
+            },
+        )
     }
 
-    fn generate_test_plan(&self, task_request: &agent_agency_contracts::task_request::TaskRequest, risk_tier: u32) -> PlanningResult<agent_agency_contracts::working_spec::TestPlan> {
+    fn generate_test_plan(
+        &self,
+        task_request: &agent_agency_contracts::task_request::TaskRequest,
+        risk_tier: u32,
+    ) -> PlanningResult<agent_agency_contracts::working_spec::TestPlan> {
         let coverage_targets = match risk_tier {
             1 => Some(agent_agency_contracts::working_spec::CoverageTargets {
                 line_coverage: Some(0.9),
@@ -443,8 +508,13 @@ impl PlanningAgent {
         })
     }
 
-    fn generate_rollback_plan(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::RollbackPlan> {
-        let risk_tier = task_request.constraints.as_ref()
+    fn generate_rollback_plan(
+        &self,
+        task_request: &agent_agency_contracts::task_request::TaskRequest,
+    ) -> PlanningResult<agent_agency_contracts::working_spec::RollbackPlan> {
+        let risk_tier = task_request
+            .constraints
+            .as_ref()
             .map(|c| c.risk_tier.clone())
             .unwrap_or(agent_agency_contracts::task_request::RiskTier::Tier2);
 
@@ -464,12 +534,18 @@ impl PlanningAgent {
             automated_steps: vec!["git revert".to_string()],
             manual_steps: vec!["Verify system state".to_string()],
             data_impact,
-            downtime_required: Some(matches!(risk_tier, agent_agency_contracts::task_request::RiskTier::Tier1)),
+            downtime_required: Some(matches!(
+                risk_tier,
+                agent_agency_contracts::task_request::RiskTier::Tier1
+            )),
             rollback_window_minutes: Some(30),
         })
     }
 
-    fn create_working_spec_context(&self, task_request: &agent_agency_contracts::task_request::TaskRequest) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecContext> {
+    fn create_working_spec_context(
+        &self,
+        task_request: &agent_agency_contracts::task_request::TaskRequest,
+    ) -> PlanningResult<agent_agency_contracts::working_spec::WorkingSpecContext> {
         let context = task_request.context.as_ref();
 
         Ok(agent_agency_contracts::working_spec::WorkingSpecContext {
@@ -480,33 +556,39 @@ impl PlanningAgent {
                 .map(|c| c.git_branch.clone())
                 .unwrap_or_else(|| "main".to_string()),
             recent_changes: context
-                .map(|c| c.recent_changes.iter().map(|change| {
-                    agent_agency_contracts::working_spec::FileChange {
-                        file: change.file.clone(),
-                        change_type: match change.change_type {
-                            agent_agency_contracts::task_request::ChangeType::Added => agent_agency_contracts::working_spec::ChangeType::Added,
-                            agent_agency_contracts::task_request::ChangeType::Modified => agent_agency_contracts::working_spec::ChangeType::Modified,
-                            agent_agency_contracts::task_request::ChangeType::Deleted => agent_agency_contracts::working_spec::ChangeType::Deleted,
-                        },
-                        timestamp: change.timestamp,
-                    }
-                }).collect())
+                .map(|c| {
+                    c.recent_changes
+                        .iter()
+                        .map(|change| agent_agency_contracts::working_spec::FileChange {
+                            file: change.file.clone(),
+                            change_type: match change.change_type {
+                                agent_agency_contracts::task_request::ChangeType::Added => {
+                                    agent_agency_contracts::working_spec::ChangeType::Added
+                                }
+                                agent_agency_contracts::task_request::ChangeType::Modified => {
+                                    agent_agency_contracts::working_spec::ChangeType::Modified
+                                }
+                                agent_agency_contracts::task_request::ChangeType::Deleted => {
+                                    agent_agency_contracts::working_spec::ChangeType::Deleted
+                                }
+                            },
+                            timestamp: change.timestamp,
+                        })
+                        .collect()
+                })
                 .unwrap_or_default(),
-            dependencies: context
-                .map(|c| c.dependencies.clone())
-                .unwrap_or_default(),
+            dependencies: context.map(|c| c.dependencies.clone()).unwrap_or_default(),
             environment: context
                 .map(|c| c.environment.clone())
                 .unwrap_or(agent_agency_contracts::task_request::Environment::Development),
         })
     }
-
 }
 
 /// Comprehensive Goal Extraction and Analysis Implementation
 
 /// Configuration for goal analysis
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalAnalysisConfig {
     /// Enable semantic analysis using BERT
     pub enable_semantic_analysis: bool,
@@ -527,7 +609,7 @@ pub struct GoalAnalysisConfig {
 }
 
 /// Result of comprehensive goal analysis
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalAnalysisResult {
     /// Extracted goals with metadata
     pub goals: Vec<ExtractedGoal>,
@@ -542,7 +624,7 @@ pub struct GoalAnalysisResult {
 }
 
 /// Individual extracted goal with comprehensive metadata
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtractedGoal {
     /// Unique goal identifier
     pub id: String,
@@ -577,7 +659,7 @@ pub struct ExtractedGoal {
 }
 
 /// Goal type classifications
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash) ]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum GoalType {
     /// Functional requirements
     Functional,
@@ -600,7 +682,7 @@ pub enum GoalType {
 }
 
 /// Timeline constraints for goals
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalTimeline {
     /// Target completion date
     pub target_date: Option<chrono::DateTime<chrono::Utc>>,
@@ -613,7 +695,7 @@ pub struct GoalTimeline {
 }
 
 /// Goal hierarchy with dependencies
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalHierarchy {
     /// Root goals (no dependencies)
     pub root_goals: Vec<String>,
@@ -628,7 +710,7 @@ pub struct GoalHierarchy {
 }
 
 /// Goal prioritization results
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalPrioritization {
     /// Goals ranked by priority score
     pub ranked_goals: Vec<String>,
@@ -641,7 +723,7 @@ pub struct GoalPrioritization {
 }
 
 /// Priority score breakdown
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriorityBreakdown {
     /// Business value component
     pub business_value: f64,
@@ -658,7 +740,7 @@ pub struct PriorityBreakdown {
 }
 
 /// Business value analysis
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BusinessValueAnalysis {
     /// ROI estimates for each goal
     pub roi_estimates: HashMap<String, f64>,
@@ -671,7 +753,7 @@ pub struct BusinessValueAnalysis {
 }
 
 /// Cost-benefit analysis result
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CostBenefitResult {
     /// Estimated costs
     pub estimated_costs: f64,
@@ -686,7 +768,7 @@ pub struct CostBenefitResult {
 }
 
 /// Goal validation results
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalValidation {
     /// Goal ID being validated
     pub goal_id: String,
@@ -703,7 +785,7 @@ pub struct GoalValidation {
 }
 
 /// Validation types for goals
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash) ]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ValidationType {
     /// SMART criteria validation
     SmartCriteria,
@@ -724,7 +806,7 @@ pub enum ValidationType {
 }
 
 /// Validation results
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationResult {
     Pass,
     Warning,
@@ -732,7 +814,7 @@ pub enum ValidationResult {
 }
 
 /// Validation severity levels
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationSeverity {
     Info,
     Warning,
@@ -741,7 +823,7 @@ pub enum ValidationSeverity {
 }
 
 /// Goal analysis metadata
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoalAnalysisMetadata {
     /// Analysis timestamp
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -779,7 +861,7 @@ pub struct AdvancedGoalAnalyzer {
 
 /// Goal prioritization engine
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GoalPrioritizationEngine {
     // TODO: Implement ML model for priority prediction
     //       Currently uses basic weight map; should implement ML model for accurate priority prediction.
@@ -819,7 +901,7 @@ pub struct GoalPrioritizationEngine {
 
 /// Goal dependency analyzer
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GoalDependencyAnalyzer {
     /// Dependency patterns
     dependency_patterns: Vec<String>,
@@ -827,7 +909,7 @@ pub struct GoalDependencyAnalyzer {
 
 /// Goal validation engine
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GoalValidationEngine {
     /// Validation rules
     validation_rules: Vec<GoalValidationRule>,
@@ -835,7 +917,7 @@ pub struct GoalValidationEngine {
 
 /// Goal validation rule
 
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GoalValidationRule {
     /// Rule type
     rule_type: ValidationType,
@@ -880,9 +962,13 @@ static GOAL_PATTERNS: Lazy<HashMap<&'static str, Lazy<Regex>>> = Lazy::new(|| {
     let mut patterns: HashMap<&'static str, Lazy<Regex>> = HashMap::new();
 
     // Goal indicators
-    patterns.insert("goal_indicators", Lazy::new(|| {
-        Regex::new(r"(?i)\b(?:goal|objective|aim|target|purpose|mission|vision|strategy)\b").unwrap()
-    }));
+    patterns.insert(
+        "goal_indicators",
+        Lazy::new(|| {
+            Regex::new(r"(?i)\b(?:goal|objective|aim|target|purpose|mission|vision|strategy)\b")
+                .unwrap()
+        }),
+    );
 
     // Action verbs
     patterns.insert("action_verbs", Lazy::new(|| {
@@ -932,7 +1018,10 @@ impl AdvancedGoalAnalyzer {
     pub fn new(config: GoalAnalysisConfig) -> Self {
         let goal_patterns = Self::compile_goal_patterns();
         let goal_type_patterns = Self::compile_goal_type_patterns();
-        let semantic_cache = LruCache::new(std::num::NonZeroUsize::new(config.cache_size).unwrap_or(std::num::NonZeroUsize::new(100).unwrap()));
+        let semantic_cache = LruCache::new(
+            std::num::NonZeroUsize::new(config.cache_size)
+                .unwrap_or(std::num::NonZeroUsize::new(100).unwrap()),
+        );
         let prioritization_engine = GoalPrioritizationEngine::new();
         let dependency_analyzer = GoalDependencyAnalyzer::new();
         let validation_engine = GoalValidationEngine::new();
@@ -964,35 +1053,54 @@ impl AdvancedGoalAnalyzer {
         let mut type_patterns = HashMap::new();
 
         // Functional goals
-        type_patterns.insert(GoalType::Functional, vec![
-            Regex::new(r"(?i)\b(?:implement|create|build|add|develop|design)\b").unwrap(),
-        ]);
+        type_patterns.insert(
+            GoalType::Functional,
+            vec![Regex::new(r"(?i)\b(?:implement|create|build|add|develop|design)\b").unwrap()],
+        );
 
         // Non-functional goals
-        type_patterns.insert(GoalType::NonFunctional, vec![
-            Regex::new(r"(?i)\b(?:performance|security|reliability|usability|scalability)\b").unwrap(),
-        ]);
+        type_patterns.insert(
+            GoalType::NonFunctional,
+            vec![
+                Regex::new(r"(?i)\b(?:performance|security|reliability|usability|scalability)\b")
+                    .unwrap(),
+            ],
+        );
 
         // Technical goals
-        type_patterns.insert(GoalType::Technical, vec![
-            Regex::new(r"(?i)\b(?:code|algorithm|architecture|infrastructure|database|api)\b").unwrap(),
-        ]);
+        type_patterns.insert(
+            GoalType::Technical,
+            vec![Regex::new(
+                r"(?i)\b(?:code|algorithm|architecture|infrastructure|database|api)\b",
+            )
+            .unwrap()],
+        );
 
         // Business goals
-        type_patterns.insert(GoalType::Business, vec![
-            Regex::new(r"(?i)\b(?:business|revenue|profit|market|customer|stakeholder)\b").unwrap(),
-        ]);
+        type_patterns.insert(
+            GoalType::Business,
+            vec![
+                Regex::new(r"(?i)\b(?:business|revenue|profit|market|customer|stakeholder)\b")
+                    .unwrap(),
+            ],
+        );
 
         // Quality goals
-        type_patterns.insert(GoalType::Quality, vec![
-            Regex::new(r"(?i)\b(?:quality|test|testing|qa|review|audit|compliance)\b").unwrap(),
-        ]);
+        type_patterns.insert(
+            GoalType::Quality,
+            vec![
+                Regex::new(r"(?i)\b(?:quality|test|testing|qa|review|audit|compliance)\b").unwrap(),
+            ],
+        );
 
         type_patterns
     }
 
     /// Perform comprehensive goal analysis
-    pub async fn analyze_goals_comprehensive(&self, input_text: &str) -> PlanningResult<GoalAnalysisResult> {
+    pub async fn analyze_goals_comprehensive(
+        &self,
+        input_text: &str,
+    ) -> PlanningResult<GoalAnalysisResult> {
         let start_time = std::time::Instant::now();
 
         // Extract goals using multiple methods
@@ -1004,13 +1112,19 @@ impl AdvancedGoalAnalyzer {
         }
 
         // Analyze goal hierarchy and dependencies
-        let hierarchy = self.dependency_analyzer.analyze_hierarchy(&extracted_goals, input_text)?;
+        let hierarchy = self
+            .dependency_analyzer
+            .analyze_hierarchy(&extracted_goals, input_text)?;
 
         // Prioritize goals
-        let prioritization = self.prioritization_engine.prioritize_goals(&extracted_goals, input_text)?;
+        let prioritization = self
+            .prioritization_engine
+            .prioritize_goals(&extracted_goals, input_text)?;
 
         // Validate goals
-        let validation_results = self.validation_engine.validate_goals(&extracted_goals, &hierarchy)?;
+        let validation_results = self
+            .validation_engine
+            .validate_goals(&extracted_goals, &hierarchy)?;
 
         // Create analysis metadata
         let metadata = GoalAnalysisMetadata {
@@ -1050,7 +1164,11 @@ impl AdvancedGoalAnalyzer {
             if !goals.iter().any(|g| jaro_winkler(&g.text, &sentence) > 0.8) {
                 goal_id_counter += 1;
                 let goal_type = self.classify_goal_type(&sentence);
-                goals.push(self.create_goal_from_text(sentence.to_string(), goal_type, goal_id_counter));
+                goals.push(self.create_goal_from_text(
+                    sentence.to_string(),
+                    goal_type,
+                    goal_id_counter,
+                ));
             }
         }
 
@@ -1058,9 +1176,16 @@ impl AdvancedGoalAnalyzer {
         if self.config.enable_stakeholder_analysis {
             let stakeholder_goals = self.extract_stakeholder_goals(input_text)?;
             for goal_text in stakeholder_goals {
-                if !goals.iter().any(|g| jaro_winkler(&g.text, &goal_text) > 0.8) {
+                if !goals
+                    .iter()
+                    .any(|g| jaro_winkler(&g.text, &goal_text) > 0.8)
+                {
                     goal_id_counter += 1;
-                    goals.push(self.create_goal_from_text(goal_text.to_string(), GoalType::Business, goal_id_counter));
+                    goals.push(self.create_goal_from_text(
+                        goal_text.to_string(),
+                        GoalType::Business,
+                        goal_id_counter,
+                    ));
                 }
             }
         }
@@ -1113,7 +1238,8 @@ impl AdvancedGoalAnalyzer {
             // Score sentence as potential goal
             let score = self.score_sentence_as_goal(sentence);
 
-            if score > 0.6 { // Threshold for goal classification
+            if score > 0.6 {
+                // Threshold for goal classification
                 goals.push(sentence.to_string());
             }
         }
@@ -1190,55 +1316,73 @@ impl AdvancedGoalAnalyzer {
     fn extract_stakeholder_requirement(&self, sentence: &str) -> Option<String> {
         // Enhanced requirement extraction using multiple patterns
         let sentence_lower = sentence.to_lowercase();
-        
+
         // Pattern 1: "X wants/needs Y"
         if let Some(want_idx) = sentence_lower.find(" wants ") {
             let before_want = &sentence[..want_idx];
             let after_want = &sentence[want_idx + 7..];
-            
+
             // Extract stakeholder name
-            let stakeholder = before_want.split_whitespace().last().unwrap_or("Stakeholder");
+            let stakeholder = before_want
+                .split_whitespace()
+                .last()
+                .unwrap_or("Stakeholder");
             let requirement = after_want.trim().trim_end_matches('.').trim();
-            
+
             return Some(format!("{} wants {}", stakeholder, requirement));
         }
-        
+
         if let Some(need_idx) = sentence_lower.find(" needs ") {
             let before_need = &sentence[..need_idx];
             let after_need = &sentence[need_idx + 7..];
-            
-            let stakeholder = before_need.split_whitespace().last().unwrap_or("Stakeholder");
+
+            let stakeholder = before_need
+                .split_whitespace()
+                .last()
+                .unwrap_or("Stakeholder");
             let requirement = after_need.trim().trim_end_matches('.').trim();
-            
+
             return Some(format!("{} needs {}", stakeholder, requirement));
         }
-        
+
         // Pattern 2: "Requirement: ..." or "Requirement is ..."
         if let Some(req_idx) = sentence_lower.find("requirement") {
             let after_req = &sentence[req_idx + 11..];
             if !after_req.trim().is_empty() {
                 // Clean up common prefixes
                 let cleaned = after_req
-                    .trim_start_matches(|c: char| c == ':' || c == ' ' || c == 'i' || c == 's' || c == ' ')
+                    .trim_start_matches(|c: char| {
+                        c == ':' || c == ' ' || c == 'i' || c == 's' || c == ' '
+                    })
                     .trim()
                     .trim_end_matches('.')
                     .to_string();
-                
+
                 if !cleaned.is_empty() {
                     return Some(cleaned);
                 }
             }
         }
-        
+
         // Pattern 3: "The system should/must/can ..."
         if let Some(should_idx) = sentence_lower.find("should ") {
-            return Some(sentence[should_idx + 7..].trim().trim_end_matches('.').to_string());
+            return Some(
+                sentence[should_idx + 7..]
+                    .trim()
+                    .trim_end_matches('.')
+                    .to_string(),
+            );
         }
-        
+
         if let Some(must_idx) = sentence_lower.find("must ") {
-            return Some(sentence[must_idx + 5..].trim().trim_end_matches('.').to_string());
+            return Some(
+                sentence[must_idx + 5..]
+                    .trim()
+                    .trim_end_matches('.')
+                    .to_string(),
+            );
         }
-        
+
         // Fallback: return the sentence if it's substantial enough
         if sentence.trim().len() > 10 {
             Some(sentence.trim().trim_end_matches('.').to_string())
@@ -1266,7 +1410,7 @@ impl AdvancedGoalAnalyzer {
             id: format!("goal_{}", id),
             text,
             goal_type,
-            confidence: 0.7, // Base confidence
+            confidence: 0.7,     // Base confidence
             priority_score: 0.5, // Will be updated by prioritization
             business_value: 0.5,
             stakeholder_importance: 0.5,
@@ -1359,7 +1503,8 @@ impl AdvancedGoalAnalyzer {
             risks.push("High complexity may lead to implementation challenges".to_string());
         }
 
-        if context.to_lowercase().contains("time") && context.to_lowercase().contains("constraint") {
+        if context.to_lowercase().contains("time") && context.to_lowercase().contains("constraint")
+        {
             risks.push("Timeline constraints may affect quality".to_string());
         }
 
@@ -1369,8 +1514,16 @@ impl AdvancedGoalAnalyzer {
     /// Estimate effort for goal (person-hours)
     fn estimate_effort(&self, goal_text: &str) -> f64 {
         let word_count = goal_text.split_whitespace().count();
-        let complexity_factor = if goal_text.to_lowercase().contains("complex") { 2.0 } else { 1.0 };
-        let integration_factor = if goal_text.to_lowercase().contains("integrat") { 1.5 } else { 1.0 };
+        let complexity_factor = if goal_text.to_lowercase().contains("complex") {
+            2.0
+        } else {
+            1.0
+        };
+        let integration_factor = if goal_text.to_lowercase().contains("integrat") {
+            1.5
+        } else {
+            1.0
+        };
 
         (word_count as f64 * 0.5 * complexity_factor * integration_factor).max(1.0)
     }
@@ -1387,7 +1540,9 @@ impl AdvancedGoalAnalyzer {
             resources.push("API access".to_string());
         }
 
-        if goal_text.to_lowercase().contains("user") && goal_text.to_lowercase().contains("interface") {
+        if goal_text.to_lowercase().contains("user")
+            && goal_text.to_lowercase().contains("interface")
+        {
             resources.push("UI/UX design resources".to_string());
         }
 
@@ -1425,7 +1580,11 @@ impl GoalPrioritizationEngine {
     }
 
     /// Prioritize goals using multiple criteria
-    fn prioritize_goals(&self, goals: &[ExtractedGoal], context: &str) -> PlanningResult<GoalPrioritization> {
+    fn prioritize_goals(
+        &self,
+        goals: &[ExtractedGoal],
+        context: &str,
+    ) -> PlanningResult<GoalPrioritization> {
         let mut ranked_goals = Vec::new();
         let mut priority_breakdown = HashMap::new();
         let mut stakeholder_matrix = HashMap::new();
@@ -1437,10 +1596,13 @@ impl GoalPrioritizationEngine {
         };
 
         // Calculate priority scores for each goal
-        let mut goal_scores: Vec<(String, f64)> = goals.iter().map(|goal| {
-            let priority_score = self.calculate_priority_score(goal, context);
-            (goal.id.clone(), priority_score)
-        }).collect();
+        let mut goal_scores: Vec<(String, f64)> = goals
+            .iter()
+            .map(|goal| {
+                let priority_score = self.calculate_priority_score(goal, context);
+                (goal.id.clone(), priority_score)
+            })
+            .collect();
 
         // Sort by priority score (descending)
         goal_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -1488,7 +1650,7 @@ impl GoalPrioritizationEngine {
             // - Reviewer Requirements: Business analysis expertise
             business_value_analysis.roi_estimates.insert(
                 goal.id.clone(),
-                goal.business_value * 2.0 // Temporary: placeholder multiplier until proper ROI calculation
+                goal.business_value * 2.0, // Temporary: placeholder multiplier until proper ROI calculation
             );
 
             business_value_analysis.cost_benefit_results.insert(
@@ -1499,7 +1661,7 @@ impl GoalPrioritizationEngine {
                     net_present_value: goal.business_value * 800.0,
                     benefit_cost_ratio: goal.business_value * 10.0,
                     payback_period_months: goal.estimated_effort / 10.0, // TODO: Calculate actual payback period
-                }
+                },
             );
         }
 
@@ -1520,26 +1682,30 @@ impl GoalPrioritizationEngine {
         let effort_impact_ratio = goal.business_value / goal.estimated_effort.max(0.1);
 
         // Weighted combination
-        business_value * 0.3 +
-        stakeholder_importance * 0.25 +
-        technical_feasibility * 0.2 +
-        risk_factor * 0.15 +
-        effort_impact_ratio * 0.1
+        business_value * 0.3
+            + stakeholder_importance * 0.25
+            + technical_feasibility * 0.2
+            + risk_factor * 0.15
+            + effort_impact_ratio * 0.1
     }
 
     /// Calculate detailed priority breakdown
-    fn calculate_priority_breakdown(&self, goal: &ExtractedGoal, context: &str) -> PriorityBreakdown {
+    fn calculate_priority_breakdown(
+        &self,
+        goal: &ExtractedGoal,
+        context: &str,
+    ) -> PriorityBreakdown {
         let business_value = goal.business_value;
         let technical_feasibility = 1.0 / (1.0 + goal.estimated_effort);
         let stakeholder_importance = goal.stakeholder_importance;
         let risk_factor = 1.0 - (goal.risks.len() as f64 * 0.1).min(0.5f64);
         let effort_impact_ratio = goal.business_value / goal.estimated_effort.max(0.1);
 
-        let total_score = business_value * 0.3 +
-                         stakeholder_importance * 0.25 +
-                         technical_feasibility * 0.2 +
-                         risk_factor * 0.15 +
-                         effort_impact_ratio * 0.1;
+        let total_score = business_value * 0.3
+            + stakeholder_importance * 0.25
+            + technical_feasibility * 0.2
+            + risk_factor * 0.15
+            + effort_impact_ratio * 0.1;
 
         PriorityBreakdown {
             business_value,
@@ -1561,11 +1727,17 @@ impl GoalDependencyAnalyzer {
             r"(?i)\b(?:must|shall|should)\b.*\b(?:first|initially|before)\b".to_string(),
         ];
 
-        Self { dependency_patterns }
+        Self {
+            dependency_patterns,
+        }
     }
 
     /// Analyze goal hierarchy and dependencies
-    fn analyze_hierarchy(&self, goals: &[ExtractedGoal], context: &str) -> PlanningResult<GoalHierarchy> {
+    fn analyze_hierarchy(
+        &self,
+        goals: &[ExtractedGoal],
+        context: &str,
+    ) -> PlanningResult<GoalHierarchy> {
         let mut dependency_graph = HashMap::new();
         let mut conflict_graph = HashMap::new();
         let mut root_goals = Vec::new();
@@ -1580,20 +1752,31 @@ impl GoalDependencyAnalyzer {
         // Analyze dependencies between goals
         for i in 0..goals.len() {
             for j in 0..goals.len() {
-                if i == j { continue; }
+                if i == j {
+                    continue;
+                }
 
                 let goal_a = &goals[i];
                 let goal_b = &goals[j];
 
                 // Check for explicit dependencies
                 if self.goals_have_dependency(goal_a, goal_b, context) {
-                    dependency_graph.get_mut(&goal_a.id).unwrap().push(goal_b.id.clone());
+                    dependency_graph
+                        .get_mut(&goal_a.id)
+                        .unwrap()
+                        .push(goal_b.id.clone());
                 }
 
                 // Check for conflicts
                 if self.goals_conflict(goal_a, goal_b) {
-                    conflict_graph.get_mut(&goal_a.id).unwrap().push(goal_b.id.clone());
-                    conflict_graph.get_mut(&goal_b.id).unwrap().push(goal_a.id.clone());
+                    conflict_graph
+                        .get_mut(&goal_a.id)
+                        .unwrap()
+                        .push(goal_b.id.clone());
+                    conflict_graph
+                        .get_mut(&goal_b.id)
+                        .unwrap()
+                        .push(goal_a.id.clone());
                 }
             }
         }
@@ -1611,7 +1794,7 @@ impl GoalDependencyAnalyzer {
         let mut sorted_levels = Vec::new();
         let mut in_degree = HashMap::new();
         let mut ready_queue = VecDeque::new();
-        
+
         // Initialize in-degree counts
         // In-degree = number of goals that depend on this goal
         for goal_id in dependency_graph.keys() {
@@ -1623,17 +1806,17 @@ impl GoalDependencyAnalyzer {
                 }
             }
             in_degree.insert(goal_id.clone(), count);
-            
+
             if count == 0 {
                 ready_queue.push_back(goal_id.clone());
             }
         }
-        
+
         // Process goals level by level
         while !ready_queue.is_empty() {
             let current_level = Vec::from_iter(ready_queue.drain(..));
             sorted_levels.push(current_level.clone());
-            
+
             // For each goal in current level, reduce in-degree of goals that depend on this goal
             for goal_id in &current_level {
                 // Find all goals that have this goal in their dependency list
@@ -1642,7 +1825,7 @@ impl GoalDependencyAnalyzer {
                     if deps.contains(goal_id) {
                         if let Some(current_in_degree) = in_degree.get_mut(dependent_goal_id) {
                             *current_in_degree -= 1;
-                            
+
                             if *current_in_degree == 0 {
                                 ready_queue.push_back(dependent_goal_id.clone());
                             }
@@ -1651,7 +1834,7 @@ impl GoalDependencyAnalyzer {
                 }
             }
         }
-        
+
         // Update hierarchy_levels with properly sorted levels
         hierarchy_levels = sorted_levels;
 
@@ -1668,20 +1851,24 @@ impl GoalDependencyAnalyzer {
     }
 
     /// Check if two goals have a dependency relationship
-    fn goals_have_dependency(&self, goal_a: &ExtractedGoal, goal_b: &ExtractedGoal, context: &str) -> bool {
+    fn goals_have_dependency(
+        &self,
+        goal_a: &ExtractedGoal,
+        goal_b: &ExtractedGoal,
+        context: &str,
+    ) -> bool {
         // Check text similarity (related goals might be dependent)
         let text_similarity = jaro_winkler(&goal_a.text, &goal_b.text);
 
         // Check for explicit dependency patterns in context
         let combined_text = format!("{} {}", goal_a.text, goal_b.text);
-        let has_dependency_pattern = self.dependency_patterns.iter()
-            .any(|pattern_str| {
-                if let Ok(pattern) = Regex::new(pattern_str) {
-                    pattern.is_match(&combined_text) || pattern.is_match(context)
-                } else {
-                    false
-                }
-            });
+        let has_dependency_pattern = self.dependency_patterns.iter().any(|pattern_str| {
+            if let Ok(pattern) = Regex::new(pattern_str) {
+                pattern.is_match(&combined_text) || pattern.is_match(context)
+            } else {
+                false
+            }
+        });
 
         text_similarity > 0.6 || has_dependency_pattern
     }
@@ -1692,13 +1879,16 @@ impl GoalDependencyAnalyzer {
         let a_lower = goal_a.text.to_lowercase();
         let b_lower = goal_b.text.to_lowercase();
 
-        (a_lower.contains("fast") && b_lower.contains("thorough")) ||
-        (a_lower.contains("simple") && b_lower.contains("complex")) ||
-        (a_lower.contains("cheap") && b_lower.contains("high quality"))
+        (a_lower.contains("fast") && b_lower.contains("thorough"))
+            || (a_lower.contains("simple") && b_lower.contains("complex"))
+            || (a_lower.contains("cheap") && b_lower.contains("high quality"))
     }
 
     /// Detect circular dependencies using depth-first search
-    fn detect_circular_dependencies(&self, dependency_graph: &HashMap<String, Vec<String>>) -> Vec<Vec<String>> {
+    fn detect_circular_dependencies(
+        &self,
+        dependency_graph: &HashMap<String, Vec<String>>,
+    ) -> Vec<Vec<String>> {
         // Use DFS to detect cycles in the dependency graph
         let mut circular_deps = Vec::new();
         let mut visited = HashSet::new();
@@ -1753,18 +1943,24 @@ impl GoalDependencyAnalyzer {
         for cycle in circular_deps {
             let mut normalized_cycle = cycle.clone();
             // Rotate cycle to start from smallest ID for consistent representation
-            if let Some(min_idx) = normalized_cycle.iter().enumerate()
+            if let Some(min_idx) = normalized_cycle
+                .iter()
+                .enumerate()
                 .min_by_key(|(_, id)| id.as_str())
-                .map(|(idx, _)| idx) {
+                .map(|(idx, _)| idx)
+            {
                 normalized_cycle.rotate_left(min_idx);
             }
-            
+
             // Check if this cycle is already in unique_cycles
             let is_duplicate = unique_cycles.iter().any(|existing: &Vec<String>| {
-                existing.len() == normalized_cycle.len() &&
-                existing.iter().zip(normalized_cycle.iter()).all(|(a, b)| a == b)
+                existing.len() == normalized_cycle.len()
+                    && existing
+                        .iter()
+                        .zip(normalized_cycle.iter())
+                        .all(|(a, b)| a == b)
             });
-            
+
             if !is_duplicate {
                 unique_cycles.push(normalized_cycle);
             }
@@ -1780,7 +1976,9 @@ impl GoalValidationEngine {
         let validation_rules = vec![
             GoalValidationRule {
                 rule_type: ValidationType::SmartCriteria,
-                description: "Goal should be Specific, Measurable, Achievable, Relevant, Time-bound".to_string(),
+                description:
+                    "Goal should be Specific, Measurable, Achievable, Relevant, Time-bound"
+                        .to_string(),
             },
             GoalValidationRule {
                 rule_type: ValidationType::Feasibility,
@@ -1796,7 +1994,11 @@ impl GoalValidationEngine {
     }
 
     /// Validate goals against constraints and best practices
-    fn validate_goals(&self, goals: &[ExtractedGoal], hierarchy: &GoalHierarchy) -> PlanningResult<Vec<GoalValidation>> {
+    fn validate_goals(
+        &self,
+        goals: &[ExtractedGoal],
+        hierarchy: &GoalHierarchy,
+    ) -> PlanningResult<Vec<GoalValidation>> {
         let mut validations = Vec::new();
 
         for goal in goals {
@@ -1835,7 +2037,8 @@ impl GoalValidationEngine {
         }
 
         // Achievable: Check effort estimate
-        if goal.estimated_effort > 100.0 { // More than 100 person-hours
+        if goal.estimated_effort > 100.0 {
+            // More than 100 person-hours
             issues.push("Goal may be too ambitious for estimated effort".to_string());
         }
 
@@ -1867,8 +2070,15 @@ impl GoalValidationEngine {
             } else {
                 format!("SMART criteria issues: {}", issues.join(", "))
             },
-            severity: if issues.len() > 2 { ValidationSeverity::Error } else { ValidationSeverity::Warning },
-            suggested_fixes: issues.into_iter().map(|issue| format!("Fix: {}", issue)).collect(),
+            severity: if issues.len() > 2 {
+                ValidationSeverity::Error
+            } else {
+                ValidationSeverity::Warning
+            },
+            suggested_fixes: issues
+                .into_iter()
+                .map(|issue| format!("Fix: {}", issue))
+                .collect(),
         }
     }
 
@@ -1877,7 +2087,9 @@ impl GoalValidationEngine {
         let mut issues = Vec::new();
 
         // Check for technical complexity indicators
-        if goal.text.to_lowercase().contains("ai") || goal.text.to_lowercase().contains("machine learning") {
+        if goal.text.to_lowercase().contains("ai")
+            || goal.text.to_lowercase().contains("machine learning")
+        {
             if goal.estimated_effort < 10.0 {
                 issues.push("AI/ML goals typically require more effort".to_string());
             }
@@ -1904,7 +2116,10 @@ impl GoalValidationEngine {
                 format!("Feasibility concerns: {}", issues.join(", "))
             },
             severity: ValidationSeverity::Warning,
-            suggested_fixes: issues.into_iter().map(|issue| format!("Address: {}", issue)).collect(),
+            suggested_fixes: issues
+                .into_iter()
+                .map(|issue| format!("Address: {}", issue))
+                .collect(),
         }
     }
 
@@ -1925,12 +2140,18 @@ impl GoalValidationEngine {
                 _ => "No specific resources identified for goal".to_string(),
             },
             severity: ValidationSeverity::Info,
-            suggested_fixes: vec!["Identify specific resources needed for goal implementation".to_string()],
+            suggested_fixes: vec![
+                "Identify specific resources needed for goal implementation".to_string()
+            ],
         }
     }
 
     /// Validate goal dependencies
-    fn validate_dependencies(&self, goal: &ExtractedGoal, hierarchy: &GoalHierarchy) -> GoalValidation {
+    fn validate_dependencies(
+        &self,
+        goal: &ExtractedGoal,
+        hierarchy: &GoalHierarchy,
+    ) -> GoalValidation {
         let deps = &hierarchy.dependency_graph[&goal.id];
         let conflicts = &hierarchy.conflict_graph[&goal.id];
 
@@ -1941,7 +2162,10 @@ impl GoalValidationEngine {
         }
 
         if !conflicts.is_empty() {
-            issues.push(format!("Goal conflicts with {} other goals", conflicts.len()));
+            issues.push(format!(
+                "Goal conflicts with {} other goals",
+                conflicts.len()
+            ));
         }
 
         let result = if issues.is_empty() {
@@ -1959,8 +2183,15 @@ impl GoalValidationEngine {
             } else {
                 format!("Dependency issues: {}", issues.join(", "))
             },
-            severity: if conflicts.is_empty() { ValidationSeverity::Warning } else { ValidationSeverity::Error },
-            suggested_fixes: issues.into_iter().map(|issue| format!("Resolve: {}", issue)).collect(),
+            severity: if conflicts.is_empty() {
+                ValidationSeverity::Warning
+            } else {
+                ValidationSeverity::Error
+            },
+            suggested_fixes: issues
+                .into_iter()
+                .map(|issue| format!("Resolve: {}", issue))
+                .collect(),
         }
     }
 }

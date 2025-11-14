@@ -5,9 +5,8 @@
 
 use crate::ane::ane_errors::Result;
 use crate::ane::models::whisper_model::{
-    LoadedWhisperModel, WhisperTranscription, TranscriptionSegment,
-    WhisperInferenceOptions, PreprocessedAudio,
-    AudioPreprocessingConfig,
+    AudioPreprocessingConfig, LoadedWhisperModel, PreprocessedAudio, TranscriptionSegment,
+    WhisperInferenceOptions, WhisperTranscription,
 };
 use std::time::Instant;
 
@@ -63,7 +62,9 @@ impl WhisperInferenceExecutor {
         let transcription = self.decode_whisper_output(inference_result, &preprocessed)?;
 
         // Record telemetry
-        self.model.telemetry.record_inference(inference_time.as_millis() as u64, true);
+        self.model
+            .telemetry
+            .record_inference(inference_time.as_millis() as u64, true);
 
         // Update access time
         self.model.last_accessed = Instant::now();
@@ -72,10 +73,18 @@ impl WhisperInferenceExecutor {
     }
 
     /// Preprocess audio data for Whisper
-    fn preprocess_audio(&self, audio_data: &[f32], input_sample_rate: usize) -> Result<PreprocessedAudio> {
+    fn preprocess_audio(
+        &self,
+        audio_data: &[f32],
+        input_sample_rate: usize,
+    ) -> Result<PreprocessedAudio> {
         // Resample to 16kHz if needed
         let resampled_audio = if input_sample_rate != self.audio_config.target_sample_rate {
-            self.resample_audio(audio_data, input_sample_rate, self.audio_config.target_sample_rate)?
+            self.resample_audio(
+                audio_data,
+                input_sample_rate,
+                self.audio_config.target_sample_rate,
+            )?
         } else {
             audio_data.to_vec()
         };
@@ -90,7 +99,8 @@ impl WhisperInferenceExecutor {
         let mel_spectrogram = self.audio_to_mel_spectrogram(&padded_audio)?;
         let n_time_steps = mel_spectrogram.len() / self.audio_config.n_mels;
 
-        let duration_seconds = padded_audio.len() as f32 / self.audio_config.target_sample_rate as f32;
+        let duration_seconds =
+            padded_audio.len() as f32 / self.audio_config.target_sample_rate as f32;
 
         Ok(PreprocessedAudio {
             mel_spectrogram,
@@ -123,9 +133,7 @@ impl WhisperInferenceExecutor {
 
     /// Normalize audio to [-1, 1] range
     fn normalize_audio(&self, audio: &[f32]) -> Vec<f32> {
-        let max_abs = audio.iter()
-            .map(|x| x.abs())
-            .fold(0.0f32, |a, b| a.max(b));
+        let max_abs = audio.iter().map(|x| x.abs()).fold(0.0f32, |a, b| a.max(b));
 
         if max_abs > 0.0 {
             audio.iter().map(|x| x / max_abs).collect()
@@ -136,7 +144,8 @@ impl WhisperInferenceExecutor {
 
     /// Pad or truncate audio to 30 seconds
     fn pad_or_truncate_audio(&self, audio: &[f32]) -> Vec<f32> {
-        let target_length = self.audio_config.target_sample_rate * self.audio_config.chunk_length_seconds;
+        let target_length =
+            self.audio_config.target_sample_rate * self.audio_config.chunk_length_seconds;
 
         if audio.len() >= target_length {
             // Truncate
@@ -247,7 +256,9 @@ impl WhisperInferenceExecutor {
         // - Change Budget: ~200 LOC
         // - Reviewer Requirements: CoreML integration expertise
         // Run inference through CoreML
-        let output_tensor = self.run_coreml_inference(&input_tensor, &inference_options).await?;
+        let output_tensor = self
+            .run_coreml_inference(&input_tensor, &inference_options)
+            .await?;
 
         Ok(WhisperInferenceResult {
             tokens: output_tensor.tokens,
@@ -259,7 +270,10 @@ impl WhisperInferenceExecutor {
     }
 
     /// Prepare input tensor for Whisper model
-    fn prepare_whisper_input(&self, preprocessed: &PreprocessedAudio) -> Result<WhisperInputTensor> {
+    fn prepare_whisper_input(
+        &self,
+        preprocessed: &PreprocessedAudio,
+    ) -> Result<WhisperInputTensor> {
         // Convert mel spectrogram to the format expected by Whisper
         // This includes adding positional embeddings, language tokens, etc.
 
@@ -278,7 +292,9 @@ impl WhisperInferenceExecutor {
     ) -> Result<WhisperOutputTensor> {
         #[cfg(target_os = "macos")]
         {
-            use crate::ane::compat::coreml_direct::{CoreMLModel, MLFeatureProvider, MLFeatureValue, MLMultiArray};
+            use crate::ane::compat::coreml_direct::{
+                CoreMLModel, MLFeatureProvider, MLFeatureValue, MLMultiArray,
+            };
             use std::collections::HashMap;
             use std::path::Path;
 
@@ -288,23 +304,38 @@ impl WhisperInferenceExecutor {
             let input_shape = vec![1, input.n_mels as i32, input.n_time_steps as i32];
 
             // Create input array
-            let input_array = MLMultiArray::from_slice(mel_data, &input_shape)
-                .map_err(|e| crate::ane::ane_errors::ANEError::Internal(format!("Failed to create input array: {}", e)))?;
+            let input_array = MLMultiArray::from_slice(mel_data, &input_shape).map_err(|e| {
+                crate::ane::ane_errors::ANEError::Internal(format!(
+                    "Failed to create input array: {}",
+                    e
+                ))
+            })?;
 
             // Create feature provider
             let mut features = HashMap::new();
             features.insert("input".to_string(), MLFeatureValue::MultiArray(input_array));
-            let feature_provider = MLFeatureProvider::from_dictionary(&features)
-                .map_err(|e| crate::ane::ane_errors::ANEError::Internal(format!("Failed to create feature provider: {}", e)))?;
+            let feature_provider = MLFeatureProvider::from_dictionary(&features).map_err(|e| {
+                crate::ane::ane_errors::ANEError::Internal(format!(
+                    "Failed to create feature provider: {}",
+                    e
+                ))
+            })?;
 
             // Load model and run encoder inference
             let model_path = Path::new(&self.model.compiled_path);
-            let mut coreml_model = CoreMLModel::from_path(model_path)
-                .map_err(|e| crate::ane::ane_errors::ANEError::Internal(format!("Failed to load model: {}", e)))?;
+            let mut coreml_model = CoreMLModel::from_path(model_path).map_err(|e| {
+                crate::ane::ane_errors::ANEError::Internal(format!("Failed to load model: {}", e))
+            })?;
 
             // Run encoder inference
-            let output_provider = coreml_model.prediction_from_features(&feature_provider)
-                .map_err(|e| crate::ane::ane_errors::ANEError::Internal(format!("Encoder inference failed: {}", e)))?;
+            let output_provider = coreml_model
+                .prediction_from_features(&feature_provider)
+                .map_err(|e| {
+                    crate::ane::ane_errors::ANEError::Internal(format!(
+                        "Encoder inference failed: {}",
+                        e
+                    ))
+                })?;
 
             // Extract encoder output
             // The encoder produces hidden states that the decoder uses for token generation
@@ -351,13 +382,15 @@ impl WhisperInferenceExecutor {
             // - CAWS Tier: 2 (decoder inference functionality)
             // - Change Budget: ~400 LOC
             // - Reviewer Requirements: ML inference, transformer architecture, and Whisper model expertise
-            
+
             // Extract encoder output features for potential use in decoder
             // The encoder output is typically a multi-array with shape [batch, seq_len, hidden_dim]
-            let encoder_output = output_provider.features.get("output")
+            let encoder_output = output_provider
+                .features
+                .get("output")
                 .or_else(|| output_provider.features.get("encoder_output"))
                 .or_else(|| output_provider.features.values().next());
-            
+
             // Log encoder output info for debugging
             if let Some(feature_value) = encoder_output {
                 match feature_value {
@@ -375,19 +408,19 @@ impl WhisperInferenceExecutor {
             } else {
                 tracing::warn!("No encoder output found in output provider");
             }
-            
+
             // Generate tokens using simplified greedy decoding
             // Start with proper Whisper special tokens
             let mut tokens = vec![50258]; // <|startoftranscript|>
             tokens.push(50259); // <|en|> (English language token)
             tokens.push(50359); // <|transcribe|> (transcription task token)
-            // Add notimestamps token only if timestamps are disabled
+                                // Add notimestamps token only if timestamps are disabled
             if self.model.config.timestamps {
                 // Timestamps enabled - don't add notimestamps token
             } else {
                 tokens.push(50363); // <|notimestamps|>
             }
-            
+
             // Generate transcription tokens
             // TODO: Implement beam search decoding for improved accuracy
             //       Currently uses simplified greedy decoding; should implement comprehensive beam search decoding that maintains multiple candidate sequences, scores them using logprobs, and selects the best sequence based on cumulative score.
@@ -433,10 +466,10 @@ impl WhisperInferenceExecutor {
             // - CAWS Tier: 2 (decoding algorithm enhancement)
             // - Change Budget: ~300 LOC
             // - Reviewer Requirements: ML decoding algorithms and sequence generation expertise
-            
+
             let max_tokens = self.model.config.num_beams.max(50); // Use config or default
             let mut generated_count = 0;
-            
+
             // Simplified token generation loop
             // In production, this would run decoder inference for each token
             while generated_count < max_tokens {
@@ -447,20 +480,22 @@ impl WhisperInferenceExecutor {
                 // - Run decoder inference with encoder output as context
                 // - Extract logits and sample next token
                 // - Check for end-of-transcript token (50257)
-                
+
                 let next_token = 50359; // Placeholder token
                 tokens.push(next_token);
                 generated_count += 1;
-                
+
                 // Stop if we hit end token or max length
-                if next_token == 50257 { // <|endoftext|>
+                if next_token == 50257 {
+                    // <|endoftext|>
                     break;
                 }
             }
 
             // Calculate logprobs (simplified - would come from decoder logits)
             // In production, these would be extracted from decoder output logits
-            let token_logprobs: Vec<f32> = tokens.iter()
+            let token_logprobs: Vec<f32> = tokens
+                .iter()
                 .enumerate()
                 .map(|(i, _)| {
                     // Simulate decreasing confidence for longer sequences
@@ -484,7 +519,9 @@ impl WhisperInferenceExecutor {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(crate::ane::ane_errors::ANEError::Internal("CoreML not available on this platform".to_string()))
+            Err(crate::ane::ane_errors::ANEError::Internal(
+                "CoreML not available on this platform".to_string(),
+            ))
         }
     }
 
@@ -532,7 +569,8 @@ impl WhisperInferenceExecutor {
         const TIMESTAMP_END: i32 = 50364;
 
         // Filter out special tokens and timestamps
-        let text_tokens: Vec<i32> = tokens.iter()
+        let text_tokens: Vec<i32> = tokens
+            .iter()
             .copied()
             .filter(|&token| {
                 // Keep only text tokens (not special tokens or timestamps)
@@ -561,7 +599,7 @@ impl WhisperInferenceExecutor {
         // Whisper uses GPT-2 style BPE tokenizer
         // For now, we'll use a basic implementation
         // In production, load the actual Whisper tokenizer from HuggingFace
-        
+
         // Convert i32 tokens to u32 for tokenizers crate
         let token_ids: Vec<u32> = text_tokens.iter().map(|&t| t as u32).collect();
 
@@ -573,7 +611,8 @@ impl WhisperInferenceExecutor {
             Err(_) => {
                 // Fallback: decode using basic character mapping
                 // This is a simplified fallback - real implementation would use proper tokenizer
-                let decoded: String = token_ids.iter()
+                let decoded: String = token_ids
+                    .iter()
                     .filter_map(|&id| {
                         // Basic ASCII character mapping (simplified)
                         if id < 256 {
@@ -583,7 +622,7 @@ impl WhisperInferenceExecutor {
                         }
                     })
                     .collect();
-                
+
                 if decoded.is_empty() {
                     Ok(format!("[Decoded {} tokens]", token_ids.len()))
                 } else {
@@ -596,16 +635,16 @@ impl WhisperInferenceExecutor {
 
 /// Decode tokens using tokenizers crate
 fn decode_with_tokenizer(token_ids: &[u32]) -> Result<String> {
-    use std::sync::{OnceLock, Mutex};
+    use std::sync::{Mutex, OnceLock};
     use tokenizers::Tokenizer;
-    
+
     // Try to load Whisper tokenizer
     // Whisper uses GPT-2 style tokenizer, so we can use a GPT-2 tokenizer as fallback
     // Use Mutex<Option> pattern for compatibility with older Rust versions
     static TOKENIZER: OnceLock<Mutex<Option<Tokenizer>>> = OnceLock::new();
-    
+
     let tokenizer = TOKENIZER.get_or_init(|| Mutex::new(None));
-    
+
     // Try to load tokenizer if not already loaded
     {
         let mut tokenizer_guard = tokenizer.lock().unwrap();
@@ -616,7 +655,7 @@ fn decode_with_tokenizer(token_ids: &[u32]) -> Result<String> {
                 "models/tokenizers/whisper-tokenizer.json",
                 "tokenizer.json",
             ];
-            
+
             for path in &possible_paths {
                 if let Ok(t) = Tokenizer::from_file(path) {
                     *tokenizer_guard = Some(t);
@@ -625,15 +664,18 @@ fn decode_with_tokenizer(token_ids: &[u32]) -> Result<String> {
             }
         }
     }
-    
+
     // Use tokenizer if available
     let tokenizer_guard = tokenizer.lock().unwrap();
     if let Some(ref t) = *tokenizer_guard {
-        t.decode(token_ids, true)
-            .map_err(|e| crate::ane::ane_errors::ANEError::Internal(format!("Token decoding failed: {}", e)))
+        t.decode(token_ids, true).map_err(|e| {
+            crate::ane::ane_errors::ANEError::Internal(format!("Token decoding failed: {}", e))
+        })
     } else {
         // Fallback: use basic character decoding
-        Err(crate::ane::ane_errors::ANEError::Internal("Tokenizer not available".to_string()))
+        Err(crate::ane::ane_errors::ANEError::Internal(
+            "Tokenizer not available".to_string(),
+        ))
     }
 }
 
@@ -648,11 +690,19 @@ impl WhisperInferenceExecutor {
         let mut segments = Vec::new();
 
         for (i, (start_time, end_time)) in timestamps.iter().enumerate() {
-            let segment_tokens = if i < tokens.len() { &tokens[i..i+1] } else { &[] };
+            let segment_tokens = if i < tokens.len() {
+                &tokens[i..i + 1]
+            } else {
+                &[]
+            };
             let segment_text = self.decode_tokens_to_text(segment_tokens)?;
 
             // Calculate segment confidence from logprobs
-            let segment_logprobs = if i < logprobs.len() { logprobs[i] } else { -1.0 };
+            let segment_logprobs = if i < logprobs.len() {
+                logprobs[i]
+            } else {
+                -1.0
+            };
             let confidence = (-segment_logprobs).exp(); // Convert logprob to probability
 
             segments.push(TranscriptionSegment {
@@ -709,11 +759,11 @@ pub fn create_whisper_executor(model: LoadedWhisperModel) -> WhisperInferenceExe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use crate::ane::models::whisper_model::{WhisperConfig, WhisperMetadata};
     use crate::telemetry::TelemetryCollector;
-    use crate::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
     use std::path::PathBuf;
-    
+
     fn create_test_whisper_model() -> LoadedWhisperModel {
         LoadedWhisperModel {
             model_id: "test_whisper".to_string(),

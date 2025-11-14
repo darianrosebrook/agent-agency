@@ -11,8 +11,8 @@
 //! 4. **Unregister**: Only call when no concurrent `with_*` is active on the same thread. With `Rc`, this is enforced (drop occurs when the last `Rc` is released).
 
 use std::collections::HashMap;
-use std::ptr::NonNull;
 use std::marker::PhantomData;
+use std::ptr::NonNull;
 use std::rc::Rc;
 
 /// Types of Core ML objects that can be managed by the registry.
@@ -111,7 +111,10 @@ unsafe fn release_coreml_object(object: &RawCoreMlObject) {
         CoreMlObjectType::DictionaryProvider => {
             let result = agentbridge_dict_provider_destroy(handle);
             if result == 0 {
-                tracing::debug!("Successfully released Core ML dict provider handle {}", handle);
+                tracing::debug!(
+                    "Successfully released Core ML dict provider handle {}",
+                    handle
+                );
             }
             result
         }
@@ -125,7 +128,11 @@ unsafe fn release_coreml_object(object: &RawCoreMlObject) {
     };
 
     if result != 0 {
-        tracing::warn!("Failed to destroy Core ML {:?} handle {}", object.object_type(), handle);
+        tracing::warn!(
+            "Failed to destroy Core ML {:?} handle {}",
+            object.object_type(),
+            handle
+        );
     }
 }
 
@@ -189,7 +196,10 @@ impl Drop for CoreMlHandle {
         unsafe {
             release_coreml_object(&self.object);
         }
-        tracing::debug!("CoreMlHandle dropped and {:?} released", self.object.object_type());
+        tracing::debug!(
+            "CoreMlHandle dropped and {:?} released",
+            self.object.object_type()
+        );
     }
 }
 
@@ -242,8 +252,10 @@ impl ModelRef {
 }
 
 /// Internal function to save a model using its raw handle
-fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::ane_errors::Result<()> {
-    
+fn save_model_to_path(
+    model_handle: u64,
+    path: &std::path::Path,
+) -> crate::ane::ane_errors::Result<()> {
     use crate::ane::ane_errors::ANEError;
 
     // Get model information from the FFI layer
@@ -259,11 +271,7 @@ fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::
                 out_error: *mut *mut std::ffi::c_char,
             ) -> i32;
         }
-        agentbridge_model_get_info(
-            model_handle,
-            &mut info_ptr,
-            &mut error_ptr,
-        )
+        agentbridge_model_get_info(model_handle, &mut info_ptr, &mut error_ptr)
     };
 
     if info_result != 0 {
@@ -276,7 +284,10 @@ fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::
         } else {
             "Unknown error getting model info".to_string()
         };
-        return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+        return Err(ANEError::Internal(format!(
+            "Failed to get model info: {}",
+            error_msg
+        )));
     }
 
     if info_ptr.is_null() {
@@ -301,13 +312,17 @@ fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::
     let model_info: serde_json::Value = serde_json::from_str(&model_info_json)
         .map_err(|e| ANEError::Internal(format!("Failed to parse model info: {}", e)))?;
 
-    let source_path = model_info["path"].as_str()
+    let source_path = model_info["path"]
+        .as_str()
         .ok_or_else(|| ANEError::Internal("Model info does not contain path".to_string()))?;
 
     // Copy the compiled model file to the destination
     let source_path = std::path::Path::new(source_path);
     if !source_path.exists() {
-        return Err(ANEError::Internal(format!("Source model file does not exist: {:?}", source_path)));
+        return Err(ANEError::Internal(format!(
+            "Source model file does not exist: {:?}",
+            source_path
+        )));
     }
 
     // Ensure parent directory exists
@@ -322,7 +337,9 @@ fn save_model_to_path(model_handle: u64, path: &std::path::Path) -> crate::ane::
 
     // Verify the copy was successful
     if !path.exists() {
-        return Err(ANEError::Internal("Model file copy verification failed".to_string()));
+        return Err(ANEError::Internal(
+            "Model file copy verification failed".to_string(),
+        ));
     }
 
     let metadata = std::fs::metadata(path)
@@ -383,14 +400,15 @@ pub mod registry {
     /// Register a model handle and get an opaque reference
     /// This should only be called on the thread that owns the handle
     pub fn register_model(handle: CoreMlHandle) -> ModelRef {
-        MODEL_REGISTRY.with(|registry| {
-            registry.borrow_mut().register(handle)
-        })
+        MODEL_REGISTRY.with(|registry| registry.borrow_mut().register(handle))
     }
 
     /// Scoped access to a model handle for running a closure
     /// This ensures the handle cannot be taken ownership of and prevents lifetime issues
-    pub fn with_model_handle<T, F: FnOnce(NonNull<std::ffi::c_void>) -> T>(id: ModelRef, f: F) -> Option<T> {
+    pub fn with_model_handle<T, F: FnOnce(NonNull<std::ffi::c_void>) -> T>(
+        id: ModelRef,
+        f: F,
+    ) -> Option<T> {
         MODEL_REGISTRY.with(|registry| {
             registry.borrow().get_handle(id).map(|rc_handle| {
                 // Rc ensures the handle lives for the duration of the closure
@@ -403,9 +421,6 @@ pub mod registry {
     /// Unregister a model (called during cleanup)
     /// Returns the handle for proper cleanup
     pub fn unregister_model(id: ModelRef) -> Option<Rc<CoreMlHandle>> {
-        MODEL_REGISTRY.with(|registry| {
-            registry.borrow_mut().unregister(id)
-        })
+        MODEL_REGISTRY.with(|registry| registry.borrow_mut().unregister(id))
     }
-
 }

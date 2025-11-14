@@ -1,9 +1,9 @@
+use chrono::{DateTime, Utc};
 /**
  * @fileoverview Core types for workspace state management
  * @author @darianrosebrook
  */
 use schemars::JsonSchema;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -43,7 +43,6 @@ pub struct FileState {
     pub content_hash: String,
     /// Last modified timestamp
     #[schemars(with = "String")]
-
     pub modified_at: DateTime<Utc>,
     /// File permissions (Unix-style)
     pub permissions: u32,
@@ -70,7 +69,6 @@ pub struct DirectoryState {
     pub total_size: u64,
     /// Last modified timestamp of most recent file
     #[schemars(with = "String")]
-
     pub last_modified: DateTime<Utc>,
 }
 
@@ -81,7 +79,6 @@ pub struct WorkspaceState {
     pub id: StateId,
     /// Timestamp when this state was captured
     #[schemars(with = "String")]
-
     pub captured_at: DateTime<Utc>,
     /// Workspace root path
     pub workspace_root: PathBuf,
@@ -101,7 +98,6 @@ pub struct WorkspaceState {
     pub metadata: CaptureMetadata,
     /// Legacy timestamp field for compatibility
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
 }
 
@@ -171,11 +167,9 @@ pub struct WorkspaceDiff {
     pub files_modified: usize,
     /// Timestamp when diff was computed
     #[schemars(with = "String")]
-
     pub computed_at: DateTime<Utc>,
     /// Legacy timestamp field for compatibility
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Detailed changes for advanced diff operations
     pub changes: Vec<DiffChange>,
@@ -244,7 +238,7 @@ impl Default for WorkspaceConfig {
 
 /// Result of a workspace state operation
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct WorkspaceResult <T> {
+pub struct WorkspaceResult<T> {
     /// The result data
     pub data: T,
     /// Any warnings generated during the operation
@@ -287,7 +281,7 @@ impl<T> WorkspaceResult<T> {
 pub enum WorkspaceError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Embedding error: {0}")]
     Embedding(String),
 

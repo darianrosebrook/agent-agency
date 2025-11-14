@@ -5,10 +5,10 @@
 //!
 //! @author @darianrosebrook
 
-use crate::types::planning::TaskDescriptor;
-use crate::types::execution::ExecutionContext;
-use crate::planning_io::ExecutionPlan;
 use crate::errors::PlanningResult;
+use crate::planning_io::ExecutionPlan;
+use crate::types::execution::ExecutionContext;
+use crate::types::planning::TaskDescriptor;
 
 /// Core planning engine interface
 /// Implementations provide the logic to generate execution plans from task descriptors

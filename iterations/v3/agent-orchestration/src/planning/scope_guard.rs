@@ -5,17 +5,18 @@
 //!
 //! @author @darianrosebrook
 
+use agent_agency_contracts::planning_io::MilestoneScope;
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::{RwLock, Semaphore};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use anyhow::{anyhow, Result};
+use tokio::sync::{RwLock, Semaphore};
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration};
-use agent_agency_contracts::planning_io::MilestoneScope;
 
 /// File lock information
 
@@ -94,7 +95,11 @@ impl ScopeGuard {
     }
 
     /// Acquire locks for milestone scope
-    pub async fn acquire_locks(&self, milestone_id: String, scope: &MilestoneScope) -> Result<Vec<PathBuf>> {
+    pub async fn acquire_locks(
+        &self,
+        milestone_id: String,
+        scope: &MilestoneScope,
+    ) -> Result<Vec<PathBuf>> {
         let milestone_uuid = Uuid::parse_str(&milestone_id)
             .map_err(|_| anyhow!("Invalid milestone ID format: {}", milestone_id))?;
 
@@ -133,13 +138,16 @@ impl ScopeGuard {
         // Handle conflicts
         if !conflicts.is_empty() {
             // Log detailed conflict information
-            let conflict_details: Vec<_> = conflicts.iter()
+            let conflict_details: Vec<_> = conflicts
+                .iter()
                 .map(|(path, lock)| {
-                    format!("{} (held by {}, mode: {:?}, acquired: {})", 
-                        path, lock.milestone_id, lock.mode, lock.acquired_at)
+                    format!(
+                        "{} (held by {}, mode: {:?}, acquired: {})",
+                        path, lock.milestone_id, lock.mode, lock.acquired_at
+                    )
                 })
                 .collect();
-            
+
             tracing::error!(
                 milestone_id = %milestone_id,
                 conflicts = ?conflict_details,
@@ -147,16 +155,18 @@ impl ScopeGuard {
                 will_modify = %scope.will_modify,
                 "Scope conflict detected - files locked by other milestones"
             );
-            
-            let conflict_summary = conflicts.into_iter()
+
+            let conflict_summary = conflicts
+                .into_iter()
                 .map(|(path, lock)| format!("{} (held by {})", path, lock.milestone_id))
                 .collect::<Vec<_>>()
                 .join(", ");
 
-                return Err(anyhow!(
-                    "Scope conflict for milestone {}: files locked by other milestones: {}",
-                    milestone_id, conflict_summary
-                ));
+            return Err(anyhow!(
+                "Scope conflict for milestone {}: files locked by other milestones: {}",
+                milestone_id,
+                conflict_summary
+            ));
         }
 
         // No conflicts - acquire locks
@@ -172,7 +182,8 @@ impl ScopeGuard {
 
                 // Create lock file for advisory locking
                 let lock_file_path = self.create_lock_file_path(std::path::Path::new(&file_path));
-                self.create_lock_file(&lock_file_path, &milestone_id).await?;
+                self.create_lock_file(&lock_file_path, &milestone_id)
+                    .await?;
 
                 let file_lock = FileLock {
                     milestone_id: milestone_uuid,
@@ -219,7 +230,11 @@ impl ScopeGuard {
         for (_, lock_file_path) in locks_to_release {
             if let Err(e) = tokio::fs::remove_file(&lock_file_path).await {
                 // Log but don't fail - lock files might already be cleaned up
-                eprintln!("Warning: Failed to remove lock file {}: {}", lock_file_path.display(), e);
+                eprintln!(
+                    "Warning: Failed to remove lock file {}: {}",
+                    lock_file_path.display(),
+                    e
+                );
             }
         }
 
@@ -227,7 +242,11 @@ impl ScopeGuard {
     }
 
     /// Check if scope is valid (within allowed boundaries)
-    pub async fn validate_scope(&self, _milestone_id: &str, scope: &MilestoneScope) -> Result<bool> {
+    pub async fn validate_scope(
+        &self,
+        _milestone_id: &str,
+        scope: &MilestoneScope,
+    ) -> Result<bool> {
         // TODO: Validate scope against CAWS working spec:
         // 1. Spec validation: Validate scope against working spec
         //    - Retrieve working spec for milestone
@@ -263,7 +282,9 @@ impl ScopeGuard {
                    path_str.starts_with("/sbin") ||
                    path_str.starts_with("/System") || // macOS
                    path_str.starts_with("/Windows") || // Windows
-                   path_str.contains("..") { // Directory traversal
+                   path_str.contains("..")
+                {
+                    // Directory traversal
                     return Ok(false);
                 }
             }
@@ -273,10 +294,16 @@ impl ScopeGuard {
     }
 
     /// Handle scope violations by logging and potentially blocking
-    pub async fn handle_scope_violation(&self, milestone_id: &str, violated_files: Vec<String>) -> Result<()> {
+    pub async fn handle_scope_violation(
+        &self,
+        milestone_id: &str,
+        violated_files: Vec<String>,
+    ) -> Result<()> {
         // Log the violation
-        eprintln!("SCOPE VIOLATION in milestone {}: attempted to access files: {:?}",
-                 milestone_id, violated_files);
+        eprintln!(
+            "SCOPE VIOLATION in milestone {}: attempted to access files: {:?}",
+            milestone_id, violated_files
+        );
 
         // TODO: Implement scope violation handling with the following requirements:
         // 1. Execution blocking: Block milestone execution when violations detected
@@ -298,7 +325,8 @@ impl ScopeGuard {
 
         Err(anyhow!(
             "Scope violation detected for milestone {}: attempted to access {} unauthorized files",
-            milestone_id, violated_files.len()
+            milestone_id,
+            violated_files.len()
         ))
     }
 
@@ -311,7 +339,10 @@ impl ScopeGuard {
     /// List all currently locked files
     pub async fn list_locked_files(&self) -> Result<Vec<(PathBuf, FileLock)>> {
         let locks = self.active_locks.read().await;
-        Ok(locks.iter().map(|(path, lock)| (path.clone(), lock.clone())).collect())
+        Ok(locks
+            .iter()
+            .map(|(path, lock)| (path.clone(), lock.clone()))
+            .collect())
     }
 
     /// Force release all locks for a milestone (emergency cleanup)
@@ -343,7 +374,10 @@ impl ScopeGuard {
 
     /// Create lock file path for advisory locking
     fn create_lock_file_path(&self, file_path: &Path) -> PathBuf {
-        let file_hash = format!("{:x}", seahash::hash(file_path.to_string_lossy().as_bytes()));
+        let file_hash = format!(
+            "{:x}",
+            seahash::hash(file_path.to_string_lossy().as_bytes())
+        );
         self.lock_directory.join(format!("{}.lock", file_hash))
     }
 
@@ -398,7 +432,10 @@ impl ScopeGuard {
             }
 
             if waited_ms >= max_wait_ms {
-                return Err(anyhow!("Timeout waiting for lock release on {}", file_path.display()));
+                return Err(anyhow!(
+                    "Timeout waiting for lock release on {}",
+                    file_path.display()
+                ));
             }
 
             tokio::time::sleep(tokio::time::Duration::from_millis(check_interval_ms)).await;
@@ -412,10 +449,9 @@ impl ScopeGuard {
         let max_age = Duration::seconds(3600); // 1 hour max lock age
 
         let mut locks = self.active_locks.write().await;
-        let expired_paths: Vec<PathBuf> = locks.iter()
-            .filter(|(_, lock)| {
-                now.signed_duration_since(lock.acquired_at) > max_age
-            })
+        let expired_paths: Vec<PathBuf> = locks
+            .iter()
+            .filter(|(_, lock)| now.signed_duration_since(lock.acquired_at) > max_age)
             .map(|(path, _)| path.clone())
             .collect();
 
@@ -436,9 +472,7 @@ impl ScopeGuard {
         let read_locks = locks.values().filter(|l| l.mode == LockMode::Read).count();
 
         // Count unique milestones holding locks
-        let unique_milestones: HashSet<Uuid> = locks.values()
-            .map(|l| l.milestone_id)
-            .collect();
+        let unique_milestones: HashSet<Uuid> = locks.values().map(|l| l.milestone_id).collect();
 
         Ok(LockStatistics {
             total_locks,
@@ -495,7 +529,10 @@ mod tests {
             resource_requirements: HashMap::new(),
         };
 
-        let valid = guard.validate_scope("test-milestone", &valid_scope).await.unwrap();
+        let valid = guard
+            .validate_scope("test-milestone", &valid_scope)
+            .await
+            .unwrap();
         assert!(valid);
 
         // Invalid scope (system file)
@@ -510,7 +547,10 @@ mod tests {
             resource_requirements: HashMap::new(),
         };
 
-        let invalid = guard.validate_scope("test-milestone", &invalid_scope).await.unwrap();
+        let invalid = guard
+            .validate_scope("test-milestone", &invalid_scope)
+            .await
+            .unwrap();
         assert!(!invalid);
     }
 
@@ -518,15 +558,15 @@ mod tests {
     mod lock_stats_tests {
         use super::*;
 
-    #[tokio::test]
-    async fn test_lock_statistics() {
-        let guard = ScopeGuard::new();
-        let stats = guard.get_lock_statistics().await.unwrap();
+        #[tokio::test]
+        async fn test_lock_statistics() {
+            let guard = ScopeGuard::new();
+            let stats = guard.get_lock_statistics().await.unwrap();
 
-        assert_eq!(stats.total_locks, 0);
-        assert_eq!(stats.write_locks, 0);
-        assert_eq!(stats.read_locks, 0);
-        assert_eq!(stats.unique_milestones, 0);
+            assert_eq!(stats.total_locks, 0);
+            assert_eq!(stats.write_locks, 0);
+            assert_eq!(stats.read_locks, 0);
+            assert_eq!(stats.unique_milestones, 0);
         }
     }
 }

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::{ResourceAllocation, ResourceUtilization, PoolUtilization};
+use crate::{PoolUtilization, ResourceAllocation, ResourceUtilization};
 
 /// Resource monitor for tracking utilization and metrics
 #[derive(Debug)]
@@ -74,7 +74,8 @@ impl ResourceMonitor {
         // Group allocations by pool
         let mut pool_allocations: HashMap<String, Vec<&ResourceAllocation>> = HashMap::new();
         for allocation in allocations.values() {
-            pool_allocations.entry(allocation.pool_name.clone())
+            pool_allocations
+                .entry(allocation.pool_name.clone())
                 .or_insert_with(Vec::new)
                 .push(allocation);
         }
@@ -90,12 +91,15 @@ impl ResourceMonitor {
                 0.0
             };
 
-            pool_utilizations.insert(pool_name.clone(), PoolUtilization {
-                pool_name: pool_name.clone(),
-                utilization_percent,
-                active_allocations: active_count,
-                total_capacity,
-            });
+            pool_utilizations.insert(
+                pool_name.clone(),
+                PoolUtilization {
+                    pool_name: pool_name.clone(),
+                    utilization_percent,
+                    active_allocations: active_count,
+                    total_capacity,
+                },
+            );
 
             // Mock resource accumulation
             total_memory += 16384; // 16GB per pool
@@ -143,7 +147,8 @@ impl ResourceMonitor {
         let history = self.utilization_history.read().await;
         let cutoff = chrono::Utc::now() - chrono::Duration::hours(hours as i64);
 
-        history.iter()
+        history
+            .iter()
             .filter(|snapshot| snapshot.timestamp > cutoff)
             .cloned()
             .collect()

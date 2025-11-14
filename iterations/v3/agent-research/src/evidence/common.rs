@@ -4,13 +4,13 @@
 //! including the `EvidenceCollector` trait with default methods and the
 //! `CollectorCtx` for execution context and configuration.
 
-use crate::extraction_types::{AtomicClaim, Evidence, ProcessingContext};
 use crate::evidence::evidence_types::EvidenceCollectorConfig;
+use crate::extraction_types::{AtomicClaim, Evidence, ProcessingContext};
 use anyhow::Result;
-use std::time::{Duration, Instant};
-use tracing::{info, warn, error, instrument, Span};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
+use tracing::{error, info, instrument, warn, Span};
 
 /// Execution context for evidence collection
 ///
@@ -51,7 +51,11 @@ impl CollectorCtx {
 
     /// Create a new collector context with a custom timeout (for testing)
     #[cfg(test)]
-    pub fn with_timeout(config: EvidenceCollectorConfig, processing_context: ProcessingContext, timeout: Duration) -> Self {
+    pub fn with_timeout(
+        config: EvidenceCollectorConfig,
+        processing_context: ProcessingContext,
+        timeout: Duration,
+    ) -> Self {
         let start_time = Instant::now();
         let deadline = start_time + timeout;
 
@@ -119,7 +123,9 @@ pub trait EvidenceCollector: Send + Sync {
     type Output;
 
     /// Get the collector's name for logging and identification
-    fn name(&self) -> &'static str { "evidence-collector" }
+    fn name(&self) -> &'static str {
+        "evidence-collector"
+    }
 
     /// Get the collector's configuration
     fn config(&self) -> &EvidenceCollectorConfig;
@@ -128,13 +134,21 @@ pub trait EvidenceCollector: Send + Sync {
     ///
     /// Default implementation checks basic configuration validity.
     /// Override for collector-specific validation.
-    fn preflight(&self, ctx: &CollectorCtx) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    fn preflight(
+        &self,
+        ctx: &CollectorCtx,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
         if ctx.config.min_relevance_threshold < 0.0 || ctx.config.min_relevance_threshold > 1.0 {
-            return Err(anyhow::anyhow!("min_relevance_threshold must be between 0.0 and 1.0").into());
+            return Err(
+                anyhow::anyhow!("min_relevance_threshold must be between 0.0 and 1.0").into(),
+            );
         }
 
-        if ctx.config.min_credibility_threshold < 0.0 || ctx.config.min_credibility_threshold > 1.0 {
-            return Err(anyhow::anyhow!("min_credibility_threshold must be between 0.0 and 1.0").into());
+        if ctx.config.min_credibility_threshold < 0.0 || ctx.config.min_credibility_threshold > 1.0
+        {
+            return Err(
+                anyhow::anyhow!("min_credibility_threshold must be between 0.0 and 1.0").into(),
+            );
         }
 
         Ok(())
@@ -144,7 +158,11 @@ pub trait EvidenceCollector: Send + Sync {
     ///
     /// This method must be implemented by each collector to provide
     /// their specific evidence collection logic.
-    async fn collect(&self, input: &Self::Input, ctx: &CollectorCtx) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync + 'static>>;
+    async fn collect(
+        &self,
+        input: &Self::Input,
+        ctx: &CollectorCtx,
+    ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync + 'static>>;
 
     /// Main collection entry point with common infrastructure
     ///
@@ -153,7 +171,11 @@ pub trait EvidenceCollector: Send + Sync {
     /// 2. Tracing and timing
     /// 3. Core collection logic
     /// 4. Metrics recording
-    async fn run(&self, input: &Self::Input, ctx: &CollectorCtx) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    async fn run(
+        &self,
+        input: &Self::Input,
+        ctx: &CollectorCtx,
+    ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync + 'static>> {
         let span = tracing::info_span!("evidence_collection", collector = %self.name());
         let _enter = span.enter();
         let start = Instant::now();
@@ -196,14 +218,14 @@ pub mod helpers {
 
     /// Validate that evidence meets minimum quality thresholds
     pub fn validate_evidence_quality(evidence: &[Evidence], threshold: f64) -> Result<(), String> {
-        let low_quality_count = evidence.iter()
-            .filter(|e| e.confidence < threshold)
-            .count();
+        let low_quality_count = evidence.iter().filter(|e| e.confidence < threshold).count();
 
         if low_quality_count > evidence.len() / 2 {
             return Err(format!(
                 "Too many low-quality evidence items: {} out of {} below threshold {:.2}",
-                low_quality_count, evidence.len(), threshold
+                low_quality_count,
+                evidence.len(),
+                threshold
             ));
         }
 

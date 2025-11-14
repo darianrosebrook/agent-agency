@@ -3,10 +3,10 @@
 //! Provides Redis-based caching with connection pooling, TTL support,
 //! and circuit breaker pattern for reliability.
 
-use std::sync::Arc;
-use std::time::Duration;
 use async_trait::async_trait;
 use redis::{AsyncCommands, Client, ConnectionAddr, ConnectionInfo, RedisResult};
+use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 /// Redis cache backend
@@ -39,17 +39,19 @@ impl RedisCache {
             },
         };
 
-        let client = Client::open(conn_info)
-            .map_err(|e| RedisCacheError::ConnectionError(e.to_string()))?;
+        let client =
+            Client::open(conn_info).map_err(|e| RedisCacheError::ConnectionError(e.to_string()))?;
 
         // Validate connection by attempting to connect
         // This ensures invalid hosts/ports fail during initialization
-        client.get_async_connection().await
-            .map_err(|e| RedisCacheError::ConnectionError(format!("Failed to connect to Redis: {}", e)))?;
+        client.get_async_connection().await.map_err(|e| {
+            RedisCacheError::ConnectionError(format!("Failed to connect to Redis: {}", e))
+        })?;
 
         // Pre-connect some connections
         let mut pool = Vec::new();
-        for _ in 0..pool_size.min(5) { // Limit initial connections
+        for _ in 0..pool_size.min(5) {
+            // Limit initial connections
             match client.get_async_connection().await {
                 Ok(conn) => pool.push(conn),
                 Err(e) => {
@@ -68,7 +70,10 @@ impl RedisCache {
     }
 
     /// Create with default localhost configuration
-    pub async fn localhost(pool_size: usize, default_ttl: Duration) -> Result<Self, RedisCacheError> {
+    pub async fn localhost(
+        pool_size: usize,
+        default_ttl: Duration,
+    ) -> Result<Self, RedisCacheError> {
         Self::new("127.0.0.1", 6379, None, 0, pool_size, default_ttl).await
     }
 
@@ -231,7 +236,11 @@ impl super::CacheBackend for RedisCache {
         let ttl_seconds = ttl.as_secs();
 
         let mut conn = self.get_connection().await?;
-        let result: RedisResult<i32> = redis::cmd("EXPIRE").arg(key).arg(ttl_seconds).query_async(&mut conn).await;
+        let result: RedisResult<i32> = redis::cmd("EXPIRE")
+            .arg(key)
+            .arg(ttl_seconds)
+            .query_async(&mut conn)
+            .await;
 
         self.return_connection(conn).await;
 
@@ -267,7 +276,8 @@ impl RedisCircuitBreaker {
     }
 
     pub async fn record_success(&self) {
-        self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.failure_count
+            .store(0, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub async fn record_failure(&self) {
@@ -276,12 +286,16 @@ impl RedisCircuitBreaker {
             .unwrap()
             .as_millis() as u64;
 
-        self.failure_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        self.last_failure.store(now, std::sync::atomic::Ordering::Relaxed);
+        self.failure_count
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.last_failure
+            .store(now, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn is_open(&self) -> bool {
-        let failures = self.failure_count.load(std::sync::atomic::Ordering::Relaxed);
+        let failures = self
+            .failure_count
+            .load(std::sync::atomic::Ordering::Relaxed);
         if failures >= self.failure_threshold {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -293,7 +307,8 @@ impl RedisCircuitBreaker {
             // Check if reset timeout has passed
             if now - last_failure > self.reset_timeout_ms {
                 // Reset the circuit breaker
-                self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
+                self.failure_count
+                    .store(0, std::sync::atomic::Ordering::Relaxed);
                 false
             } else {
                 true
@@ -356,7 +371,8 @@ mod tests {
     #[tokio::test]
     async fn test_redis_creation_fails_invalid_host() {
         // This should fail with invalid host
-        let result = RedisCache::new("invalid.host", 6379, None, 0, 5, Duration::from_secs(300)).await;
+        let result =
+            RedisCache::new("invalid.host", 6379, None, 0, 5, Duration::from_secs(300)).await;
         assert!(result.is_err());
     }
 }

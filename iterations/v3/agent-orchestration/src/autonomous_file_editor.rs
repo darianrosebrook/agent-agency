@@ -6,11 +6,12 @@
 //! @author @darianrosebrook
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use system_common_interfaces::file_operations::{FileOperationsService, Workspace, Changeset, AllowList, Budgets,
-                     ChangesetId, Patch, Hunk};
-use tracing::{info, error, instrument};
+use system_common_interfaces::file_operations::{
+    AllowList, Budgets, Changeset, ChangesetId, FileOperationsService, Hunk, Patch,
+};
+use tracing::{error, info, instrument};
 
 /// Autonomous file editor that integrates with agent orchestration
 
@@ -26,7 +27,10 @@ pub struct AutonomousFileEditor {
 impl AutonomousFileEditor {
     /// Create a new autonomous file editor
     pub fn new(file_ops: Arc<dyn FileOperationsService>, repo_path: std::path::PathBuf) -> Self {
-        Self { file_ops, repo_path }
+        Self {
+            file_ops,
+            repo_path,
+        }
     }
 
     /// Apply autonomous file changes with validation and safety checks
@@ -38,24 +42,39 @@ impl AutonomousFileEditor {
         allowlist: &AllowList,
         budgets: &Budgets,
     ) -> Result<ChangesetId, AutonomousFileEditError> {
-        info!("Applying {} autonomous file changes for task {}", changes.len(), task_id);
+        info!(
+            "Applying {} autonomous file changes for task {}",
+            changes.len(),
+            task_id
+        );
 
         // Convert FileChange to Changeset
         let changeset = self.create_changeset(task_id, changes)?;
 
         // Validate changeset
-        self.file_ops.validate_changeset(&changeset, allowlist, budgets).await
+        self.file_ops
+            .validate_changeset(&changeset, allowlist, budgets)
+            .await
             .map_err(|e| AutonomousFileEditError::Validation(e.to_string()))?;
 
         // Create workspace
-        let workspace = self.file_ops.create_workspace(task_id, &self.repo_path).await
+        let workspace = self
+            .file_ops
+            .create_workspace(task_id, &self.repo_path)
+            .await
             .map_err(|e| AutonomousFileEditError::Workspace(e.to_string()))?;
 
         // Apply changeset
-        let changeset_id = workspace.apply(&changeset, allowlist, budgets).await
+        let changeset_id = workspace
+            .apply(&changeset, allowlist, budgets)
+            .await
             .map_err(|e| AutonomousFileEditError::Application(e.to_string()))?;
 
-        info!("Successfully applied changeset {} with {} patches", changeset_id.0, changeset.patches.len());
+        info!(
+            "Successfully applied changeset {} with {} patches",
+            changeset_id.0,
+            changeset.patches.len()
+        );
 
         Ok(changeset_id)
     }
@@ -80,10 +99,15 @@ impl AutonomousFileEditor {
         task_id: &str,
         changeset_id: &ChangesetId,
     ) -> Result<(), AutonomousFileEditError> {
-        let workspace = self.file_ops.create_workspace(task_id, &self.repo_path).await
+        let workspace = self
+            .file_ops
+            .create_workspace(task_id, &self.repo_path)
+            .await
             .map_err(|e| AutonomousFileEditError::Workspace(e.to_string()))?;
 
-        workspace.revert(changeset_id).await
+        workspace
+            .revert(changeset_id)
+            .await
             .map_err(|e| AutonomousFileEditError::Rollback(e.to_string()))?;
 
         info!("Successfully rolled back changeset {}", changeset_id.0);
@@ -91,14 +115,16 @@ impl AutonomousFileEditor {
     }
 
     /// Promote changes to main repository
-    pub async fn promote_changes(
-        &self,
-        task_id: &str,
-    ) -> Result<(), AutonomousFileEditError> {
-        let workspace = self.file_ops.create_workspace(task_id, &self.repo_path).await
+    pub async fn promote_changes(&self, task_id: &str) -> Result<(), AutonomousFileEditError> {
+        let workspace = self
+            .file_ops
+            .create_workspace(task_id, &self.repo_path)
+            .await
             .map_err(|e| AutonomousFileEditError::Workspace(e.to_string()))?;
 
-        workspace.promote().await
+        workspace
+            .promote()
+            .await
             .map_err(|e| AutonomousFileEditError::Promotion(e.to_string()))?;
 
         info!("Successfully promoted changes for task {}", task_id);
@@ -106,8 +132,13 @@ impl AutonomousFileEditor {
     }
 
     /// Create a changeset from file changes
-    fn create_changeset(&self, task_id: &str, changes: Vec<FileChange>) -> Result<Changeset, AutonomousFileEditError> {
-        let patches = changes.into_iter()
+    fn create_changeset(
+        &self,
+        task_id: &str,
+        changes: Vec<FileChange>,
+    ) -> Result<Changeset, AutonomousFileEditError> {
+        let patches = changes
+            .into_iter()
             .map(|change| change.to_patch())
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -147,7 +178,9 @@ impl AutonomousFileEditor {
         }
 
         // Assess based on change size
-        let total_lines_changed: usize = changeset.patches.iter()
+        let total_lines_changed: usize = changeset
+            .patches
+            .iter()
             .map(|p| p.hunks.iter().map(|h| h.new_lines as usize).sum::<usize>())
             .sum();
 
@@ -192,7 +225,9 @@ impl FileChange {
         match self.change_type {
             ChangeType::Create => {
                 // For creation, treat as adding all content
-                let lines = self.new_content.lines()
+                let lines = self
+                    .new_content
+                    .lines()
                     .map(|line| format!("+{}", line))
                     .collect::<Vec<_>>()
                     .join("\n");
@@ -209,20 +244,24 @@ impl FileChange {
                 })
             }
             ChangeType::Replace => {
-                let old_lines = self.old_content.as_ref()
+                let old_lines = self
+                    .old_content
+                    .as_ref()
                     .map(|c| c.lines().count())
                     .unwrap_or(0);
                 let new_lines = self.new_content.lines().count();
 
                 let lines = format!(
                     "{}\n{}",
-                    self.old_content.as_ref()
+                    self.old_content
+                        .as_ref()
                         .unwrap_or(&String::new())
                         .lines()
                         .map(|line| format!("-{}", line))
                         .collect::<Vec<_>>()
                         .join("\n"),
-                    self.new_content.lines()
+                    self.new_content
+                        .lines()
                         .map(|line| format!("+{}", line))
                         .collect::<Vec<_>>()
                         .join("\n")
@@ -240,7 +279,9 @@ impl FileChange {
                 })
             }
             ChangeType::Insert => {
-                let lines = self.new_content.lines()
+                let lines = self
+                    .new_content
+                    .lines()
                     .map(|line| format!("+{}", line))
                     .collect::<Vec<_>>()
                     .join("\n");
@@ -257,11 +298,15 @@ impl FileChange {
                 })
             }
             ChangeType::Delete => {
-                let old_lines = self.old_content.as_ref()
+                let old_lines = self
+                    .old_content
+                    .as_ref()
                     .map(|c| c.lines().count())
                     .unwrap_or(0);
 
-                let lines = self.old_content.as_ref()
+                let lines = self
+                    .old_content
+                    .as_ref()
                     .unwrap_or(&String::new())
                     .lines()
                     .map(|line| format!("-{}", line))

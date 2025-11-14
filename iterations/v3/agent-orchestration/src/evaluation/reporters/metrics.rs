@@ -2,8 +2,8 @@
 //!
 //! Generates OpenMetrics format for Prometheus integration.
 
-use crate::evaluation::framework::EvaluationReport;
 use crate::evaluation::contracts::Reporter;
+use crate::evaluation::framework::EvaluationReport;
 
 /// OpenMetrics reporter for Prometheus
 pub struct MetricsReporter {
@@ -16,7 +16,7 @@ impl MetricsReporter {
             metric_prefix: "agent_evaluation".to_string(),
         }
     }
-    
+
     pub fn with_prefix(prefix: String) -> Self {
         Self {
             metric_prefix: prefix,
@@ -34,14 +34,15 @@ impl Reporter for MetricsReporter {
     fn name(&self) -> &str {
         "openmetrics"
     }
-    
+
     fn render(&self, report: &EvaluationReport) -> Result<String, String> {
         let mut output = String::new();
-        
+
         // Write OpenMetrics header
         output.push_str("# TYPE agent_evaluation_overall_score gauge\n");
-        output.push_str("# HELP agent_evaluation_overall_score Overall evaluation score (0.0-1.0)\n");
-        
+        output
+            .push_str("# HELP agent_evaluation_overall_score Overall evaluation score (0.0-1.0)\n");
+
         // Overall score metric
         output.push_str(&format!(
             "{}_{{scenario_id=\"{}\",scenario_name=\"{}\"}} {:.4}\n",
@@ -50,11 +51,13 @@ impl Reporter for MetricsReporter {
             escape_label_value(&report.scenario.name),
             report.summary.average_score
         ));
-        
+
         // Dimension metrics
         output.push_str("# TYPE agent_evaluation_dimension_score gauge\n");
-        output.push_str("# HELP agent_evaluation_dimension_score Evaluation dimension scores (0.0-1.0)\n");
-        
+        output.push_str(
+            "# HELP agent_evaluation_dimension_score Evaluation dimension scores (0.0-1.0)\n",
+        );
+
         for (dimension, score) in &report.summary.score_distribution {
             output.push_str(&format!(
                 "{}_{{scenario_id=\"{}\",dimension=\"{}\"}} {:.4}\n",
@@ -64,19 +67,21 @@ impl Reporter for MetricsReporter {
                 score
             ));
         }
-        
+
         // Process quality metrics
         if !report.evaluations.is_empty() {
             output.push_str("# TYPE agent_evaluation_process_quality gauge\n");
-            output.push_str("# HELP agent_evaluation_process_quality Process quality metrics (0.0-1.0)\n");
-            
+            output.push_str(
+                "# HELP agent_evaluation_process_quality Process quality metrics (0.0-1.0)\n",
+            );
+
             for (idx, eval) in report.evaluations.iter().enumerate() {
                 let labels = format!(
                     "scenario_id=\"{}\",evaluation_index=\"{}\"",
                     escape_label_value(&report.scenario.scenario_id),
                     idx
                 );
-                
+
                 output.push_str(&format!(
                     "{}_{{{},metric=\"reasoning_depth\"}} {:.4}\n",
                     self.metric_prefix, labels, eval.process_quality.reasoning_depth
@@ -99,19 +104,20 @@ impl Reporter for MetricsReporter {
                 ));
             }
         }
-        
+
         // Adaptability metrics
         if !report.evaluations.is_empty() {
             output.push_str("# TYPE agent_evaluation_adaptability gauge\n");
-            output.push_str("# HELP agent_evaluation_adaptability Adaptability metrics (0.0-1.0)\n");
-            
+            output
+                .push_str("# HELP agent_evaluation_adaptability Adaptability metrics (0.0-1.0)\n");
+
             for (idx, eval) in report.evaluations.iter().enumerate() {
                 let labels = format!(
                     "scenario_id=\"{}\",evaluation_index=\"{}\"",
                     escape_label_value(&report.scenario.scenario_id),
                     idx
                 );
-                
+
                 output.push_str(&format!(
                     "{}_{{{},metric=\"uncertainty_management\"}} {:.4}\n",
                     self.metric_prefix, labels, eval.adaptability_metrics.uncertainty_management
@@ -134,19 +140,19 @@ impl Reporter for MetricsReporter {
                 ));
             }
         }
-        
+
         // Safety metrics
         if !report.evaluations.is_empty() {
             output.push_str("# TYPE agent_evaluation_safety gauge\n");
             output.push_str("# HELP agent_evaluation_safety Safety assessment metrics (0.0-1.0)\n");
-            
+
             for (idx, eval) in report.evaluations.iter().enumerate() {
                 let labels = format!(
                     "scenario_id=\"{}\",evaluation_index=\"{}\"",
                     escape_label_value(&report.scenario.scenario_id),
                     idx
                 );
-                
+
                 output.push_str(&format!(
                     "{}_{{{},metric=\"risk_avoidance\"}} {:.4}\n",
                     self.metric_prefix, labels, eval.safety_assessment.risk_avoidance
@@ -169,19 +175,21 @@ impl Reporter for MetricsReporter {
                 ));
             }
         }
-        
+
         // Learning indicators
         if !report.evaluations.is_empty() {
             output.push_str("# TYPE agent_evaluation_learning gauge\n");
-            output.push_str("# HELP agent_evaluation_learning Learning indicator metrics (0.0-1.0)\n");
-            
+            output.push_str(
+                "# HELP agent_evaluation_learning Learning indicator metrics (0.0-1.0)\n",
+            );
+
             for (idx, eval) in report.evaluations.iter().enumerate() {
                 let labels = format!(
                     "scenario_id=\"{}\",evaluation_index=\"{}\"",
                     escape_label_value(&report.scenario.scenario_id),
                     idx
                 );
-                
+
                 output.push_str(&format!(
                     "{}_{{{},metric=\"pattern_recognition\"}} {:.4}\n",
                     self.metric_prefix, labels, eval.learning_indicators.pattern_recognition
@@ -204,18 +212,18 @@ impl Reporter for MetricsReporter {
                 ));
             }
         }
-        
+
         // Trend metrics
         output.push_str("# TYPE agent_evaluation_trend gauge\n");
         output.push_str("# HELP agent_evaluation_trend Trend analysis metrics\n");
-        
+
         let trend_value = match report.summary.trend_analysis.performance_trend {
             crate::evaluation::framework::PerformanceTrend::Improving => 1.0,
             crate::evaluation::framework::PerformanceTrend::Stable => 0.5,
             crate::evaluation::framework::PerformanceTrend::Declining => 0.0,
             crate::evaluation::framework::PerformanceTrend::Inconsistent => 0.25,
         };
-        
+
         output.push_str(&format!(
             "{}_{{scenario_id=\"{}\",metric=\"performance_trend\"}} {:.4}\n",
             self.metric_prefix,
@@ -240,10 +248,10 @@ impl Reporter for MetricsReporter {
             escape_label_value(&report.scenario.scenario_id),
             report.summary.trend_analysis.adaptability_growth
         ));
-        
+
         Ok(output)
     }
-    
+
     fn format(&self) -> &str {
         "openmetrics"
     }
@@ -259,7 +267,10 @@ fn escape_label_value(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::evaluation::framework::{EvaluationReport, EvaluationScenario, ScenarioDifficulty, ProblemType, EvaluationSummary, TrendAnalysis, PerformanceTrend};
+    use crate::evaluation::framework::{
+        EvaluationReport, EvaluationScenario, EvaluationSummary, PerformanceTrend, ProblemType,
+        ScenarioDifficulty, TrendAnalysis,
+    };
 
     fn create_test_report() -> EvaluationReport {
         EvaluationReport {
@@ -294,16 +305,16 @@ mod tests {
     fn test_metrics_reporter() {
         let reporter = MetricsReporter::new();
         let report = create_test_report();
-        
+
         let result = reporter.render(&report);
         assert!(result.is_ok());
-        
+
         let metrics = result.unwrap();
         assert!(metrics.contains("# TYPE"));
         assert!(metrics.contains("agent_evaluation"));
         assert!(metrics.contains("0.8500"));
     }
-    
+
     #[test]
     fn test_escape_label_value() {
         assert_eq!(escape_label_value("test"), "test");

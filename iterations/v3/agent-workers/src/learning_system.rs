@@ -1,25 +1,24 @@
 //! Learning system components for parallel task execution
-//! 
+//!
 //! This module contains all the adaptive learning components that enable
 //! the system to learn from execution patterns and optimize performance.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::worker_types::{TaskId, SubTaskId, WorkerId};
 use crate::learning::{
-    ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern,
-    OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern,
-    PatternType, ConfigType
+    ConfigType, ConfigurationRecommendations, ExecutionRecord, FailurePattern, OptimalConfig,
+    OptimizationEvent, PatternType, SuccessPattern, TaskPattern, WorkerPerformanceProfile,
 };
-use data_infrastructure::client::DatabaseClient;
-use std::sync::Arc;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
-use serde_json;
-use tracing::{info, error};
+use crate::worker_types::{SubTaskId, TaskId, WorkerId};
 use anyhow::Result;
-use sqlx::{Row, postgres::PgRow};
+use chrono::{DateTime, Utc};
+use data_infrastructure::client::DatabaseClient;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use serde_json;
+use sqlx::{postgres::PgRow, Row};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{error, info};
+use uuid::Uuid;
 
 // RealFairnessMonitor moved to fairness_monitor.rs to avoid trait implementation conflicts
 /// Real adaptive selector implementation using ML-based worker selection
@@ -29,15 +28,24 @@ pub struct RealAdaptiveSelector {
 }
 
 impl RealAdaptiveSelector {
-    pub fn new(db_client: Arc<DatabaseClient>, pattern_analyzer: Arc<crate::learning::PatternAnalyzer>) -> Self {
-        Self { db_client, pattern_analyzer }
+    pub fn new(
+        db_client: Arc<DatabaseClient>,
+        pattern_analyzer: Arc<crate::learning::PatternAnalyzer>,
+    ) -> Self {
+        Self {
+            db_client,
+            pattern_analyzer,
+        }
     }
 
     /// Select optimal worker for a task using ML-based selection
-    pub async fn select_worker(&self, task_pattern: &TaskPattern) -> Result<WorkerId, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn select_worker(
+        &self,
+        task_pattern: &TaskPattern,
+    ) -> Result<WorkerId, Box<dyn std::error::Error + Send + Sync>> {
         // Get available workers with their performance profiles
         let query = r#"
-            SELECT 
+            SELECT
                 w.id,
                 w.name,
                 w.specialty,
@@ -74,13 +82,15 @@ impl RealAdaptiveSelector {
                     let specialty: String = row.try_get("specialty")?;
 
                     // Calculate worker score based on multiple factors
-                    let score = self.calculate_worker_score(
-                        &worker_id,
-                        success_rate,
-                        quality_score,
-                        &specialty,
-                        task_pattern,
-                    ).await?;
+                    let score = self
+                        .calculate_worker_score(
+                            &worker_id,
+                            success_rate,
+                            quality_score,
+                            &specialty,
+                            task_pattern,
+                        )
+                        .await?;
 
                     if score > best_score {
                         best_score = score;
@@ -94,7 +104,7 @@ impl RealAdaptiveSelector {
                             .map_err(|e| format!("Invalid worker ID: {}", e))?;
                         Ok(WorkerId(worker_uuid))
                     }
-                    None => Err("No suitable worker found".into())
+                    None => Err("No suitable worker found".into()),
                 }
             }
             Err(e) => {
@@ -123,14 +133,20 @@ impl RealAdaptiveSelector {
         score += specialty_match * 0.2;
 
         // Capability match score (20% weight)
-        let capability_match = self.calculate_capability_match(worker_id, task_pattern).await?;
+        let capability_match = self
+            .calculate_capability_match(worker_id, task_pattern)
+            .await?;
         score += capability_match * 0.2;
 
         Ok(score.min(1.0).max(0.0))
     }
 
     /// Calculate specialty match score
-    fn calculate_specialty_match(&self, worker_specialty: &str, _task_pattern: &TaskPattern) -> f64 {
+    fn calculate_specialty_match(
+        &self,
+        worker_specialty: &str,
+        _task_pattern: &TaskPattern,
+    ) -> f64 {
         // OPTIONAL: Implement real specialty matching with task pattern analysis (deferred - advanced routing feature)
         // - [ ] Extract domain/task type from TaskPattern
         // - [ ] Map worker specialties to task domains
@@ -183,28 +199,37 @@ impl RealAdaptiveSelector {
     }
 
     /// Calculate capability match score
-    async fn calculate_capability_match(&self, worker_id: &str, task_pattern: &TaskPattern) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn calculate_capability_match(
+        &self,
+        worker_id: &str,
+        task_pattern: &TaskPattern,
+    ) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             SELECT capabilities
             FROM worker_capabilities
             WHERE worker_id = $1
         "#;
 
-        match self.db_client.query_one_with_params(query, &[&worker_id]).await {
+        match self
+            .db_client
+            .query_one_with_params(query, &[&worker_id])
+            .await
+        {
             Ok(Some(row)) => {
                 let capabilities: Vec<String> = row.try_get("capabilities")?;
                 let required_capabilities = &task_pattern.required_capabilities;
-                
-                let matches = required_capabilities.iter()
+
+                let matches = required_capabilities
+                    .iter()
                     .filter(|req| capabilities.contains(req))
                     .count();
-                
+
                 let match_score = if required_capabilities.is_empty() {
                     1.0
                 } else {
                     matches as f64 / required_capabilities.len() as f64
                 };
-                
+
                 Ok(match_score)
             }
             Ok(None) => {
@@ -227,20 +252,25 @@ pub struct RealConfigOptimizer {
 
 impl RealConfigOptimizer {
     pub fn new(db_client: Arc<DatabaseClient>) -> Self {
-        Self { 
+        Self {
             db_client,
             optimization_history: Arc::new(std::sync::RwLock::new(Vec::new())),
         }
     }
 
     /// Optimize configuration based on historical performance data
-    pub async fn optimize_configuration(&self, current_config: &HashMap<String, serde_json::Value>) -> Result<ConfigurationRecommendations, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn optimize_configuration(
+        &self,
+        current_config: &HashMap<String, serde_json::Value>,
+    ) -> Result<ConfigurationRecommendations, Box<dyn std::error::Error + Send + Sync>> {
         // Analyze performance trends
         let performance_trend = self.analyze_performance_trend().await?;
-        
+
         // Generate optimized configuration
-        let optimized_config = self.generate_optimized_config(current_config, &performance_trend).await?;
-        
+        let optimized_config = self
+            .generate_optimized_config(current_config, &performance_trend)
+            .await?;
+
         // Store optimization event
         let event = OptimizationEvent {
             id: Uuid::new_v4(),
@@ -260,9 +290,9 @@ impl RealConfigOptimizer {
             performance_improvement: Some(performance_trend.improvement_score),
             optimization_type: Some("reinforcement_learning".to_string()),
         };
-        
+
         self.store_optimization_result(&event).await?;
-        
+
         Ok(ConfigurationRecommendations {
             worker_selection: None,
             task_decomposition: None,
@@ -278,9 +308,11 @@ impl RealConfigOptimizer {
     }
 
     /// Analyze performance trends from historical data
-    async fn analyze_performance_trend(&self) -> Result<PerformanceTrend, Box<dyn std::error::Error + Send + Sync>> {
+    async fn analyze_performance_trend(
+        &self,
+    ) -> Result<PerformanceTrend, Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
-            SELECT 
+            SELECT
                 AVG(execution_time_ms) as avg_execution_time,
                 AVG(success_rate) as avg_success_rate,
                 AVG(quality_score) as avg_quality_score,
@@ -297,7 +329,9 @@ impl RealConfigOptimizer {
                 let sample_count: i64 = row.try_get("sample_count")?;
 
                 // Calculate improvement score based on recent performance
-                let improvement_score = (avg_success_rate * 0.4) + (avg_quality_score * 0.4) + ((1.0 - (avg_execution_time / 300000.0)) * 0.2);
+                let improvement_score = (avg_success_rate * 0.4)
+                    + (avg_quality_score * 0.4)
+                    + ((1.0 - (avg_execution_time / 300000.0)) * 0.2);
                 let confidence = (sample_count as f64 / 100.0).min(1.0);
 
                 Ok(PerformanceTrend {
@@ -359,22 +393,30 @@ impl RealConfigOptimizer {
     }
 
     /// Store optimization result in database
-    async fn store_optimization_result(&self, event: &OptimizationEvent) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn store_optimization_result(
+        &self,
+        event: &OptimizationEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             INSERT INTO optimization_events (
-                id, timestamp, config_before, config_after, 
+                id, timestamp, config_before, config_after,
                 performance_improvement, optimization_type
             ) VALUES ($1, $2, $3, $4, $5, $6)
         "#;
 
-        self.db_client.execute(query, &[
-            &event.id,
-            &event.timestamp,
-            &serde_json::to_value(&event.config_before)?,
-            &serde_json::to_value(&event.config_after)?,
-            &event.performance_improvement,
-            &event.optimization_type,
-        ]).await?;
+        self.db_client
+            .execute(
+                query,
+                &[
+                    &event.id,
+                    &event.timestamp,
+                    &serde_json::to_value(&event.config_before)?,
+                    &serde_json::to_value(&event.config_after)?,
+                    &event.performance_improvement,
+                    &event.optimization_type,
+                ],
+            )
+            .await?;
 
         // Also store in memory for quick access
         {
@@ -389,9 +431,11 @@ impl RealConfigOptimizer {
     }
 
     /// Get optimization history
-    pub async fn get_optimization_history(&self) -> Result<Vec<OptimizationEvent>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_optimization_history(
+        &self,
+    ) -> Result<Vec<OptimizationEvent>, Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
-            SELECT id, timestamp, config_before, config_after, 
+            SELECT id, timestamp, config_before, config_after,
                    performance_improvement, optimization_type
             FROM optimization_events
             ORDER BY timestamp DESC
@@ -402,9 +446,11 @@ impl RealConfigOptimizer {
             Ok(rows) => {
                 let mut events = Vec::new();
                 for row in rows {
-                    let config_before_value: Option<serde_json::Value> = row.try_get("config_before")?;
-                    let config_after_value: Option<serde_json::Value> = row.try_get("config_after")?;
-                    
+                    let config_before_value: Option<serde_json::Value> =
+                        row.try_get("config_before")?;
+                    let config_after_value: Option<serde_json::Value> =
+                        row.try_get("config_after")?;
+
                     events.push(OptimizationEvent {
                         id: row.try_get("id")?,
                         event_type: crate::learning::types::OptimizationEventType::ConfigApplied, // Default
@@ -418,8 +464,10 @@ impl RealConfigOptimizer {
                         },
                         timestamp: row.try_get("timestamp")?,
                         metadata: HashMap::new(),
-                        config_before: config_before_value.and_then(|v| serde_json::from_value(v).ok()),
-                        config_after: config_after_value.and_then(|v| serde_json::from_value(v).ok()),
+                        config_before: config_before_value
+                            .and_then(|v| serde_json::from_value(v).ok()),
+                        config_after: config_after_value
+                            .and_then(|v| serde_json::from_value(v).ok()),
                         performance_improvement: row.try_get("performance_improvement")?,
                         optimization_type: row.try_get::<Option<String>, _>("optimization_type")?,
                     });
@@ -445,16 +493,18 @@ impl RealQueueHealthMonitor {
     }
 
     /// Monitor queue health and return metrics
-    pub async fn monitor_queue_health(&self) -> Result<QueueHealthMetrics, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn monitor_queue_health(
+        &self,
+    ) -> Result<QueueHealthMetrics, Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
-            SELECT 
+            SELECT
                 COUNT(*) as total_tasks,
                 COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
                 COUNT(CASE WHEN status = 'running' THEN 1 END) as running_tasks,
                 COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks,
                 COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_tasks,
-                AVG(CASE WHEN status = 'completed' 
-                    THEN EXTRACT(EPOCH FROM (completed_at - started_at)) 
+                AVG(CASE WHEN status = 'completed'
+                    THEN EXTRACT(EPOCH FROM (completed_at - started_at))
                     END) as avg_completion_time_seconds
             FROM task_executions
             WHERE created_at >= NOW() - INTERVAL '1 hour'
@@ -467,7 +517,8 @@ impl RealQueueHealthMonitor {
                 let running_tasks: i64 = row.try_get("running_tasks")?;
                 let completed_tasks: i64 = row.try_get("completed_tasks")?;
                 let failed_tasks: i64 = row.try_get("failed_tasks")?;
-                let avg_completion_time: Option<f64> = row.try_get("avg_completion_time_seconds")?;
+                let avg_completion_time: Option<f64> =
+                    row.try_get("avg_completion_time_seconds")?;
 
                 let success_rate = if total_tasks > 0 {
                     completed_tasks as f64 / total_tasks as f64
@@ -539,7 +590,11 @@ impl RealFailureTaxonomy {
     }
 
     /// Classify failure based on error message and context
-    pub async fn classify_failure(&self, error_message: &str, task_context: &HashMap<String, serde_json::Value>) -> Result<FailureClassification, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn classify_failure(
+        &self,
+        error_message: &str,
+        task_context: &HashMap<String, serde_json::Value>,
+    ) -> Result<FailureClassification, Box<dyn std::error::Error + Send + Sync>> {
         let failure_type = self.determine_failure_type(error_message);
         let severity = self.determine_failure_severity(error_message, task_context);
         let recommendations = self.generate_recommendations(&failure_type, &severity);
@@ -558,7 +613,7 @@ impl RealFailureTaxonomy {
     /// Determine failure type based on error message
     fn determine_failure_type(&self, error_message: &str) -> FailureType {
         let error_lower = error_message.to_lowercase();
-        
+
         if error_lower.contains("timeout") || error_lower.contains("deadline") {
             FailureType::Timeout
         } else if error_lower.contains("memory") || error_lower.contains("oom") {
@@ -577,11 +632,16 @@ impl RealFailureTaxonomy {
     }
 
     /// Determine failure severity
-    fn determine_failure_severity(&self, error_message: &str, task_context: &HashMap<String, serde_json::Value>) -> FailureSeverity {
+    fn determine_failure_severity(
+        &self,
+        error_message: &str,
+        task_context: &HashMap<String, serde_json::Value>,
+    ) -> FailureSeverity {
         let error_lower = error_message.to_lowercase();
-        
+
         // Check if it's a critical task
-        let is_critical = task_context.get("priority")
+        let is_critical = task_context
+            .get("priority")
             .and_then(|v| v.as_str())
             .map(|p| p == "critical")
             .unwrap_or(false);
@@ -598,7 +658,11 @@ impl RealFailureTaxonomy {
     }
 
     /// Generate recommendations based on failure type and severity
-    fn generate_recommendations(&self, failure_type: &FailureType, severity: &FailureSeverity) -> Vec<String> {
+    fn generate_recommendations(
+        &self,
+        failure_type: &FailureType,
+        severity: &FailureSeverity,
+    ) -> Vec<String> {
         let mut recommendations = Vec::new();
 
         match failure_type {
@@ -662,7 +726,7 @@ impl RealFailureTaxonomy {
     /// Calculate confidence in classification
     fn calculate_confidence(&self, error_message: &str, failure_type: &FailureType) -> f64 {
         let error_lower = error_message.to_lowercase();
-        
+
         match failure_type {
             FailureType::Timeout => {
                 if error_lower.contains("timeout") && error_lower.contains("exceeded") {
@@ -739,7 +803,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
     async fn store_execution_records(&self, records: Vec<ExecutionRecord>) -> Result<()> {
         let query = r#"
             INSERT INTO execution_records (
-                id, task_id, worker_id, execution_time_ms, success_rate, 
+                id, task_id, worker_id, execution_time_ms, success_rate,
                 quality_score, created_at, metadata
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (id) DO UPDATE SET
@@ -751,32 +815,45 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
 
         for record in records {
             let success_rate = if record.success { 1.0 } else { 0.0 };
-            self.db_client.execute(query, &[
-                &record.id,
-                &record.task_id.0,
-                &record.worker_id.0,
-                &(record.execution_time_ms as i64),
-                &success_rate,
-                &record.quality_score,
-                &record.created_at,
-                &serde_json::to_value(&record.metadata)?,
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &record.id,
+                        &record.task_id.0,
+                        &record.worker_id.0,
+                        &(record.execution_time_ms as i64),
+                        &success_rate,
+                        &record.quality_score,
+                        &record.created_at,
+                        &serde_json::to_value(&record.metadata)?,
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
     }
 
-    async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> Result<Vec<ExecutionRecord>> {
+    async fn get_execution_records(
+        &self,
+        pattern: &TaskPattern,
+        limit: Option<usize>,
+    ) -> Result<Vec<ExecutionRecord>> {
         let limit = limit.unwrap_or(100);
         let query = r#"
-            SELECT id, task_id, worker_id, execution_time_ms, success_rate, 
+            SELECT id, task_id, worker_id, execution_time_ms, success_rate,
                    quality_score, created_at, metadata
             FROM execution_records
             ORDER BY created_at DESC
             LIMIT $1
         "#;
 
-        match self.db_client.query_with_params(query, &[&(limit as i32)]).await {
+        match self
+            .db_client
+            .query_with_params(query, &[&(limit as i32)])
+            .await
+        {
             Ok(rows) => {
                 let mut records = Vec::new();
                 for row in rows {
@@ -791,7 +868,9 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         success: success_rate > 0.5, // Convert rate back to bool
                         quality_score: row.try_get("quality_score")?,
                         error_message: None, // Not stored in database
-                        metadata: serde_json::from_value(row.try_get::<serde_json::Value, _>("metadata")?)?,
+                        metadata: serde_json::from_value(
+                            row.try_get::<serde_json::Value, _>("metadata")?,
+                        )?,
                         created_at: row.try_get("created_at")?,
                     });
                 }
@@ -804,7 +883,10 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         }
     }
 
-    async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> Result<()> {
+    async fn store_worker_profiles(
+        &self,
+        profiles: HashMap<WorkerId, WorkerPerformanceProfile>,
+    ) -> Result<()> {
         let query = r#"
             INSERT INTO worker_profiles (
                 worker_id, task_count, success_rate, avg_execution_time_ms,
@@ -821,22 +903,30 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         "#;
 
         for (worker_id, profile) in profiles {
-            self.db_client.execute(query, &[
-                &worker_id.0.to_string(),
-                &(profile.task_count as i64),
-                &profile.success_rate,
-                &(profile.average_execution_time_ms as i64),
-                &profile.quality_score,
-                &profile.specialization_score,
-                &profile.last_updated,
-                &serde_json::to_value(&profile.metadata)?,
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &worker_id.0.to_string(),
+                        &(profile.task_count as i64),
+                        &profile.success_rate,
+                        &(profile.average_execution_time_ms as i64),
+                        &profile.quality_score,
+                        &profile.specialization_score,
+                        &profile.last_updated,
+                        &serde_json::to_value(&profile.metadata)?,
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
     }
 
-    async fn get_worker_profile(&self, worker_id: &WorkerId) -> Result<Option<WorkerPerformanceProfile>> {
+    async fn get_worker_profile(
+        &self,
+        worker_id: &WorkerId,
+    ) -> Result<Option<WorkerPerformanceProfile>> {
         let query = r#"
             SELECT task_count, success_rate, avg_execution_time_ms,
                    quality_score, specialization_score, last_updated, metadata
@@ -844,14 +934,18 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             WHERE worker_id = $1
         "#;
 
-        match self.db_client.query_one_with_params(query, &[&worker_id.0.to_string()]).await {
+        match self
+            .db_client
+            .query_one_with_params(query, &[&worker_id.0.to_string()])
+            .await
+        {
             Ok(Some(row)) => {
                 Ok(Some(WorkerPerformanceProfile {
                     worker_id: worker_id.clone(),
                     specialty: crate::parallel_types::WorkerSpecialty::General, // Default, should be updated
-                    total_executions: 0, // Default
-                    successful_executions: 0, // Default
-                    average_quality_score: 0.0, // Default
+                    total_executions: 0,                                        // Default
+                    successful_executions: 0,                                   // Default
+                    average_quality_score: 0.0,                                 // Default
                     performance_trend: crate::learning::types::PerformanceTrend::Unknown,
                     capability_scores: HashMap::new(), // Default
                     task_count: row.try_get::<i64, _>("task_count")? as u64,
@@ -860,7 +954,9 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                     quality_score: row.try_get("quality_score")?,
                     specialization_score: row.try_get("specialization_score")?,
                     last_updated: row.try_get("last_updated")?,
-                    metadata: serde_json::from_value(row.try_get::<serde_json::Value, _>("metadata")?)?,
+                    metadata: serde_json::from_value(
+                        row.try_get::<serde_json::Value, _>("metadata")?,
+                    )?,
                 }))
             }
             Ok(None) => Ok(None),
@@ -882,14 +978,19 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         "#;
 
         for pattern in patterns {
-            self.db_client.execute(query, &[
-                &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
-                &serde_json::to_value(&pattern.pattern_type)?,
-                &pattern.success_rate, // Use success_rate as confidence
-                &serde_json::to_value(&pattern.conditions)?, // Use conditions as outcomes
-                &pattern.created_at, // Use created_at as last_seen
-                &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
+                        &serde_json::to_value(&pattern.pattern_type)?,
+                        &pattern.success_rate, // Use success_rate as confidence
+                        &serde_json::to_value(&pattern.conditions)?, // Use conditions as outcomes
+                        &pattern.created_at,   // Use created_at as last_seen
+                        &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
@@ -902,9 +1003,11 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
-                    let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
+                    let pattern_type: PatternType =
+                        serde_json::from_value(row.get("pattern_type"))?;
                     let conditions: serde_json::Value = row.get("metadata");
-                    let conditions: HashMap<String, serde_json::Value> = serde_json::from_value(conditions)?;
+                    let conditions: HashMap<String, serde_json::Value> =
+                        serde_json::from_value(conditions)?;
 
                     patterns.push(SuccessPattern {
                         id: Uuid::new_v4(), // Generate new ID since we don't store it
@@ -912,7 +1015,7 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         conditions,
                         success_rate: row.get("confidence_score"),
                         average_quality: 0.8, // Default quality
-                        frequency: 1, // Default frequency
+                        frequency: 1,         // Default frequency
                         created_at: row.get("last_seen"),
                     });
                 }
@@ -939,14 +1042,19 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         "#;
 
         for pattern in patterns {
-            self.db_client.execute(query, &[
-                &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
-                &serde_json::to_value(&pattern.pattern_type)?,
-                &pattern.failure_rate, // Use failure_rate as confidence
-                &serde_json::to_value(&pattern.common_errors)?, // Use common_errors as outcomes
-                &pattern.created_at, // Use created_at as last_seen
-                &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &format!("{:?}", pattern.pattern_type), // Use pattern_type as name
+                        &serde_json::to_value(&pattern.pattern_type)?,
+                        &pattern.failure_rate, // Use failure_rate as confidence
+                        &serde_json::to_value(&pattern.common_errors)?, // Use common_errors as outcomes
+                        &pattern.created_at, // Use created_at as last_seen
+                        &serde_json::to_value(&pattern.conditions)?, // Store conditions as metadata
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
@@ -959,9 +1067,11 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
             Ok(rows) => {
                 let mut patterns = Vec::new();
                 for row in rows {
-                    let pattern_type: PatternType = serde_json::from_value(row.get("pattern_type"))?;
+                    let pattern_type: PatternType =
+                        serde_json::from_value(row.get("pattern_type"))?;
                     let conditions: serde_json::Value = row.get("metadata");
-                    let conditions: HashMap<String, serde_json::Value> = serde_json::from_value(conditions)?;
+                    let conditions: HashMap<String, serde_json::Value> =
+                        serde_json::from_value(conditions)?;
                     let common_errors: Vec<String> = serde_json::from_value(row.get("outcomes"))?;
 
                     patterns.push(FailurePattern {
@@ -997,16 +1107,21 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         "#;
 
         for config in configs {
-            self.db_client.execute(query, &[
-                &config.id,
-                &config.worker_type,
-                &config.task_type,
-                &config.config,
-                &serde_json::to_value(&config.performance_metrics)?,
-                &config.confidence,
-                &config.expires_at,
-                &config.metadata,
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &config.id,
+                        &config.worker_type,
+                        &config.task_type,
+                        &config.config,
+                        &serde_json::to_value(&config.performance_metrics)?,
+                        &config.confidence,
+                        &config.expires_at,
+                        &config.metadata,
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
@@ -1027,7 +1142,9 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
                         config: row.get("config"),
                         parameters: HashMap::new(), // Default empty parameters
                         conditions: HashMap::new(), // Default empty conditions
-                        performance_metrics: serde_json::from_value(row.get("performance_metrics"))?,
+                        performance_metrics: serde_json::from_value(
+                            row.get("performance_metrics"),
+                        )?,
                         confidence: row.get("confidence"),
                         expires_at: row.get("expires_at"),
                         metadata: row.get("metadata"),
@@ -1051,14 +1168,19 @@ impl crate::learning::LearningPersistence for RealLearningPersistence {
         "#;
 
         for event in events {
-            self.db_client.execute(query, &[
-                &event.id,
-                &serde_json::to_value(&event.event_type)?,
-                &event.config_id,
-                &serde_json::to_value(&event.performance_delta)?,
-                &event.timestamp,
-                &serde_json::to_value(&event.metadata)?,
-            ]).await?;
+            self.db_client
+                .execute(
+                    query,
+                    &[
+                        &event.id,
+                        &serde_json::to_value(&event.event_type)?,
+                        &event.config_id,
+                        &serde_json::to_value(&event.performance_delta)?,
+                        &event.timestamp,
+                        &serde_json::to_value(&event.metadata)?,
+                    ],
+                )
+                .await?;
         }
 
         Ok(())
@@ -1109,7 +1231,6 @@ pub struct QueueHealthMetrics {
     pub queue_depth_score: f64,
     pub throughput_score: f64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -1131,7 +1252,6 @@ impl Default for QueueHealthMetrics {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct FailureClassification {
     pub failure_type: FailureType,
@@ -1140,10 +1260,8 @@ pub struct FailureClassification {
     pub confidence: f64,
     pub error_message: String,
     #[schemars(with = "String")]
-
     pub classified_at: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 enum FailureType {
@@ -1156,7 +1274,6 @@ enum FailureType {
     Unknown,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 enum FailureSeverity {
     Low,
@@ -1164,7 +1281,6 @@ enum FailureSeverity {
     High,
     Critical,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct PerformanceTrend {

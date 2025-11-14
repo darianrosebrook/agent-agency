@@ -106,7 +106,7 @@ impl AuthManager {
         // Validate inputs
         self.validate_username(&username)?;
         self.validate_password(&password)?;
-        
+
         // Check if user already exists
         let users = self.users.read().await;
         if users.contains_key(&username) {

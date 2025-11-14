@@ -1,12 +1,12 @@
 //! Progress synthesis and result combination
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use crate::error::*;
 use crate::parallel_types::*;
+use crate::worker_errors::{SynthesisError, SynthesisResult};
 use crate::TaskStatus;
 use crate::{Artifact, ArtifactType};
-use crate::error::*;
-use crate::worker_errors::{SynthesisResult, SynthesisError};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Synthesizes final results from worker outputs
 pub struct ProgressSynthesizer;
@@ -34,17 +34,21 @@ impl ProgressSynthesizer {
         let completed_subtasks = results.iter().filter(|r| r.success).count();
 
         // Calculate execution time
-        let start_time = results.iter()
+        let start_time = results
+            .iter()
             .map(|r| r.metrics.start_time)
             .min()
             .unwrap_or_else(chrono::Utc::now);
 
-        let end_time = results.iter()
+        let end_time = results
+            .iter()
             .map(|r| r.metrics.end_time)
             .max()
             .unwrap_or_else(chrono::Utc::now);
 
-        let execution_time = end_time.signed_duration_since(start_time).to_std()
+        let execution_time = end_time
+            .signed_duration_since(start_time)
+            .to_std()
             .unwrap_or(std::time::Duration::from_secs(0));
 
         // Generate summary
@@ -75,12 +79,22 @@ impl ProgressSynthesizer {
                 .find(|r| !r.success && !r.errors.is_empty())
                 .and_then(|r| r.errors.first().cloned()),
             tool_used: None, // Parallel execution doesn't specify a single tool
-            status: if success { TaskStatus::Completed } else { TaskStatus::Failed },
+            status: if success {
+                TaskStatus::Completed
+            } else {
+                TaskStatus::Failed
+            },
             metadata: {
                 let mut map = std::collections::HashMap::new();
                 map.insert("parallel_execution".to_string(), serde_json::json!(true));
-                map.insert("total_workers".to_string(), serde_json::json!(results.len()));
-                map.insert("successful_workers".to_string(), serde_json::json!(results.iter().filter(|r| r.success).count()));
+                map.insert(
+                    "total_workers".to_string(),
+                    serde_json::json!(results.len()),
+                );
+                map.insert(
+                    "successful_workers".to_string(),
+                    serde_json::json!(results.iter().filter(|r| r.success).count()),
+                );
                 map
             },
         })
@@ -92,16 +106,17 @@ impl ProgressSynthesizer {
         let successful_workers = results.iter().filter(|r| r.success).count();
         let failed_workers = total_workers - successful_workers;
 
-        let total_files_modified: usize = results.iter()
-            .map(|r| r.metrics.files_modified)
-            .sum();
+        let total_files_modified: usize = results.iter().map(|r| r.metrics.files_modified).sum();
 
-        let total_lines_changed: usize = results.iter()
-            .map(|r| r.metrics.lines_changed)
-            .sum();
+        let total_lines_changed: usize = results.iter().map(|r| r.metrics.lines_changed).sum();
 
-        let total_execution_time: std::time::Duration = results.iter()
-            .map(|r| r.metrics.end_time.signed_duration_since(r.metrics.start_time))
+        let total_execution_time: std::time::Duration = results
+            .iter()
+            .map(|r| {
+                r.metrics
+                    .end_time
+                    .signed_duration_since(r.metrics.start_time)
+            })
             .filter_map(|d| d.to_std().ok())
             .sum();
 
@@ -126,42 +141,60 @@ impl ProgressSynthesizer {
 
     /// Create detailed breakdown by worker
     fn create_worker_breakdown(&self, results: &[WorkerResult]) -> Vec<WorkerBreakdown> {
-        results.iter().map(|result| {
-            let execution_time = result.metrics.end_time
-                .signed_duration_since(result.metrics.start_time)
-                .to_std()
-                .unwrap_or(std::time::Duration::from_secs(0));
+        results
+            .iter()
+            .map(|result| {
+                let execution_time = result
+                    .metrics
+                    .end_time
+                    .signed_duration_since(result.metrics.start_time)
+                    .to_std()
+                    .unwrap_or(std::time::Duration::from_secs(0));
 
-            WorkerBreakdown {
-                worker_id: result.worker_id,
-                subtasks_assigned: 1,
-                subtasks_completed: if result.success { 1 } else { 0 },
-                execution_time,
-                quality_score: result.quality_score,
-                errors: result.errors.clone(),
-            }
-        }).collect()
+                WorkerBreakdown {
+                    worker_id: result.worker_id,
+                    subtasks_assigned: 1,
+                    subtasks_completed: if result.success { 1 } else { 0 },
+                    execution_time,
+                    quality_score: result.quality_score,
+                    errors: result.errors.clone(),
+                }
+            })
+            .collect()
     }
 
     /// Calculate quality scores from results
-    fn calculate_quality_scores(&self, results: &[WorkerResult]) -> std::collections::HashMap<String, f64> {
+    fn calculate_quality_scores(
+        &self,
+        results: &[WorkerResult],
+    ) -> std::collections::HashMap<String, f64> {
         let mut scores = std::collections::HashMap::new();
 
         // Success rate
-        let success_rate = results.iter().filter(|r| r.success).count() as f64 / results.len() as f64;
+        let success_rate =
+            results.iter().filter(|r| r.success).count() as f64 / results.len() as f64;
         scores.insert("success_rate".to_string(), success_rate * 100.0);
 
         // Average CPU usage
         // Productivity score (lines changed per minute)
         let total_lines_changed: usize = results.iter().map(|r| r.metrics.lines_changed).sum();
-        let total_execution_time: std::time::Duration = results.iter()
-            .map(|r| r.metrics.end_time.signed_duration_since(r.metrics.start_time))
+        let total_execution_time: std::time::Duration = results
+            .iter()
+            .map(|r| {
+                r.metrics
+                    .end_time
+                    .signed_duration_since(r.metrics.start_time)
+            })
             .filter_map(|d| d.to_std().ok())
             .sum();
 
         if total_execution_time.as_secs() > 0 {
-            let lines_per_minute = total_lines_changed as f64 / (total_execution_time.as_secs() as f64 / 60.0);
-            scores.insert("productivity_lines_per_minute".to_string(), lines_per_minute);
+            let lines_per_minute =
+                total_lines_changed as f64 / (total_execution_time.as_secs() as f64 / 60.0);
+            scores.insert(
+                "productivity_lines_per_minute".to_string(),
+                lines_per_minute,
+            );
         }
 
         scores
@@ -175,7 +208,8 @@ impl ProgressSynthesizer {
         for result in results {
             for artifact in &result.artifacts {
                 if matches!(artifact.artifact_type, ArtifactType::SourceCode) {
-                    let entry = file_modifications.entry(artifact.path.clone())
+                    let entry = file_modifications
+                        .entry(artifact.path.clone())
                         .or_insert_with(Vec::new);
                     entry.push(result.subtask_id.clone());
                 }
@@ -183,20 +217,28 @@ impl ProgressSynthesizer {
         }
 
         // Report conflicts where multiple workers modified the same file
-        let conflicts: Vec<_> = file_modifications.iter()
+        let conflicts: Vec<_> = file_modifications
+            .iter()
             .filter(|(_, workers)| workers.len() > 1)
             .collect();
 
         if !conflicts.is_empty() {
-            let conflict_descriptions: Vec<String> = conflicts.iter()
+            let conflict_descriptions: Vec<String> = conflicts
+                .iter()
                 .map(|(path, workers)| {
-                    format!("{} modified by workers: {:?}", path,
-                           workers.iter().map(|w| w.0).collect::<Vec<_>>())
+                    format!(
+                        "{} modified by workers: {:?}",
+                        path,
+                        workers.iter().map(|w| w.0).collect::<Vec<_>>()
+                    )
                 })
                 .collect();
 
             return Err(SynthesisError::ConflictingResults {
-                conflict_description: format!("File conflicts detected: {}", conflict_descriptions.join(", ")),
+                conflict_description: format!(
+                    "File conflicts detected: {}",
+                    conflict_descriptions.join(", ")
+                ),
             });
         }
 
@@ -215,11 +257,13 @@ impl ProgressSynthesizer {
                     merged.push(artifact.clone());
                 } else {
                     // Merge duplicate artifacts (same path)
-                    if let Some(existing) = merged.iter_mut()
-                        .find(|a| a.path == artifact.path) {
+                    if let Some(existing) = merged.iter_mut().find(|a| a.path == artifact.path) {
                         // Merge metadata entries
                         for (key, value) in &artifact.metadata {
-                            existing.metadata.entry(key.clone()).or_insert_with(|| value.clone());
+                            existing
+                                .metadata
+                                .entry(key.clone())
+                                .or_insert_with(|| value.clone());
                         }
                         if existing.content != artifact.content {
                             existing.content.push_str("\n---\n");
@@ -235,8 +279,13 @@ impl ProgressSynthesizer {
 
     /// Generate performance summary
     pub fn generate_performance_summary(&self, results: &[WorkerResult]) -> PerformanceSummary {
-        let total_execution_time: std::time::Duration = results.iter()
-            .map(|r| r.metrics.end_time.signed_duration_since(r.metrics.start_time))
+        let total_execution_time: std::time::Duration = results
+            .iter()
+            .map(|r| {
+                r.metrics
+                    .end_time
+                    .signed_duration_since(r.metrics.start_time)
+            })
             .filter_map(|d| d.to_std().ok())
             .sum();
 
@@ -246,13 +295,9 @@ impl ProgressSynthesizer {
             std::time::Duration::from_secs(0)
         };
 
-        let total_files_modified: usize = results.iter()
-            .map(|r| r.metrics.files_modified)
-            .sum();
+        let total_files_modified: usize = results.iter().map(|r| r.metrics.files_modified).sum();
 
-        let total_lines_changed: usize = results.iter()
-            .map(|r| r.metrics.lines_changed)
-            .sum();
+        let total_lines_changed: usize = results.iter().map(|r| r.metrics.lines_changed).sum();
 
         PerformanceSummary {
             total_workers: results.len(),
@@ -260,9 +305,12 @@ impl ProgressSynthesizer {
             avg_execution_time_per_worker: avg_execution_time,
             total_files_modified,
             total_lines_changed,
-            throughput_files_per_second: total_files_modified as f32 / total_execution_time.as_secs_f32(),
-            throughput_lines_per_second: total_lines_changed as f32 / total_execution_time.as_secs_f32(),
-            success_rate: results.iter().filter(|r| r.success).count() as f32 / results.len() as f32,
+            throughput_files_per_second: total_files_modified as f32
+                / total_execution_time.as_secs_f32(),
+            throughput_lines_per_second: total_lines_changed as f32
+                / total_execution_time.as_secs_f32(),
+            success_rate: results.iter().filter(|r| r.success).count() as f32
+                / results.len() as f32,
         }
     }
 }
@@ -318,7 +366,8 @@ impl ResultMerger {
         merged.success = results.iter().all(|r| r.success);
 
         // Combine outputs
-        merged.output = results.iter()
+        merged.output = results
+            .iter()
             .map(|r| r.output.as_str())
             .collect::<Vec<_>>()
             .join("\n---\n");
@@ -341,7 +390,3 @@ impl Default for ResultMerger {
         Self::new()
     }
 }
-
-
-
-

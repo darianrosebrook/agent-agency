@@ -19,17 +19,19 @@
 //! 3. **LLM Integration Analysis**: Use inference for deployment and compatibility review
 //! 4. **Verdict Merging**: Combine automated checks with integration expertise
 
-use std::sync::Arc;
 use async_trait::async_trait;
+use std::sync::Arc;
 use tracing::debug;
 
 use agent_agency_contracts::{
-    JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, judge_io::Severity, RubricItem,
+    judge_io::Severity, JudgeEngine, JudgePrompt, JudgeType, JudgeVerdict, RubricItem,
+    VerdictLabel, Violation,
 };
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
-use super::common::{JudgeUtils, RubricBuilder, EvidenceBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA};
+use super::common::{
+    EvidenceBuilder, JudgeUtils, RubricBuilder, RubricItemBuilder, JUDGE_OUTPUT_SCHEMA,
+};
+use crate::{CouncilError, CouncilResult, ReviewContext};
 
 // CAWS integration for runtime validation
 use agent_orchestration::planning::caws_integration::CawsPlanBridge;
@@ -47,15 +49,19 @@ pub struct IntegrationValidator {
 #[derive(Debug)]
 pub struct IntegrationRubric {
     /// API compatibility criteria
+    #[allow(dead_code)] // Reserved for v4 features
     api_items: Vec<RubricItem>,
 
     /// Data consistency criteria
+    #[allow(dead_code)] // Reserved for v4 features
     data_items: Vec<RubricItem>,
 
     /// System integration criteria
+    #[allow(dead_code)] // Reserved for v4 features
     system_items: Vec<RubricItem>,
 
     /// Deployment criteria
+    #[allow(dead_code)] // Reserved for v4 features
     deployment_items: Vec<RubricItem>,
 }
 
@@ -229,11 +235,17 @@ impl super::common::Judge for IntegrationValidator {
         prompt: JudgePrompt,
         violations: Vec<Violation>,
     ) -> CouncilResult<JudgeVerdict> {
-        debug!("🔗 Integration Validator reviewing spec {}", ctx.working_spec.id);
+        debug!(
+            "🔗 Integration Validator reviewing spec {}",
+            ctx.working_spec.id
+        );
 
         // STEP 4: Execute engine
         let req = JudgeUtils::build_request(prompt, 256);
-        let llm_verdict = self.engine.complete(req).await
+        let llm_verdict = self
+            .engine
+            .complete(req)
+            .await
             .map_err(|e| CouncilError::Engine(e))?;
 
         // STEP 5: Merge findings
@@ -277,7 +289,10 @@ impl IntegrationValidator {
                 rule_id: "CAWS-RUNTIME-002".to_string(),
                 severity: Severity::High,
                 waivable: false,
-                description: format!("Risk tier {} exceeds maximum allowed tier 3", ctx.working_spec.risk_tier),
+                description: format!(
+                    "Risk tier {} exceeds maximum allowed tier 3",
+                    ctx.working_spec.risk_tier
+                ),
             });
         }
 
@@ -287,12 +302,16 @@ impl IntegrationValidator {
                 rule_id: "CAWS-RUNTIME-003".to_string(),
                 severity: Severity::Medium,
                 waivable: true,
-                description: "Working spec scope boundaries are not defined - specify allowed/blocked paths".to_string(),
+                description:
+                    "Working spec scope boundaries are not defined - specify allowed/blocked paths"
+                        .to_string(),
             });
         }
 
         // Check change budget is reasonable
-        if ctx.working_spec.change_budget.max_files > 1000 || ctx.working_spec.change_budget.max_loc > 50000 {
+        if ctx.working_spec.change_budget.max_files > 1000
+            || ctx.working_spec.change_budget.max_loc > 50000
+        {
             violations.push(Violation {
                 rule_id: "CAWS-RUNTIME-004".to_string(),
                 severity: Severity::Medium,
@@ -324,12 +343,18 @@ impl IntegrationValidator {
         //     });
         // }
 
-        let spec_text = format!("{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
+        let spec_text = format!(
+            "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",
             ctx.working_spec.title,
             ctx.working_spec.description,
             ctx.working_spec.goals.join("\n- "),
-            ctx.working_spec.acceptance_criteria.iter()
-                .map(|ac| format!("{}: Given {}, When {}, Then {}", ac.id, ac.given, ac.when, ac.then))
+            ctx.working_spec
+                .acceptance_criteria
+                .iter()
+                .map(|ac| format!(
+                    "{}: Given {}, When {}, Then {}",
+                    ac.id, ac.given, ac.when, ac.then
+                ))
                 .collect::<Vec<_>>()
                 .join("\n")
         );
@@ -346,7 +371,8 @@ impl IntegrationValidator {
 
         // Check for database/data changes
         if (spec_text.contains("database") || spec_text.contains("schema"))
-            && !spec_text.contains("migration") {
+            && !spec_text.contains("migration")
+        {
             violations.push(Violation {
                 rule_id: "INTEGRATION-DATA-001".to_string(),
                 severity: Severity::Medium,
@@ -357,7 +383,8 @@ impl IntegrationValidator {
 
         // Check for external dependencies
         if (spec_text.contains("external") || spec_text.contains("third-party"))
-            && !spec_text.contains("fallback") {
+            && !spec_text.contains("fallback")
+        {
             violations.push(Violation {
                 rule_id: "INTEGRATION-SYS-001".to_string(),
                 severity: Severity::Medium,

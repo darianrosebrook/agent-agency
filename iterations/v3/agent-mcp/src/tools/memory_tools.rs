@@ -3,9 +3,9 @@
 //! Provides MCP tools for memory operations including search, store, and retrieve.
 //! These tools allow agents to interact with their memory system through MCP.
 
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::mcp_types::*;
@@ -24,30 +24,27 @@ pub fn create_memory_search_tool() -> MCPTool {
     MCPTool {
         id: Uuid::new_v4(),
         name: "memory_search".to_string(),
-        description: "Search the agent's memory system for relevant experiences and knowledge".to_string(),
+        description: "Search the agent's memory system for relevant experiences and knowledge"
+            .to_string(),
         version: "1.0.0".to_string(),
         author: "Agent Agency".to_string(),
         tool_type: ToolType::Utility,
         capabilities: vec![ToolCapability::DatabaseAccess],
         parameters: ToolParameters {
-            required: vec![
-                ParameterDefinition {
-                    name: "query".to_string(),
-                    parameter_type: ParameterType::String,
-                    description: "Search query to find relevant memories".to_string(),
-                    default_value: None,
-                    validation_rules: vec![],
-                },
-            ],
-            optional: vec![
-                ParameterDefinition {
-                    name: "limit".to_string(),
-                    parameter_type: ParameterType::Integer,
-                    description: "Maximum number of results to return".to_string(),
-                    default_value: Some(serde_json::Value::Number(10.into())),
-                    validation_rules: vec![],
-                },
-            ],
+            required: vec![ParameterDefinition {
+                name: "query".to_string(),
+                parameter_type: ParameterType::String,
+                description: "Search query to find relevant memories".to_string(),
+                default_value: None,
+                validation_rules: vec![],
+            }],
+            optional: vec![ParameterDefinition {
+                name: "limit".to_string(),
+                parameter_type: ParameterType::Integer,
+                description: "Maximum number of results to return".to_string(),
+                default_value: Some(serde_json::Value::Number(10.into())),
+                validation_rules: vec![],
+            }],
             constraints: vec![],
         },
         output_schema: serde_json::json!({
@@ -149,7 +146,8 @@ pub fn create_memory_store_tool() -> MCPTool {
                 ParameterDefinition {
                     name: "memory_type".to_string(),
                     parameter_type: ParameterType::String,
-                    description: "Type of memory ('episodic', 'semantic', 'procedural', 'working')".to_string(),
+                    description: "Type of memory ('episodic', 'semantic', 'procedural', 'working')"
+                        .to_string(),
                     default_value: None,
                     validation_rules: vec![],
                 },
@@ -208,8 +206,14 @@ pub fn create_memory_store_tool() -> MCPTool {
         usage_count: 0,
         metadata: {
             let mut map = std::collections::HashMap::new();
-            map.insert("category".to_string(), serde_json::Value::String("memory".to_string()));
-            map.insert("tags".to_string(), serde_json::json!(["store", "experience", "learning"]));
+            map.insert(
+                "category".to_string(),
+                serde_json::Value::String("memory".to_string()),
+            );
+            map.insert(
+                "tags".to_string(),
+                serde_json::json!(["store", "experience", "learning"]),
+            );
             map
         },
     }
@@ -226,15 +230,13 @@ pub fn create_memory_retrieve_tool() -> MCPTool {
         tool_type: ToolType::Utility,
         capabilities: vec![ToolCapability::DatabaseAccess],
         parameters: ToolParameters {
-            required: vec![
-                ParameterDefinition {
-                    name: "memory_id".to_string(),
-                    parameter_type: ParameterType::String,
-                    description: "UUID of the memory to retrieve".to_string(),
-                    default_value: None,
-                    validation_rules: vec![],
-                },
-            ],
+            required: vec![ParameterDefinition {
+                name: "memory_id".to_string(),
+                parameter_type: ParameterType::String,
+                description: "UUID of the memory to retrieve".to_string(),
+                default_value: None,
+                validation_rules: vec![],
+            }],
             optional: vec![],
             constraints: vec![],
         },
@@ -284,8 +286,14 @@ pub fn create_memory_retrieve_tool() -> MCPTool {
         usage_count: 0,
         metadata: {
             let mut map = std::collections::HashMap::new();
-            map.insert("category".to_string(), serde_json::Value::String("memory".to_string()));
-            map.insert("tags".to_string(), serde_json::json!(["retrieve", "lookup", "recall"]));
+            map.insert(
+                "category".to_string(),
+                serde_json::Value::String("memory".to_string()),
+            );
+            map.insert(
+                "tags".to_string(),
+                serde_json::json!(["retrieve", "lookup", "recall"]),
+            );
             map
         },
     }

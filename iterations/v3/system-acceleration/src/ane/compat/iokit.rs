@@ -18,25 +18,68 @@ const TARGET_APPLE_SILICON: bool = false;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub mod iokit {
     use super::*;
+    use std::process::Command;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
+
+    /// Execute powermetrics command with timeout to prevent blocking watchdog
+    /// 
+    /// This wrapper ensures powermetrics calls never block for more than the specified
+    /// timeout, preventing system watchdog timeouts. All powermetrics calls should use
+    /// this function instead of calling Command directly.
+    /// 
+    /// # Arguments
+    /// * `args` - Arguments to pass to powermetrics
+    /// * `timeout` - Maximum time to wait for powermetrics to complete
+    /// 
+    /// # Returns
+    /// Output from powermetrics if successful within timeout, None otherwise
+    pub(crate) fn powermetrics_with_timeout(
+        args: &[&str],
+        timeout: Duration,
+    ) -> Option<std::process::Output> {
+        use tracing::warn;
+
+        let (tx, rx) = mpsc::channel();
+        let mut cmd = Command::new("powermetrics");
+        cmd.args(args);
+
+        thread::spawn(move || {
+            let result = cmd.output();
+            let _ = tx.send(result);
+        });
+
+        match rx.recv_timeout(timeout) {
+            Ok(Ok(output)) => Some(output),
+            Ok(Err(e)) => {
+                warn!("powermetrics command failed: {:?}", e);
+                None
+            }
+            Err(_) => {
+                warn!("powermetrics call timed out after {:?}", timeout);
+                None
+            }
+        }
+    }
 
     /// Get current system temperature in Celsius
     ///
     /// Queries SMC (System Management Controller) via powermetrics for thermal data
     pub fn temperature_celsius() -> Option<f32> {
         // Use powermetrics to get thermal data - available on macOS without IOKit bindings
-        use std::process::Command;
-
-        let output = Command::new("powermetrics")
-            .args(&[
+        // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+        let output = powermetrics_with_timeout(
+            &[
                 "--samplers",
                 "thermal",
                 "--sample-count",
                 "1",
                 "--format",
                 "csv",
-            ])
-            .output()
-            .ok()?;
+            ],
+            Duration::from_secs(1),
+        )?;
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -113,19 +156,18 @@ pub mod iokit {
     /// Uses pmset and powermetrics to estimate system power consumption
     pub fn power_watts() -> Option<f32> {
         // Try powermetrics first for detailed power data
-        use std::process::Command;
-
-        let output = Command::new("powermetrics")
-            .args(&[
+        // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+        let output = powermetrics_with_timeout(
+            &[
                 "--samplers",
                 "power",
                 "--sample-count",
                 "1",
                 "--format",
                 "csv",
-            ])
-            .output()
-            .ok()?;
+            ],
+            Duration::from_secs(1),
+        )?;
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -194,13 +236,12 @@ pub mod iokit {
     pub fn ane_temperature_celsius() -> Option<f32> {
         // Try to get ANE-specific temperature data
         // ANE (Apple Neural Engine) temperatures are often reported separately
-        use std::process::Command;
-
         // Check if we can get ANE-specific data from powermetrics
-        let output = Command::new("powermetrics")
-            .args(&["--samplers", "thermal", "--sample-count", "1"])
-            .output()
-            .ok()?;
+        // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+        let output = powermetrics_with_timeout(
+            &["--samplers", "thermal", "--sample-count", "1"],
+            Duration::from_secs(1),
+        )?;
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -231,12 +272,11 @@ pub mod iokit {
     /// This would query ANE power consumption if available
     pub fn ane_power_watts() -> Option<f32> {
         // Attempt to estimate ANE power consumption from system metrics
-        use std::process::Command;
-
-        let output = Command::new("powermetrics")
-            .args(&["--samplers", "power", "--sample-count", "1"])
-            .output()
-            .ok()?;
+        // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+        let output = powermetrics_with_timeout(
+            &["--samplers", "power", "--sample-count", "1"],
+            Duration::from_secs(1),
+        )?;
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -326,10 +366,11 @@ pub mod iokit {
             || output_str.contains("Mac Pro")
         {
             // This Mac might have fans - try to get fan speed
-            let output = Command::new("powermetrics")
-                .args(&["--samplers", "thermal", "--sample-count", "1"])
-                .output()
-                .ok()?;
+            // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+            let output = powermetrics_with_timeout(
+                &["--samplers", "thermal", "--sample-count", "1"],
+                Duration::from_secs(1),
+            )?;
 
             let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -427,82 +468,272 @@ pub mod iokit {
 
     /// Measure ANE utilization percentage (0.0 to 1.0)
     ///
-    /// Uses powermetrics to query ANE compute utilization.
+    /// Uses powermetrics with improved samplers and streaming to query ANE compute utilization.
     /// Returns the percentage of time ANE is actively processing.
+    ///
+    /// This function uses multiple sampling strategies:
+    /// 1. Direct ANE utilization from powermetrics (if available)
+    /// 2. Power-based estimation from ANE power consumption
+    /// 3. Activity-based inference from system metrics
     pub fn ane_utilization_percent() -> Option<f32> {
         use std::process::Command;
+        use std::time::{Duration, Instant};
+        use tracing::{debug, warn};
 
-        // Use powermetrics to get ANE utilization data
-        let output = Command::new("powermetrics")
-            .args(&[
+        // Strategy 1: Use powermetrics with correct samplers for ANE
+        // Use 'tasks' sampler which includes ANE activity, or 'cpu_power' which tracks ANE power
+        // Sample over a short interval (500ms) for better accuracy
+        // IMPORTANT: Add timeout to prevent blocking watchdog - max 2 seconds total
+        let sample_start = Instant::now();
+        
+        // Use timeout wrapper to prevent blocking system watchdog
+        // powermetrics can hang, so we limit it to 2 seconds max
+        let output = powermetrics_with_timeout(
+            &[
                 "--samplers",
-                "cpu_power,gpu_power",
+                "tasks,cpu_power", // tasks includes ANE activity, cpu_power includes ANE power domain
                 "--sample-count",
-                "1",
+                "2", // Take 2 samples over ~1 second for better averaging
+                "--sample-interval",
+                "500", // 500ms between samples
                 "--format",
                 "csv",
-            ])
-            .output()
-            .ok()?;
+                "--show-process-coalition",
+                "--show-process-gpu",
+            ],
+            Duration::from_secs(2), // Max 2 seconds to prevent watchdog timeout
+        )?;
 
+        let sample_duration = sample_start.elapsed();
         let output_str = String::from_utf8(output.stdout).ok()?;
 
-        // Look for ANE-specific utilization metrics
-        // powermetrics may report ANE usage in different formats
+        // Log provenance: when and how measurement was taken
+        debug!(
+            "ANE utilization measurement: powermetrics sample_duration={:?}, output_len={}",
+            sample_duration,
+            output_str.len()
+        );
+
+        // Parse powermetrics output for ANE-specific metrics
+        // powermetrics output format varies by macOS version, so we try multiple patterns
+        let mut ane_utilization: Option<f32> = None;
+        
         for line in output_str.lines() {
-            // Look for ANE utilization patterns
+            // Pattern 1: Direct ANE utilization percentage
+            // Format: "ANE Utilization: 85.0%" or "Neural Engine: 85%"
             if line.contains("ANE") || line.contains("Neural Engine") {
-                // Try to extract utilization percentage
-                // Format might be: "ANE Utilization: 85.0%" or "ANE: 85%"
-                if let Some(util_str) = line
-                    .split(':')
-                    .nth(1)
-                    .or_else(|| line.split_whitespace().find(|s| s.contains('%')))
+                // Try multiple extraction patterns
+                let patterns = [
+                    (":", "%"), // "ANE Utilization: 85.0%"
+                    ("=", "%"), // "ANE=85.0%"
+                    (" ", "%"), // "ANE 85.0%"
+                ];
+                
+                for (sep, term) in &patterns {
+                    if let Some(util_str) = line.split(sep).nth(1) {
+                        if let Some(percent_str) = util_str.split(term).next() {
+                            let cleaned = percent_str
+                                .trim()
+                                .trim_matches(|c: char| !c.is_numeric() && c != '.');
+                            if let Ok(util_value) = cleaned.parse::<f32>() {
+                                let normalized = (util_value / 100.0).min(1.0).max(0.0);
+                                debug!("ANE utilization parsed from direct metric: {:.1}%", util_value);
+                                ane_utilization = Some(normalized);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Pattern 2: ANE power domain utilization
+            // Format: "ANE Power: 1.5W" - we can infer utilization from power
+            if line.contains("ANE") && (line.contains("Power") || line.contains("W")) {
+                if let Some(power_str) = line.split(':').nth(1)
+                    .or_else(|| line.split_whitespace().find(|s| s.contains('W')))
                 {
-                    // Extract numeric value before %
-                    let cleaned = util_str
+                    let cleaned = power_str
                         .trim()
                         .trim_matches(|c: char| !c.is_numeric() && c != '.');
-                    if let Ok(util_value) = cleaned.parse::<f32>() {
-                        // Convert percentage to 0.0-1.0 range
-                        return Some((util_value / 100.0).min(1.0).max(0.0));
+                    if let Ok(power_value) = cleaned.parse::<f32>() {
+                        // ANE idle ~0.1W, max ~2W
+                        let baseline = 0.1;
+                        let max_power = 2.0;
+                        let estimated_util = ((power_value - baseline) / (max_power - baseline))
+                            .min(1.0)
+                            .max(0.0);
+                        debug!("ANE utilization estimated from power ({:.2}W): {:.1}%", 
+                            power_value, estimated_util * 100.0);
+                        if ane_utilization.is_none() || estimated_util > ane_utilization.unwrap() {
+                            ane_utilization = Some(estimated_util);
+                        }
                     }
                 }
             }
         }
 
-        // Alternative: Estimate from power consumption
-        // If ANE power is high relative to baseline, utilization is likely high
-        if let Some(ane_power) = ane_power_watts() {
-            // ANE idle power ~0.1W, max power ~2W
-            // Estimate utilization from power consumption
-            let baseline_power = 0.1;
-            let max_power = 2.0;
-            let utilization = ((ane_power - baseline_power) / (max_power - baseline_power))
-                .min(1.0)
-                .max(0.0);
-            return Some(utilization);
+        // Strategy 2: Power-based estimation (if direct measurement failed)
+        if ane_utilization.is_none() {
+            if let Some(ane_power) = ane_power_watts() {
+                // ANE idle power ~0.1W, max power ~2W
+                // Estimate utilization from power consumption
+                let baseline_power = 0.1;
+                let max_power = 2.0;
+                let utilization = ((ane_power - baseline_power) / (max_power - baseline_power))
+                    .min(1.0)
+                    .max(0.0);
+                debug!("ANE utilization estimated from power consumption ({:.2}W): {:.1}%",
+                    ane_power, utilization * 100.0);
+                ane_utilization = Some(utilization);
+            }
         }
 
-        // Fallback: Try to infer from CPU/GPU activity patterns
-        // If system is doing neural network work but CPU/GPU aren't maxed, ANE might be active
-        None
+        // Log final result with provenance
+        if let Some(util) = ane_utilization {
+            debug!(
+                "ANE utilization measurement complete: {:.1}% (method: {}, duration: {:?})",
+                util * 100.0,
+                if output_str.contains("ANE") { "direct" } else { "power_estimate" },
+                sample_duration
+            );
+        } else {
+            warn!("ANE utilization measurement failed: no metrics found in powermetrics output");
+        }
+
+        ane_utilization
     }
 
     /// Get ANE compute statistics
     ///
-    /// Returns detailed ANE utilization and performance metrics
+    /// Returns detailed ANE utilization and performance metrics with provenance logging.
+    /// This function aggregates multiple telemetry sources for comprehensive ANE monitoring.
     pub fn ane_compute_stats() -> Option<ANEComputeStats> {
+        use std::time::Instant;
+        use tracing::debug;
+
+        let stats_start = Instant::now();
+        
         let utilization = ane_utilization_percent()?;
         let power = ane_power_watts();
         let temperature = ane_temperature_celsius();
 
-        Some(ANEComputeStats {
+        let stats = ANEComputeStats {
             utilization_percent: utilization * 100.0,
             power_watts: power,
             temperature_celsius: temperature,
             is_active: utilization > 0.1, // Consider active if >10% utilization
-        })
+        };
+
+        // Log provenance: comprehensive stats with context
+        debug!(
+            "ANE compute stats: util={:.1}%, power={:?}W, temp={:?}°C, active={}, duration={:?}",
+            stats.utilization_percent,
+            stats.power_watts,
+            stats.temperature_celsius,
+            stats.is_active,
+            stats_start.elapsed()
+        );
+
+        Some(stats)
+    }
+
+    /// Measure ANE utilization with streaming/continuous sampling
+    ///
+    /// This function performs multiple samples over a time window and returns
+    /// averaged statistics. Useful for getting more stable measurements during
+    /// active inference workloads.
+    ///
+    /// # Arguments
+    /// * `sample_count` - Number of samples to take (default: 5)
+    /// * `sample_interval_ms` - Milliseconds between samples (default: 200)
+    ///
+    /// # Returns
+    /// Average utilization over the sampling window, or None if measurement fails
+    pub fn ane_utilization_streaming(
+        sample_count: Option<usize>,
+        sample_interval_ms: Option<u64>,
+    ) -> Option<f32> {
+        use tracing::debug;
+
+        let count = sample_count.unwrap_or(5);
+        let interval = sample_interval_ms.unwrap_or(200);
+        
+        debug!(
+            "Starting ANE utilization streaming: {} samples, {}ms interval",
+            count, interval
+        );
+
+        // Use powermetrics with streaming mode
+        // Take multiple samples over time for better averaging
+        // IMPORTANT: Add timeout to prevent blocking watchdog
+        // Calculate max timeout: (count * interval) + 1 second buffer
+        let max_timeout_secs = ((count as u64 * interval) / 1000) + 1;
+        let max_timeout = Duration::from_secs(max_timeout_secs.min(5)); // Cap at 5 seconds
+        
+        // Use timeout wrapper to prevent blocking watchdog
+        let output = powermetrics_with_timeout(
+            &[
+                "--samplers",
+                "tasks,cpu_power",
+                "--sample-count",
+                &count.to_string(),
+                "--sample-interval",
+                &interval.to_string(),
+                "--format",
+                "csv",
+            ],
+            max_timeout,
+        )?;
+
+        let output_str = String::from_utf8(output.stdout).ok()?;
+
+        // Parse all samples and average them
+        let mut samples = Vec::new();
+        
+        for line in output_str.lines() {
+            if line.contains("ANE") || line.contains("Neural Engine") {
+                // Extract utilization from this sample
+                if let Some(util_str) = line.split(':').nth(1)
+                    .or_else(|| line.split_whitespace().find(|s| s.contains('%')))
+                {
+                    let cleaned = util_str
+                        .trim()
+                        .trim_matches(|c: char| !c.is_numeric() && c != '.');
+                    if let Ok(util_value) = cleaned.parse::<f32>() {
+                        samples.push((util_value / 100.0).min(1.0).max(0.0));
+                    }
+                }
+            }
+        }
+
+        if samples.is_empty() {
+            // Fallback to power-based estimation
+            if let Some(ane_power) = ane_power_watts() {
+                let baseline = 0.1;
+                let max_power = 2.0;
+                let estimated = ((ane_power - baseline) / (max_power - baseline))
+                    .min(1.0)
+                    .max(0.0);
+                samples.push(estimated);
+            }
+        }
+
+        if samples.is_empty() {
+            return None;
+        }
+
+        // Calculate average utilization
+        let avg_utilization = samples.iter().sum::<f32>() / samples.len() as f32;
+        
+        debug!(
+            "ANE utilization streaming complete: {:.1}% ({} samples, range: {:.1}%-{:.1}%)",
+            avg_utilization * 100.0,
+            samples.len(),
+            samples.iter().copied().fold(f32::INFINITY, f32::min) * 100.0,
+            samples.iter().copied().fold(0.0, f32::max) * 100.0
+        );
+
+        Some(avg_utilization)
     }
 }
 
@@ -553,6 +784,13 @@ pub mod iokit {
         None
     }
     pub fn ane_compute_stats() -> Option<ANEComputeStats> {
+        None
+    }
+
+    pub fn ane_utilization_streaming(
+        _sample_count: Option<usize>,
+        _sample_interval_ms: Option<u64>,
+    ) -> Option<f32> {
         None
     }
 
@@ -669,24 +907,27 @@ pub fn initialize_monitoring() -> Result<()> {
     }
 
     // Check if powermetrics requires special permissions (common on macOS)
-    let output = Command::new("powermetrics")
-        .args(&["--samplers", "thermal", "--sample-count", "1"])
-        .output();
+    // Use timeout wrapper to prevent blocking watchdog (max 1 second)
+    // Note: This is called from outside the iokit module, so we use the module path
+    let output = iokit::powermetrics_with_timeout(
+        &["--samplers", "thermal", "--sample-count", "1"],
+        std::time::Duration::from_secs(1),
+    );
 
     match output {
-        Ok(result) if result.status.success() => {
+        Some(result) if result.status.success() => {
             // Monitoring system is ready
             info!("IOKit monitoring system initialized successfully");
             Ok(())
         }
-        Ok(_) => {
+        Some(_) => {
             // powermetrics failed - might need special permissions
             warn!("powermetrics requires special permissions - some telemetry may be unavailable");
             // Still allow initialization but with reduced functionality
             Ok(())
         }
-        Err(_) => {
-            warn!("powermetrics not available - falling back to basic monitoring");
+        None => {
+            warn!("powermetrics not available or timed out - falling back to basic monitoring");
             // Allow initialization with reduced functionality
             Ok(())
         }

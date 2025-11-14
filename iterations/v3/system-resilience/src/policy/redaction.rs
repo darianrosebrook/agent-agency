@@ -70,8 +70,9 @@ impl SecretRedactor {
             .iter()
             .map(|p| Regex::new(p))
             .collect::<Result<Vec<_>, _>>()?;
-        
-        self.compiled_patterns.insert(pattern.name.clone(), compiled_regexes);
+
+        self.compiled_patterns
+            .insert(pattern.name.clone(), compiled_regexes);
         self.patterns.push(pattern);
         Ok(())
     }
@@ -107,13 +108,13 @@ impl SecretRedactor {
         for pattern in &self.patterns {
             if let Some(regexes) = self.compiled_patterns.get(&pattern.name) {
                 let mut matches = Vec::new();
-                
+
                 for regex in regexes {
                     for mat in regex.find_iter(content_str) {
                         matches.push(mat.as_str().to_string());
                     }
                 }
-                
+
                 if !matches.is_empty() {
                     return CheckResult::Denied {
                         reason: DenialReason::Secret,
@@ -137,17 +138,13 @@ impl SecretRedactor {
         let default_patterns = vec![
             RedactionPattern {
                 name: "private_key".to_string(),
-                patterns: vec![
-                    r"-----BEGIN.*PRIVATE KEY-----".to_string(),
-                ],
+                patterns: vec![r"-----BEGIN.*PRIVATE KEY-----".to_string()],
                 severity: PatternSeverity::Critical,
                 description: "Private key detected".to_string(),
             },
             RedactionPattern {
                 name: "api_key".to_string(),
-                patterns: vec![
-                    r"(?i)(api[_-]?key|apikey)\s*[:=]\s*[a-zA-Z0-9]{20,}".to_string(),
-                ],
+                patterns: vec![r"(?i)(api[_-]?key|apikey)\s*[:=]\s*[a-zA-Z0-9]{20,}".to_string()],
                 severity: PatternSeverity::High,
                 description: "API key detected".to_string(),
             },
@@ -214,10 +211,13 @@ mod tests {
     #[test]
     fn test_private_key_detection() {
         let redactor = SecretRedactor::new();
-        let content = b"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
-        
+        let content =
+            b"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----";
+
         match redactor.check_and_deny(content) {
-            CheckResult::Denied { reason, matches, .. } => {
+            CheckResult::Denied {
+                reason, matches, ..
+            } => {
                 assert_eq!(reason, DenialReason::Secret);
                 assert!(!matches.is_empty());
             }
@@ -231,7 +231,7 @@ mod tests {
     fn test_clean_content_allowed() {
         let redactor = SecretRedactor::new();
         let content = b"# This is a normal code file\nfunction hello() {\n  return \"world\";\n}";
-        
+
         match redactor.check_and_deny(content) {
             CheckResult::Allowed => {
                 // Expected
@@ -246,7 +246,7 @@ mod tests {
     fn test_pre_admission_scanner() {
         let scanner = PreAdmissionScanner::new();
         let content = b"# Normal file content";
-        
+
         match scanner.scan_content(content, Some("test.txt")) {
             CheckResult::Allowed => {
                 // Expected
@@ -261,7 +261,7 @@ mod tests {
     fn test_blocked_extension() {
         let scanner = PreAdmissionScanner::new();
         let content = b"# This is a key file";
-        
+
         match scanner.scan_content(content, Some("private.key")) {
             CheckResult::Denied { reason, .. } => {
                 assert_eq!(reason, DenialReason::Policy);

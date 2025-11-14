@@ -57,8 +57,8 @@ impl ThreadSafeRngSource {
 
     /// Generate a UUID deterministically using the RNG
     pub fn generate_uuid(&self) -> uuid::Uuid {
-        use uuid::Uuid;
         use rand::RngCore;
+        use uuid::Uuid;
         let mut rng_guard = self.rng.lock().unwrap();
         let rng = rng_guard.rng();
         let mut bytes = [0u8; 16];
@@ -122,21 +122,21 @@ impl RngSource for SystemRng {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_fixed_clock() {
         let fixed_time = Utc::now();
         let clock = FixedClock::new(fixed_time);
-        
+
         assert_eq!(clock.now(), fixed_time);
         assert_eq!(clock.now(), fixed_time); // Should be consistent
     }
-    
+
     #[test]
     fn test_seeded_rng() {
         let mut rng1 = SeededRng::new(42);
         let mut rng2 = SeededRng::new(42);
-        
+
         // Same seed should produce same sequence
         assert_eq!(rng1.rng().next_u32(), rng2.rng().next_u32());
     }
@@ -144,18 +144,18 @@ mod tests {
     #[test]
     fn test_thread_safe_rng_determinism() {
         use rand::RngCore;
-        
+
         // Create two ThreadSafeRngSource instances with the same seed
         let rng1 = ThreadSafeRngSource::new(Box::new(SeededRng::new(42)));
         let rng2 = ThreadSafeRngSource::new(Box::new(SeededRng::new(42)));
-        
+
         // Generate UUIDs - should be deterministic
         let uuid1 = rng1.generate_uuid();
         let uuid2 = rng2.generate_uuid();
-        
+
         // Same seed should produce same UUID
         assert_eq!(uuid1, uuid2);
-        
+
         // Generate more UUIDs to verify sequence
         let uuid3 = rng1.generate_uuid();
         let uuid4 = rng2.generate_uuid();
@@ -167,11 +167,11 @@ mod tests {
         // Create two ThreadSafeRngSource instances with the same seed
         let rng1 = ThreadSafeRngSource::new(Box::new(SeededRng::new(123)));
         let rng2 = ThreadSafeRngSource::new(Box::new(SeededRng::new(123)));
-        
+
         // Generate u64 values - should be deterministic
         let val1 = rng1.next_u64();
         let val2 = rng2.next_u64();
-        
+
         // Same seed should produce same value
         assert_eq!(val1, val2);
     }

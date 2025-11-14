@@ -5,10 +5,12 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::recovery_types::{Digest, RestorePlan, RestoreAction, RestoreResult, RestoreFilters, SessionRef};
 use crate::cas::{AtomicRestore, RestoredFile};
 use crate::merkle::{Commit as MerkleCommit, FileTree as MerkleTree};
 use crate::policy::{CawsPolicy, PolicyEnforcer};
+use crate::recovery_types::{
+    Digest, RestoreAction, RestoreFilters, RestorePlan, RestoreResult, SessionRef,
+};
 
 /// Worker integration for recovery system
 pub struct WorkerRecovery {
@@ -60,8 +62,7 @@ impl Default for WorkerRecoveryConfig {
 }
 
 /// Worker recovery statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WorkerRecoveryStats {
     /// Total restores performed
     pub total_restores: usize,
@@ -81,10 +82,12 @@ pub struct WorkerRecoveryStats {
     pub last_session_restore: Option<u64>,
 }
 
-
 impl WorkerRecovery {
     /// Create a new worker recovery integration
-    pub fn new(config: WorkerRecoveryConfig, blob_store: std::sync::Arc<crate::cas::BlobStore>) -> Self {
+    pub fn new(
+        config: WorkerRecoveryConfig,
+        blob_store: std::sync::Arc<crate::cas::BlobStore>,
+    ) -> Self {
         let restore_manager = AtomicRestore::new();
         let policy_enforcer = PolicyEnforcer::new(CawsPolicy::new());
 
@@ -115,7 +118,7 @@ impl WorkerRecovery {
         filters: Option<RestoreFilters>,
     ) -> Result<RestorePlan> {
         let start_time = Self::current_timestamp();
-        
+
         // Get commit tree digest
         let tree_digest = commit.tree();
 
@@ -125,7 +128,7 @@ impl WorkerRecovery {
         // Create restore actions from tree traversal
         let mut actions = Vec::new();
         self.traverse_tree_for_restore_actions(&tree, PathBuf::new(), &mut actions)?;
-        
+
         // Check restore size limit
         if let Some(max_size) = self.config.max_restore_size {
             let plan_size: u64 = actions.iter().map(|a: &RestoreAction| a.size()).sum();
@@ -140,7 +143,7 @@ impl WorkerRecovery {
 
         let total_files = actions.len() as u32;
         let total_bytes: u64 = actions.iter().map(|a: &RestoreAction| a.size()).sum();
-        
+
         Ok(RestorePlan {
             actions,
             total_files,
@@ -180,7 +183,7 @@ impl WorkerRecovery {
     /// Execute a restore plan
     pub fn execute_restore_plan(&mut self, plan: &RestorePlan) -> Result<RestoreResult> {
         let start_time = Self::current_timestamp();
-        
+
         // Check if restore is allowed
         if let Some(max_size) = self.config.max_restore_size {
             if plan.total_bytes > max_size {
@@ -202,9 +205,9 @@ impl WorkerRecovery {
         // Update statistics
         let end_time = Self::current_timestamp();
         let duration = end_time - start_time;
-        
+
         self.update_stats(&result, duration);
-        
+
         Ok(result)
     }
 
@@ -216,15 +219,18 @@ impl WorkerRecovery {
     ) -> Result<RestoreResult> {
         // Create restore plan
         let plan = self.create_restore_plan(commit, filters)?;
-        
+
         // Preview restore if enabled
         if self.config.enable_preview {
             let preview = self.preview_restore_plan(&plan)?;
             if !preview.errors.is_empty() {
-                return Err(anyhow!("Restore preview found errors: {:?}", preview.errors));
+                return Err(anyhow!(
+                    "Restore preview found errors: {:?}",
+                    preview.errors
+                ));
             }
         }
-        
+
         // Execute restore
         self.execute_restore_plan(&plan)
     }
@@ -290,7 +296,8 @@ impl WorkerRecovery {
     fn check_restore_issues(&self, plan: &RestorePlan, preview: &mut RestorePreview) -> Result<()> {
         // Check for large files
         for action in &plan.actions {
-            if action.size() > 100 * 1024 * 1024 { // 100MB
+            if action.size() > 100 * 1024 * 1024 {
+                // 100MB
                 preview.warnings.push(format!(
                     "Large file detected: {} ({} bytes)",
                     action.path().display(),
@@ -302,10 +309,9 @@ impl WorkerRecovery {
         // Check for system files
         for action in &plan.actions {
             if action.path().starts_with("/etc") || action.path().starts_with("/sys") {
-                preview.warnings.push(format!(
-                    "System file detected: {}",
-                    action.path().display()
-                ));
+                preview
+                    .warnings
+                    .push(format!("System file detected: {}", action.path().display()));
             }
         }
 
@@ -322,11 +328,14 @@ impl WorkerRecovery {
             let restored_file = RestoredFile {
                 path: action.path().clone(),
                 size: action.size() as usize,
-                digest: action.expected_digest().cloned().unwrap_or(Digest::from_bytes([0; 32])),
+                digest: action
+                    .expected_digest()
+                    .cloned()
+                    .unwrap_or(Digest::from_bytes([0; 32])),
                 mode: action.mode().cloned().unwrap_or_default(),
                 restored_at: Self::current_timestamp(),
             };
-            
+
             restored_files.push(restored_file);
             total_bytes += action.size();
         }
@@ -344,15 +353,16 @@ impl WorkerRecovery {
         self.stats.total_restores += 1;
         self.stats.total_bytes_restored += result.bytes_restored;
         self.stats.last_restore = Some(Self::current_timestamp());
-        
+
         if result.files_restored > 0 {
             self.stats.successful_restores += 1;
         } else {
             self.stats.failed_restores += 1;
         }
-        
+
         // Update average restore time
-        let total_time = self.stats.avg_restore_time_ms * (self.stats.total_restores - 1) as u64 + duration;
+        let total_time =
+            self.stats.avg_restore_time_ms * (self.stats.total_restores - 1) as u64 + duration;
         self.stats.avg_restore_time_ms = total_time / self.stats.total_restores as u64;
     }
 
@@ -387,7 +397,9 @@ impl WorkerRecovery {
     /// Load a Merkle tree from blob storage using its digest
     fn load_tree_from_blob_store(&self, digest: Digest) -> Result<MerkleTree> {
         // Get the blob containing the tree data
-        let blob = self.blob_store.get_blob(digest)?
+        let blob = self
+            .blob_store
+            .get_blob(digest)?
             .ok_or_else(|| anyhow!("Tree blob not found for digest: {}", digest))?;
 
         // Deserialize the tree from the blob data
@@ -543,8 +555,11 @@ impl WorkerRecovery {
             session_commits.truncate(10);
         }
 
-        tracing::debug!("Stored commit for session {} ({} commits total)",
-                       session_id, session_commits.len());
+        tracing::debug!(
+            "Stored commit for session {} ({} commits total)",
+            session_id,
+            session_commits.len()
+        );
         Ok(())
     }
 
@@ -559,9 +574,12 @@ impl WorkerRecovery {
             let entry_path = current_path.join(&entry.name);
 
             match entry.mode {
-                crate::recovery_types::FileMode::Regular | crate::recovery_types::FileMode::Executable => {
+                crate::recovery_types::FileMode::Regular
+                | crate::recovery_types::FileMode::Executable => {
                     // Get actual file size from blob store
-                    let size = self.blob_store.get_blob_size(entry.digest.clone())?
+                    let size = self
+                        .blob_store
+                        .get_blob_size(entry.digest.clone())?
                         .unwrap_or(0); // Default to 0 if blob not found
 
                     // Create WriteFile action for regular files
@@ -576,13 +594,14 @@ impl WorkerRecovery {
                         size,
                     };
                     actions.push(action);
-                },
+                }
                 crate::recovery_types::FileMode::Symlink => {
                     // For symlinks, read the target from the blob
-                    let target = if let Some(blob) = self.blob_store.get_blob(entry.digest.clone())? {
+                    let target = if let Some(blob) =
+                        self.blob_store.get_blob(entry.digest.clone())?
+                    {
                         // The symlink target is stored as the blob data
-                        String::from_utf8(blob.data().to_vec())
-                            .unwrap_or_else(|_| String::new())
+                        String::from_utf8(blob.data().to_vec()).unwrap_or_else(|_| String::new())
                     } else {
                         String::new() // Empty target if blob not found
                     };
@@ -594,7 +613,7 @@ impl WorkerRecovery {
                         size: target_size, // Size based on target string length
                     };
                     actions.push(action);
-                },
+                }
                 crate::recovery_types::FileMode::Directory => {
                     // Create directory action
                     let action = RestoreAction::CreateDirectory {
@@ -684,7 +703,9 @@ impl WorkerRecoveryBuilder {
     /// Build the worker recovery
     pub fn build(self) -> WorkerRecovery {
         // Create a temporary blob store for testing
-        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from(
+            "test_objects",
+        )));
         WorkerRecovery::new(self.config, blob_store)
     }
 }
@@ -697,7 +718,9 @@ mod tests {
     #[test]
     fn test_worker_recovery_creation() {
         let config = WorkerRecoveryConfig::default();
-        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from(
+            "test_objects",
+        )));
         let recovery = WorkerRecovery::new(config, blob_store);
 
         assert_eq!(recovery.get_stats().total_restores, 0);
@@ -711,7 +734,7 @@ mod tests {
             .enable_preview(true)
             .dry_run(true)
             .build();
-        
+
         assert!(recovery.get_config().enable_verification);
         assert!(recovery.get_config().enable_preview);
         assert!(recovery.get_config().dry_run);
@@ -720,9 +743,11 @@ mod tests {
     #[test]
     fn test_session_management() {
         let config = WorkerRecoveryConfig::default();
-        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from(
+            "test_objects",
+        )));
         let mut recovery = WorkerRecovery::new(config, blob_store);
-        
+
         let session = SessionRef {
             id: "test-session".to_string(),
             meta: SessionMeta {
@@ -733,10 +758,10 @@ mod tests {
             },
             created_at: chrono::Utc::now(),
         };
-        
+
         recovery.set_session(session);
         assert!(recovery.current_session.is_some());
-        
+
         recovery.clear_session();
         assert!(recovery.current_session.is_none());
     }
@@ -744,28 +769,28 @@ mod tests {
     #[test]
     fn test_restore_preview() {
         let config = WorkerRecoveryConfig::default();
-        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from("test_objects")));
+        let blob_store = std::sync::Arc::new(crate::cas::BlobStore::new(std::path::PathBuf::from(
+            "test_objects",
+        )));
         let recovery = WorkerRecovery::new(config, blob_store);
-        
+
         let digest = Digest::from_bytes([9; 32]);
         let plan = RestorePlan {
             target: "commit1".to_string(),
-            actions: vec![
-                RestoreAction::WriteFile {
-                    path: PathBuf::from("test.txt"),
-                    mode: crate::recovery_types::FileMode::Regular,
-                    expected: digest,
-                    source: crate::recovery_types::ObjectRef {
-                        digest: digest,
-                        size: 12,
-                    },
+            actions: vec![RestoreAction::WriteFile {
+                path: PathBuf::from("test.txt"),
+                mode: crate::recovery_types::FileMode::Regular,
+                expected: digest,
+                source: crate::recovery_types::ObjectRef {
+                    digest: digest,
                     size: 12,
-                }
-            ],
+                },
+                size: 12,
+            }],
             total_files: 1,
             total_bytes: 12,
         };
-        
+
         let preview = recovery.preview_restore_plan(&plan).unwrap();
         assert_eq!(preview.total_files, 1);
         assert_eq!(preview.total_size, 12);

@@ -5,10 +5,10 @@
 //!
 //! @author @darianrosebrook
 
-use uuid::Uuid;
-use reqwest::Client;
-use anyhow::Result;
 use crate::mcp_types::*;
+use anyhow::Result;
+use reqwest::Client;
+use uuid::Uuid;
 
 /// Configuration for notification tool
 pub struct NotificationToolConfig {
@@ -27,9 +27,7 @@ impl Default for NotificationToolConfig {
 /// Create notification MCP tools
 pub fn create_notification_tools(config: Option<NotificationToolConfig>) -> Vec<MCPTool> {
     let config = config.unwrap_or_default();
-    vec![
-        create_send_notification_tool(config),
-    ]
+    vec![create_send_notification_tool(config)]
 }
 
 /// Create send notification tool
@@ -187,21 +185,25 @@ pub async fn execute_notification_tool(
     }
 
     // Extract parameters
-    let notification_type = request.parameters
+    let notification_type = request
+        .parameters
         .get("type")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing required parameter: type"))?;
 
-    let message = request.parameters
+    let message = request
+        .parameters
         .get("message")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing required parameter: message"))?;
 
-    let error_code = request.parameters
+    let error_code = request
+        .parameters
         .get("error_code")
         .and_then(|v| v.as_str());
 
-    let error_details = request.parameters
+    let error_details = request
+        .parameters
         .get("error_details")
         .and_then(|v| v.as_object())
         .map(|obj| {
@@ -210,11 +212,13 @@ pub async fn execute_notification_tool(
                 .collect::<std::collections::HashMap<String, serde_json::Value>>()
         });
 
-    let action_url = request.parameters
+    let action_url = request
+        .parameters
         .get("action_url")
         .and_then(|v| v.as_str());
 
-    let action_label = request.parameters
+    let action_label = request
+        .parameters
         .get("action_label")
         .and_then(|v| v.as_str());
 
@@ -243,7 +247,7 @@ pub async fn execute_notification_tool(
     // Make HTTP request to dashboard API
     let client = Client::new();
     let api_url = format!("{}/api/notifications", dashboard_url);
-    
+
     let response = client
         .post(&api_url)
         .json(&payload)
@@ -267,10 +271,10 @@ pub async fn execute_notification_tool(
     } else {
         Err(anyhow::anyhow!(
             "Failed to send notification: {}",
-            response_body.get("message")
+            response_body
+                .get("message")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown error")
         ))
     }
 }
-

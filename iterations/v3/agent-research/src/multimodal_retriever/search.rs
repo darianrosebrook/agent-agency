@@ -1,18 +1,17 @@
 //! Search coordination across multiple modalities
 
+use anyhow::Result;
 use schemars::JsonSchema;
 use std::sync::Arc;
-use anyhow::Result;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
-use super::core::{MultimodalRetrieverConfig, MultimodalQuery, MultimodalSearchResult};
-use agent_agency_contracts::types::research::QueryType;
+use super::core::{MultimodalQuery, MultimodalRetrieverConfig, MultimodalSearchResult};
+use super::query_processing::ProcessedQuery;
 use super::text_search::TextSearchEngine;
 use super::visual_search::VisualSearchEngine;
-use super::query_processing::ProcessedQuery;
+use agent_agency_contracts::types::research::QueryType;
 
 /// Search coordinator managing multimodal search execution
-
 use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct SearchCoordinator {
@@ -39,7 +38,9 @@ impl SearchCoordinator {
         database_pool: Arc<data_infrastructure::DatabaseClient>,
         config: MultimodalRetrieverConfig,
     ) -> Result<Self> {
-        let text_engine = Arc::new(TextSearchEngine::new_with_database(database_pool.clone(), config.clone()).await?);
+        let text_engine = Arc::new(
+            TextSearchEngine::new_with_database(database_pool.clone(), config.clone()).await?,
+        );
         let visual_engine = Arc::new(VisualSearchEngine::new(config.clone())?);
 
         Ok(Self {
@@ -55,7 +56,10 @@ impl SearchCoordinator {
         query: &ProcessedQuery,
         k: usize,
     ) -> Result<Vec<Vec<MultimodalSearchResult>>> {
-        info!("Executing multimodal search for query type: {:?}", query.query_type);
+        info!(
+            "Executing multimodal search for query type: {:?}",
+            query.query_type
+        );
 
         let mut modality_results = Vec::new();
 
@@ -85,20 +89,20 @@ impl SearchCoordinator {
 
     /// Determine if text search should be executed
     fn should_search_text(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, QueryType::Text | QueryType::Hybrid)
-            && query.text.is_some()
+        matches!(query.query_type, QueryType::Text | QueryType::Hybrid) && query.text.is_some()
     }
 
     /// Determine if visual search should be executed
     fn should_search_visual(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, QueryType::Visual | QueryType::Image | QueryType::Hybrid)
-            && query.image_path.is_some()
+        matches!(
+            query.query_type,
+            QueryType::Visual | QueryType::Image | QueryType::Hybrid
+        ) && query.image_path.is_some()
     }
 
     /// Determine if code search should be executed
     fn should_search_code(&self, query: &ProcessedQuery) -> bool {
-        matches!(query.query_type, QueryType::Code | QueryType::Hybrid)
-            && query.text.is_some()
+        matches!(query.query_type, QueryType::Code | QueryType::Hybrid) && query.text.is_some()
     }
 
     /// Get search statistics
@@ -118,7 +122,7 @@ impl SearchCoordinator {
 
 /// Search execution statistics
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchStats {
     pub text_searches: u64,
     pub visual_searches: u64,

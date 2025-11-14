@@ -11,19 +11,18 @@ pub mod whisper;
 // DO NOT disable YOLO functionality.
 // If you encounter issues, fix them rather than disabling this module.
 // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
-pub mod yolo;
 pub mod mistral;
+pub mod yolo;
+pub mod policy_integration;
 
 // Re-export commonly used types
 pub use execute::{
-    execute_inference, execute_batch_inference, InferenceOptions, InferenceResult,
-    InferenceMetrics, update_performance_metrics,
+    execute_batch_inference, execute_inference, update_performance_metrics, InferenceMetrics,
+    InferenceOptions, InferenceResult,
 };
 
 // Re-export Whisper inference
-pub use whisper::{
-    WhisperInferenceExecutor, create_whisper_executor,
-};
+pub use whisper::{create_whisper_executor, WhisperInferenceExecutor};
 
 // CRITICAL: DO NOT REMOVE OR DISABLE - YOLO re-exports are production functionality
 // These exports enable YOLO object detection capabilities.
@@ -31,12 +30,10 @@ pub use whisper::{
 // DO NOT remove YOLO functionality from the public API.
 // Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 // Re-export YOLO inference
-pub use yolo::{
-    YOLOInferenceExecutor, create_yolo_executor,
-};
+pub use yolo::{create_yolo_executor, YOLOInferenceExecutor};
 
 // Re-export Mistral inference (stub types only - functions disabled)
 pub use mistral::{
-    MistralInferenceOptions, ConstitutionalVerdict, ComplianceLevel, RiskTier, Verdict,
-    DebateArgument, DebatePosition, ConfidenceLevel,
+    ComplianceLevel, ConfidenceLevel, ConstitutionalVerdict, DebateArgument, DebatePosition,
+    MistralInferenceOptions, RiskTier, Verdict,
 };

@@ -6,10 +6,10 @@
 //!
 //! @author @darianrosebrook
 
+use crate::JudgeType;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use schemars::JsonSchema;
-use crate::JudgeType;
 
 /// Judge prompt with structured rubric and evidence
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

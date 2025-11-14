@@ -6,12 +6,14 @@
 //! - Council decision-making quality
 //! - Output quality (code and writing)
 
-use serde::{Deserialize, Serialize};
-use std::path::Path;
+#[cfg(feature = "full")]
+use agent_constitutional_council::verdict_writer::{
+    CouncilMetrics, JudgeVerdictSummary, VerdictRecord,
+};
 #[cfg(feature = "full")]
 use agent_orchestration::chain_of_thought::{DecisionPoint, RiskAssessment};
-#[cfg(feature = "full")]
-use agent_constitutional_council::verdict_writer::{VerdictRecord, JudgeVerdictSummary, CouncilMetrics};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Reasoning depth score (0.0-1.0)
 /// Measures how thoroughly the agent analyzed the problem
@@ -75,7 +77,8 @@ impl ReasoningDepthScore {
             total_risk_assessment += risk_score;
 
             // Confidence calibration score: +0.2 if realistic (between 0.3 and 0.9)
-            let confidence_calibration = if decision.confidence >= 0.3 && decision.confidence <= 0.9 {
+            let confidence_calibration = if decision.confidence >= 0.3 && decision.confidence <= 0.9
+            {
                 0.2
             } else if decision.confidence > 0.9 {
                 0.1 // Overconfident
@@ -91,7 +94,10 @@ impl ReasoningDepthScore {
         let risk_assessment_score = total_risk_assessment / count;
         let confidence_calibration_score = total_confidence_calibration / count;
 
-        let score = reasoning_length_score + alternatives_score + risk_assessment_score + confidence_calibration_score;
+        let score = reasoning_length_score
+            + alternatives_score
+            + risk_assessment_score
+            + confidence_calibration_score;
 
         Self {
             score: score.min(1.0),
@@ -105,7 +111,9 @@ impl ReasoningDepthScore {
     /// Get quality level description
     pub fn quality_level(&self) -> &'static str {
         match self.score {
-            s if s >= 0.9 => "Exceptional depth - thorough analysis, multiple perspectives considered",
+            s if s >= 0.9 => {
+                "Exceptional depth - thorough analysis, multiple perspectives considered"
+            }
             s if s >= 0.7 => "Good depth - solid analysis with some alternatives",
             s if s >= 0.5 => "Adequate depth - basic reasoning, limited alternatives",
             s if s >= 0.3 => "Shallow reasoning - minimal analysis, few alternatives",
@@ -148,16 +156,33 @@ impl DecisionQualityScore {
             // Evidence gathering: Check if reasoning references specific evidence
             // Expanded evidence keywords for better detection
             let evidence_keywords = [
-                "because", "due to", "based on", "evidence", "data",
-                "shows", "indicates", "suggests", "demonstrates", "reveals",
-                "according to", "from", "using", "with", "found", "detected",
-                "analysis", "results", "findings", "observation", "measurement"
+                "because",
+                "due to",
+                "based on",
+                "evidence",
+                "data",
+                "shows",
+                "indicates",
+                "suggests",
+                "demonstrates",
+                "reveals",
+                "according to",
+                "from",
+                "using",
+                "with",
+                "found",
+                "detected",
+                "analysis",
+                "results",
+                "findings",
+                "observation",
+                "measurement",
             ];
-            
-            let has_evidence = evidence_keywords.iter().any(|keyword| {
-                decision.reasoning.to_lowercase().contains(keyword)
-            });
-            
+
+            let has_evidence = evidence_keywords
+                .iter()
+                .any(|keyword| decision.reasoning.to_lowercase().contains(keyword));
+
             let evidence_score = if has_evidence {
                 0.25
             } else if decision.reasoning.len() > 100 {
@@ -171,16 +196,35 @@ impl DecisionQualityScore {
             // Logic soundness: Check if reasoning is coherent (has logical connectors)
             // Expanded logic keywords for better detection
             let logic_keywords = [
-                "therefore", "thus", "consequently", "however", "alternatively",
-                "since", "as", "given that", "so", "hence", "accordingly",
-                "but", "yet", "although", "while", "whereas", "if", "then",
-                "in order to", "for", "to", "because of", "as a result"
+                "therefore",
+                "thus",
+                "consequently",
+                "however",
+                "alternatively",
+                "since",
+                "as",
+                "given that",
+                "so",
+                "hence",
+                "accordingly",
+                "but",
+                "yet",
+                "although",
+                "while",
+                "whereas",
+                "if",
+                "then",
+                "in order to",
+                "for",
+                "to",
+                "because of",
+                "as a result",
             ];
-            
-            let has_logic = logic_keywords.iter().any(|keyword| {
-                decision.reasoning.to_lowercase().contains(keyword)
-            });
-            
+
+            let has_logic = logic_keywords
+                .iter()
+                .any(|keyword| decision.reasoning.to_lowercase().contains(keyword));
+
             let logic_score = if has_logic {
                 0.25
             } else if decision.reasoning.len() > 50 {
@@ -221,7 +265,10 @@ impl DecisionQualityScore {
         let confidence_calibration_score = total_confidence / count;
         let risk_mitigation_score = total_risk_mitigation / count;
 
-        let score = evidence_gathering_score + logic_soundness_score + confidence_calibration_score + risk_mitigation_score;
+        let score = evidence_gathering_score
+            + logic_soundness_score
+            + confidence_calibration_score
+            + risk_mitigation_score;
 
         Self {
             score: score.min(1.0),
@@ -293,7 +340,10 @@ impl CouncilTransparencyScore {
             0.0
         };
 
-        let score: f64 = verdict_reasoning_score + consensus_quality_score + violation_detection_score + judge_coordination_score;
+        let score: f64 = verdict_reasoning_score
+            + consensus_quality_score
+            + violation_detection_score
+            + judge_coordination_score;
 
         Self {
             score: score.min(1.0),
@@ -340,7 +390,9 @@ impl VerdictReasoningQualityScore {
         };
 
         // Reasoning completeness: Check key reasoning points
-        let total_reasoning_points: usize = verdict.judge_verdicts.iter()
+        let total_reasoning_points: usize = verdict
+            .judge_verdicts
+            .iter()
             .map(|j| j.key_reasoning.len())
             .sum();
         let reasoning_completeness_score = if total_reasoning_points >= 12 {
@@ -369,7 +421,11 @@ impl VerdictReasoningQualityScore {
             0.1 // No violations (could be good or bad)
         };
 
-        let score: f64 = consensus_strength_score + judge_participation_score + reasoning_completeness_score + efficiency_score + violation_accuracy_score;
+        let score: f64 = consensus_strength_score
+            + judge_participation_score
+            + reasoning_completeness_score
+            + efficiency_score
+            + violation_accuracy_score;
 
         Self {
             score: score.min(1.0),
@@ -384,7 +440,9 @@ impl VerdictReasoningQualityScore {
     /// Get quality level description
     pub fn quality_level(&self) -> &'static str {
         match self.score {
-            s if s >= 0.9 => "Exceptional - clear rationale, all judges aligned, comprehensive analysis",
+            s if s >= 0.9 => {
+                "Exceptional - clear rationale, all judges aligned, comprehensive analysis"
+            }
             s if s >= 0.7 => "Good - solid reasoning, minor disagreements, good coverage",
             s if s >= 0.5 => "Adequate - basic reasoning, some disagreements, partial coverage",
             s if s >= 0.3 => "Poor - unclear reasoning, significant disagreements, gaps",
@@ -410,7 +468,7 @@ impl CodeQualityScore {
     /// Uses REAL compilation checks and language-specific analysis
     pub fn analyze(code_path: &Path) -> Self {
         use std::process::Command;
-        
+
         // Read code file
         let code_content = match std::fs::read_to_string(code_path) {
             Ok(content) => content,
@@ -427,7 +485,8 @@ impl CodeQualityScore {
         };
 
         // Detect file type from extension
-        let file_ext = code_path.extension()
+        let file_ext = code_path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
@@ -444,7 +503,7 @@ impl CodeQualityScore {
                                 .arg(workspace_root.join("Cargo.toml"))
                                 .current_dir(workspace_root)
                                 .output();
-                            
+
                             if let Ok(result) = output {
                                 compiles = result.status.success();
                             }
@@ -464,16 +523,19 @@ impl CodeQualityScore {
                 let output = Command::new("tsc")
                     .args(&["--noEmit", code_path.to_string_lossy().as_ref()])
                     .output();
-                
+
                 let compiles = if let Ok(result) = output {
                     result.status.success()
                 } else {
                     false
                 };
-                
+
                 if compiles {
                     0.3 // Compiles successfully
-                } else if code_content.contains("function") || code_content.contains("const") || code_content.contains("interface") {
+                } else if code_content.contains("function")
+                    || code_content.contains("const")
+                    || code_content.contains("interface")
+                {
                     0.15 // Basic structure
                 } else {
                     0.0
@@ -484,13 +546,13 @@ impl CodeQualityScore {
                 let output = Command::new("python3")
                     .args(&["-m", "py_compile", code_path.to_string_lossy().as_ref()])
                     .output();
-                
+
                 let compiles = if let Ok(result) = output {
                     result.status.success()
                 } else {
                     false
                 };
-                
+
                 if compiles {
                     0.3 // Compiles successfully
                 } else if code_content.contains("def ") || code_content.contains("class ") {
@@ -501,7 +563,10 @@ impl CodeQualityScore {
             }
             _ => {
                 // Unknown type - basic structure check
-                if code_content.contains("function") || code_content.contains("fn ") || code_content.contains("def ") {
+                if code_content.contains("function")
+                    || code_content.contains("fn ")
+                    || code_content.contains("def ")
+                {
                     0.1
                 } else {
                     0.0
@@ -524,8 +589,14 @@ impl CodeQualityScore {
                 // TypeScript: Check for imports/exports and type annotations
                 let has_imports = code_content.contains("import ");
                 let has_exports = code_content.contains("export ");
-                let has_types = code_content.contains(": ") && (code_content.contains(": string") || code_content.contains(": number") || code_content.contains(": boolean") || code_content.contains(": any") || code_content.contains("interface ") || code_content.contains("type "));
-                
+                let has_types = code_content.contains(": ")
+                    && (code_content.contains(": string")
+                        || code_content.contains(": number")
+                        || code_content.contains(": boolean")
+                        || code_content.contains(": any")
+                        || code_content.contains("interface ")
+                        || code_content.contains("type "));
+
                 if has_imports && has_exports && has_types {
                     0.2
                 } else if (has_imports || has_exports) && has_types {
@@ -545,7 +616,7 @@ impl CodeQualityScore {
                     0.05
                 }
             }
-            _ => 0.05
+            _ => 0.05,
         };
 
         // Error handling score: Language-specific patterns
@@ -563,11 +634,18 @@ impl CodeQualityScore {
             }
             "ts" | "tsx" => {
                 // TypeScript: Check for error handling patterns
-                let has_try_catch = code_content.contains("try {") && code_content.contains("catch");
-                let has_error_handling = code_content.contains("catch") || code_content.contains("throw") || code_content.contains("Error");
-                let has_conditional_error = code_content.contains("if (") && (code_content.contains("error") || code_content.contains("Error"));
-                let has_null_check = code_content.contains("if (") && (code_content.contains("!== null") || code_content.contains("!== undefined") || code_content.contains("?."));
-                
+                let has_try_catch =
+                    code_content.contains("try {") && code_content.contains("catch");
+                let has_error_handling = code_content.contains("catch")
+                    || code_content.contains("throw")
+                    || code_content.contains("Error");
+                let has_conditional_error = code_content.contains("if (")
+                    && (code_content.contains("error") || code_content.contains("Error"));
+                let has_null_check = code_content.contains("if (")
+                    && (code_content.contains("!== null")
+                        || code_content.contains("!== undefined")
+                        || code_content.contains("?."));
+
                 if has_try_catch {
                     0.2
                 } else if has_error_handling {
@@ -587,7 +665,7 @@ impl CodeQualityScore {
                     0.0
                 }
             }
-            _ => 0.0
+            _ => 0.0,
         };
 
         // Test coverage score: Language-specific test patterns
@@ -595,20 +673,24 @@ impl CodeQualityScore {
         let test_coverage_score = match file_ext {
             "rs" => {
                 // Enhanced test detection: Check for various Rust test patterns
-                let has_test_attr = code_content.contains("#[test]") || code_content.contains("#[tokio::test]");
-                let has_test_mod = code_content.contains("#[cfg(test)]") || code_content.contains("#[cfg(test)]");
-                let has_assert = code_content.contains("assert!") || code_content.contains("assert_eq!") || code_content.contains("assert_ne!");
+                let has_test_attr =
+                    code_content.contains("#[test]") || code_content.contains("#[tokio::test]");
+                let has_test_mod =
+                    code_content.contains("#[cfg(test)]") || code_content.contains("#[cfg(test)]");
+                let has_assert = code_content.contains("assert!")
+                    || code_content.contains("assert_eq!")
+                    || code_content.contains("assert_ne!");
                 let _has_should_panic = code_content.contains("#[should_panic]");
-                
+
                 // Inline tests: Multiple indicators suggest comprehensive testing
                 let has_inline_tests = has_test_attr || has_test_mod;
                 let has_comprehensive_tests = has_inline_tests && has_assert;
-                
+
                 // Check for test files in same directory with better pattern matching
                 let has_test_file = if let Some(parent) = code_path.parent() {
                     let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     let base_name = file_name.replace(".rs", "");
-                    
+
                     // Check for common Rust test file patterns
                     let test_patterns = vec![
                         format!("{}_test.rs", base_name),
@@ -617,14 +699,19 @@ impl CodeQualityScore {
                         "test.rs".to_string(),
                         "tests.rs".to_string(),
                     ];
-                    
-                    test_patterns.iter().any(|pattern| {
-                        parent.join(pattern).exists()
-                    }) || parent.join("tests").is_dir() || parent.join("tests").join(format!("{}.rs", base_name)).exists()
+
+                    test_patterns
+                        .iter()
+                        .any(|pattern| parent.join(pattern).exists())
+                        || parent.join("tests").is_dir()
+                        || parent
+                            .join("tests")
+                            .join(format!("{}.rs", base_name))
+                            .exists()
                 } else {
                     false
                 };
-                
+
                 if has_comprehensive_tests {
                     0.2 // Full credit for comprehensive inline tests
                 } else if has_inline_tests {
@@ -639,22 +726,27 @@ impl CodeQualityScore {
             }
             "ts" | "tsx" => {
                 // Enhanced test detection: Check for various test patterns
-                let has_describe = code_content.contains("describe(") || code_content.contains("describe (");
+                let has_describe =
+                    code_content.contains("describe(") || code_content.contains("describe (");
                 let has_it = code_content.contains("it(") || code_content.contains("it (");
                 let has_test = code_content.contains("test(") || code_content.contains("test (");
-                let has_before_each = code_content.contains("beforeEach") || code_content.contains("beforeAll");
-                let has_after_each = code_content.contains("afterEach") || code_content.contains("afterAll");
-                let has_expect = code_content.contains("expect(") || code_content.contains("assert(");
-                
+                let has_before_each =
+                    code_content.contains("beforeEach") || code_content.contains("beforeAll");
+                let has_after_each =
+                    code_content.contains("afterEach") || code_content.contains("afterAll");
+                let has_expect =
+                    code_content.contains("expect(") || code_content.contains("assert(");
+
                 // Inline tests: Multiple indicators suggest comprehensive testing
                 let has_inline_tests = (has_describe || has_test) && (has_it || has_expect);
-                let has_comprehensive_tests = has_inline_tests && (has_before_each || has_after_each);
-                
+                let has_comprehensive_tests =
+                    has_inline_tests && (has_before_each || has_after_each);
+
                 // Check for test files in same directory with better pattern matching
                 let has_test_file = if let Some(parent) = code_path.parent() {
                     let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     let base_name = file_name.replace(&format!(".{}", file_ext), "");
-                    
+
                     // Check for common test file patterns
                     let test_patterns = vec![
                         format!("{}.test.ts", base_name),
@@ -666,14 +758,16 @@ impl CodeQualityScore {
                         format!("test_{}.ts", base_name),
                         format!("test_{}.tsx", base_name),
                     ];
-                    
-                    test_patterns.iter().any(|pattern| {
-                        parent.join(pattern).exists()
-                    }) || parent.join("__tests__").is_dir() || parent.join("tests").is_dir()
+
+                    test_patterns
+                        .iter()
+                        .any(|pattern| parent.join(pattern).exists())
+                        || parent.join("__tests__").is_dir()
+                        || parent.join("tests").is_dir()
                 } else {
                     false
                 };
-                
+
                 if has_comprehensive_tests {
                     0.2 // Full credit for comprehensive inline tests
                 } else if has_inline_tests {
@@ -689,20 +783,25 @@ impl CodeQualityScore {
             "py" => {
                 // Enhanced test detection: Check for various Python test patterns
                 let has_test_function = code_content.contains("def test_");
-                let has_unittest = code_content.contains("import unittest") || code_content.contains("from unittest");
-                let has_pytest = code_content.contains("import pytest") || code_content.contains("from pytest");
-                let has_assert = code_content.contains("assert ") || code_content.contains("self.assert");
-                let _has_setup_teardown = code_content.contains("setUp") || code_content.contains("tearDown") || code_content.contains("fixture");
-                
+                let has_unittest = code_content.contains("import unittest")
+                    || code_content.contains("from unittest");
+                let has_pytest =
+                    code_content.contains("import pytest") || code_content.contains("from pytest");
+                let has_assert =
+                    code_content.contains("assert ") || code_content.contains("self.assert");
+                let _has_setup_teardown = code_content.contains("setUp")
+                    || code_content.contains("tearDown")
+                    || code_content.contains("fixture");
+
                 // Inline tests: Multiple indicators suggest comprehensive testing
                 let has_inline_tests = has_test_function || has_unittest || has_pytest;
                 let has_comprehensive_tests = has_inline_tests && has_assert;
-                
+
                 // Check for test files in same directory with better pattern matching
                 let has_test_file = if let Some(parent) = code_path.parent() {
                     let file_name = code_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     let base_name = file_name.replace(".py", "");
-                    
+
                     // Check for common Python test file patterns
                     let test_patterns = vec![
                         format!("test_{}.py", base_name),
@@ -710,14 +809,16 @@ impl CodeQualityScore {
                         format!("test_{}.py", base_name.replace("_", "")),
                         format!("tests_{}.py", base_name),
                     ];
-                    
-                    test_patterns.iter().any(|pattern| {
-                        parent.join(pattern).exists()
-                    }) || parent.join("tests").is_dir() || parent.join("test").is_dir()
+
+                    test_patterns
+                        .iter()
+                        .any(|pattern| parent.join(pattern).exists())
+                        || parent.join("tests").is_dir()
+                        || parent.join("test").is_dir()
                 } else {
                     false
                 };
-                
+
                 if has_comprehensive_tests {
                     0.2 // Full credit for comprehensive inline tests
                 } else if has_inline_tests {
@@ -730,7 +831,7 @@ impl CodeQualityScore {
                     0.0
                 }
             }
-            _ => 0.0
+            _ => 0.0,
         };
 
         // Documentation score: Language-specific doc patterns
@@ -738,22 +839,28 @@ impl CodeQualityScore {
         let documentation_score = match file_ext {
             "rs" => {
                 // Enhanced doc comment detection: Check for comprehensive documentation
-                let doc_comment_count = code_content.matches("///").count() + code_content.matches("//!").count();
-                let doc_params = code_content.matches("# Arguments").count() + code_content.matches("/// # Arguments").count();
-                let doc_returns = code_content.matches("# Returns").count() + code_content.matches("/// # Returns").count();
-                let doc_examples = code_content.matches("# Examples").count() + code_content.matches("/// # Examples").count();
-                let _doc_panics = code_content.matches("# Panics").count() + code_content.matches("/// # Panics").count();
-                
+                let doc_comment_count =
+                    code_content.matches("///").count() + code_content.matches("//!").count();
+                let doc_params = code_content.matches("# Arguments").count()
+                    + code_content.matches("/// # Arguments").count();
+                let doc_returns = code_content.matches("# Returns").count()
+                    + code_content.matches("/// # Returns").count();
+                let doc_examples = code_content.matches("# Examples").count()
+                    + code_content.matches("/// # Examples").count();
+                let _doc_panics = code_content.matches("# Panics").count()
+                    + code_content.matches("/// # Panics").count();
+
                 // Comprehensive docs have multiple sections
-                let has_comprehensive_docs = doc_comment_count > 0 && (doc_params > 0 || doc_returns > 0 || doc_examples > 0);
+                let has_comprehensive_docs = doc_comment_count > 0
+                    && (doc_params > 0 || doc_returns > 0 || doc_examples > 0);
                 let has_basic_docs = doc_comment_count > 0;
-                
+
                 // Count regular comments (//)
                 let comment_count = code_content.matches("//").count();
-                
+
                 // Check for module-level documentation
                 let has_module_docs = code_content.contains("//!") && doc_comment_count > 2;
-                
+
                 if has_comprehensive_docs {
                     0.2 // Full credit for comprehensive doc comments
                 } else if has_basic_docs || has_module_docs {
@@ -772,21 +879,23 @@ impl CodeQualityScore {
                 // Enhanced JSDoc detection: Check for comprehensive documentation patterns
                 let jsdoc_start = code_content.matches("/**").count();
                 let jsdoc_params = code_content.matches("@param").count();
-                let jsdoc_returns = code_content.matches("@returns").count() + code_content.matches("@return").count();
+                let jsdoc_returns = code_content.matches("@returns").count()
+                    + code_content.matches("@return").count();
                 let jsdoc_examples = code_content.matches("@example").count();
                 let _jsdoc_throws = code_content.matches("@throws").count();
                 let jsdoc_descriptions = code_content.matches("* @").count();
-                
+
                 // Comprehensive JSDoc has multiple elements
-                let has_comprehensive_jsdoc = jsdoc_start > 0 && (jsdoc_params > 0 || jsdoc_returns > 0 || jsdoc_examples > 0);
+                let has_comprehensive_jsdoc = jsdoc_start > 0
+                    && (jsdoc_params > 0 || jsdoc_returns > 0 || jsdoc_examples > 0);
                 let has_basic_jsdoc = jsdoc_start > 0 || jsdoc_descriptions > 0;
-                
+
                 // Count regular comments (//)
                 let comment_count = code_content.matches("//").count();
-                
+
                 // Check for type documentation in interfaces/types
                 let has_type_docs = code_content.contains("interface ") && comment_count > 3;
-                
+
                 if has_comprehensive_jsdoc {
                     0.2 // Full credit for comprehensive JSDoc
                 } else if has_basic_jsdoc {
@@ -807,23 +916,29 @@ impl CodeQualityScore {
                 let single_quotes = code_content.matches("'''").count();
                 // Docstrings come in pairs (opening and closing), so divide by 2
                 let docstring_count = (triple_quotes / 2) + (single_quotes / 2);
-                
+
                 // Check for comprehensive docstring patterns
-                let has_args_section = code_content.contains("Args:") || code_content.contains("Parameters:");
-                let has_returns_section = code_content.contains("Returns:") || code_content.contains("Return:");
-                let _has_raises_section = code_content.contains("Raises:") || code_content.contains("Exceptions:");
-                let has_examples = code_content.contains("Example:") || code_content.contains("Examples:");
-                
+                let has_args_section =
+                    code_content.contains("Args:") || code_content.contains("Parameters:");
+                let has_returns_section =
+                    code_content.contains("Returns:") || code_content.contains("Return:");
+                let _has_raises_section =
+                    code_content.contains("Raises:") || code_content.contains("Exceptions:");
+                let has_examples =
+                    code_content.contains("Example:") || code_content.contains("Examples:");
+
                 // Comprehensive docstrings have multiple sections
-                let has_comprehensive_docs = docstring_count > 0 && (has_args_section || has_returns_section || has_examples);
+                let has_comprehensive_docs = docstring_count > 0
+                    && (has_args_section || has_returns_section || has_examples);
                 let has_basic_docs = docstring_count > 0;
-                
+
                 // Count regular comments (#)
                 let comment_count = code_content.matches("#").count();
-                
+
                 // Check for module-level docstrings
-                let has_module_docs = code_content.starts_with("\"\"\"") || code_content.starts_with("'''");
-                
+                let has_module_docs =
+                    code_content.starts_with("\"\"\"") || code_content.starts_with("'''");
+
                 if has_comprehensive_docs {
                     0.2 // Full credit for comprehensive docstrings
                 } else if has_basic_docs || has_module_docs {
@@ -840,10 +955,10 @@ impl CodeQualityScore {
             }
             _ => {
                 // Generic: count all comment types
-                let comment_count = code_content.matches("//").count() 
-                    + code_content.matches("#").count() 
+                let comment_count = code_content.matches("//").count()
+                    + code_content.matches("#").count()
                     + code_content.matches("/*").count();
-                
+
                 if comment_count > 5 {
                     0.15
                 } else if comment_count > 0 {
@@ -854,7 +969,11 @@ impl CodeQualityScore {
             }
         };
 
-        let score: f64 = compilation_score + structure_score + error_handling_score + test_coverage_score + documentation_score;
+        let score: f64 = compilation_score
+            + structure_score
+            + error_handling_score
+            + test_coverage_score
+            + documentation_score;
 
         Self {
             score: score.min(1.0),
@@ -938,20 +1057,27 @@ impl WritingQualityScore {
         };
 
         // Grammar score: Basic grammar checks (simplified)
-        let grammar_score = if content.matches('.').count() > content.matches('!').count() + content.matches('?').count() {
+        let grammar_score = if content.matches('.').count()
+            > content.matches('!').count() + content.matches('?').count()
+        {
             0.2 // Has proper sentence structure
         } else {
             0.1
         };
 
         // Professionalism score: Check for professional tone
-        let professionalism_score = if !content.contains("lol") && !content.contains("omg") && !content.contains("wtf") {
-            0.2 // Professional tone
-        } else {
-            0.0
-        };
+        let professionalism_score =
+            if !content.contains("lol") && !content.contains("omg") && !content.contains("wtf") {
+                0.2 // Professional tone
+            } else {
+                0.0
+            };
 
-        let score: f64 = clarity_score + structure_score + completeness_score + grammar_score + professionalism_score;
+        let score: f64 = clarity_score
+            + structure_score
+            + completeness_score
+            + grammar_score
+            + professionalism_score;
 
         Self {
             score: score.min(1.0),
@@ -994,11 +1120,10 @@ impl OverallQualityScore {
         council_transparency: f64,
         output_quality: f64,
     ) -> Self {
-        let score =
-            reasoning_depth * 0.25 +
-            decision_quality * 0.25 +
-            council_transparency * 0.15 +
-            output_quality * 0.35;
+        let score = reasoning_depth * 0.25
+            + decision_quality * 0.25
+            + council_transparency * 0.15
+            + output_quality * 0.35;
 
         Self {
             score: score.min(1.0),
@@ -1024,12 +1149,18 @@ impl OverallQualityScore {
 #[cfg(feature = "full")]
 mod tests {
     use super::*;
-    use agent_orchestration::chain_of_thought::{DecisionPoint, DecisionType, DecisionContext, Alternative};
-    use std::collections::HashMap;
+    use agent_orchestration::chain_of_thought::{
+        Alternative, DecisionContext, DecisionPoint, DecisionType,
+    };
     use chrono::Utc;
+    use std::collections::HashMap;
     use uuid::Uuid;
 
-    fn create_test_decision(reasoning: &str, alternatives_count: usize, has_risk: bool) -> DecisionPoint {
+    fn create_test_decision(
+        reasoning: &str,
+        alternatives_count: usize,
+        has_risk: bool,
+    ) -> DecisionPoint {
         DecisionPoint {
             decision_id: Uuid::new_v4(),
             decision_type: DecisionType::WorkerAssignment,
@@ -1085,9 +1216,11 @@ mod tests {
 
     #[test]
     fn test_decision_quality_analysis() {
-        let decisions = vec![
-            create_test_decision("Based on the evidence, we should proceed because the data shows positive results", 2, true),
-        ];
+        let decisions = vec![create_test_decision(
+            "Based on the evidence, we should proceed because the data shows positive results",
+            2,
+            true,
+        )];
 
         let score = DecisionQualityScore::analyze(&decisions);
         assert!(score.score > 0.0);
@@ -1124,4 +1257,3 @@ The documentation covers all aspects thoroughly.
         assert_eq!(overall.decision_quality, 0.75);
     }
 }
-

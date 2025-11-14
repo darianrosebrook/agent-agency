@@ -7,19 +7,19 @@
 //! - Cross-references between knowledge sources
 //! - On-demand knowledge retrieval
 
-use schemars::JsonSchema;
 use crate::data_processing_types::*;
-use crate::{DataProcessingResult, DataProcessingError};
-use async_trait::async_trait;
-use std::collections::HashMap;
+use crate::{DataProcessingError, DataProcessingResult};
 #[cfg(feature = "memory-integration")]
 use agent_memory::graph_engine::RelationshipType;
+use async_trait::async_trait;
+use schemars::JsonSchema;
+use std::collections::HashMap;
 
 // Production-grade additions
+use backoff::{future::retry, ExponentialBackoff};
 use governor::{Quota, RateLimiter};
-use nonzero_ext::nonzero;
-use backoff::{ExponentialBackoff, future::retry};
 use moka::future::Cache;
+use nonzero_ext::nonzero;
 use std::sync::Arc;
 // Use workspace sqlx instead of rusqlite to avoid conflicts
 // use deadpool_sqlite::{Config, Pool, Runtime};
@@ -41,10 +41,17 @@ pub trait KnowledgeStage: Send + Sync {
     fn name(&self) -> &'static str;
 
     /// Integrate external knowledge with processed content
-    async fn integrate_knowledge(&self, input: DataInput, content: ProcessedContent) -> KnowledgeResult;
+    async fn integrate_knowledge(
+        &self,
+        input: DataInput,
+        content: ProcessedContent,
+    ) -> KnowledgeResult;
 
     /// Retrieve knowledge for a query
-    async fn retrieve_knowledge(&self, query: &KnowledgeQuery) -> DataProcessingResult<Vec<KnowledgeItem>>;
+    async fn retrieve_knowledge(
+        &self,
+        query: &KnowledgeQuery,
+    ) -> DataProcessingResult<Vec<KnowledgeItem>>;
 
     /// Get supported knowledge sources
     fn supported_sources(&self) -> &[KnowledgeSource];
@@ -159,7 +166,11 @@ impl KnowledgeStage for DefaultKnowledgeStage {
         "default_knowledge"
     }
 
-    async fn integrate_knowledge(&self, input: DataInput, mut content: ProcessedContent) -> KnowledgeResult {
+    async fn integrate_knowledge(
+        &self,
+        input: DataInput,
+        mut content: ProcessedContent,
+    ) -> KnowledgeResult {
         let start_time = std::time::Instant::now();
         let mut errors = Vec::new();
         let mut knowledge_relationships = Vec::new();
@@ -174,10 +185,13 @@ impl KnowledgeStage for DefaultKnowledgeStage {
         // Process results and create relationships
         for knowledge in knowledge_items {
             let title = knowledge.title.clone();
-            knowledge_relationships.extend(self.create_relationships_from_knowledge(&title, &knowledge));
+            knowledge_relationships
+                .extend(self.create_relationships_from_knowledge(&title, &knowledge));
 
             // Cache successful lookups
-            self.knowledge_cache.store_concept_knowledge(&title, knowledge).await?;
+            self.knowledge_cache
+                .store_concept_knowledge(&title, knowledge)
+                .await?;
         }
 
         // Fuse relationships by target to reduce redundancy and boost confidence
@@ -186,7 +200,10 @@ impl KnowledgeStage for DefaultKnowledgeStage {
         // Add knowledge relationships to content with normalized types and provenance
         for relationship in &knowledge_relationships {
             content.relationships.push(Relationship {
-                id: format!("knowledge_{}_{}", relationship.target_id, relationship.relationship_type),
+                id: format!(
+                    "knowledge_{}_{}",
+                    relationship.target_id, relationship.relationship_type
+                ),
                 source_entity: relationship.target_id.clone(), // This would be matched to existing entities
                 target_entity: relationship.target_id.clone(),
                 relationship_type: match CanonRel::from_str(&relationship.relationship_type) {
@@ -212,10 +229,18 @@ impl KnowledgeStage for DefaultKnowledgeStage {
 
         // Create metadata about knowledge integration
         let mut metadata = input.metadata.clone();
-        metadata.insert("knowledge_integrated".to_string(), (!knowledge_relationships.is_empty()).into());
-        metadata.insert("knowledge_sources_queried".to_string(),
-            serde_json::to_value(vec!["wikidata", "wordnet"]).unwrap_or(serde_json::Value::Null));
-        metadata.insert("knowledge_relationships_added".to_string(), knowledge_relationships.len().into());
+        metadata.insert(
+            "knowledge_integrated".to_string(),
+            (!knowledge_relationships.is_empty()).into(),
+        );
+        metadata.insert(
+            "knowledge_sources_queried".to_string(),
+            serde_json::to_value(vec!["wikidata", "wordnet"]).unwrap_or(serde_json::Value::Null),
+        );
+        metadata.insert(
+            "knowledge_relationships_added".to_string(),
+            knowledge_relationships.len().into(),
+        );
 
         let stats = ProcessingStats {
             processing_time_ms: start_time.elapsed().as_millis() as u64,
@@ -236,22 +261,32 @@ impl KnowledgeStage for DefaultKnowledgeStage {
         })
     }
 
-    async fn retrieve_knowledge(&self, query: &KnowledgeQuery) -> DataProcessingResult<Vec<KnowledgeItem>> {
+    async fn retrieve_knowledge(
+        &self,
+        query: &KnowledgeQuery,
+    ) -> DataProcessingResult<Vec<KnowledgeItem>> {
         let mut all_results = Vec::new();
 
         match query.query_type {
             KnowledgeQueryType::EntityLookup => {
                 for entity_id in &query.entity_ids {
                     // Try cache first
-                    if let Some(cached) = self.knowledge_cache.get_concept_knowledge(entity_id).await? {
+                    if let Some(cached) = self
+                        .knowledge_cache
+                        .get_concept_knowledge(entity_id)
+                        .await?
+                    {
                         all_results.push(cached);
                         continue;
                     }
 
                     // Query external sources
-                    if let Ok(Some(item)) = self.wikidata_integrator.lookup_concept(entity_id).await {
+                    if let Ok(Some(item)) = self.wikidata_integrator.lookup_concept(entity_id).await
+                    {
                         all_results.push(item);
-                    } else if let Ok(Some(item)) = self.wordnet_integrator.lookup_concept(entity_id).await {
+                    } else if let Ok(Some(item)) =
+                        self.wordnet_integrator.lookup_concept(entity_id).await
+                    {
                         all_results.push(item);
                     }
                 }
@@ -260,10 +295,18 @@ impl KnowledgeStage for DefaultKnowledgeStage {
             KnowledgeQueryType::ConceptSearch => {
                 if let Some(text) = &query.text_query {
                     // Search across all sources
-                    if let Ok(results) = self.wikidata_integrator.search_concepts(text, query.limit).await {
+                    if let Ok(results) = self
+                        .wikidata_integrator
+                        .search_concepts(text, query.limit)
+                        .await
+                    {
                         all_results.extend(results);
                     }
-                    if let Ok(results) = self.wordnet_integrator.search_concepts(text, query.limit).await {
+                    if let Ok(results) = self
+                        .wordnet_integrator
+                        .search_concepts(text, query.limit)
+                        .await
+                    {
                         all_results.extend(results);
                     }
                 }
@@ -271,9 +314,12 @@ impl KnowledgeStage for DefaultKnowledgeStage {
 
             KnowledgeQueryType::DefinitionLookup => {
                 for entity_id in &query.entity_ids {
-                    if let Ok(Some(item)) = self.wikidata_integrator.get_definition(entity_id).await {
+                    if let Ok(Some(item)) = self.wikidata_integrator.get_definition(entity_id).await
+                    {
                         all_results.push(item);
-                    } else if let Ok(Some(item)) = self.wordnet_integrator.get_definition(entity_id).await {
+                    } else if let Ok(Some(item)) =
+                        self.wordnet_integrator.get_definition(entity_id).await
+                    {
                         all_results.push(item);
                     }
                 }
@@ -281,12 +327,17 @@ impl KnowledgeStage for DefaultKnowledgeStage {
 
             KnowledgeQueryType::RelationshipQuery => {
                 for entity_id in &query.entity_ids {
-                    if let Ok(relationships) = self.wikidata_integrator.get_relationships(entity_id).await {
+                    if let Ok(relationships) =
+                        self.wikidata_integrator.get_relationships(entity_id).await
+                    {
                         let item = KnowledgeItem {
                             id: format!("relationships_{}", entity_id),
                             source: KnowledgeSource::Wikidata,
                             title: format!("Relationships for {}", entity_id),
-                            description: Some(format!("Knowledge relationships for entity {}", entity_id)),
+                            description: Some(format!(
+                                "Knowledge relationships for entity {}",
+                                entity_id
+                            )),
                             content: format!("Entity has {} relationships", relationships.len()),
                             entity_type: "relationship_set".to_string(),
                             confidence_score: 0.9,
@@ -301,17 +352,18 @@ impl KnowledgeStage for DefaultKnowledgeStage {
         }
 
         // Sort by confidence and limit results
-        all_results.sort_by(|a, b| b.confidence_score.partial_cmp(&a.confidence_score).unwrap_or(std::cmp::Ordering::Equal));
+        all_results.sort_by(|a, b| {
+            b.confidence_score
+                .partial_cmp(&a.confidence_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         all_results.truncate(query.limit);
 
         Ok(all_results)
     }
 
     fn supported_sources(&self) -> &[KnowledgeSource] {
-        &[
-            KnowledgeSource::Wikidata,
-            KnowledgeSource::WordNet,
-        ]
+        &[KnowledgeSource::Wikidata, KnowledgeSource::WordNet]
     }
 }
 
@@ -325,18 +377,23 @@ impl crate::pipeline::PipelineStage for DefaultKnowledgeStage {
         // Use tagged payload for safer deserialization
         let processed_content = match &input.content {
             DataContent::Structured(data) => {
-                let payload: KnowledgePayload = serde_json::from_value(data.clone())
-                    .map_err(|e| DataProcessingError::Validation(
-                        format!("Expected KnowledgePayload in structured data: {}", e)
-                    ))?;
+                let payload: KnowledgePayload =
+                    serde_json::from_value(data.clone()).map_err(|e| {
+                        DataProcessingError::Validation(format!(
+                            "Expected KnowledgePayload in structured data: {}",
+                            e
+                        ))
+                    })?;
 
                 match payload {
                     KnowledgePayload::ProcessedContent(pc) => pc,
                 }
             }
-            _ => return Err(DataProcessingError::Validation(
-                "Knowledge stage expects structured content with KnowledgePayload".to_string()
-            )),
+            _ => {
+                return Err(DataProcessingError::Validation(
+                    "Knowledge stage expects structured content with KnowledgePayload".to_string(),
+                ))
+            }
         };
 
         self.integrate_knowledge(input, processed_content).await
@@ -352,7 +409,10 @@ impl DefaultKnowledgeStage {
         // 1) Trust structured entities first (highest confidence)
         for entity in &content.entities {
             match entity.entity_type {
-                EntityType::Person | EntityType::Organization | EntityType::Location | EntityType::Event => {
+                EntityType::Person
+                | EntityType::Organization
+                | EntityType::Location
+                | EntityType::Event => {
                     let entity_name = entity.name.trim().to_string();
                     concepts.push(entity_name.clone());
                     // Also extract individual words from entity names (e.g., "John Smith" -> "John", "Smith")
@@ -393,7 +453,11 @@ impl DefaultKnowledgeStage {
             let mut current = Vec::new();
             for token in text.split_whitespace() {
                 let clean = token.trim_matches(|c: char| !c.is_alphanumeric());
-                let is_title = clean.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
+                let is_title = clean
+                    .chars()
+                    .next()
+                    .map(|c| c.is_uppercase())
+                    .unwrap_or(false);
 
                 if is_title && clean.len() > 1 {
                     // Add individual word
@@ -442,8 +506,12 @@ impl DefaultKnowledgeStage {
             async move {
                 let _permit = sem.acquire_owned().await.unwrap();
                 // Try cache via integrators first
-                if let Ok(Some(i)) = wikidata.lookup_concept(&c).await { return Ok::<KnowledgeItem, String>(i); }
-                if let Ok(Some(i)) = wordnet.lookup_concept(&c).await { return Ok(i); }
+                if let Ok(Some(i)) = wikidata.lookup_concept(&c).await {
+                    return Ok::<KnowledgeItem, String>(i);
+                }
+                if let Ok(Some(i)) = wordnet.lookup_concept(&c).await {
+                    return Ok(i);
+                }
                 Err::<KnowledgeItem, String>(c)
             }
         }))
@@ -469,12 +537,18 @@ impl DefaultKnowledgeStage {
     }
 
     /// Create relationships from knowledge items
-    fn create_relationships_from_knowledge(&self, _concept: &str, knowledge: &KnowledgeItem) -> Vec<KnowledgeRelationship> {
+    fn create_relationships_from_knowledge(
+        &self,
+        _concept: &str,
+        knowledge: &KnowledgeItem,
+    ) -> Vec<KnowledgeRelationship> {
         knowledge.relationships.clone()
     }
 
     /// Fuse relationships by target, preferring corroborated relationships
-    fn fuse_relationships_by_target(relationships: Vec<KnowledgeRelationship>) -> Vec<KnowledgeRelationship> {
+    fn fuse_relationships_by_target(
+        relationships: Vec<KnowledgeRelationship>,
+    ) -> Vec<KnowledgeRelationship> {
         use std::collections::BTreeMap;
 
         let mut map: BTreeMap<(String, String), (f64, Vec<String>)> = BTreeMap::new();
@@ -487,12 +561,14 @@ impl DefaultKnowledgeStage {
             entry.1.extend(r.evidence);
         }
 
-        map.into_iter().map(|((t, rel), (c, ev))| KnowledgeRelationship {
-            target_id: t,
-            relationship_type: rel,
-            confidence: c.min(1.0),
-            evidence: ev,
-        }).collect()
+        map.into_iter()
+            .map(|((t, rel), (c, ev))| KnowledgeRelationship {
+                target_id: t,
+                relationship_type: rel,
+                confidence: c.min(1.0),
+                evidence: ev,
+            })
+            .collect()
     }
 }
 
@@ -512,15 +588,16 @@ pub struct WikidataIntegrator {
 impl WikidataIntegrator {
     pub async fn new() -> DataProcessingResult<Self> {
         let client = reqwest::Client::builder()
-            .user_agent(concat!("AgentAgency/KnowledgeStage ", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!(
+                "AgentAgency/KnowledgeStage ",
+                env!("CARGO_PKG_VERSION")
+            ))
             .pool_idle_timeout(std::time::Duration::from_secs(30))
             .timeout(std::time::Duration::from_secs(10))
             .build()
             .map_err(|e| DataProcessingError::Http(format!("client build: {e}")))?;
 
-        let limiter = RateLimiter::direct(
-            Quota::per_minute(nonzero!(60u32))
-        );
+        let limiter = RateLimiter::direct(Quota::per_minute(nonzero!(60u32)));
 
         Ok(Self {
             cache: parking_lot::Mutex::new(HashMap::new()),
@@ -535,7 +612,8 @@ impl WikidataIntegrator {
         self.limiter.until_ready().await;
 
         let op = || async {
-            let resp = self.client
+            let resp = self
+                .client
                 .get(&self.base_url)
                 .query(params)
                 .send()
@@ -543,22 +621,31 @@ impl WikidataIntegrator {
                 .map_err(anyhow::Error::from)?;
 
             if resp.status().is_success() {
-                let v = resp.json::<serde_json::Value>().await
+                let v = resp
+                    .json::<serde_json::Value>()
+                    .await
                     .map_err(anyhow::Error::from)?;
                 Ok(v)
             } else if resp.status().as_u16() == 429 {
                 // Rate limited - retry
                 Err(backoff::Error::transient(anyhow::anyhow!("429")))
             } else {
-                Err(backoff::Error::permanent(anyhow::anyhow!("HTTP {}", resp.status())))
+                Err(backoff::Error::permanent(anyhow::anyhow!(
+                    "HTTP {}",
+                    resp.status()
+                )))
             }
         };
 
-        retry(ExponentialBackoff::default(), op).await
+        retry(ExponentialBackoff::default(), op)
+            .await
             .map_err(|e| DataProcessingError::Http(format!("wikidata request failed: {e}")))
     }
 
-    pub async fn lookup_concept(&self, concept: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+    pub async fn lookup_concept(
+        &self,
+        concept: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
         // Check cache first
         {
             let cache_guard = self.cache.lock();
@@ -569,16 +656,16 @@ impl WikidataIntegrator {
 
         // Search for entity by label
         let search_result = self.search_entity_by_label(concept).await?;
-        
+
         if let Some(entity_id) = search_result {
             // Get detailed entity information
             let item = self.get_entity_details(&entity_id, concept).await?;
-            
+
             // Cache the result
             if let Some(ref item) = item {
                 self.cache.lock().insert(concept.to_string(), item.clone());
             }
-            
+
             Ok(item)
         } else {
             Ok(None)
@@ -609,7 +696,11 @@ impl WikidataIntegrator {
     }
 
     /// Get detailed entity information from Wikidata with production-grade reliability
-    async fn get_entity_details(&self, entity_id: &str, concept: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+    async fn get_entity_details(
+        &self,
+        entity_id: &str,
+        concept: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
         let params = [
             ("action", "wbgetentities"),
             ("format", "json"),
@@ -639,7 +730,9 @@ impl WikidataIntegrator {
                 source: KnowledgeSource::Wikidata,
                 title,
                 description: description.clone(),
-                content: description.clone().unwrap_or_else(|| "No description available".to_string()),
+                content: description
+                    .clone()
+                    .unwrap_or_else(|| "No description available".to_string()),
                 entity_type,
                 confidence_score: 0.9,
                 relationships,
@@ -654,7 +747,10 @@ impl WikidataIntegrator {
     }
 
     /// Determine entity type from Wikidata claims
-    fn determine_entity_type(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> String {
+    fn determine_entity_type(
+        &self,
+        entity_data: &serde_json::Map<String, serde_json::Value>,
+    ) -> String {
         if let Some(claims) = entity_data.get("claims") {
             // Check for instance of (P31)
             if let Some(instance_of) = claims.get("P31") {
@@ -679,39 +775,49 @@ impl WikidataIntegrator {
     /// Map Wikidata entity IDs to entity types
     fn map_wikidata_type_to_entity_type(&self, wikidata_id: &str) -> String {
         match wikidata_id {
-            "Q5" => "person".to_string(),           // human
-            "Q43229" => "organization".to_string(),  // organization
-            "Q515" => "city".to_string(),            // city
-            "Q6256" => "country".to_string(),       // country
+            "Q5" => "person".to_string(),                // human
+            "Q43229" => "organization".to_string(),      // organization
+            "Q515" => "city".to_string(),                // city
+            "Q6256" => "country".to_string(),            // country
             "Q486972" => "human settlement".to_string(), // human settlement
-            "Q16521" => "taxon".to_string(),        // taxon
-            "Q7725634" => "literary work".to_string(), // literary work
-            "Q11424" => "film".to_string(),         // film
-            "Q3305213" => "painting".to_string(),   // painting
+            "Q16521" => "taxon".to_string(),             // taxon
+            "Q7725634" => "literary work".to_string(),   // literary work
+            "Q11424" => "film".to_string(),              // film
+            "Q3305213" => "painting".to_string(),        // painting
             _ => "entity".to_string(),
         }
     }
 
     /// Extract relationships from Wikidata claims
-    fn extract_relationships(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> Vec<KnowledgeRelationship> {
+    fn extract_relationships(
+        &self,
+        entity_data: &serde_json::Map<String, serde_json::Value>,
+    ) -> Vec<KnowledgeRelationship> {
         let mut relationships = Vec::new();
 
         if let Some(claims) = entity_data.get("claims") {
-            for (property_id, claim_values) in claims.as_object().unwrap_or(&serde_json::Map::new()) {
+            for (property_id, claim_values) in claims.as_object().unwrap_or(&serde_json::Map::new())
+            {
                 if let Some(values) = claim_values.as_array() {
                     for value in values {
                         if let Some(mainsnak) = value.get("mainsnak") {
                             if let Some(datavalue) = mainsnak.get("datavalue") {
                                 if let Some(value_data) = datavalue.get("value") {
-                                    if let Some(target_id) = value_data.get("id").and_then(|v| v.as_str()) {
-                                        let relationship_type = self.map_property_to_relationship_type(property_id);
+                                    if let Some(target_id) =
+                                        value_data.get("id").and_then(|v| v.as_str())
+                                    {
+                                        let relationship_type =
+                                            self.map_property_to_relationship_type(property_id);
                                         let confidence = self.calculate_claim_confidence(value);
-                                        
+
                                         relationships.push(KnowledgeRelationship {
                                             target_id: target_id.to_string(),
                                             relationship_type,
                                             confidence,
-                                            evidence: vec![format!("Wikidata property {}", property_id)],
+                                            evidence: vec![format!(
+                                                "Wikidata property {}",
+                                                property_id
+                                            )],
                                         });
                                     }
                                 }
@@ -728,16 +834,16 @@ impl WikidataIntegrator {
     /// Map Wikidata property IDs to relationship types
     fn map_property_to_relationship_type(&self, property_id: &str) -> String {
         match property_id {
-            "P17" => "country".to_string(),           // country
-            "P131" => "located_in".to_string(),       // located in administrative territorial entity
-            "P19" => "place_of_birth".to_string(),   // place of birth
-            "P20" => "place_of_death".to_string(),   // place of death
-            "P27" => "citizen_of".to_string(),       // country of citizenship
-            "P106" => "occupation".to_string(),      // occupation
-            "P108" => "employer".to_string(),        // employer
-            "P39" => "position_held".to_string(),    // position held
-            "P569" => "date_of_birth".to_string(),   // date of birth
-            "P570" => "date_of_death".to_string(),   // date of death
+            "P17" => "country".to_string(),        // country
+            "P131" => "located_in".to_string(),    // located in administrative territorial entity
+            "P19" => "place_of_birth".to_string(), // place of birth
+            "P20" => "place_of_death".to_string(), // place of death
+            "P27" => "citizen_of".to_string(),     // country of citizenship
+            "P106" => "occupation".to_string(),    // occupation
+            "P108" => "employer".to_string(),      // employer
+            "P39" => "position_held".to_string(),  // position held
+            "P569" => "date_of_birth".to_string(), // date of birth
+            "P570" => "date_of_death".to_string(), // date of death
             _ => "related_to".to_string(),
         }
     }
@@ -765,23 +871,37 @@ impl WikidataIntegrator {
     }
 
     /// Extract metadata from Wikidata entity
-    fn extract_metadata(&self, entity_data: &serde_json::Map<String, serde_json::Value>) -> HashMap<String, serde_json::Value> {
+    fn extract_metadata(
+        &self,
+        entity_data: &serde_json::Map<String, serde_json::Value>,
+    ) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
 
         // Add basic metadata
-        metadata.insert("wikidata_id".to_string(), entity_data.get("id").cloned().unwrap_or(serde_json::Value::Null));
-        
+        metadata.insert(
+            "wikidata_id".to_string(),
+            entity_data
+                .get("id")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+        );
+
         // Extract specific claims as metadata
         if let Some(claims) = entity_data.get("claims") {
             // Population (P1082)
             if let Some(population) = claims.get("P1082") {
                 if let Some(first_value) = population.as_array().and_then(|a| a.first()) {
-                    if let Some(amount) = first_value.get("mainsnak")
+                    if let Some(amount) = first_value
+                        .get("mainsnak")
                         .and_then(|s| s.get("datavalue"))
                         .and_then(|d| d.get("value"))
                         .and_then(|v| v.get("amount"))
-                        .and_then(|a| a.as_str()) {
-                        metadata.insert("population".to_string(), amount.parse::<f64>().unwrap_or(0.0).into());
+                        .and_then(|a| a.as_str())
+                    {
+                        metadata.insert(
+                            "population".to_string(),
+                            amount.parse::<f64>().unwrap_or(0.0).into(),
+                        );
                     }
                 }
             }
@@ -789,9 +909,11 @@ impl WikidataIntegrator {
             // Coordinates (P625)
             if let Some(coordinates) = claims.get("P625") {
                 if let Some(first_value) = coordinates.as_array().and_then(|a| a.first()) {
-                    if let Some(value) = first_value.get("mainsnak")
+                    if let Some(value) = first_value
+                        .get("mainsnak")
                         .and_then(|s| s.get("datavalue"))
-                        .and_then(|d| d.get("value")) {
+                        .and_then(|d| d.get("value"))
+                    {
                         metadata.insert("coordinates".to_string(), value.clone());
                     }
                 }
@@ -801,7 +923,11 @@ impl WikidataIntegrator {
         metadata
     }
 
-    pub async fn search_concepts(&self, query: &str, limit: usize) -> DataProcessingResult<Vec<KnowledgeItem>> {
+    pub async fn search_concepts(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> DataProcessingResult<Vec<KnowledgeItem>> {
         let params = [
             ("action", "wbsearchentities"),
             ("format", "json"),
@@ -819,22 +945,25 @@ impl WikidataIntegrator {
                 if let Some(entity_id) = result["id"].as_str() {
                     if let Some(title) = result["label"].as_str() {
                         let description = result["description"].as_str().map(|s| s.to_string());
-                        
+
                         let item = KnowledgeItem {
                             id: entity_id.to_string(),
                             source: KnowledgeSource::Wikidata,
                             title: title.to_string(),
                             description: description.clone(),
-                            content: description.clone().unwrap_or_else(|| "No description available".to_string()),
+                            content: description
+                                .clone()
+                                .unwrap_or_else(|| "No description available".to_string()),
                             entity_type: "unknown".to_string(),
                             confidence_score: 0.8,
                             relationships: vec![],
-                            metadata: HashMap::from([
-                                ("wikidata_id".to_string(), entity_id.into()),
-                            ]),
+                            metadata: HashMap::from([(
+                                "wikidata_id".to_string(),
+                                entity_id.into(),
+                            )]),
                             last_updated: chrono::Utc::now(),
                         };
-                        
+
                         results.push(item);
                     }
                 }
@@ -844,11 +973,17 @@ impl WikidataIntegrator {
         Ok(results)
     }
 
-    pub async fn get_definition(&self, entity_id: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+    pub async fn get_definition(
+        &self,
+        entity_id: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
         self.lookup_concept(entity_id).await
     }
 
-    pub async fn get_relationships(&self, entity_id: &str) -> DataProcessingResult<Vec<KnowledgeRelationship>> {
+    pub async fn get_relationships(
+        &self,
+        entity_id: &str,
+    ) -> DataProcessingResult<Vec<KnowledgeRelationship>> {
         if let Some(item) = self.lookup_concept(entity_id).await? {
             Ok(item.relationships)
         } else {
@@ -906,7 +1041,8 @@ impl SqliteWordNet {
         // - CAWS Tier: 2 (data loading functionality)
         // - Change Budget: ~250 LOC
         // - Reviewer Requirements: Data loading and archive processing expertise
-        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:")
+            .await
             .map_err(DataProcessingError::Database)?;
 
         // TODO: Implement full WordNet schema initialization
@@ -916,7 +1052,7 @@ impl SqliteWordNet {
                 lemma TEXT PRIMARY KEY,
                 synset_id TEXT NOT NULL,
                 definition TEXT NOT NULL
-            )"
+            )",
         )
         .execute(&pool)
         .await
@@ -931,12 +1067,11 @@ impl WordNetBackend for SqliteWordNet {
     async fn lookup(&self, lemma: &str) -> anyhow::Result<Option<KnowledgeItem>> {
         let lemma_lower = lemma.to_lowercase();
 
-        let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT synset_id, definition FROM synsets WHERE lemma = ?1 LIMIT 1"
-        )
-        .bind(&lemma_lower)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row: Option<(String, String)> =
+            sqlx::query_as("SELECT synset_id, definition FROM synsets WHERE lemma = ?1 LIMIT 1")
+                .bind(&lemma_lower)
+                .fetch_optional(&self.pool)
+                .await?;
 
         Ok(row.map(|(id, def)| KnowledgeItem {
             id: format!("wn_{id}"),
@@ -956,25 +1091,28 @@ impl WordNetBackend for SqliteWordNet {
         let query = format!("%{}%", query.to_lowercase());
 
         let rows: Vec<(String, String, String)> = sqlx::query_as(
-            "SELECT lemma, synset_id, definition FROM synsets WHERE lemma LIKE ?1 LIMIT ?2"
+            "SELECT lemma, synset_id, definition FROM synsets WHERE lemma LIKE ?1 LIMIT ?2",
         )
         .bind(query)
         .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        let items = rows.into_iter().map(|(lemma, id, def)| KnowledgeItem {
-            id: format!("wn_{id}"),
-            source: KnowledgeSource::WordNet,
-            title: lemma.clone(),
-            description: Some(def.clone()),
-            content: def,
-            entity_type: "synset".into(),
-            confidence_score: 0.8,
-            relationships: vec![],
-            metadata: HashMap::new(),
-            last_updated: chrono::Utc::now(),
-        }).collect();
+        let items = rows
+            .into_iter()
+            .map(|(lemma, id, def)| KnowledgeItem {
+                id: format!("wn_{id}"),
+                source: KnowledgeSource::WordNet,
+                title: lemma.clone(),
+                description: Some(def.clone()),
+                content: def,
+                entity_type: "synset".into(),
+                confidence_score: 0.8,
+                relationships: vec![],
+                metadata: HashMap::new(),
+                last_updated: chrono::Utc::now(),
+            })
+            .collect();
 
         Ok(items)
     }
@@ -1053,17 +1191,31 @@ impl WordNetIntegrator {
         Ok(Self { backend })
     }
 
-    pub async fn lookup_concept(&self, concept: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
-        self.backend.lookup(concept).await
+    pub async fn lookup_concept(
+        &self,
+        concept: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
+        self.backend
+            .lookup(concept)
+            .await
             .map_err(|e| DataProcessingError::Other(format!("WordNet lookup failed: {:?}", e)))
     }
 
-    pub async fn search_concepts(&self, query: &str, limit: usize) -> DataProcessingResult<Vec<KnowledgeItem>> {
-        self.backend.search(query, limit).await
+    pub async fn search_concepts(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> DataProcessingResult<Vec<KnowledgeItem>> {
+        self.backend
+            .search(query, limit)
+            .await
             .map_err(|e| DataProcessingError::Other(format!("WordNet search failed: {:?}", e)))
     }
 
-    pub async fn get_definition(&self, entity_id: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+    pub async fn get_definition(
+        &self,
+        entity_id: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
         self.lookup_concept(entity_id).await
     }
 }
@@ -1083,12 +1235,19 @@ impl KnowledgeCache {
         }
     }
 
-    pub async fn store_concept_knowledge(&self, concept: &str, knowledge: KnowledgeItem) -> DataProcessingResult<()> {
+    pub async fn store_concept_knowledge(
+        &self,
+        concept: &str,
+        knowledge: KnowledgeItem,
+    ) -> DataProcessingResult<()> {
         self.cache.insert(concept.to_string(), knowledge).await;
         Ok(())
     }
 
-    pub async fn get_concept_knowledge(&self, concept: &str) -> DataProcessingResult<Option<KnowledgeItem>> {
+    pub async fn get_concept_knowledge(
+        &self,
+        concept: &str,
+    ) -> DataProcessingResult<Option<KnowledgeItem>> {
         Ok(self.cache.get(concept).await)
     }
 }
@@ -1115,7 +1274,10 @@ mod tests {
         assert_eq!(item.source, KnowledgeSource::Wikidata);
 
         // Test unknown concept
-        let result = integrator.lookup_concept("UnknownConcept123").await.unwrap();
+        let result = integrator
+            .lookup_concept("UnknownConcept123")
+            .await
+            .unwrap();
         assert!(result.is_none());
     }
 
@@ -1153,7 +1315,10 @@ mod tests {
         };
 
         // Store and retrieve
-        cache.store_concept_knowledge("test_concept", item.clone()).await.unwrap();
+        cache
+            .store_concept_knowledge("test_concept", item.clone())
+            .await
+            .unwrap();
         let retrieved = cache.get_concept_knowledge("test_concept").await.unwrap();
 
         assert!(retrieved.is_some());
@@ -1162,26 +1327,26 @@ mod tests {
 
     #[test]
     fn test_concept_extraction() {
-        let stage = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            DefaultKnowledgeStage::new().await.unwrap()
-        });
+        let stage = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(async { DefaultKnowledgeStage::new().await.unwrap() });
 
         let content: ProcessedContent = ProcessedContent {
             content_type: ContentType::Text,
-            data: ProcessedContentData::Text("John Smith works at Apple Inc in New York.".to_string()),
+            data: ProcessedContentData::Text(
+                "John Smith works at Apple Inc in New York.".to_string(),
+            ),
             text_content: Some("John Smith works at Apple Inc in New York.".to_string()),
             structured_data: None,
             embeddings: None,
-            entities: vec![
-                Entity {
-                    id: "john".to_string(),
-                    name: "John Smith".to_string(),
-                    entity_type: EntityType::Person,
-                    confidence: 0.9,
-                    positions: vec![],
-                    metadata: HashMap::new(),
-                }
-            ],
+            entities: vec![Entity {
+                id: "john".to_string(),
+                name: "John Smith".to_string(),
+                entity_type: EntityType::Person,
+                confidence: 0.9,
+                positions: vec![],
+                metadata: HashMap::new(),
+            }],
             relationships: vec![],
             visual_elements: vec![],
             audio_transcript: None,

@@ -6,9 +6,9 @@
 //!
 //! @author @darianrosebrook
 
+use crate::errors::DataProcessingResult;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::errors::DataProcessingResult;
 
 /// Supported data formats for processing
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, JsonSchema)]
@@ -140,7 +140,8 @@ pub trait DataProcessingService: Send + Sync {
     ///
     /// # Returns
     /// Processed data result or error if processing fails
-    async fn process_data(&self, context: ProcessingContext) -> DataProcessingResult<ProcessedData>;
+    async fn process_data(&self, context: ProcessingContext)
+        -> DataProcessingResult<ProcessedData>;
 
     /// Batch process multiple data sources
     ///
@@ -149,7 +150,10 @@ pub trait DataProcessingService: Send + Sync {
     ///
     /// # Returns
     /// Vector of processing results (may contain errors for individual items)
-    async fn batch_process(&self, contexts: Vec<ProcessingContext>) -> DataProcessingResult<Vec<Result<ProcessedData, String>>>;
+    async fn batch_process(
+        &self,
+        contexts: Vec<ProcessingContext>,
+    ) -> DataProcessingResult<Vec<Result<ProcessedData, String>>>;
 
     /// Validate data format and content
     ///
@@ -158,7 +162,10 @@ pub trait DataProcessingService: Send + Sync {
     ///
     /// # Returns
     /// Validation result indicating if data can be processed
-    async fn validate_data(&self, context: &ProcessingContext) -> DataProcessingResult<ValidationResult>;
+    async fn validate_data(
+        &self,
+        context: &ProcessingContext,
+    ) -> DataProcessingResult<ValidationResult>;
 
     /// Get supported data formats
     ///
@@ -173,7 +180,10 @@ pub trait DataProcessingService: Send + Sync {
     ///
     /// # Returns
     /// File operation result
-    async fn file_operation(&self, operation: FileOperation) -> DataProcessingResult<FileOperationResult>;
+    async fn file_operation(
+        &self,
+        operation: FileOperation,
+    ) -> DataProcessingResult<FileOperationResult>;
 
     /// Get processing statistics
     ///

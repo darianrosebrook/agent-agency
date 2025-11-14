@@ -22,14 +22,20 @@ impl DeploymentRegistry {
     }
 
     /// Register a deployment
-    pub async fn register_deployment(&self, info: DeploymentInfo) -> Result<(), ModelManagementError> {
+    pub async fn register_deployment(
+        &self,
+        info: DeploymentInfo,
+    ) -> Result<(), ModelManagementError> {
         let mut deployments = self.deployments.write().await;
         deployments.insert(info.model_id.clone(), info);
         Ok(())
     }
 
     /// Get deployment info
-    pub async fn get_deployment(&self, model_id: &str) -> Result<Option<DeploymentInfo>, ModelManagementError> {
+    pub async fn get_deployment(
+        &self,
+        model_id: &str,
+    ) -> Result<Option<DeploymentInfo>, ModelManagementError> {
         let deployments = self.deployments.read().await;
         Ok(deployments.get(model_id).cloned())
     }

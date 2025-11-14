@@ -3,16 +3,16 @@
 //! Ensures data integrity across distributed systems during failures,
 //! failovers, and recovery operations.
 
+use chrono::{DateTime, Utc};
+use futures_util::future::join_all;
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
-use futures_util::future::join_all;
 
 use crate::simple_client::DatabaseClient;
 
@@ -64,10 +64,8 @@ pub struct DistributedTransaction {
     pub participants: Vec<TransactionParticipant>, // Detailed participant info
     pub state: TransactionState,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub timeout_at: DateTime<Utc>,
     pub metadata: serde_json::Value,
 }
@@ -90,7 +88,6 @@ pub enum ConsistencyLevel {
 pub struct ConsistencyCheckResult {
     pub check_id: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub service_id: String,
     pub table_name: String,
@@ -167,8 +164,9 @@ impl DataConsistencyManager {
             participants,
             state: TransactionState::Pending,
             created_at: Utc::now(),
-            timeout_at: Utc::now() + chrono::Duration::from_std(timeout_duration)
-                .map_err(|_| "Invalid timeout duration")?,
+            timeout_at: Utc::now()
+                + chrono::Duration::from_std(timeout_duration)
+                    .map_err(|_| "Invalid timeout duration")?,
             metadata: serde_json::json!({}),
         };
 
@@ -186,11 +184,15 @@ impl DataConsistencyManager {
     /// Prepare phase of two-phase commit
     pub async fn prepare_transaction(&self, transaction_id: &str) -> Result<(), String> {
         let mut transactions = self.transactions.write().await;
-        let transaction = transactions.get_mut(transaction_id)
+        let transaction = transactions
+            .get_mut(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
         if transaction.state != TransactionState::Pending {
-            return Err(format!("Transaction {} is not in pending state", transaction_id));
+            return Err(format!(
+                "Transaction {} is not in pending state",
+                transaction_id
+            ));
         }
 
         // Coordinate prepare phase with all participants
@@ -205,7 +207,10 @@ impl DataConsistencyManager {
                 match self.execute_prepare_phase(&participant, &tx_id).await {
                     Ok(()) => Ok(Vote::Yes),
                     Err(e) => {
-                        warn!("Participant {} failed prepare phase: {}", participant.service_id, e);
+                        warn!(
+                            "Participant {} failed prepare phase: {}",
+                            participant.service_id, e
+                        );
                         Ok(Vote::No)
                     }
                 }
@@ -221,7 +226,10 @@ impl DataConsistencyManager {
                     if vote == Vote::No {
                         // If any participant votes no, abort the entire transaction
                         self.abort_distributed_transaction(transaction_id).await?;
-                        return Err(format!("Participant {} voted to abort transaction {}", i, transaction_id));
+                        return Err(format!(
+                            "Participant {} voted to abort transaction {}",
+                            i, transaction_id
+                        ));
                     }
                 }
                 Err(e) => {
@@ -238,20 +246,31 @@ impl DataConsistencyManager {
             tx.state = TransactionState::InDoubt;
         }
 
-        self.persist_transaction_state(transaction_id, TransactionState::InDoubt).await?;
+        self.persist_transaction_state(transaction_id, TransactionState::InDoubt)
+            .await?;
 
-        info!("Successfully prepared transaction: {} with {} participants", transaction_id, participant_count);
+        info!(
+            "Successfully prepared transaction: {} with {} participants",
+            transaction_id, participant_count
+        );
         Ok(())
     }
 
     /// Commit phase of two-phase commit
     pub async fn commit_transaction(&self, transaction_id: &str) -> Result<(), String> {
         let mut transactions = self.transactions.write().await;
-        let transaction = transactions.get_mut(transaction_id)
+        let transaction = transactions
+            .get_mut(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
-        if !matches!(transaction.state, TransactionState::Pending | TransactionState::InDoubt) {
-            return Err(format!("Transaction {} cannot be committed from state {:?}", transaction_id, transaction.state));
+        if !matches!(
+            transaction.state,
+            TransactionState::Pending | TransactionState::InDoubt
+        ) {
+            return Err(format!(
+                "Transaction {} cannot be committed from state {:?}",
+                transaction_id, transaction.state
+            ));
         }
 
         // Coordinate commit phase with all participants
@@ -266,7 +285,10 @@ impl DataConsistencyManager {
                 match self.execute_commit_phase(&participant, &tx_id).await {
                     Ok(()) => Ok(()),
                     Err(e) => {
-                        warn!("Participant {} failed commit phase: {}", participant.service_id, e);
+                        warn!(
+                            "Participant {} failed commit phase: {}",
+                            participant.service_id, e
+                        );
                         Err(format!("Participant {} commit failed: {}", i, e))
                     }
                 }
@@ -316,7 +338,10 @@ impl DataConsistencyManager {
             // - CAWS Tier: 1 (critical distributed systems feature)
             // - Change Budget: ~150 LOC
             // - Reviewer Requirements: Distributed systems expertise
-            warn!("Some participants failed to commit transaction {}: {:?}", transaction_id, commit_failures); // Temporary: log until recovery procedures are implemented
+            warn!(
+                "Some participants failed to commit transaction {}: {:?}",
+                transaction_id, commit_failures
+            ); // Temporary: log until recovery procedures are implemented
         }
 
         // Mark transaction as committed
@@ -325,25 +350,35 @@ impl DataConsistencyManager {
             tx.state = TransactionState::Committed;
         }
 
-        self.persist_transaction_state(transaction_id, TransactionState::Committed).await?;
+        self.persist_transaction_state(transaction_id, TransactionState::Committed)
+            .await?;
 
-        info!("Committed distributed transaction: {} with {} participants", transaction_id, participants.len());
+        info!(
+            "Committed distributed transaction: {} with {} participants",
+            transaction_id,
+            participants.len()
+        );
         Ok(())
     }
 
     /// Abort transaction
     pub async fn abort_transaction(&self, transaction_id: &str) -> Result<(), String> {
         let mut transactions = self.transactions.write().await;
-        let transaction = transactions.get_mut(transaction_id)
+        let transaction = transactions
+            .get_mut(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
         if transaction.state == TransactionState::Committed {
-            return Err(format!("Cannot abort committed transaction: {}", transaction_id));
+            return Err(format!(
+                "Cannot abort committed transaction: {}",
+                transaction_id
+            ));
         }
 
         transaction.state = TransactionState::Aborted;
 
-        self.persist_transaction_state(transaction_id, TransactionState::Aborted).await?;
+        self.persist_transaction_state(transaction_id, TransactionState::Aborted)
+            .await?;
 
         info!("Aborted transaction: {}", transaction_id);
         Ok(())
@@ -352,7 +387,8 @@ impl DataConsistencyManager {
     /// Recover in-doubt transactions after failure
     pub async fn recover_in_doubt_transactions(&self) -> Result<Vec<String>, String> {
         let transactions = self.transactions.read().await;
-        let in_doubt: Vec<_> = transactions.iter()
+        let in_doubt: Vec<_> = transactions
+            .iter()
             .filter(|(_, tx)| tx.state == TransactionState::InDoubt)
             .map(|(id, _)| id.clone())
             .collect();
@@ -405,7 +441,8 @@ impl DataConsistencyManager {
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Distributed systems expertise
         let transactions = self.transactions.read().await; // Temporary: simple heuristic until participant query is implemented
-        let transaction = transactions.get(transaction_id)
+        let transaction = transactions
+            .get(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
         // If transaction timed out, abort it
@@ -424,7 +461,8 @@ impl DataConsistencyManager {
     /// Persist transaction to database
     async fn persist_transaction(&self, transaction_id: &str) -> Result<(), String> {
         let transactions = self.transactions.read().await;
-        let transaction = transactions.get(transaction_id)
+        let transaction = transactions
+            .get(transaction_id)
             .ok_or(format!("Transaction not found: {}", transaction_id))?;
 
         let query = r#"
@@ -436,44 +474,50 @@ impl DataConsistencyManager {
                 metadata = EXCLUDED.metadata
         "#;
 
-        let participants_json = serde_json::to_string(&transaction.participants)
-            .map_err(|e| e.to_string())?;
-        let state_json = serde_json::to_string(&transaction.state)
-            .map_err(|e| e.to_string())?;
-        let metadata_json = serde_json::to_string(&transaction.metadata)
-            .map_err(|e| e.to_string())?;
+        let participants_json =
+            serde_json::to_string(&transaction.participants).map_err(|e| e.to_string())?;
+        let state_json = serde_json::to_string(&transaction.state).map_err(|e| e.to_string())?;
+        let metadata_json =
+            serde_json::to_string(&transaction.metadata).map_err(|e| e.to_string())?;
         let created_at_str = transaction.created_at.to_rfc3339();
         let timeout_at_str = transaction.timeout_at.to_rfc3339();
 
-        self.db_client.execute(
-            query,
-            &[
-                &transaction.id,
-                &transaction.coordinator_id,
-                &participants_json,
-                &state_json,
-                &created_at_str,
-                &timeout_at_str,
-                &metadata_json,
-            ],
-        ).await
-        .map_err(|e| format!("Failed to persist transaction: {}", e))?;
+        self.db_client
+            .execute(
+                query,
+                &[
+                    &transaction.id,
+                    &transaction.coordinator_id,
+                    &participants_json,
+                    &state_json,
+                    &created_at_str,
+                    &timeout_at_str,
+                    &metadata_json,
+                ],
+            )
+            .await
+            .map_err(|e| format!("Failed to persist transaction: {}", e))?;
 
         Ok(())
     }
 
     /// Persist transaction state change
-    async fn persist_transaction_state(&self, transaction_id: &str, new_state: TransactionState) -> Result<(), String> {
+    async fn persist_transaction_state(
+        &self,
+        transaction_id: &str,
+        new_state: TransactionState,
+    ) -> Result<(), String> {
         let query = r#"
             UPDATE distributed_transactions
             SET state = $1, updated_at = NOW()
             WHERE id = $2
         "#;
 
-        let state_str = serde_json::to_string(&new_state)
-            .map_err(|e| e.to_string())?;
+        let state_str = serde_json::to_string(&new_state).map_err(|e| e.to_string())?;
 
-        self.db_client.execute(query, &[&state_str, &transaction_id.to_string()]).await
+        self.db_client
+            .execute(query, &[&state_str, &transaction_id.to_string()])
+            .await
             .map_err(|e| format!("Failed to update transaction state: {}", e))?;
 
         Ok(())
@@ -487,11 +531,18 @@ impl DataConsistencyManager {
         primary_connection: &DatabaseClient,
         replica_connection: &DatabaseClient,
     ) -> Result<ConsistencyCheckResult, String> {
-        let check_id = format!("consistency_check_{}_{}_{}",
-            service_id, table_name, Utc::now().timestamp());
+        let check_id = format!(
+            "consistency_check_{}_{}_{}",
+            service_id,
+            table_name,
+            Utc::now().timestamp()
+        );
         let start_time = Instant::now();
 
-        info!("Starting consistency check: {} for table {}", check_id, table_name);
+        info!(
+            "Starting consistency check: {} for table {}",
+            check_id, table_name
+        );
 
         // Get row counts from primary and replica
         let primary_count = self.get_table_count(primary_connection, table_name).await?;
@@ -500,16 +551,17 @@ impl DataConsistencyManager {
         let mut inconsistencies = Vec::new();
 
         // If counts differ significantly, check for specific inconsistencies
-        if (primary_count - replica_count).abs() > 10 { // Allow small differences for replication lag
-            inconsistencies = self.find_inconsistencies(
-                primary_connection,
-                replica_connection,
-                table_name,
-            ).await?;
+        if (primary_count - replica_count).abs() > 10 {
+            // Allow small differences for replication lag
+            inconsistencies = self
+                .find_inconsistencies(primary_connection, replica_connection, table_name)
+                .await?;
         }
 
-        let is_consistent = inconsistencies.is_empty() ||
-            inconsistencies.iter().all(|i| i.severity == InconsistencySeverity::Low);
+        let is_consistent = inconsistencies.is_empty()
+            || inconsistencies
+                .iter()
+                .all(|i| i.severity == InconsistencySeverity::Low);
 
         let result = ConsistencyCheckResult {
             check_id: check_id.clone(),
@@ -534,14 +586,23 @@ impl DataConsistencyManager {
             }
         }
 
-        info!("Consistency check completed: {} (consistent: {})", check_id, is_consistent);
+        info!(
+            "Consistency check completed: {} (consistent: {})",
+            check_id, is_consistent
+        );
         Ok(result)
     }
 
     /// Get row count for a table
-    async fn get_table_count(&self, db_client: &DatabaseClient, table_name: &str) -> Result<i64, String> {
+    async fn get_table_count(
+        &self,
+        db_client: &DatabaseClient,
+        table_name: &str,
+    ) -> Result<i64, String> {
         let query = format!("SELECT COUNT(*) as count FROM {}", table_name);
-        let rows = db_client.query(&query, &[]).await
+        let rows = db_client
+            .query(&query, &[])
+            .await
             .map_err(|e| format!("Failed to count rows in {}: {}", table_name, e))?;
 
         if let Some(row) = rows.into_iter().next() {
@@ -553,7 +614,7 @@ impl DataConsistencyManager {
     }
 
     /// Find specific data inconsistencies
-    /// 
+    ///
     /// Compares row IDs between primary and replica databases to detect missing records.
     /// This is an incremental improvement over simple count comparison - it identifies
     /// which specific records are missing in the replica.
@@ -574,10 +635,14 @@ impl DataConsistencyManager {
 
         let query = format!("SELECT id FROM {} ORDER BY id LIMIT 1000", table_name);
 
-        let primary_rows = primary.query(&query, &[]).await
+        let primary_rows = primary
+            .query(&query, &[])
+            .await
             .map_err(|e| format!("Failed to query primary: {}", e))?;
 
-        let replica_rows = replica.query(&query, &[]).await
+        let replica_rows = replica
+            .query(&query, &[])
+            .await
             .map_err(|e| format!("Failed to query replica: {}", e))?;
 
         let mut inconsistencies = Vec::new();
@@ -643,7 +708,10 @@ impl DataConsistencyManager {
     }
 
     /// Generate recovery actions for consistency issues
-    pub async fn generate_recovery_actions(&self, check_result: &ConsistencyCheckResult) -> Vec<RecoveryAction> {
+    pub async fn generate_recovery_actions(
+        &self,
+        check_result: &ConsistencyCheckResult,
+    ) -> Vec<RecoveryAction> {
         let mut actions = Vec::new();
 
         for inconsistency in &check_result.inconsistencies_found {
@@ -657,13 +725,19 @@ impl DataConsistencyManager {
                 InconsistencySeverity::Medium => {
                     // Manual review for medium severity
                     actions.push(RecoveryAction::ManualIntervention {
-                        description: format!("Medium severity inconsistency in record {}", inconsistency.record_id),
+                        description: format!(
+                            "Medium severity inconsistency in record {}",
+                            inconsistency.record_id
+                        ),
                     });
                 }
                 InconsistencySeverity::High | InconsistencySeverity::Critical => {
                     // Escalation for high severity
                     actions.push(RecoveryAction::ManualIntervention {
-                        description: format!("High severity data inconsistency detected: {}", inconsistency.record_id),
+                        description: format!(
+                            "High severity data inconsistency detected: {}",
+                            inconsistency.record_id
+                        ),
                     });
                 }
             }
@@ -702,10 +776,15 @@ impl DataConsistencyManager {
     }
 
     /// Get consistency check history
-    pub async fn get_consistency_history(&self, service_id: Option<&str>, limit: usize) -> Vec<ConsistencyCheckResult> {
+    pub async fn get_consistency_history(
+        &self,
+        service_id: Option<&str>,
+        limit: usize,
+    ) -> Vec<ConsistencyCheckResult> {
         let checks = self.consistency_checks.read().await;
 
-        checks.iter()
+        checks
+            .iter()
             .rev()
             .filter(|check| service_id.map_or(true, |id| check.service_id == id))
             .take(limit)
@@ -731,7 +810,10 @@ impl DataConsistencyManager {
     }
 
     /// Get transaction status
-    pub async fn get_transaction_status(&self, transaction_id: &str) -> Option<DistributedTransaction> {
+    pub async fn get_transaction_status(
+        &self,
+        transaction_id: &str,
+    ) -> Option<DistributedTransaction> {
         let transactions = self.transactions.read().await;
         transactions.get(transaction_id).cloned()
     }
@@ -739,8 +821,11 @@ impl DataConsistencyManager {
     /// List active transactions
     pub async fn list_active_transactions(&self) -> Vec<DistributedTransaction> {
         let transactions = self.transactions.read().await;
-        transactions.values()
-            .filter(|tx| tx.state == TransactionState::Pending || tx.state == TransactionState::InDoubt)
+        transactions
+            .values()
+            .filter(|tx| {
+                tx.state == TransactionState::Pending || tx.state == TransactionState::InDoubt
+            })
             .cloned()
             .collect()
     }
@@ -750,10 +835,13 @@ impl DataConsistencyManager {
         let cutoff = Utc::now() - chrono::Duration::days(max_age_days);
 
         let mut transactions = self.transactions.write().await;
-        let to_remove: Vec<String> = transactions.iter()
+        let to_remove: Vec<String> = transactions
+            .iter()
             .filter(|(_, tx)| {
-                matches!(tx.state, TransactionState::Committed | TransactionState::Aborted) &&
-                tx.created_at < cutoff
+                matches!(
+                    tx.state,
+                    TransactionState::Committed | TransactionState::Aborted
+                ) && tx.created_at < cutoff
             })
             .map(|(id, _)| id.clone())
             .collect();
@@ -762,36 +850,55 @@ impl DataConsistencyManager {
             transactions.remove(&tx_id);
         }
 
-        info!("Cleaned up {} completed transactions older than {} days",
-              transactions.len(), max_age_days);
+        info!(
+            "Cleaned up {} completed transactions older than {} days",
+            transactions.len(),
+            max_age_days
+        );
     }
 
     /// Execute prepare phase for a participant (Phase 1 of 2PC)
-    async fn execute_prepare_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
-        info!("Executing prepare phase for participant {} in transaction {}", participant.service_id, transaction_id);
+    async fn execute_prepare_phase(
+        &self,
+        participant: &TransactionParticipant,
+        transaction_id: &str,
+    ) -> Result<(), String> {
+        info!(
+            "Executing prepare phase for participant {} in transaction {}",
+            participant.service_id, transaction_id
+        );
 
         // Connect to participant's database
-        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+        let pool = sqlx::PgPool::connect(&participant.connection_info)
+            .await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
         // Start a database transaction for this participant
-        let mut tx = pool.begin().await
+        let mut tx = pool
+            .begin()
+            .await
             .map_err(|e| format!("Failed to start database transaction: {}", e))?;
 
         // Execute all operations for this participant
         for operation in &participant.operations {
             match operation.operation_type.as_str() {
                 "insert" => {
-                    self.execute_insert_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_insert_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 "update" => {
-                    self.execute_update_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_update_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 "delete" => {
-                    self.execute_delete_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_delete_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 _ => {
-                    return Err(format!("Unsupported operation type: {}", operation.operation_type));
+                    return Err(format!(
+                        "Unsupported operation type: {}",
+                        operation.operation_type
+                    ));
                 }
             }
         }
@@ -832,11 +939,19 @@ impl DataConsistencyManager {
     }
 
     /// Execute commit phase for a participant (Phase 2 of 2PC)
-    async fn execute_commit_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
-        info!("Executing commit phase for participant {} in transaction {}", participant.service_id, transaction_id);
+    async fn execute_commit_phase(
+        &self,
+        participant: &TransactionParticipant,
+        transaction_id: &str,
+    ) -> Result<(), String> {
+        info!(
+            "Executing commit phase for participant {} in transaction {}",
+            participant.service_id, transaction_id
+        );
 
         // Connect to participant's database
-        let pool = sqlx::PgPool::connect(&participant.connection_info).await
+        let pool = sqlx::PgPool::connect(&participant.connection_info)
+            .await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
         // TODO: Retrieve prepared transaction and commit it
@@ -873,33 +988,44 @@ impl DataConsistencyManager {
         // - Reviewer Requirements: Database transaction expertise
         // Temporary: simulate commit until prepared transaction retrieval is implemented
 
-        let mut tx = pool.begin().await
+        let mut tx = pool
+            .begin()
+            .await
             .map_err(|e| format!("Failed to start commit transaction: {}", e))?;
 
         // Execute all operations for this participant (simulating commit of prepared transaction)
         for operation in &participant.operations {
             match operation.operation_type.as_str() {
                 "insert" => {
-                    self.execute_insert_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_insert_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 "update" => {
-                    self.execute_update_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_update_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 "delete" => {
-                    self.execute_delete_operation(&mut tx, operation, transaction_id).await?;
+                    self.execute_delete_operation(&mut tx, operation, transaction_id)
+                        .await?;
                 }
                 _ => {
-                    return Err(format!("Unsupported operation type: {}", operation.operation_type));
+                    return Err(format!(
+                        "Unsupported operation type: {}",
+                        operation.operation_type
+                    ));
                 }
             }
         }
 
         // Commit the transaction
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| format!("Failed to commit transaction: {}", e))?;
 
-        info!("Successfully committed operations for participant {} in transaction {}",
-              participant.service_id, transaction_id);
+        info!(
+            "Successfully committed operations for participant {} in transaction {}",
+            participant.service_id, transaction_id
+        );
         Ok(())
     }
 
@@ -908,8 +1034,10 @@ impl DataConsistencyManager {
         info!("Aborting distributed transaction: {}", transaction_id);
 
         let transactions = self.transactions.read().await;
-        let transaction = transactions.get(transaction_id)
-            .ok_or(format!("Transaction not found for abort: {}", transaction_id))?;
+        let transaction = transactions.get(transaction_id).ok_or(format!(
+            "Transaction not found for abort: {}",
+            transaction_id
+        ))?;
 
         // Rollback each participant concurrently
         let abort_futures = transaction.participants.iter().map(|participant| {
@@ -919,7 +1047,10 @@ impl DataConsistencyManager {
                 match self.execute_abort_phase(&participant, &tx_id).await {
                     Ok(()) => Ok(()),
                     Err(e) => {
-                        warn!("Failed to abort participant {}: {}", participant.service_id, e);
+                        warn!(
+                            "Failed to abort participant {}: {}",
+                            participant.service_id, e
+                        );
                         Err(e)
                     }
                 }
@@ -937,7 +1068,10 @@ impl DataConsistencyManager {
         }
 
         if !abort_failures.is_empty() {
-            warn!("Some participants failed to abort transaction {}: {:?}", transaction_id, abort_failures);
+            warn!(
+                "Some participants failed to abort transaction {}: {:?}",
+                transaction_id, abort_failures
+            );
         }
 
         // Update transaction state
@@ -946,18 +1080,27 @@ impl DataConsistencyManager {
         if let Some(tx) = transactions.get_mut(transaction_id) {
             tx.state = TransactionState::Aborted;
         }
-        self.persist_transaction_state(transaction_id, TransactionState::Aborted).await?;
+        self.persist_transaction_state(transaction_id, TransactionState::Aborted)
+            .await?;
 
         info!("Distributed transaction {} aborted", transaction_id);
         Ok(())
     }
 
     /// Execute abort phase for a participant (rollback)
-    async fn execute_abort_phase(&self, participant: &TransactionParticipant, transaction_id: &str) -> Result<(), String> {
-        info!("Executing abort phase for participant {} in transaction {}", participant.service_id, transaction_id);
+    async fn execute_abort_phase(
+        &self,
+        participant: &TransactionParticipant,
+        transaction_id: &str,
+    ) -> Result<(), String> {
+        info!(
+            "Executing abort phase for participant {} in transaction {}",
+            participant.service_id, transaction_id
+        );
 
         // Connect to participant's database
-        let _pool = sqlx::PgPool::connect(&participant.connection_info).await
+        let _pool = sqlx::PgPool::connect(&participant.connection_info)
+            .await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
         // TODO: Implement transaction rollback with the following requirements:
@@ -995,18 +1138,26 @@ impl DataConsistencyManager {
         // - Participant database connections (Required)
         // PRIORITY: High
 
-        info!("Successfully aborted operations for participant {} in transaction {}",
-              participant.service_id, transaction_id);
+        info!(
+            "Successfully aborted operations for participant {} in transaction {}",
+            participant.service_id, transaction_id
+        );
         Ok(())
     }
 
     /// Execute an insert operation
-    async fn execute_insert_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
+    async fn execute_insert_operation(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        operation: &TransactionOperation,
+        _transaction_id: &str,
+    ) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 
         // Build dynamic INSERT statement based on the data
-        let columns: Vec<String> = data.as_object()
+        let columns: Vec<String> = data
+            .as_object()
             .ok_or("Insert data must be an object")?
             .keys()
             .cloned()
@@ -1020,7 +1171,8 @@ impl DataConsistencyManager {
             placeholders.join(", ")
         );
 
-        let values: Vec<serde_json::Value> = columns.iter()
+        let values: Vec<serde_json::Value> = columns
+            .iter()
             .map(|col| data.get(col).cloned().unwrap_or(serde_json::Value::Null))
             .collect();
 
@@ -1044,94 +1196,147 @@ impl DataConsistencyManager {
             };
         }
 
-        query.execute(&mut **tx).await
+        query
+            .execute(&mut **tx)
+            .await
             .map_err(|e| format!("Failed to execute insert: {}", e))?;
 
         Ok(())
     }
 
     /// Execute an update operation
-    async fn execute_update_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
+    async fn execute_update_operation(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        operation: &TransactionOperation,
+        _transaction_id: &str,
+    ) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 
         // Assume data contains both WHERE conditions and SET values
-        let set_data = data.get("set").and_then(|v| v.as_object())
+        let set_data = data
+            .get("set")
+            .and_then(|v| v.as_object())
             .ok_or("Update data must contain 'set' object")?;
-        let where_data = data.get("where").and_then(|v| v.as_object())
+        let where_data = data
+            .get("where")
+            .and_then(|v| v.as_object())
             .ok_or("Update data must contain 'where' object")?;
 
         // Build SET clause
         let set_columns: Vec<String> = set_data.keys().cloned().collect();
-        let set_placeholders: Vec<String> = (1..=set_columns.len()).map(|i| format!("${}", i)).collect();
+        let set_placeholders: Vec<String> =
+            (1..=set_columns.len()).map(|i| format!("${}", i)).collect();
 
         // Build WHERE clause
         let where_columns: Vec<String> = where_data.keys().cloned().collect();
-        let where_placeholders: Vec<String> = ((set_columns.len() + 1)..=(set_columns.len() + where_columns.len()))
+        let where_placeholders: Vec<String> = ((set_columns.len() + 1)
+            ..=(set_columns.len() + where_columns.len()))
             .map(|i| format!("${}", i))
             .collect();
 
         let sql = format!(
             "UPDATE {} SET {} WHERE {}",
             table,
-            set_columns.iter().zip(set_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(", "),
-            where_columns.iter().zip(where_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(" AND ")
+            set_columns
+                .iter()
+                .zip(set_placeholders.iter())
+                .map(|(col, ph)| format!("{} = {}", col, ph))
+                .collect::<Vec<_>>()
+                .join(", "),
+            where_columns
+                .iter()
+                .zip(where_placeholders.iter())
+                .map(|(col, ph)| format!("{} = {}", col, ph))
+                .collect::<Vec<_>>()
+                .join(" AND ")
         );
 
         let mut query = sqlx::query(&sql);
 
         // Bind SET values
         for col in &set_columns {
-            let value = set_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            let value = set_data
+                .get(col)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             query = self.bind_json_value(query, value);
         }
 
         // Bind WHERE values
         for col in &where_columns {
-            let value = where_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            let value = where_data
+                .get(col)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             query = self.bind_json_value(query, value);
         }
 
-        query.execute(&mut **tx).await
+        query
+            .execute(&mut **tx)
+            .await
             .map_err(|e| format!("Failed to execute update: {}", e))?;
 
         Ok(())
     }
 
     /// Execute a delete operation
-    async fn execute_delete_operation(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, operation: &TransactionOperation, _transaction_id: &str) -> Result<(), String> {
+    async fn execute_delete_operation(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        operation: &TransactionOperation,
+        _transaction_id: &str,
+    ) -> Result<(), String> {
         let table = &operation.table;
         let data = &operation.data;
 
         // Assume data contains WHERE conditions
-        let where_data = data.as_object()
+        let where_data = data
+            .as_object()
             .ok_or("Delete data must be an object with WHERE conditions")?;
 
         let where_columns: Vec<String> = where_data.keys().cloned().collect();
-        let where_placeholders: Vec<String> = (1..=where_columns.len()).map(|i| format!("${}", i)).collect();
+        let where_placeholders: Vec<String> = (1..=where_columns.len())
+            .map(|i| format!("${}", i))
+            .collect();
 
         let sql = format!(
             "DELETE FROM {} WHERE {}",
             table,
-            where_columns.iter().zip(where_placeholders.iter()).map(|(col, ph)| format!("{} = {}", col, ph)).collect::<Vec<_>>().join(" AND ")
+            where_columns
+                .iter()
+                .zip(where_placeholders.iter())
+                .map(|(col, ph)| format!("{} = {}", col, ph))
+                .collect::<Vec<_>>()
+                .join(" AND ")
         );
 
         let mut query = sqlx::query(&sql);
 
         // Bind WHERE values
         for col in &where_columns {
-            let value = where_data.get(col).cloned().unwrap_or(serde_json::Value::Null);
+            let value = where_data
+                .get(col)
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             query = self.bind_json_value(query, value);
         }
 
-        query.execute(&mut **tx).await
+        query
+            .execute(&mut **tx)
+            .await
             .map_err(|e| format!("Failed to execute delete: {}", e))?;
 
         Ok(())
     }
 
     /// Helper to bind JSON values to SQL queries
-    fn bind_json_value<'a>(&self, query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, value: serde_json::Value) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    fn bind_json_value<'a>(
+        &self,
+        query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
+        value: serde_json::Value,
+    ) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
         match value {
             serde_json::Value::String(s) => query.bind(s),
             serde_json::Value::Number(n) => {
@@ -1175,33 +1380,28 @@ mod tests {
             TransactionParticipant {
                 service_id: "service1".to_string(),
                 connection_info: "postgresql://test:test@localhost:5432/test1".to_string(),
-                operations: vec![
-                    TransactionOperation {
-                        operation_type: "insert".to_string(),
-                        table: "test_table".to_string(),
-                        data: serde_json::json!({"id": 1, "name": "test1"}),
-                    }
-                ],
+                operations: vec![TransactionOperation {
+                    operation_type: "insert".to_string(),
+                    table: "test_table".to_string(),
+                    data: serde_json::json!({"id": 1, "name": "test1"}),
+                }],
             },
             TransactionParticipant {
                 service_id: "service2".to_string(),
                 connection_info: "postgresql://test:test@localhost:5432/test2".to_string(),
-                operations: vec![
-                    TransactionOperation {
-                        operation_type: "insert".to_string(),
-                        table: "test_table".to_string(),
-                        data: serde_json::json!({"id": 2, "name": "test2"}),
-                    }
-                ],
+                operations: vec![TransactionOperation {
+                    operation_type: "insert".to_string(),
+                    table: "test_table".to_string(),
+                    data: serde_json::json!({"id": 2, "name": "test2"}),
+                }],
             },
         ];
 
         // Test transaction creation
-        assert!(consistency_manager.begin_distributed_transaction(
-            tx_id.clone(),
-            participants,
-            Duration::from_secs(300)
-        ).await.is_ok());
+        assert!(consistency_manager
+            .begin_distributed_transaction(tx_id.clone(), participants, Duration::from_secs(300))
+            .await
+            .is_ok());
 
         // Test transaction status
         let status = consistency_manager.get_transaction_status(&tx_id).await;
@@ -1209,7 +1409,10 @@ mod tests {
         assert_eq!(status.unwrap().state, TransactionState::Pending);
 
         // Test prepare
-        assert!(consistency_manager.prepare_transaction(&tx_id).await.is_ok());
+        assert!(consistency_manager
+            .prepare_transaction(&tx_id)
+            .await
+            .is_ok());
 
         // Test commit
         assert!(consistency_manager.commit_transaction(&tx_id).await.is_ok());
@@ -1225,13 +1428,17 @@ mod tests {
                 return;
             }
         };
-        
-        let strong_manager = DataConsistencyManager::new(db_client.clone(), ConsistencyLevel::Strong);
+
+        let strong_manager =
+            DataConsistencyManager::new(db_client.clone(), ConsistencyLevel::Strong);
 
         let eventual_manager = DataConsistencyManager::new(db_client, ConsistencyLevel::Eventual);
 
         // Different consistency levels should be configurable
         assert_eq!(strong_manager._consistency_level, ConsistencyLevel::Strong);
-        assert_eq!(eventual_manager._consistency_level, ConsistencyLevel::Eventual);
+        assert_eq!(
+            eventual_manager._consistency_level,
+            ConsistencyLevel::Eventual
+        );
     }
 }

@@ -3,18 +3,17 @@
 //! These are temporary implementations to allow the crate to compile.
 //! They should be replaced with full implementations as development progresses.
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 // Stub for context module
 pub mod context {
-    use std::collections::HashMap;
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
+    use std::collections::HashMap;
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct HierarchicalContextManager {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct HierarchicalContextManager {
         contexts: HashMap<String, String>,
     }
 
@@ -25,7 +24,10 @@ pub struct HierarchicalContextManager {
             }
         }
 
-        pub async fn allocate_context(&self, _budget: &ContextBudget) -> Result<ContextBundle, String> {
+        pub async fn allocate_context(
+            &self,
+            _budget: &ContextBudget,
+        ) -> Result<ContextBundle, String> {
             Ok(ContextBundle {
                 id: "stub".to_string(),
                 content: "Stub context".to_string(),
@@ -33,26 +35,22 @@ pub struct HierarchicalContextManager {
         }
     }
 
-    
-    #[derive(Debug, Clone, Serialize, Deserialize) ]
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ContextBundle {
         pub id: String,
         pub content: String,
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct ContextBudget {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ContextBudget {
         pub max_tokens: usize,
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-struct Allocation ;
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct Allocation;
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-struct ContextStats ;
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct ContextStats;
 }
 
 // Stub for integration module
@@ -73,8 +71,8 @@ pub mod integration {
 // Stub for learning_bridge module
 pub mod learning_bridge {
     use async_trait::async_trait;
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
 
     pub struct LearningBridge;
 
@@ -84,9 +82,8 @@ pub mod learning_bridge {
         }
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct LearningSignal {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct LearningSignal {
         pub signal_type: String,
         pub value: f64,
     }
@@ -133,8 +130,8 @@ pub mod policy_hooks {
 
 // Stub for profiling module
 pub mod profiling {
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
     pub struct PerformanceProfiler;
 
     impl PerformanceProfiler {
@@ -151,16 +148,14 @@ pub mod profiling {
         }
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct PerformanceBenchmark {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PerformanceBenchmark {
         pub name: String,
         pub score: f64,
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct PerformanceReport {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PerformanceReport {
         pub operation: String,
         pub duration_ms: f64,
         pub memory_mb: f64,
@@ -169,18 +164,17 @@ pub struct PerformanceReport {
 
 // Stub for prompting module
 pub mod prompting {
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct PromptFrame {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PromptFrame {
         pub content: String,
         pub metadata: std::collections::HashMap<String, String>,
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct PatchAction {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PatchAction {
         pub action_type: String,
         pub target: String,
         pub content: Option<String>,
@@ -198,9 +192,8 @@ pub struct PatchAction {
         }
     }
 
-    
-#[derive(Debug, Serialize, Deserialize, thiserror::Error)]
-pub enum ToolSchemaError {
+    #[derive(Debug, Serialize, Deserialize, thiserror::Error)]
+    pub enum ToolSchemaError {
         #[error("Invalid tool schema")]
         InvalidSchema,
     }
@@ -232,8 +225,8 @@ pub enum ToolSchemaError {
 
 // Stub for rl_signals module
 pub mod rl_signals {
-    use serde::{Deserialize, Serialize};
     use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
     pub struct RLSignal;
 
     pub struct RLSignalGenerator;
@@ -248,9 +241,8 @@ pub mod rl_signals {
         }
     }
 
-    
-#[derive(Debug, Clone, Serialize, Deserialize) ]
-pub struct PolicyAdjustment {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PolicyAdjustment {
         pub parameter: String,
         pub new_value: f64,
     }

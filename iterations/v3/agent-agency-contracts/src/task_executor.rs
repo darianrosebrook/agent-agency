@@ -5,11 +5,11 @@
 //! orchestration can depend on without depending on the concrete implementation.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Result of task execution
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -120,13 +120,21 @@ pub trait TaskExecutor: Send + Sync + std::fmt::Debug {
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Get the health status of the task executor
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>>;
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Get statistics about task execution
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Cancel a task execution
-    async fn cancel_task_execution(&self, task_id: Uuid, worker_id: Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn cancel_task_execution(
+        &self,
+        task_id: Uuid,
+        worker_id: Uuid,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// Health status of the task executor

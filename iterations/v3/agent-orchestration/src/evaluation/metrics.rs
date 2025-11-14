@@ -4,10 +4,10 @@
 //!
 //! All formulas are data-driven and testable, replacing placeholder values with real analysis.
 
-use crate::chain_of_thought::{DecisionPoint, CoordinationEvent, CoordinationEventType};
 use crate::audit_trail::AuditEvent;
-use std::collections::{HashMap, HashSet};
+use crate::chain_of_thought::{CoordinationEvent, CoordinationEventType, DecisionPoint};
 use chrono::{DateTime, Utc};
+use std::collections::{HashMap, HashSet};
 
 /// Calculate coordination quality using event DAG analysis
 ///
@@ -42,7 +42,7 @@ pub fn calculate_coordination_quality(
                         .or_insert_with(Vec::new)
                         .push(event.timestamp);
                     total_tasks += 1;
-                    
+
                     // Check if this is a reassignment (multiple assignments for same task)
                     if let Some(assignments) = task_assignments.get(milestone_id) {
                         if assignments.len() > 1 {
@@ -82,12 +82,24 @@ pub fn calculate_coordination_quality(
 
     // Calculate critical path efficiency
     // For simplicity, use parallel execution events to estimate concurrency
-    let parallel_starts = events.iter()
-        .filter(|e| matches!(e.event_type, CoordinationEventType::ParallelExecutionStarted))
+    let parallel_starts = events
+        .iter()
+        .filter(|e| {
+            matches!(
+                e.event_type,
+                CoordinationEventType::ParallelExecutionStarted
+            )
+        })
         .count();
-    
-    let parallel_completes = events.iter()
-        .filter(|e| matches!(e.event_type, CoordinationEventType::ParallelExecutionCompleted))
+
+    let parallel_completes = events
+        .iter()
+        .filter(|e| {
+            matches!(
+                e.event_type,
+                CoordinationEventType::ParallelExecutionCompleted
+            )
+        })
         .count();
 
     // Estimate critical path efficiency
@@ -104,7 +116,7 @@ pub fn calculate_coordination_quality(
     // Calculate load imbalance (coefficient of variation of parallel branch loads)
     let mut branch_loads = Vec::new();
     let mut current_parallel_tasks = 0;
-    
+
     for event in events {
         match event.event_type {
             CoordinationEventType::ParallelExecutionStarted => {
@@ -122,12 +134,14 @@ pub fn calculate_coordination_quality(
 
     let load_imbalance = if branch_loads.len() > 1 {
         let mean = branch_loads.iter().sum::<usize>() as f64 / branch_loads.len() as f64;
-        let variance = branch_loads.iter()
+        let variance = branch_loads
+            .iter()
             .map(|&x| {
                 let diff = x as f64 - mean;
                 diff * diff
             })
-            .sum::<f64>() / branch_loads.len() as f64;
+            .sum::<f64>()
+            / branch_loads.len() as f64;
         let std_dev = variance.sqrt();
         if mean > 0.0 {
             (std_dev / mean).min(1.0) // Coefficient of variation, capped at 1.0
@@ -143,7 +157,8 @@ pub fn calculate_coordination_quality(
     let w2 = 0.3;
     let w3 = 0.3;
 
-    let score = w1 * (1.0 - redo_ratio) + w2 * (1.0 - load_imbalance) + w3 * critical_path_efficiency;
+    let score =
+        w1 * (1.0 - redo_ratio) + w2 * (1.0 - load_imbalance) + w3 * critical_path_efficiency;
     score.max(0.0).min(1.0)
 }
 
@@ -189,17 +204,20 @@ pub fn calculate_coordination_quality(
 // - CAWS Tier: 3 (metrics enhancement)
 // - Change Budget: ~120 LOC
 // - Reviewer Requirements: Performance metrics expertise
-pub fn calculate_resource_adaptation( // Temporary: basic pattern analysis until comprehensive calculation
+pub fn calculate_resource_adaptation(
+    // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     events: &[CoordinationEvent],
     audit_entries: &[AuditEvent],
 ) -> f64 {
     // Look for resource allocation and freeing events
-    let resource_allocations = events.iter()
+    let resource_allocations = events
+        .iter()
         .filter(|e| matches!(e.event_type, CoordinationEventType::ResourceAllocated))
         .count();
-    
-    let resource_frees = events.iter()
+
+    let resource_frees = events
+        .iter()
         .filter(|e| matches!(e.event_type, CoordinationEventType::ResourceFreed))
         .count();
 
@@ -207,10 +225,11 @@ pub fn calculate_resource_adaptation( // Temporary: basic pattern analysis until
     let mut resource_aware_decisions = 0;
     for decision in decisions {
         let reasoning_lower = decision.reasoning.to_lowercase();
-        if reasoning_lower.contains("resource") ||
-           reasoning_lower.contains("capacity") ||
-           reasoning_lower.contains("load") ||
-           reasoning_lower.contains("utilization") {
+        if reasoning_lower.contains("resource")
+            || reasoning_lower.contains("capacity")
+            || reasoning_lower.contains("load")
+            || reasoning_lower.contains("utilization")
+        {
             resource_aware_decisions += 1;
         }
     }
@@ -219,10 +238,11 @@ pub fn calculate_resource_adaptation( // Temporary: basic pattern analysis until
     let mut resource_operations = 0;
     for entry in audit_entries {
         let operation_lower = entry.operation.to_lowercase();
-        if operation_lower.contains("resource") ||
-           operation_lower.contains("allocate") ||
-           operation_lower.contains("throttle") ||
-           operation_lower.contains("scale") {
+        if operation_lower.contains("resource")
+            || operation_lower.contains("allocate")
+            || operation_lower.contains("throttle")
+            || operation_lower.contains("scale")
+        {
             resource_operations += 1;
         }
     }
@@ -231,7 +251,7 @@ pub fn calculate_resource_adaptation( // Temporary: basic pattern analysis until
     // 1. Resource awareness in decisions (higher is better)
     // 2. Balanced allocation/freeing (indicates adaptation)
     // 3. Resource-related operations (indicates active management)
-    
+
     let awareness_score = if decisions.is_empty() {
         0.0
     } else {
@@ -273,7 +293,8 @@ pub fn calculate_recovery_safety(
     audit_entries: &[AuditEvent],
 ) -> f64 {
     // Find failure events
-    let failure_events: Vec<_> = events.iter()
+    let failure_events: Vec<_> = events
+        .iter()
         .filter(|e| matches!(e.event_type, CoordinationEventType::TaskFailed))
         .collect();
 
@@ -293,38 +314,46 @@ pub fn calculate_recovery_safety(
             let mut found_recovery = false;
             let mut found_quiesce = false;
             let mut found_isolate = false;
-            
+
             // Check next 5 events for recovery pattern
             for j in (i + 1)..events.len().min(i + 6) {
                 let next_event = &events[j];
-                
+
                 // Check for quiesce pattern (stopping related operations)
                 if let Some(ref details) = next_event.details.get("action") {
-                    if details.as_str().map(|s| s.to_lowercase().contains("quiesce")).unwrap_or(false) {
+                    if details
+                        .as_str()
+                        .map(|s| s.to_lowercase().contains("quiesce"))
+                        .unwrap_or(false)
+                    {
                         found_quiesce = true;
                     }
                 }
-                
+
                 // Check for isolation pattern
                 if let Some(ref details) = next_event.details.get("action") {
-                    if details.as_str().map(|s| s.to_lowercase().contains("isolate")).unwrap_or(false) {
+                    if details
+                        .as_str()
+                        .map(|s| s.to_lowercase().contains("isolate"))
+                        .unwrap_or(false)
+                    {
                         found_isolate = true;
                     }
                 }
-                
+
                 // Check for recovery action
                 if next_event.details.get("recovery_action").is_some() {
                     found_recovery = true;
-                    
+
                     // Check for backoff
-                    let has_backoff = next_event.details.get("backoff_ms").is_some() ||
-                                     next_event.details.get("retry_delay").is_some();
-                    
+                    let has_backoff = next_event.details.get("backoff_ms").is_some()
+                        || next_event.details.get("retry_delay").is_some();
+
                     if !has_backoff {
                         retries_without_backoff += 1;
                     }
                 }
-                
+
                 // Check for parallel recoveries (multiple failures close together)
                 if matches!(next_event.event_type, CoordinationEventType::TaskFailed) {
                     let time_diff = (next_event.timestamp - event.timestamp).num_seconds();
@@ -333,7 +362,7 @@ pub fn calculate_recovery_safety(
                     }
                 }
             }
-            
+
             // Check for proper recovery pattern
             if found_recovery {
                 let pattern_quality = if found_quiesce && found_isolate {
@@ -364,7 +393,7 @@ pub fn calculate_recovery_safety(
             }
         }
     }
-    
+
     if max_consecutive > 3 {
         cascading_failures = 1;
     }
@@ -438,7 +467,8 @@ pub fn calculate_recovery_safety(
 // - CAWS Tier: 3 (metrics enhancement)
 // - Change Budget: ~120 LOC
 // - Reviewer Requirements: Pattern analysis expertise
-pub fn calculate_solution_generalization( // Temporary: basic pattern analysis until comprehensive calculation
+pub fn calculate_solution_generalization(
+    // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     _scenario_id: &str,
 ) -> f64 {
@@ -448,18 +478,20 @@ pub fn calculate_solution_generalization( // Temporary: basic pattern analysis u
 
     // Canonicalize decision patterns by extracting key verbs and resource types
     let mut canonical_patterns: Vec<String> = Vec::new();
-    
+
     for decision in decisions {
         let reasoning_lower = decision.reasoning.to_lowercase();
-        
+
         // Extract action verbs
         let mut verbs = Vec::new();
-        for verb in ["assign", "allocate", "execute", "retry", "fallback", "scale", "optimize"] {
+        for verb in [
+            "assign", "allocate", "execute", "retry", "fallback", "scale", "optimize",
+        ] {
             if reasoning_lower.contains(verb) {
                 verbs.push(verb);
             }
         }
-        
+
         // Extract resource types
         let mut resources = Vec::new();
         for resource in ["worker", "cpu", "memory", "network", "disk", "cache"] {
@@ -467,7 +499,7 @@ pub fn calculate_solution_generalization( // Temporary: basic pattern analysis u
                 resources.push(resource);
             }
         }
-        
+
         // Create canonical pattern: verbs + resources
         let pattern = format!("{}:{}", verbs.join(","), resources.join(","));
         canonical_patterns.push(pattern);
@@ -482,7 +514,7 @@ pub fn calculate_solution_generalization( // Temporary: basic pattern analysis u
     // Calculate reuse rate
     let total_patterns = canonical_patterns.len();
     let unique_patterns = pattern_counts.len();
-    
+
     // Higher reuse (fewer unique patterns relative to total) indicates better generalization
     // But we also want some diversity, so balance is key
     let reuse_rate = if total_patterns > 0 {
@@ -495,14 +527,15 @@ pub fn calculate_solution_generalization( // Temporary: basic pattern analysis u
     // Check alternative reuse across decisions
     let mut alternative_reuse = 0;
     let mut total_alternatives = 0;
-    
+
     for decision in decisions {
         total_alternatives += decision.alternatives.len();
         // Check if alternatives reference previous decisions
         for alt in &decision.alternatives {
-            if alt.reasoning.to_lowercase().contains("similar") ||
-               alt.reasoning.to_lowercase().contains("previous") ||
-               alt.reasoning.to_lowercase().contains("reuse") {
+            if alt.reasoning.to_lowercase().contains("similar")
+                || alt.reasoning.to_lowercase().contains("previous")
+                || alt.reasoning.to_lowercase().contains("reuse")
+            {
                 alternative_reuse += 1;
             }
         }
@@ -561,7 +594,8 @@ pub fn calculate_solution_generalization( // Temporary: basic pattern analysis u
 // - CAWS Tier: 3 (metrics enhancement)
 // - Change Budget: ~120 LOC
 // - Reviewer Requirements: Optimization metrics expertise
-pub fn calculate_self_optimization( // Temporary: basic trend analysis until comprehensive calculation
+pub fn calculate_self_optimization(
+    // Temporary: basic trend analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     events: &[CoordinationEvent],
 ) -> f64 {
@@ -578,15 +612,15 @@ pub fn calculate_self_optimization( // Temporary: basic trend analysis until com
         if let Some(ref metadata) = decision.metadata.get("optimization") {
             optimization_indicators += 1;
         }
-        
+
         if let Some(ref metadata) = decision.metadata.get("cache_update") {
             optimization_indicators += 1;
         }
-        
+
         if let Some(ref _metadata) = decision.metadata.get("threshold_adjustment") {
             optimization_indicators += 1;
         }
-        
+
         if !decision.metadata.is_empty() {
             total_metadata_changes += 1;
         }
@@ -595,7 +629,7 @@ pub fn calculate_self_optimization( // Temporary: basic trend analysis until com
     // Analyze confidence improvement trend (indicates learning/optimization)
     let mut confidence_improvements = 0;
     for i in 1..decisions.len() {
-        if decisions[i].confidence > decisions[i-1].confidence {
+        if decisions[i].confidence > decisions[i - 1].confidence {
             confidence_improvements += 1;
         }
     }
@@ -607,10 +641,10 @@ pub fn calculate_self_optimization( // Temporary: basic trend analysis until com
     };
 
     // Check for adaptive behavior in events (e.g., load balancing adjustments)
-    let adaptive_events = events.iter()
+    let adaptive_events = events
+        .iter()
         .filter(|e| {
-            e.details.get("adaptive_action").is_some() ||
-            e.details.get("optimization").is_some()
+            e.details.get("adaptive_action").is_some() || e.details.get("optimization").is_some()
         })
         .count();
 
@@ -672,7 +706,8 @@ pub fn calculate_self_optimization( // Temporary: basic trend analysis until com
 // - CAWS Tier: 3 (metrics enhancement)
 // - Change Budget: ~120 LOC
 // - Reviewer Requirements: Knowledge retention metrics expertise
-pub fn calculate_knowledge_retention( // Temporary: basic pattern analysis until comprehensive calculation
+pub fn calculate_knowledge_retention(
+    // Temporary: basic pattern analysis until comprehensive calculation
     decisions: &[DecisionPoint],
     _scenario_id: &str,
 ) -> f64 {
@@ -686,20 +721,20 @@ pub fn calculate_knowledge_retention( // Temporary: basic pattern analysis until
 
     for i in 1..decisions.len() {
         total_comparisons += 1;
-        
+
         let current_reasoning = decisions[i].reasoning.to_lowercase();
-        let previous_reasoning = decisions[i-1].reasoning.to_lowercase();
-        
+        let previous_reasoning = decisions[i - 1].reasoning.to_lowercase();
+
         // Check for consistent reasoning patterns
         let mut shared_keywords = 0;
         let keywords = ["because", "should", "consider", "evaluate", "select"];
-        
+
         for keyword in &keywords {
             if current_reasoning.contains(keyword) && previous_reasoning.contains(keyword) {
                 shared_keywords += 1;
             }
         }
-        
+
         // If significant pattern overlap, consider it consistent
         if shared_keywords >= 2 {
             consistent_patterns += 1;
@@ -714,12 +749,12 @@ pub fn calculate_knowledge_retention( // Temporary: basic pattern analysis until
 
     // Analyze decision type consistency
     let mut unique_types = HashSet::new();
-    
+
     for decision in decisions {
         let type_str = format!("{:?}", decision.decision_type);
         unique_types.insert(type_str);
     }
-    
+
     // More consistent types (fewer unique types relative to total) indicates retention
     let type_consistency = if decisions.len() > 0 {
         1.0 - (unique_types.len() as f64 / decisions.len() as f64).min(1.0)
@@ -731,10 +766,11 @@ pub fn calculate_knowledge_retention( // Temporary: basic pattern analysis until
     let mut references_to_past = 0;
     for i in 1..decisions.len() {
         let reasoning = decisions[i].reasoning.to_lowercase();
-        if reasoning.contains("previous") ||
-           reasoning.contains("earlier") ||
-           reasoning.contains("before") ||
-           reasoning.contains("learned") {
+        if reasoning.contains("previous")
+            || reasoning.contains("earlier")
+            || reasoning.contains("before")
+            || reasoning.contains("learned")
+        {
             references_to_past += 1;
         }
     }
@@ -764,7 +800,7 @@ mod tests {
     #[test]
     fn test_coordination_quality_with_parallel_execution() {
         use crate::chain_of_thought::CoordinationEvent;
-        
+
         let events = vec![
             CoordinationEvent {
                 event_id: Uuid::new_v4(),
@@ -787,7 +823,7 @@ mod tests {
                 details: HashMap::new(),
             },
         ];
-        
+
         let score = calculate_coordination_quality(&[], &events);
         assert!(score >= 0.0 && score <= 1.0);
     }
@@ -826,7 +862,7 @@ mod tests {
             risk_assessment: None,
             metadata: HashMap::new(),
         }];
-        
+
         let score = calculate_solution_generalization(&decisions, "test");
         assert_eq!(score, 0.5);
     }
@@ -853,7 +889,7 @@ mod tests {
             risk_assessment: None,
             metadata: HashMap::new(),
         }];
-        
+
         let score = calculate_self_optimization(&decisions, &[]);
         assert_eq!(score, 0.5);
     }
@@ -880,7 +916,7 @@ mod tests {
             risk_assessment: None,
             metadata: HashMap::new(),
         }];
-        
+
         let score = calculate_knowledge_retention(&decisions, "test");
         assert_eq!(score, 0.5);
     }

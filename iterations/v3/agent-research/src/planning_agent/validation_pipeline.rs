@@ -4,28 +4,33 @@
 //! including CAWS compliance, constraint validation, and risk assessment.
 //! Uses system-configuration validation pipeline for standardized patterns.
 
+use async_trait::async_trait;
 use schemars::JsonSchema;
 use std::sync::Arc;
-use async_trait::async_trait;
 
-use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use crate::planning_agent::planning_caws_integration::{CawsValidator, ValidationContext};
-use system_configuration::validation::{ValidationPipeline as SystemValidationPipeline, ValidationStage as SystemValidationStage, ValidationResult as SystemValidationResult, ValidationSeverity as SystemValidationSeverity, ValidationResults as SystemValidationResults};
-use system_configuration::traits::ExecutablePipeline;
-use system_configuration::config::{PipelineConfig, ValidationPipelineConfig as SystemValidationPipelineConfig};
-use system_configuration::types::ValidationStatus;
-use system_configuration::error::{PipelineResult, PipelineError};
+use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 use agent_agency_contracts::ContractKind;
+use system_configuration::config::{
+    PipelineConfig, ValidationPipelineConfig as SystemValidationPipelineConfig,
+};
+use system_configuration::error::{PipelineError, PipelineResult};
+use system_configuration::traits::ExecutablePipeline;
+use system_configuration::types::ValidationStatus;
+use system_configuration::validation::{
+    ValidationPipeline as SystemValidationPipeline, ValidationResult as SystemValidationResult,
+    ValidationResults as SystemValidationResults, ValidationSeverity as SystemValidationSeverity,
+    ValidationStage as SystemValidationStage,
+};
 // Use unified validation types from contracts
 use agent_agency_contracts::types::validation::{
-    ValidationIssue, ValidationSeverity, ValidationCategory, ValidationCategoryEnum,
-    SimpleIssueSeverity,
+    SimpleIssueSeverity, ValidationCategory, ValidationCategoryEnum, ValidationIssue,
+    ValidationSeverity,
 };
 
 /// Validation stage in the pipeline
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ValidationStage {
     SchemaValidation,
     ConstraintValidation,
@@ -36,7 +41,7 @@ pub enum ValidationStage {
 
 /// Adapter to convert domain-specific validation stages to system-configuration validation stages
 
-#[derive(Serialize, Deserialize) ]
+#[derive(Serialize, Deserialize)]
 pub struct ValidationStageAdapter {
     stage_type: ValidationStage,
     #[serde(skip)]
@@ -47,13 +52,19 @@ impl std::fmt::Debug for ValidationStageAdapter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ValidationStageAdapter")
             .field("stage_type", &self.stage_type)
-            .field("caws_validator", &self.caws_validator.as_ref().map(|_| "<CawsValidator>"))
+            .field(
+                "caws_validator",
+                &self.caws_validator.as_ref().map(|_| "<CawsValidator>"),
+            )
             .finish()
     }
 }
 
 impl ValidationStageAdapter {
-    pub fn new(stage_type: ValidationStage, caws_validator: Option<Arc<dyn CawsValidator>>) -> Self {
+    pub fn new(
+        stage_type: ValidationStage,
+        caws_validator: Option<Arc<dyn CawsValidator>>,
+    ) -> Self {
         Self {
             stage_type,
             caws_validator,
@@ -73,19 +84,19 @@ impl SystemValidationStage for ValidationStageAdapter {
         }
     }
 
-    async fn validate(&self, input: &serde_json::Value) -> PipelineResult<Vec<SystemValidationResult>> {
+    async fn validate(
+        &self,
+        input: &serde_json::Value,
+    ) -> PipelineResult<Vec<SystemValidationResult>> {
         // Convert serde_json::Value to WorkingSpec
-        let working_spec: agent_agency_contracts::working_spec::WorkingSpec = serde_json::from_value(input.clone())
-            .map_err(|e| PipelineError::Validation(e.to_string()))?;
+        let working_spec: agent_agency_contracts::working_spec::WorkingSpec =
+            serde_json::from_value(input.clone())
+                .map_err(|e| PipelineError::Validation(e.to_string()))?;
 
         // Run the appropriate validation based on stage type
         let results = match self.stage_type {
-            ValidationStage::SchemaValidation => {
-                self.validate_schema(&working_spec)
-            }
-            ValidationStage::ConstraintValidation => {
-                self.validate_constraints(&working_spec)
-            }
+            ValidationStage::SchemaValidation => self.validate_schema(&working_spec),
+            ValidationStage::ConstraintValidation => self.validate_constraints(&working_spec),
             ValidationStage::CawsValidation => {
                 if let Some(validator) = &self.caws_validator {
                     // Use the CAWS validator
@@ -125,16 +136,12 @@ impl SystemValidationStage for ValidationStageAdapter {
                     vec![SystemValidationResult::fail(
                         SystemValidationSeverity::Error,
                         "caws_validator_missing",
-                        "CAWS validator not configured"
+                        "CAWS validator not configured",
                     )]
                 }
             }
-            ValidationStage::RiskAssessment => {
-                self.assess_risk(&working_spec)
-            }
-            ValidationStage::DependencyValidation => {
-                self.validate_dependencies(&working_spec)
-            }
+            ValidationStage::RiskAssessment => self.assess_risk(&working_spec),
+            ValidationStage::DependencyValidation => self.validate_dependencies(&working_spec),
         };
 
         Ok(results)
@@ -144,7 +151,10 @@ impl SystemValidationStage for ValidationStageAdapter {
 // Helper methods for ValidationStageAdapter (not part of trait)
 impl ValidationStageAdapter {
     /// Validate working spec schema structure
-    fn validate_schema(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<SystemValidationResult> {
+    fn validate_schema(
+        &self,
+        spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> Vec<SystemValidationResult> {
         let mut results = Vec::new();
 
         // Check required fields
@@ -152,7 +162,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "missing_id",
-                "Working spec must have a non-empty ID"
+                "Working spec must have a non-empty ID",
             ));
         }
 
@@ -160,7 +170,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "missing_title",
-                "Working spec must have a non-empty title"
+                "Working spec must have a non-empty title",
             ));
         }
 
@@ -169,7 +179,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "invalid_id_format",
-                "ID must follow format PREFIX-NUMBER (e.g., FEAT-001, FIX-042)"
+                "ID must follow format PREFIX-NUMBER (e.g., FEAT-001, FIX-042)",
             ));
         }
 
@@ -178,7 +188,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "invalid_risk_tier",
-                "Risk tier must be between 1 and 3"
+                "Risk tier must be between 1 and 3",
             ));
         }
 
@@ -187,7 +197,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "invalid_max_files",
-                "Max files must be greater than 0"
+                "Max files must be greater than 0",
             ));
         }
 
@@ -195,7 +205,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "invalid_max_loc",
-                "Max lines of code must be greater than 0"
+                "Max lines of code must be greater than 0",
             ));
         }
 
@@ -204,7 +214,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "empty_scope_in",
-                "Scope must include at least one input directory"
+                "Scope must include at least one input directory",
             ));
         }
 
@@ -213,7 +223,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Error,
                 "missing_acceptance_criteria",
-                "Working spec must have at least one acceptance criterion"
+                "Working spec must have at least one acceptance criterion",
             ));
         }
 
@@ -223,7 +233,10 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_given", i),
-                    format!("Acceptance criterion {} must have a 'given' condition", i + 1)
+                    format!(
+                        "Acceptance criterion {} must have a 'given' condition",
+                        i + 1
+                    ),
                 ));
             }
 
@@ -231,7 +244,7 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_when", i),
-                    format!("Acceptance criterion {} must have a 'when' action", i + 1)
+                    format!("Acceptance criterion {} must have a 'when' action", i + 1),
                 ));
             }
 
@@ -239,31 +252,41 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Error,
                     format!("acceptance_criterion_{}_missing_then", i),
-                    format!("Acceptance criterion {} must have a 'then' outcome", i + 1)
+                    format!("Acceptance criterion {} must have a 'then' outcome", i + 1),
                 ));
             }
         }
 
         if results.is_empty() {
-            results.push(SystemValidationResult::pass("schema_validation", "Schema validation passed"));
+            results.push(SystemValidationResult::pass(
+                "schema_validation",
+                "Schema validation passed",
+            ));
         }
 
         results
     }
 
     /// Validate constraints and business rules
-    fn validate_constraints(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<SystemValidationResult> {
+    fn validate_constraints(
+        &self,
+        spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> Vec<SystemValidationResult> {
         let mut results = Vec::new();
 
         // Collect all allowed paths from scope restrictions
-        let all_allowed_paths: Vec<String> = spec.scope.iter().flat_map(|s| s.allowed_paths.clone()).collect();
+        let all_allowed_paths: Vec<String> = spec
+            .scope
+            .iter()
+            .flat_map(|s| s.allowed_paths.clone())
+            .collect();
 
         // Validate change budget constraints
         if spec.change_budget.max_files > 100 {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "large_change_budget",
-                "Change budget exceeds recommended maximum of 100 files"
+                "Change budget exceeds recommended maximum of 100 files",
             ));
         }
 
@@ -271,7 +294,7 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "large_loc_budget",
-                "Lines of code budget exceeds recommended maximum of 10,000"
+                "Lines of code budget exceeds recommended maximum of 10,000",
             ));
         }
 
@@ -281,30 +304,35 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Error,
                     "invalid_scope_directory",
-                    format!("Scope directory '{}' should not include build artifacts or dependencies", dir)
+                    format!(
+                        "Scope directory '{}' should not include build artifacts or dependencies",
+                        dir
+                    ),
                 ));
             }
         }
 
         // Validate risk tier appropriateness
-        let is_high_risk_change = spec.change_budget.max_files > 50 || 
-                                 spec.change_budget.max_loc > 5000 ||
-                                 all_allowed_paths.len() > 10;
+        let is_high_risk_change = spec.change_budget.max_files > 50
+            || spec.change_budget.max_loc > 5000
+            || all_allowed_paths.len() > 10;
 
         if is_high_risk_change && spec.risk_tier < 2 {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "risk_tier_mismatch",
-                "High-impact changes should use risk tier 2 or higher"
+                "High-impact changes should use risk tier 2 or higher",
             ));
         }
 
         // Validate rollback plan exists
-        if spec.rollback_plan.automated_steps.is_empty() && spec.rollback_plan.manual_steps.is_empty() {
+        if spec.rollback_plan.automated_steps.is_empty()
+            && spec.rollback_plan.manual_steps.is_empty()
+        {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "missing_rollback_plan",
-                "Rollback plan should include automated or manual steps"
+                "Rollback plan should include automated or manual steps",
             ));
         }
 
@@ -314,43 +342,68 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Warning,
                     format!("acceptance_criterion_{}_not_measurable", i),
-                    format!("Acceptance criterion {} should be more specific and measurable", i + 1)
+                    format!(
+                        "Acceptance criterion {} should be more specific and measurable",
+                        i + 1
+                    ),
                 ));
             }
         }
 
         if results.is_empty() {
-            results.push(SystemValidationResult::pass("constraint_validation", "Constraint validation passed"));
+            results.push(SystemValidationResult::pass(
+                "constraint_validation",
+                "Constraint validation passed",
+            ));
         }
 
         results
     }
 
     /// Assess risk factors
-    fn assess_risk(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<SystemValidationResult> {
+    fn assess_risk(
+        &self,
+        spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> Vec<SystemValidationResult> {
         let mut results = Vec::new();
         let mut risk_score = 0.0;
-        
+
         // Collect all allowed paths from scope restrictions
-        let all_allowed_paths: Vec<String> = spec.scope.iter().flat_map(|s| s.allowed_paths.clone()).collect();
+        let all_allowed_paths: Vec<String> = spec
+            .scope
+            .iter()
+            .flat_map(|s| s.allowed_paths.clone())
+            .collect();
 
         // Calculate complexity risk
-        let complexity_risk = if spec.change_budget.max_files > 25 { 0.3 } else { 0.1 };
+        let complexity_risk = if spec.change_budget.max_files > 25 {
+            0.3
+        } else {
+            0.1
+        };
         risk_score += complexity_risk;
 
         // Calculate scope risk
-        let scope_risk = if all_allowed_paths.len() > 5 { 0.2 } else { 0.05 };
+        let scope_risk = if all_allowed_paths.len() > 5 {
+            0.2
+        } else {
+            0.05
+        };
         risk_score += scope_risk;
 
         // Calculate testing risk
-        let testing_risk = if spec.acceptance_criteria.len() < 3 { 0.2 } else { 0.05 };
+        let testing_risk = if spec.acceptance_criteria.len() < 3 {
+            0.2
+        } else {
+            0.05
+        };
         risk_score += testing_risk;
 
         // Calculate rollback risk based on rollback window
         let rollback_risk = match spec.rollback_plan.rollback_window_minutes {
-            Some(minutes) if minutes <= 5 => 0.1, // 5 minutes or less
+            Some(minutes) if minutes <= 5 => 0.1,  // 5 minutes or less
             Some(minutes) if minutes <= 60 => 0.2, // 1 hour or less
-            _ => 0.3, // Longer or unspecified
+            _ => 0.3,                              // Longer or unspecified
         };
         risk_score += rollback_risk;
 
@@ -372,7 +425,7 @@ impl ValidationStageAdapter {
         // Provide risk mitigation recommendations
         if risk_score > 0.4 {
             let mut recommendations = Vec::new();
-            
+
             if complexity_risk > 0.2 {
                 recommendations.push("Consider breaking into smaller, focused changes");
             }
@@ -390,24 +443,34 @@ impl ValidationStageAdapter {
                 results.push(SystemValidationResult::fail(
                     SystemValidationSeverity::Info,
                     "risk_mitigation_recommendations",
-                    format!("Risk mitigation: {}", recommendations.join("; "))
+                    format!("Risk mitigation: {}", recommendations.join("; ")),
                 ));
             }
         }
 
         if results.is_empty() {
-            results.push(SystemValidationResult::pass("risk_assessment", "Risk assessment passed"));
+            results.push(SystemValidationResult::pass(
+                "risk_assessment",
+                "Risk assessment passed",
+            ));
         }
 
         results
     }
 
     /// Validate dependencies
-    fn validate_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<SystemValidationResult> {
+    fn validate_dependencies(
+        &self,
+        spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> Vec<SystemValidationResult> {
         let mut results = Vec::new();
-        
+
         // Collect all allowed paths from scope restrictions
-        let all_allowed_paths: Vec<String> = spec.scope.iter().flat_map(|s| s.allowed_paths.clone()).collect();
+        let all_allowed_paths: Vec<String> = spec
+            .scope
+            .iter()
+            .flat_map(|s| s.allowed_paths.clone())
+            .collect();
 
         // Check for external service dependencies
         let external_services = self.extract_external_dependencies(spec);
@@ -415,12 +478,18 @@ impl ValidationStageAdapter {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Info,
                 "external_dependency",
-                format!("External dependency detected: {}. Ensure service availability.", service)
+                format!(
+                    "External dependency detected: {}. Ensure service availability.",
+                    service
+                ),
             ));
         }
 
         // Check for database dependencies
-        if all_allowed_paths.iter().any(|dir| dir.contains("migration") || dir.contains("schema")) {
+        if all_allowed_paths
+            .iter()
+            .any(|dir| dir.contains("migration") || dir.contains("schema"))
+        {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "database_dependency",
@@ -429,25 +498,34 @@ impl ValidationStageAdapter {
         }
 
         // Check for API dependencies
-        if all_allowed_paths.iter().any(|dir| dir.contains("api") || dir.contains("endpoint")) {
+        if all_allowed_paths
+            .iter()
+            .any(|dir| dir.contains("api") || dir.contains("endpoint"))
+        {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Warning,
                 "api_dependency",
-                "API changes detected. Ensure backward compatibility and versioning strategy."
+                "API changes detected. Ensure backward compatibility and versioning strategy.",
             ));
         }
 
         // Check for configuration dependencies
-        if all_allowed_paths.iter().any(|dir| dir.contains("config") || dir.contains("env")) {
+        if all_allowed_paths
+            .iter()
+            .any(|dir| dir.contains("config") || dir.contains("env"))
+        {
             results.push(SystemValidationResult::fail(
                 SystemValidationSeverity::Info,
                 "config_dependency",
-                "Configuration changes detected. Ensure environment compatibility."
+                "Configuration changes detected. Ensure environment compatibility.",
             ));
         }
 
         if results.is_empty() {
-            results.push(SystemValidationResult::pass("dependency_validation", "Dependency validation passed"));
+            results.push(SystemValidationResult::pass(
+                "dependency_validation",
+                "Dependency validation passed",
+            ));
         }
 
         results
@@ -459,50 +537,75 @@ impl ValidationStageAdapter {
         if parts.len() != 2 {
             return false;
         }
-        
+
         let prefix = parts[0];
         let number = parts[1];
-        
+
         // Check prefix is uppercase letters
         if !prefix.chars().all(|c| c.is_ascii_uppercase()) || prefix.is_empty() {
             return false;
         }
-        
+
         // Check number is digits
         if !number.chars().all(|c| c.is_ascii_digit()) || number.is_empty() {
             return false;
         }
-        
+
         true
     }
 
     /// Check if acceptance criterion is measurable
-    fn is_measurable_criterion(&self, criterion: &agent_agency_contracts::working_spec::AcceptanceCriterion) -> bool {
-        let measurable_keywords = ["should", "must", "will", "verify", "check", "ensure", "confirm"];
-        let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then).to_lowercase();
-        
-        measurable_keywords.iter().any(|keyword| text.contains(keyword))
+    fn is_measurable_criterion(
+        &self,
+        criterion: &agent_agency_contracts::working_spec::AcceptanceCriterion,
+    ) -> bool {
+        let measurable_keywords = [
+            "should", "must", "will", "verify", "check", "ensure", "confirm",
+        ];
+        let text =
+            format!("{} {} {}", criterion.given, criterion.when, criterion.then).to_lowercase();
+
+        measurable_keywords
+            .iter()
+            .any(|keyword| text.contains(keyword))
     }
 
     /// Extract external dependencies from working spec
-    fn extract_external_dependencies(&self, spec: &agent_agency_contracts::working_spec::WorkingSpec) -> Vec<String> {
+    fn extract_external_dependencies(
+        &self,
+        spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> Vec<String> {
         let mut dependencies = Vec::new();
-        
+
         // Check title and description for external services
         let text = format!("{} {}", spec.title, spec.description).to_lowercase();
-        
+
         let external_services = [
-            "api", "database", "redis", "postgresql", "mysql", "mongodb",
-            "elasticsearch", "kafka", "rabbitmq", "s3", "dynamodb",
-            "firebase", "auth0", "stripe", "paypal", "twilio", "sendgrid"
+            "api",
+            "database",
+            "redis",
+            "postgresql",
+            "mysql",
+            "mongodb",
+            "elasticsearch",
+            "kafka",
+            "rabbitmq",
+            "s3",
+            "dynamodb",
+            "firebase",
+            "auth0",
+            "stripe",
+            "paypal",
+            "twilio",
+            "sendgrid",
         ];
-        
+
         for service in &external_services {
             if text.contains(service) {
                 dependencies.push(service.to_string());
             }
         }
-        
+
         dependencies
     }
 }
@@ -517,7 +620,7 @@ pub struct ValidationPipeline {
 
 /// Configuration for the validation pipeline
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationPipelineConfig {
     /// Whether to run in strict mode (fail on warnings)
     pub strict_mode: bool,
@@ -541,10 +644,7 @@ impl Default for ValidationPipelineConfig {
 
 impl ValidationPipeline {
     /// Create a new validation pipeline
-    pub fn new(
-        caws_validator: Arc<dyn CawsValidator>,
-        config: ValidationPipelineConfig,
-    ) -> Self {
+    pub fn new(caws_validator: Arc<dyn CawsValidator>, config: ValidationPipelineConfig) -> Self {
         // Create system-configuration pipeline config
         let system_config = SystemValidationPipelineConfig {
             base: PipelineConfig::default(),
@@ -579,10 +679,8 @@ impl ValidationPipeline {
         };
 
         for stage_type in stages {
-            let adapter = ValidationStageAdapter::new(
-                stage_type,
-                Some(Arc::clone(&caws_validator))
-            );
+            let adapter =
+                ValidationStageAdapter::new(stage_type, Some(Arc::clone(&caws_validator)));
             system_pipeline.add_stage(Box::new(adapter));
         }
 
@@ -599,12 +697,14 @@ impl ValidationPipeline {
         working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
     ) -> PlanningResult<crate::planning_agent::types::ValidationResults> {
         // Convert WorkingSpec to JSON for system-configuration pipeline
-        let input = serde_json::to_value(working_spec)
-            .map_err(|e| PlanningError::ValidationError(format!("Failed to serialize working spec: {}", e)))?;
+        let input = serde_json::to_value(working_spec).map_err(|e| {
+            PlanningError::ValidationError(format!("Failed to serialize working spec: {}", e))
+        })?;
 
         // Execute validation through system-configuration pipeline
-        let system_results = self.system_pipeline.execute(input).await
-            .map_err(|e| PlanningError::ValidationError(format!("Pipeline execution failed: {}", e)))?;
+        let system_results = self.system_pipeline.execute(input).await.map_err(|e| {
+            PlanningError::ValidationError(format!("Pipeline execution failed: {}", e))
+        })?;
 
         // Convert system-configuration results to domain-specific results
         let mut all_issues = Vec::new();
@@ -617,26 +717,28 @@ impl ValidationPipeline {
                 SystemValidationSeverity::Warning => ValidationSeverity::Warning,
                 SystemValidationSeverity::Info => ValidationSeverity::Info,
             };
-            
-            let issue = ValidationIssue::with_string_category(
-                severity,
-                result.category,
-                result.message,
-            );
-            
+
+            let issue =
+                ValidationIssue::with_string_category(severity, result.category, result.message);
+
             if let Some(suggestion) = result.suggestion {
                 all_issues.push(ValidationIssue {
                     suggestion: Some(suggestion),
                     ..issue
                 });
             } else {
-            all_issues.push(issue);
+                all_issues.push(issue);
             }
         }
 
         let validation_status = if system_results.overall_passed {
             crate::planning_agent::types::ValidationStatus::Passed
-        } else if all_issues.iter().any(|i| matches!(i.severity, ValidationSeverity::Critical | ValidationSeverity::Error)) {
+        } else if all_issues.iter().any(|i| {
+            matches!(
+                i.severity,
+                ValidationSeverity::Critical | ValidationSeverity::Error
+            )
+        }) {
             crate::planning_agent::types::ValidationStatus::Failed
         } else {
             crate::planning_agent::types::ValidationStatus::PassedWithRefinements
@@ -644,7 +746,15 @@ impl ValidationPipeline {
 
         // Calculate CAWS compliance score
         let total_issues = all_issues.len();
-        let error_count = all_issues.iter().filter(|i| matches!(i.severity, ValidationSeverity::Critical | ValidationSeverity::Error)).count();
+        let error_count = all_issues
+            .iter()
+            .filter(|i| {
+                matches!(
+                    i.severity,
+                    ValidationSeverity::Critical | ValidationSeverity::Error
+                )
+            })
+            .count();
         let caws_compliance_score = if total_issues == 0 {
             1.0
         } else {
@@ -659,4 +769,3 @@ impl ValidationPipeline {
         })
     }
 }
-

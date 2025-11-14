@@ -3,18 +3,17 @@
 //! Provides helper functions to initialize service adapters for use in binaries.
 //! This centralizes dependency injection setup.
 
-use std::sync::Arc;
 use data_interfaces::service_contracts::{
-    ResearchService, OrchestrationService, WorkerService,
-    ProgressTrackingService, MemoryService,
+    MemoryService, OrchestrationService, ProgressTrackingService, ResearchService, WorkerService,
 };
+use std::sync::Arc;
 
 // Re-export adapters
-pub use super::research_adapter::ResearchServiceAdapter;
-pub use super::orchestration_adapter::OrchestrationServiceAdapter;
-pub use super::worker_adapter::WorkerServiceAdapter;
-pub use super::progress_adapter::ProgressTrackingServiceAdapter;
 pub use super::memory_adapter::MemoryServiceAdapter;
+pub use super::orchestration_adapter::OrchestrationServiceAdapter;
+pub use super::progress_adapter::ProgressTrackingServiceAdapter;
+pub use super::research_adapter::ResearchServiceAdapter;
+pub use super::worker_adapter::WorkerServiceAdapter;
 
 /// Service container holding all initialized services
 pub struct ServiceContainer {
@@ -30,13 +29,17 @@ impl ServiceContainer {
     pub async fn new() -> Self {
         Self {
             research_service: Arc::new(ResearchServiceAdapter::with_defaults()),
-            orchestration_service: Arc::new(OrchestrationServiceAdapter::with_defaults().await.expect("Failed to create orchestration service")),
+            orchestration_service: Arc::new(
+                OrchestrationServiceAdapter::with_defaults()
+                    .await
+                    .expect("Failed to create orchestration service"),
+            ),
             worker_service: Arc::new(WorkerServiceAdapter::new()),
             progress_service: Arc::new(ProgressTrackingServiceAdapter::new()),
             memory_service: None, // Memory service requires database connection
         }
     }
-    
+
     /// Create with custom services (for testing or advanced usage)
     pub fn with_services(
         research: Arc<dyn ResearchService>,
@@ -62,4 +65,3 @@ impl Default for ServiceContainer {
         panic!("ServiceContainer::default() cannot be used. Use ServiceContainer::new() in async contexts or ServiceContainer::with_services() for sync contexts.")
     }
 }
-

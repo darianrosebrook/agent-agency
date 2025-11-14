@@ -2,14 +2,14 @@
 //! Memory Manager - Central coordinator for all memory operations
 
 use crate::memory_types::*;
-use crate::MemoryResult;
 use crate::MemoryError;
-use sqlx::{Row, PgPool};
-use std::sync::Arc;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc, Duration};
+use crate::MemoryResult;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn};
+use sqlx::{PgPool, Row};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, info, warn};
 /// Central memory manager coordinating all memory operations
 #[derive(Debug)]
 pub struct MemoryManager {
@@ -26,7 +26,7 @@ impl MemoryManager {
         match self.config.workspace_config.isolation_level.as_str() {
             "Strict" => self.workspace_id,
             "WorkspaceFirst" => self.workspace_id,
-            "GlobalFirst" => None, // Allow global access
+            "GlobalFirst" => None,  // Allow global access
             "Unrestricted" => None, // Allow all workspaces
             _ => self.workspace_id, // Default to strict
         }
@@ -67,10 +67,8 @@ impl MemoryManager {
         };
 
         let decay_scheduler = Some(Arc::new(
-            crate::decay_scheduler::MemoryDecayScheduler::new(
-                scheduler_config,
-                db_pool.clone(),
-            ).await?
+            crate::decay_scheduler::MemoryDecayScheduler::new(scheduler_config, db_pool.clone())
+                .await?,
         ));
 
         Ok(Self {
@@ -85,7 +83,7 @@ impl MemoryManager {
     pub async fn new_with_registry(
         config: MemoryConfig,
         db_pool: PgPool,
-        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>
+        workspace_registry: Arc<crate::workspace_registry::WorkspaceRegistry>,
     ) -> MemoryResult<Self> {
         // TODO: Make scheduler configurable (see line 42 for full TODO)
         let scheduler_config = crate::decay_scheduler::DecaySchedulerConfig {
@@ -95,10 +93,8 @@ impl MemoryManager {
         };
 
         let decay_scheduler = Some(Arc::new(
-            crate::decay_scheduler::MemoryDecayScheduler::new(
-                scheduler_config,
-                db_pool.clone(),
-            ).await?
+            crate::decay_scheduler::MemoryDecayScheduler::new(scheduler_config, db_pool.clone())
+                .await?,
         ));
 
         Ok(Self {
@@ -136,7 +132,10 @@ impl MemoryManager {
         .execute(&self.db_pool)
         .await?;
 
-        info!("Stored agent experience: {} for agent {}", memory_id, experience.agent_id);
+        info!(
+            "Stored agent experience: {} for agent {}",
+            memory_id, experience.agent_id
+        );
         Ok(memory_id)
     }
 
@@ -144,7 +143,7 @@ impl MemoryManager {
     pub fn db_pool(&self) -> &PgPool {
         &self.db_pool
     }
-    
+
     /// Retrieve a memory by ID
     pub async fn retrieve_memory(&self, memory_id: MemoryId) -> MemoryResult<AgentExperience> {
         let row = sqlx::query(
@@ -168,10 +167,15 @@ impl MemoryManager {
             input: row.try_get("input")?,
             output: row.try_get("output")?,
             outcome: serde_json::from_value(row.try_get("outcome")?)?,
-            memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?).unwrap_or_else(|_| MemoryType::Episodic),
+            memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?)
+                .unwrap_or_else(|_| MemoryType::Episodic),
             timestamp: row.try_get("timestamp")?,
             metadata: serde_json::from_value(row.try_get("metadata")?).unwrap_or_default(),
-            content: format!("{} -> {}", row.try_get::<String, _>("input")?, row.try_get::<String, _>("output")?),
+            content: format!(
+                "{} -> {}",
+                row.try_get::<String, _>("input")?,
+                row.try_get::<String, _>("output")?
+            ),
         };
 
         Ok(experience)
@@ -222,10 +226,15 @@ impl MemoryManager {
                 input: row.try_get("input")?,
                 output: row.try_get("output")?,
                 outcome: serde_json::from_value(row.try_get("outcome")?)?,
-                memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?).unwrap_or_else(|_| MemoryType::Episodic),
+                memory_type: MemoryType::try_from(row.try_get::<i32, _>("memory_type")?)
+                    .unwrap_or_else(|_| MemoryType::Episodic),
                 timestamp: row.try_get("timestamp")?,
                 metadata: serde_json::from_value(row.try_get("metadata")?).unwrap_or_default(),
-                content: format!("{} -> {}", row.try_get::<String, _>("input")?, row.try_get::<String, _>("output")?),
+                content: format!(
+                    "{} -> {}",
+                    row.try_get::<String, _>("input")?,
+                    row.try_get::<String, _>("output")?
+                ),
             };
             experiences.push(experience);
         }
@@ -234,7 +243,11 @@ impl MemoryManager {
     }
 
     /// Update memory metadata
-    pub async fn update_memory_metadata(&self, memory_id: MemoryId, metadata: HashMap<String, serde_json::Value>) -> MemoryResult<()> {
+    pub async fn update_memory_metadata(
+        &self,
+        memory_id: MemoryId,
+        metadata: HashMap<String, serde_json::Value>,
+    ) -> MemoryResult<()> {
         sqlx::query(
             r#"
             UPDATE agent_experiences
@@ -253,15 +266,16 @@ impl MemoryManager {
 
     /// Delete a memory
     pub async fn delete_memory(&self, memory_id: MemoryId) -> MemoryResult<()> {
-        let result = sqlx::query(
-            "DELETE FROM agent_experiences WHERE id = $1",
-        )
-        .bind(memory_id)
-        .execute(&self.db_pool)
-        .await?;
+        let result = sqlx::query("DELETE FROM agent_experiences WHERE id = $1")
+            .bind(memory_id)
+            .execute(&self.db_pool)
+            .await?;
 
         if result.rows_affected() == 0 {
-            return Err(MemoryError::NotFound(format!("Memory not found: {}", memory_id)));
+            return Err(MemoryError::NotFound(format!(
+                "Memory not found: {}",
+                memory_id
+            )));
         }
 
         info!("Deleted memory: {}", memory_id);
@@ -350,13 +364,15 @@ impl MemoryManager {
 
     /// Get all memories with their embeddings for consolidation
     /// Returns a vector of (memory_id, embedding) tuples
-    pub async fn get_all_memories_with_embeddings(&self) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
+    pub async fn get_all_memories_with_embeddings(
+        &self,
+    ) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
         use sqlx::Row;
         use tracing::debug;
-        
+
         // Apply workspace filtering based on isolation level
         let workspace_filter = self.get_workspace_filter();
-        
+
         let query = sqlx::query(
             r#"
             SELECT me.memory_id, me.embedding
@@ -364,12 +380,12 @@ impl MemoryManager {
             WHERE ($1::uuid IS NULL OR me.workspace_id = $1 OR me.workspace_id IS NULL)
               AND me.embedding IS NOT NULL
             ORDER BY me.last_accessed DESC
-            "#
+            "#,
         )
         .bind(workspace_filter);
-        
+
         let rows = query.fetch_all(&self.db_pool).await?;
-        
+
         let mut results = Vec::new();
         for row in rows {
             let memory_id: MemoryId = row.try_get("memory_id")?;
@@ -382,24 +398,30 @@ impl MemoryManager {
                 }
             }
         }
-        
-        debug!("Fetched {} memories with embeddings for consolidation", results.len());
+
+        debug!(
+            "Fetched {} memories with embeddings for consolidation",
+            results.len()
+        );
         Ok(results)
     }
-    
+
     /// Get embeddings for specific memory IDs
     /// Returns a vector of (memory_id, embedding) tuples
-    pub async fn get_embeddings_by_ids(&self, memory_ids: &[MemoryId]) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
+    pub async fn get_embeddings_by_ids(
+        &self,
+        memory_ids: &[MemoryId],
+    ) -> MemoryResult<Vec<(MemoryId, Vec<f32>)>> {
         use sqlx::Row;
         use tracing::debug;
-        
+
         if memory_ids.is_empty() {
             return Ok(Vec::new());
         }
-        
+
         // Apply workspace filtering based on isolation level
         let workspace_filter = self.get_workspace_filter();
-        
+
         let query = sqlx::query(
             r#"
             SELECT me.memory_id, me.embedding
@@ -407,13 +429,13 @@ impl MemoryManager {
             WHERE me.memory_id = ANY($1::uuid[])
               AND ($2::uuid IS NULL OR me.workspace_id = $2 OR me.workspace_id IS NULL)
               AND me.embedding IS NOT NULL
-            "#
+            "#,
         )
         .bind(memory_ids)
         .bind(workspace_filter);
-        
+
         let rows = query.fetch_all(&self.db_pool).await?;
-        
+
         let mut results = Vec::new();
         for row in rows {
             let memory_id: MemoryId = row.try_get("memory_id")?;
@@ -426,11 +448,15 @@ impl MemoryManager {
                 }
             }
         }
-        
-        debug!("Fetched {} embeddings for {} requested memory IDs", results.len(), memory_ids.len());
+
+        debug!(
+            "Fetched {} embeddings for {} requested memory IDs",
+            results.len(),
+            memory_ids.len()
+        );
         Ok(results)
     }
-    
+
     /// Get memory statistics
     pub async fn get_memory_stats(&self) -> MemoryResult<MemoryStats> {
         let row = sqlx::query(
@@ -460,7 +486,7 @@ impl MemoryManager {
             FROM agent_experiences
             GROUP BY memory_type
             ORDER BY count DESC
-            "#
+            "#,
         )
         .fetch_all(&self.db_pool)
         .await?;
@@ -468,8 +494,12 @@ impl MemoryManager {
         let mut memory_types_distribution = HashMap::new();
         for row in memory_type_rows {
             let memory_type_i32: i32 = row.try_get("memory_type")?;
-            let memory_type = MemoryType::try_from(memory_type_i32)
-                .map_err(|_| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid memory type value"))))?;
+            let memory_type = MemoryType::try_from(memory_type_i32).map_err(|_| {
+                sqlx::Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid memory type value",
+                )))
+            })?;
             let count: i64 = row.try_get("count")?;
             memory_types_distribution.insert(memory_type, count as usize);
         }
@@ -503,7 +533,9 @@ impl MemoryManager {
     }
 
     /// Get decay scheduler status
-    pub async fn get_decay_scheduler_status(&self) -> Option<crate::decay_scheduler::DecaySchedulerStatus> {
+    pub async fn get_decay_scheduler_status(
+        &self,
+    ) -> Option<crate::decay_scheduler::DecaySchedulerStatus> {
         if let Some(ref scheduler) = self.decay_scheduler {
             Some(scheduler.status().await)
         } else {

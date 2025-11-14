@@ -2,21 +2,25 @@
 //!
 //! This module handles parsing of documentation and extracting claims from docs.
 
-use regex::Regex;
-use std::collections::HashMap;
+use crate::extraction_types::{AtomicClaim, ClaimScope, DataImpact, VerifiabilityLevel};
 use crate::verification::types::*;
 use crate::verification::verification_types::{
-    DocumentationStructure, UsageExample, DocumentationStandards,
+    DocumentationStandards, DocumentationStructure, UsageExample,
 };
-use crate::extraction_types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
+use regex::Regex;
+use std::collections::HashMap;
 
 /// Documentation claim extractor
 pub struct DocumentationExtractor;
 
 impl DocumentationExtractor {
     /// Extract claims from documentation output
-    pub async fn extract_documentation_claims(&self, doc_output: &DocumentationOutput, style_guide: &DocumentationStandards) -> Result<Vec<AtomicClaim>> {
+    pub async fn extract_documentation_claims(
+        &self,
+        doc_output: &DocumentationOutput,
+        style_guide: &DocumentationStandards,
+    ) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
 
         // Parse documentation structure
@@ -47,7 +51,11 @@ impl DocumentationExtractor {
     }
 
     /// Check documentation consistency and completeness
-    pub async fn check_documentation_consistency(&self, doc_output: &DocumentationOutput, style_guide: &DocumentationStandards) -> Result<DocumentationConsistency> {
+    pub async fn check_documentation_consistency(
+        &self,
+        doc_output: &DocumentationOutput,
+        style_guide: &DocumentationStandards,
+    ) -> Result<DocumentationConsistency> {
         let mut issues = Vec::new();
         let mut score: f64 = 1.0;
 
@@ -78,7 +86,9 @@ impl DocumentationExtractor {
         Ok(DocumentationConsistency {
             overall_score: score.max(0.0) as f64,
             issues,
-            sections_present: style_guide.required_sections.iter()
+            sections_present: style_guide
+                .required_sections
+                .iter()
                 .map(|s| (s.clone(), self.has_section(&doc_output.content, s)))
                 .collect(),
             api_completeness,
@@ -86,7 +96,10 @@ impl DocumentationExtractor {
     }
 
     /// Parse documentation structure
-    pub fn parse_documentation_structure(&self, doc_output: &DocumentationOutput) -> Result<DocumentationStructure> {
+    pub fn parse_documentation_structure(
+        &self,
+        doc_output: &DocumentationOutput,
+    ) -> Result<DocumentationStructure> {
         let mut sections = Vec::new();
         let mut examples = Vec::new();
         let mut api_references = Vec::new();
@@ -148,7 +161,8 @@ impl DocumentationExtractor {
             }
             "consistent_headers" => {
                 // Check if headers are consistently formatted
-                let header_lines: Vec<_> = content.lines()
+                let header_lines: Vec<_> = content
+                    .lines()
                     .filter(|l| l.trim_start().starts_with('#'))
                     .collect();
                 if header_lines.len() <= 1 {
@@ -156,9 +170,9 @@ impl DocumentationExtractor {
                 } else {
                     // Check if all headers follow the same style
                     let first_style = header_lines[0].chars().take_while(|c| *c == '#').count();
-                    header_lines.iter().all(|line| {
-                        line.chars().take_while(|c| *c == '#').count() == first_style
-                    })
+                    header_lines
+                        .iter()
+                        .all(|line| line.chars().take_while(|c| *c == '#').count() == first_style)
                 }
             }
             _ => true, // Unknown rules pass
@@ -166,7 +180,10 @@ impl DocumentationExtractor {
     }
 
     /// Check API documentation completeness
-    fn check_api_documentation_completeness(&self, doc_output: &DocumentationOutput) -> Result<f64> {
+    fn check_api_documentation_completeness(
+        &self,
+        doc_output: &DocumentationOutput,
+    ) -> Result<f64> {
         let mut completeness = 0.0;
         let mut checks = 0;
 
@@ -194,11 +211,19 @@ impl DocumentationExtractor {
         }
         checks += 1;
 
-        Ok(if checks > 0 { completeness / checks as f64 } else { 0.0 })
+        Ok(if checks > 0 {
+            completeness / checks as f64
+        } else {
+            0.0
+        })
     }
 
     /// Extract API documentation claim
-    fn extract_api_documentation_claim(&self, api_ref: &str, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
+    fn extract_api_documentation_claim(
+        &self,
+        api_ref: &str,
+        _style_guide: &DocumentationStandards,
+    ) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: format!("API endpoint {} is documented", api_ref),
@@ -227,7 +252,11 @@ impl DocumentationExtractor {
     }
 
     /// Extract usage example claim
-    fn extract_usage_example_claim(&self, example: &UsageExample, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
+    fn extract_usage_example_claim(
+        &self,
+        example: &UsageExample,
+        _style_guide: &DocumentationStandards,
+    ) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: format!("Usage example provided: {}", example.description),
@@ -256,7 +285,11 @@ impl DocumentationExtractor {
     }
 
     /// Extract section claim
-    fn extract_section_claim(&self, section: &str, _style_guide: &DocumentationStandards) -> Result<Option<AtomicClaim>> {
+    fn extract_section_claim(
+        &self,
+        section: &str,
+        _style_guide: &DocumentationStandards,
+    ) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: format!("Documentation section '{}' exists", section),

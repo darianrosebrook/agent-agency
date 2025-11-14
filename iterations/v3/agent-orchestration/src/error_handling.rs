@@ -8,12 +8,13 @@
 //! - Comprehensive error logging and monitoring
 //! - Recovery orchestration and automated healing
 
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use uuid::Uuid;
+use uuid::Uuid;
 
 /// Unified error type for the entire Agent Agency system
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -113,8 +114,11 @@ impl AgencyError {
 
 impl std::fmt::Display for AgencyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}] {}: {} (component: {}, operation: {})",
-               self.category, self.code, self.message, self.component, self.operation)
+        write!(
+            f,
+            "[{}] {}: {} (component: {}, operation: {})",
+            self.category, self.code, self.message, self.component, self.operation
+        )
     }
 }
 
@@ -374,7 +378,7 @@ impl CircuitBreaker {
                     &format!("Circuit breaker is open for service: {}", self.service_name),
                     ErrorSeverity::Error,
                     "circuit_breaker",
-                    "execute"
+                    "execute",
                 ));
             }
             CircuitBreakerState::HalfOpen => {
@@ -392,10 +396,7 @@ impl CircuitBreaker {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, AgencyError>>,
     {
-        let result = tokio::time::timeout(
-            self.config.request_timeout,
-            operation()
-        ).await;
+        let result = tokio::time::timeout(self.config.request_timeout, operation()).await;
 
         let mut stats = self.stats.write().await;
         stats.total_requests += 1;
@@ -415,7 +416,8 @@ impl CircuitBreaker {
                 // Check if we should open the circuit
                 if stats.consecutive_failures >= self.config.failure_threshold {
                     drop(stats);
-                    self.transition_to_open("Failure threshold exceeded".to_string()).await;
+                    self.transition_to_open("Failure threshold exceeded".to_string())
+                        .await;
                 }
 
                 Err(error)
@@ -428,7 +430,8 @@ impl CircuitBreaker {
 
                 if stats.consecutive_failures >= self.config.failure_threshold {
                     drop(stats);
-                    self.transition_to_open("Timeout threshold exceeded".to_string()).await;
+                    self.transition_to_open("Timeout threshold exceeded".to_string())
+                        .await;
                 }
 
                 Err(AgencyError::new(
@@ -437,7 +440,7 @@ impl CircuitBreaker {
                     &format!("Request to {} timed out", self.service_name),
                     ErrorSeverity::Error,
                     "circuit_breaker",
-                    "execute_closed"
+                    "execute_closed",
                 ))
             }
         }
@@ -449,10 +452,7 @@ impl CircuitBreaker {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<T, AgencyError>>,
     {
-        let result = tokio::time::timeout(
-            self.config.request_timeout,
-            operation()
-        ).await;
+        let result = tokio::time::timeout(self.config.request_timeout, operation()).await;
 
         let mut stats = self.stats.write().await;
         stats.total_requests += 1;
@@ -466,7 +466,8 @@ impl CircuitBreaker {
                 // Check if we should close the circuit
                 if stats.successful_requests % self.config.success_threshold as u64 == 0 {
                     drop(stats);
-                    self.transition_to_closed("Success threshold reached".to_string()).await;
+                    self.transition_to_closed("Success threshold reached".to_string())
+                        .await;
                 }
 
                 Ok(success)
@@ -478,15 +479,19 @@ impl CircuitBreaker {
                 stats.last_failure_time = Some(Instant::now());
 
                 drop(stats);
-                self.transition_to_open("Failure during recovery attempt".to_string()).await;
+                self.transition_to_open("Failure during recovery attempt".to_string())
+                    .await;
 
                 Err(AgencyError::new(
                     ErrorCategory::ExternalService,
                     "HALF_OPEN_FAILURE",
-                    &format!("Service {} failed during recovery attempt", self.service_name),
+                    &format!(
+                        "Service {} failed during recovery attempt",
+                        self.service_name
+                    ),
                     ErrorSeverity::Error,
                     "circuit_breaker",
-                    "execute_half_open"
+                    "execute_half_open",
                 ))
             }
         }
@@ -559,13 +564,14 @@ impl CircuitBreaker {
         if *self.state.read().await == CircuitBreakerState::HalfOpen {
             if stats.successful_requests >= self.config.success_threshold as u64 {
                 drop(stats);
-                self.transition_to_closed("Success threshold met in half-open state".to_string()).await;
+                self.transition_to_closed("Success threshold met in half-open state".to_string())
+                    .await;
             }
         }
     }
 
     /// Record a failed operation
-    /// 
+    ///
     /// Updates circuit breaker statistics and transitions state if failure threshold is exceeded.
     pub async fn record_failure(&self) {
         let mut stats = self.stats.write().await;
@@ -577,11 +583,13 @@ impl CircuitBreaker {
         // Check if we should open the circuit
         if stats.consecutive_failures >= self.config.failure_threshold as u32 {
             drop(stats);
-            self.transition_to_open("Failure threshold exceeded".to_string()).await;
+            self.transition_to_open("Failure threshold exceeded".to_string())
+                .await;
         } else if *self.state.read().await == CircuitBreakerState::HalfOpen {
             // Any failure in half-open state sends us back to open
             drop(stats);
-            self.transition_to_open("Failure during recovery attempt".to_string()).await;
+            self.transition_to_open("Failure during recovery attempt".to_string())
+                .await;
         }
     }
 }
@@ -723,7 +731,11 @@ impl DegradationManager {
     }
 
     /// Apply degradation to a component
-    pub async fn degrade_component(&self, component: &str, level: DegradationLevel) -> Result<(), AgencyError> {
+    pub async fn degrade_component(
+        &self,
+        component: &str,
+        level: DegradationLevel,
+    ) -> Result<(), AgencyError> {
         let mut state = self.state.write().await;
 
         if !state.degraded {
@@ -731,19 +743,28 @@ impl DegradationManager {
             state.degradation_start = Some(Instant::now());
         }
 
-        state.degraded_components.insert(component.to_string(), level.clone());
+        state
+            .degraded_components
+            .insert(component.to_string(), level.clone());
 
         // Log degradation event
         tracing::warn!(
             "Component '{}' degraded to level '{}' - {}",
-            component, level.name, level.description
+            component,
+            level.name,
+            level.description
         );
 
         Ok(())
     }
 
     /// Check if a component should be degraded based on error patterns
-    pub async fn should_degrade(&self, component: &str, error_count: u32, time_window: Duration) -> Option<DegradationLevel> {
+    pub async fn should_degrade(
+        &self,
+        component: &str,
+        error_count: u32,
+        time_window: Duration,
+    ) -> Option<DegradationLevel> {
         let policy = self.policies.get(component)?;
 
         // Simple degradation logic: degrade after 5 errors in 5 minutes
@@ -805,29 +826,38 @@ impl RecoveryOrchestrator {
         let mut retry_configs = HashMap::new();
 
         // Configure retry policies for different error types
-        retry_configs.insert(ErrorCategory::Network, ErrorHandlingRetryConfig {
-            max_attempts: 3,
-            initial_delay: Duration::from_millis(100),
-            max_delay: Duration::from_secs(5),
-            backoff_multiplier: 2.0,
-            jitter_factor: 0.1,
-        });
+        retry_configs.insert(
+            ErrorCategory::Network,
+            ErrorHandlingRetryConfig {
+                max_attempts: 3,
+                initial_delay: Duration::from_millis(100),
+                max_delay: Duration::from_secs(5),
+                backoff_multiplier: 2.0,
+                jitter_factor: 0.1,
+            },
+        );
 
-        retry_configs.insert(ErrorCategory::ExternalService, ErrorHandlingRetryConfig {
-            max_attempts: 2,
-            initial_delay: Duration::from_millis(500),
-            max_delay: Duration::from_secs(10),
-            backoff_multiplier: 2.0,
-            jitter_factor: 0.2,
-        });
+        retry_configs.insert(
+            ErrorCategory::ExternalService,
+            ErrorHandlingRetryConfig {
+                max_attempts: 2,
+                initial_delay: Duration::from_millis(500),
+                max_delay: Duration::from_secs(10),
+                backoff_multiplier: 2.0,
+                jitter_factor: 0.2,
+            },
+        );
 
-        retry_configs.insert(ErrorCategory::Timeout, ErrorHandlingRetryConfig {
-            max_attempts: 1, // Don't retry timeouts
-            initial_delay: Duration::from_millis(0),
-            max_delay: Duration::from_millis(0),
-            backoff_multiplier: 1.0,
-            jitter_factor: 0.0,
-        });
+        retry_configs.insert(
+            ErrorCategory::Timeout,
+            ErrorHandlingRetryConfig {
+                max_attempts: 1, // Don't retry timeouts
+                initial_delay: Duration::from_millis(0),
+                max_delay: Duration::from_millis(0),
+                backoff_multiplier: 1.0,
+                jitter_factor: 0.0,
+            },
+        );
 
         Self {
             circuit_breakers,
@@ -857,7 +887,11 @@ impl RecoveryOrchestrator {
                 if let Some(service_name_str) = service_name.as_str() {
                     if let Some(circuit_breaker) = self.circuit_breakers.get(service_name_str) {
                         let state = circuit_breaker.get_state().await;
-                        tracing::warn!("Circuit breaker for {} is in state: {:?}", service_name_str, state);
+                        tracing::warn!(
+                            "Circuit breaker for {} is in state: {:?}",
+                            service_name_str,
+                            state
+                        );
                     }
                 }
             }
@@ -874,7 +908,11 @@ impl RecoveryOrchestrator {
                     return Ok(());
                 }
                 Err(recovery_error) => {
-                    tracing::warn!("Recovery strategy '{}' failed: {}", strategy.description, recovery_error);
+                    tracing::warn!(
+                        "Recovery strategy '{}' failed: {}",
+                        strategy.description,
+                        recovery_error
+                    );
                 }
             }
         }
@@ -963,22 +1001,42 @@ impl RecoveryOrchestrator {
         // Log error chain if present
         if !error.error_chain.is_empty() {
             match log_level {
-                tracing::Level::ERROR => tracing::error!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
-                tracing::Level::WARN => tracing::warn!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
-                tracing::Level::INFO => tracing::info!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
-                tracing::Level::DEBUG => tracing::debug!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
-                tracing::Level::TRACE => tracing::trace!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain),
+                tracing::Level::ERROR => {
+                    tracing::error!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain)
+                }
+                tracing::Level::WARN => {
+                    tracing::warn!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain)
+                }
+                tracing::Level::INFO => {
+                    tracing::info!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain)
+                }
+                tracing::Level::DEBUG => {
+                    tracing::debug!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain)
+                }
+                tracing::Level::TRACE => {
+                    tracing::trace!(error_id = %error.error_id, "Error chain: {:?}", error.error_chain)
+                }
             }
         }
 
         // Log recovery strategies
         if !error.recovery_strategies.is_empty() {
             match log_level {
-                tracing::Level::ERROR => tracing::error!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
-                tracing::Level::WARN => tracing::warn!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
-                tracing::Level::INFO => tracing::info!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
-                tracing::Level::DEBUG => tracing::debug!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
-                tracing::Level::TRACE => tracing::trace!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len()),
+                tracing::Level::ERROR => {
+                    tracing::error!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len())
+                }
+                tracing::Level::WARN => {
+                    tracing::warn!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len())
+                }
+                tracing::Level::INFO => {
+                    tracing::info!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len())
+                }
+                tracing::Level::DEBUG => {
+                    tracing::debug!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len())
+                }
+                tracing::Level::TRACE => {
+                    tracing::trace!(error_id = %error.error_id, "Available recovery strategies: {}", error.recovery_strategies.len())
+                }
             }
         }
     }
@@ -986,7 +1044,8 @@ impl RecoveryOrchestrator {
     /// Evaluate whether to apply degradation based on error patterns
     async fn evaluate_degradation(&self, error: &AgencyError) -> Result<(), AgencyError> {
         // Check if component should be degraded
-        if let Some(degradation_level) = self.degradation_manager
+        if let Some(degradation_level) = self
+            .degradation_manager
             .should_degrade(&error.component, 1, Duration::from_secs(300))
             .await
         {
@@ -999,7 +1058,10 @@ impl RecoveryOrchestrator {
     }
 
     /// Execute a specific recovery strategy
-    async fn execute_recovery_strategy(&self, strategy: &RecoveryStrategy) -> Result<(), AgencyError> {
+    async fn execute_recovery_strategy(
+        &self,
+        strategy: &RecoveryStrategy,
+    ) -> Result<(), AgencyError> {
         match strategy.strategy_type {
             RecoveryStrategyType::Retry => {
                 // Retry logic is handled by the caller
@@ -1034,7 +1096,7 @@ impl RecoveryOrchestrator {
                     &format!("Human intervention required: {}", strategy.description),
                     ErrorSeverity::Critical,
                     "recovery_orchestrator",
-                    "execute_recovery_strategy"
+                    "execute_recovery_strategy",
                 ))
             }
             RecoveryStrategyType::Abort => {
@@ -1046,7 +1108,7 @@ impl RecoveryOrchestrator {
                     &format!("Operation aborted: {}", strategy.description),
                     ErrorSeverity::Error,
                     "recovery_orchestrator",
-                    "execute_recovery_strategy"
+                    "execute_recovery_strategy",
                 ))
             }
         }
@@ -1134,7 +1196,10 @@ pub mod error_factory {
             service,
             operation,
         )
-        .with_context("service_name", serde_json::Value::String(service.to_string()))
+        .with_context(
+            "service_name",
+            serde_json::Value::String(service.to_string()),
+        )
         .retryable(true)
         .with_recovery_strategy(RecoveryStrategy {
             strategy_type: RecoveryStrategyType::Retry,
@@ -1154,7 +1219,11 @@ pub mod error_factory {
         })
     }
 
-    pub fn timeout_error(component: &str, operation: &str, timeout_duration: Duration) -> AgencyError {
+    pub fn timeout_error(
+        component: &str,
+        operation: &str,
+        timeout_duration: Duration,
+    ) -> AgencyError {
         AgencyError::new(
             ErrorCategory::Timeout,
             "TIMEOUT_ERROR",
@@ -1174,7 +1243,11 @@ pub mod error_factory {
         })
     }
 
-    pub fn resource_exhaustion_error(component: &str, operation: &str, resource: &str) -> AgencyError {
+    pub fn resource_exhaustion_error(
+        component: &str,
+        operation: &str,
+        resource: &str,
+    ) -> AgencyError {
         AgencyError::new(
             ErrorCategory::ResourceExhaustion,
             "RESOURCE_EXHAUSTION",
@@ -1260,10 +1333,16 @@ impl From<crate::council_errors::CouncilError> for AgencyError {
                 format!("Configuration error in {}: {}", field, reason),
                 ErrorSeverity::Medium,
             ),
-            crate::council_errors::CouncilError::SessionTimeout { session_id, timeout_seconds } => (
+            crate::council_errors::CouncilError::SessionTimeout {
+                session_id,
+                timeout_seconds,
+            } => (
                 ErrorCategory::Timeout,
                 "SESSION_TIMEOUT",
-                format!("Session {} timed out after {} seconds", session_id, timeout_seconds),
+                format!(
+                    "Session {} timed out after {} seconds",
+                    session_id, timeout_seconds
+                ),
                 ErrorSeverity::Medium,
             ),
             crate::council_errors::CouncilError::Database(error) => (
@@ -1278,10 +1357,16 @@ impl From<crate::council_errors::CouncilError> for AgencyError {
                 format!("Serialization error: {}", error),
                 ErrorSeverity::Medium,
             ),
-            crate::council_errors::CouncilError::QuorumFailure { available, required } => (
+            crate::council_errors::CouncilError::QuorumFailure {
+                available,
+                required,
+            } => (
                 ErrorCategory::Logic,
                 "QUORUM_FAILURE",
-                format!("Quorum not met: {}/{} judges available", available, required),
+                format!(
+                    "Quorum not met: {}/{} judges available",
+                    available, required
+                ),
                 ErrorSeverity::High,
             ),
             crate::council_errors::CouncilError::UnresolvedDissent { judge_count } => (
@@ -1316,6 +1401,13 @@ impl From<crate::council_errors::CouncilError> for AgencyError {
             ),
         };
 
-        AgencyError::new(category, &code, &message, severity, "council", "council_operation")
+        AgencyError::new(
+            category,
+            &code,
+            &message,
+            severity,
+            "council",
+            "council_operation",
+        )
     }
 }

@@ -3,8 +3,8 @@
 //! This module provides conversion functions between internal database types
 //! and external API response types, ensuring type safety and consistency.
 
-use uuid::Uuid;
 use serde_json::Value;
+use uuid::Uuid;
 
 use crate::api::api_types::WaiverResponse;
 use crate::models::Waiver;
@@ -74,7 +74,7 @@ mod tests {
         };
 
         let response: WaiverResponse = waiver.clone().into();
-        
+
         assert_eq!(response.id, waiver.id);
         assert_eq!(response.task_id, waiver.id); // Should default to waiver.id when no task_id in metadata
         assert_eq!(response.title, waiver.title);
@@ -107,7 +107,7 @@ mod tests {
 
         let custom_task_id = Uuid::new_v4();
         let response = waiver_to_response(waiver.clone(), Some(custom_task_id));
-        
+
         assert_eq!(response.task_id, custom_task_id);
         assert_ne!(response.task_id, waiver.id);
     }

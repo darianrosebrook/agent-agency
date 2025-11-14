@@ -2,14 +2,12 @@
 
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
-use tokio::sync::{broadcast, Mutex};
 use moka::future::Cache;
-use tracing::{info, error};
+use tokio::sync::{broadcast, Mutex};
+use tracing::{error, info};
 
 use crate::{
-    data_processing_types::*,
-    ingestion::DefaultIngestionStage,
-    pipeline::PipelineStage,
+    data_processing_types::*, ingestion::DefaultIngestionStage, pipeline::PipelineStage,
     DataProcessingResult,
 };
 
@@ -21,8 +19,10 @@ pub enum IngestionCmd {
 }
 
 /// Hooks that upper layers can provide
-pub type OutputHook = Arc<dyn Fn(ProcessingOutput) -> futures::future::BoxFuture<'static, ()> + Send + Sync>;
-pub type RemovalHook = Arc<dyn Fn(PathBuf) -> futures::future::BoxFuture<'static, ()> + Send + Sync>;
+pub type OutputHook =
+    Arc<dyn Fn(ProcessingOutput) -> futures::future::BoxFuture<'static, ()> + Send + Sync>;
+pub type RemovalHook =
+    Arc<dyn Fn(PathBuf) -> futures::future::BoxFuture<'static, ()> + Send + Sync>;
 
 /// Runtime for handling ingestion operations with bounded queue and workers
 pub struct IngestionRuntime {
@@ -70,16 +70,20 @@ impl IngestionRuntimeBuilder {
 
     /// Set the hook for processing successful ingestion outputs
     pub fn output_hook<F, Fut>(mut self, f: F) -> Self
-    where F: Fn(ProcessingOutput) -> Fut + Send + Sync + 'static,
-          Fut: std::future::Future<Output=()> + Send + 'static {
+    where
+        F: Fn(ProcessingOutput) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
         self.output_hook = Some(Arc::new(move |o| Box::pin(f(o))));
         self
     }
 
     /// Set the hook for handling file removal cleanup
     pub fn removal_hook<F, Fut>(mut self, f: F) -> Self
-    where F: Fn(PathBuf) -> Fut + Send + Sync + 'static,
-          Fut: std::future::Future<Output=()> + Send + 'static {
+    where
+        F: Fn(PathBuf) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
         self.removal_hook = Some(Arc::new(move |p| Box::pin(f(p))));
         self
     }
@@ -96,8 +100,12 @@ impl IngestionRuntimeBuilder {
             .time_to_live(std::time::Duration::from_secs(600))
             .build();
 
-        let output_hook = self.output_hook.unwrap_or_else(|| Arc::new(|_| Box::pin(async {})));
-        let removal_hook = self.removal_hook.unwrap_or_else(|| Arc::new(|_| Box::pin(async {})));
+        let output_hook = self
+            .output_hook
+            .unwrap_or_else(|| Arc::new(|_| Box::pin(async {})));
+        let removal_hook = self
+            .removal_hook
+            .unwrap_or_else(|| Arc::new(|_| Box::pin(async {})));
 
         // Basic dedupe of enqueued paths during bursts
         let enqueued: Arc<Mutex<HashSet<PathBuf>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -116,11 +124,14 @@ impl IngestionRuntimeBuilder {
                     match cmd {
                         IngestionCmd::FileUpsert { path } => {
                             // Mark dequeued
-                            { enqueued.lock().await.remove(&path); }
+                            {
+                                enqueued.lock().await.remove(&path);
+                            }
 
                             match super::ingestion_util::data_input_from_path(path.clone()).await {
                                 Ok(input) => {
-                                    let ident = super::ingestion_util::op_identity(&path).await.ok();
+                                    let ident =
+                                        super::ingestion_util::op_identity(&path).await.ok();
                                     if let Some(id) = ident {
                                         if recent.get(&id).await.is_some() {
                                             info!("skip duplicate op {}", id);
@@ -138,7 +149,9 @@ impl IngestionRuntimeBuilder {
                             }
                         }
                         IngestionCmd::FileRemove { path } => {
-                            { enqueued.lock().await.remove(&path); }
+                            {
+                                enqueued.lock().await.remove(&path);
+                            }
                             (removal_hook)(path).await;
                         }
                     }

@@ -1,12 +1,12 @@
+use super::state_types::*;
+use anyhow::Result;
+use async_trait::async_trait;
+use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 /**
  * @fileoverview Storage implementations for workspace state management
  * @author @darianrosebrook
  */
 use schemars::JsonSchema;
-use super::state_types::*;
-use anyhow::Result;
-use async_trait::async_trait;
-use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use serde_json;
 use sqlx::Row;
 use std::collections::HashMap;
@@ -562,9 +562,7 @@ impl MemoryStorage {
 
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(&json_data)
-            .map_err(WorkspaceError::Io)?;
+        encoder.write_all(&json_data).map_err(WorkspaceError::Io)?;
 
         let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
 
@@ -614,26 +612,26 @@ impl MemoryStorage {
     async fn optimize_storage_performance(&self) -> Result<(), WorkspaceError> {
         // Memory storage optimization
         debug!("Optimizing memory storage performance");
-        
+
         // Clean up old states if needed
         self.cleanup_old_states().await?;
-        
+
         // Compress large states
         self.compress_large_states().await?;
-        
+
         // Update metrics
         self.update_storage_metrics().await?;
-        
+
         Ok(())
     }
-    
+
     /// Clean up old states to free memory
     async fn cleanup_old_states(&self) -> Result<(), WorkspaceError> {
         let now = chrono::Utc::now();
         let cutoff_time = now - chrono::Duration::hours(24);
-        
+
         let mut to_remove = Vec::new();
-        
+
         // Clean up old states
         let states = self.states.read().await;
         for (id, state) in states.iter() {
@@ -641,7 +639,7 @@ impl MemoryStorage {
                 to_remove.push(*id);
             }
         }
-        
+
         // Remove old states
         if !to_remove.is_empty() {
             let mut states = self.states.write().await;
@@ -649,34 +647,37 @@ impl MemoryStorage {
                 states.remove(id);
                 debug!("Cleaned up old state: {}", id);
             }
-            
+
             // Update metrics
             let mut metrics = self.metrics.write().await;
-            metrics.total_states_stored = metrics.total_states_stored.saturating_sub(to_remove.len());
+            metrics.total_states_stored =
+                metrics.total_states_stored.saturating_sub(to_remove.len());
             metrics.last_cleanup_time = Some(now);
         }
-        
+
         Ok(())
     }
-    
+
     /// Compress large states to save memory
     async fn compress_large_states(&self) -> Result<(), WorkspaceError> {
         let mut to_compress = Vec::new();
-        
+
         // Find large states
         let states = self.states.read().await;
         for (id, state) in states.iter() {
-            let total_size: u64 = state.files.values()
+            let total_size: u64 = state
+                .files
+                .values()
                 .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
                 .sum();
-            
+
             // Compress if over 1MB
             if total_size > 1024 * 1024 {
                 to_compress.push(*id);
             }
         }
         drop(states);
-        
+
         // Compress the large states
         for id in to_compress {
             if let Some(state) = self.states.write().await.get_mut(&id) {
@@ -692,28 +693,32 @@ impl MemoryStorage {
                 debug!("Compressed large state: {}", id);
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Update storage metrics
     async fn update_storage_metrics(&self) -> Result<(), WorkspaceError> {
         let states = self.states.read().await;
         let diffs = self.diffs.read().await;
-        
+
         let mut metrics = self.metrics.write().await;
         metrics.total_states_stored = states.len();
         metrics.total_diffs_stored = diffs.len();
-        
-        metrics.total_storage_size_bytes = states.values()
-            .map(|state| state.files.values()
-                 .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
-                 .sum::<u64>())
+
+        metrics.total_storage_size_bytes = states
+            .values()
+            .map(|state| {
+                state
+                    .files
+                    .values()
+                    .map(|file| file.content.as_ref().map(|c| c.len()).unwrap_or(0) as u64)
+                    .sum::<u64>()
+            })
             .sum();
-        
+
         Ok(())
     }
-    
 }
 
 #[async_trait]
@@ -1192,9 +1197,7 @@ impl DatabaseStorage {
 
         // Compress the JSON data
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(&json_data)
-            .map_err(WorkspaceError::Io)?;
+        encoder.write_all(&json_data).map_err(WorkspaceError::Io)?;
 
         let compressed_data = encoder.finish().map_err(WorkspaceError::Io)?;
 
@@ -1247,8 +1250,7 @@ impl StateStorage for DatabaseStorage {
         let metadata_json =
             serde_json::to_value(&state.metadata).map_err(WorkspaceError::Serialization)?;
 
-        let state_json =
-            serde_json::to_value(state).map_err(WorkspaceError::Serialization)?;
+        let state_json = serde_json::to_value(state).map_err(WorkspaceError::Serialization)?;
 
         sqlx::query(
             r#"
@@ -1389,11 +1391,11 @@ impl StateStorage for DatabaseStorage {
         let result = sqlx::query(
             r#"
             WITH old_states AS (
-                SELECT id FROM workspace_states 
-                ORDER BY captured_at ASC 
+                SELECT id FROM workspace_states
+                ORDER BY captured_at ASC
                 LIMIT (SELECT COUNT(*) - $1 FROM workspace_states)
             )
-            DELETE FROM workspace_states 
+            DELETE FROM workspace_states
             WHERE id IN (SELECT id FROM old_states)
             "#,
         )

@@ -6,18 +6,18 @@
 //! - Database persistence with connection pooling
 //! - Job scheduler with concurrency governance
 
-use schemars::JsonSchema;
 use crate::data_processing_types::*;
-use crate::{DataProcessingResult, DataProcessingError};
-use async_trait::async_trait;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use tracing::debug;
+use crate::{DataProcessingError, DataProcessingResult};
 #[cfg(feature = "memory-integration")]
 use agent_memory::graph_engine::Relationship;
-use std::sync::Arc;
+use async_trait::async_trait;
 use parking_lot::{Mutex, RwLock};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::debug;
+use uuid::Uuid;
 
 /// Result from indexing operations
 pub type IndexingResult = DataProcessingResult<ProcessingOutput>;
@@ -119,7 +119,11 @@ impl IndexingStage for DefaultIndexingStage {
 
         // Index full-text content
         if let Some(text) = &content.text_content {
-            match self.fulltext_indexer.index_text(input_id.clone(), text).await {
+            match self
+                .fulltext_indexer
+                .index_text(input_id.clone(), text)
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => errors.push(format!("Full-text indexing failed: {}", e)),
             }
@@ -127,7 +131,11 @@ impl IndexingStage for DefaultIndexingStage {
 
         // Index embeddings if available
         if let Some(embedding) = &content.embeddings {
-            match self.vector_indexer.index_vector(input_id.clone(), embedding.clone()).await {
+            match self
+                .vector_indexer
+                .index_vector(input_id.clone(), embedding.clone())
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => errors.push(format!("Vector indexing failed: {}", e)),
             }
@@ -135,7 +143,11 @@ impl IndexingStage for DefaultIndexingStage {
 
         // Index entities
         if !content.entities.is_empty() {
-            match self.entity_indexer.index_entities(input_id.clone(), &content.entities).await {
+            match self
+                .entity_indexer
+                .index_entities(input_id.clone(), &content.entities)
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => errors.push(format!("Entity indexing failed: {}", e)),
             }
@@ -143,7 +155,11 @@ impl IndexingStage for DefaultIndexingStage {
 
         // Index relationships
         if !content.relationships.is_empty() {
-            match self.entity_indexer.index_relationships(input_id.clone(), &content.relationships).await {
+            match self
+                .entity_indexer
+                .index_relationships(input_id.clone(), &content.relationships)
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => errors.push(format!("Relationship indexing failed: {}", e)),
             }
@@ -152,15 +168,22 @@ impl IndexingStage for DefaultIndexingStage {
         // Create metadata about indexing
         let mut metadata = input.metadata.clone();
         metadata.insert("indexing_completed".to_string(), (errors.is_empty()).into());
-        metadata.insert("index_types_created".to_string(),
-            serde_json::to_value(vec!["fulltext", "vector", "entity"]).unwrap_or(serde_json::Value::Null));
+        metadata.insert(
+            "index_types_created".to_string(),
+            serde_json::to_value(vec!["fulltext", "vector", "entity"])
+                .unwrap_or(serde_json::Value::Null),
+        );
 
         let stats = ProcessingStats {
             processing_time_ms: start_time.elapsed().as_millis() as u64,
             bytes_processed: 0, // Would track indexed data size
             entities_extracted: content.entities.len(),
             relationships_found: content.relationships.len(),
-            embeddings_generated: content.embeddings.as_ref().map(|e| e.len() / 384).unwrap_or(0), // Assuming 384-dim embeddings
+            embeddings_generated: content
+                .embeddings
+                .as_ref()
+                .map(|e| e.len() / 384)
+                .unwrap_or(0), // Assuming 384-dim embeddings
             errors_encountered: errors,
         };
 
@@ -185,19 +208,24 @@ impl IndexingStage for DefaultIndexingStage {
             IndexQueryType::Text => {
                 if let Some(text) = &query.text_query {
                     let results = self.fulltext_indexer.search_text(text, query.limit).await?;
-                    all_results.extend(results.into_iter().map(|(id, score, snippet)| IndexMatch {
-                        id,
-                        score,
-                        content_snippet: snippet,
-                        metadata: HashMap::new(),
-                        matched_entities: vec![],
+                    all_results.extend(results.into_iter().map(|(id, score, snippet)| {
+                        IndexMatch {
+                            id,
+                            score,
+                            content_snippet: snippet,
+                            metadata: HashMap::new(),
+                            matched_entities: vec![],
+                        }
                     }));
                 }
             }
 
             IndexQueryType::Semantic => {
                 if let Some(vector) = &query.vector_query {
-                    let results = self.vector_indexer.search_similar(vector, query.limit).await?;
+                    let results = self
+                        .vector_indexer
+                        .search_similar(vector, query.limit)
+                        .await?;
                     all_results.extend(results.into_iter().map(|(id, score)| IndexMatch {
                         id,
                         score,
@@ -213,17 +241,29 @@ impl IndexingStage for DefaultIndexingStage {
                 let mut hybrid_results = Vec::new();
 
                 if let Some(text) = &query.text_query {
-                    if let Ok(text_results) = self.fulltext_indexer.search_text(text, query.limit * 2).await {
+                    if let Ok(text_results) = self
+                        .fulltext_indexer
+                        .search_text(text, query.limit * 2)
+                        .await
+                    {
                         hybrid_results.extend(text_results);
                     }
                 }
 
                 if let Some(vector) = &query.vector_query {
-                    if let Ok(vector_results) = self.vector_indexer.search_similar(vector, query.limit * 2).await {
+                    if let Ok(vector_results) = self
+                        .vector_indexer
+                        .search_similar(vector, query.limit * 2)
+                        .await
+                    {
                         // Normalize and combine scores
                         for (id, vector_score) in vector_results {
-                            if let Some((_, text_score, _)) = hybrid_results.iter_mut().find(|(existing_id, _, _)| *existing_id == id) {
-                                *text_score = (*text_score + vector_score) / 2.0; // Simple average
+                            if let Some((_, text_score, _)) = hybrid_results
+                                .iter_mut()
+                                .find(|(existing_id, _, _)| *existing_id == id)
+                            {
+                                *text_score = (*text_score + vector_score) / 2.0;
+                            // Simple average
                             } else {
                                 hybrid_results.push((id, vector_score, None));
                             }
@@ -232,29 +272,38 @@ impl IndexingStage for DefaultIndexingStage {
                 }
 
                 // Sort by combined score and take top results
-                hybrid_results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                hybrid_results
+                    .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
                 hybrid_results.truncate(query.limit);
 
-                all_results.extend(hybrid_results.into_iter().map(|(id, score, snippet)| IndexMatch {
-                    id,
-                    score,
-                    content_snippet: snippet,
-                    metadata: HashMap::new(),
-                    matched_entities: vec![],
+                all_results.extend(hybrid_results.into_iter().map(|(id, score, snippet)| {
+                    IndexMatch {
+                        id,
+                        score,
+                        content_snippet: snippet,
+                        metadata: HashMap::new(),
+                        matched_entities: vec![],
+                    }
                 }));
             }
 
             IndexQueryType::Entity => {
                 // Search for entities
                 for filter in &query.entity_filters {
-                    let results = self.entity_indexer.search_entities(filter, query.limit).await?;
+                    let results = self
+                        .entity_indexer
+                        .search_entities(filter, query.limit)
+                        .await?;
                     all_results.extend(results.into_iter().map(|(id, entity, score)| IndexMatch {
                         id,
                         score,
                         content_snippet: None,
                         metadata: HashMap::from([
                             ("entity_name".to_string(), entity.name.clone().into()),
-                            ("entity_type".to_string(), format!("{:?}", entity.entity_type).into()),
+                            (
+                                "entity_type".to_string(),
+                                format!("{:?}", entity.entity_type).into(),
+                            ),
                         ]),
                         matched_entities: vec![entity],
                     }));
@@ -263,7 +312,11 @@ impl IndexingStage for DefaultIndexingStage {
         }
 
         // Sort results by score
-        all_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        all_results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Apply limit
         let total_matches = all_results.len();
@@ -311,14 +364,18 @@ impl crate::pipeline::PipelineStage for DefaultIndexingStage {
                 // Try to deserialize as ProcessedContent
                 match serde_json::from_value(data.clone()) {
                     Ok(content) => content,
-                    Err(_) => return Err(DataProcessingError::Validation(
-                        "Expected ProcessedContent in structured data".to_string()
-                    )),
+                    Err(_) => {
+                        return Err(DataProcessingError::Validation(
+                            "Expected ProcessedContent in structured data".to_string(),
+                        ))
+                    }
                 }
             }
-            _ => return Err(DataProcessingError::Validation(
-                "Indexing stage expects structured content".to_string()
-            )),
+            _ => {
+                return Err(DataProcessingError::Validation(
+                    "Indexing stage expects structured content".to_string(),
+                ))
+            }
         };
 
         self.index(input, processed_content).await
@@ -343,8 +400,10 @@ impl crate::pipeline::PipelineStage for DefaultIndexingStage {
         let index_result = self.search(&index_query).await?;
 
         // Convert index results to retrieved data
-        let retrieved_data = index_result.results.into_iter().map(|match_| {
-            RetrievedData {
+        let retrieved_data = index_result
+            .results
+            .into_iter()
+            .map(|match_| RetrievedData {
                 id: match_.id,
                 content: ProcessedContent {
                     text_content: match_.content_snippet.clone(),
@@ -355,13 +414,15 @@ impl crate::pipeline::PipelineStage for DefaultIndexingStage {
                     visual_elements: vec![],
                     audio_transcript: None,
                     content_type: ContentType::Text,
-                    data: ProcessedContentData::Text(match_.content_snippet.clone().unwrap_or_default()),
+                    data: ProcessedContentData::Text(
+                        match_.content_snippet.clone().unwrap_or_default(),
+                    ),
                 },
                 relevance_score: match_.score,
                 matched_entities: match_.matched_entities,
                 source_metadata: match_.metadata,
-            }
-        }).collect();
+            })
+            .collect();
 
         Ok(retrieved_data)
     }
@@ -404,23 +465,26 @@ impl FullTextIndexer {
         let tokens = self.tokenize(text);
         let term_freqs = self.calculate_term_frequencies(&tokens);
         let doc_length = tokens.len();
-        
+
         // Update document record
         {
             let mut documents = self.documents.lock().unwrap();
-            documents.insert(id.clone(), DocumentRecord {
-                text: text.to_string(),
-                term_freqs: term_freqs.clone(),
-                length: doc_length,
-                modality: "text".to_string(),
-            });
+            documents.insert(
+                id.clone(),
+                DocumentRecord {
+                    text: text.to_string(),
+                    term_freqs: term_freqs.clone(),
+                    length: doc_length,
+                    modality: "text".to_string(),
+                },
+            );
         }
-        
+
         // Update vocabulary statistics
         {
             let mut vocabulary = self.vocabulary.lock().unwrap();
             let mut total_docs = self.total_documents.lock().unwrap();
-            
+
             for (term, freq) in &term_freqs {
                 let stats = vocabulary.entry(term.clone()).or_insert(TermStats {
                     document_frequency: 0,
@@ -429,41 +493,51 @@ impl FullTextIndexer {
                 stats.document_frequency += 1;
                 stats.total_frequency += freq;
             }
-            
+
             *total_docs += 1;
         }
-        
+
         Ok(())
     }
 
-    pub async fn search_text(&self, query: &str, limit: usize) -> DataProcessingResult<Vec<(ProcessingId, f64, Option<String>)>> {
+    pub async fn search_text(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> DataProcessingResult<Vec<(ProcessingId, f64, Option<String>)>> {
         let query_terms = self.tokenize(query);
         let mut results = Vec::new();
-        
+
         let documents = self.documents.lock().unwrap();
         let vocabulary = self.vocabulary.lock().unwrap();
         let total_docs = *self.total_documents.lock().unwrap();
-        
+
         if total_docs == 0 {
             return Ok(results);
         }
-        
+
         // Calculate average document length once to avoid deadlock
         let avg_doc_length = Self::calculate_avg_document_length(&documents);
-        
+
         // Calculate BM25 scores for each document
         for (id, doc) in documents.iter() {
-            let score = self.calculate_bm25_score(&query_terms, doc, &vocabulary, total_docs, avg_doc_length);
+            let score = self.calculate_bm25_score(
+                &query_terms,
+                doc,
+                &vocabulary,
+                total_docs,
+                avg_doc_length,
+            );
             if score > 0.0 {
                 let snippet = self.extract_snippet(&doc.text, &query_terms);
                 results.push((id.clone(), score, snippet));
             }
         }
-        
+
         // Sort by score descending
         results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         results.truncate(limit);
-        
+
         Ok(results)
     }
 
@@ -471,7 +545,10 @@ impl FullTextIndexer {
     fn tokenize(&self, text: &str) -> Vec<String> {
         text.split_whitespace()
             .map(|word| word.to_lowercase())
-            .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+            .map(|word| {
+                word.trim_matches(|c: char| !c.is_alphanumeric())
+                    .to_string()
+            })
             .filter(|word| !word.is_empty())
             .collect()
     }
@@ -496,9 +573,9 @@ impl FullTextIndexer {
     ) -> f64 {
         const K1: f64 = 1.2;
         const B: f64 = 0.75;
-        
+
         let mut score = 0.0;
-        
+
         for term in query_terms {
             if let Some(term_stats) = vocabulary.get(term) {
                 let tf = *doc.term_freqs.get(term).unwrap_or(&0) as f64;
@@ -514,24 +591,26 @@ impl FullTextIndexer {
                     // When all documents contain the term, use a small positive IDF
                     0.1
                 };
-                
+
                 let numerator = tf * (K1 + 1.0);
                 let denominator = tf + K1 * (1.0 - B + B * (doc.length as f64 / avg_doc_length));
-                
+
                 score += idf * (numerator / denominator);
             }
         }
-        
+
         score
     }
 
     /// Calculate average document length from a reference to locked documents
     /// This helper avoids deadlock when documents are already locked
-    fn calculate_avg_document_length(documents: &std::sync::MutexGuard<'_, HashMap<ProcessingId, DocumentRecord>>) -> f64 {
+    fn calculate_avg_document_length(
+        documents: &std::sync::MutexGuard<'_, HashMap<ProcessingId, DocumentRecord>>,
+    ) -> f64 {
         if documents.is_empty() {
             return 100.0; // Default average
         }
-        
+
         let total_length: usize = documents.values().map(|doc| doc.length).sum();
         total_length as f64 / documents.len() as f64
     }
@@ -580,23 +659,24 @@ impl FullTextIndexer {
     /// Extract relevant snippet from document
     fn extract_snippet(&self, text: &str, query_terms: &[String]) -> Option<String> {
         let lines: Vec<&str> = text.lines().collect();
-        
+
         // Find the line with the most query term matches
         let mut best_line = None;
         let mut max_matches = 0;
-        
+
         for line in &lines {
             let line_lower = line.to_lowercase();
-            let matches = query_terms.iter()
+            let matches = query_terms
+                .iter()
                 .filter(|term| line_lower.contains(term.as_str()))
                 .count();
-            
+
             if matches > max_matches {
                 max_matches = matches;
                 best_line = Some(line);
             }
         }
-        
+
         best_line.map(|line| {
             if line.len() > 200 {
                 format!("{}...", &line[..200])
@@ -606,17 +686,26 @@ impl FullTextIndexer {
         })
     }
 
-    pub async fn get_metadata(&self, id: &ProcessingId) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
+    pub async fn get_metadata(
+        &self,
+        id: &ProcessingId,
+    ) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
         let documents = self.documents.lock().unwrap();
-        
+
         if let Some(doc) = documents.get(id) {
             Ok(HashMap::from([
-                ("indexed_at".to_string(), chrono::Utc::now().to_rfc3339().into()),
+                (
+                    "indexed_at".to_string(),
+                    chrono::Utc::now().to_rfc3339().into(),
+                ),
                 ("content_length".to_string(), doc.length.into()),
                 ("unique_terms".to_string(), doc.term_freqs.len().into()),
             ]))
         } else {
-            Err(DataProcessingError::NotFound(format!("Document {} not found in index", id)))
+            Err(DataProcessingError::NotFound(format!(
+                "Document {} not found in index",
+                id
+            )))
         }
     }
 }
@@ -655,7 +744,11 @@ impl VectorIndexer {
         })
     }
 
-    pub async fn index_vector(&self, id: ProcessingId, vector: Vec<f32>) -> DataProcessingResult<()> {
+    pub async fn index_vector(
+        &self,
+        id: ProcessingId,
+        vector: Vec<f32>,
+    ) -> DataProcessingResult<()> {
         if vector.len() != self.dimension {
             return Err(DataProcessingError::Validation(format!(
                 "Vector dimension {} does not match expected dimension {}",
@@ -714,7 +807,11 @@ impl VectorIndexer {
         Ok(())
     }
 
-    pub async fn search_similar(&self, query_vector: &[f32], limit: usize) -> DataProcessingResult<Vec<(ProcessingId, f64)>> {
+    pub async fn search_similar(
+        &self,
+        query_vector: &[f32],
+        limit: usize,
+    ) -> DataProcessingResult<Vec<(ProcessingId, f64)>> {
         if query_vector.len() != self.dimension {
             return Err(DataProcessingError::Validation(format!(
                 "Query vector dimension {} does not match expected dimension {}",
@@ -754,13 +851,14 @@ impl VectorIndexer {
                 for neighbor_id in neighbors {
                     if !visited.contains(neighbor_id) {
                         if let Some(neighbor_record) = vectors.get(neighbor_id) {
-                            let neighbor_score = self.cosine_similarity(query_vector, query_norm, neighbor_record);
+                            let neighbor_score =
+                                self.cosine_similarity(query_vector, query_norm, neighbor_record);
                             candidates.push((neighbor_score, neighbor_id.clone()));
                         }
                     }
                 }
             }
-            
+
             // Sort candidates by score descending
             candidates.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
         }
@@ -778,12 +876,18 @@ impl VectorIndexer {
     }
 
     /// Calculate cosine similarity between query and stored vector
-    fn cosine_similarity(&self, query_vector: &[f32], query_norm: f32, record: &VectorRecord) -> f64 {
+    fn cosine_similarity(
+        &self,
+        query_vector: &[f32],
+        query_norm: f32,
+        record: &VectorRecord,
+    ) -> f64 {
         if query_norm == 0.0 || record.norm == 0.0 {
             return 0.0;
         }
 
-        let dot_product: f32 = query_vector.iter()
+        let dot_product: f32 = query_vector
+            .iter()
             .zip(record.vector.iter())
             .map(|(x, y)| x * y)
             .sum();
@@ -792,7 +896,11 @@ impl VectorIndexer {
     }
 
     /// Build graph connections for HNSW-like structure
-    async fn build_graph_connections(&self, id: &ProcessingId, vector: &[f32]) -> DataProcessingResult<()> {
+    async fn build_graph_connections(
+        &self,
+        id: &ProcessingId,
+        vector: &[f32],
+    ) -> DataProcessingResult<()> {
         let mut graph = self.graph.lock().unwrap();
         let vectors = self.vectors.lock().unwrap();
 
@@ -802,14 +910,15 @@ impl VectorIndexer {
         // Find most similar vectors
         for (other_id, other_record) in vectors.iter() {
             if other_id != id {
-                let similarity = self.cosine_similarity(vector, self.calculate_norm(vector), other_record);
+                let similarity =
+                    self.cosine_similarity(vector, self.calculate_norm(vector), other_record);
                 similarities.push((similarity, other_id.clone()));
             }
         }
 
         // Sort by similarity and take top connections
         similarities.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         // TODO: Implement full HNSW graph structure (see TODO above)
         //       Currently uses temporary top-5 connections; should implement full HNSW graph structure for efficient similarity search.
         for (_, other_id) in similarities.iter().take(5) {
@@ -820,17 +929,26 @@ impl VectorIndexer {
         Ok(())
     }
 
-    pub async fn get_metadata(&self, id: &ProcessingId) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
+    pub async fn get_metadata(
+        &self,
+        id: &ProcessingId,
+    ) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
         let vectors = self.vectors.lock().unwrap();
-        
+
         if let Some(record) = vectors.get(id) {
             Ok(HashMap::from([
-                ("indexed_at".to_string(), record.indexed_at.to_rfc3339().into()),
+                (
+                    "indexed_at".to_string(),
+                    record.indexed_at.to_rfc3339().into(),
+                ),
                 ("vector_dimension".to_string(), record.vector.len().into()),
                 ("vector_norm".to_string(), record.norm.into()),
             ]))
         } else {
-            Err(DataProcessingError::NotFound(format!("Vector {} not found in index", id)))
+            Err(DataProcessingError::NotFound(format!(
+                "Vector {} not found in index",
+                id
+            )))
         }
     }
 }
@@ -865,21 +983,24 @@ impl EntityIndexer {
         })
     }
 
-    pub async fn index_entities(&self, id: ProcessingId, entities: &[Entity]) -> DataProcessingResult<()> {
+    pub async fn index_entities(
+        &self,
+        id: ProcessingId,
+        entities: &[Entity],
+    ) -> DataProcessingResult<()> {
         let mut entity_index = self.entities.lock().unwrap();
         let mut type_index = self.entity_types.lock().unwrap();
         let mut text_index = self.entity_text_index.lock().unwrap();
-        
+
         for entity in entities {
             let confidence = self.calculate_entity_confidence(entity);
-            
+
             // Index by full entity name
-            entity_index.entry(entity.name.clone()).or_insert_with(Vec::new).push((
-                id.clone(),
-                entity.clone(),
-                confidence,
-            ));
-            
+            entity_index
+                .entry(entity.name.clone())
+                .or_insert_with(Vec::new)
+                .push((id.clone(), entity.clone(), confidence));
+
             // Index by entity type
             let type_key = format!("{:?}", entity.entity_type);
             type_index.entry(type_key).or_insert_with(Vec::new).push((
@@ -887,7 +1008,7 @@ impl EntityIndexer {
                 entity.clone(),
                 confidence,
             ));
-            
+
             // Index by text content for fuzzy search
             let text_key = entity.name.to_lowercase();
             text_index.entry(text_key).or_insert_with(Vec::new).push((
@@ -896,13 +1017,17 @@ impl EntityIndexer {
                 confidence,
             ));
         }
-        
+
         Ok(())
     }
 
-    pub async fn index_relationships(&self, id: ProcessingId, relationships: &[Relationship]) -> DataProcessingResult<()> {
+    pub async fn index_relationships(
+        &self,
+        id: ProcessingId,
+        relationships: &[Relationship],
+    ) -> DataProcessingResult<()> {
         let mut relationship_index = self.relationships.lock().unwrap();
-        
+
         for relationship in relationships {
             let record = RelationshipRecord {
                 _source_entity: relationship.source_entity.clone(),
@@ -912,30 +1037,37 @@ impl EntityIndexer {
                 _context: relationship.evidence.first().cloned(),
                 processing_id: id.clone(),
             };
-            
+
             // Index by relationship type
             let type_key = format!("{:?}", relationship.relationship_type);
-            relationship_index.entry(type_key)
+            relationship_index
+                .entry(type_key)
                 .or_insert_with(Vec::new)
                 .push(record.clone());
-            
+
             // Index by source entity
-            relationship_index.entry(format!("source:{}", relationship.source_entity))
+            relationship_index
+                .entry(format!("source:{}", relationship.source_entity))
                 .or_insert_with(Vec::new)
                 .push(record.clone());
-            
+
             // Index by target entity
-            relationship_index.entry(format!("target:{}", relationship.target_entity))
+            relationship_index
+                .entry(format!("target:{}", relationship.target_entity))
                 .or_insert_with(Vec::new)
                 .push(record);
         }
-        
+
         Ok(())
     }
 
-    pub async fn search_entities(&self, filter: &EntityFilter, limit: usize) -> DataProcessingResult<Vec<(ProcessingId, Entity, f64)>> {
+    pub async fn search_entities(
+        &self,
+        filter: &EntityFilter,
+        limit: usize,
+    ) -> DataProcessingResult<Vec<(ProcessingId, Entity, f64)>> {
         let mut results = Vec::new();
-        
+
         // Search by entity name
         if let Some(entity_name) = filter.entity_names.first() {
             let entity_index = self.entities.lock().unwrap();
@@ -946,7 +1078,7 @@ impl EntityIndexer {
                     }
                 }
             }
-            
+
             // Also search text index for fuzzy matching
             let text_index = self.entity_text_index.lock().unwrap();
             let query_lower = entity_name.to_lowercase();
@@ -960,31 +1092,33 @@ impl EntityIndexer {
                 }
             }
         }
-        
+
         // Remove duplicates and sort by confidence
         results.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
         results.dedup_by(|a, b| a.0 == b.0 && a.1.name == b.1.name);
         results.truncate(limit);
-        
+
         Ok(results)
     }
 
     /// Calculate confidence score for an entity
     fn calculate_entity_confidence(&self, entity: &Entity) -> f64 {
         let mut confidence = entity.confidence; // Start with entity's confidence
-        
+
         // Boost confidence for longer entity names
         if entity.name.len() > 10 {
             confidence += 0.1;
         }
-        
+
         // Boost confidence for certain entity types
         match entity.entity_type {
-            EntityType::Person | EntityType::Organization | EntityType::Location => confidence += 0.1,
+            EntityType::Person | EntityType::Organization | EntityType::Location => {
+                confidence += 0.1
+            }
             EntityType::Date | EntityType::Time | EntityType::Money => confidence += 0.05,
             _ => {}
         }
-        
+
         // Cap at 1.0
         confidence.min(1.0)
     }
@@ -993,16 +1127,16 @@ impl EntityIndexer {
     fn fuzzy_match(&self, entity_text: &str, query: &str) -> bool {
         let entity_lower = entity_text.to_lowercase();
         let query_lower = query.to_lowercase();
-        
+
         // Exact match
         if entity_lower.contains(&query_lower) {
             return true;
         }
-        
+
         // Word boundary match
         let entity_words: Vec<&str> = entity_lower.split_whitespace().collect();
         let query_words: Vec<&str> = query_lower.split_whitespace().collect();
-        
+
         for query_word in &query_words {
             for entity_word in &entity_words {
                 if entity_word.starts_with(query_word) || query_word.starts_with(entity_word) {
@@ -1010,58 +1144,80 @@ impl EntityIndexer {
                 }
             }
         }
-        
+
         false
     }
 
-    pub async fn search_relationships(&self, entity: &str, relationship_type: Option<&str>, limit: usize) -> DataProcessingResult<Vec<RelationshipRecord>> {
+    pub async fn search_relationships(
+        &self,
+        entity: &str,
+        relationship_type: Option<&str>,
+        limit: usize,
+    ) -> DataProcessingResult<Vec<RelationshipRecord>> {
         let relationship_index = self.relationships.lock().unwrap();
         let mut results = Vec::new();
-        
+
         // Search by source entity
         if let Some(relationships) = relationship_index.get(&format!("source:{}", entity)) {
             for rel in relationships {
-                if relationship_type.is_none() || rel.relationship_type == relationship_type.unwrap() {
+                if relationship_type.is_none()
+                    || rel.relationship_type == relationship_type.unwrap()
+                {
                     results.push(rel.clone());
                 }
             }
         }
-        
+
         // Search by target entity
         if let Some(relationships) = relationship_index.get(&format!("target:{}", entity)) {
             for rel in relationships {
-                if relationship_type.is_none() || rel.relationship_type == relationship_type.unwrap() {
+                if relationship_type.is_none()
+                    || rel.relationship_type == relationship_type.unwrap()
+                {
                     results.push(rel.clone());
                 }
             }
         }
-        
+
         // Sort by confidence
-        results.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results.truncate(limit);
-        
+
         Ok(results)
     }
 
-    pub async fn get_metadata(&self, id: &ProcessingId) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
+    pub async fn get_metadata(
+        &self,
+        id: &ProcessingId,
+    ) -> DataProcessingResult<HashMap<String, serde_json::Value>> {
         let entity_index = self.entities.lock().unwrap();
         let relationship_index = self.relationships.lock().unwrap();
-        
+
         let mut entity_count = 0;
         let mut relationship_count = 0;
-        
+
         // Count entities for this processing ID
         for entries in entity_index.values() {
             entity_count += entries.iter().filter(|(pid, _, _)| pid == id).count();
         }
-        
+
         // Count relationships for this processing ID
         for entries in relationship_index.values() {
-            relationship_count += entries.iter().filter(|rel| &rel.processing_id == id).count();
+            relationship_count += entries
+                .iter()
+                .filter(|rel| &rel.processing_id == id)
+                .count();
         }
-        
+
         Ok(HashMap::from([
-            ("indexed_at".to_string(), chrono::Utc::now().to_rfc3339().into()),
+            (
+                "indexed_at".to_string(),
+                chrono::Utc::now().to_rfc3339().into(),
+            ),
             ("entity_count".to_string(), entity_count.into()),
             ("relationship_count".to_string(), relationship_count.into()),
         ]))
@@ -1214,7 +1370,6 @@ pub struct Bm25Indexer {
     stats: Arc<Mutex<Bm25Stats>>,
 }
 
-
 impl Bm25Indexer {
     /// Create a new BM25 indexer
     pub fn new() -> Self {
@@ -1226,7 +1381,12 @@ impl Bm25Indexer {
     }
 
     /// Index a block of text
-    pub async fn index_block(&self, block_id: Uuid, text: &str, modality: &str) -> Result<(), anyhow::Error> {
+    pub async fn index_block(
+        &self,
+        block_id: Uuid,
+        text: &str,
+        modality: &str,
+    ) -> Result<(), anyhow::Error> {
         debug!(
             "Indexing block {} with {} chars in {}",
             block_id,
@@ -1269,7 +1429,10 @@ impl Bm25Indexer {
                 .insert(block_id, freq);
         }
 
-        debug!("Indexed block {} with {} unique terms", block_id, unique_terms_count);
+        debug!(
+            "Indexed block {} with {} unique terms",
+            block_id, unique_terms_count
+        );
         Ok(())
     }
 
@@ -1297,7 +1460,8 @@ impl Bm25Indexer {
                         let doc_len = doc.length as f32;
                         let avg_doc_len = stats.avg_doc_length;
 
-                        let bm25_score = self.bm25_score(tf, doc_len, avg_doc_len, idf, stats.k1, stats.b);
+                        let bm25_score =
+                            self.bm25_score(tf, doc_len, avg_doc_len, idf, stats.k1, stats.b);
 
                         *scores.entry(*doc_id).or_insert(0.0) += bm25_score;
                     }
@@ -1321,7 +1485,11 @@ impl Bm25Indexer {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results.truncate(query.k);
 
         Ok(results)
@@ -1334,7 +1502,12 @@ impl Bm25Indexer {
 
     fn tokenize(&self, text: &str) -> Vec<String> {
         text.split_whitespace()
-            .map(|word| word.to_lowercase().chars().filter(|c| c.is_alphanumeric()).collect())
+            .map(|word| {
+                word.to_lowercase()
+                    .chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect()
+            })
             .filter(|word: &String| !word.is_empty() && word.len() > 2)
             .collect()
     }
@@ -1346,7 +1519,15 @@ impl Bm25Indexer {
         ((total_docs as f32 - doc_freq as f32 + 0.5) / (doc_freq as f32 + 0.5)).ln()
     }
 
-    fn bm25_score(&self, tf: f32, doc_len: f32, avg_doc_len: f32, idf: f32, k1: f32, b: f32) -> f32 {
+    fn bm25_score(
+        &self,
+        tf: f32,
+        doc_len: f32,
+        avg_doc_len: f32,
+        idf: f32,
+        k1: f32,
+        b: f32,
+    ) -> f32 {
         let numerator = tf * (k1 + 1.0);
         let denominator = tf + k1 * (1.0 - b + b * (doc_len / avg_doc_len));
         (numerator / denominator) * idf
@@ -1365,7 +1546,12 @@ impl Bm25Indexer {
         }
 
         // Fallback to beginning of text
-        words.iter().take(max_tokens).cloned().collect::<Vec<_>>().join(" ")
+        words
+            .iter()
+            .take(max_tokens)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -1466,7 +1652,10 @@ impl HnswIndexer {
     }
 
     /// Search for similar vectors
-    pub async fn search(&self, query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    pub async fn search(
+        &self,
+        query: &VectorQuery,
+    ) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         let index = self.index.lock();
 
         let similarities = index.search(&query.vector, query.k)?;
@@ -1561,13 +1750,19 @@ impl VectorStore {
     }
 
     /// Retrieve vectors by block IDs
-    pub async fn get_vectors(&self, _block_ids: &[Uuid]) -> Result<Vec<BlockVectorRecord>, anyhow::Error> {
+    pub async fn get_vectors(
+        &self,
+        _block_ids: &[Uuid],
+    ) -> Result<Vec<BlockVectorRecord>, anyhow::Error> {
         // Implementation would retrieve from database
         Ok(Vec::new())
     }
 
     /// Search vectors in database
-    pub async fn search_vectors(&self, _query: &VectorQuery) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
+    pub async fn search_vectors(
+        &self,
+        _query: &VectorQuery,
+    ) -> Result<Vec<VectorSearchResult>, anyhow::Error> {
         // Implementation would perform vector search in database
         Ok(Vec::new())
     }
@@ -1648,7 +1843,12 @@ impl JobScheduler {
     }
 
     /// Submit a job for execution
-    pub async fn submit_job(&self, job_type: JobType, payload: serde_json::Value, priority: JobPriority) -> Result<Uuid, anyhow::Error> {
+    pub async fn submit_job(
+        &self,
+        job_type: JobType,
+        payload: serde_json::Value,
+        priority: JobPriority,
+    ) -> Result<Uuid, anyhow::Error> {
         let job = IngestionJob {
             id: Uuid::new_v4(),
             job_type,
@@ -1678,7 +1878,8 @@ impl JobScheduler {
         // Find first job that can run within concurrency limits
         for i in 0..queue.len() {
             let job = &queue[i];
-            let active_count = active_jobs.values()
+            let active_count = active_jobs
+                .values()
                 .filter(|j| j.job_type == job.job_type && j.status == JobStatus::Running)
                 .count();
 
@@ -1708,7 +1909,11 @@ impl JobScheduler {
     pub async fn complete_job(&self, job_id: Uuid, success: bool) -> Result<(), anyhow::Error> {
         let mut active_jobs = self.active_jobs.lock();
         if let Some(job) = active_jobs.get_mut(&job_id) {
-            job.status = if success { JobStatus::Completed } else { JobStatus::Failed };
+            job.status = if success {
+                JobStatus::Completed
+            } else {
+                JobStatus::Failed
+            };
             job.completed_at = Some(chrono::Utc::now());
             Ok(())
         } else {
@@ -1729,10 +1934,12 @@ impl JobScheduler {
 
         let pending_count = queue.len();
         let active_count = active_jobs.len();
-        let completed_count = active_jobs.values()
+        let completed_count = active_jobs
+            .values()
             .filter(|j| j.status == JobStatus::Completed)
             .count();
-        let failed_count = active_jobs.values()
+        let failed_count = active_jobs
+            .values()
             .filter(|j| j.status == JobStatus::Failed)
             .count();
 
@@ -1811,7 +2018,8 @@ impl UnifiedIndexer {
                 // - [ ] Store model metadata with indexed content
                 // - [ ] Handle model versioning for compatibility
                 "placeholder_model",
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -1833,7 +2041,9 @@ impl UnifiedIndexer {
         model_id: &str,
     ) -> Result<(), anyhow::Error> {
         // Index text with BM25
-        self.bm25_indexer.index_block(block_id, text, modality).await?;
+        self.bm25_indexer
+            .index_block(block_id, text, modality)
+            .await?;
 
         // Index vector with HNSW
         self.hnsw_indexer.index_vector(vector).await?;
@@ -1854,22 +2064,33 @@ impl UnifiedIndexer {
     }
 
     /// Search using hybrid approach
-    pub async fn hybrid_search(&self, text_query: &str, vector_query: &[f32], k: usize) -> Result<Vec<HybridSearchResult>, anyhow::Error> {
+    pub async fn hybrid_search(
+        &self,
+        text_query: &str,
+        vector_query: &[f32],
+        k: usize,
+    ) -> Result<Vec<HybridSearchResult>, anyhow::Error> {
         // Perform text search
-        let text_results = self.bm25_indexer.search(&SearchQuery {
-            text: text_query.to_string(),
-            project_scope: None,
-            k,
-            max_tokens: 100,
-        }).await?;
+        let text_results = self
+            .bm25_indexer
+            .search(&SearchQuery {
+                text: text_query.to_string(),
+                project_scope: None,
+                k,
+                max_tokens: 100,
+            })
+            .await?;
 
         // Perform vector search
-        let _vector_results = self.hnsw_indexer.search(&VectorQuery {
-            vector: vector_query.to_vec(),
-            model_id: "default".to_string(),
-            k,
-            project_scope: None,
-        }).await?;
+        let _vector_results = self
+            .hnsw_indexer
+            .search(&VectorQuery {
+                vector: vector_query.to_vec(),
+                model_id: "default".to_string(),
+                k,
+                project_scope: None,
+            })
+            .await?;
 
         // TODO: Implement proper result fusion algorithm
         //       Currently uses basic combination; should implement proper fusion algorithm for combining search results from multiple sources.
@@ -1887,15 +2108,25 @@ impl UnifiedIndexer {
         }
 
         // Sort by combined score
-        hybrid_results.sort_by(|a, b| b.combined_score.partial_cmp(&a.combined_score).unwrap_or(std::cmp::Ordering::Equal));
+        hybrid_results.sort_by(|a, b| {
+            b.combined_score
+                .partial_cmp(&a.combined_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         hybrid_results.truncate(k);
 
         Ok(hybrid_results)
     }
 
     /// Submit indexing job
-    pub async fn submit_indexing_job(&self, job_type: JobType, payload: serde_json::Value) -> Result<Uuid, anyhow::Error> {
-        self.job_scheduler.submit_job(job_type, payload, JobPriority::Normal).await
+    pub async fn submit_indexing_job(
+        &self,
+        job_type: JobType,
+        payload: serde_json::Value,
+    ) -> Result<Uuid, anyhow::Error> {
+        self.job_scheduler
+            .submit_job(job_type, payload, JobPriority::Normal)
+            .await
     }
 
     /// Get indexer statistics
@@ -1944,7 +2175,10 @@ mod tests {
         let id = ProcessingId::new();
 
         // Index some text
-        indexer.index_text(id.clone(), "The quick brown fox jumps over the lazy dog").await.unwrap();
+        indexer
+            .index_text(id.clone(), "The quick brown fox jumps over the lazy dog")
+            .await
+            .unwrap();
 
         // Search for text
         let results = indexer.search_text("fox", 10).await.unwrap();
@@ -1961,14 +2195,21 @@ mod tests {
         let vector = vec![1.0, 2.0, 3.0];
 
         // Index vector
-        indexer.index_vector(id.clone(), vector.clone()).await.unwrap();
+        indexer
+            .index_vector(id.clone(), vector.clone())
+            .await
+            .unwrap();
 
         // Search for similar vectors
         let results = indexer.search_similar(&vector, 10).await.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, id);
         // Use approximate equality for floating point comparison
-        assert!((results[0].1 - 1.0).abs() < 1e-6, "Expected similarity ≈ 1.0, got {}", results[0].1);
+        assert!(
+            (results[0].1 - 1.0).abs() < 1e-6,
+            "Expected similarity ≈ 1.0, got {}",
+            results[0].1
+        );
     }
 
     #[tokio::test]
@@ -1986,7 +2227,10 @@ mod tests {
         };
 
         // Index entity
-        indexer.index_entities(id.clone(), &[entity.clone()]).await.unwrap();
+        indexer
+            .index_entities(id.clone(), &[entity.clone()])
+            .await
+            .unwrap();
 
         // Search for entity
         let filter = EntityFilter {
@@ -2007,10 +2251,18 @@ mod tests {
         let b = vec![1.0, 2.0, 3.0];
         let similarity = SimpleHnswIndex::cosine_similarity(&a, &b);
         // Use approximate equality for floating point comparison
-        assert!((similarity - 1.0).abs() < 1e-6, "Expected similarity ≈ 1.0, got {}", similarity);
+        assert!(
+            (similarity - 1.0).abs() < 1e-6,
+            "Expected similarity ≈ 1.0, got {}",
+            similarity
+        );
 
         let c = vec![-1.0, -2.0, -3.0];
         let similarity_opposite = SimpleHnswIndex::cosine_similarity(&a, &c);
-        assert!((similarity_opposite - (-1.0)).abs() < 1e-6, "Expected similarity ≈ -1.0, got {}", similarity_opposite);
+        assert!(
+            (similarity_opposite - (-1.0)).abs() < 1e-6,
+            "Expected similarity ≈ -1.0, got {}",
+            similarity_opposite
+        );
     }
 }

@@ -3,12 +3,12 @@
 //! Provides standardized error types for API operations with proper
 //! HTTP status code mapping and error serialization.
 
-use schemars::JsonSchema;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
+use schemars::JsonSchema;
 use serde::Serialize;
 use std::fmt;
 use uuid::Uuid;
@@ -103,7 +103,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         // Get error code before moving self
         let error_code = self.error_code().to_string();
-        
+
         let (status, error_message) = match self {
             ApiError::DatabaseError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),

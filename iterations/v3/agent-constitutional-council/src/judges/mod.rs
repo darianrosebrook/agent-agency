@@ -18,12 +18,14 @@
 //! 4. Execute through JudgeEngine (with caching)
 //! 5. Merge deterministic findings with LLM verdict
 
-use std::sync::Arc;
 use async_trait::async_trait;
+use std::sync::Arc;
 
-use agent_agency_contracts::{JudgeEngine, JudgeVerdict, EngineRequest, JudgePrompt, VerdictLabel, judge_io};
+use agent_agency_contracts::{
+    judge_io, EngineRequest, JudgeEngine, JudgePrompt, JudgeVerdict, VerdictLabel,
+};
 
-use crate::{ReviewContext, CouncilResult};
+use crate::{CouncilResult, ReviewContext};
 
 /// The four constitutional judges
 #[derive(Debug)]
@@ -61,14 +63,14 @@ impl Judges {
 
 pub mod common;
 pub mod constitutional_judge;
-pub mod technical_auditor;
-pub mod quality_evaluator;
 pub mod integration_validator;
+pub mod quality_evaluator;
+pub mod technical_auditor;
 
 pub use constitutional_judge::ConstitutionalJudge;
-pub use technical_auditor::TechnicalAuditor;
-pub use quality_evaluator::QualityEvaluator;
 pub use integration_validator::IntegrationValidator;
+pub use quality_evaluator::QualityEvaluator;
+pub use technical_auditor::TechnicalAuditor;
 
 /// Common trait for all constitutional judges
 #[async_trait]
@@ -97,7 +99,8 @@ impl JudgeUtils {
         llm_verdict: JudgeVerdict,
     ) -> JudgeVerdict {
         // If there are critical deterministic violations, override LLM score
-        let has_critical_deterministic = deterministic_violations.iter()
+        let has_critical_deterministic = deterministic_violations
+            .iter()
             .any(|v| v.severity == judge_io::Severity::Critical);
 
         let mut merged_violations = deterministic_violations;
@@ -126,8 +129,8 @@ impl JudgeUtils {
 
     /// Check if violations contain non-waivable failures
     pub fn has_blocking_violations(violations: &[agent_agency_contracts::Violation]) -> bool {
-        violations.iter().any(|v| {
-            v.severity == judge_io::Severity::Critical && !v.waivable
-        })
+        violations
+            .iter()
+            .any(|v| v.severity == judge_io::Severity::Critical && !v.waivable)
     }
 }

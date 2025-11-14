@@ -5,20 +5,20 @@
 //!
 //! @author @darianrosebrook
 
-use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 use agent_agency_contracts::{
     planning_io::{
-        ExecutionPlan as ContractExecutionPlan, PlanState as ContractPlanState,
-        DependencyGraph as ContractDependencyGraph,
+        DependencyGraph as ContractDependencyGraph, ExecutionPlan as ContractExecutionPlan,
+        PlanState as ContractPlanState,
     },
     types::validation::ValidationResult,
     ChangeBudget, WorkingSpec,
 };
+use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
+use uuid::Uuid;
 
 /// Extended execution plan with orchestration state
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -210,7 +210,6 @@ pub struct OrchestrationMetadata {
 pub struct ExecutionContext {
     /// Session start time
     #[schemars(with = "String")]
-
     pub session_start: DateTime<Utc>,
 
     /// Current working directory
@@ -263,7 +262,6 @@ pub struct WorkerAssignment {
 
     /// Assigned at timestamp
     #[schemars(with = "String")]
-
     pub assigned_at: DateTime<Utc>,
 
     /// Assignment status
@@ -409,8 +407,8 @@ impl Default for ResourceInventory {
     fn default() -> Self {
         Self {
             available_cpu_cores: 8,
-            available_memory_mb: 16384, // 16GB
-            available_disk_mb: 102400, // 100GB
+            available_memory_mb: 16384,     // 16GB
+            available_disk_mb: 102400,      // 100GB
             available_network_mbps: 1000.0, // 1Gbps
             available_workers: HashMap::new(),
         }
@@ -469,7 +467,6 @@ pub struct EvidenceStatus {
 
     /// Collection start time
     #[schemars(with = "String")]
-
     pub started_at: DateTime<Utc>,
 
     /// Collection completion time
@@ -516,7 +513,6 @@ pub struct EvidenceFailure {
 
     /// Failure timestamp
     #[schemars(with = "String")]
-
     pub failed_at: DateTime<Utc>,
 
     /// Retry count
@@ -538,7 +534,6 @@ pub struct EvidenceBundle {
 
     /// Collection timestamp
     #[schemars(with = "String")]
-
     pub collected_at: DateTime<Utc>,
 
     /// Evidence artifacts
@@ -572,7 +567,6 @@ pub struct EvidenceArtifact {
 
     /// Collection timestamp
     #[schemars(with = "String")]
-
     pub collected_at: DateTime<Utc>,
 
     /// Artifact metadata
@@ -648,7 +642,9 @@ pub trait WorkingSpecProvider: Send + Sync {
 #[async_trait::async_trait]
 pub trait TaskDescriptorProvider: Send + Sync {
     /// Get the task descriptor
-    async fn get_task_descriptor(&self) -> Result<agent_agency_contracts::TaskDescriptor, anyhow::Error>;
+    async fn get_task_descriptor(
+        &self,
+    ) -> Result<agent_agency_contracts::TaskDescriptor, anyhow::Error>;
 }
 
 /// Planning constraints
@@ -747,7 +743,7 @@ pub struct QualityRequirements {
 impl Default for QualityRequirements {
     fn default() -> Self {
         Self {
-            min_coverage: 0.8, // 80% coverage
+            min_coverage: 0.8,       // 80% coverage
             min_mutation_score: 0.5, // 50% mutation score
             security_scan_required: true,
             manual_review_required: false,
@@ -927,7 +923,8 @@ mod tests {
                     max_migrations: 0,
                     allow_breaking_changes: false,
                     allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+                    enforcement_mode:
+                        agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
                 },
                 file_changes: vec![],
                 coverage_targets: None,
@@ -949,32 +946,34 @@ mod tests {
                 has_cycles: false,
                 cycles: vec![],
             },
-                change_budget: agent_agency_contracts::planning_io::ChangeBudget {
-                    max_files: 10,
-                    max_loc: 100,
-                    max_migrations: 0,
-                    allow_breaking_changes: false,
-                    allow_new_dependencies: false,
-                    enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 10,
+                max_loc: 100,
+                max_migrations: 0,
+                allow_breaking_changes: false,
+                allow_new_dependencies: false,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            },
+            quality_gates: agent_agency_contracts::planning_io::QualityGates {
+                coverage_requirements: std::collections::HashMap::new(),
+                mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
+                    required: false,
+                    min_score: 0.0,
+                    operators: vec![],
                 },
-                quality_gates: agent_agency_contracts::planning_io::QualityGates {
-                    coverage_requirements: std::collections::HashMap::new(),
-                    mutation_requirements: agent_agency_contracts::planning_io::MutationRequirements {
-                        required: false,
-                        min_score: 0.0,
-                        operators: vec![],
-                    },
-                    security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
-                        scan_required: false,
-                        max_issues_by_severity: std::collections::HashMap::new(),
-                        required_controls: vec![],
-                    },
-                    performance_requirements: agent_agency_contracts::planning_io::PerformanceRequirements {
+                security_requirements: agent_agency_contracts::planning_io::SecurityRequirements {
+                    scan_required: false,
+                    max_issues_by_severity: std::collections::HashMap::new(),
+                    required_controls: vec![],
+                },
+                performance_requirements:
+                    agent_agency_contracts::planning_io::PerformanceRequirements {
                         max_regressions: 0,
                         required_benchmarks: vec![],
                         slas: vec![],
                     },
-                    documentation_requirements: agent_agency_contracts::planning_io::DocumentationRequirements {
+                documentation_requirements:
+                    agent_agency_contracts::planning_io::DocumentationRequirements {
                         api_docs_required: false,
                         code_docs_required: false,
                         architecture_docs_required: false,
@@ -983,40 +982,40 @@ mod tests {
                         min_coverage: 0.0,
                         quality_checks: vec![],
                     },
-                    requires_manual_review: false,
-                    requires_council_approval: false,
-                    min_coverage: None,
-                    min_mutation_score_percent: None,
-                },
-                metadata: agent_agency_contracts::planning_io::PlanMetadata {
-                    created_at: chrono::Utc::now(),
-                    updated_at: chrono::Utc::now(),
-                    approved_at: None,
-                    completed_at: None,
-                    created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
-                        model: "default-model".to_string(),
-                        version: "1.0".to_string(),
-                    },
-                    version: "1.0".to_string(),
-                    source: "default".to_string(),
-                    confidence_score: Some(0.5),
-                    generation_time_ms: Some(100),
-                    model_used: Some("default-model".to_string()),
-                    fallback_used: false,
-                    strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
-                    confidence: 0.5,
-                    estimated_duration_ms: 0,
-                    estimated_cost_cents: 0,
-                    adaptive: false,
-                    engine_version: "1.0".to_string(),
-                    additional_metadata: std::collections::HashMap::new(),
-                },
-                execution_context: None,
+                requires_manual_review: false,
+                requires_council_approval: false,
+                min_coverage: None,
+                min_mutation_score_percent: None,
+            },
+            metadata: agent_agency_contracts::planning_io::PlanMetadata {
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
                 approved_at: None,
                 completed_at: None,
-            };
+                created_by: agent_agency_contracts::planning_io::PlanCreator::AI {
+                    model: "default-model".to_string(),
+                    version: "1.0".to_string(),
+                },
+                version: "1.0".to_string(),
+                source: "default".to_string(),
+                confidence_score: Some(0.5),
+                generation_time_ms: Some(100),
+                model_used: Some("default-model".to_string()),
+                fallback_used: false,
+                strategy: agent_agency_contracts::types::planning::PlanningStrategy::AIAssisted,
+                confidence: 0.5,
+                estimated_duration_ms: 0,
+                estimated_cost_cents: 0,
+                adaptive: false,
+                engine_version: "1.0".to_string(),
+                additional_metadata: std::collections::HashMap::new(),
+            },
+            execution_context: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            approved_at: None,
+            completed_at: None,
+        };
 
         let plan = ExecutionPlan {
             contract_plan,
@@ -1046,7 +1045,12 @@ mod tests {
         };
 
         assert_eq!(plan.orchestration_meta.orchestrator_id, "test-orchestrator");
-        assert_eq!(plan.execution_context.available_resources.available_cpu_cores, 4);
+        assert_eq!(
+            plan.execution_context
+                .available_resources
+                .available_cpu_cores,
+            4
+        );
     }
 
     #[test]
@@ -1259,7 +1263,6 @@ pub struct PlanningSession {
 
     /// Planning start time
     #[schemars(with = "String")]
-
     pub started_at: DateTime<Utc>,
 
     /// Current planning phase
@@ -1476,29 +1479,51 @@ impl CoordinationTrace {
     }
 
     /// Get all events for a specific milestone
-    pub fn get_milestone_events(&self, milestone_id: &str) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
-        self.events.iter()
-            .filter(|e| e.milestone_id.as_ref().map(|id| id == milestone_id).unwrap_or(false))
+    pub fn get_milestone_events(
+        &self,
+        milestone_id: &str,
+    ) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events
+            .iter()
+            .filter(|e| {
+                e.milestone_id
+                    .as_ref()
+                    .map(|id| id == milestone_id)
+                    .unwrap_or(false)
+            })
             .collect()
     }
 
     /// Get all events for a specific worker
-    pub fn get_worker_events(&self, worker_id: Uuid) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
-        self.events.iter()
+    pub fn get_worker_events(
+        &self,
+        worker_id: Uuid,
+    ) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events
+            .iter()
             .filter(|e| e.worker_id.map(|id| id == worker_id).unwrap_or(false))
             .collect()
     }
 
     /// Get events by type
-    pub fn get_events_by_type(&self, event_type: crate::chain_of_thought::CoordinationEventType) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
-        self.events.iter()
+    pub fn get_events_by_type(
+        &self,
+        event_type: crate::chain_of_thought::CoordinationEventType,
+    ) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events
+            .iter()
             .filter(|e| e.event_type == event_type)
             .collect()
     }
 
     /// Get events in a time range
-    pub fn get_events_in_range(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
-        self.events.iter()
+    pub fn get_events_in_range(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Vec<&crate::chain_of_thought::CoordinationEvent> {
+        self.events
+            .iter()
             .filter(|e| e.timestamp >= start && e.timestamp <= end)
             .collect()
     }
@@ -1514,12 +1539,22 @@ impl CoordinationTrace {
 
         for event in &self.events {
             match event.event_type {
-                crate::chain_of_thought::CoordinationEventType::WorkerAssigned => worker_assignments += 1,
-                crate::chain_of_thought::CoordinationEventType::WorkerReleased => worker_releases += 1,
-                crate::chain_of_thought::CoordinationEventType::MilestoneStarted => milestones_started += 1,
-                crate::chain_of_thought::CoordinationEventType::MilestoneCompleted => milestones_completed += 1,
+                crate::chain_of_thought::CoordinationEventType::WorkerAssigned => {
+                    worker_assignments += 1
+                }
+                crate::chain_of_thought::CoordinationEventType::WorkerReleased => {
+                    worker_releases += 1
+                }
+                crate::chain_of_thought::CoordinationEventType::MilestoneStarted => {
+                    milestones_started += 1
+                }
+                crate::chain_of_thought::CoordinationEventType::MilestoneCompleted => {
+                    milestones_completed += 1
+                }
                 crate::chain_of_thought::CoordinationEventType::TaskFailed => tasks_failed += 1,
-                crate::chain_of_thought::CoordinationEventType::ParallelExecutionStarted => parallel_executions += 1,
+                crate::chain_of_thought::CoordinationEventType::ParallelExecutionStarted => {
+                    parallel_executions += 1
+                }
                 _ => {}
             }
         }
@@ -1532,8 +1567,12 @@ impl CoordinationTrace {
             milestones_completed,
             tasks_failed,
             parallel_executions,
-            duration_ms: self.last_event_at
-                .map(|end| end.signed_duration_since(self.created_at).num_milliseconds() as u64)
+            duration_ms: self
+                .last_event_at
+                .map(|end| {
+                    end.signed_duration_since(self.created_at)
+                        .num_milliseconds() as u64
+                })
                 .unwrap_or(0),
         }
     }
@@ -1587,7 +1626,6 @@ pub struct ResourceUtilization {
 
     /// Timestamp of measurement
     #[schemars(with = "String")]
-
     pub measured_at: DateTime<Utc>,
 
     /// Associated milestone or task

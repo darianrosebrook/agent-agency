@@ -1,22 +1,26 @@
 //! Main self-prompting agent coordinator
 
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
 use crate::self_prompting_agent::evaluation::EvaluationOrchestrator;
-use crate::self_prompting_agent::loop_controller::{SelfPromptingLoop, SelfPromptingResult, SelfPromptingEvent};
-use crate::self_prompting_agent::models::ModelRegistry;
-use crate::self_prompting_agent::sandbox::SandboxEnvironment;
-use crate::self_prompting_agent::prompting_types::{Task, SelfPromptingAgentError, AutonomousMode, SafetyMode};
 use crate::self_prompting_agent::learning_bridge::LearningBridge;
+use crate::self_prompting_agent::loop_controller::{
+    SelfPromptingEvent, SelfPromptingLoop, SelfPromptingResult,
+};
+use crate::self_prompting_agent::models::ModelRegistry;
+use crate::self_prompting_agent::prompting_types::{
+    AutonomousMode, SafetyMode, SelfPromptingAgentError, Task,
+};
 use crate::self_prompting_agent::rl_signals::RLTrainer;
+use crate::self_prompting_agent::sandbox::SandboxEnvironment;
 
 /// Configuration for the self-prompting agent
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SelfPromptingAgentConfig {
     pub max_iterations: usize,
     pub enable_sandbox: bool,
@@ -66,15 +70,16 @@ impl SelfPromptingAgent {
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
 
         // Create loop controller
-        let loop_controller = SelfPromptingLoop::new(
-            config.max_iterations,
-            event_tx.clone(),
-        ).await.map_err(|e| SelfPromptingAgentError::Configuration(e.to_string()))?;
+        let loop_controller = SelfPromptingLoop::new(config.max_iterations, event_tx.clone())
+            .await
+            .map_err(|e| SelfPromptingAgentError::Configuration(e.to_string()))?;
 
         // Create sandbox if enabled
         let sandbox = if config.enable_sandbox {
-            Some(SandboxEnvironment::new(config.sandbox_path.clone())
-                .map_err(|e| SelfPromptingAgentError::Sandbox(e.to_string()))?)
+            Some(
+                SandboxEnvironment::new(config.sandbox_path.clone())
+                    .map_err(|e| SelfPromptingAgentError::Sandbox(e.to_string()))?,
+            )
         } else {
             None
         };
@@ -106,8 +111,14 @@ impl SelfPromptingAgent {
     }
 
     /// Execute a task with self-prompting
-    pub async fn execute_task(&self, task: Task) -> Result<SelfPromptingResult, SelfPromptingAgentError> {
-        info!("Starting self-prompting execution for task: {}", task.description);
+    pub async fn execute_task(
+        &self,
+        task: Task,
+    ) -> Result<SelfPromptingResult, SelfPromptingAgentError> {
+        info!(
+            "Starting self-prompting execution for task: {}",
+            task.description
+        );
 
         // Validate task
         self.validate_task(&task).await?;
@@ -115,13 +126,21 @@ impl SelfPromptingAgent {
         // Get learning recommendations before execution if learning is enabled
         let mut task_with_recommendations = task;
         if let Some(ref learning_bridge) = self.learning_bridge {
-            match learning_bridge.get_recommendations(&format!("{:?}_code_fixing", task_with_recommendations.task_type)).await {
+            match learning_bridge
+                .get_recommendations(&format!(
+                    "{:?}_code_fixing",
+                    task_with_recommendations.task_type
+                ))
+                .await
+            {
                 Ok(recommendations) => {
                     if !recommendations.is_empty() {
                         info!("Learning system recommendations: {:?}", recommendations);
                         // Add recommendations to task refinement_context
                         task_with_recommendations.refinement_context.extend(
-                            recommendations.iter().map(|r| format!("Learning insight: {}", r))
+                            recommendations
+                                .iter()
+                                .map(|r| format!("Learning insight: {}", r)),
                         );
                     }
                 }
@@ -130,16 +149,22 @@ impl SelfPromptingAgent {
         }
 
         // Execute the self-prompting loop with learning bridge and RL trainer
-        let result = self.loop_controller.execute_task(
-            task_with_recommendations,
-            self.model_registry.clone(),
-            self.evaluator.clone(),
-            self.learning_bridge.clone(),
-            self.rl_trainer.clone(),
-        ).await
+        let result = self
+            .loop_controller
+            .execute_task(
+                task_with_recommendations,
+                self.model_registry.clone(),
+                self.evaluator.clone(),
+                self.learning_bridge.clone(),
+                self.rl_trainer.clone(),
+            )
+            .await
             .map_err(|e| SelfPromptingAgentError::Execution(e.to_string()))?;
 
-        info!("Self-prompting execution completed with {} iterations", result.iterations);
+        info!(
+            "Self-prompting execution completed with {} iterations",
+            result.iterations
+        );
 
         Ok(result)
     }
@@ -147,11 +172,15 @@ impl SelfPromptingAgent {
     /// Validate task before execution
     async fn validate_task(&self, task: &Task) -> Result<(), SelfPromptingAgentError> {
         if task.description.trim().is_empty() {
-            return Err(SelfPromptingAgentError::Validation("Task description cannot be empty".to_string()));
+            return Err(SelfPromptingAgentError::Validation(
+                "Task description cannot be empty".to_string(),
+            ));
         }
 
         if task.description.len() > 10000 {
-            return Err(SelfPromptingAgentError::Validation("Task description too long".to_string()));
+            return Err(SelfPromptingAgentError::Validation(
+                "Task description too long".to_string(),
+            ));
         }
 
         // Additional validation can be added here
@@ -196,11 +225,15 @@ impl SelfPromptingAgent {
         info!("Shutting down self-prompting agent");
 
         if let Some(ref sandbox) = self.sandbox {
-            sandbox.cleanup().await
+            sandbox
+                .cleanup()
+                .await
                 .map_err(|e| SelfPromptingAgentError::Sandbox(e.to_string()))?;
         }
 
-        self.loop_controller.shutdown().await
+        self.loop_controller
+            .shutdown()
+            .await
             .map_err(|e| SelfPromptingAgentError::Execution(e.to_string()))?;
 
         Ok(())

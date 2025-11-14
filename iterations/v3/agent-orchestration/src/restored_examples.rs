@@ -5,16 +5,17 @@
 //!
 //! @author @darianrosebrook
 
-use agent_agency_contracts::{
-    TaskDescriptor, TaskPriority, WorkingSpec, BlastRadius, ChangeBudget, AcceptanceCriterion, types::prelude::RiskTier,
-};
-use crate::types::{DiffStats, OrchestratorConfig};
 use crate::adapter::{LegacyOrchestratorAdapter, ValidationResult};
-use crate::evidence_enrichment::{EvidenceEnrichmentCoordinator, EnrichmentConfig};
+use crate::evidence_enrichment::{EnrichmentConfig, EvidenceEnrichmentCoordinator};
 use crate::frontier::{Frontier, FrontierConfig};
+use crate::types::{DiffStats, OrchestratorConfig};
+use agent_agency_contracts::{
+    types::prelude::RiskTier, AcceptanceCriterion, BlastRadius, ChangeBudget, TaskDescriptor,
+    TaskPriority, WorkingSpec,
+};
 use anyhow::Result;
-use uuid::Uuid;
 use chrono;
+use uuid::Uuid;
 
 /// Example of using the restored orchestration functionality
 pub async fn example_orchestration_workflow() -> Result<()> {
@@ -153,8 +154,14 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         .enrich_evidence("evidence-001", evidence_content, &task_descriptor)
         .await?;
 
-    println!("✅ Evidence enriched with confidence: {:.2}", enriched_evidence.confidence);
-    println!("📊 Multimodal contexts found: {}", enriched_evidence.multimodal_context.len());
+    println!(
+        "✅ Evidence enriched with confidence: {:.2}",
+        enriched_evidence.confidence
+    );
+    println!(
+        "📊 Multimodal contexts found: {}",
+        enriched_evidence.multimodal_context.len()
+    );
 
     // 6. Set up frontier for task queue management
     let frontier_config = FrontierConfig {
@@ -171,7 +178,10 @@ pub async fn example_orchestration_workflow() -> Result<()> {
 
     // 8. Get task from frontier
     if let Some(task_entry) = frontier.get_next_task().await? {
-        println!("🎯 Retrieved task from frontier: {}", task_entry.descriptor.task_id);
+        println!(
+            "🎯 Retrieved task from frontier: {}",
+            task_entry.descriptor.task_id
+        );
         println!("⚡ Priority score: {}", task_entry.priority_score);
         println!("📈 Attempts: {}", task_entry.attempts);
 
@@ -187,9 +197,18 @@ pub async fn example_orchestration_workflow() -> Result<()> {
 
         println!("✅ Orchestration completed!");
         // TaskExecutionResult (contract type) - artifacts and quality_report stored separately
-        println!("📊 Execution status: {}", if result.success { "Success" } else { "Failed" });
+        println!(
+            "📊 Execution status: {}",
+            if result.success { "Success" } else { "Failed" }
+        );
         println!("🆔 Execution ID: {}", result.execution_id);
-        println!("👷 Worker ID: {}", result.worker_id.map(|w| w.to_string()).unwrap_or_else(|| "unknown".to_string()));
+        println!(
+            "👷 Worker ID: {}",
+            result
+                .worker_id
+                .map(|w| w.to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        );
         println!("⏱️  Duration: {} ms", result.duration_ms);
         if !result.errors.is_empty() {
             println!("❌ Errors: {}", result.errors.join(", "));
@@ -199,7 +218,9 @@ pub async fn example_orchestration_workflow() -> Result<()> {
         //       Currently uses placeholder example; should fetch artifacts and quality reports from storage using execution_id.
 
         // 11. Mark task as completed
-        frontier.complete_task(&task_descriptor.task_id.to_string()).await?;
+        frontier
+            .complete_task(&task_descriptor.task_id.to_string())
+            .await?;
         println!("🎉 Task marked as completed: {}", task_descriptor.task_id);
     }
 
@@ -209,14 +230,20 @@ pub async fn example_orchestration_workflow() -> Result<()> {
     println!("   Total added: {}", stats.total_added);
     println!("   Total completed: {}", stats.total_completed);
     println!("   Current queue size: {}", stats.current_queue_size);
-    println!("   Average processing time: {:.2}s", stats.avg_processing_time_seconds);
+    println!(
+        "   Average processing time: {:.2}s",
+        stats.avg_processing_time_seconds
+    );
 
     // 13. Get enrichment statistics
     let enrichment_stats = enrichment_coordinator.get_stats();
     println!("📊 Enrichment Statistics:");
     println!("   Cache size: {}", enrichment_stats.cache_size);
     println!("   Total enriched: {}", enrichment_stats.total_enriched);
-    println!("   Cache hit rate: {:.2}%", enrichment_stats.cache_hit_rate * 100.0);
+    println!(
+        "   Cache hit rate: {:.2}%",
+        enrichment_stats.cache_hit_rate * 100.0
+    );
 
     println!("🎊 Orchestration workflow example completed successfully!");
     Ok(())
@@ -230,7 +257,7 @@ pub fn example_task_creation() -> Result<()> {
     let critical_task = TaskDescriptor {
         task_id: Uuid::new_v4(),
         description: "Fix security vulnerability".to_string(),
-          scope_in: agent_agency_contracts::ScopeRestrictions {
+        scope_in: agent_agency_contracts::ScopeRestrictions {
             allowed_paths: vec!["src/security/".to_string()],
             blocked_paths: vec![],
         },
@@ -259,7 +286,7 @@ pub fn example_task_creation() -> Result<()> {
     let feature_task = TaskDescriptor {
         task_id: Uuid::new_v4(),
         description: "Add user profile management".to_string(),
-          scope_in: agent_agency_contracts::ScopeRestrictions {
+        scope_in: agent_agency_contracts::ScopeRestrictions {
             allowed_paths: vec!["src/profile/".to_string(), "tests/profile/".to_string()],
             blocked_paths: vec!["node_modules/".to_string()],
         },
@@ -288,7 +315,7 @@ pub fn example_task_creation() -> Result<()> {
     let maintenance_task = TaskDescriptor {
         task_id: Uuid::new_v4(),
         description: "Update documentation".to_string(),
-          scope_in: agent_agency_contracts::ScopeRestrictions {
+        scope_in: agent_agency_contracts::ScopeRestrictions {
             allowed_paths: vec!["docs/".to_string()],
             blocked_paths: vec![],
         },

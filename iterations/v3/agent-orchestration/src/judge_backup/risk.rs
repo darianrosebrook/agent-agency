@@ -5,7 +5,7 @@
 //! multi-dimensional analysis and mitigation strategies.
 
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 /// Risk assessment from a judge
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -18,7 +18,9 @@ pub struct RiskAssessment {
 
 /// Risk level classification
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema, Copy)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema, Copy,
+)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -313,7 +315,7 @@ struct ComplexityAssessment {
     // pub algorithmic_complexity: crate::risk_scorer::ComputationalComplexity, // TEMPORARILY DISABLED
     pub integration_points: u32,
     pub external_dependencies: u32,
-    pub novelty_factor: f32, // 0.0-1.0, higher = more novel/untested
+    pub novelty_factor: f32,        // 0.0-1.0, higher = more novel/untested
     pub team_experience_level: f32, // 0.0-1.0, higher = more experienced
 }
 
@@ -323,7 +325,7 @@ struct ComplexityAssessment {
 struct ResourceRisk {
     pub resource_type: String,
     pub availability_risk: f32, // 0.0-1.0
-    pub cost_volatility: f32, // 0.0-1.0
+    pub cost_volatility: f32,   // 0.0-1.0
     pub alternative_sources: u32,
     pub description: String,
 }
@@ -333,9 +335,9 @@ struct ResourceRisk {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct TechnologyMaturity {
     pub maturity_level: TechnologyMaturityLevel,
-    pub adoption_rate: f32, // 0.0-1.0
+    pub adoption_rate: f32,   // 0.0-1.0
     pub stability_score: f32, // 0.0-1.0
-    pub vendor_support: f32, // 0.0-1.0
+    pub vendor_support: f32,  // 0.0-1.0
     pub community_size: String,
 }
 
@@ -366,7 +368,7 @@ struct IntegrationComplexity {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct PerformanceRisk {
     pub risk_type: PerformanceRiskType,
-    pub severity: f32, // 0.0-1.0
+    pub severity: f32,   // 0.0-1.0
     pub likelihood: f32, // 0.0-1.0
     pub mitigation_complexity: ComplexityLevel,
 }
@@ -411,7 +413,7 @@ struct RegulatoryRisk {
     pub jurisdiction: String,
     pub regulation_type: RegulationType,
     pub compliance_complexity: f32, // 0.0-1.0
-    pub penalty_severity: f32, // 0.0-1.0
+    pub penalty_severity: f32,      // 0.0-1.0
     pub audit_frequency: AuditFrequency,
 }
 
@@ -697,10 +699,10 @@ enum CommunicationPlanQuality {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 struct MarketImpact {
-    pub market_size: f64, // Market size in dollars
-    pub market_share: f32, // 0.0-1.0
+    pub market_size: f64,           // Market size in dollars
+    pub market_share: f32,          // 0.0-1.0
     pub competitive_advantage: f32, // 0.0-1.0
-    pub disruption_potential: f32, // 0.0-1.0
+    pub disruption_potential: f32,  // 0.0-1.0
     pub adoption_curve: AdoptionCurve,
 }
 
@@ -720,7 +722,7 @@ enum AdoptionCurve {
 struct FinancialRisk {
     pub risk_type: FinancialRiskType,
     pub potential_impact: f64, // Impact in dollars
-    pub probability: f32, // 0.0-1.0
+    pub probability: f32,      // 0.0-1.0
     pub time_horizon: TimeHorizon,
 }
 
@@ -874,7 +876,7 @@ pub struct EthicalTradeoff {
 pub struct ConsequenceAssessment {
     pub consequence_type: ConsequenceType,
     pub time_horizon: TimeHorizon,
-    pub probability: f32, // 0.0-1.0
+    pub probability: f32,      // 0.0-1.0
     pub impact_magnitude: f32, // -1.0 to 1.0
     pub reversibility: Reversibility,
 }
@@ -898,4 +900,3 @@ pub struct CulturalConsideration {
     pub potential_conflicts: Vec<String>,
     pub adaptation_recommendations: Vec<String>,
 }
-

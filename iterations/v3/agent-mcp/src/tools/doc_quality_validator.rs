@@ -4,10 +4,10 @@
 //! Integrates with the V3 Rust architecture to provide documentation quality
 //! validation capabilities to AI models and agents.
 
-use schemars::JsonSchema;
 use crate::mcp_types::*;
 use anyhow::{Context, Result};
 use chrono::Utc;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::Stdio;
@@ -217,7 +217,7 @@ impl DocQualityValidator {
         // Create temporary file for content
         let temp_file = tempfile::NamedTempFile::with_suffix(&format!(".{}", content_type))
             .context("Failed to create temporary file")?;
-        
+
         tokio::fs::write(temp_file.path(), content)
             .await
             .context("Failed to write content to temporary file")?;
@@ -238,11 +238,13 @@ impl DocQualityValidator {
             cmd.arg("--include-suggestions");
         }
 
-        cmd.stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
         // Execute the linter
-        let output = cmd.output().await.context("Failed to execute documentation quality linter")?;
+        let output = cmd
+            .output()
+            .await
+            .context("Failed to execute documentation quality linter")?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -251,7 +253,7 @@ impl DocQualityValidator {
                 stderr = %stderr,
                 "Documentation quality linter failed"
             );
-            
+
             return Ok(DocQualityResult {
                 validation_id: format!("val_{}", Uuid::new_v4()),
                 quality_score: 0.0,
@@ -275,18 +277,18 @@ impl DocQualityValidator {
 
         // Parse JSON output
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let linter_output: serde_json::Value = serde_json::from_str(&stdout)
-            .context("Failed to parse linter JSON output")?;
+        let linter_output: serde_json::Value =
+            serde_json::from_str(&stdout).context("Failed to parse linter JSON output")?;
 
         // Extract issues
         let issues = self.parse_issues(&linter_output)?;
-        
+
         // Calculate quality score
         let quality_score = self.calculate_quality_score(&issues, validation_level);
-        
+
         // Generate metrics
         let metrics = self.generate_metrics(&issues);
-        
+
         // Generate recommendations
         let recommendations = self.generate_recommendations(&issues, quality_score);
 
@@ -330,9 +332,18 @@ impl DocQualityValidator {
         }
 
         // Count issues by severity
-        let error_count = issues.iter().filter(|i| i.severity == QualitySeverity::Error).count();
-        let warning_count = issues.iter().filter(|i| i.severity == QualitySeverity::Warning).count();
-        let info_count = issues.iter().filter(|i| i.severity == QualitySeverity::Info).count();
+        let error_count = issues
+            .iter()
+            .filter(|i| i.severity == QualitySeverity::Error)
+            .count();
+        let warning_count = issues
+            .iter()
+            .filter(|i| i.severity == QualitySeverity::Warning)
+            .count();
+        let info_count = issues
+            .iter()
+            .filter(|i| i.severity == QualitySeverity::Info)
+            .count();
 
         // Calculate base score
         let total_issues = issues.len();
@@ -386,33 +397,43 @@ impl DocQualityValidator {
         if quality_score < 0.5 {
             recommendations.push("Documentation quality is very low. Consider a complete rewrite focusing on engineering-grade content.".to_string());
         } else if quality_score < 0.8 {
-            recommendations.push("Documentation quality needs improvement. Address the identified issues.".to_string());
+            recommendations.push(
+                "Documentation quality needs improvement. Address the identified issues."
+                    .to_string(),
+            );
         }
 
         // Add specific recommendations based on issue types
-        let issue_types: std::collections::HashSet<String> = issues
-            .iter()
-            .map(|i| i.rule_id.clone())
-            .collect();
+        let issue_types: std::collections::HashSet<String> =
+            issues.iter().map(|i| i.rule_id.clone()).collect();
 
         if issue_types.contains("SUPERIORITY_CLAIM") {
             recommendations.push("Remove superiority claims and marketing language. Focus on technical capabilities.".to_string());
         }
 
         if issue_types.contains("UNFOUNDED_ACHIEVEMENT") {
-            recommendations.push("Verify all achievement claims with evidence or use more accurate language.".to_string());
+            recommendations.push(
+                "Verify all achievement claims with evidence or use more accurate language."
+                    .to_string(),
+            );
         }
 
         if issue_types.contains("TEMPORAL_DOC") {
-            recommendations.push("Move temporal documentation to appropriate archive directories.".to_string());
+            recommendations.push(
+                "Move temporal documentation to appropriate archive directories.".to_string(),
+            );
         }
 
         if issue_types.contains("EMOJI_USAGE") {
-            recommendations.push("Remove emojis or use only approved emojis (⚠️, ✅, 🚫).".to_string());
+            recommendations
+                .push("Remove emojis or use only approved emojis (⚠️, ✅, 🚫).".to_string());
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Documentation quality is good. Continue maintaining engineering-grade standards.".to_string());
+            recommendations.push(
+                "Documentation quality is good. Continue maintaining engineering-grade standards."
+                    .to_string(),
+            );
         }
 
         recommendations
@@ -432,15 +453,11 @@ mod tests {
     #[tokio::test]
     async fn test_validate_quality() {
         let validator = DocQualityValidator::new();
-        
+
         let content = "# My Project\n\nThis is a revolutionary breakthrough in AI technology!";
-        let result = validator.validate_quality(
-            content,
-            "markdown",
-            None,
-            "moderate",
-            true,
-        ).await;
+        let result = validator
+            .validate_quality(content, "markdown", None, "moderate", true)
+            .await;
 
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -452,7 +469,7 @@ mod tests {
     fn test_get_tool_definition() {
         let validator = DocQualityValidator::new();
         let tool = validator.get_tool_definition();
-        
+
         assert_eq!(tool.name, "doc_quality_validator");
         assert_eq!(tool.tool_type, ToolType::Documentation);
         assert!(!tool.parameters.required.is_empty());

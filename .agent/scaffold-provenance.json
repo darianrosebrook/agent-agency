@@ -1,29 +1,35 @@
 {
   "agent": "caws-cli",
   "model": "cli-scaffold",
-  "modelHash": "3.3.1",
+  "modelHash": "8.0.1",
   "toolAllowlist": [
     "node",
     "fs-extra"
   ],
   "prompts": [
     "scaffold",
-    "normal"
+    "force"
   ],
   "commit": null,
   "artifacts": [
-    "COMMIT_CONVENTIONS.md",
-    "OIDC_SETUP.md"
+    ".caws/tools",
+    ".caws/schemas",
+    ".caws/templates",
+    ".caws/waivers.yml",
+    ".caws/tools-allow.json",
+    "codemod",
+    "ide-integrations",
+    "COMMIT_CONVENTIONS.md"
   ],
   "results": {
     "operation": "scaffold",
-    "force_mode": false,
+    "force_mode": true,
     "target_directory": "/Users/darianrosebrook/Desktop/Projects/agent-agency",
-    "files_added": 2,
-    "files_skipped": 13
+    "files_added": 18,
+    "files_skipped": 0
   },
   "approvals": [],
-  "timestamp": "2025-10-09T00:28:54.442Z",
-  "version": "3.3.1",
-  "hash": "1437eba4b05ff8858309b888791941b13fe56e3d2d21eb6c7f8bbb41d67d3421"
+  "timestamp": "2025-11-12T10:27:26.627Z",
+  "version": "8.0.1",
+  "hash": "18ae6d85adbe1c80c4ba280fb01ffdcd5d875b61eb676c775f837eeca4677ffd"
 }

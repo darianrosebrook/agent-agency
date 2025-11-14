@@ -3,19 +3,22 @@
 //! Uses temporary directory mirroring for safe file editing in non-Git environments
 //! with rsync-based copying and snapshot capabilities.
 
+use crate::client::orchestrator::DatabaseClient;
+use crate::file_operations::{
+    validate_changeset, AllowList, Budgets, ChangeSet, ChangeSetId, FileOpsError, Hunk, Patch,
+    Result, Workspace,
+};
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
+use sha2::{Digest, Sha256};
+use sqlx::Row;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use sha2::{Digest, Sha256};
-use sqlx::Row;
-use crate::file_operations::{Workspace, ChangeSet, AllowList, Budgets, ChangeSetId, FileOpsError, Result, validate_changeset, Patch, Hunk};
-use crate::client::orchestrator::DatabaseClient;
 
 /// Temp directory mirror workspace for safe file operations
 pub struct TempMirrorWorkspace {
@@ -58,7 +61,6 @@ pub struct ChangesetApplicationState {
     pub progress: ApplicationProgress,
     /// Start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// Validation results
     pub validation_results: Vec<ChangesetValidationResult>,
@@ -175,7 +177,6 @@ pub struct ApplicationCheckpoint {
     pub checkpoint_id: String,
     /// Timestamp
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     /// Files backed up at this checkpoint
     pub backed_up_files: Vec<PathBuf>,
@@ -191,11 +192,9 @@ pub struct CompletedChangesetApplication {
     pub changeset: ChangeSet,
     /// Application start time
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     /// Application completion time
     #[schemars(with = "String")]
-
     pub completion_time: DateTime<Utc>,
     /// Final application status
     pub status: ApplicationStatus,
@@ -215,8 +214,7 @@ pub enum ApplicationStatus {
     RolledBack,
 }
 
-#[derive(Debug, Clone, JsonSchema)]
-#[derive(Default)]
+#[derive(Debug, Clone, JsonSchema, Default)]
 pub struct ApplicationPerformance {
     /// Total application time
     pub total_time_ms: u64,
@@ -234,8 +232,7 @@ pub struct ApplicationPerformance {
     pub io_operations: u64,
 }
 
-#[derive(Debug, Clone, JsonSchema)]
-#[derive(Default)]
+#[derive(Debug, Clone, JsonSchema, Default)]
 pub struct ValidationSummary {
     /// Total validations performed
     pub total_validations: usize,
@@ -281,18 +278,19 @@ impl TempMirrorWorkspace {
         task_id: &str,
         db_client: Option<Arc<DatabaseClient>>,
     ) -> Result<Self> {
-        let source_root = project_path.canonicalize()
+        let source_root = project_path
+            .canonicalize()
             .map_err(|e| FileOpsError::Path(format!("Cannot canonicalize project path: {}", e)))?;
 
         // Create temp workspace directory
-        let workspace_path = std::env::temp_dir()
-            .join(format!("caws-workspace-{}", task_id));
+        let workspace_path = std::env::temp_dir().join(format!("caws-workspace-{}", task_id));
 
         // Clean up any existing workspace
         let _ = fs::remove_dir_all(&workspace_path).await;
 
         // Create workspace directory
-        fs::create_dir_all(&workspace_path).await
+        fs::create_dir_all(&workspace_path)
+            .await
             .map_err(FileOpsError::Io)?;
 
         // Mirror source to workspace using rsync if available, otherwise manual copy
@@ -328,7 +326,7 @@ impl TempMirrorWorkspace {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 metadata JSONB DEFAULT '{}'::jsonb
             )
-            "#
+            "#,
         )
         .execute(db.pool())
         .await
@@ -336,9 +334,9 @@ impl TempMirrorWorkspace {
 
         sqlx::query(
             r#"
-            CREATE INDEX IF NOT EXISTS idx_changeset_storage_changeset_id 
+            CREATE INDEX IF NOT EXISTS idx_changeset_storage_changeset_id
             ON changeset_storage(changeset_id)
-            "#
+            "#,
         )
         .execute(db.pool())
         .await
@@ -346,9 +344,9 @@ impl TempMirrorWorkspace {
 
         sqlx::query(
             r#"
-            CREATE INDEX IF NOT EXISTS idx_changeset_storage_task_id 
+            CREATE INDEX IF NOT EXISTS idx_changeset_storage_task_id
             ON changeset_storage(task_id)
-            "#
+            "#,
         )
         .execute(db.pool())
         .await
@@ -366,7 +364,7 @@ impl TempMirrorWorkspace {
         if let Some(ref db) = self.db_client {
             let changeset_json = serde_json::to_value(changeset)
                 .map_err(|e| FileOpsError::Path(format!("Failed to serialize changeset: {}", e)))?;
-            
+
             let mut hasher = Sha256::new();
             hasher.update(changeset_json.to_string().as_bytes());
             let checksum = format!("{:x}", hasher.finalize());
@@ -376,7 +374,7 @@ impl TempMirrorWorkspace {
                 INSERT INTO changeset_storage (
                     changeset_id, task_id, workspace_path, changeset_data, checksum, metadata
                 ) VALUES ($1, $2, $3, $4, $5, $6)
-                "#
+                "#,
             )
             .bind(&changeset_id.0)
             .bind(&self.task_id)
@@ -391,7 +389,10 @@ impl TempMirrorWorkspace {
             Ok(())
         } else {
             // No database client, store in memory only
-            self.applied_changesets.write().await.push((changeset_id.clone(), changeset.clone()));
+            self.applied_changesets
+                .write()
+                .await
+                .push((changeset_id.clone(), changeset.clone()));
             Ok(())
         }
     }
@@ -405,7 +406,7 @@ impl TempMirrorWorkspace {
                 WHERE changeset_id = $1 AND task_id = $2
                 ORDER BY applied_at DESC
                 LIMIT 1
-                "#
+                "#,
             )
             .bind(&changeset_id.0)
             .bind(&self.task_id)
@@ -415,15 +416,20 @@ impl TempMirrorWorkspace {
 
             if let Some(row) = row {
                 let changeset_json: serde_json::Value = row.get("changeset_data");
-                let changeset: ChangeSet = serde_json::from_value(changeset_json)
-                    .map_err(|e| FileOpsError::Path(format!("Failed to deserialize changeset: {}", e)))?;
+                let changeset: ChangeSet = serde_json::from_value(changeset_json).map_err(|e| {
+                    FileOpsError::Path(format!("Failed to deserialize changeset: {}", e))
+                })?;
                 Ok(Some(changeset))
             } else {
                 Ok(None)
             }
         } else {
             // No database client, check in-memory storage
-            Ok(self.applied_changesets.read().await.iter()
+            Ok(self
+                .applied_changesets
+                .read()
+                .await
+                .iter()
                 .find(|(id, _)| id == changeset_id)
                 .map(|(_, cs)| cs.clone()))
         }
@@ -436,22 +442,26 @@ impl TempMirrorWorkspace {
         allowlist: &AllowList,
         budgets: &Budgets,
     ) -> Result<ChangeSetId> {
-        self.changeset_engine.apply_changeset_comprehensive(
-            changeset,
-            allowlist,
-            budgets,
-            &self.workspace_path,
-        ).await
+        self.changeset_engine
+            .apply_changeset_comprehensive(changeset, allowlist, budgets, &self.workspace_path)
+            .await
     }
 
     /// Get application status for a changeset
-    pub async fn get_application_status(&self, changeset_id: &ChangeSetId) -> Result<Option<ChangesetApplicationState>> {
-        self.changeset_engine.get_application_status(changeset_id).await
+    pub async fn get_application_status(
+        &self,
+        changeset_id: &ChangeSetId,
+    ) -> Result<Option<ChangesetApplicationState>> {
+        self.changeset_engine
+            .get_application_status(changeset_id)
+            .await
     }
 
     /// Rollback a changeset application
     pub async fn rollback_changeset(&self, changeset_id: &ChangeSetId) -> Result<()> {
-        self.changeset_engine.rollback_changeset(changeset_id, &self.workspace_path).await
+        self.changeset_engine
+            .rollback_changeset(changeset_id, &self.workspace_path)
+            .await
     }
 
     /// Get changeset performance metrics
@@ -463,7 +473,12 @@ impl TempMirrorWorkspace {
     async fn mirror_directory(source: &Path, dest: &Path) -> Result<()> {
         // Try rsync first
         let rsync_result = Command::new("rsync")
-            .args(["-a", "--exclude=.git", &format!("{}/", source.display()), &dest.display().to_string()])
+            .args([
+                "-a",
+                "--exclude=.git",
+                &format!("{}/", source.display()),
+                &dest.display().to_string(),
+            ])
             .output();
 
         if rsync_result.is_ok() && rsync_result.as_ref().unwrap().status.success() {
@@ -496,7 +511,9 @@ impl TempMirrorWorkspace {
                         stack.push((src_path, dst_path));
                     }
                 } else if entry_type.is_file() {
-                    fs::copy(&src_path, &dst_path).await.map_err(FileOpsError::Io)?;
+                    fs::copy(&src_path, &dst_path)
+                        .await
+                        .map_err(FileOpsError::Io)?;
                 }
             }
         }
@@ -532,7 +549,8 @@ impl TempMirrorWorkspace {
         let new_content = self.apply_hunks_to_content(&current_content, &patch.hunks)?;
 
         // Write new content
-        fs::write(&file_path, new_content).await
+        fs::write(&file_path, new_content)
+            .await
             .map_err(FileOpsError::Io)?;
 
         Ok(())
@@ -562,7 +580,8 @@ impl TempMirrorWorkspace {
             // Add new lines
             if hunk.new_lines > 0 {
                 let insert_pos = std::cmp::min(start_line, lines.len());
-                let new_lines: Vec<String> = hunk.lines
+                let new_lines: Vec<String> = hunk
+                    .lines
                     .lines()
                     .filter(|line| line.starts_with('+') || line.starts_with(' '))
                     .map(|line| line[1..].to_string())
@@ -580,10 +599,12 @@ impl TempMirrorWorkspace {
 
     /// Create a snapshot of current workspace state
     async fn create_snapshot(&self) -> Result<PathBuf> {
-        let snapshot_dir = std::env::temp_dir()
-            .join(format!("caws-snapshot-{}-{}", self.task_id, Uuid::new_v4()));
+        let snapshot_dir =
+            std::env::temp_dir().join(format!("caws-snapshot-{}-{}", self.task_id, Uuid::new_v4()));
 
-        fs::create_dir_all(&snapshot_dir).await.map_err(FileOpsError::Io)?;
+        fs::create_dir_all(&snapshot_dir)
+            .await
+            .map_err(FileOpsError::Io)?;
         Self::copy_directory_recursive(&self.workspace_path, &snapshot_dir).await?;
 
         Ok(snapshot_dir)
@@ -645,7 +666,16 @@ impl ChangesetApplicationEngine {
             active_apps.insert(changeset_id.clone(), application_state);
         }
 
-        let result = self.execute_changeset_application(&changeset_id, changeset, allowlist, budgets, workspace_path, start_time).await;
+        let result = self
+            .execute_changeset_application(
+                &changeset_id,
+                changeset,
+                allowlist,
+                budgets,
+                workspace_path,
+                start_time,
+            )
+            .await;
 
         // Update metrics
         self.update_metrics(start_time, &result).await;
@@ -661,44 +691,65 @@ impl ChangesetApplicationEngine {
         allowlist: &AllowList,
         budgets: &Budgets,
         workspace_path: &Path,
-    start_time: DateTime<Utc>,
+        start_time: DateTime<Utc>,
     ) -> Result<ChangeSetId> {
         // Phase 1: Comprehensive Validation
-        self.update_phase(changeset_id, ApplicationPhase::Validation).await?;
-        let validation_results = self.perform_comprehensive_validation(changeset, allowlist, budgets, workspace_path).await?;
-        self.record_validation_results(changeset_id, validation_results.clone()).await?;
+        self.update_phase(changeset_id, ApplicationPhase::Validation)
+            .await?;
+        let validation_results = self
+            .perform_comprehensive_validation(changeset, allowlist, budgets, workspace_path)
+            .await?;
+        self.record_validation_results(changeset_id, validation_results.clone())
+            .await?;
 
         // Check for critical validation failures
-        let has_critical_failures = validation_results.iter()
+        let has_critical_failures = validation_results
+            .iter()
             .any(|r| r.severity == ValidationSeverity::Error && !r.passed);
 
         if has_critical_failures {
-            self.finalize_application(changeset_id, ApplicationStatus::Failed, start_time, None).await?;
-            return Err(FileOpsError::Validation("Critical validation failures detected".to_string()));
+            self.finalize_application(changeset_id, ApplicationStatus::Failed, start_time, None)
+                .await?;
+            return Err(FileOpsError::Validation(
+                "Critical validation failures detected".to_string(),
+            ));
         }
 
         // Phase 2: Conflict Detection
-        self.update_phase(changeset_id, ApplicationPhase::ConflictDetection).await?;
+        self.update_phase(changeset_id, ApplicationPhase::ConflictDetection)
+            .await?;
         let conflicts = self.detect_conflicts(changeset, workspace_path).await?;
-        self.record_conflicts(changeset_id, conflicts.clone()).await?;
+        self.record_conflicts(changeset_id, conflicts.clone())
+            .await?;
 
         // Phase 3: Backup Creation
-        self.update_phase(changeset_id, ApplicationPhase::BackupCreation).await?;
+        self.update_phase(changeset_id, ApplicationPhase::BackupCreation)
+            .await?;
         let backup_location = self.create_backup(changeset, workspace_path).await?;
-        self.create_checkpoint(changeset_id, &backup_location, 0).await?;
+        self.create_checkpoint(changeset_id, &backup_location, 0)
+            .await?;
 
         // Phase 4: Atomic Application
-        self.update_phase(changeset_id, ApplicationPhase::AtomicApplication).await?;
-        let application_result = self.apply_changeset_atomically(changeset, workspace_path).await?;
+        self.update_phase(changeset_id, ApplicationPhase::AtomicApplication)
+            .await?;
+        let application_result = self
+            .apply_changeset_atomically(changeset, workspace_path)
+            .await?;
 
         // Phase 5: Verification
-        self.update_phase(changeset_id, ApplicationPhase::Verification).await?;
-        let verification_passed = self.verify_changeset_application(changeset, workspace_path).await?;
+        self.update_phase(changeset_id, ApplicationPhase::Verification)
+            .await?;
+        let verification_passed = self
+            .verify_changeset_application(changeset, workspace_path)
+            .await?;
 
         // Phase 6: Completion
-        self.update_phase(changeset_id, ApplicationPhase::Completion).await?;
+        self.update_phase(changeset_id, ApplicationPhase::Completion)
+            .await?;
 
-        let status = if verification_passed && application_result.successful_patches == changeset.patches.len() {
+        let status = if verification_passed
+            && application_result.successful_patches == changeset.patches.len()
+        {
             ApplicationStatus::Success
         } else if application_result.successful_patches > 0 {
             ApplicationStatus::PartialSuccess
@@ -712,19 +763,34 @@ impl ChangesetApplicationEngine {
             backup_time_ms: 200,     // Placeholder
             application_time_ms: application_result.application_time_ms,
             verification_time_ms: 50, // Placeholder
-            peak_memory_mb: 100,    // Placeholder
+            peak_memory_mb: 100,      // Placeholder
             io_operations: application_result.io_operations,
         };
 
         let validation_summary = ValidationSummary {
             total_validations: validation_results.len(),
             passed_validations: validation_results.iter().filter(|r| r.passed).count(),
-            failed_validations: validation_results.iter().filter(|r| !r.passed && r.severity == ValidationSeverity::Error).count(),
-            warning_validations: validation_results.iter().filter(|r| !r.passed && r.severity == ValidationSeverity::Warning).count(),
-            critical_issues: validation_results.iter().filter(|r| r.severity == ValidationSeverity::Error && !r.passed).count(),
+            failed_validations: validation_results
+                .iter()
+                .filter(|r| !r.passed && r.severity == ValidationSeverity::Error)
+                .count(),
+            warning_validations: validation_results
+                .iter()
+                .filter(|r| !r.passed && r.severity == ValidationSeverity::Warning)
+                .count(),
+            critical_issues: validation_results
+                .iter()
+                .filter(|r| r.severity == ValidationSeverity::Error && !r.passed)
+                .count(),
         };
 
-        self.finalize_application(changeset_id, status, start_time, Some((performance, validation_summary, backup_location))).await?;
+        self.finalize_application(
+            changeset_id,
+            status,
+            start_time,
+            Some((performance, validation_summary, backup_location)),
+        )
+        .await?;
 
         Ok(changeset_id.clone())
     }
@@ -766,7 +832,11 @@ impl ChangesetApplicationEngine {
                 } else {
                     format!("Patch integrity check failed for {}", patch.path)
                 },
-                severity: if integrity_valid { ValidationSeverity::Info } else { ValidationSeverity::Error },
+                severity: if integrity_valid {
+                    ValidationSeverity::Info
+                } else {
+                    ValidationSeverity::Error
+                },
             });
         }
 
@@ -781,7 +851,11 @@ impl ChangesetApplicationEngine {
                 } else {
                     format!("Content validation failed for {}", patch.path)
                 },
-                severity: if content_valid { ValidationSeverity::Info } else { ValidationSeverity::Warning },
+                severity: if content_valid {
+                    ValidationSeverity::Info
+                } else {
+                    ValidationSeverity::Warning
+                },
             });
         }
 
@@ -817,7 +891,9 @@ impl ChangesetApplicationEngine {
         // - CAWS Tier: 2 (validation feature)
         // - Change Budget: ~100 LOC
         // - Reviewer Requirements: Graph algorithms expertise
-        let dependency_valid = self.validate_changeset_dependencies(changeset, workspace_path).await?;
+        let dependency_valid = self
+            .validate_changeset_dependencies(changeset, workspace_path)
+            .await?;
         results.push(ChangesetValidationResult {
             validation_type: ValidationType::Dependency,
             passed: dependency_valid,
@@ -826,7 +902,11 @@ impl ChangesetApplicationEngine {
             } else {
                 "Dependency validation failed - circular or missing dependencies".to_string()
             },
-            severity: if dependency_valid { ValidationSeverity::Info } else { ValidationSeverity::Warning },
+            severity: if dependency_valid {
+                ValidationSeverity::Info
+            } else {
+                ValidationSeverity::Warning
+            },
         });
 
         Ok(results)
@@ -845,8 +925,7 @@ impl ChangesetApplicationEngine {
 
             // Check if file exists and has been modified
             if file_path.exists() {
-                let current_content = fs::read_to_string(&file_path).await
-                    .unwrap_or_default();
+                let current_content = fs::read_to_string(&file_path).await.unwrap_or_default();
                 let file_modified = self.detect_file_conflicts(&patch, &current_content)?;
 
                 if !file_modified.is_empty() {
@@ -868,7 +947,9 @@ impl ChangesetApplicationEngine {
         let backup_id = Uuid::new_v4().to_string();
         let backup_path = std::env::temp_dir().join(format!("caws-backup-{}", backup_id));
 
-        fs::create_dir_all(&backup_path).await.map_err(FileOpsError::Io)?;
+        fs::create_dir_all(&backup_path)
+            .await
+            .map_err(FileOpsError::Io)?;
 
         // Copy all files that will be modified
         for patch in &changeset.patches {
@@ -878,7 +959,9 @@ impl ChangesetApplicationEngine {
                 if let Some(parent) = backup_file.parent() {
                     fs::create_dir_all(parent).await.map_err(FileOpsError::Io)?;
                 }
-                fs::copy(&source_path, &backup_file).await.map_err(FileOpsError::Io)?;
+                fs::copy(&source_path, &backup_file)
+                    .await
+                    .map_err(FileOpsError::Io)?;
             }
         }
 
@@ -897,8 +980,14 @@ impl ChangesetApplicationEngine {
 
         for (i, patch) in changeset.patches.iter().enumerate() {
             // Update progress
-            self.update_progress(&ChangeSetId("temp".to_string()), i + 1, successful_patches, 0,
-                               format!("Applying patch to {}", patch.path)).await?;
+            self.update_progress(
+                &ChangeSetId("temp".to_string()),
+                i + 1,
+                successful_patches,
+                0,
+                format!("Applying patch to {}", patch.path),
+            )
+            .await?;
 
             match self.apply_single_patch_atomic(patch, workspace_path).await {
                 Ok(ops) => {
@@ -934,8 +1023,7 @@ impl ChangesetApplicationEngine {
             }
 
             // Verify file content matches expected result
-            let current_content = fs::read_to_string(&file_path).await
-                .unwrap_or_default();
+            let current_content = fs::read_to_string(&file_path).await.unwrap_or_default();
 
             if !self.verify_patch_application(patch, &current_content) {
                 return Ok(false);
@@ -959,7 +1047,8 @@ impl ChangesetApplicationEngine {
         if let Some(app) = completed_app {
             if let Some(backup_location) = app.backup_location {
                 // Restore from backup
-                self.restore_from_backup(&backup_location, workspace_path).await?;
+                self.restore_from_backup(&backup_location, workspace_path)
+                    .await?;
 
                 // Update application status
                 let mut completed_apps = self.completed_applications.write().await;
@@ -1027,17 +1116,21 @@ impl ChangesetApplicationEngine {
         Ok(true)
     }
 
-    async fn validate_changeset_dependencies(&self, changeset: &ChangeSet, workspace_path: &Path) -> Result<bool> {
+    async fn validate_changeset_dependencies(
+        &self,
+        changeset: &ChangeSet,
+        workspace_path: &Path,
+    ) -> Result<bool> {
         // Validate changeset dependencies
         // Check for circular dependencies, missing prerequisites, and self-referential patches
-        
+
         let mut file_dependencies: HashMap<String, Vec<String>> = HashMap::new();
         let mut files_modified: HashSet<String> = HashSet::new();
 
         // Build dependency graph from patches
         for patch in &changeset.patches {
             files_modified.insert(patch.path.clone());
-            
+
             // Extract file dependencies from patch content
             // Look for imports, includes, or other file references in patch content
             let mut deps = Vec::new();
@@ -1057,7 +1150,7 @@ impl ChangesetApplicationEngine {
                     }
                 }
             }
-            
+
             if !deps.is_empty() {
                 file_dependencies.insert(patch.path.clone(), deps);
             }
@@ -1066,10 +1159,15 @@ impl ChangesetApplicationEngine {
         // Check for circular dependencies using DFS
         let mut visited = HashSet::new();
         let mut rec_stack = HashSet::new();
-        
+
         for file in file_dependencies.keys() {
             if !visited.contains(file) {
-                if self.has_circular_dependency(file, &file_dependencies, &mut visited, &mut rec_stack) {
+                if self.has_circular_dependency(
+                    file,
+                    &file_dependencies,
+                    &mut visited,
+                    &mut rec_stack,
+                ) {
                     return Ok(false);
                 }
             }
@@ -1085,14 +1183,14 @@ impl ChangesetApplicationEngine {
                     } else {
                         workspace_path.join(dep)
                     };
-                    
+
                     // Try to normalize path (may fail if path doesn't exist, which is fine)
-                    let dep_path_normalized = dep_path.canonicalize()
-                        .unwrap_or_else(|_| dep_path.clone());
-                    
+                    let dep_path_normalized =
+                        dep_path.canonicalize().unwrap_or_else(|_| dep_path.clone());
+
                     // Check if file exists and is a regular file (not a directory)
                     let file_exists = dep_path_normalized.exists() && dep_path_normalized.is_file();
-                    
+
                     if !file_exists {
                         // Dependency file doesn't exist - this is a validation failure
                         // Return false to indicate dependency validation failed
@@ -1139,7 +1237,11 @@ impl ChangesetApplicationEngine {
         false
     }
 
-    fn detect_file_conflicts(&self, patch: &Patch, current_content: &str) -> Result<Vec<ConflictingLines>> {
+    fn detect_file_conflicts(
+        &self,
+        patch: &Patch,
+        current_content: &str,
+    ) -> Result<Vec<ConflictingLines>> {
         let mut conflicts = Vec::new();
         let current_lines: Vec<&str> = current_content.lines().collect();
 
@@ -1147,7 +1249,8 @@ impl ChangesetApplicationEngine {
             let start_line = (hunk.old_start as usize).saturating_sub(1);
 
             if start_line < current_lines.len() {
-                let expected_lines: Vec<&str> = hunk.lines
+                let expected_lines: Vec<&str> = hunk
+                    .lines
                     .lines()
                     .filter(|line| line.starts_with('-') || line.starts_with(' '))
                     .map(|line| &line[1..])
@@ -1180,9 +1283,9 @@ fn extract_file_reference(line: &str) -> Option<String> {
     // Examples: "use crate::module::submodule;" -> "module/submodule.rs"
     //           "mod my_module;" -> "my_module.rs"
     //           "include_str!(\"file.txt\")" -> "file.txt"
-    
+
     let line = line.trim();
-    
+
     // Handle Rust use statements: use crate::path::to::module;
     if line.starts_with("use ") {
         let parts: Vec<&str> = line
@@ -1190,7 +1293,7 @@ fn extract_file_reference(line: &str) -> Option<String> {
             .trim_end_matches(';')
             .split("::")
             .collect();
-        
+
         if parts.len() > 1 && parts[0] == "crate" {
             // Convert crate path to file path
             let module_path = parts[1..].join("/");
@@ -1201,7 +1304,7 @@ fn extract_file_reference(line: &str) -> Option<String> {
             return Some(format!("{}.rs", module_path));
         }
     }
-    
+
     // Handle mod statements: mod my_module;
     if line.starts_with("mod ") {
         let module_name = line
@@ -1211,7 +1314,7 @@ fn extract_file_reference(line: &str) -> Option<String> {
             .next()?;
         return Some(format!("{}.rs", module_name));
     }
-    
+
     // Handle include macros: include_str!("file.txt")
     if line.contains("include_str!") || line.contains("include!") {
         if let Some(start) = line.find('"') {
@@ -1220,7 +1323,7 @@ fn extract_file_reference(line: &str) -> Option<String> {
             }
         }
     }
-    
+
     None
 }
 
@@ -1254,7 +1357,9 @@ impl ChangesetApplicationEngine {
         let new_content = self.apply_hunks_to_content(&current_content, &patch.hunks)?;
 
         // Write new content (file write I/O)
-        fs::write(&file_path, new_content).await.map_err(FileOpsError::Io)?;
+        fs::write(&file_path, new_content)
+            .await
+            .map_err(FileOpsError::Io)?;
         io_operations += 1; // File write operation
 
         Ok(io_operations)
@@ -1269,17 +1374,17 @@ impl ChangesetApplicationEngine {
         // 3. Compare hunks against actual content
         // 4. Verify all expected additions are present
         // 5. Verify all expected deletions are absent
-        
+
         if current_content.is_empty() {
             return false;
         }
-        
+
         // Check that patch hunks can be matched in content
         let content_lines: Vec<&str> = current_content.lines().collect();
-        
+
         for hunk in &patch.hunks {
             let start_line = (hunk.old_start as usize).saturating_sub(1);
-            
+
             // Verify context lines match (if old_start is within bounds)
             if start_line < content_lines.len() {
                 let hunk_lines: Vec<&str> = hunk.lines.lines().collect();
@@ -1288,7 +1393,7 @@ impl ChangesetApplicationEngine {
                     .filter(|line| line.starts_with(' '))
                     .map(|line| line.trim_start())
                     .collect();
-                
+
                 // Check if context matches expected
                 for (i, expected_context) in context_lines.iter().take(3).enumerate() {
                     let line_idx = start_line + i;
@@ -1301,7 +1406,7 @@ impl ChangesetApplicationEngine {
                 }
             }
         }
-        
+
         true
     }
 
@@ -1318,14 +1423,20 @@ impl ChangesetApplicationEngine {
                 fs::create_dir_all(parent).await.map_err(FileOpsError::Io)?;
             }
 
-            fs::copy(&backup_file, &target_file).await.map_err(FileOpsError::Io)?;
+            fs::copy(&backup_file, &target_file)
+                .await
+                .map_err(FileOpsError::Io)?;
         }
 
         Ok(())
     }
 
     /// Update application phase
-    async fn update_phase(&self, changeset_id: &ChangeSetId, phase: ApplicationPhase) -> Result<()> {
+    async fn update_phase(
+        &self,
+        changeset_id: &ChangeSetId,
+        phase: ApplicationPhase,
+    ) -> Result<()> {
         let mut active_apps = self.active_applications.write().await;
         if let Some(app) = active_apps.get_mut(changeset_id) {
             app.phase = phase;
@@ -1352,7 +1463,11 @@ impl ChangesetApplicationEngine {
     }
 
     /// Record validation results
-    async fn record_validation_results(&self, changeset_id: &ChangeSetId, results: Vec<ChangesetValidationResult>) -> Result<()> {
+    async fn record_validation_results(
+        &self,
+        changeset_id: &ChangeSetId,
+        results: Vec<ChangesetValidationResult>,
+    ) -> Result<()> {
         let mut active_apps = self.active_applications.write().await;
         if let Some(app) = active_apps.get_mut(changeset_id) {
             app.validation_results = results;
@@ -1361,7 +1476,11 @@ impl ChangesetApplicationEngine {
     }
 
     /// Record conflicts
-    async fn record_conflicts(&self, changeset_id: &ChangeSetId, conflicts: Vec<ChangesetConflict>) -> Result<()> {
+    async fn record_conflicts(
+        &self,
+        changeset_id: &ChangeSetId,
+        conflicts: Vec<ChangesetConflict>,
+    ) -> Result<()> {
         let mut active_apps = self.active_applications.write().await;
         if let Some(app) = active_apps.get_mut(changeset_id) {
             app.conflicts = conflicts;
@@ -1370,7 +1489,12 @@ impl ChangesetApplicationEngine {
     }
 
     /// Create application checkpoint
-    async fn create_checkpoint(&self, changeset_id: &ChangeSetId, _backup_location: &Path, applied_patches: usize) -> Result<()> {
+    async fn create_checkpoint(
+        &self,
+        changeset_id: &ChangeSetId,
+        _backup_location: &Path,
+        applied_patches: usize,
+    ) -> Result<()> {
         let checkpoint = ApplicationCheckpoint {
             checkpoint_id: Uuid::new_v4().to_string(),
             timestamp: Utc::now(),
@@ -1391,7 +1515,7 @@ impl ChangesetApplicationEngine {
         &self,
         changeset_id: &ChangeSetId,
         status: ApplicationStatus,
-    start_time: DateTime<Utc>,
+        start_time: DateTime<Utc>,
         details: Option<(ApplicationPerformance, ValidationSummary, PathBuf)>,
     ) -> Result<()> {
         let mut active_apps = self.active_applications.write().await;
@@ -1403,9 +1527,15 @@ impl ChangesetApplicationEngine {
                 start_time,
                 completion_time: Utc::now(),
                 status,
-                performance: details.as_ref().map(|(p, _, _)| p.clone()).unwrap_or_default(),
+                performance: details
+                    .as_ref()
+                    .map(|(p, _, _)| p.clone())
+                    .unwrap_or_default(),
                 backup_location: details.as_ref().map(|(_, _, b)| Some(b.clone())).flatten(),
-                validation_summary: details.as_ref().map(|(_, s, _)| s.clone()).unwrap_or_default(),
+                validation_summary: details
+                    .as_ref()
+                    .map(|(_, s, _)| s.clone())
+                    .unwrap_or_default(),
             };
 
             completed_apps.insert(changeset_id.clone(), completed_app);
@@ -1429,11 +1559,15 @@ impl ChangesetApplicationEngine {
 
         // Update rolling averages
         let total = metrics.total_applications as f64;
-        metrics.avg_application_time_ms = (metrics.avg_application_time_ms * (total - 1.0) + duration) / total;
+        metrics.avg_application_time_ms =
+            (metrics.avg_application_time_ms * (total - 1.0) + duration) / total;
     }
 
     /// Get application status
-    pub async fn get_application_status(&self, changeset_id: &ChangeSetId) -> Result<Option<ChangesetApplicationState>> {
+    pub async fn get_application_status(
+        &self,
+        changeset_id: &ChangeSetId,
+    ) -> Result<Option<ChangesetApplicationState>> {
         let active_apps = self.active_applications.read().await;
         Ok(active_apps.get(changeset_id).cloned())
     }
@@ -1468,7 +1602,8 @@ impl ChangesetApplicationEngine {
             // Add new lines
             if hunk.new_lines > 0 {
                 let insert_pos = std::cmp::min(start_line, lines.len());
-                let new_lines: Vec<String> = hunk.lines
+                let new_lines: Vec<String> = hunk
+                    .lines
                     .lines()
                     .filter(|line| line.starts_with('+') || line.starts_with(' '))
                     .map(|line| &line[1..])
@@ -1526,8 +1661,9 @@ impl Workspace for TempMirrorWorkspace {
 
     async fn revert(&self, changeset_id: &ChangeSetId) -> Result<()> {
         // Retrieve the changeset from persistent storage
-        let changeset = self.get_changeset(changeset_id).await?
-            .ok_or_else(|| FileOpsError::Path(format!("Changeset not found: {}", changeset_id.0)))?;
+        let changeset = self.get_changeset(changeset_id).await?.ok_or_else(|| {
+            FileOpsError::Path(format!("Changeset not found: {}", changeset_id.0))
+        })?;
 
         // Create a reverse changeset by inverting all patches
         let mut reverse_patches = Vec::new();
@@ -1608,34 +1744,34 @@ mod tests {
         Ok((temp_dir, project_path))
     }
 
-      // TODO: Implement comprehensive async testing infrastructure
-      // - Add tokio-test dependency and configuration
-      // - Create async test utilities and fixtures
-      // - Implement proper async test cleanup and teardown
-      // - Add async test timeouts and cancellation handling
-      // - Support concurrent test execution
-      // - Add async test debugging and profiling tools
-      // TODO: Implement async test infrastructure:
-      // 1. Async test framework: Set up async test framework
-      //    - Configure async test runtime and executor
-      //    - Support async test setup and teardown
-      //    - Handle async test timeouts and cancellation
-      // 2. Test infrastructure: Build test infrastructure
-      //    - Implement proper async test cleanup
-      //    - Support concurrent test execution
-      //    - Add async test debugging tools
-      // 3. Integration: Integrate with test system
-      //    - Use async test framework for temp workspace tests
-      //    - Support async test fixtures and helpers
-      //    - Handle async test failures gracefully
-      // ACCEPTANCE CRITERIA:
-      // - Async tests run correctly with proper cleanup
-      // - Test infrastructure supports concurrent execution
-      // - Async test debugging tools are available
-      // DEPENDENCIES:
-      // - Async test framework (Required)
-      // - Test infrastructure utilities (Required)
-      // PRIORITY: Medium
+    // TODO: Implement comprehensive async testing infrastructure
+    // - Add tokio-test dependency and configuration
+    // - Create async test utilities and fixtures
+    // - Implement proper async test cleanup and teardown
+    // - Add async test timeouts and cancellation handling
+    // - Support concurrent test execution
+    // - Add async test debugging and profiling tools
+    // TODO: Implement async test infrastructure:
+    // 1. Async test framework: Set up async test framework
+    //    - Configure async test runtime and executor
+    //    - Support async test setup and teardown
+    //    - Handle async test timeouts and cancellation
+    // 2. Test infrastructure: Build test infrastructure
+    //    - Implement proper async test cleanup
+    //    - Support concurrent test execution
+    //    - Add async test debugging tools
+    // 3. Integration: Integrate with test system
+    //    - Use async test framework for temp workspace tests
+    //    - Support async test fixtures and helpers
+    //    - Handle async test failures gracefully
+    // ACCEPTANCE CRITERIA:
+    // - Async tests run correctly with proper cleanup
+    // - Test infrastructure supports concurrent execution
+    // - Async test debugging tools are available
+    // DEPENDENCIES:
+    // - Async test framework (Required)
+    // - Test infrastructure utilities (Required)
+    // PRIORITY: Medium
 
     #[test]
     fn test_temp_workspace_types() {

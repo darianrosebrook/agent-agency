@@ -1,10 +1,10 @@
 //! Configuration optimizer for learning optimal settings
 
-use std::sync::Arc;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::learning::types::*;
 use crate::learning::PatternAnalyzer;
@@ -46,14 +46,16 @@ impl ConfigurationOptimizer {
 
         // Get optimal configurations
         let optimal_configs = self.optimal_configs.read().await;
-        
+
         // Find best matching configuration
         let mut best_config = None;
         let mut best_match_score = 0.0;
 
         for config in optimal_configs.iter() {
             // Extract conditions from config JSON - assume it's an object
-            let conditions = config.config.as_object()
+            let conditions = config
+                .config
+                .as_object()
                 .unwrap_or(&serde_json::Map::new())
                 .iter()
                 .map(|(k, v)| (k.clone(), v.clone()))
@@ -67,7 +69,13 @@ impl ConfigurationOptimizer {
 
         if let Some(config) = best_config {
             recommendations.confidence = config.confidence;
-            recommendations.reasoning = format!("Based on {} similar executions", config.conditions.get("min_executions").unwrap_or(&serde_json::Value::Number(0.into())));
+            recommendations.reasoning = format!(
+                "Based on {} similar executions",
+                config
+                    .conditions
+                    .get("min_executions")
+                    .unwrap_or(&serde_json::Value::Number(0.into()))
+            );
 
             // Generate specific recommendations based on config type
             match config.config_type {
@@ -75,14 +83,16 @@ impl ConfigurationOptimizer {
                     recommendations.worker_selection = Some(WorkerSelectionRecommendation {
                         preferred_workers: vec![], // Would be populated from config parameters
                         worker_weights: HashMap::new(),
-                        reasoning: "Optimized worker selection based on historical performance".to_string(),
+                        reasoning: "Optimized worker selection based on historical performance"
+                            .to_string(),
                     });
                 }
                 ConfigType::TaskDecomposition => {
                     recommendations.task_decomposition = Some(TaskDecompositionRecommendation {
                         suggested_subtasks: 3, // Default value
                         decomposition_strategy: "Parallel decomposition".to_string(),
-                        reasoning: "Optimal decomposition strategy based on task complexity".to_string(),
+                        reasoning: "Optimal decomposition strategy based on task complexity"
+                            .to_string(),
                     });
                 }
                 ConfigType::ResourceAllocation => {
@@ -97,7 +107,8 @@ impl ConfigurationOptimizer {
                     recommendations.quality_thresholds = Some(QualityThresholdRecommendation {
                         min_quality_score: config.performance_metrics.quality_score,
                         max_rework_rate: 0.1,
-                        reasoning: "Quality thresholds based on historical success patterns".to_string(),
+                        reasoning: "Quality thresholds based on historical success patterns"
+                            .to_string(),
                     });
                 }
                 _ => {
@@ -107,8 +118,9 @@ impl ConfigurationOptimizer {
         } else {
             // No matching configuration found, provide default recommendations
             recommendations.confidence = 0.5;
-            recommendations.reasoning = "No historical data available, using default recommendations".to_string();
-            
+            recommendations.reasoning =
+                "No historical data available, using default recommendations".to_string();
+
             recommendations.worker_selection = Some(WorkerSelectionRecommendation {
                 preferred_workers: vec![],
                 worker_weights: HashMap::new(),

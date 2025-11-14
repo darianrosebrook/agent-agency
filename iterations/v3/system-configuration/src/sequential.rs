@@ -4,10 +4,10 @@
 //! passing the output of each stage as input to the next stage.
 
 use crate::{
-    traits::{ExecutablePipeline, PipelineStage, StagedPipeline},
     config::SequentialPipelineConfig,
     error::{PipelineError, PipelineResult},
     metrics::PipelineMetrics,
+    traits::{ExecutablePipeline, PipelineStage, StagedPipeline},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use tracing::{debug, info, warn};
 
 /// Sequential pipeline that executes stages in order
 #[derive(Debug)]
-pub struct SequentialPipeline <Input> {
+pub struct SequentialPipeline<Input> {
     config: SequentialPipelineConfig,
     stages: Arc<RwLock<Vec<Box<dyn PipelineStage<Input, Input>>>>>,
     metrics: PipelineMetrics,
@@ -39,7 +39,10 @@ where
     pub async fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Input>>) {
         let mut stages = self.stages.write().await;
         stages.push(stage);
-        debug!("Added stage to sequential pipeline, total stages: {}", stages.len());
+        debug!(
+            "Added stage to sequential pipeline, total stages: {}",
+            stages.len()
+        );
     }
 
     /// Execute the pipeline sequentially
@@ -56,12 +59,19 @@ where
 
             match tokio::time::timeout(
                 self.config.stage_timeout,
-                stage.process(current_input.clone())
-            ).await {
+                stage.process(current_input.clone()),
+            )
+            .await
+            {
                 Ok(Ok(output)) => {
                     let duration = start_time.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(&stage_name, duration, true).await;
-                    debug!("Stage {} completed successfully in {}ms", stage_name, duration);
+                    self.metrics
+                        .record_stage_execution(&stage_name, duration, true)
+                        .await;
+                    debug!(
+                        "Stage {} completed successfully in {}ms",
+                        stage_name, duration
+                    );
 
                     // Use output as input for next stage
                     current_input = self.extract_next_input(&output)?;
@@ -69,8 +79,12 @@ where
                 }
                 Ok(Err(e)) => {
                     let duration = start_time.elapsed().as_millis() as u64;
-                    self.metrics.record_stage_execution(&stage_name, duration, false).await;
-                    self.metrics.record_error(&format!("stage_{}", stage_name)).await;
+                    self.metrics
+                        .record_stage_execution(&stage_name, duration, false)
+                        .await;
+                    self.metrics
+                        .record_error(&format!("stage_{}", stage_name))
+                        .await;
 
                     warn!("Stage {} failed: {}", stage_name, e);
 
@@ -79,19 +93,32 @@ where
                     }
                 }
                 Err(_) => {
-                    self.metrics.record_stage_execution(&stage_name, self.config.stage_timeout.as_millis() as u64, false).await;
+                    self.metrics
+                        .record_stage_execution(
+                            &stage_name,
+                            self.config.stage_timeout.as_millis() as u64,
+                            false,
+                        )
+                        .await;
                     self.metrics.record_error("stage_timeout").await;
 
-                    warn!("Stage {} timed out after {:?}", stage_name, self.config.stage_timeout);
+                    warn!(
+                        "Stage {} timed out after {:?}",
+                        stage_name, self.config.stage_timeout
+                    );
 
                     if !self.config.continue_on_stage_failure {
-                        return Err(PipelineError::timeout(format!("Stage {} timed out", stage_name)));
+                        return Err(PipelineError::timeout(format!(
+                            "Stage {} timed out",
+                            stage_name
+                        )));
                     }
                 }
             }
         }
 
-        final_output.ok_or_else(|| PipelineError::Execution("No stages produced output".to_string()))
+        final_output
+            .ok_or_else(|| PipelineError::Execution("No stages produced output".to_string()))
     }
 
     /// Extract input for the next stage from current output
@@ -109,8 +136,10 @@ where
     async fn execute(&self, input: Input) -> PipelineResult<Input> {
         let start_time = std::time::Instant::now();
 
-        info!("Starting sequential pipeline execution with {} stages",
-              self.stages.read().await.len());
+        info!(
+            "Starting sequential pipeline execution with {} stages",
+            self.stages.read().await.len()
+        );
 
         let result = self.execute_internal(input).await;
         let duration = start_time.elapsed().as_millis() as u64;
@@ -120,7 +149,10 @@ where
 
         match &result {
             Ok(_) => {
-                info!("Sequential pipeline completed successfully in {}ms", duration);
+                info!(
+                    "Sequential pipeline completed successfully in {}ms",
+                    duration
+                );
             }
             Err(e) => {
                 self.metrics.record_error("pipeline_execution").await;
@@ -138,9 +170,8 @@ where
         // - [ ] Implement concurrent metrics collection and aggregation
         // - [ ] Add timeout handling for metrics collection operations
         // - [ ] Ensure thread safety for concurrent metrics access
-        futures::executor::block_on(async {
-            self.metrics.to_json().await
-        }).map_err(|e| PipelineError::Metrics(e.to_string()))
+        futures::executor::block_on(async { self.metrics.to_json().await })
+            .map_err(|e| PipelineError::Metrics(e.to_string()))
     }
 
     fn health_status(&self) -> PipelineResult<crate::PipelineHealth> {
@@ -169,9 +200,7 @@ where
     Input: Clone + Send + Sync + 'static + std::fmt::Debug,
 {
     fn add_stage(&mut self, stage: Box<dyn PipelineStage<Input, Input>>) {
-        futures::executor::block_on(async {
-            SequentialPipeline::add_stage(self, stage).await
-        })
+        futures::executor::block_on(async { SequentialPipeline::add_stage(self, stage).await })
     }
 
     fn remove_stage(&mut self, name: &str) -> PipelineResult<()> {
@@ -182,10 +211,17 @@ where
             stages.retain(|stage| stage.name() != name);
 
             if stages.len() == initial_len {
-                return Err(PipelineError::Execution(format!("Stage '{}' not found", name)));
+                return Err(PipelineError::Execution(format!(
+                    "Stage '{}' not found",
+                    name
+                )));
             }
 
-            debug!("Removed stage '{}', remaining stages: {}", name, stages.len());
+            debug!(
+                "Removed stage '{}', remaining stages: {}",
+                name,
+                stages.len()
+            );
             Ok(())
         })
     }
@@ -193,14 +229,15 @@ where
     fn stage_names(&self) -> Vec<String> {
         futures::executor::block_on(async {
             let stages = self.stages.read().await;
-            stages.iter().map(|stage| stage.name().to_string()).collect()
+            stages
+                .iter()
+                .map(|stage| stage.name().to_string())
+                .collect()
         })
     }
 
     fn stage_count(&self) -> usize {
-        futures::executor::block_on(async {
-            self.stages.read().await.len()
-        })
+        futures::executor::block_on(async { self.stages.read().await.len() })
     }
 }
 
@@ -211,7 +248,7 @@ mod tests {
 
     // Mock stage for testing
     #[derive(Debug)]
-struct MockStage {
+    struct MockStage {
         name: String,
         should_fail: bool,
     }

@@ -30,7 +30,9 @@ mod tests {
             }
         });
 
-        let result = integration.validate_tool_manifest(&manifest).await
+        let result = integration
+            .validate_tool_manifest(&manifest)
+            .await
             .expect("Validation should succeed");
 
         // Should return a compliance result (may or may not be compliant)
@@ -46,7 +48,9 @@ mod tests {
             "description": "",
         });
 
-        let result = integration.validate_tool_manifest(&manifest).await
+        let result = integration
+            .validate_tool_manifest(&manifest)
+            .await
             .expect("Validation should return result even for invalid manifest");
 
         // Should return a compliance result with violations
@@ -59,11 +63,12 @@ mod tests {
 
         let manifest = json!({});
 
-        let result = integration.validate_tool_manifest(&manifest).await
+        let result = integration
+            .validate_tool_manifest(&manifest)
+            .await
             .expect("Validation should return result even for empty manifest");
 
         // Should return a compliance result
         assert!(result.checked_at.timestamp() > 0);
     }
 }
-

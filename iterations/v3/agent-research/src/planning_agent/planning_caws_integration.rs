@@ -3,10 +3,10 @@
 //! This module provides integration with CAWS (Code Analysis and Writing Standards)
 //! to validate working specifications before they proceed to execution.
 
+use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use async_trait::async_trait;
 
 use crate::planning_agent::planning_errors::{PlanningError, PlanningResult};
 
@@ -31,7 +31,7 @@ pub enum CawsValidationError {
 
 /// Context for CAWS validation
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationContext {
     /// Risk tier of the task
     pub risk_tier: agent_agency_contracts::task_request::RiskTier,
@@ -59,7 +59,7 @@ pub struct ValidationOptions {
 
 /// CAWS validation result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CawsValidationResult {
     /// Whether validation passed
     pub compliant: bool,
@@ -79,7 +79,7 @@ pub struct CawsValidationResult {
 
 /// Validation violation
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationViolation {
     /// Violation code
     pub code: String,
@@ -105,7 +105,7 @@ pub enum ViolationSeverity {
 
 /// Quality indicator
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityIndicator {
     /// Indicator name
     pub name: String,
@@ -139,12 +139,11 @@ impl DefaultCawsValidator {
     /// Create a new default CAWS validator
     pub fn new() -> Self {
         let policy = std::sync::Arc::new(development_tools::policy::CawsPolicy::default());
-        let validator = std::sync::Arc::new(development_tools::validator::CawsValidator::new((*policy).clone()));
-        
-        Self {
-            validator,
-            policy,
-        }
+        let validator = std::sync::Arc::new(development_tools::validator::CawsValidator::new(
+            (*policy).clone(),
+        ));
+
+        Self { validator, policy }
     }
 }
 
@@ -155,12 +154,13 @@ impl CawsValidator for DefaultCawsValidator {
         working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
         context: &ValidationContext,
     ) -> Result<CawsValidationResult, CawsValidationError> {
-        use development_tools::validator::{ValidationContext as DevToolsContext, DiffStats};
+        use development_tools::validator::{DiffStats, ValidationContext as DevToolsContext};
         use tracing::warn;
 
         // Convert WorkingSpec to JSON for validation
-        let spec_json = serde_json::to_value(working_spec)
-            .map_err(|e| CawsValidationError::Serialization(format!("Failed to serialize working spec: {}", e)))?;
+        let spec_json = serde_json::to_value(working_spec).map_err(|e| {
+            CawsValidationError::Serialization(format!("Failed to serialize working spec: {}", e))
+        })?;
 
         // Convert risk tier to string format expected by development-tools validator
         let risk_tier_str = match working_spec.risk_tier {
@@ -198,9 +198,13 @@ impl CawsValidator for DefaultCawsValidator {
                 code: v.rule_id.clone(),
                 severity: match v.severity {
                     development_tools::policy::ViolationSeverity::Info => ViolationSeverity::Info,
-                    development_tools::policy::ViolationSeverity::Warning => ViolationSeverity::Warning,
+                    development_tools::policy::ViolationSeverity::Warning => {
+                        ViolationSeverity::Warning
+                    }
                     development_tools::policy::ViolationSeverity::Error => ViolationSeverity::Error,
-                    development_tools::policy::ViolationSeverity::Critical => ViolationSeverity::Error,
+                    development_tools::policy::ViolationSeverity::Critical => {
+                        ViolationSeverity::Error
+                    }
                 },
                 message: v.message.clone(),
                 location: v.location.as_ref().and_then(|l| {
@@ -216,18 +220,22 @@ impl CawsValidator for DefaultCawsValidator {
         }
 
         // Extract suggestions from remediation hints
-        let mut suggestions: Vec<String> = validation_result.violations
+        let mut suggestions: Vec<String> = validation_result
+            .violations
             .iter()
             .filter_map(|v| v.remediation.clone())
             .collect();
 
         // Generate quality indicators
         let mut quality_indicators = Vec::new();
-        
+
         quality_indicators.push(QualityIndicator {
             name: "caws_compliance".to_string(),
             score: validation_result.compliance_score as f64,
-            evidence: format!("CAWS compliance score: {:.2}", validation_result.compliance_score),
+            evidence: format!(
+                "CAWS compliance score: {:.2}",
+                validation_result.compliance_score
+            ),
         });
 
         quality_indicators.push(QualityIndicator {
@@ -241,7 +249,12 @@ impl CawsValidator for DefaultCawsValidator {
         self.validate_basic_structure(working_spec, &mut basic_violations)?;
         self.validate_risk_tier_compliance(working_spec, context, &mut basic_violations)?;
         self.validate_acceptance_criteria(working_spec, &mut basic_violations, &mut suggestions)?;
-        self.validate_test_plan(working_spec, context, &mut basic_violations, &mut suggestions)?;
+        self.validate_test_plan(
+            working_spec,
+            context,
+            &mut basic_violations,
+            &mut suggestions,
+        )?;
 
         // Merge basic violations with CAWS violations
         violations.extend(basic_violations);
@@ -267,7 +280,10 @@ impl CawsValidator for DefaultCawsValidator {
             evidence: "Rollback strategy defined".to_string(),
         });
 
-        let compliant = validation_result.passed && violations.iter().all(|v| v.severity != ViolationSeverity::Error);
+        let compliant = validation_result.passed
+            && violations
+                .iter()
+                .all(|v| v.severity != ViolationSeverity::Error);
 
         Ok(CawsValidationResult {
             compliant,
@@ -367,9 +383,10 @@ impl DefaultCawsValidator {
     ) -> Result<(), CawsValidationError> {
         for (i, criterion) in working_spec.acceptance_criteria.iter().enumerate() {
             // Check criterion structure
-            if criterion.given.trim().is_empty() ||
-               criterion.when.trim().is_empty() ||
-               criterion.then.trim().is_empty() {
+            if criterion.given.trim().is_empty()
+                || criterion.when.trim().is_empty()
+                || criterion.then.trim().is_empty()
+            {
                 violations.push(ValidationViolation {
                     code: "MALFORMED_ACCEPTANCE_CRITERION".to_string(),
                     severity: ViolationSeverity::Error,
@@ -431,7 +448,11 @@ impl DefaultCawsValidator {
         Ok(())
     }
 
-    fn calculate_compliance_score(&self, violations: &[ValidationViolation], risk_tier: u32) -> f64 {
+    fn calculate_compliance_score(
+        &self,
+        violations: &[ValidationViolation],
+        risk_tier: u32,
+    ) -> f64 {
         if violations.is_empty() {
             return 1.0;
         }
@@ -452,7 +473,10 @@ impl DefaultCawsValidator {
         score
     }
 
-    fn assess_test_coverage(&self, working_spec: &agent_agency_contracts::working_spec::WorkingSpec) -> f64 {
+    fn assess_test_coverage(
+        &self,
+        working_spec: &agent_agency_contracts::working_spec::WorkingSpec,
+    ) -> f64 {
         let test_plan = &working_spec.test_plan;
 
         let mut coverage_score = 0.0;

@@ -25,19 +25,19 @@ use crate::{reward::TaskOutcome, bandit_stubs::{CounterfactualLogger, LoggedDeci
 pub struct LLMParameterOptimizer {
     /// Pluggable bandit policy
     policy: Arc<RwLock<Box<dyn BanditPolicy>>>,
-    
+
     /// Historical parameter performance by task type and model
     parameter_history: Arc<RwLock<HashMap<String, Vec<ParameterEvaluation>>>>,
-    
+
     /// Counterfactual logger
     cf_logger: Arc<CounterfactualLogger>,
-    
+
     /// Current optimal parameters per task type
     optimal_parameters: Arc<RwLock<HashMap<String, OptimalParameterSet>>>,
-    
+
     /// Baseline parameters (fallback)
     baseline_parameters: Arc<RwLock<HashMap<String, ParameterSet>>>,
-    
+
     /// Quality gate validator
     quality_validator: Arc<QualityGateValidator>,
 }
@@ -118,7 +118,7 @@ pub struct BaselineMetrics {
 impl LLMParameterOptimizer {
     pub fn new() -> Self {
         let policy = Arc::new(RwLock::new(Box::new(ThompsonGaussian::new()) as Box<dyn BanditPolicy>));
-        
+
         Self {
             policy,
             parameter_history: Arc::new(RwLock::new(HashMap::new())),
@@ -138,20 +138,20 @@ impl LLMParameterOptimizer {
     ) -> Result<RecommendedParameters> {
         // 1. Get baseline parameters for this task type
         let baseline = self.get_baseline_parameters(task_type).await?;
-        
+
         // 2. Generate candidate parameter sets within trust region
         let candidates = self.generate_candidates(&baseline, constraints).await?;
-        
+
         // 3. Use bandit policy to select best candidate
         let policy = self.policy.read().unwrap();
         let selection = policy.as_ref().select(task_features, &candidates);
         drop(policy);
-        
+
         // 4. Validate selection meets constraints
         let validation = self.quality_validator
             .validate_pre_deployment(task_type, &selection.parameters, constraints)
             .await?;
-        
+
         if !validation.approved() {
             return Ok(RecommendedParameters {
                 set: baseline,
@@ -165,7 +165,7 @@ impl LLMParameterOptimizer {
                 deployment_safe: false,
             });
         }
-        
+
         // TODO: Calculate proper confidence intervals from statistical analysis
         //       Currently uses hardcoded values; should calculate confidence intervals from statistical analysis of historical data.
         //
@@ -202,7 +202,7 @@ impl LLMParameterOptimizer {
         let ci_reward = (0.7, 0.9); // Temporary: hardcoded until statistical calculation
         let ci_latency = (100, 200); // Temporary: hardcoded until statistical calculation
         let ci_quality = (0.8, 0.95); // Temporary: hardcoded until statistical calculation
-        
+
         Ok(RecommendedParameters {
             set: selection.parameters,
             confidence,
@@ -239,16 +239,16 @@ impl LLMParameterOptimizer {
             policy_version: parameters.policy_version.clone(),
             created_at: parameters.created_at,
         };
-        
+
         // Calculate reward
         let reward = self.calculate_reward(&outcome);
-        
+
         // Update bandit policy
         {
             let mut policy = self.policy.write().unwrap();
             policy.update(&TaskFeatures::default(), &param_set, reward);
         }
-        
+
         // Log for counterfactual evaluation
         self.cf_logger.log_decision(
             request_id,
@@ -260,7 +260,7 @@ impl LLMParameterOptimizer {
             outcome.clone(),
             parameters.policy_version,
         )?;
-        
+
         // Update parameter history
         {
             let mut history = self.parameter_history.write().unwrap();
@@ -273,7 +273,7 @@ impl LLMParameterOptimizer {
             };
             history.entry(task_type.to_string()).or_insert_with(Vec::new).push(entry);
         }
-        
+
         Ok(())
     }
 
@@ -306,18 +306,18 @@ impl LLMParameterOptimizer {
         constraints: &OptimizationConstraints,
     ) -> Result<Vec<ParameterSet>> {
         let mut candidates = Vec::new();
-        
+
         // Generate variations within trust region
         let temp_deltas = [-0.1, 0.0, 0.1];
         let token_deltas = [-100, 0, 100];
-        
+
         for &temp_delta in &temp_deltas {
             for &token_delta in &token_deltas {
                 let new_temp = (baseline.temperature + temp_delta)
                     .max(0.0).min(2.0);
                 let new_tokens = (baseline.max_tokens as i32 + token_delta)
                     .max(1).min(constraints.max_tokens as i32) as u32;
-                
+
                 // Check trust region constraints
                 if (new_temp - baseline.temperature).abs() <= constraints.max_delta_temperature as f64
                     && (new_tokens as i32 - baseline.max_tokens as i32).abs() <= constraints.max_delta_max_tokens as i32
@@ -331,11 +331,11 @@ impl LLMParameterOptimizer {
                 }
             }
         }
-        
+
         if candidates.is_empty() {
             candidates.push(baseline.clone());
         }
-        
+
         Ok(candidates)
     }
 
@@ -376,7 +376,7 @@ impl LLMParameterOptimizer {
         let quality_reward = outcome.quality_score; // Temporary: placeholder until comprehensive reward function
         let latency_penalty = (outcome.latency_ms as f64) / 1000.0; // Normalize
         let token_penalty = (outcome.tokens_used as f64) / 1000.0; // Normalize
-        
+
         quality_reward - 0.1 * latency_penalty - 0.05 * token_penalty
     }
 }
@@ -430,17 +430,17 @@ impl QualityGateValidator {
         // - Reviewer Requirements: Parameter validation expertise
         if proposed.max_tokens > constraints.max_tokens as usize { // Temporary: basic validation until comprehensive validation
             return Ok(ValidationResult::Rejected {
-                reason: format!("Token limit {} exceeds constraint {}", 
+                reason: format!("Token limit {} exceeds constraint {}",
                                 proposed.max_tokens, constraints.max_tokens),
             });
         }
-        
+
         if proposed.temperature < 0.0 || proposed.temperature > 2.0 {
             return Ok(ValidationResult::Rejected {
                 reason: "Temperature out of valid range [0.0, 2.0]".to_string(),
             });
         }
-        
+
         Ok(ValidationResult::Approved {
             quality_delta: 0.0,
             latency_delta: 0,

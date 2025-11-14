@@ -1,7 +1,7 @@
 //! Inference engine management and execution
 
-pub mod manager;
 pub mod backends;
+pub mod manager;
 
-pub use manager::*;
 pub use backends::*;
+pub use manager::*;

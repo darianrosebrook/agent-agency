@@ -7,8 +7,8 @@
 //! - Handles temperature monitoring where available
 //! - Gracefully handles collection errors
 
-use system_resilience::memory::MemoryManager;
 use std::time::Duration;
+use system_resilience::memory::MemoryManager;
 use tokio::time::sleep;
 
 #[cfg(test)]
@@ -21,7 +21,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -58,7 +58,8 @@ mod cpu_metrics_tests {
                     // Overall usage should be reasonable compared to per-core average
                     let avg_core_usage = cpu_metrics.per_core_percent.iter().sum::<f64>()
                         / cpu_metrics.per_core_percent.len() as f64;
-                    assert!((cpu_metrics.usage_percent - avg_core_usage).abs() < 50.0); // Allow some variance
+                    assert!((cpu_metrics.usage_percent - avg_core_usage).abs() < 50.0);
+                    // Allow some variance
                 }
 
                 // Verify frequency if available
@@ -87,7 +88,10 @@ mod cpu_metrics_tests {
             }
             Err(e) => {
                 // If collection fails, it should be a proper error
-                println!("⚠️ CPU metrics collection failed (expected on some systems): {}", e);
+                println!(
+                    "⚠️ CPU metrics collection failed (expected on some systems): {}",
+                    e
+                );
                 // This might fail on some CI environments or systems without CPU monitoring
                 // We accept this gracefully
             }
@@ -100,7 +104,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -134,19 +138,32 @@ mod cpu_metrics_tests {
 
             // CPU usage shouldn't change by more than 50% between samples
             let usage_diff = (first.usage_percent - last.usage_percent).abs();
-            assert!(usage_diff < 50.0, "CPU usage varies too much: {}% -> {}%", first.usage_percent, last.usage_percent);
+            assert!(
+                usage_diff < 50.0,
+                "CPU usage varies too much: {}% -> {}%",
+                first.usage_percent,
+                last.usage_percent
+            );
 
             // Per-core counts should be consistent
             if !first.per_core_percent.is_empty() && !last.per_core_percent.is_empty() {
-                assert_eq!(first.per_core_percent.len(), last.per_core_percent.len(),
-                    "Per-core count changed between samples");
+                assert_eq!(
+                    first.per_core_percent.len(),
+                    last.per_core_percent.len(),
+                    "Per-core count changed between samples"
+                );
             }
 
             println!("✅ CPU metrics stability verified:");
             println!("  Collected {} stable samples", samples.len());
-            println!("  Usage range: {:.1}% - {:.1}%",
-                samples.iter().map(|m| m.usage_percent).fold(f64::INFINITY, f64::min),
-                samples.iter().map(|m| m.usage_percent).fold(0.0, f64::max));
+            println!(
+                "  Usage range: {:.1}% - {:.1}%",
+                samples
+                    .iter()
+                    .map(|m| m.usage_percent)
+                    .fold(f64::INFINITY, f64::min),
+                samples.iter().map(|m| m.usage_percent).fold(0.0, f64::max)
+            );
         } else {
             println!("⚠️ Insufficient CPU metrics samples for stability test");
         }
@@ -158,7 +175,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -190,7 +207,7 @@ mod cpu_metrics_tests {
         let _ = hash; // Suppress unused variable warning - hash is used for CPU load simulation
         while start_time.elapsed() < Duration::from_millis(500) {
             // Simple CPU load simulation
-                for i in 0..1000 {
+            for i in 0..1000 {
                 hash ^= (i as u64).wrapping_mul(0x9e3779b9);
             }
         }
@@ -219,7 +236,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -258,7 +275,10 @@ mod cpu_metrics_tests {
 
         // We should have either all successes or some mix (but not all failures)
         // error_count is u64, always >= 0
-        assert!(success_count > 0 || error_count == 0, "Should have at least some results");
+        assert!(
+            success_count > 0 || error_count == 0,
+            "Should have at least some results"
+        );
 
         println!("✅ CPU metrics error handling verified:");
         println!("  Successful collections: {}", success_count);
@@ -272,7 +292,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -304,7 +324,10 @@ mod cpu_metrics_tests {
                 println!("  Both monitoring systems working together");
             }
             Err(e) => {
-                println!("⚠️ CPU collection failed, but memory stats available: {}", e);
+                println!(
+                    "⚠️ CPU collection failed, but memory stats available: {}",
+                    e
+                );
                 println!("  Memory allocated: {} bytes", memory_stats.allocated_bytes);
                 // Memory stats should still work even if CPU fails
             }
@@ -317,7 +340,7 @@ mod cpu_metrics_tests {
         let limit_config = system_resilience::memory::MemoryLimitConfig {
             max_heap_mb: 1024,
             max_stack_mb: 128,
-            warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+            warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
             critical_threshold_percent: 0.75, // 768 MB / 1024 MB
             enable_gc_pressure: true,
             gc_pressure_threshold_mb: 256.0,
@@ -351,8 +374,12 @@ mod cpu_metrics_tests {
                             let freq_diff = (metrics.frequency_mhz - metrics2.frequency_mhz).abs();
                             println!("  Frequency variation: {:.0} MHz", freq_diff);
                             // Frequency shouldn't change drastically between samples
-                            assert!(freq_diff < 2000.0, "Frequency changed too much: {} -> {}",
-                                metrics.frequency_mhz, metrics2.frequency_mhz);
+                            assert!(
+                                freq_diff < 2000.0,
+                                "Frequency changed too much: {} -> {}",
+                                metrics.frequency_mhz,
+                                metrics2.frequency_mhz
+                            );
                         }
                     }
                 } else {
@@ -365,11 +392,3 @@ mod cpu_metrics_tests {
         }
     }
 }
-
-
-
-
-
-
-
-

@@ -12,12 +12,12 @@ use std::sync::Arc;
 
 #[cfg(feature = "data-processing")]
 use agent_agency_contracts::{
-    DataProcessingService,
-    types::data_processing::{
-        DataFormat, ProcessingContext, ProcessingPriority, ProcessedData, ProcessingContent,
-        ProcessingStats, FileOperationResult, ValidationResult, FileOperation
-    },
     errors::DataProcessingResult,
+    types::data_processing::{
+        DataFormat, FileOperation, FileOperationResult, ProcessedData, ProcessingContent,
+        ProcessingContext, ProcessingPriority, ProcessingStats, ValidationResult,
+    },
+    DataProcessingService,
 };
 
 /// Adapter that wraps agent-data-processing service to implement contracts::DataProcessingService
@@ -35,7 +35,10 @@ impl DataProcessingServiceAdapter {
     }
 
     /// Convert contracts ProcessingContext to agent-data-processing types
-    fn to_internal_context(&self, context: &ProcessingContext) -> agent_data_processing::ProcessingContext {
+    fn to_internal_context(
+        &self,
+        context: &ProcessingContext,
+    ) -> agent_data_processing::ProcessingContext {
         agent_data_processing::ProcessingContext {
             request_id: context.request_id,
             source: context.source.clone(),
@@ -62,7 +65,10 @@ impl DataProcessingServiceAdapter {
     }
 
     /// Convert contracts ProcessingPriority to agent-data-processing types
-    fn to_internal_priority(&self, priority: ProcessingPriority) -> agent_data_processing::ProcessingPriority {
+    fn to_internal_priority(
+        &self,
+        priority: ProcessingPriority,
+    ) -> agent_data_processing::ProcessingPriority {
         match priority {
             ProcessingPriority::Low => agent_data_processing::ProcessingPriority::Low,
             ProcessingPriority::Normal => agent_data_processing::ProcessingPriority::Normal,
@@ -101,10 +107,15 @@ impl DataProcessingServiceAdapter {
     }
 
     /// Convert agent-data-processing ProcessingContent to contracts types
-    fn from_internal_content(&self, content: agent_data_processing::ProcessingContent) -> ProcessingContent {
+    fn from_internal_content(
+        &self,
+        content: agent_data_processing::ProcessingContent,
+    ) -> ProcessingContent {
         match content {
             agent_data_processing::ProcessingContent::Text(s) => ProcessingContent::Text(s),
-            agent_data_processing::ProcessingContent::Structured(v) => ProcessingContent::Structured(v),
+            agent_data_processing::ProcessingContent::Structured(v) => {
+                ProcessingContent::Structured(v)
+            }
             agent_data_processing::ProcessingContent::Binary(s) => ProcessingContent::Binary(s),
             agent_data_processing::ProcessingContent::MultiModal { text, metadata } => {
                 ProcessingContent::MultiModal { text, metadata }
@@ -116,39 +127,68 @@ impl DataProcessingServiceAdapter {
 #[cfg(feature = "data-processing")]
 #[async_trait]
 impl DataProcessingService for DataProcessingServiceAdapter {
-    async fn process_data(&self, context: ProcessingContext) -> DataProcessingResult<ProcessedData> {
+    async fn process_data(
+        &self,
+        context: ProcessingContext,
+    ) -> DataProcessingResult<ProcessedData> {
         let internal_context = self.to_internal_context(&context);
-        let result = self.data_processor.process_data(internal_context).await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                operation: "process_data".to_string(),
-                reason: e.to_string(),
-            })?;
+        let result = self
+            .data_processor
+            .process_data(internal_context)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+                    operation: "process_data".to_string(),
+                    reason: e.to_string(),
+                },
+            )?;
 
         Ok(self.from_internal_data(result))
     }
 
-    async fn batch_process(&self, contexts: Vec<ProcessingContext>) -> DataProcessingResult<Vec<Result<ProcessedData, String>>> {
-        let internal_contexts: Vec<_> = contexts.iter()
+    async fn batch_process(
+        &self,
+        contexts: Vec<ProcessingContext>,
+    ) -> DataProcessingResult<Vec<Result<ProcessedData, String>>> {
+        let internal_contexts: Vec<_> = contexts
+            .iter()
             .map(|c| self.to_internal_context(c))
             .collect();
 
-        let results = self.data_processor.batch_process(internal_contexts).await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                operation: "batch_process".to_string(),
-                reason: e.to_string(),
-            })?;
+        let results = self
+            .data_processor
+            .batch_process(internal_contexts)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+                    operation: "batch_process".to_string(),
+                    reason: e.to_string(),
+                },
+            )?;
 
-        Ok(results.into_iter()
-            .map(|r| r.map(|d| self.from_internal_data(d)).map_err(|e| e.to_string()))
+        Ok(results
+            .into_iter()
+            .map(|r| {
+                r.map(|d| self.from_internal_data(d))
+                    .map_err(|e| e.to_string())
+            })
             .collect())
     }
 
-    async fn validate_data(&self, context: &ProcessingContext) -> DataProcessingResult<ValidationResult> {
+    async fn validate_data(
+        &self,
+        context: &ProcessingContext,
+    ) -> DataProcessingResult<ValidationResult> {
         let internal_context = self.to_internal_context(context);
-        let result = self.data_processor.validate_data(&internal_context).await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ValidationFailed {
-                reason: e.to_string(),
-            })?;
+        let result = self
+            .data_processor
+            .validate_data(&internal_context)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::errors::DataProcessingError::ValidationFailed {
+                    reason: e.to_string(),
+                },
+            )?;
 
         Ok(ValidationResult {
             is_valid: result.is_valid,
@@ -160,32 +200,35 @@ impl DataProcessingService for DataProcessingServiceAdapter {
     }
 
     async fn supported_formats(&self) -> Vec<DataFormat> {
-        self.data_processor.supported_formats().await
+        self.data_processor
+            .supported_formats()
+            .await
             .into_iter()
             .map(|f| self.from_internal_format(f))
             .collect()
     }
 
-    async fn file_operation(&self, operation: FileOperation) -> DataProcessingResult<FileOperationResult> {
-        use tokio::fs;
+    async fn file_operation(
+        &self,
+        operation: FileOperation,
+    ) -> DataProcessingResult<FileOperationResult> {
         use std::path::Path;
+        use tokio::fs;
         use tracing::{debug, warn};
-        
+
         match operation {
             FileOperation::Read { path } => {
                 debug!("Reading file: {}", path);
                 match fs::read(&path).await {
-                    Ok(content) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: path.clone(),
-                            result: Some(serde_json::json!({
-                                "content": String::from_utf8_lossy(&content),
-                                "size_bytes": content.len(),
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(content) => Ok(FileOperationResult {
+                        success: true,
+                        path: path.clone(),
+                        result: Some(serde_json::json!({
+                            "content": String::from_utf8_lossy(&content),
+                            "size_bytes": content.len(),
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to read file {}: {}", path, e);
                         Ok(FileOperationResult {
@@ -200,16 +243,14 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             FileOperation::Write { path, content } => {
                 debug!("Writing file: {} ({} bytes)", path, content.len());
                 match fs::write(&path, &content).await {
-                    Ok(_) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: path.clone(),
-                            result: Some(serde_json::json!({
-                                "bytes_written": content.len(),
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(_) => Ok(FileOperationResult {
+                        success: true,
+                        path: path.clone(),
+                        result: Some(serde_json::json!({
+                            "bytes_written": content.len(),
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to write file {}: {}", path, e);
                         Ok(FileOperationResult {
@@ -273,22 +314,20 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             FileOperation::Metadata { path } => {
                 debug!("Getting metadata for: {}", path);
                 match fs::metadata(&path).await {
-                    Ok(metadata) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: path.clone(),
-                            result: Some(serde_json::json!({
-                                "is_file": metadata.is_file(),
-                                "is_dir": metadata.is_dir(),
-                                "size": metadata.len(),
-                                "modified": metadata.modified()
-                                    .ok()
-                                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                                    .map(|d| d.as_secs()),
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(metadata) => Ok(FileOperationResult {
+                        success: true,
+                        path: path.clone(),
+                        result: Some(serde_json::json!({
+                            "is_file": metadata.is_file(),
+                            "is_dir": metadata.is_dir(),
+                            "size": metadata.len(),
+                            "modified": metadata.modified()
+                                .ok()
+                                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                                .map(|d| d.as_secs()),
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to get metadata for {}: {}", path, e);
                         Ok(FileOperationResult {
@@ -308,18 +347,16 @@ impl DataProcessingService for DataProcessingServiceAdapter {
                 } else {
                     fs::remove_file(&path).await
                 };
-                
+
                 match result {
-                    Ok(_) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: path.clone(),
-                            result: Some(serde_json::json!({
-                                "deleted": true,
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(_) => Ok(FileOperationResult {
+                        success: true,
+                        path: path.clone(),
+                        result: Some(serde_json::json!({
+                            "deleted": true,
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to delete {}: {}", path, e);
                         Ok(FileOperationResult {
@@ -334,16 +371,14 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             FileOperation::CreateDir { path } => {
                 debug!("Creating directory: {}", path);
                 match fs::create_dir_all(&path).await {
-                    Ok(_) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: path.clone(),
-                            result: Some(serde_json::json!({
-                                "created": true,
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(_) => Ok(FileOperationResult {
+                        success: true,
+                        path: path.clone(),
+                        result: Some(serde_json::json!({
+                            "created": true,
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to create directory {}: {}", path, e);
                         Ok(FileOperationResult {
@@ -358,17 +393,15 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             FileOperation::Copy { from, to } => {
                 debug!("Copying {} to {}", from, to);
                 match fs::copy(&from, &to).await {
-                    Ok(bytes_copied) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: to.clone(),
-                            result: Some(serde_json::json!({
-                                "from": from,
-                                "bytes_copied": bytes_copied,
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(bytes_copied) => Ok(FileOperationResult {
+                        success: true,
+                        path: to.clone(),
+                        result: Some(serde_json::json!({
+                            "from": from,
+                            "bytes_copied": bytes_copied,
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to copy {} to {}: {}", from, to, e);
                         Ok(FileOperationResult {
@@ -383,17 +416,15 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             FileOperation::Move { from, to } => {
                 debug!("Moving {} to {}", from, to);
                 match fs::rename(&from, &to).await {
-                    Ok(_) => {
-                        Ok(FileOperationResult {
-                            success: true,
-                            path: to.clone(),
-                            result: Some(serde_json::json!({
-                                "from": from,
-                                "moved": true,
-                            })),
-                            error: None,
-                        })
-                    }
+                    Ok(_) => Ok(FileOperationResult {
+                        success: true,
+                        path: to.clone(),
+                        result: Some(serde_json::json!({
+                            "from": from,
+                            "moved": true,
+                        })),
+                        error: None,
+                    }),
                     Err(e) => {
                         warn!("Failed to move {} to {}: {}", from, to, e);
                         Ok(FileOperationResult {
@@ -409,9 +440,14 @@ impl DataProcessingService for DataProcessingServiceAdapter {
     }
 
     async fn get_processing_stats(&self) -> DataProcessingResult<ProcessingStats> {
-        let stats = self.data_processor.get_processing_stats().await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ServiceUnavailable {
-                service: "data-processing".to_string(),
+        let stats = self
+            .data_processor
+            .get_processing_stats()
+            .await
+            .map_err(|e| {
+                agent_agency_contracts::errors::DataProcessingError::ServiceUnavailable {
+                    service: "data-processing".to_string(),
+                }
             })?;
 
         Ok(ProcessingStats {
@@ -426,18 +462,26 @@ impl DataProcessingService for DataProcessingServiceAdapter {
 
     async fn extract_text(&self, data: &[u8], format: DataFormat) -> DataProcessingResult<String> {
         let internal_format = self.to_internal_format(format);
-        self.data_processor.extract_text(data, internal_format).await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                operation: "extract_text".to_string(),
-                reason: e.to_string(),
-            })
+        self.data_processor
+            .extract_text(data, internal_format)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+                    operation: "extract_text".to_string(),
+                    reason: e.to_string(),
+                },
+            )
     }
 
     async fn generate_embedding(&self, text: &str) -> DataProcessingResult<Vec<f32>> {
-        self.data_processor.generate_embedding(text).await
-            .map_err(|e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                operation: "generate_embedding".to_string(),
-                reason: e.to_string(),
-            })
+        self.data_processor
+            .generate_embedding(text)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+                    operation: "generate_embedding".to_string(),
+                    reason: e.to_string(),
+                },
+            )
     }
 }

@@ -3,21 +3,23 @@
 //! This module aggregates verdicts from multiple judges into a unified
 //! council decision, handling conflicting opinions and consensus algorithms.
 
+use crate::council_errors::{CouncilError, CouncilResult};
+use crate::judge_backup::backup_types::JudgeType;
+use crate::judge_backup::risk::RiskLevel;
+use crate::judge_backup::types::ReviewContext;
+use crate::judge_backup::verdicts::ComplexityLevel;
+use crate::judge_backup::{
+    ChangeImpact, ChangePriority, CriticalIssue, IssueSeverity, JudgeContribution, JudgeVerdict,
+    RequiredChange,
+};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use futures_util::TryFutureExt;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use futures_util::FutureExt;
-use crate::council_errors::{CouncilError, CouncilResult};
-use crate::judge_backup::{JudgeVerdict, JudgeContribution, RequiredChange, CriticalIssue, ChangePriority, IssueSeverity, ChangeImpact};
-use crate::judge_backup::types::ReviewContext;
-use crate::judge_backup::backup_types::{JudgeType};
-use crate::judge_backup::risk::RiskLevel;
-use crate::judge_backup::verdicts::ComplexityLevel;
 use strsim::{jaro_winkler, normalized_damerau_levenshtein};
-use regex::Regex;
 use tracing::warn;
-use once_cell::sync::Lazy;
 
 // Helper function to convert string to JudgeType
 fn string_to_judge_type(s: &str) -> JudgeType {
@@ -36,53 +38,109 @@ fn string_to_judge_type(s: &str) -> JudgeType {
 }
 
 // Helper function to convert string to JudgeVerdict
-fn string_to_judge_verdict(_s: &str) -> Result<JudgeVerdict, CouncilError> {
-    // TODO: Parse string verdict into JudgeVerdict structure
-    //       Currently returns default verdict; should parse string representation into proper JudgeVerdict structure with confidence and reasoning.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Primary functionality implemented
-    // [ ] API/data structures defined & stable
-    // [ ] Error handling + validation aligned with error taxonomy
-    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-    // [ ] Integration tests for external systems/contracts
-    // [ ] Documentation: public API + system behavior
-    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-    // [ ] Configurability and feature flags defined if relevant
-    // [ ] Failure-mode cards documented (degradation paths)
-    //
-    // ACCEPTANCE CRITERIA:
-    // - String verdicts are parsed correctly into JudgeVerdict
-    // - Confidence and reasoning are extracted from string
-    // - Invalid string formats are handled gracefully
-    // - Parsing is accurate and reliable
-    //
-    // DEPENDENCIES:
-    // - Verdict parsing utilities (Required)
-    // - JudgeVerdict structure (Required)
-    // - String parsing utilities (Required)
-    //
-    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (parsing utility)
-    // - Change Budget: ~50 LOC
-    // - Reviewer Requirements: Parsing and data structure expertise
-    Ok(JudgeVerdict::Approve { // Temporary: default verdict until string parsing is implemented
-        confidence: 0.8,
-        reasoning: "Converted from string verdict".to_string(),
-        quality_score: 0.7,
-        risk_assessment: crate::judge_backup::RiskAssessment {
-            overall_risk: RiskLevel::Low,
-            risk_factors: vec![],
-            mitigation_suggestions: vec![],
-            confidence: 0.8,
-        },
+fn string_to_judge_verdict(s: &str) -> Result<JudgeVerdict, CouncilError> {
+    let trimmed = s.trim();
+    if trimmed.is_empty() {
+        return Err(CouncilError::InvalidInput {
+            message: "Empty verdict string provided".to_string(),
+        });
+    }
+
+    if let Ok(verdict) = serde_json::from_str::<JudgeVerdict>(trimmed) {
+        return Ok(verdict);
+    }
+
+    parse_debug_style_verdict(trimmed)
+}
+
+fn parse_debug_style_verdict(raw: &str) -> Result<JudgeVerdict, CouncilError> {
+    let normalized = normalize_verdict_prefix(raw);
+
+    if let Ok(verdict) = ron::from_str::<JudgeVerdict>(normalized) {
+        return Ok(verdict);
+    }
+
+    let ron_ready = convert_debug_structs_to_ron(normalized);
+
+    ron::from_str(&ron_ready).map_err(|err| CouncilError::InvalidInput {
+        message: format!("Failed to parse verdict '{raw}': {err}"),
     })
+}
+
+fn normalize_verdict_prefix(input: &str) -> &str {
+    let without_prefix = input
+        .trim_start()
+        .trim_start_matches("JudgeVerdict::")
+        .trim_start();
+
+    if matches_variant_head(without_prefix) {
+        return without_prefix;
+    }
+
+    if let Some((_, tail)) = without_prefix.rsplit_once("::") {
+        if matches_variant_head(tail) {
+            return tail;
+        }
+    }
+
+    without_prefix
+}
+
+fn matches_variant_head(input: &str) -> bool {
+    input.starts_with("Approve") || input.starts_with("Refine") || input.starts_with("Reject")
+}
+
+fn convert_debug_structs_to_ron(raw: &str) -> String {
+    let mut result = String::with_capacity(raw.len() + 16);
+    let mut in_string = false;
+    let mut escaping = false;
+    let mut struct_depth = 0usize;
+
+    for ch in raw.chars() {
+        if in_string {
+            result.push(ch);
+            if escaping {
+                escaping = false;
+            } else if ch == '\\' {
+                escaping = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => {
+                in_string = true;
+                result.push(ch);
+            }
+            '{' => {
+                trim_trailing_whitespace(&mut result);
+                result.push('(');
+                struct_depth += 1;
+            }
+            '}' => {
+                if struct_depth > 0 {
+                    struct_depth -= 1;
+                }
+                result.push(')');
+            }
+            _ => result.push(ch),
+        }
+    }
+
+    result
+}
+
+fn trim_trailing_whitespace(buf: &mut String) {
+    while buf
+        .chars()
+        .last()
+        .map(|c| c.is_whitespace())
+        .unwrap_or(false)
+    {
+        buf.pop();
+    }
 }
 
 // Missing enum definitions
@@ -95,7 +153,6 @@ enum RiskSeverity {
     High,
     Critical,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -113,7 +170,6 @@ enum ConsensusStrength {
     Strong = 3,
     Unanimous = 4,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[allow(dead_code)] // Reserved for future use
@@ -339,7 +395,9 @@ impl Default for AggregationConfig {
             consensus_threshold: 0.7,
             weight_by_specialization: true,
             min_judges_required: 3,
-            dissent_handling: DissentHandling::Weighted { dissent_threshold: 0.2 },
+            dissent_handling: DissentHandling::Weighted {
+                dissent_threshold: 0.2,
+            },
             risk_aggregation: RiskAggregationStrategy::MostConservative,
         }
     }
@@ -370,34 +428,39 @@ impl VerdictAggregator {
         self.validate_contributions(&contributions)?;
 
         // Calculate weights and analyze verdicts
-        let weighted_contributions = self.calculate_weights(contributions, review_context).await?;
+        let weighted_contributions = self
+            .calculate_weights(contributions, review_context)
+            .await?;
         let verdict_distribution = self.analyze_verdict_distribution(&weighted_contributions);
-        let (consensus_strength_f64, agreement_level) = self.calculate_consensus_metrics(&verdict_distribution);
+        let (consensus_strength_f64, agreement_level) =
+            self.calculate_consensus_metrics(&verdict_distribution);
         let consensus_strength = match consensus_strength_f64 {
             s if s >= 0.9 => ConsensusStrength::Unanimous,
             s if s >= 0.7 => ConsensusStrength::Strong,
             s if s >= 0.5 => ConsensusStrength::Moderate,
             _ => ConsensusStrength::Weak,
         };
-        let dissenting_opinions = self.identify_dissenting_opinions(&weighted_contributions, &verdict_distribution);
+        let dissenting_opinions =
+            self.identify_dissenting_opinions(&weighted_contributions, &verdict_distribution);
 
         // Make council decision
-        let council_decision = self.make_council_decision(
-            &verdict_distribution,
-            &weighted_contributions,
-            consensus_strength,
-            &dissenting_opinions,
-        ).await?;
+        let council_decision = self
+            .make_council_decision(
+                &verdict_distribution,
+                &weighted_contributions,
+                consensus_strength,
+                &dissenting_opinions,
+            )
+            .await?;
 
         // Aggregate additional data
-        let (aggregated_changes, critical_issues_summary) =
-            self.aggregate_additional_data(&council_decision, &weighted_contributions).await;
+        let (aggregated_changes, critical_issues_summary) = self
+            .aggregate_additional_data(&council_decision, &weighted_contributions)
+            .await;
 
         // Create aggregation metadata
-        let aggregation_metadata = self.create_aggregation_metadata(
-            &weighted_contributions,
-            start_time.elapsed(),
-        );
+        let aggregation_metadata =
+            self.create_aggregation_metadata(&weighted_contributions, start_time.elapsed());
 
         Ok(AggregationResult {
             council_decision,
@@ -441,8 +504,10 @@ impl VerdictAggregator {
             })
         } else if consensus_strength as u8 >= ConsensusStrength::Moderate as u8 {
             // Moderate consensus - refine
-              let aggregated_changes = self.aggregate_changes(weighted_contributions)
-                .await.unwrap_or_else(|_| AggregatedChanges {
+            let aggregated_changes = self
+                .aggregate_changes(weighted_contributions)
+                .await
+                .unwrap_or_else(|_| AggregatedChanges {
                     changes: Vec::new(),
                     change_categories: HashMap::new(),
                     priority_distribution: HashMap::new(),
@@ -465,15 +530,19 @@ impl VerdictAggregator {
         } else {
             // Weak consensus or significant dissent - reject
             let critical_issues_strings = self.aggregate_critical_issues(weighted_contributions);
-            let critical_issues = critical_issues_strings.into_iter().map(|issue| {
-                crate::judge_backup::verdicts::CriticalIssue {
+            let critical_issues = critical_issues_strings
+                .into_iter()
+                .map(|issue| crate::judge_backup::verdicts::CriticalIssue {
                     severity: crate::judge_backup::verdicts::IssueSeverity::High,
                     category: "Consensus".to_string(),
                     description: issue,
                     evidence: vec![],
-                }
-            }).collect();
-            let alternative_approaches = vec!["Re-evaluate judge criteria".to_string(), "Consider human review".to_string()];
+                })
+                .collect();
+            let alternative_approaches = vec![
+                "Re-evaluate judge criteria".to_string(),
+                "Consider human review".to_string(),
+            ];
             Ok(CouncilDecision::Reject {
                 confidence: 0.2,
                 critical_issues,
@@ -497,11 +566,11 @@ impl VerdictAggregator {
                         (None, vec![format!("Change aggregation failed: {}", e)])
                     }
                 }
-            },
+            }
             CouncilDecision::Reject { .. } => {
                 let issues = self.aggregate_critical_issues(weighted_contributions);
                 (None, issues)
-            },
+            }
             _ => (None, Vec::new()),
         }
     }
@@ -522,12 +591,18 @@ impl VerdictAggregator {
     }
 
     /// Calculate risk assessment for approval decision
-    fn calculate_risk_assessment(&self, weighted_contributions: &[WeightedContribution]) -> AggregatedRiskAssessment {
-        let total_weight: f64 = weighted_contributions.iter().map(|wc| wc.weight).sum();
+    fn calculate_risk_assessment(
+        &self,
+        weighted_contributions: &[WeightedContribution],
+    ) -> AggregatedRiskAssessment {
+        let _total_weight: f64 = weighted_contributions.iter().map(|wc| wc.weight).sum();
         let mut risk_factors = Vec::new();
 
         for contribution in weighted_contributions {
-            if let JudgeVerdict::Approve { risk_assessment, .. } = &contribution.verdict {
+            if let JudgeVerdict::Approve {
+                risk_assessment, ..
+            } = &contribution.verdict
+            {
                 risk_factors.extend(risk_assessment.risk_factors.clone());
             }
         }
@@ -591,11 +666,14 @@ impl VerdictAggregator {
             min_person_hours: total_effort_hours * 0.8,
             max_person_hours: total_effort_hours * 1.2,
             average_person_hours: total_effort_hours,
-            complexity_levels: HashMap::from([(match complexity {
-                EffortComplexity::Low => ComplexityLevel::Simple,
-                EffortComplexity::Medium => ComplexityLevel::Moderate,
-                EffortComplexity::High => ComplexityLevel::Complex,
-            }, 1)]),
+            complexity_levels: HashMap::from([(
+                match complexity {
+                    EffortComplexity::Low => ComplexityLevel::Simple,
+                    EffortComplexity::Medium => ComplexityLevel::Moderate,
+                    EffortComplexity::High => ComplexityLevel::Complex,
+                },
+                1,
+            )]),
             dependencies: vec!["Rust development".to_string()],
         }
     }
@@ -639,80 +717,97 @@ impl VerdictAggregator {
     ) -> f64 {
         // Calculate how well this judge's expertise matches the task
         let task_description = context.working_spec.to_lowercase(); // working_spec is a String
-        let task_title = task_description.clone(); // Use same content for both
+        let _task_title = task_description.clone(); // Use same content for both
 
         let mut score: f64 = 0.5; // Base score
 
         match contribution.judge_type {
             JudgeType::Constitutional => {
                 // Constitutional judges handle CAWS compliance and governance
-                if task_description.contains("compliance") || task_description.contains("constitutional") ||
-                   task_description.contains("caws") || task_description.contains("governance") ||
-                   context.risk_tier == 1 { // Tier1 is high priority
+                if task_description.contains("compliance")
+                    || task_description.contains("constitutional")
+                    || task_description.contains("caws")
+                    || task_description.contains("governance")
+                    || context.risk_tier == 1
+                {
+                    // Tier1 is high priority
                     score += 0.4; // High priority for compliance and high-risk tasks
                 }
-            },
+            }
             JudgeType::QualityAssurance => {
                 if task_description.contains("quality") || task_description.contains("test") {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Security => {
-                if task_description.contains("security") || task_description.contains("auth") ||
-                   task_description.contains("password") || task_description.contains("encrypt") {
+                if task_description.contains("security")
+                    || task_description.contains("auth")
+                    || task_description.contains("password")
+                    || task_description.contains("encrypt")
+                {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Performance => {
-                if task_description.contains("performance") || task_description.contains("speed") ||
-                   task_description.contains("optimize") {
+                if task_description.contains("performance")
+                    || task_description.contains("speed")
+                    || task_description.contains("optimize")
+                {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Architecture => {
-                if task_description.contains("architecture") || task_description.contains("design") ||
-                   task_description.contains("structure") {
+                if task_description.contains("architecture")
+                    || task_description.contains("design")
+                    || task_description.contains("structure")
+                {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Testing => {
                 if task_description.contains("test") || task_description.contains("coverage") {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Compliance => {
-                if context.risk_tier == 1 { // Tier1
+                if context.risk_tier == 1 {
+                    // Tier1
                     score += 0.4; // High compliance needs for T1 tasks
                 }
-            },
+            }
             JudgeType::DomainExpert => {
                 // Domain experts get higher scores for complex tasks
                 if context.risk_tier > 1 {
                     score += 0.2;
                 }
-            },
+            }
             JudgeType::Ethics => {
                 // Ethics judges prioritize high-risk, sensitive tasks
                 if context.risk_tier == 1 || // Tier1
                    task_description.contains("privacy") || task_description.contains("ethics") ||
-                   task_description.contains("bias") || task_description.contains("fair") {
+                   task_description.contains("bias") || task_description.contains("fair")
+                {
                     score += 0.4;
                 }
-            },
+            }
             JudgeType::Technical => {
                 // Technical judges handle implementation and architecture
-                if task_description.contains("technical") || task_description.contains("implementation") ||
-                   task_description.contains("architecture") {
+                if task_description.contains("technical")
+                    || task_description.contains("implementation")
+                    || task_description.contains("architecture")
+                {
                     score += 0.3;
                 }
-            },
+            }
             JudgeType::Quality => {
                 // Quality judges focus on code quality and standards
-                if task_description.contains("quality") || task_description.contains("standards") ||
-                   task_description.contains("code") {
+                if task_description.contains("quality")
+                    || task_description.contains("standards")
+                    || task_description.contains("code")
+                {
                     score += 0.25;
                 }
-            },
+            }
         }
 
         score.min(1.0)
@@ -727,17 +822,17 @@ impl VerdictAggregator {
                 if contribution.confidence > 0.8 && contribution.reasoning.len() > 50 {
                     quality += 0.1;
                 }
-            },
+            }
             "refine" => {
                 if contribution.confidence > 0.7 && contribution.reasoning.len() > 50 {
                     quality += 0.1;
                 }
-            },
+            }
             "reject" | "rejected" => {
                 if contribution.confidence > 0.8 && contribution.reasoning.len() > 50 {
                     quality += 0.1;
                 }
-            },
+            }
             _ => {}
         }
 
@@ -751,7 +846,10 @@ impl VerdictAggregator {
         quality.clamp(0.0, 1.0)
     }
 
-    fn analyze_verdict_distribution(&self, contributions: &[WeightedContribution]) -> VerdictDistribution {
+    fn analyze_verdict_distribution(
+        &self,
+        contributions: &[WeightedContribution],
+    ) -> VerdictDistribution {
         let mut approve_weight = 0.0;
         let mut refine_weight = 0.0;
         let mut reject_weight = 0.0;
@@ -774,8 +872,12 @@ impl VerdictAggregator {
         }
     }
 
-    fn calculate_consensus_metrics(&self, distribution: &VerdictDistribution) -> (f64, AgreementLevel) {
-        let max_weight = distribution.approve_weight
+    fn calculate_consensus_metrics(
+        &self,
+        distribution: &VerdictDistribution,
+    ) -> (f64, AgreementLevel) {
+        let max_weight = distribution
+            .approve_weight
             .max(distribution.refine_weight)
             .max(distribution.reject_weight);
 
@@ -803,7 +905,8 @@ impl VerdictAggregator {
         contributions: &[WeightedContribution],
         distribution: &VerdictDistribution,
     ) -> Vec<DissentingOpinion> {
-        let max_weight = distribution.approve_weight
+        let max_weight = distribution
+            .approve_weight
             .max(distribution.refine_weight)
             .max(distribution.reject_weight);
 
@@ -815,7 +918,8 @@ impl VerdictAggregator {
             "reject"
         };
 
-        contributions.iter()
+        contributions
+            .iter()
             .filter(|contrib| {
                 let verdict_type = match &contrib.verdict {
                     JudgeVerdict::Approve { .. } => "approve",
@@ -844,7 +948,10 @@ impl VerdictAggregator {
         // Check consensus threshold
         if consensus_strength < self.config.consensus_threshold {
             return Ok(CouncilDecision::Inconclusive {
-                reason: format!("Consensus strength {:.2} below threshold {:.2}", consensus_strength, self.config.consensus_threshold),
+                reason: format!(
+                    "Consensus strength {:.2} below threshold {:.2}",
+                    consensus_strength, self.config.consensus_threshold
+                ),
                 conflicting_factors: vec!["Low consensus among judges".to_string()],
             });
         }
@@ -854,33 +961,45 @@ impl VerdictAggregator {
             DissentHandling::Strict => {
                 if !dissenting_opinions.is_empty() {
                     return Ok(CouncilDecision::Inconclusive {
-                        reason: "Strict dissent policy - dissenting opinions require human review".to_string(),
-                        conflicting_factors: dissenting_opinions.iter().map(|d| d.judge_id.clone()).collect(),
+                        reason: "Strict dissent policy - dissenting opinions require human review"
+                            .to_string(),
+                        conflicting_factors: dissenting_opinions
+                            .iter()
+                            .map(|d| d.judge_id.clone())
+                            .collect(),
                     });
                 }
-            },
+            }
             DissentHandling::Weighted { dissent_threshold } => {
-                let dissent_weight: f64 = dissenting_opinions.len() as f64 / contributions.len() as f64;
+                let dissent_weight: f64 =
+                    dissenting_opinions.len() as f64 / contributions.len() as f64;
                 if dissent_weight > *dissent_threshold {
                     return Ok(CouncilDecision::Inconclusive {
-                        reason: format!("Dissent weight {:.2} exceeds threshold {:.2}", dissent_weight, dissent_threshold),
+                        reason: format!(
+                            "Dissent weight {:.2} exceeds threshold {:.2}",
+                            dissent_weight, dissent_threshold
+                        ),
                         conflicting_factors: vec!["High dissent ratio".to_string()],
                     });
                 }
-            },
+            }
             DissentHandling::Majority { majority_threshold } => {
                 if consensus_strength < *majority_threshold {
                     return Ok(CouncilDecision::Inconclusive {
-                        reason: format!("Consensus strength {:.2} below majority threshold {:.2}", consensus_strength, majority_threshold),
+                        reason: format!(
+                            "Consensus strength {:.2} below majority threshold {:.2}",
+                            consensus_strength, majority_threshold
+                        ),
                         conflicting_factors: vec!["Insufficient majority".to_string()],
                     });
                 }
-            },
+            }
         }
 
         // Determine decision based on highest weighted verdict
-        if distribution.approve_weight >= distribution.refine_weight &&
-           distribution.approve_weight >= distribution.reject_weight {
+        if distribution.approve_weight >= distribution.refine_weight
+            && distribution.approve_weight >= distribution.reject_weight
+        {
             // Approve decision
             let risk_assessment = self.aggregate_risk_assessments(contributions);
             let quality_score = self.calculate_weighted_quality_score(contributions);
@@ -921,7 +1040,8 @@ impl VerdictAggregator {
             }
         } else {
             // Reject decision
-            let critical_issues = self.aggregate_critical_issues(contributions)
+            let critical_issues = self
+                .aggregate_critical_issues(contributions)
                 .into_iter()
                 .map(|summary| CriticalIssue {
                     severity: IssueSeverity::High,
@@ -940,7 +1060,10 @@ impl VerdictAggregator {
     }
 
     #[allow(dead_code)] // Reserved for future use
-    fn aggregate_risk_assessments(&self, contributions: &[WeightedContribution]) -> AggregatedRiskAssessment {
+    fn aggregate_risk_assessments(
+        &self,
+        contributions: &[WeightedContribution],
+    ) -> AggregatedRiskAssessment {
         let mut risk_factors: Vec<String> = Vec::new();
         let mut mitigation_suggestions = Vec::new();
         let mut risk_levels = Vec::new();
@@ -948,7 +1071,10 @@ impl VerdictAggregator {
         let mut total_weight = 0.0;
 
         for contribution in contributions {
-            if let JudgeVerdict::Approve { risk_assessment, .. } = &contribution.verdict {
+            if let JudgeVerdict::Approve {
+                risk_assessment, ..
+            } = &contribution.verdict
+            {
                 risk_factors.extend(risk_assessment.risk_factors.clone());
                 mitigation_suggestions.extend(risk_assessment.mitigation_suggestions.clone());
                 risk_levels.push(risk_assessment.overall_risk);
@@ -960,10 +1086,10 @@ impl VerdictAggregator {
         let overall_risk = match self.config.risk_aggregation {
             RiskAggregationStrategy::MostConservative => {
                 risk_levels.into_iter().max().unwrap_or(RiskLevel::Medium)
-            },
+            }
             RiskAggregationStrategy::WeightedAverage => {
                 self.calculate_weighted_risk_average(contributions, &risk_levels, total_weight)
-            },
+            }
             RiskAggregationStrategy::RiskFactorFrequency => {
                 // Count risk factor frequency to determine level
                 let high_risk_count = risk_factors.len();
@@ -976,7 +1102,7 @@ impl VerdictAggregator {
                 } else {
                     RiskLevel::Low
                 }
-            },
+            }
         };
 
         // Remove duplicates and sort by severity
@@ -990,7 +1116,11 @@ impl VerdictAggregator {
             overall_risk,
             risk_factors,
             mitigation_suggestions,
-            confidence: if total_weight > 0.0 { total_confidence / total_weight } else { 0.5 },
+            confidence: if total_weight > 0.0 {
+                total_confidence / total_weight
+            } else {
+                0.5
+            },
         }
     }
 
@@ -1013,7 +1143,10 @@ impl VerdictAggregator {
         }
     }
 
-    async fn aggregate_changes(&self, contributions: &[WeightedContribution]) -> CouncilResult<AggregatedChanges> {
+    async fn aggregate_changes(
+        &self,
+        contributions: &[WeightedContribution],
+    ) -> CouncilResult<AggregatedChanges> {
         let mut all_changes = Vec::new();
         let mut change_categories = HashMap::new();
         let mut priority_distribution = HashMap::new();
@@ -1025,7 +1158,12 @@ impl VerdictAggregator {
         let mut all_dependencies = Vec::new();
 
         for contribution in contributions {
-            if let JudgeVerdict::Refine { required_changes, estimated_effort, .. } = &contribution.verdict {
+            if let JudgeVerdict::Refine {
+                required_changes,
+                estimated_effort,
+                ..
+            } = &contribution.verdict
+            {
                 for change in required_changes {
                     all_changes.push(change.clone());
 
@@ -1041,7 +1179,9 @@ impl VerdictAggregator {
                 total_weight += contribution.weight;
 
                 // Count complexity levels
-                *complexity_levels.entry(estimated_effort.complexity.clone()).or_insert(0) += 1;
+                *complexity_levels
+                    .entry(estimated_effort.complexity.clone())
+                    .or_insert(0) += 1;
 
                 // Collect dependencies
                 all_dependencies.extend(estimated_effort.dependencies.clone());
@@ -1062,8 +1202,9 @@ impl VerdictAggregator {
         // Add timeout to prevent hanging on deduplication operations
         let deduplication_result = tokio::time::timeout(
             Duration::from_secs(30), // 30 second timeout for deduplication
-            deduplication_engine.deduplicate_changes(all_changes)
-        ).await
+            deduplication_engine.deduplicate_changes(all_changes),
+        )
+        .await
         .map_err(|_| CouncilError::SessionTimeout {
             session_id: "change_deduplication".to_string(),
             timeout_seconds: 30,
@@ -1092,9 +1233,17 @@ impl VerdictAggregator {
             change_categories,
             priority_distribution,
             estimated_effort: AggregatedEffort {
-                min_person_hours: if min_hours.is_finite() { min_hours } else { 0.0 },
+                min_person_hours: if min_hours.is_finite() {
+                    min_hours
+                } else {
+                    0.0
+                },
                 max_person_hours: max_hours,
-                average_person_hours: if total_weight > 0.0 { total_hours / total_weight } else { 0.0 },
+                average_person_hours: if total_weight > 0.0 {
+                    total_hours / total_weight
+                } else {
+                    0.0
+                },
                 complexity_levels,
                 dependencies: all_dependencies,
             },
@@ -1102,12 +1251,24 @@ impl VerdictAggregator {
     }
 
     #[allow(dead_code)] // Reserved for future use
-    fn calculate_highest_change_priority(&self, aggregated_changes: &AggregatedChanges) -> ChangePriority {
-        if aggregated_changes.priority_distribution.contains_key(&ChangePriority::Critical) {
+    fn calculate_highest_change_priority(
+        &self,
+        aggregated_changes: &AggregatedChanges,
+    ) -> ChangePriority {
+        if aggregated_changes
+            .priority_distribution
+            .contains_key(&ChangePriority::Critical)
+        {
             ChangePriority::Critical
-        } else if aggregated_changes.priority_distribution.contains_key(&ChangePriority::High) {
+        } else if aggregated_changes
+            .priority_distribution
+            .contains_key(&ChangePriority::High)
+        {
             ChangePriority::High
-        } else if aggregated_changes.priority_distribution.contains_key(&ChangePriority::Medium) {
+        } else if aggregated_changes
+            .priority_distribution
+            .contains_key(&ChangePriority::Medium)
+        {
             ChangePriority::Medium
         } else {
             ChangePriority::Low
@@ -1118,7 +1279,10 @@ impl VerdictAggregator {
         let mut issues = Vec::new();
 
         for contribution in contributions {
-            if let JudgeVerdict::Reject { critical_issues, .. } = &contribution.verdict {
+            if let JudgeVerdict::Reject {
+                critical_issues, ..
+            } = &contribution.verdict
+            {
                 for issue in critical_issues {
                     let issue_str = issue.description.clone();
                     if !issues.contains(&issue_str) {
@@ -1144,14 +1308,15 @@ impl VerdictAggregator {
         }
 
         // Convert risk levels to numerical scores for weighted calculation
-        let risk_scores: Vec<f64> = risk_levels.iter().map(|risk| {
-            match risk {
+        let risk_scores: Vec<f64> = risk_levels
+            .iter()
+            .map(|risk| match risk {
                 RiskLevel::Low => 0.25,
                 RiskLevel::Medium => 0.5,
                 RiskLevel::High => 0.75,
                 RiskLevel::Critical => 1.0,
-            }
-        }).collect();
+            })
+            .collect();
 
         // Calculate weighted average risk score
         let mut weighted_sum = 0.0;
@@ -1420,25 +1585,46 @@ static SEMANTIC_PATTERNS: Lazy<HashMap<&'static str, Regex>> = Lazy::new(|| {
     let mut patterns = HashMap::new();
 
     // Bug fix patterns
-    patterns.insert("bug_fix", Regex::new(r"(?i)(fix|bug|issue|problem|error|crash)").unwrap());
+    patterns.insert(
+        "bug_fix",
+        Regex::new(r"(?i)(fix|bug|issue|problem|error|crash)").unwrap(),
+    );
 
     // Feature addition patterns
-    patterns.insert("feature", Regex::new(r"(?i)(add|implement|create|new|feature)").unwrap());
+    patterns.insert(
+        "feature",
+        Regex::new(r"(?i)(add|implement|create|new|feature)").unwrap(),
+    );
 
     // Performance patterns
-    patterns.insert("performance", Regex::new(r"(?i)(performance|speed|optimize|efficient|fast)").unwrap());
+    patterns.insert(
+        "performance",
+        Regex::new(r"(?i)(performance|speed|optimize|efficient|fast)").unwrap(),
+    );
 
     // Security patterns
-    patterns.insert("security", Regex::new(r"(?i)(security|secure|vulnerability|auth|encrypt)").unwrap());
+    patterns.insert(
+        "security",
+        Regex::new(r"(?i)(security|secure|vulnerability|auth|encrypt)").unwrap(),
+    );
 
     // Code quality patterns
-    patterns.insert("quality", Regex::new(r"(?i)(quality|clean|lint|format|style|standard)").unwrap());
+    patterns.insert(
+        "quality",
+        Regex::new(r"(?i)(quality|clean|lint|format|style|standard)").unwrap(),
+    );
 
     // Refactoring patterns
-    patterns.insert("refactor", Regex::new(r"(?i)(refactor|restructure|reorganize|simplify)").unwrap());
+    patterns.insert(
+        "refactor",
+        Regex::new(r"(?i)(refactor|restructure|reorganize|simplify)").unwrap(),
+    );
 
     // Testing patterns
-    patterns.insert("testing", Regex::new(r"(?i)(test|spec|assert|coverage|mock)").unwrap());
+    patterns.insert(
+        "testing",
+        Regex::new(r"(?i)(test|spec|assert|coverage|mock)").unwrap(),
+    );
 
     patterns
 });
@@ -1458,42 +1644,62 @@ pub fn create_verdict_aggregator() -> VerdictAggregator {
     VerdictAggregator::new(AggregationConfig::default())
 }
 
-
 impl ChangeDeduplicationEngine {
     /// Create a new deduplication engine with default settings
     pub fn new() -> Self {
         let mut conflict_resolvers = HashMap::new();
 
         // Configure default conflict resolution strategies
-        conflict_resolvers.insert(ConflictType::FunctionalConflict, ConflictResolutionStrategy {
-            auto_resolve: false,
-            default_resolution: ConflictResolution::ManualResolution("Functional conflicts require human review".to_string()),
-            require_manual_review: true,
-        });
+        conflict_resolvers.insert(
+            ConflictType::FunctionalConflict,
+            ConflictResolutionStrategy {
+                auto_resolve: false,
+                default_resolution: ConflictResolution::ManualResolution(
+                    "Functional conflicts require human review".to_string(),
+                ),
+                require_manual_review: true,
+            },
+        );
 
-        conflict_resolvers.insert(ConflictType::PriorityConflict, ConflictResolutionStrategy {
-            auto_resolve: true,
-            default_resolution: ConflictResolution::PreferHigherPriority,
-            require_manual_review: false,
-        });
+        conflict_resolvers.insert(
+            ConflictType::PriorityConflict,
+            ConflictResolutionStrategy {
+                auto_resolve: true,
+                default_resolution: ConflictResolution::PreferHigherPriority,
+                require_manual_review: false,
+            },
+        );
 
-        conflict_resolvers.insert(ConflictType::ScopeOverlap, ConflictResolutionStrategy {
-            auto_resolve: true,
-            default_resolution: ConflictResolution::MergeChanges,
-            require_manual_review: false,
-        });
+        conflict_resolvers.insert(
+            ConflictType::ScopeOverlap,
+            ConflictResolutionStrategy {
+                auto_resolve: true,
+                default_resolution: ConflictResolution::MergeChanges,
+                require_manual_review: false,
+            },
+        );
 
-        conflict_resolvers.insert(ConflictType::DependencyConflict, ConflictResolutionStrategy {
-            auto_resolve: false,
-            default_resolution: ConflictResolution::ManualResolution("Dependency conflicts require careful analysis".to_string()),
-            require_manual_review: true,
-        });
+        conflict_resolvers.insert(
+            ConflictType::DependencyConflict,
+            ConflictResolutionStrategy {
+                auto_resolve: false,
+                default_resolution: ConflictResolution::ManualResolution(
+                    "Dependency conflicts require careful analysis".to_string(),
+                ),
+                require_manual_review: true,
+            },
+        );
 
-        conflict_resolvers.insert(ConflictType::ApproachConflict, ConflictResolutionStrategy {
-            auto_resolve: false,
-            default_resolution: ConflictResolution::ManualResolution("Approach conflicts require architectural decision".to_string()),
-            require_manual_review: true,
-        });
+        conflict_resolvers.insert(
+            ConflictType::ApproachConflict,
+            ConflictResolutionStrategy {
+                auto_resolve: false,
+                default_resolution: ConflictResolution::ManualResolution(
+                    "Approach conflicts require architectural decision".to_string(),
+                ),
+                require_manual_review: true,
+            },
+        );
 
         Self {
             semantic_similarity_threshold: 0.75,
@@ -1506,13 +1712,17 @@ impl ChangeDeduplicationEngine {
     }
 
     /// Perform comprehensive deduplication on a list of changes
-    pub async fn deduplicate_changes(&mut self, changes: Vec<RequiredChange>) -> CouncilResult<DeduplicationResult> {
+    pub async fn deduplicate_changes(
+        &mut self,
+        changes: Vec<RequiredChange>,
+    ) -> CouncilResult<DeduplicationResult> {
         let start_time = std::time::Instant::now();
         let mut similarity_computations = 0u64;
         let mut cache_hits = 0u64;
 
         // Extract semantic features for all changes
-        let semantic_features: Vec<ChangeSemanticFeatures> = changes.iter()
+        let semantic_features: Vec<ChangeSemanticFeatures> = changes
+            .iter()
             .map(|change| self.extract_semantic_features(change))
             .collect();
 
@@ -1534,19 +1744,26 @@ impl ChangeDeduplicationEngine {
                     continue;
                 }
 
-                let similarity = self.compute_semantic_similarity(
-                    &semantic_features[i],
-                    &semantic_features[j],
-                    &mut similarity_computations,
-                    &mut cache_hits,
-                ).await;
+                let similarity = self
+                    .compute_semantic_similarity(
+                        &semantic_features[i],
+                        &semantic_features[j],
+                        &mut similarity_computations,
+                        &mut cache_hits,
+                    )
+                    .await;
 
                 if similarity >= self.semantic_similarity_threshold {
                     group_indices.push(j);
                     similarity_scores.push(similarity);
                 } else {
                     // Check for conflicts between non-duplicate changes
-                    if let Some(conflict) = self.detect_conflict(&changes[i], &changes[j], &semantic_features[i], &semantic_features[j]) {
+                    if let Some(conflict) = self.detect_conflict(
+                        &changes[i],
+                        &changes[j],
+                        &semantic_features[i],
+                        &semantic_features[j],
+                    ) {
                         conflicts.push(conflict);
                     }
                 }
@@ -1554,10 +1771,15 @@ impl ChangeDeduplicationEngine {
 
             if group_indices.len() > 1 {
                 // Found a duplicate group
-                let merged_change = self.merge_duplicate_group(&changes, &group_indices, &semantic_features).await?;
+                let merged_change = self
+                    .merge_duplicate_group(&changes, &group_indices, &semantic_features)
+                    .await?;
                 duplicate_groups.push(DuplicateGroup {
                     representative_change: merged_change,
-                    original_changes: group_indices.iter().map(|&idx| changes[idx].clone()).collect(),
+                    original_changes: group_indices
+                        .iter()
+                        .map(|&idx| changes[idx].clone())
+                        .collect(),
                     similarity_scores,
                     merge_strategy: MergeStrategy::CreateComposite, // Default strategy
                 });
@@ -1622,7 +1844,10 @@ impl ChangeDeduplicationEngine {
     /// Extract semantic features from a change for similarity analysis
     fn extract_semantic_features(&self, change: &RequiredChange) -> ChangeSemanticFeatures {
         // Normalize category
-        let category = format!("{:?}", change.category).to_lowercase().trim().to_string();
+        let category = format!("{:?}", change.category)
+            .to_lowercase()
+            .trim()
+            .to_string();
 
         // Extract key terms from description
         let key_terms = self.extract_key_terms(&change.description);
@@ -1693,7 +1918,11 @@ impl ChangeDeduplicationEngine {
         // Create cache key
         let key1 = format!("{:?}:{:?}", features1.category, features1.key_terms);
         let key2 = format!("{:?}:{:?}", features2.category, features2.key_terms);
-        let cache_key = if key1 < key2 { format!("{}|{}", key1, key2) } else { format!("{}|{}", key2, key1) };
+        let cache_key = if key1 < key2 {
+            format!("{}|{}", key1, key2)
+        } else {
+            format!("{}|{}", key2, key1)
+        };
 
         // Check cache first
         if let Some(cached_similarities) = self.similarity_cache.get(&cache_key) {
@@ -1712,21 +1941,29 @@ impl ChangeDeduplicationEngine {
             merge_confidence_threshold: 0.8,
         };
 
-        let category_similarity = if features1.category == features2.category { 1.0 } else { 0.0 };
+        let category_similarity = if features1.category == features2.category {
+            1.0
+        } else {
+            0.0
+        };
 
         let description_similarity = self.compute_text_similarity(
             &features1.key_terms.join(" "),
-            &features2.key_terms.join(" ")
+            &features2.key_terms.join(" "),
         );
 
-        let scope_similarity = self.compute_scope_similarity(&features1.affected_components, &features2.affected_components);
+        let scope_similarity = self.compute_scope_similarity(
+            &features1.affected_components,
+            &features2.affected_components,
+        );
 
-        let priority_similarity = self.compute_impact_compatibility(features1.impact.clone(), features2.impact.clone());
+        let priority_similarity =
+            self.compute_impact_compatibility(features1.impact.clone(), features2.impact.clone());
 
-        let overall_similarity = (category_similarity * config.category_weight) +
-                               (description_similarity * config.description_weight) +
-                               (scope_similarity * config.scope_weight) +
-                               (priority_similarity * config.priority_weight);
+        let overall_similarity = (category_similarity * config.category_weight)
+            + (description_similarity * config.description_weight)
+            + (scope_similarity * config.scope_weight)
+            + (priority_similarity * config.priority_weight);
 
         // Cache the result
         let mut similarity_map = HashMap::new();
@@ -1758,7 +1995,8 @@ impl ChangeDeduplicationEngine {
             return 1.0;
         }
 
-        let intersection: std::collections::HashSet<_> = components1.iter()
+        let intersection: std::collections::HashSet<_> = components1
+            .iter()
             .filter(|c| components2.contains(c))
             .collect();
 
@@ -1784,14 +2022,16 @@ impl ChangeDeduplicationEngine {
             (Moderate, Minor) | (Minor, Moderate) => 0.6,
             (Minor, Minor) => 1.0,
             (Breaking, _) | (_, Breaking) => 0.5, // Breaking should not conflict with others
-            _ => 0.4, // Low compatibility for other combinations
+            _ => 0.4,                             // Low compatibility for other combinations
         }
     }
 
     /// Extract key terms from change description
     fn extract_key_terms(&self, description: &str) -> Vec<String> {
         // Simple keyword extraction - split by whitespace and filter common words
-        let stop_words = ["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
+        let stop_words = [
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+        ];
 
         description
             .to_lowercase()
@@ -1805,10 +2045,10 @@ impl ChangeDeduplicationEngine {
     fn extract_affected_components(&self, description: &str) -> Vec<String> {
         // Simple component extraction - look for file paths, module names, etc.
         let component_patterns = [
-            r"\b\w+\.rs\b",  // Rust files
-            r"\b\w+\.js\b",  // JavaScript files
-            r"\b\w+\.ts\b",  // TypeScript files
-            r"\b\w+\.py\b",  // Python files
+            r"\b\w+\.rs\b", // Rust files
+            r"\b\w+\.js\b", // JavaScript files
+            r"\b\w+\.ts\b", // TypeScript files
+            r"\b\w+\.py\b", // Python files
         ];
 
         let mut components = Vec::new();
@@ -1850,13 +2090,23 @@ impl ChangeDeduplicationEngine {
     /// Extract complexity indicators from description
     fn extract_complexity_indicators(&self, description: &str) -> Vec<String> {
         let complexity_keywords = [
-            "complex", "complicated", "difficult", "challenging",
-            "architectural", "design", "refactor", "restructure",
-            "multiple", "several", "many", "extensive",
+            "complex",
+            "complicated",
+            "difficult",
+            "challenging",
+            "architectural",
+            "design",
+            "refactor",
+            "restructure",
+            "multiple",
+            "several",
+            "many",
+            "extensive",
         ];
 
         let desc_lower = description.to_lowercase();
-        complexity_keywords.iter()
+        complexity_keywords
+            .iter()
             .filter(|&&keyword| desc_lower.contains(keyword))
             .map(|s| s.to_string())
             .collect()
@@ -1872,7 +2122,9 @@ impl ChangeDeduplicationEngine {
     ) -> Option<ChangeConflict> {
         // Check for functional conflicts (same components, different intents)
         if !features1.affected_components.is_empty() && !features2.affected_components.is_empty() {
-            let component_overlap: Vec<_> = features1.affected_components.iter()
+            let component_overlap: Vec<_> = features1
+                .affected_components
+                .iter()
                 .filter(|c| features2.affected_components.contains(c))
                 .collect();
 
@@ -1880,9 +2132,14 @@ impl ChangeDeduplicationEngine {
                 return Some(ChangeConflict {
                     changes: vec![change1.clone(), change2.clone()],
                     conflict_type: ConflictType::FunctionalConflict,
-                    description: format!("Changes affect same components ({:?}) but have different intents", component_overlap),
+                    description: format!(
+                        "Changes affect same components ({:?}) but have different intents",
+                        component_overlap
+                    ),
                     resolution_options: vec![
-                        ConflictResolution::ManualResolution("Review both approaches and choose the better one".to_string()),
+                        ConflictResolution::ManualResolution(
+                            "Review both approaches and choose the better one".to_string(),
+                        ),
                         ConflictResolution::SplitImplementation,
                     ],
                 });
@@ -1890,12 +2147,19 @@ impl ChangeDeduplicationEngine {
         }
 
         // Check for impact conflicts (similar scope, different impacts)
-        if change1.impact != change2.impact &&
-           self.compute_scope_similarity(&features1.affected_components, &features2.affected_components) > 0.5 {
+        if change1.impact != change2.impact
+            && self.compute_scope_similarity(
+                &features1.affected_components,
+                &features2.affected_components,
+            ) > 0.5
+        {
             return Some(ChangeConflict {
                 changes: vec![change1.clone(), change2.clone()],
                 conflict_type: ConflictType::PriorityConflict,
-                description: format!("Similar scope but different impacts: {:?} vs {:?}", change1.impact, change2.impact),
+                description: format!(
+                    "Similar scope but different impacts: {:?} vs {:?}",
+                    change1.impact, change2.impact
+                ),
                 resolution_options: vec![ConflictResolution::PreferHigherPriority],
             });
         }
@@ -1933,8 +2197,11 @@ impl ChangeDeduplicationEngine {
 
             // Merge descriptions if they differ
             if change.description != merged_description {
-                merged_description = format!("{} (consolidated with {} similar changes)",
-                                           merged_description, indices.len() - 1);
+                merged_description = format!(
+                    "{} (consolidated with {} similar changes)",
+                    merged_description,
+                    indices.len() - 1
+                );
             }
         }
 
@@ -1972,7 +2239,8 @@ impl ChangeDeduplicationEngine {
         // Update rolling averages
         let total_ops = self.metrics.total_operations as f64;
         self.metrics.avg_processing_time_ms =
-            (self.metrics.avg_processing_time_ms * (total_ops - 1.0) + processing_time as f64) / total_ops;
+            (self.metrics.avg_processing_time_ms * (total_ops - 1.0) + processing_time as f64)
+                / total_ops;
 
         if merges > 0 || conflicts > 0 {
             let duplicate_rate = (merges + conflicts) as f64 / 10.0; // Assume 10 changes for simplicity

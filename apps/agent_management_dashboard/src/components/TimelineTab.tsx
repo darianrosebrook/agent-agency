@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GanttChart } from "./GanttChart";
 import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
 import { Button } from "./primitives/button";
@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "./primitives/select";
 import styles from "./TimelineTab.module.scss";
+import { listTasks, type Task } from "../lib/api/tasks";
+import { getAgents, type Agent } from "../lib/api/agents";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
 
@@ -27,161 +29,127 @@ export interface TimelineTask {
   description?: string;
 }
 
-// Mock data for timeline tasks
-const mockTasks: TimelineTask[] = [
-  {
-    id: "1",
-    title: "Design system foundation",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 1),
-    endDate: new Date(2024, 10, 5),
-    status: "completed",
-    tags: ["Design", "High Priority"],
-    description: "Created core design tokens and components",
-  },
-  {
-    id: "2",
-    title: "Component library setup",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 6),
-    endDate: new Date(2024, 10, 12),
-    status: "completed",
-    tags: ["Design", "UI"],
-    description: "Set up Storybook and base components",
-  },
-  {
-    id: "3",
-    title: "Dashboard wireframes",
-    worker: "Sarah Chen",
-    workerId: "sarah",
-    startDate: new Date(2024, 10, 13),
-    endDate: new Date(2024, 10, 20),
-    status: "in-progress",
-    tags: ["Design", "Wireframes"],
-    description: "Creating dashboard layout mockups",
-  },
-  {
-    id: "4",
-    title: "API endpoint development",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 2),
-    endDate: new Date(2024, 10, 8),
-    status: "completed",
-    tags: ["Backend", "API"],
-    description: "Built REST API endpoints for user management",
-  },
-  {
-    id: "5",
-    title: "Database schema design",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 9),
-    endDate: new Date(2024, 10, 11),
-    status: "completed",
-    tags: ["Backend", "Database"],
-    description: "Designed and implemented database schema",
-  },
-  {
-    id: "6",
-    title: "Authentication system",
-    worker: "Alex Kumar",
-    workerId: "alex",
-    startDate: new Date(2024, 10, 12),
-    endDate: new Date(2024, 10, 18),
-    status: "in-progress",
-    tags: ["Backend", "Security"],
-    description: "Implementing JWT-based authentication",
-  },
-  {
-    id: "7",
-    title: "Frontend routing",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 1),
-    endDate: new Date(2024, 10, 3),
-    status: "completed",
-    tags: ["Frontend", "Dev"],
-    description: "Set up React Router and navigation",
-  },
-  {
-    id: "8",
-    title: "Dashboard implementation",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 4),
-    endDate: new Date(2024, 10, 10),
-    status: "completed",
-    tags: ["Frontend", "UI"],
-    description: "Built main dashboard components",
-  },
-  {
-    id: "9",
-    title: "User profile pages",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 11),
-    endDate: new Date(2024, 10, 15),
-    status: "in-progress",
-    tags: ["Frontend", "UI"],
-    description: "Creating user profile and settings pages",
-  },
-  {
-    id: "10",
-    title: "Responsive design",
-    worker: "Jordan Lee",
-    workerId: "jordan",
-    startDate: new Date(2024, 10, 16),
-    endDate: new Date(2024, 10, 22),
-    status: "pending",
-    tags: ["Frontend", "Mobile"],
-    description: "Making all pages mobile responsive",
-  },
-  {
-    id: "11",
-    title: "Unit testing",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 3),
-    endDate: new Date(2024, 10, 7),
-    status: "completed",
-    tags: ["QA", "Testing"],
-    description: "Writing unit tests for core features",
-  },
-  {
-    id: "12",
-    title: "Integration testing",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 8),
-    endDate: new Date(2024, 10, 14),
-    status: "in-progress",
-    tags: ["QA", "Testing"],
-    description: "Setting up E2E test suite",
-  },
-  {
-    id: "13",
-    title: "Performance optimization",
-    worker: "Maria Garcia",
-    workerId: "maria",
-    startDate: new Date(2024, 10, 15),
-    endDate: new Date(2024, 10, 21),
-    status: "pending",
-    tags: ["QA", "Performance"],
-    description: "Optimizing bundle size and load times",
-  },
-];
+// Helper function to map task status to timeline status
+function mapTaskStatus(status: string): "completed" | "in-progress" | "pending" {
+  if (status === "completed") return "completed";
+  if (status === "in_progress" || status === "running") return "in-progress";
+  return "pending";
+}
+
+// Helper function to extract tags from metadata
+function extractTags(metadata?: Record<string, unknown>): string[] {
+  if (!metadata) return [];
+  
+  // Check for tags array in metadata
+  if (Array.isArray(metadata.tags)) {
+    return metadata.tags.map(tag => String(tag));
+  }
+  
+  // Check for tags as comma-separated string
+  if (typeof metadata.tags === "string") {
+    return metadata.tags.split(",").map(tag => tag.trim()).filter(Boolean);
+  }
+  
+  // Extract from other metadata fields if available
+  const tags: string[] = [];
+  if (metadata.priority) tags.push(`Priority: ${metadata.priority}`);
+  if (metadata.risk_tier) tags.push(`Risk: ${metadata.risk_tier}`);
+  
+  return tags;
+}
+
+// Helper function to calculate end date
+function calculateEndDate(task: Task): Date {
+  // Use deadline if available
+  if (task.metadata?.deadline && typeof task.metadata.deadline === "string") {
+    const deadline = new Date(task.metadata.deadline);
+    if (!isNaN(deadline.getTime())) return deadline;
+  }
+  
+  // Use completed_at if task is completed
+  if (task.completed_at) {
+    return new Date(task.completed_at);
+  }
+  
+  // Use updated_at as fallback
+  if (task.updated_at) {
+    return new Date(task.updated_at);
+  }
+  
+  // Default to 7 days from start date
+  const startDate = task.created_at ? new Date(task.created_at) : new Date();
+  return new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+}
+
 export function TimelineTab() {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("week");
   const [selectedWorker, setSelectedWorker] = useState<string>("all");
+  const [tasks, setTasks] = useState<TimelineTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const workers = Array.from(new Set(mockTasks.map((t) => t.worker)));
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch tasks and agents in parallel
+        const [tasksResponse, agentsResponse] = await Promise.all([
+          listTasks(),
+          getAgents(),
+        ]);
+
+        // Create a map of worker_id to agent name
+        const workerMap = new Map<string, string>();
+        agentsResponse.forEach((agent) => {
+          workerMap.set(agent.id, agent.name);
+        });
+
+        // Transform tasks to TimelineTask format
+        const timelineTasks: TimelineTask[] = tasksResponse.tasks
+          .filter((task) => {
+            // Only include tasks with assigned workers and valid dates
+            return task.worker_id && task.created_at;
+          })
+          .map((task) => {
+            const workerId = task.worker_id || "";
+            const workerName = workerMap.get(workerId) || "Unassigned";
+            const startDate = task.created_at ? new Date(task.created_at) : new Date();
+            const endDate = calculateEndDate(task);
+            const tags = extractTags(task.metadata);
+
+            return {
+              id: task.id,
+              title: task.title,
+              worker: workerName,
+              workerId: workerId,
+              startDate,
+              endDate,
+              status: mapTaskStatus(task.status),
+              tags,
+              description: task.description || undefined,
+            };
+          });
+
+        setTasks(timelineTasks);
+      } catch (err) {
+        console.error("Failed to fetch timeline data:", err);
+        setError(err instanceof Error ? err : new Error("Failed to load timeline data"));
+        setTasks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const workers = Array.from(new Set(tasks.map((t) => t.worker)));
   const filteredTasks =
     selectedWorker === "all"
-      ? mockTasks
-      : mockTasks.filter((t) => t.worker === selectedWorker);
+      ? tasks
+      : tasks.filter((t) => t.worker === selectedWorker);
 
   const handleZoomIn = () => {
     const levels: ZoomLevel[] = ["quarter", "month", "week", "day"];
@@ -198,6 +166,24 @@ export function TimelineTab() {
       setZoomLevel(levels[currentIndex - 1]);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className={styles.timelineTab}>
+        <div className={styles.loading}>Loading timeline data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.timelineTab}>
+        <div className={styles.error}>
+          Failed to load timeline data: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.timelineTab}>
@@ -253,7 +239,13 @@ export function TimelineTab() {
 
       {/* Gantt Chart */}
       <div className={styles.ganttContainer}>
-        <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+        {filteredTasks.length > 0 ? (
+          <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+        ) : (
+          <div className={styles.emptyState}>
+            No tasks with assigned workers found. Assign workers to tasks to see them on the timeline.
+          </div>
+        )}
       </div>
     </div>
   );

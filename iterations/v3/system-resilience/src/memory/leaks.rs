@@ -3,14 +3,14 @@
 //! This module provides comprehensive memory leak detection capabilities
 //! including allocation pattern analysis and leak reporting.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 
-use crate::memory::types::*;
 use crate::memory::allocator::*;
+use crate::memory::types::*;
 
 /// Memory leak information
 #[derive(Debug, Clone)]
@@ -67,7 +67,8 @@ impl MemoryLeakDetector {
         for (label, recent_count) in &recent.1 {
             if let Some(prev_count) = previous.1.get(label) {
                 let growth = *recent_count as i64 - *prev_count as i64;
-                if growth > 1000 { // Arbitrary threshold
+                if growth > 1000 {
+                    // Arbitrary threshold
                     alerts.push(format!(
                         "Potential memory leak in '{}': {} new allocations since last snapshot",
                         label, growth
@@ -95,9 +96,9 @@ impl Default for MemoryManagementConfig {
     fn default() -> Self {
         Self {
             monitor_config: MemoryLimitConfig {
-                max_heap_mb: 1024, // 1GB
-                max_stack_mb: 8,    // 8MB per thread
-                warning_threshold_percent: 0.75, // 75% of heap limit
+                max_heap_mb: 1024,                 // 1GB
+                max_stack_mb: 8,                   // 8MB per thread
+                warning_threshold_percent: 0.75,   // 75% of heap limit
                 critical_threshold_percent: 0.875, // 87.5% of heap limit
                 enable_gc_pressure: true,
                 gc_pressure_threshold_mb: 800.0,

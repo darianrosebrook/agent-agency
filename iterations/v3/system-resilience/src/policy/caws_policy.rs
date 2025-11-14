@@ -51,8 +51,8 @@
 //! - Orchestration compliance (handled by caws-runtime-validator)
 //! - Worker output validation (handled by caws-runtime-validator)
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -292,10 +292,7 @@ impl Default for CawsPolicy {
                     "postmortem/*".to_string(),
                     "milestone/*".to_string(),
                 ],
-                protected_patterns: vec![
-                    "release/*".to_string(),
-                    "postmortem/*".to_string(),
-                ],
+                protected_patterns: vec!["release/*".to_string(), "postmortem/*".to_string()],
             },
             compression: CompressionPolicy {
                 default_codec: Codec::Zstd,
@@ -471,18 +468,23 @@ impl CawsPolicy {
         }
 
         // Return default configuration
-        (self.compression.default_codec.clone(), self.compression.level)
+        (
+            self.compression.default_codec.clone(),
+            self.compression.level,
+        )
     }
 
     /// Check if storage is over soft limit
     pub fn is_over_soft_limit(&self, current_size: u64) -> bool {
-        let soft_limit = (self.storage.max_size_bytes as f64 * self.storage.soft_limit_ratio) as u64;
+        let soft_limit =
+            (self.storage.max_size_bytes as f64 * self.storage.soft_limit_ratio) as u64;
         current_size > soft_limit
     }
 
     /// Check if storage is over hard limit
     pub fn is_over_hard_limit(&self, current_size: u64) -> bool {
-        let hard_limit = (self.storage.max_size_bytes as f64 * self.storage.hard_limit_ratio) as u64;
+        let hard_limit =
+            (self.storage.max_size_bytes as f64 * self.storage.hard_limit_ratio) as u64;
         current_size > hard_limit
     }
 }
@@ -494,7 +496,7 @@ mod tests {
     //! These tests validate the recovery system's CAWS policy implementation.
     //! They are separate from tests in `caws-runtime-validator` because they
     //! test domain-specific recovery policies rather than general CAWS validation.
-    
+
     use super::*;
 
     #[test]
@@ -508,10 +510,10 @@ mod tests {
     #[test]
     fn test_policy_validation() {
         let mut policy = CawsPolicy::new();
-        
+
         // Valid policy should pass
         assert!(policy.validate().is_ok());
-        
+
         // Invalid soft/hard limit ratio should fail
         policy.storage.soft_limit_ratio = 0.9;
         policy.storage.hard_limit_ratio = 0.8;
@@ -521,7 +523,7 @@ mod tests {
     #[test]
     fn test_protected_labels() {
         let policy = CawsPolicy::new();
-        
+
         assert!(policy.is_protected_label("release/v1.0.0"));
         assert!(policy.is_protected_label("postmortem/incident-2024"));
         assert!(!policy.is_protected_label("feature/new-feature"));
@@ -530,7 +532,7 @@ mod tests {
     #[test]
     fn test_compression_config() {
         let policy = CawsPolicy::new();
-        
+
         let (codec, level) = policy.get_compression_config("test.txt");
         assert_eq!(codec, Codec::Zstd);
         assert_eq!(level, 4);
@@ -539,14 +541,16 @@ mod tests {
     #[test]
     fn test_storage_limits() {
         let policy = CawsPolicy::new();
-        
+
         // Test soft limit
-        let soft_limit = (policy.storage.max_size_bytes as f64 * policy.storage.soft_limit_ratio) as u64;
+        let soft_limit =
+            (policy.storage.max_size_bytes as f64 * policy.storage.soft_limit_ratio) as u64;
         assert!(policy.is_over_soft_limit(soft_limit + 1));
         assert!(!policy.is_over_soft_limit(soft_limit - 1));
-        
+
         // Test hard limit
-        let hard_limit = (policy.storage.max_size_bytes as f64 * policy.storage.hard_limit_ratio) as u64;
+        let hard_limit =
+            (policy.storage.max_size_bytes as f64 * policy.storage.hard_limit_ratio) as u64;
         assert!(policy.is_over_hard_limit(hard_limit + 1));
         assert!(!policy.is_over_hard_limit(hard_limit - 1));
     }

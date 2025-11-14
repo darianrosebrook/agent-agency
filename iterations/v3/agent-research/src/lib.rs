@@ -6,19 +6,19 @@
 // Import contract types
 use agent_agency_contracts as contracts;
 
+pub mod benchmark_runner;
+pub mod benchmark_types;
+pub mod benchmarking;
 pub mod decomposition;
 pub mod disambiguation;
 pub mod evidence;
+pub mod extraction_types;
+pub mod performance_tracker;
 pub mod processor;
 pub mod qualification;
-pub mod extraction_types;
-pub mod verification;
-pub mod benchmarking;
-pub mod benchmark_types;
-pub mod benchmark_runner;
-pub mod performance_tracker;
 pub mod scoring_system;
 pub mod sla_validator;
+pub mod verification;
 
 // Multimodal retriever modules
 pub mod multimodal_retriever;
@@ -26,9 +26,9 @@ pub mod multimodal_retriever;
 // Content processing modules
 pub mod content_processor;
 pub mod context_builder;
+pub mod multimodal_context_provider;
 pub mod vector_search;
 pub mod web_scraper;
-pub mod multimodal_context_provider;
 
 // Planning agent modules (consolidated from planning-agent crate)
 pub mod planning_agent;
@@ -58,45 +58,53 @@ pub mod reinforcement;
 // Reflexive types module
 pub mod reflexive_types;
 
-
-
 // Re-export contract types for internal use
 pub use contracts::{
+    AcceptanceCriterion,
+    ExecutionStatus,
+    Progress,
+
+    RollbackPlan,
+    TaskContext,
+    TaskExecutionResult,
+    TaskRequirements,
+    TaskScope,
     // Task execution types
-    TaskSpec, TaskExecutionResult, TaskRequirements, TaskContext, TaskScope, ExecutionStatus, Progress,
+    TaskSpec,
+    TestPlan,
+    WorkerHealthStatus,
 
     // Worker types
-    WorkerResult, WorkerHealthStatus,
-
+    WorkerResult,
     // Planning types
-    WorkingSpec, AcceptanceCriterion, TestPlan, RollbackPlan,
+    WorkingSpec,
 };
 
 // Re-export internal types
 // pub use verification::MultiModalVerificationEngine; // Temporarily disabled due to verification module issues
-pub use processor::ClaimExtractionProcessor;
-pub use extraction_types::*;
-pub use orchestrator::LearningOrchestrator;
 pub use agent_agency_contracts::types::research::VerificationMethod;
-pub use research_types::ContentProcessingConfig;
 pub use content_processor::ContentProcessor;
 pub use context_builder::ContextBuilder;
+pub use extraction_types::*;
+pub use multimodal_context_provider::MultimodalContext;
+pub use orchestrator::LearningOrchestrator;
+pub use processor::ClaimExtractionProcessor;
+pub use research_types::ContentProcessingConfig;
 pub use vector_search::VectorSearchEngine;
 pub use web_scraper::WebScraper;
-pub use multimodal_context_provider::MultimodalContext;
 
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tracing::{info, warn};
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 
 /// Main claim extraction and verification processor
 ///
 /// Integrates with council debate protocol to provide evidence
 /// for claim verification during judicial evaluation.
 
-# [derive(Debug)]
+#[derive(Debug)]
 pub struct ClaimExtractionAndVerificationProcessor {
     disambiguation_stage: disambiguation::DisambiguationStage,
     qualification_stage: qualification::QualificationStage,
@@ -244,10 +252,7 @@ impl ClaimExtractionAndVerificationProcessor {
         // Stage 4: Verification (evidence collection)
         if !atomic_claims.is_empty() {
             if let Some(ref verification_stage) = self.verification_stage {
-                match verification_stage
-                    .process(&atomic_claims, context)
-                    .await
-                {
+                match verification_stage.process(&atomic_claims, context).await {
                     Ok(verification_result) => {
                         // TODO: Convert verification result checks to Evidence format
                         verification_evidence = vec![]; // Temporarily empty until conversion is implemented

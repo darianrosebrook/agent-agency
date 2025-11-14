@@ -1,11 +1,11 @@
 //! Local type definitions for data infrastructure to avoid circular dependencies
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Audit trail entry
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -15,7 +15,6 @@ pub struct AuditTrailEntry {
     pub event_type: String,
     pub description: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -23,39 +22,117 @@ pub struct AuditTrailEntry {
 /// Database operations trait
 #[async_trait]
 pub trait DatabaseOperations: Send + Sync {
-    async fn create_execution_plan(&self, plan: CreateExecutionPlan) -> Result<models::ExecutionPlan, anyhow::Error>;
-    async fn get_execution_plan(&self, id: Uuid) -> Result<Option<models::ExecutionPlan>, anyhow::Error>;
+    async fn create_execution_plan(
+        &self,
+        plan: CreateExecutionPlan,
+    ) -> Result<models::ExecutionPlan, anyhow::Error>;
+    async fn get_execution_plan(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<models::ExecutionPlan>, anyhow::Error>;
     async fn get_execution_plans(&self) -> Result<Vec<models::ExecutionPlan>, anyhow::Error>;
-    async fn update_execution_plan(&self, id: Uuid, update: UpdateExecutionPlan) -> Result<models::ExecutionPlan, anyhow::Error>;
-    async fn create_audit_trail_entry(&self, entry: CreateAuditTrailEntry) -> Result<models::AuditTrailEntry, anyhow::Error>;
-    async fn get_audit_trail_entries(&self, task_id: Uuid) -> Result<Vec<models::AuditTrailEntry>, anyhow::Error>;
-    async fn get_audit_trail_entry(&self, id: Uuid) -> Result<Option<models::AuditTrailEntry>, anyhow::Error>;
-    async fn create_planning_session(&self, session: CreatePlanningSession) -> Result<models::PlanningSession, anyhow::Error>;
-    async fn get_planning_session(&self, id: Uuid) -> Result<Option<models::PlanningSession>, anyhow::Error>;
-    async fn update_planning_session(&self, id: Uuid, session: UpdatePlanningSession) -> Result<(), anyhow::Error>;
-    async fn create_planning_telemetry(&self, telemetry: CreatePlanningTelemetry) -> Result<models::PlanningTelemetry, anyhow::Error>;
-    async fn get_planning_telemetry(&self, plan_id: Uuid, metric_type: Option<String>) -> Result<Vec<models::PlanningTelemetry>, anyhow::Error>;
-    async fn create_planning_audit_event(&self, event: CreatePlanningAuditEvent) -> Result<(), anyhow::Error>;
-    async fn get_planning_audit_events(&self, plan_id: Uuid) -> Result<Vec<models::PlanningAuditEvent>, anyhow::Error>;
+    async fn update_execution_plan(
+        &self,
+        id: Uuid,
+        update: UpdateExecutionPlan,
+    ) -> Result<models::ExecutionPlan, anyhow::Error>;
+    async fn create_audit_trail_entry(
+        &self,
+        entry: CreateAuditTrailEntry,
+    ) -> Result<models::AuditTrailEntry, anyhow::Error>;
+    async fn get_audit_trail_entries(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Vec<models::AuditTrailEntry>, anyhow::Error>;
+    async fn get_audit_trail_entry(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<models::AuditTrailEntry>, anyhow::Error>;
+    async fn create_planning_session(
+        &self,
+        session: CreatePlanningSession,
+    ) -> Result<models::PlanningSession, anyhow::Error>;
+    async fn get_planning_session(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<models::PlanningSession>, anyhow::Error>;
+    async fn update_planning_session(
+        &self,
+        id: Uuid,
+        session: UpdatePlanningSession,
+    ) -> Result<(), anyhow::Error>;
+    async fn create_planning_telemetry(
+        &self,
+        telemetry: CreatePlanningTelemetry,
+    ) -> Result<models::PlanningTelemetry, anyhow::Error>;
+    async fn get_planning_telemetry(
+        &self,
+        plan_id: Uuid,
+        metric_type: Option<String>,
+    ) -> Result<Vec<models::PlanningTelemetry>, anyhow::Error>;
+    async fn create_planning_audit_event(
+        &self,
+        event: CreatePlanningAuditEvent,
+    ) -> Result<(), anyhow::Error>;
+    async fn get_planning_audit_events(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Vec<models::PlanningAuditEvent>, anyhow::Error>;
     async fn delete_execution_plan(&self, id: Uuid) -> Result<(), anyhow::Error>;
     async fn create_judge(&self, judge: CreateJudge) -> Result<models::Judge, anyhow::Error>;
     async fn get_judge(&self, id: Uuid) -> Result<Option<models::Judge>, anyhow::Error>;
     async fn get_judges(&self) -> Result<Vec<models::Judge>, anyhow::Error>;
-    async fn create_judge_evaluation(&self, evaluation: CreateJudgeEvaluation) -> Result<models::JudgeEvaluation, anyhow::Error>;
-    async fn get_judge_evaluations(&self, task_id: Uuid) -> Result<Vec<models::JudgeEvaluation>, anyhow::Error>;
+    async fn create_judge_evaluation(
+        &self,
+        evaluation: CreateJudgeEvaluation,
+    ) -> Result<models::JudgeEvaluation, anyhow::Error>;
+    async fn get_judge_evaluations(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Vec<models::JudgeEvaluation>, anyhow::Error>;
     async fn get_workers(&self) -> Result<Vec<models::Worker>, anyhow::Error>;
     async fn get_worker(&self, id: Uuid) -> Result<Option<models::Worker>, anyhow::Error>;
     async fn create_worker(&self, worker: CreateWorker) -> Result<models::Worker, anyhow::Error>;
-    async fn update_worker(&self, id: Uuid, update: UpdateWorker) -> Result<models::Worker, anyhow::Error>;
-    async fn get_waivers(&self, status: Option<String>) -> Result<Vec<models::Waiver>, anyhow::Error>;
+    async fn update_worker(
+        &self,
+        id: Uuid,
+        update: UpdateWorker,
+    ) -> Result<models::Worker, anyhow::Error>;
+    async fn get_waivers(
+        &self,
+        status: Option<String>,
+    ) -> Result<Vec<models::Waiver>, anyhow::Error>;
     async fn create_waiver(&self, waiver: CreateWaiver) -> Result<models::Waiver, anyhow::Error>;
-    async fn update_waiver(&self, id: Uuid, update: UpdateWaiver) -> Result<models::Waiver, anyhow::Error>;
-    async fn create_execution_result(&self, result: CreateExecutionResult) -> Result<models::PlanExecutionResult, anyhow::Error>;
-    async fn get_execution_result(&self, plan_id: Uuid) -> Result<Option<models::PlanExecutionResult>, anyhow::Error>;
-    async fn create_council_session(&self, session: CreateCouncilSession) -> Result<models::CouncilSession, anyhow::Error>;
-    async fn get_council_session(&self, session_id: Uuid) -> Result<Option<models::CouncilSession>, anyhow::Error>;
-    async fn get_council_session_by_task(&self, task_id: Uuid) -> Result<Option<models::CouncilSession>, anyhow::Error>;
-    async fn update_council_session(&self, session_id: Uuid, update: UpdateCouncilSession) -> Result<models::CouncilSession, anyhow::Error>;
+    async fn update_waiver(
+        &self,
+        id: Uuid,
+        update: UpdateWaiver,
+    ) -> Result<models::Waiver, anyhow::Error>;
+    async fn create_execution_result(
+        &self,
+        result: CreateExecutionResult,
+    ) -> Result<models::PlanExecutionResult, anyhow::Error>;
+    async fn get_execution_result(
+        &self,
+        plan_id: Uuid,
+    ) -> Result<Option<models::PlanExecutionResult>, anyhow::Error>;
+    async fn create_council_session(
+        &self,
+        session: CreateCouncilSession,
+    ) -> Result<models::CouncilSession, anyhow::Error>;
+    async fn get_council_session(
+        &self,
+        session_id: Uuid,
+    ) -> Result<Option<models::CouncilSession>, anyhow::Error>;
+    async fn get_council_session_by_task(
+        &self,
+        task_id: Uuid,
+    ) -> Result<Option<models::CouncilSession>, anyhow::Error>;
+    async fn update_council_session(
+        &self,
+        session_id: Uuid,
+        update: UpdateCouncilSession,
+    ) -> Result<models::CouncilSession, anyhow::Error>;
 }
 
 /// Create execution plan request
@@ -89,7 +166,7 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct ExecutionPlan {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
         pub session_id: Uuid,
         pub working_spec_id: String,
@@ -115,16 +192,14 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningSession {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
-    pub plan_id: Uuid,
+        pub plan_id: Uuid,
         pub status: String,
         #[schemars(with = "String")]
-
-    pub created_at: DateTime<Utc>,
+        pub created_at: DateTime<Utc>,
         #[schemars(with = "String")]
-
-    pub updated_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
 
@@ -132,32 +207,29 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Milestone {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
-    pub plan_id: Uuid,
+        pub plan_id: Uuid,
         pub title: String,
         pub description: String,
         pub status: String,
         #[schemars(with = "String")]
-
-    pub created_at: DateTime<Utc>,
+        pub created_at: DateTime<Utc>,
         #[schemars(with = "String")]
-
-    pub updated_at: DateTime<Utc>,
+        pub updated_at: DateTime<Utc>,
     }
 
     /// Planning audit event model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningAuditEvent {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
-    pub session_id: Uuid,
+        pub session_id: Uuid,
         pub event_type: String,
         pub description: String,
         #[schemars(with = "String")]
-
-    pub timestamp: DateTime<Utc>,
+        pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
 
@@ -165,22 +237,21 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct PlanningTelemetry {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
-    pub session_id: Uuid,
+        pub session_id: Uuid,
         pub metric_name: String,
         pub metric_value: f64,
         #[schemars(with = "String")]
-
-    pub timestamp: DateTime<Utc>,
+        pub timestamp: DateTime<Utc>,
         pub metadata: HashMap<String, serde_json::Value>,
     }
 
     /// Audit trail entry model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct AuditTrailEntry {
-    #[schemars(with = "String")]
-    pub id: Uuid,
+        #[schemars(with = "String")]
+        pub id: Uuid,
         pub event_type: String,
         pub description: String,
         #[schemars(with = "String")]
@@ -191,8 +262,8 @@ pub mod models {
     /// Worker model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Worker {
-    #[schemars(with = "String")]
-    pub id: Uuid,
+        #[schemars(with = "String")]
+        pub id: Uuid,
         pub name: String,
         pub worker_type: String,
         pub specialty: Option<String>,
@@ -212,9 +283,9 @@ pub mod models {
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Waiver {
         #[schemars(with = "String")]
-    pub id: Uuid,
+        pub id: Uuid,
         #[schemars(with = "String")]
-    pub plan_id: Uuid,
+        pub plan_id: Uuid,
         pub waiver_type: String,
         pub reason: String,
         pub approved_by: String,
@@ -228,8 +299,7 @@ pub mod models {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub mitigation_plan: Option<String>,
         #[schemars(with = "String")]
-
-    pub created_at: DateTime<Utc>,
+        pub created_at: DateTime<Utc>,
         #[schemars(with = "Option<String>")]
         pub expires_at: Option<DateTime<Utc>>,
         pub metadata: HashMap<String, serde_json::Value>,
@@ -238,8 +308,8 @@ pub mod models {
     /// Judge model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct Judge {
-    #[schemars(with = "String")]
-    pub id: Uuid,
+        #[schemars(with = "String")]
+        pub id: Uuid,
         pub name: String,
         pub judge_type: String,
         pub configuration: serde_json::Value,
@@ -254,8 +324,8 @@ pub mod models {
     /// Judge evaluation model
     #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
     pub struct JudgeEvaluation {
-    #[schemars(with = "String")]
-    pub id: Uuid,
+        #[schemars(with = "String")]
+        pub id: Uuid,
         #[schemars(with = "String")]
         pub judge_id: Uuid,
         #[schemars(with = "String")]
@@ -483,4 +553,3 @@ pub struct CostLimits {
     pub max_cost: f64,
     pub currency: String,
 }
-

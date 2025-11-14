@@ -1,8 +1,8 @@
 //! Multi-dimensional scoring system
 
-use schemars::JsonSchema;
 use crate::benchmark_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -26,7 +26,6 @@ pub struct MultiDimensionalScoringSystem {
     //    - Implement efficient scoring calculations
     //    - Handle large-scale scoring operations
     //    - Optimize scoring accuracy and reliability
-    
     /// Scoring dimensions and their weights
     scoring_dimensions: HashMap<String, f64>,
     /// Scoring algorithms available
@@ -46,9 +45,18 @@ impl MultiDimensionalScoringSystem {
         scoring_dimensions.insert("reliability".to_string(), 0.3);
 
         let mut scoring_algorithms = HashMap::new();
-        scoring_algorithms.insert("weighted_average".to_string(), ScoringAlgorithm::WeightedAverage);
-        scoring_algorithms.insert("normalized_sum".to_string(), ScoringAlgorithm::NormalizedSum);
-        scoring_algorithms.insert("geometric_mean".to_string(), ScoringAlgorithm::GeometricMean);
+        scoring_algorithms.insert(
+            "weighted_average".to_string(),
+            ScoringAlgorithm::WeightedAverage,
+        );
+        scoring_algorithms.insert(
+            "normalized_sum".to_string(),
+            ScoringAlgorithm::NormalizedSum,
+        );
+        scoring_algorithms.insert(
+            "geometric_mean".to_string(),
+            ScoringAlgorithm::GeometricMean,
+        );
 
         Self {
             scoring_dimensions,
@@ -223,7 +231,6 @@ const STRENGTH_THRESHOLD: f64 = 0.85;
 const WEAKNESS_THRESHOLD: f64 = 0.7;
 const IMPROVEMENT_TARGET: f64 = 0.85;
 
-
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ModelAggregate {
     count: usize,
@@ -262,7 +269,6 @@ impl ModelAggregate {
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MetricAverages {
     accuracy: f64,
@@ -271,7 +277,6 @@ pub struct MetricAverages {
     quality: f64,
     compliance: f64,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct MetricTotals {
@@ -338,15 +343,14 @@ const METRIC_WEIGHTS: MetricWeights = MetricWeights::new();
 
 // Supporting types for the scoring system
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScoringAlgorithm {
     WeightedAverage,
     NormalizedSum,
     GeometricMean,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NormalizationSettings {
     pub min_score: f64,
     pub max_score: f64,
@@ -363,15 +367,14 @@ impl Default for NormalizationSettings {
     }
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NormalizationMethod {
     MinMax,
     ZScore,
     Robust,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelBenchmarkingMetrics {
     pub accuracy: f64,
     pub speed: f64,

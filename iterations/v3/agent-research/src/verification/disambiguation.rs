@@ -3,18 +3,24 @@
 //! This module handles entity disambiguation using multiple strategies:
 //! exact matching, fuzzy matching, and context-based disambiguation.
 
-use std::collections::{HashMap, HashSet};
 use regex::Regex;
+use std::collections::{HashMap, HashSet};
 
+use crate::verification::types::{
+    DisambiguationMethod, Entity, EntityCandidate, EntityDisambiguation, EntityType,
+};
 use anyhow::Result;
-use crate::verification::types::{Entity, EntityType, EntityDisambiguation, EntityCandidate, DisambiguationMethod};
 
 /// Entity disambiguation engine
 pub struct EntityDisambiguator;
 
 impl EntityDisambiguator {
     /// Perform comprehensive entity disambiguation using multiple strategies
-    pub async fn disambiguate_entity(&self, entity: &Entity, context: &str) -> Result<EntityDisambiguation> {
+    pub async fn disambiguate_entity(
+        &self,
+        entity: &Entity,
+        context: &str,
+    ) -> Result<EntityDisambiguation> {
         let mut candidates = Vec::new();
 
         // Strategy 1: Exact match within context
@@ -67,7 +73,7 @@ impl EntityDisambiguator {
             Some(Entity {
                 id: format!("exact_{}", entity.id),
                 name: entity.name.clone(),
-                text: entity.name.clone(),  // Alias for name
+                text: entity.name.clone(), // Alias for name
                 entity_type: entity.entity_type.clone(),
                 confidence: 0.95,
                 context: Some(context.to_string()),
@@ -112,14 +118,14 @@ impl EntityDisambiguator {
 
         // Define patterns for different entity types
         let patterns = match entity.entity_type {
-            agent_agency_contracts::types::research::EntityType::Code | 
-            agent_agency_contracts::types::research::EntityType::CodeEntity => vec![
+            agent_agency_contracts::types::research::EntityType::Code
+            | agent_agency_contracts::types::research::EntityType::CodeEntity => vec![
                 r"\b(function|method|class|struct|module)\s+\w+\b",
                 r"\b\w+\(\)\s*\{",
                 r"\bconst\s+\w+\s*=",
             ],
-            agent_agency_contracts::types::research::EntityType::Technology |
-            agent_agency_contracts::types::research::EntityType::SystemComponent => vec![
+            agent_agency_contracts::types::research::EntityType::Technology
+            | agent_agency_contracts::types::research::EntityType::SystemComponent => vec![
                 r"\b(api|service|database|server)\s+\w+\b",
                 r"\bendpoint\s+[\w/]+\b",
                 r"\btable\s+\w+\b",
@@ -159,7 +165,12 @@ impl EntityDisambiguator {
         let mut best_score = 0.0;
 
         for candidate in candidates {
-            let score = candidate.confidence * if candidate.context.is_some() { 1.2 } else { 1.0 };
+            let score = candidate.confidence
+                * if candidate.context.is_some() {
+                    1.2
+                } else {
+                    1.0
+                };
 
             if score > best_score {
                 best_score = score;
@@ -210,7 +221,10 @@ impl EntityDisambiguator {
         let text_lower = text.to_lowercase();
 
         // Check for code-related keywords
-        if CODE_ENTITIES.iter().any(|&entity| text_lower.contains(entity)) {
+        if CODE_ENTITIES
+            .iter()
+            .any(|&entity| text_lower.contains(entity))
+        {
             return agent_agency_contracts::types::research::EntityType::Code;
         }
 
@@ -266,10 +280,32 @@ impl EntityDisambiguator {
 
 /// Common code/system entities for disambiguation
 static CODE_ENTITIES: &[&str] = &[
-    "function", "method", "class", "struct", "module", "package", "library",
-    "api", "endpoint", "service", "database", "table", "column", "query",
-    "algorithm", "model", "component", "system", "application", "server",
-    "client", "user", "admin", "developer", "code", "implementation",
+    "function",
+    "method",
+    "class",
+    "struct",
+    "module",
+    "package",
+    "library",
+    "api",
+    "endpoint",
+    "service",
+    "database",
+    "table",
+    "column",
+    "query",
+    "algorithm",
+    "model",
+    "component",
+    "system",
+    "application",
+    "server",
+    "client",
+    "user",
+    "admin",
+    "developer",
+    "code",
+    "implementation",
 ];
 
 /// Public API function for entity disambiguation

@@ -51,16 +51,20 @@ impl TaskExecutorProvider {
     }
 
     /// Set the default factory function (should be called from agent-workers)
-    /// 
+    ///
     /// # Example
     /// ```rust,ignore
     /// use agent_agency_contracts::task_executor_provider::TaskExecutorProvider;
     /// use agent_workers::task_executor_factory;
-    /// 
+    ///
     /// TaskExecutorProvider::set_default_factory(task_executor_factory());
     /// ```
-    pub fn set_default_factory(factory: TaskExecutorFactory) -> Result<(), TaskExecutorProviderError> {
-        DEFAULT_FACTORY.set(factory).map_err(|_| TaskExecutorProviderError::FactoryAlreadySet)
+    pub fn set_default_factory(
+        factory: TaskExecutorFactory,
+    ) -> Result<(), TaskExecutorProviderError> {
+        DEFAULT_FACTORY
+            .set(factory)
+            .map_err(|_| TaskExecutorProviderError::FactoryAlreadySet)
     }
 }
 
@@ -100,7 +104,10 @@ pub mod tests {
             &self,
             _task_spec: crate::task_executor::TaskSpec,
             _worker_id: uuid::Uuid,
-        ) -> Result<crate::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+        ) -> Result<
+            crate::task_executor::TaskExecutionResult,
+            Box<dyn std::error::Error + Send + Sync>,
+        > {
             Ok(crate::task_executor::TaskExecutionResult {
                 execution_id: uuid::Uuid::new_v4(),
                 task_id: _task_spec.id,
@@ -120,11 +127,19 @@ pub mod tests {
             task_spec: crate::task_executor::TaskSpec,
             worker_id: uuid::Uuid,
             _circuit_breaker_enabled: bool,
-        ) -> Result<crate::task_executor::TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
+        ) -> Result<
+            crate::task_executor::TaskExecutionResult,
+            Box<dyn std::error::Error + Send + Sync>,
+        > {
             self.execute_task(task_spec, worker_id).await
         }
 
-        async fn health_check(&self) -> Result<crate::task_executor::TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+        async fn health_check(
+            &self,
+        ) -> Result<
+            crate::task_executor::TaskExecutorHealth,
+            Box<dyn std::error::Error + Send + Sync>,
+        > {
             Ok(crate::task_executor::TaskExecutorHealth {
                 status: crate::task_executor::HealthStatus::Healthy,
                 last_execution_time: Some(chrono::Utc::now()),
@@ -135,7 +150,12 @@ pub mod tests {
             })
         }
 
-        async fn get_execution_stats(&self) -> Result<crate::task_executor::TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+        async fn get_execution_stats(
+            &self,
+        ) -> Result<
+            crate::task_executor::TaskExecutionStats,
+            Box<dyn std::error::Error + Send + Sync>,
+        > {
             Ok(crate::task_executor::TaskExecutionStats {
                 total_executions: 100,
                 successful_executions: 95,
@@ -147,7 +167,11 @@ pub mod tests {
             })
         }
 
-        async fn cancel_task_execution(&self, _task_id: uuid::Uuid, _worker_id: uuid::Uuid) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        async fn cancel_task_execution(
+            &self,
+            _task_id: uuid::Uuid,
+            _worker_id: uuid::Uuid,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Ok(())
         }
     }

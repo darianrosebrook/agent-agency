@@ -7,24 +7,26 @@
 //! - Performance requirements
 //! - Scope compliance
 
-use tracing::{info, error};
-use regex::Regex;
 #[cfg(feature = "full")]
 use futures::future::join_all;
+use regex::Regex;
+use tracing::{error, info};
 
 // ML/NLP imports for advanced assertion generation
-#[cfg(feature = "full")]
-use system_federated_ml::claim_extraction::ClaimExtractor;
-#[cfg(feature = "full")]
-use system_federated_ml::claim_extraction::claim_extractor::{ExtractionPattern, PatternType};
-#[cfg(feature = "full")]
-use system_federated_ml::fact_verification::FactVerifier;
-#[cfg(feature = "full")]
-use system_federated_ml::fact_verification::fact_verifier::{VerificationMethod, VerificationPriority};
 #[cfg(feature = "full")]
 use agent_research::evidence::collector::EvidenceCollector;
 #[cfg(feature = "full")]
 use agent_research::reinforcement::QLearning;
+#[cfg(feature = "full")]
+use system_federated_ml::claim_extraction::claim_extractor::{ExtractionPattern, PatternType};
+#[cfg(feature = "full")]
+use system_federated_ml::claim_extraction::ClaimExtractor;
+#[cfg(feature = "full")]
+use system_federated_ml::fact_verification::fact_verifier::{
+    VerificationMethod, VerificationPriority,
+};
+#[cfg(feature = "full")]
+use system_federated_ml::fact_verification::FactVerifier;
 
 /// Framework for asserting test outcomes
 pub struct AssertionFramework {
@@ -49,13 +51,20 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("Council rejected task: {}", verdict.reason.as_deref().unwrap_or("no reason provided")))
+                Some(format!(
+                    "Council rejected task: {}",
+                    verdict.reason.as_deref().unwrap_or("no reason provided")
+                ))
             },
         );
     }
 
     /// Assert CAWS compliance
-    pub fn assert_caws_compliant(&mut self, compliance_result: &CawsComplianceResult, description: &str) {
+    pub fn assert_caws_compliant(
+        &mut self,
+        compliance_result: &CawsComplianceResult,
+        description: &str,
+    ) {
         let passed = compliance_result.compliant;
         self.record_assertion(
             AssertionType::CawsCompliance,
@@ -64,7 +73,10 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("CAWS violations: {:?}", compliance_result.violations))
+                Some(format!(
+                    "CAWS violations: {:?}",
+                    compliance_result.violations
+                ))
             },
         );
     }
@@ -79,7 +91,10 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("Compilation failed: {}", String::from_utf8_lossy(&output.stderr)))
+                Some(format!(
+                    "Compilation failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ))
             },
         );
     }
@@ -94,7 +109,10 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("Tests failed: {}", String::from_utf8_lossy(&output.stderr)))
+                Some(format!(
+                    "Tests failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ))
             },
         );
     }
@@ -109,7 +127,11 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("Coverage {:.2}% below threshold {:.2}%", coverage * 100.0, threshold * 100.0))
+                Some(format!(
+                    "Coverage {:.2}% below threshold {:.2}%",
+                    coverage * 100.0,
+                    threshold * 100.0
+                ))
             },
         );
     }
@@ -124,15 +146,29 @@ impl AssertionFramework {
             if passed {
                 None
             } else {
-                Some(format!("Mutation score {:.2}% below threshold {:.2}%", score * 100.0, threshold * 100.0))
+                Some(format!(
+                    "Mutation score {:.2}% below threshold {:.2}%",
+                    score * 100.0,
+                    threshold * 100.0
+                ))
             },
         );
     }
 
     /// Assert scope compliance (no files modified outside allowed paths)
-    pub fn assert_scope_compliance(&mut self, modified_files: &[String], allowed_patterns: &[Regex], description: &str) {
-        let violations: Vec<&String> = modified_files.iter()
-            .filter(|file| !allowed_patterns.iter().any(|pattern| pattern.is_match(file)))
+    pub fn assert_scope_compliance(
+        &mut self,
+        modified_files: &[String],
+        allowed_patterns: &[Regex],
+        description: &str,
+    ) {
+        let violations: Vec<&String> = modified_files
+            .iter()
+            .filter(|file| {
+                !allowed_patterns
+                    .iter()
+                    .any(|pattern| pattern.is_match(file))
+            })
             .collect();
 
         let passed = violations.is_empty();
@@ -149,11 +185,18 @@ impl AssertionFramework {
     }
 
     /// Assert citations are valid and match sources
-    pub fn assert_citation_integrity(&mut self, citations: &[Citation], sources: &[SourceFile], description: &str) {
+    pub fn assert_citation_integrity(
+        &mut self,
+        citations: &[Citation],
+        sources: &[SourceFile],
+        description: &str,
+    ) {
         let mut invalid_citations = Vec::new();
 
         for citation in citations {
-            let source_exists = sources.iter().any(|source| source.matches_citation(citation));
+            let source_exists = sources
+                .iter()
+                .any(|source| source.matches_citation(citation));
             if !source_exists {
                 invalid_citations.push(citation.clone());
             }
@@ -174,7 +217,12 @@ impl AssertionFramework {
 
     /// Assert no hallucination detected in generated content
     #[cfg(feature = "full")]
-    pub async fn assert_no_hallucination(&mut self, content: &str, fact_checker: &FactChecker, description: &str) {
+    pub async fn assert_no_hallucination(
+        &mut self,
+        content: &str,
+        fact_checker: &FactChecker,
+        description: &str,
+    ) {
         let hallucination_detected = fact_checker.detect_hallucination(content).await;
         let passed = !hallucination_detected;
         self.record_assertion(
@@ -196,9 +244,16 @@ impl AssertionFramework {
 
     /// Get summary of failed assertions
     pub fn failure_summary(&self) -> Vec<String> {
-        self.results.iter()
+        self.results
+            .iter()
             .filter(|r| !r.passed)
-            .map(|r| format!("{}: {}", r.description, r.error_message.as_deref().unwrap_or("unknown error")))
+            .map(|r| {
+                format!(
+                    "{}: {}",
+                    r.description,
+                    r.error_message.as_deref().unwrap_or("unknown error")
+                )
+            })
             .collect()
     }
 
@@ -208,7 +263,13 @@ impl AssertionFramework {
     }
 
     /// Record an assertion result
-    pub fn record_assertion(&mut self, assertion_type: AssertionType, passed: bool, description: &str, error_message: Option<String>) {
+    pub fn record_assertion(
+        &mut self,
+        assertion_type: AssertionType,
+        passed: bool,
+        description: &str,
+        error_message: Option<String>,
+    ) {
         let type_str = assertion_type.as_str().to_string();
 
         let result = AssertionResult {
@@ -221,7 +282,12 @@ impl AssertionFramework {
         if passed {
             info!("✓ {}: {}", type_str, description);
         } else {
-            error!("✗ {}: {} - {}", type_str, description, result.error_message.as_deref().unwrap_or("unknown error"));
+            error!(
+                "✗ {}: {} - {}",
+                type_str,
+                description,
+                result.error_message.as_deref().unwrap_or("unknown error")
+            );
         }
 
         self.results.push(result);
@@ -328,9 +394,9 @@ pub enum ClaimType {
 /// Result of claim verification
 #[derive(Debug, Clone)]
 pub enum ClaimVerification {
-    Verified(f64),     // Confidence score
+    Verified(f64),      // Confidence score
     Hallucination(f64), // Confidence score
-    Uncertain,         // Cannot determine
+    Uncertain,          // Cannot determine
 }
 
 /// Advanced ML-powered fact checker for hallucination detection
@@ -388,13 +454,17 @@ impl FactChecker {
         let mut confidence_score = 0.0;
 
         // Process claims concurrently for better performance
-        let verification_futures: Vec<_> = claims.iter().enumerate().map(|(idx, claim)| {
-            let claim_clone = claim.clone();
-            async move {
-                let result = self.verify_claim_with_ml(&claim_clone).await;
-                (idx, result, claim_clone)
-            }
-        }).collect();
+        let verification_futures: Vec<_> = claims
+            .iter()
+            .enumerate()
+            .map(|(idx, claim)| {
+                let claim_clone = claim.clone();
+                async move {
+                    let result = self.verify_claim_with_ml(&claim_clone).await;
+                    (idx, result, claim_clone)
+                }
+            })
+            .collect();
 
         let verification_results = join_all(verification_futures).await;
 
@@ -426,7 +496,10 @@ impl FactChecker {
     }
 
     /// Extract atomic claims from content using ML techniques
-    async fn extract_atomic_claims(&self, content: &str) -> Vec<system_federated_ml::evidence_types::AtomicClaim> {
+    async fn extract_atomic_claims(
+        &self,
+        content: &str,
+    ) -> Vec<system_federated_ml::evidence_types::AtomicClaim> {
         // Use the claim extractor to break down content
         let context = system_federated_ml::evidence_types::ProcessingContext {
             source_id: "test_content".to_string(),
@@ -438,31 +511,41 @@ impl FactChecker {
                 enable_source_validation: false,
             },
         };
-        
-        match self.claim_extractor.extract_claims(content, "general", &context).await {
+
+        match self
+            .claim_extractor
+            .extract_claims(content, "general", &context)
+            .await
+        {
             Ok(result) => result.claims,
             Err(e) => {
                 warn!("Failed to extract claims: {}", e);
                 // Fallback to simple sentence splitting
-                content.split('.')
+                content
+                    .split('.')
                     .filter(|s| !s.trim().is_empty())
                     .enumerate()
-                    .map(|(idx, sentence)| system_federated_ml::evidence_types::AtomicClaim {
-                        id: format!("fallback_{}", idx),
-                        text: sentence.trim().to_string(),
-                        claim_type: system_federated_ml::evidence_types::ClaimType::Factual,
-                        entities: vec![],
-                        confidence: 0.5,
-                        positions: vec![],
-                        evidence: vec![],
-                    })
+                    .map(
+                        |(idx, sentence)| system_federated_ml::evidence_types::AtomicClaim {
+                            id: format!("fallback_{}", idx),
+                            text: sentence.trim().to_string(),
+                            claim_type: system_federated_ml::evidence_types::ClaimType::Factual,
+                            entities: vec![],
+                            confidence: 0.5,
+                            positions: vec![],
+                            evidence: vec![],
+                        },
+                    )
                     .collect()
             }
         }
     }
 
     /// Verify a single claim using ML-based fact verification
-    async fn verify_claim_with_ml(&self, claim: &system_federated_ml::evidence_types::AtomicClaim) -> ClaimVerification {
+    async fn verify_claim_with_ml(
+        &self,
+        claim: &system_federated_ml::evidence_types::AtomicClaim,
+    ) -> ClaimVerification {
         // Convert to ProcessingContext
         let context = system_federated_ml::evidence_types::ProcessingContext {
             source_id: "test_content".to_string(),
@@ -474,9 +557,13 @@ impl FactChecker {
                 enable_source_validation: false,
             },
         };
-        
+
         // Use fact verifier to check claim against known facts
-        match self.fact_verifier.verify_claims(&[claim.clone()], &context).await {
+        match self
+            .fact_verifier
+            .verify_claims(&[claim.clone()], &context)
+            .await
+        {
             Ok(results) => {
                 if let Some(result) = results.first() {
                     if result.confidence > 0.8 {
@@ -494,7 +581,9 @@ impl FactChecker {
                 use tracing::warn;
                 warn!("Fact verification failed: {}", e);
                 // Check against known facts as fallback
-                let has_supporting_fact = self.known_facts.iter()
+                let has_supporting_fact = self
+                    .known_facts
+                    .iter()
                     .any(|fact| claim.text.to_lowercase().contains(&fact.to_lowercase()));
 
                 if has_supporting_fact {
@@ -507,7 +596,10 @@ impl FactChecker {
     }
 
     /// Detect suspicious semantic patterns that might indicate hallucination
-    fn detect_suspicious_semantics(&self, claim: &system_federated_ml::evidence_types::AtomicClaim) -> bool {
+    fn detect_suspicious_semantics(
+        &self,
+        claim: &system_federated_ml::evidence_types::AtomicClaim,
+    ) -> bool {
         let content_lower = claim.text.to_lowercase();
 
         // Patterns that often indicate hallucination
@@ -522,14 +614,23 @@ impl FactChecker {
             "industry-leading solution",
         ];
 
-        suspicious_patterns.iter()
+        suspicious_patterns
+            .iter()
             .any(|pattern| content_lower.contains(pattern))
     }
 
     /// Update the reinforcement learning model with detection results
-    fn update_detection_model(&mut self, claims: &[system_federated_ml::evidence_types::AtomicClaim], hallucination_detected: bool) {
+    fn update_detection_model(
+        &mut self,
+        claims: &[system_federated_ml::evidence_types::AtomicClaim],
+        hallucination_detected: bool,
+    ) {
         // Create state representation from claims
-        let state = format!("claims_{}_hallucination_{}", claims.len(), hallucination_detected);
+        let state = format!(
+            "claims_{}_hallucination_{}",
+            claims.len(),
+            hallucination_detected
+        );
 
         // Get available actions (detection strategies)
         let available_actions = vec![
@@ -540,7 +641,9 @@ impl FactChecker {
         ];
 
         // Select best action using Q-learning
-        let action = self.reinforcement_learner.select_action(&state, &available_actions);
+        let action = self
+            .reinforcement_learner
+            .select_action(&state, &available_actions);
 
         // Calculate reward based on detection accuracy
         // Reward is higher for correct detections and penalizes false positives/negatives
@@ -552,7 +655,7 @@ impl FactChecker {
             // This encourages precision over recall
             -0.1
         };
-        
+
         // In a full implementation, this would also consider:
         // - Confidence score of the detection
         // - Severity of the hallucination
@@ -561,7 +664,7 @@ impl FactChecker {
 
         // Update Q-values (next state would be based on actual outcomes)
         let next_state = format!("result_{}", hallucination_detected);
-        self.reinforcement_learner.update(&state, &action, reward, &next_state);
+        self.reinforcement_learner
+            .update(&state, &action, reward, &next_state);
     }
-
 }

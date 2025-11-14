@@ -20,19 +20,18 @@
 //! 3. **LLM Gray-Zone Analysis**: Use inference for ethical judgment calls
 //! 4. **Verdict Merging**: Combine deterministic results with LLM reasoning
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use tracing::{debug, instrument, warn};
 use serde_json;
+use std::sync::Arc;
+use tracing::{debug, instrument, warn};
 
 use agent_agency_contracts::{
-    JudgeEngine, JudgeVerdict, JudgePrompt, JudgeType, VerdictLabel,
-    Violation, RubricItem, WorkingSpecEvidence,
-    invariants::Severity as InvariantsSeverity, judge_io::Severity,
+    invariants::Severity as InvariantsSeverity, judge_io::Severity, JudgeEngine, JudgePrompt,
+    JudgeType, JudgeVerdict, RubricItem, VerdictLabel, Violation, WorkingSpecEvidence,
 };
 
-use crate::{ReviewContext, CouncilResult, CouncilError};
 use super::common::{Judge, JudgeUtils};
+use crate::{CouncilError, CouncilResult, ReviewContext};
 
 /// Constitutional Judge for ethical and compliance evaluation
 #[derive(Debug)]
@@ -66,7 +65,8 @@ impl Default for ConstitutionalRubric {
             ethics_items: vec![
                 RubricItem {
                     id: "ETHICS-001".to_string(),
-                    description: "Actions align with human values and ethical principles".to_string(),
+                    description: "Actions align with human values and ethical principles"
+                        .to_string(),
                     weight: 0.9,
                     evidence_requirements: vec!["ethical_impact_assessment".to_string()],
                 },
@@ -82,7 +82,10 @@ impl Default for ConstitutionalRubric {
                     id: "PRIVACY-001".to_string(),
                     description: "User data is handled securely and privately".to_string(),
                     weight: 0.9,
-                    evidence_requirements: vec!["privacy_policy".to_string(), "data_handling".to_string()],
+                    evidence_requirements: vec![
+                        "privacy_policy".to_string(),
+                        "data_handling".to_string(),
+                    ],
                 },
                 RubricItem {
                     id: "PRIVACY-002".to_string(),
@@ -143,7 +146,11 @@ impl ConstitutionalJudge {
     }
 
     /// Build LLM prompt for constitutional analysis (implementation method)
-    fn build_prompt_impl(&self, ctx: &ReviewContext, deterministic_violations: &[Violation]) -> JudgePrompt {
+    fn build_prompt_impl(
+        &self,
+        ctx: &ReviewContext,
+        _deterministic_violations: &[Violation],
+    ) -> JudgePrompt {
         let rubric = self.build_rubric();
 
         JudgePrompt {
@@ -217,9 +224,11 @@ impl ConstitutionalJudge {
     fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         // Run CAWS invariant checks
         let invariant_results = crate::run_caws_invariants(&ctx.working_spec);
-        
+
         // Convert ViolationLocation to Violation
-        invariant_results.checks.iter()
+        invariant_results
+            .checks
+            .iter()
             .flat_map(|check| &check.violations)
             .map(|vl| Violation {
                 rule_id: vl.rule_id.clone(),
@@ -240,13 +249,17 @@ impl ConstitutionalJudge {
     #[allow(dead_code)] // Part of trait implementation, may be called via trait
     #[instrument(skip(self, ctx), fields(judge = "constitutional", spec_id = %ctx.working_spec.id))]
     async fn review_spec(&self, ctx: &ReviewContext) -> CouncilResult<JudgeVerdict> {
-        debug!("🧑‍⚖️  Constitutional Judge reviewing spec {}", ctx.working_spec.id);
+        debug!(
+            "🧑‍⚖️  Constitutional Judge reviewing spec {}",
+            ctx.working_spec.id
+        );
 
         // STEP 1: Run deterministic CAWS invariant checks
         let violations = self.run_deterministic_checks_impl(ctx);
 
         // STEP 2: Check for critical invariant violations (all invariants are non-waivable)
-        let critical_violations: Vec<Violation> = violations.iter()
+        let critical_violations: Vec<Violation> = violations
+            .iter()
             .filter(|v| v.severity == Severity::Critical)
             .cloned()
             .collect();
@@ -259,7 +272,8 @@ impl ConstitutionalJudge {
                 score: 0.0,
                 rationale: format!(
                     "Rejected due to non-waivable CAWS violations: {}",
-                    violations.iter()
+                    violations
+                        .iter()
                         .map(|v| v.description.as_str())
                         .collect::<Vec<_>>()
                         .join(", ")
@@ -274,7 +288,10 @@ impl ConstitutionalJudge {
 
         // STEP 4: Execute engine (may hit prompt cache)
         let req = JudgeUtils::build_request(prompt, 256); // Allow longer responses for constitutional analysis
-        let llm_verdict = self.engine.complete(req).await
+        let llm_verdict = self
+            .engine
+            .complete(req)
+            .await
             .map_err(|e| CouncilError::Engine(e))?;
 
         // STEP 5: Merge deterministic findings with LLM verdict

@@ -2,8 +2,8 @@
 //!
 //! @author @darianrosebrook
 
-use schemars::JsonSchema;
 use crate::signer::SigningAlgorithm;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

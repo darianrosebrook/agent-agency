@@ -53,9 +53,9 @@ impl Default for FilesystemConfig {
 impl Default for SystemHealthMonitorConfig {
     fn default() -> Self {
         Self {
-            collection_interval_ms: 30000, // 30 seconds
+            collection_interval_ms: 30000,   // 30 seconds
             health_check_interval_ms: 60000, // 1 minute
-            retention_period_ms: 3600000, // 1 hour
+            retention_period_ms: 3600000,    // 1 hour
             enable_circuit_breaker: true,
             circuit_breaker_failure_threshold: 5,
             circuit_breaker_recovery_timeout_ms: 60000, // 1 minute
@@ -110,7 +110,7 @@ impl Default for RedisConfig {
             key_prefix: "agent_agency:metrics".to_string(),
             enabled: false,
             metrics_ttl_seconds: 3600, // 1 hour
-            cache_ttl_seconds: 300,     // 5 minutes
+            cache_ttl_seconds: 300,    // 5 minutes
         }
     }
 }
@@ -797,4 +797,3 @@ pub struct ComponentHealthReport {
     /// Additional details
     pub details: HashMap<String, String>,
 }
-

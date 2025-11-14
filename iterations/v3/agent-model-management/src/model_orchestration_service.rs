@@ -240,23 +240,23 @@ impl ModelOrchestrator for AgentModelOrchestrationService {
         // This ensures the backend is ready before marking the model as ready
         match self.inference_manager.get_or_create_backend(&capabilities.model_type).await {
             Ok(backend) => {
-                debug!("Prepared backend {} for model {} (instance: {})", 
+                debug!("Prepared backend {} for model {} (instance: {})",
                        backend.name(), model_id, instance_id);
-                
+
                 // Update state to ready only after backend is prepared
                 if let Some(instance) = instances.get_mut(&instance_id) {
                     instance.state = ModelState::Ready;
                 }
-                
+
                 info!("Loaded model instance: {} with backend: {}", instance_id, backend.name());
                 Ok(instance_id)
             }
             Err(e) => {
                 warn!("Failed to prepare backend for model {}: {}", model_id, e);
-                
+
                 // Remove failed instance from registry
                 instances.remove(&instance_id);
-                
+
                 Err(OrchestrationError::ModelNotFound(format!(
                     "Failed to load model {}: {}", model_id, e
                 )))

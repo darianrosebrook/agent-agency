@@ -1,10 +1,10 @@
 //! Contextual bracket extraction and application
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use crate::extraction_types::*;
 use anyhow::Result;
 use regex::Regex;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
 
@@ -84,20 +84,32 @@ impl ContextBracketAdder {
         for bracket in brackets {
             if bracket.starts_with("temporal:") {
                 requirements.temporal_constraints = Some(bracket[9..].to_string());
-                requirements.test_types.push("temporal_verification".to_string());
+                requirements
+                    .test_types
+                    .push("temporal_verification".to_string());
             } else if bracket.starts_with("scope:") {
-                requirements.scope_constraints.push(bracket[6..].to_string());
+                requirements
+                    .scope_constraints
+                    .push(bracket[6..].to_string());
             } else if bracket.starts_with("condition:") {
-                requirements.test_types.push("conditional_verification".to_string());
+                requirements
+                    .test_types
+                    .push("conditional_verification".to_string());
             }
         }
 
         // Add basic verification requirements
-        if statement.contains("performance") || statement.contains("speed") || statement.contains("time") {
+        if statement.contains("performance")
+            || statement.contains("speed")
+            || statement.contains("time")
+        {
             requirements.test_types.push("performance_test".to_string());
         }
 
-        if statement.contains("security") || statement.contains("safe") || statement.contains("protect") {
+        if statement.contains("security")
+            || statement.contains("safe")
+            || statement.contains("protect")
+        {
             requirements.test_types.push("security_test".to_string());
         }
 
@@ -190,7 +202,10 @@ impl ContextBracketAdder {
     /// Build scope pattern regexes
     fn build_scope_patterns() -> Vec<Regex> {
         vec![
-            Regex::new(r"(?:in|within|for)\s+(?:the\s+)?([^,.]+(?:system|component|module|service))").unwrap(),
+            Regex::new(
+                r"(?:in|within|for)\s+(?:the\s+)?([^,.]+(?:system|component|module|service))",
+            )
+            .unwrap(),
             Regex::new(r"(?:across|throughout)\s+(?:the\s+)?([^,.]+)").unwrap(),
             Regex::new(r"(?:only|exclusively)\s+(?:in|for|within)\s+([^,.]+)").unwrap(),
         ]
@@ -208,7 +223,7 @@ impl ContextBracketAdder {
 
 /// Verification requirements derived from contextual brackets
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationRequirements {
     /// Types of tests needed for verification
     pub test_types: Vec<String>,
@@ -247,14 +262,20 @@ impl BracketValidator {
 
             let parts: Vec<&str> = bracket.split(':').collect();
             if parts.len() != 2 {
-                return Err(anyhow::anyhow!("Bracket must have exactly one colon: {}", bracket));
+                return Err(anyhow::anyhow!(
+                    "Bracket must have exactly one colon: {}",
+                    bracket
+                ));
             }
 
             let bracket_type = parts[0];
             let bracket_value = parts[1];
 
             if bracket_type.is_empty() || bracket_value.is_empty() {
-                return Err(anyhow::anyhow!("Bracket type and value cannot be empty: {}", bracket));
+                return Err(anyhow::anyhow!(
+                    "Bracket type and value cannot be empty: {}",
+                    bracket
+                ));
             }
         }
 
@@ -271,13 +292,15 @@ impl BracketValidator {
                 let key = parts[0];
                 let value = parts[1];
 
-                merged.entry(key.to_string())
+                merged
+                    .entry(key.to_string())
                     .or_insert_with(Vec::new)
                     .push(value.to_string());
             }
         }
 
-        merged.into_iter()
+        merged
+            .into_iter()
             .map(|(bracket_type, values)| {
                 if values.len() == 1 {
                     format!("{}:{}", bracket_type, values[0])

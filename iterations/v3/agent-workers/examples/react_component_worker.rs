@@ -17,8 +17,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize service registry and register core services
     let mcp_integration = worker_pool.mcp_integration();
-    let mut service_registry = crate::services::create_default_service_registry(mcp_integration.clone()).await?;
-    println!("✅ Registered core services: {:?}", service_registry.get_registered_services());
+    let mut service_registry =
+        crate::services::create_default_service_registry(mcp_integration.clone()).await?;
+    println!(
+        "✅ Registered core services: {:?}",
+        service_registry.get_registered_services()
+    );
 
     // Register a React component specialist worker
     // This worker specializes in React but uses DYNAMICALLY REGISTERED tools
@@ -34,10 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         speed_score: 0.7,
     };
 
-    let worker_handle = worker_pool.register_worker(
-        WorkerSpecialty::ReactComponent,
-        capabilities
-    ).await.map_err(|e| format!("Failed to register worker: {}", e))?;
+    let worker_handle = worker_pool
+        .register_worker(WorkerSpecialty::ReactComponent, capabilities)
+        .await
+        .map_err(|e| format!("Failed to register worker: {}", e))?;
     println!("✅ Registered React component worker: {}", worker_handle.id);
 
     // Demonstrate dynamic tool discovery from registered services
@@ -58,7 +62,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         required_tools: vec!["knowledge_search".to_string()],
         parameters: {
             let mut params = HashMap::new();
-            params.insert("query".to_string(), serde_json::json!("React functional components best practices"));
+            params.insert(
+                "query".to_string(),
+                serde_json::json!("React functional components best practices"),
+            );
             params
         },
         timeout_seconds: Some(30),
@@ -68,7 +75,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match worker_pool.execute_task(knowledge_task).await {
         Ok(result) => println!("✅ Knowledge search completed using dynamically registered tool"),
-        Err(e) => println!("ℹ️  Knowledge search simulated (tool execution not fully implemented): {}", e),
+        Err(e) => println!(
+            "ℹ️  Knowledge search simulated (tool execution not fully implemented): {}",
+            e
+        ),
     }
 
     // Example 2: Web search using dynamically registered tool
@@ -80,7 +90,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         required_tools: vec!["web_search".to_string()],
         parameters: {
             let mut params = HashMap::new();
-            params.insert("query".to_string(), serde_json::json!("NextJS 16 new features"));
+            params.insert(
+                "query".to_string(),
+                serde_json::json!("NextJS 16 new features"),
+            );
             params
         },
         timeout_seconds: Some(20),
@@ -90,7 +103,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match worker_pool.execute_task(web_search_task).await {
         Ok(result) => println!("✅ Web search completed using dynamically registered tool"),
-        Err(e) => println!("ℹ️  Web search simulated (tool execution not fully implemented): {}", e),
+        Err(e) => println!(
+            "ℹ️  Web search simulated (tool execution not fully implemented): {}",
+            e
+        ),
     }
 
     // Example 3: File operations using dynamically registered tools
@@ -112,7 +128,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match worker_pool.execute_task(file_read_task).await {
         Ok(result) => println!("✅ File reading completed using dynamically registered tool"),
-        Err(e) => println!("ℹ️  File reading simulated (tool execution not fully implemented): {}", e),
+        Err(e) => println!(
+            "ℹ️  File reading simulated (tool execution not fully implemented): {}",
+            e
+        ),
     }
 
     // Show worker pool statistics

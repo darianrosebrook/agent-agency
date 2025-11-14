@@ -1,13 +1,12 @@
 //! Database integration for knowledge seeker
 
-use std::sync::Arc;
-use data_infrastructure::DatabaseClient;
 use anyhow::Result;
+use data_infrastructure::DatabaseClient;
+use std::sync::Arc;
 
-/// Database manager for research operations
-
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+/// Database manager for research operations
+use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub struct DatabaseManager {
     client: Arc<DatabaseClient>,
@@ -20,13 +19,19 @@ impl DatabaseManager {
     }
 
     /// Store research results in database
-    pub async fn store_results(&self, _results: &[crate::research_types::ResearchResult]) -> Result<()> {
+    pub async fn store_results(
+        &self,
+        _results: &[crate::research_types::ResearchResult],
+    ) -> Result<()> {
         // Placeholder for database storage
         Ok(())
     }
 
     /// Retrieve cached research results
-    pub async fn get_cached_results(&self, _query: &str) -> Result<Option<Vec<crate::research_types::ResearchResult>>> {
+    pub async fn get_cached_results(
+        &self,
+        _query: &str,
+    ) -> Result<Option<Vec<crate::research_types::ResearchResult>>> {
         // Placeholder for cache retrieval
         Ok(None)
     }

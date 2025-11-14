@@ -2,16 +2,16 @@
 //!
 //! Provides clean integration points for MCP and orchestration systems.
 
-use schemars::JsonSchema;
-use crate::validator::{CawsValidator, ValidationResult, ValidationContext};
-use crate::validation_budget::{BudgetChecker, BudgetLimits};
 use crate::policy::CawsPolicy;
+use crate::validation_budget::{BudgetChecker, BudgetLimits};
+use crate::validator::{CawsValidator, ValidationContext, ValidationResult};
+use schemars::JsonSchema;
 // Removed unused waiver imports
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 // Removed unused HashMap import
 
 // Import ExecutionMode from contracts
@@ -185,11 +185,8 @@ impl McpCawsIntegration {
     pub fn new() -> Self {
         let policy = Arc::new(CawsPolicy::default());
         let validator = Arc::new(CawsValidator::new((*policy).clone()));
-        
-        Self {
-            validator,
-            policy,
-        }
+
+        Self { validator, policy }
     }
 
     pub async fn validate_tool_manifest(
@@ -197,7 +194,8 @@ impl McpCawsIntegration {
         manifest: &serde_json::Value,
     ) -> Result<McpValidationResult, McpIntegrationError> {
         // Extract tool information from manifest
-        let tool_id = manifest.get("name")
+        let tool_id = manifest
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
@@ -245,10 +243,10 @@ impl McpCawsIntegration {
             max_memory_mb: 1024,
             max_cost_cents: Some(1000),
         });
-        
+
         // Calculate estimated cost based on tool complexity
         let estimated_cost = self.calculate_tool_execution_cost(context)?;
-        
+
         // Check against budget limits
         let budget_state = budget_checker.check_budget(&crate::validation_budget::BudgetState {
             files_used: 0,
@@ -258,39 +256,59 @@ impl McpCawsIntegration {
             cost_used_cents: (estimated_cost * 100.0) as u64,
             last_updated: chrono::Utc::now(),
         });
-        
+
         // Generate warnings for budget utilization
         let mut warnings = Vec::new();
-        if budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0) > &80.0 {
-            warnings.push(format!("High budget utilization: {:.1}%", 
-                budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0)));
+        if budget_state
+            .utilization_percentage
+            .get("cost_cents")
+            .unwrap_or(&0.0)
+            > &80.0
+        {
+            warnings.push(format!(
+                "High budget utilization: {:.1}%",
+                budget_state
+                    .utilization_percentage
+                    .get("cost_cents")
+                    .unwrap_or(&0.0)
+            ));
         }
         if !budget_state.violations.is_empty() {
-            warnings.push(format!("Budget violations detected: {}", budget_state.violations.len()));
+            warnings.push(format!(
+                "Budget violations detected: {}",
+                budget_state.violations.len()
+            ));
         }
-        
+
         Ok(BudgetCheckResult {
             allowed: budget_state.within_limits,
-            remaining_budget: (100.0 - *budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0)) as f32,
+            remaining_budget: (100.0
+                - *budget_state
+                    .utilization_percentage
+                    .get("cost_cents")
+                    .unwrap_or(&0.0)) as f32,
             warnings,
         })
     }
 
-    fn calculate_tool_execution_cost(&self, context: &ToolExecutionContext) -> Result<f64, McpIntegrationError> {
+    fn calculate_tool_execution_cost(
+        &self,
+        context: &ToolExecutionContext,
+    ) -> Result<f64, McpIntegrationError> {
         // Base cost calculation based on risk tier and tool complexity
         let base_cost = match context.risk_tier.as_str() {
-            "1" => 10.0,  // High risk tools cost more
-            "2" => 5.0,   // Medium risk
-            "3" => 2.0,   // Low risk
-            _ => 5.0,     // Default to medium
+            "1" => 10.0, // High risk tools cost more
+            "2" => 5.0,  // Medium risk
+            "3" => 2.0,  // Low risk
+            _ => 5.0,    // Default to medium
         };
-        
+
         // Add cost based on estimated complexity
         let complexity_multiplier = match context.estimated_cost {
             Some(cost) => cost / 10.0, // Normalize estimated cost
             None => 1.0,
         };
-        
+
         Ok(base_cost * complexity_multiplier)
     }
 }
@@ -314,7 +332,8 @@ impl McpIntegration for DefaultMcpIntegration {
         risk_tier: &str,
     ) -> Result<McpValidationResult, McpIntegrationError> {
         // Extract tool information from manifest
-        let tool_id = manifest.get("name")
+        let tool_id = manifest
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
@@ -337,7 +356,8 @@ impl McpIntegration for DefaultMcpIntegration {
                 if !manifest.get("security").is_some() {
                     violations.push("High risk tier requires security configuration".to_string());
                 }
-                recommendations.push("Consider adding rate limiting for high-risk tools".to_string());
+                recommendations
+                    .push("Consider adding rate limiting for high-risk tools".to_string());
             }
             "medium" => {
                 recommendations.push("Add input validation for medium-risk tools".to_string());
@@ -366,17 +386,18 @@ impl McpIntegration for DefaultMcpIntegration {
         execution_context: ToolExecutionContext,
     ) -> Result<BudgetCheckResult, McpIntegrationError> {
         // Integrate with actual budget checking system
-        let budget_checker = crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
-            max_files: 100,
-            max_loc: 1000,
-            max_time_seconds: 3600,
-            max_memory_mb: 1024,
-            max_cost_cents: Some(1000),
-        });
-        
+        let budget_checker =
+            crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
+                max_files: 100,
+                max_loc: 1000,
+                max_time_seconds: 3600,
+                max_memory_mb: 1024,
+                max_cost_cents: Some(1000),
+            });
+
         // Calculate estimated cost based on tool complexity and risk tier
         let estimated_cost = calculate_tool_execution_cost(&execution_context)?;
-        
+
         // Check against budget limits
         let budget_state = budget_checker.check_budget(&crate::validation_budget::BudgetState {
             files_used: 0,
@@ -386,20 +407,37 @@ impl McpIntegration for DefaultMcpIntegration {
             cost_used_cents: (estimated_cost * 100.0) as u64,
             last_updated: chrono::Utc::now(),
         });
-        
+
         // Generate warnings for budget utilization
         let mut warnings = Vec::new();
-        if budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0) > &80.0 {
-            warnings.push(format!("High budget utilization: {:.1}%", 
-                budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0)));
+        if budget_state
+            .utilization_percentage
+            .get("cost_cents")
+            .unwrap_or(&0.0)
+            > &80.0
+        {
+            warnings.push(format!(
+                "High budget utilization: {:.1}%",
+                budget_state
+                    .utilization_percentage
+                    .get("cost_cents")
+                    .unwrap_or(&0.0)
+            ));
         }
         if !budget_state.violations.is_empty() {
-            warnings.push(format!("Budget violations detected: {}", budget_state.violations.len()));
+            warnings.push(format!(
+                "Budget violations detected: {}",
+                budget_state.violations.len()
+            ));
         }
-        
+
         Ok(BudgetCheckResult {
             allowed: budget_state.within_limits,
-            remaining_budget: (100.0 - *budget_state.utilization_percentage.get("cost_cents").unwrap_or(&0.0)) as f32,
+            remaining_budget: (100.0
+                - *budget_state
+                    .utilization_percentage
+                    .get("cost_cents")
+                    .unwrap_or(&0.0)) as f32,
             warnings,
         })
     }
@@ -410,7 +448,7 @@ impl McpIntegration for DefaultMcpIntegration {
     ) -> Result<(), McpIntegrationError> {
         // Integrate with provenance system for audit trail
         let waiver_manager = crate::waiver::WaiverManager::new();
-        
+
         // Log execution for monitoring and audit trail
         tracing::info!(
             tool_id = %execution.tool_id,
@@ -420,7 +458,7 @@ impl McpIntegration for DefaultMcpIntegration {
             resource_usage = ?execution.resource_usage,
             "Tool execution recorded in provenance system"
         );
-        
+
         // Record execution metadata in waiver system for audit trail
         let audit_metadata = serde_json::json!({
             "tool_execution": true,
@@ -434,7 +472,7 @@ impl McpIntegration for DefaultMcpIntegration {
             "error_message": execution.error_message,
             "recorded_at": chrono::Utc::now().to_rfc3339(),
         });
-        
+
         // TODO: Implement store_audit_metadata method in waiver system
         // - [ ] Add store_audit_metadata method to waiver system API
         // - [ ] Store audit metadata with execution ID linkage
@@ -463,8 +501,12 @@ impl McpIntegration for DefaultMcpIntegration {
         // - Waiver system audit metadata API (Required)
         // - Metadata storage infrastructure (Required)
         // PRIORITY: Medium
-        tracing::debug!("Audit metadata for execution {}: {}", execution.execution_id, audit_metadata);
-        
+        tracing::debug!(
+            "Audit metadata for execution {}: {}",
+            execution.execution_id,
+            audit_metadata
+        );
+
         Ok(())
     }
 }
@@ -513,41 +555,49 @@ impl OrchestrationIntegration for DefaultOrchestrationIntegration {
         current_usage: ResourceUsage,
     ) -> Result<BudgetComplianceResult, OrchestrationIntegrationError> {
         // Integrate with budget checking system for task-level budget compliance
-        let _budget_checker = crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
-            max_files: 100,
-            max_loc: 1000,
-            max_time_seconds: 3600,
-            max_memory_mb: 1024,
-            max_cost_cents: Some(1000),
-        });
-        
+        let _budget_checker =
+            crate::validation_budget::BudgetChecker::new(crate::validation_budget::BudgetLimits {
+                max_files: 100,
+                max_loc: 1000,
+                max_time_seconds: 3600,
+                max_memory_mb: 1024,
+                max_cost_cents: Some(1000),
+            });
+
         // Calculate task budget utilization using available ResourceUsage fields
         let cpu_utilization = (current_usage.cpu_seconds / 3600.0) * 100.0; // Assuming 1 hour max
         let memory_utilization = (current_usage.memory_mb as f64 / 1024.0) * 100.0; // Assuming 1GB max
         let disk_utilization = (current_usage.disk_mb as f64 / 1000.0) * 100.0; // Assuming 1GB max
         let network_utilization = (current_usage.network_mb as f64 / 100.0) * 100.0; // Assuming 100MB max
-        
+
         // Overall utilization is the maximum of all resource utilizations
-        let overall_utilization = cpu_utilization.max(memory_utilization).max(disk_utilization).max(network_utilization);
-        
+        let overall_utilization = cpu_utilization
+            .max(memory_utilization)
+            .max(disk_utilization)
+            .max(network_utilization);
+
         // Determine compliance based on thresholds
         let compliant = overall_utilization <= 90.0; // 90% threshold for compliance
-        
+
         // Generate recommendations based on utilization patterns
         let mut recommendations = Vec::new();
         if cpu_utilization > 80.0 {
-            recommendations.push("High CPU utilization detected - consider optimization".to_string());
+            recommendations
+                .push("High CPU utilization detected - consider optimization".to_string());
         }
         if memory_utilization > 80.0 {
-            recommendations.push("High memory usage - review memory allocation patterns".to_string());
+            recommendations
+                .push("High memory usage - review memory allocation patterns".to_string());
         }
         if disk_utilization > 80.0 {
-            recommendations.push("High disk usage - consider cleanup of temporary files".to_string());
+            recommendations
+                .push("High disk usage - consider cleanup of temporary files".to_string());
         }
         if network_utilization > 80.0 {
-            recommendations.push("High network usage - optimize data transfer patterns".to_string());
+            recommendations
+                .push("High network usage - optimize data transfer patterns".to_string());
         }
-        
+
         Ok(BudgetComplianceResult {
             compliant,
             utilization_percent: overall_utilization,
@@ -562,26 +612,33 @@ impl OrchestrationIntegration for DefaultOrchestrationIntegration {
     ) -> Result<WaiverResult, OrchestrationIntegrationError> {
         // Integrate with waiver generation system
         let waiver_manager = crate::waiver::WaiverManager::new();
-        
+
         // Analyze violations to determine waiver eligibility
         let waiver_eligibility = analyze_waiver_eligibility(&violations)?;
-        
+
         if !waiver_eligibility.eligible {
             return Ok(WaiverResult {
                 waiver_id: None,
                 approved: false,
-                reason: Some(format!("Waiver not eligible: {}", waiver_eligibility.reason)),
+                reason: Some(format!(
+                    "Waiver not eligible: {}",
+                    waiver_eligibility.reason
+                )),
                 expires_at: None,
             });
         }
-        
+
         // Create waiver directly using available Waiver struct
         let waiver = crate::waiver::Waiver {
             id: format!("waiver-{}", Uuid::new_v4()),
             task_id: task_id.to_string(),
             requester: "orchestrator".to_string(),
             violations: violations.clone(),
-            justification: format!("Task {} requires waiver for violations: {}", task_id, violations.join(", ")),
+            justification: format!(
+                "Task {} requires waiver for violations: {}",
+                task_id,
+                violations.join(", ")
+            ),
             risk_assessment: waiver_eligibility.impact_level.clone(),
             mitigation_plan: waiver_eligibility.mitigation_plan,
             requested_at: chrono::Utc::now(),
@@ -591,29 +648,29 @@ impl OrchestrationIntegration for DefaultOrchestrationIntegration {
             approved_at: None,
             rejection_reason: None,
         };
-        
+
         // Store waiver using available method
         let mut waiver_manager_mut = waiver_manager;
-             let waiver_context = crate::waiver::WaiverContext {
-                 task_id: task_id.to_string(),
-                 requester: "system".to_string(),
-                 violations: violations.clone(),
-                 risk_tier: match waiver_eligibility.impact_level.as_str() {
-                     "High" => "High".to_string(),
-                     "Medium" => "Medium".to_string(),
-                     "Low" => "Low".to_string(),
-                     _ => "Medium".to_string(),
-                 },
-                 budget_overrun: Some(crate::waiver::BudgetOverrunDetails {
-                     resource_type: "cost_cents".to_string(),
-                     requested_amount: violations.len() as u64 * 10,
-                     approved_amount: violations.len() as u64 * 5,
-                     percentage_over: 100.0,
-                 }),
-             };
-        
+        let waiver_context = crate::waiver::WaiverContext {
+            task_id: task_id.to_string(),
+            requester: "system".to_string(),
+            violations: violations.clone(),
+            risk_tier: match waiver_eligibility.impact_level.as_str() {
+                "High" => "High".to_string(),
+                "Medium" => "Medium".to_string(),
+                "Low" => "Low".to_string(),
+                _ => "Medium".to_string(),
+            },
+            budget_overrun: Some(crate::waiver::BudgetOverrunDetails {
+                resource_type: "cost_cents".to_string(),
+                requested_amount: violations.len() as u64 * 10,
+                approved_amount: violations.len() as u64 * 5,
+                percentage_over: 100.0,
+            }),
+        };
+
         let created_waiver = waiver_manager_mut.generate_waiver(waiver_context);
-        
+
         Ok(WaiverResult {
             waiver_id: Some(created_waiver.id),
             approved: created_waiver.status == crate::waiver::WaiverStatus::Approved,
@@ -621,34 +678,38 @@ impl OrchestrationIntegration for DefaultOrchestrationIntegration {
             expires_at: Some(created_waiver.expires_at),
         })
     }
-
 }
 
 /// Calculate tool execution cost based on complexity and risk tier
-fn calculate_tool_execution_cost(execution_context: &ToolExecutionContext) -> Result<f64, McpIntegrationError> {
+fn calculate_tool_execution_cost(
+    execution_context: &ToolExecutionContext,
+) -> Result<f64, McpIntegrationError> {
     // Base cost calculation based on risk tier and tool complexity
     let base_cost = match execution_context.risk_tier.as_str() {
-        "1" => 10.0,  // High risk tools cost more
-        "2" => 5.0,   // Medium risk
-        "3" => 2.0,   // Low risk
-        _ => 5.0,     // Default to medium
+        "1" => 10.0, // High risk tools cost more
+        "2" => 5.0,  // Medium risk
+        "3" => 2.0,  // Low risk
+        _ => 5.0,    // Default to medium
     };
-    
+
     // Add cost based on estimated complexity
     let complexity_multiplier = match execution_context.estimated_cost {
         Some(cost) => cost / 10.0, // Normalize estimated cost
         None => 1.0,
     };
-    
+
     Ok(base_cost * complexity_multiplier)
 }
 
 /// Analyze waiver eligibility based on violations
-fn analyze_waiver_eligibility(violations: &[String]) -> Result<WaiverEligibility, OrchestrationIntegrationError> {
+fn analyze_waiver_eligibility(
+    violations: &[String],
+) -> Result<WaiverEligibility, OrchestrationIntegrationError> {
     // Check if violations are waiver-eligible
-    let critical_violations = violations.iter()
+    let critical_violations = violations
+        .iter()
         .any(|v| v.to_lowercase().contains("security") || v.to_lowercase().contains("critical"));
-    
+
     if critical_violations {
         return Ok(WaiverEligibility {
             eligible: false,
@@ -657,7 +718,7 @@ fn analyze_waiver_eligibility(violations: &[String]) -> Result<WaiverEligibility
             mitigation_plan: "Fix critical violations before proceeding".to_string(),
         });
     }
-    
+
     // Determine impact level based on violation count and severity
     let impact_level = if violations.len() > 5 {
         "high"
@@ -666,7 +727,7 @@ fn analyze_waiver_eligibility(violations: &[String]) -> Result<WaiverEligibility
     } else {
         "low"
     };
-    
+
     Ok(WaiverEligibility {
         eligible: true,
         reason: "Violations are eligible for waiver".to_string(),
@@ -791,27 +852,30 @@ impl DefaultOrchestrationIntegration {
 
         // Check scope compliance
         if !spec.scope_in.is_empty() && !descriptor.scope_in.is_empty() {
-            let scope_ok = descriptor.scope_in.iter().all(|file| {
-                spec.scope_in.iter().any(|scope| file.starts_with(scope))
-            });
-            
+            let scope_ok = descriptor
+                .scope_in
+                .iter()
+                .all(|file| spec.scope_in.iter().any(|scope| file.starts_with(scope)));
+
             if !scope_ok {
                 violations.push(Violation {
                     code: ViolationCode::OutOfScope,
                     message: "Files outside allowed scope".to_string(),
-                    remediation: Some("Update scope_in or move files to allowed directories".to_string()),
+                    remediation: Some(
+                        "Update scope_in or move files to allowed directories".to_string(),
+                    ),
                 });
             }
-            
+
             snapshot.within_scope = scope_ok;
         } else {
             snapshot.within_scope = true; // No scope restrictions
         }
 
         // Check budget compliance
-        let budget_ok = diff_stats.files_changed <= spec.change_budget_max_files &&
-                       diff_stats.lines_added <= spec.change_budget_max_loc as i32;
-        
+        let budget_ok = diff_stats.files_changed <= spec.change_budget_max_files
+            && diff_stats.lines_added <= spec.change_budget_max_loc as i32;
+
         if !budget_ok {
             violations.push(Violation {
                 code: ViolationCode::BudgetExceeded,
@@ -825,7 +889,7 @@ impl DefaultOrchestrationIntegration {
                 remediation: Some("Reduce scope or request budget increase".to_string()),
             });
         }
-        
+
         snapshot.within_budget = budget_ok;
         snapshot.tests_added = tests_added;
         snapshot.deterministic = deterministic;
@@ -844,7 +908,9 @@ impl DefaultOrchestrationIntegration {
             violations.push(Violation {
                 code: ViolationCode::NonDeterministic,
                 message: "Deterministic code required for risk tier 1+ tasks".to_string(),
-                remediation: Some("Remove non-deterministic elements (Date.now, Math.random, etc.)".to_string()),
+                remediation: Some(
+                    "Remove non-deterministic elements (Date.now, Math.random, etc.)".to_string(),
+                ),
             });
         }
 
@@ -863,8 +929,12 @@ impl DefaultOrchestrationIntegration {
         mode: ExecutionMode,
         violations: &[Violation],
     ) -> Result<ExecutionDecision, OrchestrationIntegrationError> {
-        let critical_violations = violations.iter()
-            .any(|v| matches!(v.code, ViolationCode::BudgetExceeded | ViolationCode::OutOfScope));
+        let critical_violations = violations.iter().any(|v| {
+            matches!(
+                v.code,
+                ViolationCode::BudgetExceeded | ViolationCode::OutOfScope
+            )
+        });
 
         let allowed = match mode {
             ExecutionMode::Strict => violations.is_empty(),
@@ -886,8 +956,14 @@ impl DefaultOrchestrationIntegration {
             ExecutionMode::DryRun
         };
 
-        let required_waivers = violations.iter()
-            .filter(|v| matches!(v.code, ViolationCode::MissingTests | ViolationCode::NonDeterministic))
+        let required_waivers = violations
+            .iter()
+            .filter(|v| {
+                matches!(
+                    v.code,
+                    ViolationCode::MissingTests | ViolationCode::NonDeterministic
+                )
+            })
             .map(|v| v.message.clone())
             .collect();
 

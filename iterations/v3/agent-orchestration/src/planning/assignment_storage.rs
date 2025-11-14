@@ -4,11 +4,11 @@
 //! Integrates with the worker assignment strategy to track assignments and performance.
 
 use anyhow::{Context, Result};
-use sqlx::{PgPool, postgres::PgPoolOptions, Row};
+use chrono::{DateTime, Utc};
+use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::sync::Arc;
 use tracing::debug;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// Database storage for worker assignments
 #[derive(Clone)]
@@ -55,7 +55,8 @@ impl AssignmentDatabaseStorage {
         let assignment_id = Uuid::new_v4();
         let assigned_at = Utc::now();
 
-        let (cpu_cores, memory_mb, disk_mb, network_mbps, time_limit_ms) = match resource_allocation {
+        let (cpu_cores, memory_mb, disk_mb, network_mbps, time_limit_ms) = match resource_allocation
+        {
             Some(alloc) => (
                 Some(alloc.cpu_cores as i32),
                 Some(alloc.memory_mb as i32),
@@ -74,7 +75,7 @@ impl AssignmentDatabaseStorage {
                 network_mbps, time_limit_ms
             )
             VALUES ($1, $2, $3, $4, $5, 'Assigned', $6, $7, $8, $9, $10, $11)
-            "#
+            "#,
         )
         .bind(assignment_id)
         .bind(worker_id)
@@ -99,7 +100,7 @@ impl AssignmentDatabaseStorage {
                 new_status, event_description
             )
             VALUES ($1, $2, $3, 'assigned', 'Assigned', 'Assignment created')
-            "#
+            "#,
         )
         .bind(assignment_id)
         .bind(worker_id)
@@ -108,7 +109,10 @@ impl AssignmentDatabaseStorage {
         .await
         .context("Failed to create assignment history entry")?;
 
-        debug!("Recorded assignment: {} for worker {} to milestone {}", assignment_id, worker_id, milestone_id);
+        debug!(
+            "Recorded assignment: {} for worker {} to milestone {}",
+            assignment_id, worker_id, milestone_id
+        );
         Ok(assignment_id)
     }
 
@@ -123,9 +127,9 @@ impl AssignmentDatabaseStorage {
             .bind(assignment_id)
             .bind(status)
             .bind(description)
-        .execute(&*self.pool)
-        .await
-        .context("Failed to update assignment status")?;
+            .execute(&*self.pool)
+            .await
+            .context("Failed to update assignment status")?;
 
         debug!("Updated assignment {} status to {}", assignment_id, status);
         Ok(())
@@ -151,7 +155,7 @@ impl AssignmentDatabaseStorage {
                 tasks_failed, avg_execution_time_ms, success_rate, performance_score
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            "#
+            "#,
         )
         .bind(metric_id)
         .bind(worker_id)
@@ -165,17 +169,23 @@ impl AssignmentDatabaseStorage {
         .await
         .context("Failed to store performance metrics")?;
 
-        debug!("Stored performance metrics for worker {}: score={}", worker_id, performance_score);
+        debug!(
+            "Stored performance metrics for worker {}: score={}",
+            worker_id, performance_score
+        );
         Ok(metric_id)
     }
 
     /// Get latest performance metrics for a worker
-    pub async fn get_latest_performance(&self, worker_id: Uuid) -> Result<Option<WorkerPerformance>> {
+    pub async fn get_latest_performance(
+        &self,
+        worker_id: Uuid,
+    ) -> Result<Option<WorkerPerformance>> {
         let row = sqlx::query("SELECT * FROM get_latest_worker_performance($1)")
             .bind(worker_id)
-        .fetch_optional(&*self.pool)
-        .await
-        .context("Failed to get latest performance metrics")?;
+            .fetch_optional(&*self.pool)
+            .await
+            .context("Failed to get latest performance metrics")?;
 
         Ok(row.map(|r| WorkerPerformance {
             tasks_completed: r.try_get::<i64, _>("tasks_completed").unwrap_or(0) as u64,
@@ -196,24 +206,31 @@ impl AssignmentDatabaseStorage {
             FROM worker_assignments
             WHERE worker_id = $1 AND status IN ('Assigned', 'Active')
             ORDER BY assigned_at DESC
-            "#
+            "#,
         )
         .bind(worker_id)
         .fetch_all(&*self.pool)
         .await
         .context("Failed to get active assignments")?;
 
-        Ok(rows.into_iter().map(|r| AssignmentRecord {
-            id: r.try_get("id").unwrap_or(Uuid::new_v4()),
-            worker_id: r.try_get("worker_id").unwrap_or(Uuid::new_v4()),
-            milestone_id: r.try_get("milestone_id").unwrap_or_default(),
-            plan_id: r.try_get("plan_id").ok(),
-            assigned_at: r.try_get("assigned_at").unwrap_or(chrono::Utc::now()),
-            status: r.try_get("status").unwrap_or_else(|_| "Unknown".to_string()),
-            priority: r.try_get("priority").unwrap_or_else(|_| "Normal".to_string()),
-            started_at: r.try_get("started_at").ok(),
-            completed_at: r.try_get("completed_at").ok(),
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| AssignmentRecord {
+                id: r.try_get("id").unwrap_or(Uuid::new_v4()),
+                worker_id: r.try_get("worker_id").unwrap_or(Uuid::new_v4()),
+                milestone_id: r.try_get("milestone_id").unwrap_or_default(),
+                plan_id: r.try_get("plan_id").ok(),
+                assigned_at: r.try_get("assigned_at").unwrap_or(chrono::Utc::now()),
+                status: r
+                    .try_get("status")
+                    .unwrap_or_else(|_| "Unknown".to_string()),
+                priority: r
+                    .try_get("priority")
+                    .unwrap_or_else(|_| "Normal".to_string()),
+                started_at: r.try_get("started_at").ok(),
+                completed_at: r.try_get("completed_at").ok(),
+            })
+            .collect())
     }
 
     /// Get assignment statistics for a worker
@@ -229,7 +246,7 @@ impl AssignmentDatabaseStorage {
             LEFT JOIN worker_performance_metrics wpm ON wa.worker_id = wpm.worker_id
             WHERE wa.worker_id = $1
             GROUP BY wa.worker_id
-            "#
+            "#,
         )
         .bind(worker_id)
         .fetch_optional(&*self.pool)
@@ -238,10 +255,22 @@ impl AssignmentDatabaseStorage {
 
         match row {
             Some(r) => Ok(WorkerStatistics {
-                active_assignments: r.try_get::<Option<i64>, _>("active_count").unwrap_or(Some(0)).unwrap_or(0) as usize,
-                completed_assignments: r.try_get::<Option<i64>, _>("completed_count").unwrap_or(Some(0)).unwrap_or(0) as u64,
-                failed_assignments: r.try_get::<Option<i64>, _>("failed_count").unwrap_or(Some(0)).unwrap_or(0) as u64,
-                avg_performance_score: r.try_get::<Option<f64>, _>("avg_performance_score").unwrap_or(Some(0.0)).unwrap_or(0.0),
+                active_assignments: r
+                    .try_get::<Option<i64>, _>("active_count")
+                    .unwrap_or(Some(0))
+                    .unwrap_or(0) as usize,
+                completed_assignments: r
+                    .try_get::<Option<i64>, _>("completed_count")
+                    .unwrap_or(Some(0))
+                    .unwrap_or(0) as u64,
+                failed_assignments: r
+                    .try_get::<Option<i64>, _>("failed_count")
+                    .unwrap_or(Some(0))
+                    .unwrap_or(0) as u64,
+                avg_performance_score: r
+                    .try_get::<Option<f64>, _>("avg_performance_score")
+                    .unwrap_or(Some(0.0))
+                    .unwrap_or(0.0),
             }),
             None => Ok(WorkerStatistics {
                 active_assignments: 0,
@@ -301,4 +330,3 @@ pub struct WorkerStatistics {
     pub failed_assignments: u64,
     pub avg_performance_score: f64,
 }
-

@@ -2,10 +2,10 @@
 //!
 //! Routes tasks to appropriate workers based on capabilities, load, and performance.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::worker_errors::WorkerError;
 use crate::specialized_workers::SpecializedWorker;
+use crate::worker_errors::WorkerError;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Task router configuration
@@ -39,11 +39,19 @@ impl TaskRouter {
         }
     }
 
-    pub fn register_worker(&mut self, name: String, worker: Box<dyn SpecializedWorker + Send + Sync>) {
+    pub fn register_worker(
+        &mut self,
+        name: String,
+        worker: Box<dyn SpecializedWorker + Send + Sync>,
+    ) {
         self.workers.insert(name, worker);
     }
 
-    pub async fn route_task(&self, task: String, required_capabilities: &[String]) -> Result<String, WorkerError> {
+    pub async fn route_task(
+        &self,
+        task: String,
+        required_capabilities: &[String],
+    ) -> Result<String, WorkerError> {
         // Find best worker for the task
         for (name, worker) in &self.workers {
             let worker_caps = worker.capabilities();
@@ -54,11 +62,14 @@ impl TaskRouter {
             }
         }
 
-        Err(WorkerError::NoSuitableWorker { message: "No worker found with required capabilities".to_string() })
+        Err(WorkerError::NoSuitableWorker {
+            message: "No worker found with required capabilities".to_string(),
+        })
     }
 
     fn calculate_match_score(&self, required: &[String], available: &[String]) -> f32 {
-        let matches = required.iter()
+        let matches = required
+            .iter()
             .filter(|req| available.contains(req))
             .count();
         matches as f32 / required.len() as f32

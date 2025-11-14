@@ -3,16 +3,16 @@
 
 use crate::memory_types::*;
 use crate::MemoryResult;
-use sqlx::{PgPool, Row};
-use sqlx::postgres::PgRow;
-use std::sync::Arc;
-use regex::Regex;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn, error};
-use std::collections::HashMap;
-use reqwest::Client;
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use regex::Regex;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgRow;
+use sqlx::{PgPool, Row};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tracing::{debug, error, info, warn};
 
 /// Knowledge graph entity
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
@@ -181,15 +181,19 @@ impl HttpEntityExtractionService {
     /// Extract entities from text via HTTP call to external service
     pub async fn extract_entities(&self, text: &str) -> Result<Vec<ExtractedEntity>> {
         let url = format!("{}/api/v1/entities/extract", self.base_url);
-        
+
         let payload = serde_json::json!({
             "text": text,
             "entity_types": ["PERSON", "ORG", "GPE", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE", "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL"]
         });
 
-        debug!("Extracting entities from text: {}...", &text[..text.len().min(100)]);
+        debug!(
+            "Extracting entities from text: {}...",
+            &text[..text.len().min(100)]
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&payload)
             .timeout(std::time::Duration::from_millis(self.timeout_ms))
@@ -199,11 +203,20 @@ impl HttpEntityExtractionService {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Entity extraction service error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Entity extraction service error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .context("Failed to parse entity extraction response")?;
 
         // Extract entities from response
@@ -225,17 +238,25 @@ impl HttpEntityExtractionService {
     }
 
     /// Extract relationships from text via HTTP call
-    pub async fn extract_relationships(&self, text: &str, entities: &[ExtractedEntity]) -> Result<Vec<ExtractedRelationship>> {
+    pub async fn extract_relationships(
+        &self,
+        text: &str,
+        entities: &[ExtractedEntity],
+    ) -> Result<Vec<ExtractedRelationship>> {
         let url = format!("{}/api/v1/relationships/extract", self.base_url);
-        
+
         let payload = serde_json::json!({
             "text": text,
             "entities": entities
         });
 
-        debug!("Extracting relationships from text with {} entities", entities.len());
+        debug!(
+            "Extracting relationships from text with {} entities",
+            entities.len()
+        );
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&payload)
             .timeout(std::time::Duration::from_millis(self.timeout_ms))
@@ -245,11 +266,20 @@ impl HttpEntityExtractionService {
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Relationship extraction service error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!(
+                "Relationship extraction service error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let result: serde_json::Value = response.json().await
+        let result: serde_json::Value = response
+            .json()
+            .await
             .context("Failed to parse relationship extraction response")?;
 
         // Extract relationships from response
@@ -320,18 +350,21 @@ impl KnowledgeGraphEngine {
         let db_pool = Arc::new(
             PgPool::connect(&database_url)
                 .await
-                .context("Failed to connect to database for knowledge graph")?
+                .context("Failed to connect to database for knowledge graph")?,
         );
 
         // Get entity extraction service URL from environment or use default
         let extraction_url = std::env::var("ENTITY_EXTRACTION_SERVICE_URL")
             .unwrap_or_else(|_| "http://localhost:8000".to_string());
 
-        info!("Initializing HTTP entity extraction service at: {}", extraction_url);
+        info!(
+            "Initializing HTTP entity extraction service at: {}",
+            extraction_url
+        );
 
         // Create HTTP-based entity extraction service
         let entity_extraction_service = Arc::new(HttpEntityExtractionService::new(extraction_url));
-        
+
         // Test connection
         if let Err(e) = entity_extraction_service.health_check().await {
             warn!("Entity extraction service health check failed: {}", e);
@@ -349,7 +382,10 @@ impl KnowledgeGraphEngine {
     }
 
     /// Extract entities from an agent experience
-    pub async fn extract_entities_from_experience(&self, experience: &AgentExperience) -> MemoryResult<Vec<Entity>> {
+    pub async fn extract_entities_from_experience(
+        &self,
+        experience: &AgentExperience,
+    ) -> MemoryResult<Vec<Entity>> {
         let mut entities = Vec::new();
 
         // Extract agent entity
@@ -360,7 +396,10 @@ impl KnowledgeGraphEngine {
             description: Some(format!("Agent {}", experience.agent_id)),
             properties: HashMap::from([
                 ("type".to_string(), serde_json::json!("agent")),
-                ("last_active".to_string(), serde_json::json!(experience.timestamp)),
+                (
+                    "last_active".to_string(),
+                    serde_json::json!(experience.timestamp),
+                ),
             ]),
             embedding: None,
             confidence: 1.0,
@@ -377,9 +416,22 @@ impl KnowledgeGraphEngine {
             name: experience.task_id.clone(),
             description: Some(experience.context.description.clone()),
             properties: HashMap::from([
-                ("type".to_string(), serde_json::json!(experience.context.task_type)),
-                ("domain".to_string(), serde_json::json!(experience.context.domain)),
-                ("priority".to_string(), serde_json::json!(experience.context.temporal_context.as_ref().map(|tc| tc.priority as i32))),
+                (
+                    "type".to_string(),
+                    serde_json::json!(experience.context.task_type),
+                ),
+                (
+                    "domain".to_string(),
+                    serde_json::json!(experience.context.domain),
+                ),
+                (
+                    "priority".to_string(),
+                    serde_json::json!(experience
+                        .context
+                        .temporal_context
+                        .as_ref()
+                        .map(|tc| tc.priority as i32)),
+                ),
             ]),
             embedding: None,
             confidence: 1.0,
@@ -397,8 +449,14 @@ impl KnowledgeGraphEngine {
                 name: capability.clone(),
                 description: Some(format!("Capability: {}", capability)),
                 properties: HashMap::from([
-                    ("proficiency_level".to_string(), serde_json::json!(experience.outcome.performance_score.unwrap_or(0.5))),
-                    ("learned_from".to_string(), serde_json::json!(experience.task_id)),
+                    (
+                        "proficiency_level".to_string(),
+                        serde_json::json!(experience.outcome.performance_score.unwrap_or(0.5)),
+                    ),
+                    (
+                        "learned_from".to_string(),
+                        serde_json::json!(experience.task_id),
+                    ),
                 ]),
                 embedding: None,
                 confidence: 0.8,
@@ -427,7 +485,10 @@ impl KnowledgeGraphEngine {
         }
 
         // Extract entities from text content using regex patterns
-        entities.extend(self.extract_entities_from_text(&experience.context.description).await?);
+        entities.extend(
+            self.extract_entities_from_text(&experience.context.description)
+                .await?,
+        );
 
         Ok(entities)
     }
@@ -468,7 +529,11 @@ impl KnowledgeGraphEngine {
     }
 
     /// Extract relationships from an agent experience
-    pub async fn extract_relationships_from_experience(&self, experience: &AgentExperience, entities: &[Entity]) -> MemoryResult<Vec<Relationship>> {
+    pub async fn extract_relationships_from_experience(
+        &self,
+        experience: &AgentExperience,
+        entities: &[Entity],
+    ) -> MemoryResult<Vec<Relationship>> {
         let mut relationships = Vec::new();
 
         let agent_entity_id = format!("agent:{}", experience.agent_id);
@@ -481,8 +546,14 @@ impl KnowledgeGraphEngine {
             target_entity: task_entity_id.clone(),
             relationship_type: RelationshipType::Performs,
             properties: HashMap::from([
-                ("performance_score".to_string(), serde_json::json!(experience.outcome.performance_score)),
-                ("execution_time_ms".to_string(), serde_json::json!(experience.outcome.execution_time_ms)),
+                (
+                    "performance_score".to_string(),
+                    serde_json::json!(experience.outcome.performance_score),
+                ),
+                (
+                    "execution_time_ms".to_string(),
+                    serde_json::json!(experience.outcome.execution_time_ms),
+                ),
             ]),
             strength: experience.outcome.performance_score.unwrap_or(0.5),
             confidence: 1.0,
@@ -494,7 +565,8 @@ impl KnowledgeGraphEngine {
 
         // Task requires capabilities
         for capability in &experience.outcome.learned_capabilities {
-            let capability_entity_id = format!("capability:{}", capability.to_lowercase().replace(" ", "_"));
+            let capability_entity_id =
+                format!("capability:{}", capability.to_lowercase().replace(" ", "_"));
             relationships.push(Relationship {
                 id: format!("rel:{}-requires-{}", task_entity_id, capability_entity_id),
                 source_entity: task_entity_id.clone(),
@@ -512,15 +584,17 @@ impl KnowledgeGraphEngine {
 
         // Agent learns capabilities from task
         for capability in &experience.outcome.learned_capabilities {
-            let capability_entity_id = format!("capability:{}", capability.to_lowercase().replace(" ", "_"));
+            let capability_entity_id =
+                format!("capability:{}", capability.to_lowercase().replace(" ", "_"));
             relationships.push(Relationship {
                 id: format!("rel:{}-learns-{}", agent_entity_id, capability_entity_id),
                 source_entity: agent_entity_id.clone(),
                 target_entity: capability_entity_id,
                 relationship_type: RelationshipType::LearnsFrom,
-                properties: HashMap::from([
-                    ("proficiency_gain".to_string(), serde_json::json!(experience.outcome.performance_score.unwrap_or(0.5))),
-                ]),
+                properties: HashMap::from([(
+                    "proficiency_gain".to_string(),
+                    serde_json::json!(experience.outcome.performance_score.unwrap_or(0.5)),
+                )]),
                 strength: experience.outcome.performance_score.unwrap_or(0.5),
                 confidence: 0.8,
                 bidirectional: false,
@@ -554,12 +628,10 @@ impl KnowledgeGraphEngine {
     /// Upsert an entity (insert or update if exists)
     pub async fn upsert_entity(&self, entity: Entity) -> MemoryResult<()> {
         // Check if entity exists
-        let existing = sqlx::query(
-            "SELECT id FROM knowledge_graph_entities WHERE id = $1",
-        )
-        .bind(&entity.id)
-        .fetch_optional(&*self.db_pool)
-        .await?;
+        let existing = sqlx::query("SELECT id FROM knowledge_graph_entities WHERE id = $1")
+            .bind(&entity.id)
+            .fetch_optional(&*self.db_pool)
+            .await?;
 
         if existing.is_some() {
             // Update existing entity
@@ -579,7 +651,13 @@ impl KnowledgeGraphEngine {
             .bind(&entity.embedding)
             .bind(entity.confidence)
             .bind(entity.updated_at)
-            .bind(&entity.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
+            .bind(
+                &entity
+                    .source_memories
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>(),
+            )
             .execute(&*self.db_pool)
             .await?;
         } else {
@@ -601,7 +679,13 @@ impl KnowledgeGraphEngine {
             .bind(entity.confidence)
             .bind(entity.created_at)
             .bind(entity.updated_at)
-            .bind(&entity.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
+            .bind(
+                &entity
+                    .source_memories
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>(),
+            )
             .execute(&*self.db_pool)
             .await?;
         }
@@ -617,12 +701,10 @@ impl KnowledgeGraphEngine {
         let relationship_id = relationship.id.clone();
 
         // Check if relationship exists
-        let existing = sqlx::query(
-            "SELECT id FROM knowledge_graph_relationships WHERE id = $1",
-        )
-        .bind(&relationship_id)
-        .fetch_optional(&*self.db_pool)
-        .await?;
+        let existing = sqlx::query("SELECT id FROM knowledge_graph_relationships WHERE id = $1")
+            .bind(&relationship_id)
+            .fetch_optional(&*self.db_pool)
+            .await?;
 
         if existing.is_some() {
             // Update existing relationship - average strengths/confidences
@@ -638,7 +720,13 @@ impl KnowledgeGraphEngine {
             .bind(relationship.strength)
             .bind(relationship.confidence)
             .bind(relationship.updated_at)
-            .bind(&relationship.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
+            .bind(
+                &relationship
+                    .source_memories
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>(),
+            )
             .execute(&*self.db_pool)
             .await?;
         } else {
@@ -661,19 +749,30 @@ impl KnowledgeGraphEngine {
             .bind(relationship.bidirectional)
             .bind(relationship.created_at)
             .bind(relationship.updated_at)
-            .bind(&relationship.source_memories.iter().map(|id| id.to_string()).collect::<Vec<_>>())
+            .bind(
+                &relationship
+                    .source_memories
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>(),
+            )
             .execute(&*self.db_pool)
             .await?;
         }
 
         // Update cache
-        self.relationship_cache.insert(relationship_id, relationship);
+        self.relationship_cache
+            .insert(relationship_id, relationship);
 
         Ok(())
     }
 
     /// Find entities related to a task context
-    pub async fn find_related_entities(&self, context: &TaskContext, limit: usize) -> MemoryResult<Vec<(MemoryId, Vec<String>)>> {
+    pub async fn find_related_entities(
+        &self,
+        context: &TaskContext,
+        limit: usize,
+    ) -> MemoryResult<Vec<(MemoryId, Vec<String>)>> {
         let mut related_memories = Vec::new();
 
         // Find tasks of similar type
@@ -713,8 +812,9 @@ impl KnowledgeGraphEngine {
             for rel_row in relationships {
                 // Extract memory IDs from the source_memories array
                 // PostgreSQL UUID arrays are returned as Vec<uuid::Uuid> by sqlx
-                let source_memories: Option<Vec<uuid::Uuid>> = rel_row.try_get("source_memories")?;
-                
+                let source_memories: Option<Vec<uuid::Uuid>> =
+                    rel_row.try_get("source_memories")?;
+
                 if let Some(memory_ids) = source_memories {
                     for memory_id in memory_ids {
                         // MemoryId is a type alias for uuid::Uuid, so we can use it directly
@@ -728,32 +828,42 @@ impl KnowledgeGraphEngine {
     }
 
     /// Perform multi-hop reasoning
-    pub async fn perform_multi_hop_reasoning(&self, query: ReasoningQuery) -> MemoryResult<ReasoningResult> {
+    pub async fn perform_multi_hop_reasoning(
+        &self,
+        query: ReasoningQuery,
+    ) -> MemoryResult<ReasoningResult> {
         let mut all_paths = Vec::new();
 
         for start_entity in &query.start_entities {
-            let paths = self.find_paths(start_entity, &query.target_entities, query.max_hops).await?;
+            let paths = self
+                .find_paths(start_entity, &query.target_entities, query.max_hops)
+                .await?;
             all_paths.extend(paths);
         }
 
         // Filter by confidence and sort
-        let mut valid_paths: Vec<ReasoningPath> = all_paths.into_iter()
+        let mut valid_paths: Vec<ReasoningPath> = all_paths
+            .into_iter()
             .filter(|path| path.confidence >= query.min_confidence)
             .collect();
 
-        valid_paths.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        valid_paths.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         valid_paths.truncate(10); // Limit results
 
-        let entities_discovered = valid_paths.iter()
+        let entities_discovered = valid_paths
+            .iter()
             .flat_map(|path| path.entities.clone())
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
             .collect();
 
         // Convert ReasoningPath to Vec<String> for paths field
-        let path_strings: Vec<Vec<String>> = valid_paths.into_iter()
-            .map(|path| path.entities)
-            .collect();
+        let path_strings: Vec<Vec<String>> =
+            valid_paths.into_iter().map(|path| path.entities).collect();
 
         // TODO: Use first path if available and calculate actual confidence score
         //       Currently uses empty path and fixed confidence; should use first path from valid_paths and calculate actual confidence score from path analysis.
@@ -793,7 +903,7 @@ impl KnowledgeGraphEngine {
         Ok(ReasoningResult {
             path: Vec::new(), // Temporary: empty until first path extraction
             paths: path_strings,
-            confidence: 0.8, // Overall confidence
+            confidence: 0.8,       // Overall confidence
             confidence_score: 0.8, // Temporary: fixed until actual calculation
             reasoning_steps: vec!["Multi-hop reasoning completed".to_string()],
             reasoning_time_ms: 100,
@@ -802,7 +912,12 @@ impl KnowledgeGraphEngine {
     }
 
     /// Find paths between entities using breadth-first search
-    async fn find_paths(&self, start: &str, targets: &[String], max_hops: usize) -> MemoryResult<Vec<ReasoningPath>> {
+    async fn find_paths(
+        &self,
+        start: &str,
+        targets: &[String],
+        max_hops: usize,
+    ) -> MemoryResult<Vec<ReasoningPath>> {
         let mut paths = Vec::new();
 
         // Breadth-first search implementation using VecDeque for FIFO queue
@@ -879,7 +994,11 @@ impl KnowledgeGraphEngine {
         }
 
         // Sort paths by confidence (descending)
-        paths.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        paths.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(paths)
     }
@@ -890,9 +1009,10 @@ impl KnowledgeGraphEngine {
             .fetch_one(&*self.db_pool)
             .await?;
 
-        let relationship_count = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_graph_relationships")
-            .fetch_one(&*self.db_pool)
-            .await?;
+        let relationship_count =
+            sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_graph_relationships")
+                .fetch_one(&*self.db_pool)
+                .await?;
 
         // Get entity type distribution
         let entity_types_rows = sqlx::query(
@@ -901,7 +1021,7 @@ impl KnowledgeGraphEngine {
             FROM knowledge_graph_entities
             GROUP BY entity_type
             ORDER BY count DESC
-            "#
+            "#,
         )
         .fetch_all(&*self.db_pool)
         .await?;
@@ -909,8 +1029,12 @@ impl KnowledgeGraphEngine {
         let mut entity_types = HashMap::new();
         for row in entity_types_rows {
             let entity_type_i32: i32 = row.try_get("entity_type")?;
-            let entity_type = EntityType::try_from(entity_type_i32)
-                .map_err(|e| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))))?;
+            let entity_type = EntityType::try_from(entity_type_i32).map_err(|e| {
+                sqlx::Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    e,
+                )))
+            })?;
             let count: i64 = row.try_get("count")?;
             entity_types.insert(entity_type, count as usize);
         }
@@ -922,7 +1046,7 @@ impl KnowledgeGraphEngine {
             FROM knowledge_graph_relationships
             GROUP BY relationship_type
             ORDER BY count DESC
-            "#
+            "#,
         )
         .fetch_all(&*self.db_pool)
         .await?;
@@ -930,8 +1054,13 @@ impl KnowledgeGraphEngine {
         let mut relationship_types = HashMap::new();
         for row in relationship_types_rows {
             let relationship_type_i32: i32 = row.try_get("relationship_type")?;
-            let relationship_type = RelationshipType::try_from(relationship_type_i32)
-                .map_err(|e| sqlx::Error::Decode(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))))?;
+            let relationship_type =
+                RelationshipType::try_from(relationship_type_i32).map_err(|e| {
+                    sqlx::Error::Decode(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        e,
+                    )))
+                })?;
             let count: i64 = row.try_get("count")?;
             relationship_types.insert(relationship_type, count as usize);
         }

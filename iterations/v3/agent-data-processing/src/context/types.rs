@@ -5,8 +5,8 @@
 //! - agent-memory (working memory folding)
 //! - reflexive-learning (context-aware learning)
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -53,7 +53,7 @@ impl Default for ContextStorageConfig {
     fn default() -> Self {
         Self {
             max_context_size: 50 * 1024 * 1024, // 50MB
-            retention_hours: 168, // 1 week
+            retention_hours: 168,               // 1 week
             max_contexts: 1000,
             enable_persistent_storage: true,
             enable_memory_cache: true,
@@ -168,7 +168,6 @@ pub struct ContextData {
     pub created_at: DateTime<Utc>,
     /// Last access timestamp
     #[schemars(with = "String")]
-
     pub last_accessed_at: DateTime<Utc>,
     /// Access count
     pub access_count: u64,

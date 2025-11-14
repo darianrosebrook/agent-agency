@@ -78,16 +78,22 @@ impl HealthHandler {
     pub async fn check_health(&self) -> Result<HealthResponse, InterfaceError> {
         // Simulate basic health check
         let services = HashMap::from([
-            ("database".to_string(), ServiceHealth {
-                status: HealthStatus::Healthy,
-                message: "Database connection OK".to_string(),
-                response_time_ms: Some(5),
-            }),
-            ("cache".to_string(), ServiceHealth {
-                status: HealthStatus::Healthy,
-                message: "Cache service OK".to_string(),
-                response_time_ms: Some(2),
-            }),
+            (
+                "database".to_string(),
+                ServiceHealth {
+                    status: HealthStatus::Healthy,
+                    message: "Database connection OK".to_string(),
+                    response_time_ms: Some(5),
+                },
+            ),
+            (
+                "cache".to_string(),
+                ServiceHealth {
+                    status: HealthStatus::Healthy,
+                    message: "Cache service OK".to_string(),
+                    response_time_ms: Some(2),
+                },
+            ),
         ]);
 
         let metrics = SystemMetrics {

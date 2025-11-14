@@ -6,7 +6,7 @@
 //! @author @darianrosebrook
 
 use crate::errors::ResearchResult;
-use crate::types::research::{Evidence, EvidenceQuery, ValidationResult, EvidenceStats};
+use crate::types::research::{Evidence, EvidenceQuery, EvidenceStats, ValidationResult};
 
 /// Core research evidence collector interface
 /// Implementations provide evidence collection and validation capabilities

@@ -1,15 +1,14 @@
 //! Context resolution for disambiguation
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use anyhow::Result;
 use crate::disambiguation::types::*;
 use crate::ProcessingContext;
+use anyhow::Result;
+use std::collections::HashMap;
+use std::sync::Arc;
 // Explicit imports from contracts
 use agent_agency_contracts::types::research::{
-    EmbeddingProvider, KnowledgeBase, KnowledgeIngest,
+    EmbeddingProvider, EntityType as ContractsEntityType, KnowledgeBase, KnowledgeIngest,
     UnresolvableReason as ContractsUnresolvableReason,
-    EntityType as ContractsEntityType,
 };
 
 /// Context resolver for disambiguating ambiguities
@@ -106,7 +105,11 @@ impl ContextResolver {
     }
 
     /// Get possible resolutions for a pronoun based on context
-    pub fn get_pronoun_resolutions(&self, pronoun: &str, context: &ProcessingContext) -> Vec<String> {
+    pub fn get_pronoun_resolutions(
+        &self,
+        pronoun: &str,
+        context: &ProcessingContext,
+    ) -> Vec<String> {
         let mut resolutions = Vec::new();
 
         // Use domain hints from context
@@ -294,7 +297,10 @@ mod tests {
             context: None,
         };
 
-        let resolution = resolver.resolve_ambiguity(&ambiguity, &context).await.unwrap();
+        let resolution = resolver
+            .resolve_ambiguity(&ambiguity, &context)
+            .await
+            .unwrap();
 
         assert_eq!(resolution, Some("authentication".to_string()));
     }
@@ -328,6 +334,9 @@ mod tests {
 
         let reason = resolver.detect_unresolvable_ambiguity(&ambiguity, &context);
 
-        assert_eq!(reason, Some(ContractsUnresolvableReason::InsufficientContext));
+        assert_eq!(
+            reason,
+            Some(ContractsUnresolvableReason::InsufficientContext)
+        );
     }
 }

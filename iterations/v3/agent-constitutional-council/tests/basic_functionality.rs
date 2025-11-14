@@ -3,10 +3,16 @@
 //! These tests verify that the constitutional council can be initialized
 //! and that the basic judge workflow functions correctly.
 
-use std::sync::Arc;
-use agent_agency_contracts::{WorkingSpec, JudgeEngine, JudgeType, VerdictLabel, JudgeVerdict, EngineRequest, EngineResponse, EngineError, JudgePrompt, WorkingSpecEvidence};
-use agent_constitutional_council::{CouncilCoordinator, Judges, ConstitutionalJudge, TechnicalAuditor, QualityEvaluator, IntegrationValidator, ReviewContext};
+use agent_agency_contracts::{
+    EngineError, EngineRequest, EngineResponse, JudgeEngine, JudgePrompt, JudgeType, JudgeVerdict,
+    VerdictLabel, WorkingSpec, WorkingSpecEvidence,
+};
+use agent_constitutional_council::{
+    ConstitutionalJudge, CouncilCoordinator, IntegrationValidator, Judges, QualityEvaluator,
+    ReviewContext, TechnicalAuditor,
+};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 /// Simple test JudgeEngine implementation using mock responses
 #[derive(Debug)]
@@ -90,4 +96,3 @@ async fn test_verdict_labels() {
     assert_ne!(needs_info, conditional);
     assert_ne!(conditional, pass);
 }
-

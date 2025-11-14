@@ -1,40 +1,38 @@
 #![allow(warnings)] // Disables all warnings for the crate
 #![allow(dead_code)] // Disables dead_code warnings for the crate
 
-pub mod state_manager;
+pub mod builder;
+pub mod context_generator;
+pub mod embedding_trait;
+pub mod events;
+pub mod file_watcher_adapter;
+pub mod file_watcher_trait;
 pub mod rollback;
-pub mod storage;
+pub mod state_manager;
 /**
  * @fileoverview Workspace State Manager - Repository state management with stable views, diffs, and rollback capabilities
  * @author @darianrosebrook
  */
 pub mod state_types;
-pub mod events;
+pub mod storage;
 pub mod unified;
-pub mod builder;
-pub mod context_generator;
-pub mod file_watcher_adapter;
-pub mod file_watcher_trait;
-pub mod embedding_trait;
 
 // Re-export main types and functionality
-pub use state_manager::WorkspaceStateManager;
-pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
-pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
-pub use state_types::*;
-pub use events::{WorkspaceStateEvent, ContextType};
-pub use unified::{
-    UnifiedWorkspaceStateManager, UnifiedWorkspaceConfig,
-    FileWatchConfig, ContextGenerationConfig, MetricsConfig,
-    WorkspaceMetrics, WatcherMetrics, SnapshotMetrics,
-    ContextMetrics, EmbeddingMetrics, MemoryMetrics,
-};
 pub use builder::UnifiedWorkspaceStateManagerBuilder;
 pub use context_generator::{
-    ContextGenerator, WorkspaceContext, ContextFile, FileMetadata,
-    ContextMetadata, ContextCriteria,
+    ContextCriteria, ContextFile, ContextGenerator, ContextMetadata, FileMetadata, WorkspaceContext,
 };
 pub use embedding_trait::{EmbeddingServiceTrait, EmbeddingServiceWrapper};
+pub use events::{ContextType, WorkspaceStateEvent};
+pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
+pub use state_manager::WorkspaceStateManager;
+pub use state_types::*;
+pub use storage::{DatabaseStorage, FileStorage, MemoryStorage};
+pub use unified::{
+    ContextGenerationConfig, ContextMetrics, EmbeddingMetrics, FileWatchConfig, MemoryMetrics,
+    MetricsConfig, SnapshotMetrics, UnifiedWorkspaceConfig, UnifiedWorkspaceStateManager,
+    WatcherMetrics, WorkspaceMetrics,
+};
 
 /// Create a new workspace state manager with file-based storage
 pub fn create_file_manager(
@@ -71,7 +69,10 @@ pub fn create_unified_file_manager(
     config: UnifiedWorkspaceConfig,
 ) -> UnifiedWorkspaceStateManager {
     let storage_path = workspace_root.as_ref().join(".workspace-state");
-    let storage = Box::new(FileStorage::new(&storage_path, config.state_config.compress_states));
+    let storage = Box::new(FileStorage::new(
+        &storage_path,
+        config.state_config.compress_states,
+    ));
     UnifiedWorkspaceStateManager::new(workspace_root, config, storage)
 }
 

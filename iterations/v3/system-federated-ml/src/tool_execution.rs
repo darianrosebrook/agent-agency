@@ -3,12 +3,12 @@
 //! Provides secure execution environment for tool invocation with timeout,
 //! resource limits, and error handling.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 
 /// Tool executor for secure invocation
 #[derive(Debug)]
@@ -151,7 +151,10 @@ impl ToolExecutor {
 
     /// Execute a tool with the given invocation
     pub async fn execute_tool(&self, invocation: ToolInvocation) -> Result<ToolResult> {
-        let permit = self.concurrency_limiter.acquire().await
+        let permit = self
+            .concurrency_limiter
+            .acquire()
+            .await
             .map_err(|e| anyhow::anyhow!("Failed to acquire execution permit: {}", e))?;
 
         // Update active executions
@@ -184,7 +187,10 @@ impl ToolExecutor {
         let start_time = std::time::Instant::now();
         let timeout_ms = invocation.timeout_ms.unwrap_or(self.default_timeout_ms);
 
-        debug!("Executing tool: {} with timeout {}ms", invocation.tool_name, timeout_ms);
+        debug!(
+            "Executing tool: {} with timeout {}ms",
+            invocation.tool_name, timeout_ms
+        );
 
         // Create execution context
         let context = ExecutionContext {
@@ -201,7 +207,10 @@ impl ToolExecutor {
             Ok(result) => result,
             Err(_) => {
                 error!("Tool execution timed out: {}", invocation.tool_name);
-                Err(anyhow::anyhow!("Tool execution timed out after {}ms", timeout_ms))
+                Err(anyhow::anyhow!(
+                    "Tool execution timed out after {}ms",
+                    timeout_ms
+                ))
             }
         }
     }
@@ -261,11 +270,15 @@ impl ToolExecutor {
         // - CAWS Tier: 2 (tool execution feature)
         // - Change Budget: ~120 LOC
         // - Reviewer Requirements: Tool execution expertise
-        let result_value = match tool_name.as_str() { // Temporary: simulation until actual dispatch
+        let result_value = match tool_name.as_str() {
+            // Temporary: simulation until actual dispatch
             "caws_validator" => self.execute_caws_validator(&context.invocation).await?,
             "claim_extractor" => self.execute_claim_extractor(&context.invocation).await?,
             "fact_verifier" => self.execute_fact_verifier(&context.invocation).await?,
-            "debate_orchestrator" => self.execute_debate_orchestrator(&context.invocation).await?,
+            "debate_orchestrator" => {
+                self.execute_debate_orchestrator(&context.invocation)
+                    .await?
+            }
             "consensus_builder" => self.execute_consensus_builder(&context.invocation).await?,
             _ => {
                 warn!("Unknown tool: {}", tool_name);
@@ -279,12 +292,16 @@ impl ToolExecutor {
         // Update average execution time
         {
             let mut stats = self.stats.write().unwrap();
-            let total_time = stats.avg_execution_time_ms * (stats.total_executions - 1) as f64 + execution_time as f64;
+            let total_time = stats.avg_execution_time_ms * (stats.total_executions - 1) as f64
+                + execution_time as f64;
             stats.avg_execution_time_ms = total_time / stats.total_executions as f64;
 
             // Update total resource usage
             stats.total_resource_usage.cpu_time_ms += resource_usage.cpu_time_ms;
-            stats.total_resource_usage.peak_memory_mb = stats.total_resource_usage.peak_memory_mb.max(resource_usage.peak_memory_mb);
+            stats.total_resource_usage.peak_memory_mb = stats
+                .total_resource_usage
+                .peak_memory_mb
+                .max(resource_usage.peak_memory_mb);
             stats.total_resource_usage.io_operations += resource_usage.io_operations;
             stats.total_resource_usage.network_bytes += resource_usage.network_bytes;
         }
@@ -306,9 +323,14 @@ impl ToolExecutor {
     }
 
     /// Execute CAWS validator tool
-    async fn execute_caws_validator(&self, invocation: &ToolInvocation) -> Result<serde_json::Value> {
+    async fn execute_caws_validator(
+        &self,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
         // Simulate CAWS validation
-        let spec = invocation.parameters.get("spec")
+        let spec = invocation
+            .parameters
+            .get("spec")
             .and_then(|v| v.as_str())
             .unwrap_or("{}");
 
@@ -324,20 +346,23 @@ impl ToolExecutor {
     }
 
     /// Execute claim extractor tool
-    async fn execute_claim_extractor(&self, invocation: &ToolInvocation) -> Result<serde_json::Value> {
-        let content = invocation.parameters.get("content")
+    async fn execute_claim_extractor(
+        &self,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
+        let content = invocation
+            .parameters
+            .get("content")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
         // Simulate claim extraction
         let claims = if content.contains("must") || content.contains("should") {
-            vec![
-                serde_json::json!({
-                    "id": "claim_1",
-                    "statement": "Extracted requirement from content",
-                    "confidence": 0.85
-                })
-            ]
+            vec![serde_json::json!({
+                "id": "claim_1",
+                "statement": "Extracted requirement from content",
+                "confidence": 0.85
+            })]
         } else {
             vec![]
         };
@@ -349,8 +374,13 @@ impl ToolExecutor {
     }
 
     /// Execute fact verifier tool
-    async fn execute_fact_verifier(&self, invocation: &ToolInvocation) -> Result<serde_json::Value> {
-        let claim = invocation.parameters.get("claim")
+    async fn execute_fact_verifier(
+        &self,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
+        let claim = invocation
+            .parameters
+            .get("claim")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -366,8 +396,13 @@ impl ToolExecutor {
     }
 
     /// Execute debate orchestrator tool
-    async fn execute_debate_orchestrator(&self, invocation: &ToolInvocation) -> Result<serde_json::Value> {
-        let topic = invocation.parameters.get("topic")
+    async fn execute_debate_orchestrator(
+        &self,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
+        let topic = invocation
+            .parameters
+            .get("topic")
             .and_then(|v| v.as_str())
             .unwrap_or("default topic");
 
@@ -383,9 +418,14 @@ impl ToolExecutor {
     }
 
     /// Execute consensus builder tool
-    async fn execute_consensus_builder(&self, invocation: &ToolInvocation) -> Result<serde_json::Value> {
+    async fn execute_consensus_builder(
+        &self,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
         // Simulate consensus building
-        let positions = invocation.parameters.get("positions")
+        let positions = invocation
+            .parameters
+            .get("positions")
             .and_then(|v| v.as_array())
             .map(|arr| arr.len())
             .unwrap_or(0);
@@ -560,5 +600,3 @@ impl Default for ExecutionStats {
         }
     }
 }
-
-

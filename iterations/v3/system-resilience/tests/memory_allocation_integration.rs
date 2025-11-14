@@ -7,11 +7,10 @@
 //! - Maintains consistent statistics
 //! - Provides accurate reporting
 
-use system_resilience::memory::{
-    AllocationSiteTracker, AllocationSite,
-    MemoryManager, MemoryManagementConfig,
-};
 use std::sync::Arc;
+use system_resilience::memory::{
+    AllocationSite, AllocationSiteTracker, MemoryManagementConfig, MemoryManager,
+};
 use tokio::sync::RwLock;
 
 #[cfg(test)]
@@ -257,7 +256,7 @@ mod memory_allocation_tracking_tests {
             monitor_config: system_resilience::memory::MemoryLimitConfig {
                 max_heap_mb: 1024,
                 max_stack_mb: 128,
-                warning_threshold_percent: 0.5,  // 512 MB / 1024 MB
+                warning_threshold_percent: 0.5,   // 512 MB / 1024 MB
                 critical_threshold_percent: 0.75, // 768 MB / 1024 MB
                 enable_gc_pressure: true,
                 gc_pressure_threshold_mb: 256.0,
@@ -291,7 +290,10 @@ mod memory_allocation_tracking_tests {
         // Verify memory pressure detection works
         let pressure = manager.get_memory_pressure();
         // Pressure should be Low in a test environment
-        assert!(matches!(pressure, system_resilience::memory::MemoryPressure::Low));
+        assert!(matches!(
+            pressure,
+            system_resilience::memory::MemoryPressure::Low
+        ));
     }
 
     /// Test concurrent allocation tracking
@@ -392,7 +394,7 @@ mod memory_allocation_tracking_tests {
         // Get site statistics
         let site_stats = tracker_guard.get_site_stats("integrity.rs", 42);
         assert!(site_stats.is_some());
-        
+
         let stats = site_stats.unwrap();
         assert_eq!(stats.total_allocations, 1);
         assert_eq!(stats.total_bytes, size);

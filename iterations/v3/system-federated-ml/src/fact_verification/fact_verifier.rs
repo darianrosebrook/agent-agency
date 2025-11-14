@@ -3,10 +3,10 @@
 //! Verifies claims against multiple sources and evidence types
 //! to determine their factual accuracy.
 
-use schemars::JsonSchema;
-use std::collections::HashMap;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tracing::{debug, info};
 
 use crate::evidence_types::*;
@@ -47,16 +47,31 @@ impl FactVerifier {
     pub async fn new() -> Result<Self> {
         let mut methods = HashMap::new();
 
-        methods.insert("factual".to_string(), VerificationMethod::SourceCrossReference);
-        methods.insert("performance".to_string(), VerificationMethod::EmpiricalTesting);
+        methods.insert(
+            "factual".to_string(),
+            VerificationMethod::SourceCrossReference,
+        );
+        methods.insert(
+            "performance".to_string(),
+            VerificationMethod::EmpiricalTesting,
+        );
         methods.insert("opinion".to_string(), VerificationMethod::ExpertConsensus);
-        methods.insert("logical".to_string(), VerificationMethod::LogicalConsistency);
+        methods.insert(
+            "logical".to_string(),
+            VerificationMethod::LogicalConsistency,
+        );
 
-        Ok(Self { verification_methods: methods })
+        Ok(Self {
+            verification_methods: methods,
+        })
     }
 
     /// Verify a collection of claims
-    pub async fn verify_claims(&self, claims: &[AtomicClaim], context: &ProcessingContext) -> Result<Vec<VerificationResult>> {
+    pub async fn verify_claims(
+        &self,
+        claims: &[AtomicClaim],
+        context: &ProcessingContext,
+    ) -> Result<Vec<VerificationResult>> {
         info!("Verifying {} claims", claims.len());
 
         let mut results = Vec::new();
@@ -70,7 +85,11 @@ impl FactVerifier {
     }
 
     /// Verify a single claim
-    async fn verify_single_claim(&self, claim: &AtomicClaim, context: &ProcessingContext) -> Result<VerificationResult> {
+    async fn verify_single_claim(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> Result<VerificationResult> {
         debug!("Verifying claim: {}", claim.text);
 
         let method = self.select_verification_method(claim)?;
@@ -78,16 +97,16 @@ impl FactVerifier {
         let (status, confidence, evidence, counter_evidence) = match method {
             VerificationMethod::SourceCrossReference => {
                 self.verify_by_cross_reference(claim, context).await?
-            },
+            }
             VerificationMethod::EmpiricalTesting => {
                 self.verify_by_empirical_testing(claim, context).await?
-            },
+            }
             VerificationMethod::ExpertConsensus => {
                 self.verify_by_expert_consensus(claim, context).await?
-            },
+            }
             VerificationMethod::LogicalConsistency => {
                 self.verify_by_logical_consistency(claim).await?
-            },
+            }
         };
 
         Ok(VerificationResult {
@@ -110,57 +129,108 @@ impl FactVerifier {
             ClaimType::Definitional => "logical",
         };
 
-        self.verification_methods.get(method_key)
-            .ok_or_else(|| anyhow::anyhow!("No verification method for claim type: {:?}", claim.claim_type))
+        self.verification_methods.get(method_key).ok_or_else(|| {
+            anyhow::anyhow!(
+                "No verification method for claim type: {:?}",
+                claim.claim_type
+            )
+        })
     }
 
     /// Verify by cross-referencing multiple sources
-    async fn verify_by_cross_reference(&self, claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_cross_reference(
+        &self,
+        claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement comprehensive cross-reference verification
         //       Currently uses placeholder implementation; should search multiple sources and aggregate evidence for accurate verification.
-        let evidence = vec!["Source A confirms".to_string(), "Source B corroborates".to_string()];
+        let evidence = vec![
+            "Source A confirms".to_string(),
+            "Source B corroborates".to_string(),
+        ];
         let counter_evidence = vec![];
 
         // Simple heuristic based on claim confidence
         if claim.confidence > 0.8 {
-            Ok((VerificationStatus::Verified, 0.85, evidence, counter_evidence))
+            Ok((
+                VerificationStatus::Verified,
+                0.85,
+                evidence,
+                counter_evidence,
+            ))
         } else {
-            Ok((VerificationStatus::Unverifiable, 0.5, evidence, counter_evidence))
+            Ok((
+                VerificationStatus::Unverifiable,
+                0.5,
+                evidence,
+                counter_evidence,
+            ))
         }
     }
 
     /// Verify by empirical testing
-    async fn verify_by_empirical_testing(&self, _claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_empirical_testing(
+        &self,
+        _claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement actual empirical testing verification
         //       Currently uses placeholder implementation; should run actual tests and collect empirical evidence for verification.
         let evidence = vec!["Empirical test passed".to_string()];
         let counter_evidence = vec![];
 
-        Ok((VerificationStatus::Verified, 0.9, evidence, counter_evidence))
+        Ok((
+            VerificationStatus::Verified,
+            0.9,
+            evidence,
+            counter_evidence,
+        ))
     }
 
     /// Verify by expert consensus
-    async fn verify_by_expert_consensus(&self, _claim: &AtomicClaim, _context: &ProcessingContext) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_expert_consensus(
+        &self,
+        _claim: &AtomicClaim,
+        _context: &ProcessingContext,
+    ) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement expert consensus verification
         //       Currently uses placeholder implementation; should consult experts and aggregate consensus for verification.
         let evidence = vec!["Expert consensus reached".to_string()];
         let counter_evidence = vec![];
 
-        Ok((VerificationStatus::Subjective, 0.7, evidence, counter_evidence))
+        Ok((
+            VerificationStatus::Subjective,
+            0.7,
+            evidence,
+            counter_evidence,
+        ))
     }
 
     /// Verify by logical consistency
-    async fn verify_by_logical_consistency(&self, _claim: &AtomicClaim) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
+    async fn verify_by_logical_consistency(
+        &self,
+        _claim: &AtomicClaim,
+    ) -> Result<(VerificationStatus, f64, Vec<String>, Vec<String>)> {
         // TODO: Implement comprehensive logical consistency verification
         //       Currently uses basic check; should implement comprehensive logical consistency analysis using formal logic and reasoning.
         let evidence = vec!["Logically consistent".to_string()];
         let counter_evidence = vec![];
 
-        Ok((VerificationStatus::Verified, 0.8, evidence, counter_evidence))
+        Ok((
+            VerificationStatus::Verified,
+            0.8,
+            evidence,
+            counter_evidence,
+        ))
     }
 
     /// Determine verification priority for a claim
-    pub fn get_verification_priority(&self, claim: &AtomicClaim, context: &ProcessingContext) -> VerificationPriority {
+    pub fn get_verification_priority(
+        &self,
+        claim: &AtomicClaim,
+        context: &ProcessingContext,
+    ) -> VerificationPriority {
         // High priority for high-confidence claims in critical contexts
         if claim.confidence > 0.9 && context.config.enable_verification {
             VerificationPriority::High

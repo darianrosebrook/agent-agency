@@ -1,9 +1,9 @@
 //! Semantic context generation for tasks and content
 
-use schemars::JsonSchema;
-use super::similarity::*;
 use super::embedding_types::*;
+use super::similarity::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 
 /// Generate semantic context for a task description
@@ -162,7 +162,9 @@ pub struct CouncilContextEnricher {
 }
 
 impl CouncilContextEnricher {
-    pub fn new(embedding_service: Box<dyn crate::embedding::embedding_service::EmbeddingService>) -> Self {
+    pub fn new(
+        embedding_service: Box<dyn crate::embedding::embedding_service::EmbeddingService>,
+    ) -> Self {
         Self {
             context_builder: ContextBuilder::new(),
             embedding_service,

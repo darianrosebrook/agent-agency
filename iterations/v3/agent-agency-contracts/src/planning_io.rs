@@ -5,15 +5,15 @@
 //!
 //! @author @darianrosebrook
 
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 // Import canonical types from types module
-use crate::types::planning::PlanningStrategy;
 use crate::types::execution::ExecutionContext;
+use crate::types::planning::PlanningStrategy;
 
 /// Execution plan with milestone breakdown
 /// The core data structure for executable plans
@@ -795,7 +795,6 @@ pub enum PlanCreator {
     Hybrid { ai_contribution: f64 },
 }
 
-
 /// Milestone execution metrics
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MilestoneMetrics {
@@ -917,7 +916,9 @@ mod tests {
         assert!(matches!(PlanState::Completed, PlanState::Completed));
 
         // Test blocked state with reason
-        match (PlanState::Blocked { reason: "Dependency issue".to_string() }) {
+        match (PlanState::Blocked {
+            reason: "Dependency issue".to_string(),
+        }) {
             PlanState::Blocked { reason } => assert_eq!(reason, "Dependency issue"),
             _ => panic!("Expected blocked state"),
         }
@@ -928,11 +929,19 @@ mod tests {
         // Test milestone state transitions
         assert!(matches!(MilestoneState::Pending, MilestoneState::Pending));
         assert!(matches!(MilestoneState::Ready, MilestoneState::Ready));
-        assert!(matches!(MilestoneState::InProgress, MilestoneState::InProgress));
-        assert!(matches!(MilestoneState::Completed, MilestoneState::Completed));
+        assert!(matches!(
+            MilestoneState::InProgress,
+            MilestoneState::InProgress
+        ));
+        assert!(matches!(
+            MilestoneState::Completed,
+            MilestoneState::Completed
+        ));
 
         // Test blocked state with dependencies
-        match (MilestoneState::Blocked { dependencies: vec!["M1".to_string()] }) {
+        match (MilestoneState::Blocked {
+            dependencies: vec!["M1".to_string()],
+        }) {
             MilestoneState::Blocked { dependencies } => {
                 assert_eq!(dependencies.len(), 1);
                 assert_eq!(dependencies[0], "M1");
@@ -967,14 +976,17 @@ mod tests {
     #[test]
     fn test_dependency_graph_structure() {
         let mut nodes = HashMap::new();
-        nodes.insert("M1".to_string(), DependencyNode {
-            milestone_id: "M1".to_string(),
-            node_type: DependencyNodeType::Milestone,
-            estimated_cost: 10.0,
-            estimated_time_ms: 5000,
-            resource_requirements: HashMap::new(),
-            metadata: HashMap::new(),
-        });
+        nodes.insert(
+            "M1".to_string(),
+            DependencyNode {
+                milestone_id: "M1".to_string(),
+                node_type: DependencyNodeType::Milestone,
+                estimated_cost: 10.0,
+                estimated_time_ms: 5000,
+                resource_requirements: HashMap::new(),
+                metadata: HashMap::new(),
+            },
+        );
 
         let edges = vec![DependencyEdge {
             from: "M1".to_string(),
@@ -999,4 +1011,3 @@ mod tests {
         assert!(!graph.has_cycles);
     }
 }
-

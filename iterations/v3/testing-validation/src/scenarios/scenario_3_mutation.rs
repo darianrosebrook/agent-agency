@@ -6,21 +6,18 @@
 //! 3. Agent runs mutation testing to achieve 90% coverage
 //! 4. Council validates functionality, coverage, and CAWS compliance
 
-use std::time::Instant;
 use std::sync::Arc;
-use tracing::{info, error};
+use std::time::Instant;
+use tracing::{error, info};
 
-use crate::harness::{TestEnvironment, LocalServiceManager, AssertionFramework};
 use crate::fixtures::schema_validator_spec::*;
-use crate::{TestResult, TestMetrics, Scenario};
+use crate::harness::{AssertionFramework, LocalServiceManager, TestEnvironment};
+use crate::{Scenario, TestMetrics, TestResult};
 #[cfg(feature = "full")]
 use agent_research::self_prompting_agent::models::{ModelRegistry, OllamaProvider};
 
 /// Run the mutation testing scenario
-pub async fn run_test(
-    env: &TestEnvironment,
-    services: &LocalServiceManager,
-) -> TestResult {
+pub async fn run_test(env: &TestEnvironment, services: &LocalServiceManager) -> TestResult {
     let start_time = Instant::now();
     let mut assertions = AssertionFramework::new();
 
@@ -72,21 +69,19 @@ pub async fn run_test(
     let base_url = "http://localhost:11434".to_string(); // Default Ollama URL
     let default_model = "gemma3n:e2b".to_string();
     drop(ollama_lock); // Release lock
-    
+
     let mut model_registry = ModelRegistry::new();
-    let ollama_provider = Arc::new(OllamaProvider::new(
-        base_url,
-        default_model,
-    ));
+    let ollama_provider = Arc::new(OllamaProvider::new(base_url, default_model));
     model_registry.register_provider("ollama".to_string(), ollama_provider);
     let model_registry = Arc::new(model_registry);
 
-    let evaluator = Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
+    let evaluator =
+        Arc::new(agent_research::self_prompting_agent::evaluation::EvaluationOrchestrator::new());
 
     #[cfg(feature = "full")]
-    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
-    #[cfg(feature = "full")]
     use agent_research::self_prompting_agent::prompting_types::{AutonomousMode, SafetyMode};
+    #[cfg(feature = "full")]
+    use agent_research::self_prompting_agent::self_prompting_agent::SelfPromptingAgentConfig;
     let agent_config = SelfPromptingAgentConfig {
         max_iterations: 5,
         enable_sandbox: true,
@@ -102,7 +97,9 @@ pub async fn run_test(
         agent_config,
         model_registry,
         evaluator,
-    ).await {
+    )
+    .await
+    {
         Ok(agent) => agent,
         Err(e) => {
             return TestResult {
@@ -153,19 +150,27 @@ pub async fn run_test(
     };
 
     // Record metrics from the generation process
-    env.record_metric("generation_iterations", generation_result.iterations as f64).await;
-    env.record_metric("model_calls", generation_result.events.len() as f64).await;
+    env.record_metric("generation_iterations", generation_result.iterations as f64)
+        .await;
+    env.record_metric("model_calls", generation_result.events.len() as f64)
+        .await;
 
     // Test compilation of generated code
     assertions.assert_code_compiles(
-        &workspace.execute_command("cargo", &["check"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Generated validator should compile"
+        &workspace
+            .execute_command("cargo", &["check"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Generated validator should compile",
     );
 
     // Test execution of generated tests
     assertions.assert_tests_pass(
-        &workspace.execute_command("cargo", &["test"]).await.unwrap_or_else(|_| crate::harness::default_process_output()),
-        "Generated tests should pass"
+        &workspace
+            .execute_command("cargo", &["test"])
+            .await
+            .unwrap_or_else(|_| crate::harness::default_process_output()),
+        "Generated tests should pass",
     );
 
     // Validate that the generated code actually implements the required functionality
@@ -184,7 +189,8 @@ pub async fn run_test(
     };
     let has_validator_struct = lib_content.contains("struct JsonSchemaValidator");
     let has_validate_method = lib_content.contains("fn validate");
-    let has_error_handling = lib_content.contains("ValidationError") || lib_content.contains("Result");
+    let has_error_handling =
+        lib_content.contains("ValidationError") || lib_content.contains("Result");
 
     if !has_validator_struct {
         assertions.record_assertion(
@@ -214,19 +220,21 @@ pub async fn run_test(
     }
 
     // Check that tests were generated
-    let test_content = match std::fs::read_to_string(workspace.path().join("tests/validator_tests.rs")) {
-        Ok(content) => content,
-        Err(e) => {
-            return TestResult {
-                scenario: Scenario::Scenario3Mutation,
-                passed: false,
-                duration_ms: start_time.elapsed().as_millis() as u64,
-                error_message: Some(format!("Failed to read test file: {}", e)),
-                metrics: TestMetrics::default(),
-            };
-        }
-    };
-    let has_tests = test_content.contains("#[test]") && test_content.contains("JsonSchemaValidator");
+    let test_content =
+        match std::fs::read_to_string(workspace.path().join("tests/validator_tests.rs")) {
+            Ok(content) => content,
+            Err(e) => {
+                return TestResult {
+                    scenario: Scenario::Scenario3Mutation,
+                    passed: false,
+                    duration_ms: start_time.elapsed().as_millis() as u64,
+                    error_message: Some(format!("Failed to read test file: {}", e)),
+                    metrics: TestMetrics::default(),
+                };
+            }
+        };
+    let has_tests =
+        test_content.contains("#[test]") && test_content.contains("JsonSchemaValidator");
 
     if !has_tests {
         assertions.record_assertion(
@@ -239,7 +247,10 @@ pub async fn run_test(
 
     // For mutation testing, we'll implement a basic check since cargo-mutants may not be available
     // Check that the code has sufficient test coverage by running tests with coverage if available
-    let test_output = workspace.execute_command("cargo", &["test", "--", "--nocapture"]).await.unwrap_or_else(|_| crate::harness::default_process_output());
+    let test_output = workspace
+        .execute_command("cargo", &["test", "--", "--nocapture"])
+        .await
+        .unwrap_or_else(|_| crate::harness::default_process_output());
     if test_output.status.success() {
         // Simple heuristic: if tests pass and we have multiple test functions, assume reasonable coverage
         let test_function_count = test_content.matches("#[test]").count();
@@ -286,7 +297,11 @@ pub async fn run_test(
             // - Change Budget: ~200 LOC
             // - Reviewer Requirements: Mutation testing expertise
             // Simulate mutation score
-            assertions.assert_mutation_score(0.85, 0.80, "Basic test coverage should meet minimum threshold");
+            assertions.assert_mutation_score(
+                0.85,
+                0.80,
+                "Basic test coverage should meet minimum threshold",
+            );
         }
     }
 
@@ -307,12 +322,16 @@ pub async fn run_test(
                 violations: vec![],
                 score: 1.0,
             },
-            "Implementation should be CAWS compliant (no unsafe code)"
+            "Implementation should be CAWS compliant (no unsafe code)",
         );
     }
 
     // Record metrics
-    env.record_metric("test_functions_generated", test_content.matches("#[test]").count() as f64).await;
+    env.record_metric(
+        "test_functions_generated",
+        test_content.matches("#[test]").count() as f64,
+    )
+    .await;
 
     let duration = start_time.elapsed().as_millis() as u64;
     let metrics = env.get_metrics().await;
@@ -333,7 +352,9 @@ pub async fn run_test(
 }
 
 /// Setup the validator project structure
-async fn setup_validator_project(workspace: &crate::harness::TestWorkspace) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn setup_validator_project(
+    workspace: &crate::harness::TestWorkspace,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::fs;
     use std::path::Path;
 
@@ -652,7 +673,10 @@ mod tests {
     }
 }
 "#;
-    fs::write(workspace.path().join("tests/validator_tests.rs"), test_content)?;
+    fs::write(
+        workspace.path().join("tests/validator_tests.rs"),
+        test_content,
+    )?;
 
     Ok(())
 }

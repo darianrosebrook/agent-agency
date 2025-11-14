@@ -7,17 +7,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
-use crate::memory::monitor::*;
-use crate::memory::types::*;
-use crate::memory::resources::*;
 use crate::memory::allocation::*;
-use crate::memory::metrics::{MemoryPressure, CpuMetrics};
 use crate::memory::allocator::{MemoryStats, MemoryTrackingAllocator};
 use crate::memory::cache::MemoryManagedCache;
 use crate::memory::leaks::MemoryLeakDetector;
-use crate::memory::pool::{ObjectPool, PooledObject, PoolStats};
+use crate::memory::metrics::{CpuMetrics, MemoryPressure};
+use crate::memory::monitor::*;
+use crate::memory::pool::{ObjectPool, PoolStats, PooledObject};
+use crate::memory::resources::*;
+use crate::memory::types::*;
 use std::time::{Duration, Instant};
 
 /// Configuration for memory management
@@ -54,7 +54,9 @@ impl MemoryManager {
     pub fn new(config: MemoryManagementConfig) -> Self {
         let monitor = Arc::new(MemoryMonitor::new(config.monitor_config.clone()));
         let leak_detector = if config.enable_leak_detection {
-            Some(Arc::new(MemoryLeakDetector::new(config.leak_detection_threshold_mb)))
+            Some(Arc::new(MemoryLeakDetector::new(
+                config.leak_detection_threshold_mb,
+            )))
         } else {
             None
         };
@@ -76,15 +78,19 @@ impl MemoryManager {
         info!("Initializing memory management system");
 
         // Register memory pressure callbacks
-        self.monitor.register_pressure_callback(MemoryPressure::High, |pressure| {
-            warn!("Memory pressure is HIGH: {:?}", pressure);
-            // In production, you might trigger GC, reduce cache sizes, etc.
-        }).await;
+        self.monitor
+            .register_pressure_callback(MemoryPressure::High, |pressure| {
+                warn!("Memory pressure is HIGH: {:?}", pressure);
+                // In production, you might trigger GC, reduce cache sizes, etc.
+            })
+            .await;
 
-        self.monitor.register_pressure_callback(MemoryPressure::Critical, |pressure| {
-            error!("Memory pressure is CRITICAL: {:?}", pressure);
-            // Emergency measures: aggressive GC, cache clearing, etc.
-        }).await;
+        self.monitor
+            .register_pressure_callback(MemoryPressure::Critical, |pressure| {
+                error!("Memory pressure is CRITICAL: {:?}", pressure);
+                // Emergency measures: aggressive GC, cache clearing, etc.
+            })
+            .await;
 
         // Start monitoring
         // self.monitor.start_monitoring();
@@ -134,8 +140,12 @@ impl MemoryManager {
                         None
                     }
                 }
-        } else {
-                tracing::error!("Pool '{}' type mismatch - expected ObjectPool<{}>", name, std::any::type_name::<T>());
+            } else {
+                tracing::error!(
+                    "Pool '{}' type mismatch - expected ObjectPool<{}>",
+                    name,
+                    std::any::type_name::<T>()
+                );
                 None
             }
         } else {
@@ -155,12 +165,16 @@ impl MemoryManager {
 
     /// Get orphaned object cleanup statistics
     pub fn get_cleanup_stats(&self) -> (usize, Vec<String>) {
-        let orphaned_count = crate::memory::ORPHANED_OBJECTS.lock()
+        let orphaned_count = crate::memory::ORPHANED_OBJECTS
+            .lock()
             .map(|orphaned| orphaned.len())
             .unwrap_or(0);
 
         let warnings = if orphaned_count > 0 {
-            vec![format!("{} orphaned objects detected - consider enabling tokio runtime for proper cleanup", orphaned_count)]
+            vec![format!(
+                "{} orphaned objects detected - consider enabling tokio runtime for proper cleanup",
+                orphaned_count
+            )]
         } else {
             Vec::new()
         };
@@ -233,7 +247,7 @@ impl MemoryManager {
         gc_registry.marked_objects.clear();
         gc_registry.pending_finalization.clear();
         gc_registry.weak_references.clear();
-        
+
         debug!("Garbage collection completed");
     }
 
@@ -245,7 +259,13 @@ impl MemoryManager {
     }
 
     /// Create a memory-managed cache
-    pub fn create_cache<K, V>(&self, _name: &str, max_entries: usize, max_memory_mb: usize, ttl_seconds: u64) -> MemoryManagedCache<K, V>
+    pub fn create_cache<K, V>(
+        &self,
+        _name: &str,
+        max_entries: usize,
+        max_memory_mb: usize,
+        ttl_seconds: u64,
+    ) -> MemoryManagedCache<K, V>
     where
         K: Eq + std::hash::Hash + Clone + std::fmt::Debug,
         V: Clone,
@@ -261,11 +281,15 @@ impl MemoryManager {
         system.refresh_all();
 
         let overall_usage = system.global_cpu_info().cpu_usage();
-        let per_core_usage: Vec<f64> = system.cpus().iter()
+        let per_core_usage: Vec<f64> = system
+            .cpus()
+            .iter()
             .map(|cpu| cpu.cpu_usage() as f64)
             .collect();
 
-        let frequency_mhz = system.cpus().first()
+        let frequency_mhz = system
+            .cpus()
+            .first()
             .map(|cpu| cpu.frequency() as f64)
             .unwrap_or(2400.0); // Default frequency
 
@@ -342,7 +366,11 @@ impl MemoryManager {
                 .await
                 .ok()
                 .and_then(|temp_str| {
-                    temp_str.trim().parse::<f64>().ok().map(|temp| temp / 1000.0)
+                    temp_str
+                        .trim()
+                        .parse::<f64>()
+                        .ok()
+                        .map(|temp| temp / 1000.0)
                 })
         }
         #[cfg(target_os = "windows")]

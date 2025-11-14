@@ -3,14 +3,14 @@
 //!
 //! Manages workspace discovery, access controls, and permissions for cross-workspace memory access.
 
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 
-use crate::memory_types::{WorkspaceEntry, WorkspaceAccess, WorkspaceAccessConfig};
+use crate::memory_types::{WorkspaceAccess, WorkspaceAccessConfig, WorkspaceEntry};
 use crate::{MemoryError, MemoryResult};
 use sqlx::{PgPool, Row};
 
@@ -50,13 +50,18 @@ impl WorkspaceRegistry {
     }
 
     /// Register a workspace with the given access level
-    pub async fn register_workspace(&self, path: &Path, access: WorkspaceAccess) -> MemoryResult<String> {
+    pub async fn register_workspace(
+        &self,
+        path: &Path,
+        access: WorkspaceAccess,
+    ) -> MemoryResult<String> {
         let path_str = path.to_string_lossy().to_string();
         let workspace_id = self.generate_workspace_id(path);
 
         let entry = WorkspaceEntry {
             id: workspace_id.clone(),
-            name: path.file_name()
+            name: path
+                .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| "Unknown".to_string()),
             path: path.to_path_buf(),
@@ -97,7 +102,6 @@ impl WorkspaceRegistry {
         Ok(workspaces.get(workspace_id).cloned())
     }
 
-
     /// Record workspace access
     pub async fn record_access(&self, workspace_id: &str) -> MemoryResult<()> {
         let mut workspaces = self.workspaces.write().await;
@@ -133,8 +137,14 @@ impl WorkspaceRegistry {
     /// Get all accessible workspaces for the current context
     pub async fn get_accessible_workspaces(&self) -> MemoryResult<Vec<WorkspaceEntry>> {
         let workspaces = self.workspaces.read().await;
-        let accessible = workspaces.values()
-            .filter(|entry| matches!(entry.access, WorkspaceAccess::Enabled | WorkspaceAccess::ReadOnly))
+        let accessible = workspaces
+            .values()
+            .filter(|entry| {
+                matches!(
+                    entry.access,
+                    WorkspaceAccess::Enabled | WorkspaceAccess::ReadOnly
+                )
+            })
             .cloned()
             .collect();
         Ok(accessible)
@@ -209,14 +219,18 @@ impl WorkspaceRegistry {
     /// Check if a workspace is in the blocked list
     fn is_blocked_workspace(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy().to_string();
-        self.config.blocked_workspaces.iter()
+        self.config
+            .blocked_workspaces
+            .iter()
             .any(|blocked| path_str.starts_with(blocked))
     }
 
     /// Check if a workspace is a default workspace
     fn is_default_workspace(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy().to_string();
-        self.config.default_workspaces.iter()
+        self.config
+            .default_workspaces
+            .iter()
             .any(|default| path_str.starts_with(default))
     }
 
@@ -225,7 +239,8 @@ impl WorkspaceRegistry {
         for default_path in &self.config.default_workspaces {
             let path = PathBuf::from(default_path);
             if path.exists() {
-                self.register_workspace(&path, WorkspaceAccess::Enabled).await?;
+                self.register_workspace(&path, WorkspaceAccess::Enabled)
+                    .await?;
             }
         }
         Ok(())
@@ -245,7 +260,7 @@ impl WorkspaceRegistry {
     async fn load_workspaces(&self) -> MemoryResult<()> {
         let rows = sqlx::query(
             r#"
-            SELECT workspace_id, name, description, created_at, last_accessed, owner_agent_id
+            SELECT workspace_id, name, path, access, created_at, last_accessed, access_count, discovered_at, is_default
             FROM workspace_registry
             ORDER BY last_accessed DESC
             "#
@@ -256,23 +271,19 @@ impl WorkspaceRegistry {
 
         let mut workspaces = self.workspaces.write().await;
         for row in rows {
-            let workspace_id: String = row.try_get("workspace_id")
-                .map_err(MemoryError::Database)?;
-            let name: String = row.try_get("name")
-                .map_err(MemoryError::Database)?;
-            let created_at: DateTime<Utc> = row.try_get("created_at")
-                .map_err(MemoryError::Database)?;
+            let workspace_id: String =
+                row.try_get("workspace_id").map_err(MemoryError::Database)?;
+            let name: String = row.try_get("name").map_err(MemoryError::Database)?;
+            let created_at: DateTime<Utc> =
+                row.try_get("created_at").map_err(MemoryError::Database)?;
             let last_accessed: Option<DateTime<Utc>> = row.try_get("last_accessed").ok();
-            let path: String = row.try_get("path")
+            let path: String = row.try_get("path").map_err(MemoryError::Database)?;
+            let access: String = row.try_get("access").map_err(MemoryError::Database)?;
+            let access_count: i64 = row.try_get("access_count").map_err(MemoryError::Database)?;
+            let discovered_at: DateTime<Utc> = row
+                .try_get("discovered_at")
                 .map_err(MemoryError::Database)?;
-            let access: String = row.try_get("access")
-                .map_err(MemoryError::Database)?;
-            let access_count: i64 = row.try_get("access_count")
-                .map_err(MemoryError::Database)?;
-            let discovered_at: DateTime<Utc> = row.try_get("discovered_at")
-                .map_err(MemoryError::Database)?;
-            let is_default: bool = row.try_get("is_default")
-                .map_err(MemoryError::Database)?;
+            let is_default: bool = row.try_get("is_default").map_err(MemoryError::Database)?;
 
             let entry = WorkspaceEntry {
                 id: workspace_id.clone(),
@@ -343,7 +354,10 @@ impl WorkspaceRegistry {
     }
 
     /// Get workspaces that haven't been accessed since the cutoff date
-    pub async fn get_unused_workspaces(&self, cutoff_date: chrono::DateTime<chrono::Utc>) -> MemoryResult<Vec<WorkspaceEntry>> {
+    pub async fn get_unused_workspaces(
+        &self,
+        cutoff_date: chrono::DateTime<chrono::Utc>,
+    ) -> MemoryResult<Vec<WorkspaceEntry>> {
         let workspaces = self.workspaces.read().await;
         let unused = workspaces
             .values()
@@ -354,17 +368,23 @@ impl WorkspaceRegistry {
     }
 
     /// Update workspace access level
-    pub async fn update_workspace_access(&self, workspace_id: &str, access: WorkspaceAccess) -> MemoryResult<()> {
+    pub async fn update_workspace_access(
+        &self,
+        workspace_id: &str,
+        access: WorkspaceAccess,
+    ) -> MemoryResult<()> {
         let mut workspaces = self.workspaces.write().await;
         if let Some(entry) = workspaces.get_mut(workspace_id) {
             entry.access = access;
             entry.last_accessed = chrono::Utc::now();
             Ok(())
         } else {
-            Err(crate::MemoryError::NotFound(format!("Workspace {} not found", workspace_id)))
+            Err(crate::MemoryError::NotFound(format!(
+                "Workspace {} not found",
+                workspace_id
+            )))
         }
     }
-
 }
 
 #[cfg(test)]
@@ -388,10 +408,17 @@ mod tests {
         let registry = WorkspaceRegistry::new(config, db_pool);
 
         // Test registering a workspace
-        let workspace_id = registry.register_workspace(temp_dir.path(), WorkspaceAccess::Enabled).await.unwrap();
+        let workspace_id = registry
+            .register_workspace(temp_dir.path(), WorkspaceAccess::Enabled)
+            .await
+            .unwrap();
 
         // Verify it's registered
-        let entry = registry.get_workspace(&workspace_id).await.unwrap().unwrap();
+        let entry = registry
+            .get_workspace(&workspace_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(entry.access, WorkspaceAccess::Enabled);
         assert!(entry.is_default);
     }
@@ -414,7 +441,10 @@ mod tests {
         // Register blocked workspace
         let blocked_path = temp_dir.path().join("blocked");
         std::fs::create_dir(&blocked_path).unwrap();
-        let workspace_id = registry.register_workspace(&blocked_path, WorkspaceAccess::Blocked).await.unwrap();
+        let workspace_id = registry
+            .register_workspace(&blocked_path, WorkspaceAccess::Blocked)
+            .await
+            .unwrap();
 
         // Check access is denied
         assert!(!registry.check_access(&workspace_id).await.unwrap());

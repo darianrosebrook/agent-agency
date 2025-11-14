@@ -2,22 +2,26 @@
 //!
 //! This module handles parsing of Rust/TypeScript code and extracting claims from implementations.
 
-use regex::Regex;
-use std::collections::HashMap;
+use crate::extraction_types::{AtomicClaim, ClaimScope, DataImpact, VerifiabilityLevel};
 use crate::verification::types::*;
 use crate::verification::verification_types::{
-    TestOutput, FunctionDefinition, CodeStructure, TypeDefinition, 
-    ImplementationBlock, DocumentationStructure, UsageExample,
+    CodeStructure, DocumentationStructure, FunctionDefinition, ImplementationBlock, TestOutput,
+    TypeDefinition, UsageExample,
 };
-use crate::extraction_types::{AtomicClaim, VerifiabilityLevel, ClaimScope, DataImpact};
 use anyhow::Result;
+use regex::Regex;
+use std::collections::HashMap;
 
 /// Code claim extractor
 pub struct CodeExtractor;
 
 impl CodeExtractor {
     /// Extract claims from code outputs
-    pub async fn extract_code_claims(&self, code_output: &CodeOutput, specification: &CodeSpecification) -> Result<Vec<AtomicClaim>> {
+    pub async fn extract_code_claims(
+        &self,
+        code_output: &CodeOutput,
+        specification: &CodeSpecification,
+    ) -> Result<Vec<AtomicClaim>> {
         let mut claims = Vec::new();
 
         // Parse code structure
@@ -25,7 +29,9 @@ impl CodeExtractor {
 
         // Extract function signature claims
         for function in &code_structure.functions {
-            if let Some(func_claim) = self.extract_function_signature_claim(function, specification)? {
+            if let Some(func_claim) =
+                self.extract_function_signature_claim(function, specification)?
+            {
                 claims.push(func_claim);
             }
         }
@@ -39,7 +45,9 @@ impl CodeExtractor {
 
         // Extract implementation claims
         for impl_block in &code_structure.implementations {
-            if let Some(impl_claim) = self.extract_implementation_claim(impl_block, specification)? {
+            if let Some(impl_claim) =
+                self.extract_implementation_claim(impl_block, specification)?
+            {
                 claims.push(impl_claim);
             }
         }
@@ -48,7 +56,10 @@ impl CodeExtractor {
     }
 
     /// Check code comment consistency
-    pub async fn check_code_comment_consistency(&self, code_output: &CodeOutput) -> Result<CodeCommentConsistency> {
+    pub async fn check_code_comment_consistency(
+        &self,
+        code_output: &CodeOutput,
+    ) -> Result<CodeCommentConsistency> {
         let mut issues = Vec::new();
         let mut score: f64 = 1.0;
 
@@ -90,7 +101,8 @@ impl CodeExtractor {
         let mut implementations = Vec::new();
 
         // Parse Rust functions
-        let rust_fn_re = Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+(\w+)\s*\([^}]*\)\s*(?:->\s*[^{]+)?")?;
+        let rust_fn_re =
+            Regex::new(r"(?:pub\s+)?(?:async\s+)?fn\s+(\w+)\s*\([^}]*\)\s*(?:->\s*[^{]+)?")?;
         for capture in rust_fn_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
@@ -103,7 +115,9 @@ impl CodeExtractor {
         }
 
         // Parse TypeScript/JavaScript functions
-        let ts_fn_re = Regex::new(r"(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)|\(\w*\)\s*=>|\w+\s*\([^}]*\)\s*\{)")?;
+        let ts_fn_re = Regex::new(
+            r"(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)|\(\w*\)\s*=>|\w+\s*\([^}]*\)\s*\{)",
+        )?;
         for capture in ts_fn_re.captures_iter(&code_output.code) {
             if let Some(name) = capture.get(1) {
                 functions.push(FunctionDefinition {
@@ -244,7 +258,10 @@ impl CodeExtractor {
             // Check if comment says "returns" but function doesn't return
             if line.contains("// returns") || line.contains("/// Returns") {
                 if !next_line.contains("->") && !next_line.contains("return") {
-                    issues.push(format!("Comment mentions return but code doesn't: {}", line));
+                    issues.push(format!(
+                        "Comment mentions return but code doesn't: {}",
+                        line
+                    ));
                     score -= 0.05;
                 }
             }
@@ -278,7 +295,8 @@ impl CodeExtractor {
         }
 
         let total_comments = rust_comments + js_comments + mixed_comments;
-        if total_comments > 10 { // Only check style if there are enough comments
+        if total_comments > 10 {
+            // Only check style if there are enough comments
             // Penalize mixed styles
             if rust_comments > 0 && js_comments > 0 {
                 score -= 0.2;
@@ -299,11 +317,14 @@ impl CodeExtractor {
             return 0.0;
         }
 
-        let comment_lines = lines.iter()
+        let comment_lines = lines
+            .iter()
             .filter(|line| {
                 let trimmed = line.trim();
-                trimmed.starts_with("//") || trimmed.starts_with("/*") ||
-                trimmed.starts_with("///") || trimmed.starts_with("/**")
+                trimmed.starts_with("//")
+                    || trimmed.starts_with("/*")
+                    || trimmed.starts_with("///")
+                    || trimmed.starts_with("/**")
             })
             .count();
 
@@ -311,7 +332,11 @@ impl CodeExtractor {
     }
 
     /// Extract function signature claim
-    fn extract_function_signature_claim(&self, function: &FunctionDefinition, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+    fn extract_function_signature_claim(
+        &self,
+        function: &FunctionDefinition,
+        _specification: &CodeSpecification,
+    ) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: format!("Function '{}' exists", function.name),
@@ -340,7 +365,11 @@ impl CodeExtractor {
     }
 
     /// Extract type definition claim
-    fn extract_type_definition_claim(&self, type_def: &TypeDefinition, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+    fn extract_type_definition_claim(
+        &self,
+        type_def: &TypeDefinition,
+        _specification: &CodeSpecification,
+    ) -> Result<Option<AtomicClaim>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: format!("{} '{}' exists", type_def.kind, type_def.name),
@@ -369,7 +398,11 @@ impl CodeExtractor {
     }
 
     /// Extract implementation claim
-    fn extract_implementation_claim(&self, impl_block: &ImplementationBlock, _specification: &CodeSpecification) -> Result<Option<AtomicClaim>> {
+    fn extract_implementation_claim(
+        &self,
+        impl_block: &ImplementationBlock,
+        _specification: &CodeSpecification,
+    ) -> Result<Option<AtomicClaim>> {
         let claim_text = format!("Implementation for '{}' exists", impl_block.target);
 
         Ok(Some(AtomicClaim {

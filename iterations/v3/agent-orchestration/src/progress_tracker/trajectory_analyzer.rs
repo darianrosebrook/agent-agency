@@ -5,17 +5,15 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
-use crate::progress_tracker::turn_level::{
-    TurnProgress, TurnTrajectory, TaskOutcome,
-};
+use crate::progress_tracker::turn_level::{TaskOutcome, TurnProgress, TurnTrajectory};
 
 /// Pattern types detected in trajectories
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -172,7 +170,7 @@ impl TrajectoryAnalyzer {
         trajectory: &TurnTrajectory,
     ) -> Result<TrajectoryInsights> {
         let turns = &trajectory.turns;
-        
+
         if turns.is_empty() {
             return Err(anyhow::anyhow!("Cannot analyze empty trajectory"));
         }
@@ -251,12 +249,16 @@ impl TrajectoryAnalyzer {
         }
 
         // Detect early success
-        if let Some(early_success) = self.detect_early_success_pattern(turns, &qualities, final_outcome) {
+        if let Some(early_success) =
+            self.detect_early_success_pattern(turns, &qualities, final_outcome)
+        {
             patterns.push(early_success);
         }
 
         // Detect late breakthrough
-        if let Some(late_breakthrough) = self.detect_late_breakthrough_pattern(turns, &qualities, final_outcome) {
+        if let Some(late_breakthrough) =
+            self.detect_late_breakthrough_pattern(turns, &qualities, final_outcome)
+        {
             patterns.push(late_breakthrough);
         }
 
@@ -286,19 +288,23 @@ impl TrajectoryAnalyzer {
         // Check last 3-5 turns for plateau
         let window_size = turns.len().min(5);
         let recent_qualities = &qualities[qualities.len().saturating_sub(window_size)..];
-        
+
         if recent_qualities.is_empty() {
             return None;
         }
 
-        let min_quality = recent_qualities.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max_quality = recent_qualities.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let min_quality = recent_qualities
+            .iter()
+            .fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_quality = recent_qualities
+            .iter()
+            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
         let threshold = 0.05; // 5% threshold
 
         if (max_quality - min_quality) < threshold {
             let start_turn = turns[turns.len().saturating_sub(window_size)].turn_number;
             let end_turn = turns.last().unwrap().turn_number;
-            
+
             return Some(DetectedPattern {
                 pattern_type: TrajectoryPattern::Plateau,
                 confidence: 0.8,
@@ -333,7 +339,9 @@ impl TrajectoryAnalyzer {
             let prev_change = qualities[i] - qualities[i - 1];
             if i > 1 {
                 let curr_change = qualities[i] - qualities[i - 1];
-                if (prev_change > 0.0 && curr_change < 0.0) || (prev_change < 0.0 && curr_change > 0.0) {
+                if (prev_change > 0.0 && curr_change < 0.0)
+                    || (prev_change < 0.0 && curr_change > 0.0)
+                {
                     direction_changes += 1;
                 }
             }
@@ -372,7 +380,11 @@ impl TrajectoryAnalyzer {
         let n = qualities.len() as f64;
         let sum_x: f64 = (0..qualities.len()).map(|i| i as f64).sum();
         let sum_y: f64 = qualities.iter().sum();
-        let sum_xy: f64 = qualities.iter().enumerate().map(|(i, &q)| i as f64 * q).sum();
+        let sum_xy: f64 = qualities
+            .iter()
+            .enumerate()
+            .map(|(i, &q)| i as f64 * q)
+            .sum();
         let sum_x2: f64 = (0..qualities.len()).map(|i| (i as f64).powi(2)).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powi(2));
@@ -407,7 +419,11 @@ impl TrajectoryAnalyzer {
         let n = qualities.len() as f64;
         let sum_x: f64 = (0..qualities.len()).map(|i| i as f64).sum();
         let sum_y: f64 = qualities.iter().sum();
-        let sum_xy: f64 = qualities.iter().enumerate().map(|(i, &q)| i as f64 * q).sum();
+        let sum_xy: f64 = qualities
+            .iter()
+            .enumerate()
+            .map(|(i, &q)| i as f64 * q)
+            .sum();
         let sum_x2: f64 = (0..qualities.len()).map(|i| (i as f64).powi(2)).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powi(2));
@@ -442,9 +458,13 @@ impl TrajectoryAnalyzer {
         // Check if early turns had high quality but later turns stagnated
         let early_window = (turns.len() / 3).max(2);
         let early_avg = qualities[..early_window].iter().sum::<f64>() / early_window as f64;
-        let late_avg = qualities[early_window..].iter().sum::<f64>() / (qualities.len() - early_window) as f64;
+        let late_avg =
+            qualities[early_window..].iter().sum::<f64>() / (qualities.len() - early_window) as f64;
 
-        if early_avg > 0.7 && (early_avg - late_avg).abs() < 0.1 && final_outcome.quality_score < 0.8 {
+        if early_avg > 0.7
+            && (early_avg - late_avg).abs() < 0.1
+            && final_outcome.quality_score < 0.8
+        {
             return Some(DetectedPattern {
                 pattern_type: TrajectoryPattern::EarlySuccess,
                 confidence: 0.7,
@@ -474,7 +494,8 @@ impl TrajectoryAnalyzer {
         // Check if later turns showed significant improvement
         let early_window = (turns.len() / 3).max(2);
         let early_avg = qualities[..early_window].iter().sum::<f64>() / early_window as f64;
-        let late_avg = qualities[early_window..].iter().sum::<f64>() / (qualities.len() - early_window) as f64;
+        let late_avg =
+            qualities[early_window..].iter().sum::<f64>() / (qualities.len() - early_window) as f64;
 
         if late_avg > early_avg + 0.15 && final_outcome.quality_score > 0.7 {
             return Some(DetectedPattern {
@@ -505,9 +526,8 @@ impl TrajectoryAnalyzer {
 
         // Calculate variance
         let mean = qualities.iter().sum::<f64>() / qualities.len() as f64;
-        let variance = qualities.iter()
-            .map(|q| (q - mean).powi(2))
-            .sum::<f64>() / qualities.len() as f64;
+        let variance =
+            qualities.iter().map(|q| (q - mean).powi(2)).sum::<f64>() / qualities.len() as f64;
         let std_dev = variance.sqrt();
 
         // Low variance indicates consistency
@@ -518,8 +538,7 @@ impl TrajectoryAnalyzer {
                 turn_range: (turns[0].turn_number, turns.last().unwrap().turn_number),
                 description: format!(
                     "Consistent performance: quality stable at {:.2}±{:.2}",
-                    mean,
-                    std_dev
+                    mean, std_dev
                 ),
                 impact: PatternImpact::Neutral,
             });
@@ -540,9 +559,8 @@ impl TrajectoryAnalyzer {
 
         // Calculate variance
         let mean = qualities.iter().sum::<f64>() / qualities.len() as f64;
-        let variance = qualities.iter()
-            .map(|q| (q - mean).powi(2))
-            .sum::<f64>() / qualities.len() as f64;
+        let variance =
+            qualities.iter().map(|q| (q - mean).powi(2)).sum::<f64>() / qualities.len() as f64;
         let std_dev = variance.sqrt();
 
         // High variance indicates erratic behavior
@@ -585,12 +603,16 @@ impl TrajectoryAnalyzer {
         let n = qualities.len() as f64;
         let sum_x: f64 = (0..qualities.len()).map(|i| i as f64).sum();
         let sum_y: f64 = qualities.iter().sum();
-        let sum_xy: f64 = qualities.iter().enumerate().map(|(i, &q)| i as f64 * q).sum();
+        let sum_xy: f64 = qualities
+            .iter()
+            .enumerate()
+            .map(|(i, &q)| i as f64 * q)
+            .sum();
         let sum_x2: f64 = (0..qualities.len()).map(|i| (i as f64).powi(2)).sum();
         let sum_y2: f64 = qualities.iter().map(|q| q * q).sum();
 
-        let correlation = (n * sum_xy - sum_x * sum_y) / 
-            ((n * sum_x2 - sum_x.powi(2)) * (n * sum_y2 - sum_y.powi(2))).sqrt();
+        let correlation = (n * sum_xy - sum_x * sum_y)
+            / ((n * sum_x2 - sum_x.powi(2)) * (n * sum_y2 - sum_y.powi(2))).sqrt();
         let strength = correlation.abs();
 
         // Calculate improvement rate
@@ -602,12 +624,11 @@ impl TrajectoryAnalyzer {
 
         // Calculate variance
         let mean = sum_y / n;
-        let variance = qualities.iter()
-            .map(|q| (q - mean).powi(2))
-            .sum::<f64>() / n;
+        let variance = qualities.iter().map(|q| (q - mean).powi(2)).sum::<f64>() / n;
 
         // Find peak quality
-        let (peak_idx, peak_quality) = qualities.iter()
+        let (peak_idx, peak_quality) = qualities
+            .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .unwrap_or((0, &0.0));
@@ -628,14 +649,15 @@ impl TrajectoryAnalyzer {
     /// Calculate performance metrics
     fn calculate_performance_metrics(&self, turns: &[TurnProgress]) -> Result<PerformanceMetrics> {
         if turns.is_empty() {
-            return Err(anyhow::anyhow!("Cannot calculate metrics for empty trajectory"));
+            return Err(anyhow::anyhow!(
+                "Cannot calculate metrics for empty trajectory"
+            ));
         }
 
         let qualities: Vec<f64> = turns.iter().map(|t| t.outcome.quality_score).collect();
         let successes: Vec<bool> = turns.iter().map(|t| t.outcome.success).collect();
-        let execution_times: Vec<Option<u64>> = turns.iter()
-            .map(|t| t.outcome.execution_time_ms)
-            .collect();
+        let execution_times: Vec<Option<u64>> =
+            turns.iter().map(|t| t.outcome.execution_time_ms).collect();
 
         let n = qualities.len() as f64;
         let average_quality = qualities.iter().sum::<f64>() / n;
@@ -652,9 +674,7 @@ impl TrajectoryAnalyzer {
 
         // Calculate standard deviation
         let mean = average_quality;
-        let variance = qualities.iter()
-            .map(|q| (q - mean).powi(2))
-            .sum::<f64>() / n;
+        let variance = qualities.iter().map(|q| (q - mean).powi(2)).sum::<f64>() / n;
         let quality_std_dev = variance.sqrt();
 
         // Calculate success rate
@@ -697,9 +717,8 @@ impl TrajectoryAnalyzer {
         for i in window_size..qualities.len() {
             let window = &qualities[i - window_size..i];
             let mean = window.iter().sum::<f64>() / window_size as f64;
-            let variance = window.iter()
-                .map(|q| (q - mean).powi(2))
-                .sum::<f64>() / window_size as f64;
+            let variance =
+                window.iter().map(|q| (q - mean).powi(2)).sum::<f64>() / window_size as f64;
             let std_dev = variance.sqrt();
 
             if std_dev < threshold {
@@ -723,19 +742,21 @@ impl TrajectoryAnalyzer {
 
         for (i, turn) in turns.iter().enumerate() {
             let action_type = turn.action.action_type.clone();
-            
+
             // Count actions
             *action_counts.entry(action_type.clone()).or_insert(0) += 1;
-            
+
             // Track quality per action type
-            action_qualities.entry(action_type.clone())
+            action_qualities
+                .entry(action_type.clone())
                 .or_insert_with(Vec::new)
                 .push(turn.outcome.quality_score);
 
             // Track transitions
             if i > 0 {
                 let prev_action = turns[i - 1].action.action_type.clone();
-                action_transitions.entry(prev_action)
+                action_transitions
+                    .entry(prev_action)
                     .or_insert_with(Vec::new)
                     .push(action_type.clone());
             }
@@ -746,7 +767,8 @@ impl TrajectoryAnalyzer {
         common_actions.sort_by(|a, b| b.1.cmp(&a.1));
 
         // Find most effective actions (by average quality)
-        let mut effective_actions: Vec<(String, f64)> = action_qualities.into_iter()
+        let mut effective_actions: Vec<(String, f64)> = action_qualities
+            .into_iter()
             .map(|(action_type, qualities)| {
                 let avg_quality = qualities.iter().sum::<f64>() / qualities.len() as f64;
                 (action_type, avg_quality)
@@ -778,9 +800,8 @@ impl TrajectoryAnalyzer {
         }
 
         // Detect repeating action sequences
-        let action_types: Vec<String> = turns.iter()
-            .map(|t| t.action.action_type.clone())
-            .collect();
+        let action_types: Vec<String> =
+            turns.iter().map(|t| t.action.action_type.clone()).collect();
 
         // Check for 2-action repeats
         for i in 0..action_types.len().saturating_sub(3) {
@@ -842,7 +863,8 @@ impl TrajectoryAnalyzer {
         match quality_trend.direction {
             TrendDirection::Downward => {
                 recommendations.push(
-                    "Quality declining - consider early intervention or strategy change".to_string()
+                    "Quality declining - consider early intervention or strategy change"
+                        .to_string(),
                 );
             }
             TrendDirection::Stable if quality_trend.final_quality < 0.7 => {
@@ -856,24 +878,24 @@ impl TrajectoryAnalyzer {
         // Recommendations based on performance metrics
         if performance_metrics.success_rate < 0.5 {
             recommendations.push(
-                "Low success rate - review failure patterns and improve error handling".to_string()
+                "Low success rate - review failure patterns and improve error handling".to_string(),
             );
         }
 
         if performance_metrics.quality_std_dev > 0.2 {
-            recommendations.push(
-                "High quality variance - work on consistency and stability".to_string()
-            );
+            recommendations
+                .push("High quality variance - work on consistency and stability".to_string());
         }
 
         // Recommendations based on final outcome
         if !final_outcome.success {
             recommendations.push(
-                "Task failed - review trajectory patterns to identify failure points".to_string()
+                "Task failed - review trajectory patterns to identify failure points".to_string(),
             );
         } else if final_outcome.quality_score < 0.8 {
             recommendations.push(
-                "Task succeeded but quality below optimal - consider additional refinement".to_string()
+                "Task succeeded but quality below optimal - consider additional refinement"
+                    .to_string(),
             );
         }
 
@@ -928,7 +950,7 @@ mod tests {
     #[tokio::test]
     async fn test_plateau_detection() {
         let analyzer = TrajectoryAnalyzer::new();
-        
+
         let turns = vec![
             create_test_turn(1, 0.7, true),
             create_test_turn(2, 0.71, true),
@@ -950,13 +972,16 @@ mod tests {
         };
 
         let insights = analyzer.analyze_trajectory(&trajectory).await.unwrap();
-        assert!(insights.patterns.iter().any(|p| p.pattern_type == TrajectoryPattern::Plateau));
+        assert!(insights
+            .patterns
+            .iter()
+            .any(|p| p.pattern_type == TrajectoryPattern::Plateau));
     }
 
     #[tokio::test]
     async fn test_improvement_detection() {
         let analyzer = TrajectoryAnalyzer::new();
-        
+
         let turns = vec![
             create_test_turn(1, 0.5, true),
             create_test_turn(2, 0.6, true),
@@ -978,8 +1003,10 @@ mod tests {
         };
 
         let insights = analyzer.analyze_trajectory(&trajectory).await.unwrap();
-        assert!(insights.patterns.iter().any(|p| p.pattern_type == TrajectoryPattern::Improving));
+        assert!(insights
+            .patterns
+            .iter()
+            .any(|p| p.pattern_type == TrajectoryPattern::Improving));
         assert_eq!(insights.quality_trend.direction, TrendDirection::Upward);
     }
 }
-

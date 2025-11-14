@@ -9,7 +9,7 @@
 
 use std::env;
 use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Load configuration from environment
     let database_url = env::var("DATABASE_URL").ok();
-    
+
     if database_url.is_none() {
         warn!("DATABASE_URL not set - running without database persistence");
         warn!("Set DATABASE_URL to enable state persistence and crash recovery");
@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Initializing database connection...");
         use data_infrastructure::database_config::DatabaseConfig;
         use data_infrastructure::database_init::initialize_database;
-        
+
         let db_config = DatabaseConfig {
             database_url: database_url.clone(),
             pool_max: Some(10),
@@ -59,11 +59,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Initializing UnifiedOrchestrator...");
     use agent_orchestration::orchestration::UnifiedOrchestratorFactory;
     use agent_orchestration::planning::DatabaseOperations;
-    
+
     // Create database operations adapter if database client is available
     // The factory will create its own adapter if None is passed, but we can create it here
     // to ensure we're using the database client we initialized
-    let db_ops: Option<Arc<dyn DatabaseOperations>> = if let Some(db_client) = db_client {
+    let db_ops: Option<Arc<dyn DatabaseOperations>> = if let Some(_db_client) = db_client {
         // The factory has DatabaseOperationsAdapter as a private module, so we pass None
         // and let the factory create it internally using the database client it initializes
         // This avoids circular dependencies while ensuring database operations are available
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     } else {
         None
     };
-    
+
     let _orchestrator = match UnifiedOrchestratorFactory::create(db_ops).await {
         Ok(orchestrator) => {
             info!("UnifiedOrchestrator initialized successfully");
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Keep the server running
     // In a production setup, this would start background tasks, health checks, etc.
     info!("Orchestrator is running. Press Ctrl+C to shutdown.");
-    
+
     tokio::signal::ctrl_c().await?;
     info!("Shutting down Agent Orchestration Server");
 

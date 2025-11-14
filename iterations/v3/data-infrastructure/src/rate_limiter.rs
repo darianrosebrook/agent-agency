@@ -43,13 +43,14 @@ impl ClientLimits {
             _last_reset: Instant::now(),
         }
     }
-    
+
     fn can_make_request(&mut self, config: &RateLimiterConfig) -> bool {
         let now = Instant::now();
-        
+
         // Remove old requests outside the window
-        self.requests.retain(|&time| now.duration_since(time) < config.window_size);
-        
+        self.requests
+            .retain(|&time| now.duration_since(time) < config.window_size);
+
         // Check if we're within limits
         if self.requests.len() < config.requests_per_minute as usize {
             self.requests.push(now);
@@ -75,13 +76,15 @@ impl RateLimiter {
             clients: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-    
+
     pub async fn check_rate_limit(&self, client_id: &str) -> bool {
         let mut clients = self.clients.write().await;
-        let client_limits = clients.entry(client_id.to_string()).or_insert_with(ClientLimits::new);
+        let client_limits = clients
+            .entry(client_id.to_string())
+            .or_insert_with(ClientLimits::new);
         client_limits.can_make_request(&self.config)
     }
-    
+
     pub async fn reset_client(&self, client_id: &str) {
         let mut clients = self.clients.write().await;
         clients.remove(client_id);

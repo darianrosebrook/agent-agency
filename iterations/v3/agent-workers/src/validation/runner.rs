@@ -1,10 +1,10 @@
 //! Quality validation runner with parallel execution
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use crate::{ValidationResult, ValidationContext};
-use crate::error::*;
 use super::gates::*;
+use crate::error::*;
+use crate::{ValidationContext, ValidationResult};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Validation runner that executes quality gates in parallel
 pub struct ValidationRunner {
@@ -63,10 +63,12 @@ impl ValidationRunner {
             match handle.await {
                 Ok(Ok(results)) => all_results.extend(results),
                 Ok(Err(e)) => return Err(e),
-                Err(e) => return Err(ValidationError::ExternalToolFailure {
-                    tool_name: "tokio".to_string(),
-                    message: format!("Task join error: {}", e),
-                }),
+                Err(e) => {
+                    return Err(ValidationError::ExternalToolFailure {
+                        tool_name: "tokio".to_string(),
+                        message: format!("Task join error: {}", e),
+                    })
+                }
             }
         }
 
@@ -110,9 +112,7 @@ impl ValidationRunner {
         let total_gates = results.len();
         let passed_gates = results.iter().filter(|r| r.passes).count();
         let failed_gates = total_gates - passed_gates;
-        let blocking_failures = results.iter()
-            .filter(|r| r.blocking && !r.passes)
-            .count();
+        let blocking_failures = results.iter().filter(|r| r.blocking && !r.passes).count();
 
         let overall_score = if total_gates > 0 {
             passed_gates as f32 / total_gates as f32
@@ -146,8 +146,12 @@ impl ValidationRunner {
         for result in results {
             if !result.passes {
                 match result.result {
-                    ValidationResult::Fail { ref suggestions, .. } |
-                    ValidationResult::Warning { ref suggestions, .. } => {
+                    ValidationResult::Fail {
+                        ref suggestions, ..
+                    }
+                    | ValidationResult::Warning {
+                        ref suggestions, ..
+                    } => {
                         recommendations.extend(suggestions.iter().cloned());
                     }
                     _ => {}
@@ -156,7 +160,8 @@ impl ValidationRunner {
                 // Add gate-specific recommendations
                 match result.gate_name.as_str() {
                     "compilation" => {
-                        recommendations.push("Fix compilation errors before proceeding".to_string());
+                        recommendations
+                            .push("Fix compilation errors before proceeding".to_string());
                     }
                     "testing" => {
                         recommendations.push("Add or fix failing tests".to_string());
@@ -166,7 +171,8 @@ impl ValidationRunner {
                         recommendations.push("Address code quality issues".to_string());
                     }
                     "security" => {
-                        recommendations.push("Address security vulnerabilities immediately".to_string());
+                        recommendations
+                            .push("Address security vulnerabilities immediately".to_string());
                     }
                     "performance" => {
                         recommendations.push("Optimize performance bottlenecks".to_string());
@@ -235,14 +241,14 @@ impl ValidationReport {
 
     /// Get failed gates
     pub fn failed_gates(&self) -> Vec<&GateResult> {
-        self.summary.results.iter()
-            .filter(|r| !r.passes)
-            .collect()
+        self.summary.results.iter().filter(|r| !r.passes).collect()
     }
 
     /// Get blocking failures
     pub fn blocking_failures(&self) -> Vec<&GateResult> {
-        self.summary.results.iter()
+        self.summary
+            .results
+            .iter()
             .filter(|r| r.blocking && !r.passes)
             .collect()
     }
@@ -321,9 +327,7 @@ fn create_summary_from_results(results: Vec<GateResult>) -> GateSummary {
     let total_gates = results.len();
     let passed_gates = results.iter().filter(|r| r.passes).count();
     let failed_gates = total_gates - passed_gates;
-    let blocking_failures = results.iter()
-        .filter(|r| r.blocking && !r.passes)
-        .count();
+    let blocking_failures = results.iter().filter(|r| r.blocking && !r.passes).count();
 
     let overall_score = if total_gates > 0 {
         passed_gates as f32 / total_gates as f32
@@ -348,8 +352,8 @@ fn generate_recommendations_from_results(results: &[GateResult]) -> Vec<String> 
     for result in results {
         if !result.passes {
             match &result.result {
-                ValidationResult::Fail { suggestions, .. } |
-                ValidationResult::Warning { suggestions, .. } => {
+                ValidationResult::Fail { suggestions, .. }
+                | ValidationResult::Warning { suggestions, .. } => {
                     recommendations.extend(suggestions.iter().cloned());
                 }
                 _ => {}

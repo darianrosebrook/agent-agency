@@ -53,9 +53,7 @@ pub fn sanitize_url(input: &str) -> String {
     }
 
     // Remove control characters
-    sanitized = sanitized.chars()
-        .filter(|c| !c.is_control())
-        .collect();
+    sanitized = sanitized.chars().filter(|c| !c.is_control()).collect();
 
     sanitized
 }
@@ -129,7 +127,8 @@ pub fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
             let mut sanitized_obj = serde_json::Map::new();
             for (key, value) in obj {
                 // Sanitize keys (remove dangerous characters)
-                let safe_key = key.chars()
+                let safe_key = key
+                    .chars()
                     .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
                     .collect::<String>();
                 sanitized_obj.insert(safe_key, sanitize_api_input(value));
@@ -137,7 +136,8 @@ pub fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
             serde_json::Value::Object(sanitized_obj)
         }
         serde_json::Value::Array(arr) => {
-            let sanitized_arr = arr.iter()
+            let sanitized_arr = arr
+                .iter()
                 .map(|v| sanitize_api_input(v))
                 .collect::<Vec<_>>();
             serde_json::Value::Array(sanitized_arr)
@@ -152,7 +152,10 @@ mod tests {
 
     #[test]
     fn test_html_sanitization() {
-        assert_eq!(sanitize_html("<script>alert('xss')</script>"), "alert('xss')");
+        assert_eq!(
+            sanitize_html("<script>alert('xss')</script>"),
+            "alert('xss')"
+        );
         assert_eq!(sanitize_html("normal text"), "normal text");
         assert_eq!(sanitize_html("<b>bold</b> text"), "bold text");
     }

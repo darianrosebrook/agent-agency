@@ -9,28 +9,28 @@
 //!
 //! @author @darianrosebrook
 
-use anyhow::{anyhow, Result, Context};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 /// Spec information for listing and selection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecInfo {
     /// Spec identifier (filename without .yaml extension)
     pub id: String,
-    
+
     /// Full path to spec file
     pub path: PathBuf,
-    
+
     /// Spec title (from working spec)
     pub title: String,
-    
+
     /// Risk tier (from working spec)
     pub risk_tier: u8,
-    
+
     /// Last modified timestamp
     pub last_modified: SystemTime,
 }
@@ -39,10 +39,10 @@ pub struct SpecInfo {
 pub struct CawsSpecResolver {
     /// Project root directory
     project_root: PathBuf,
-    
+
     /// CAWS directory path (.caws)
     caws_directory: PathBuf,
-    
+
     /// Specs directory path (.caws/specs)
     specs_directory: PathBuf,
 }
@@ -53,7 +53,7 @@ impl CawsSpecResolver {
         let project_root = project_root.as_ref().to_path_buf();
         let caws_directory = project_root.join(".caws");
         let specs_directory = caws_directory.join("specs");
-        
+
         Ok(Self {
             project_root,
             caws_directory,
@@ -68,11 +68,7 @@ impl CawsSpecResolver {
     /// 2. Explicit path (via spec_file)
     /// 3. Auto-detect: If only 1 spec exists, use it automatically
     /// 4. Legacy fallback: .caws/working-spec.yaml
-    pub fn resolve_spec(
-        &self,
-        spec_id: Option<&str>,
-        spec_file: Option<&Path>,
-    ) -> Result<PathBuf> {
+    pub fn resolve_spec(&self, spec_id: Option<&str>, spec_file: Option<&Path>) -> Result<PathBuf> {
         // Priority 1: Feature-specific spec via spec_id
         if let Some(id) = spec_id {
             let spec_path = self.specs_directory.join(format!("{}.yaml", id));
@@ -95,15 +91,15 @@ impl CawsSpecResolver {
             } else {
                 self.project_root.join(path)
             };
-            
+
             if resolved_path.exists() {
-                info!("Resolved spec via explicit path: {}", resolved_path.display());
+                info!(
+                    "Resolved spec via explicit path: {}",
+                    resolved_path.display()
+                );
                 return Ok(resolved_path);
             } else {
-                return Err(anyhow!(
-                    "Spec file not found: {}",
-                    resolved_path.display()
-                ));
+                return Err(anyhow!("Spec file not found: {}", resolved_path.display()));
             }
         }
 
@@ -129,13 +125,19 @@ impl CawsSpecResolver {
                     available_specs.len()
                 );
                 warn!("Consider using feature-specific specs: .caws/specs/<feature-id>.yaml");
-                warn!("Available specs: {}", 
-                    available_specs.iter()
+                warn!(
+                    "Available specs: {}",
+                    available_specs
+                        .iter()
                         .map(|s| s.id.as_str())
                         .collect::<Vec<_>>()
-                        .join(", "));
+                        .join(", ")
+                );
             }
-            info!("Resolved spec via legacy fallback: {}", legacy_spec.display());
+            info!(
+                "Resolved spec via legacy fallback: {}",
+                legacy_spec.display()
+            );
             return Ok(legacy_spec);
         }
 
@@ -150,8 +152,8 @@ impl CawsSpecResolver {
 
         // Check specs directory
         if self.specs_directory.exists() {
-            let entries = fs::read_dir(&self.specs_directory)
-                .context("Failed to read specs directory")?;
+            let entries =
+                fs::read_dir(&self.specs_directory).context("Failed to read specs directory")?;
 
             for entry in entries {
                 let entry = entry.context("Failed to read directory entry")?;
@@ -189,17 +191,15 @@ impl CawsSpecResolver {
 
     /// Load spec information from file
     fn load_spec_info(&self, path: &Path, id: &str) -> Result<SpecInfo> {
-        let metadata = fs::metadata(path)
-            .context("Failed to read spec file metadata")?;
-        
+        let metadata = fs::metadata(path).context("Failed to read spec file metadata")?;
+
         let last_modified = metadata
             .modified()
             .context("Failed to get modification time")?;
 
         // Try to parse YAML to extract title and risk_tier
-        let content = fs::read_to_string(path)
-            .context("Failed to read spec file")?;
-        
+        let content = fs::read_to_string(path).context("Failed to read spec file")?;
+
         let (title, risk_tier) = self.parse_spec_metadata(&content)?;
 
         Ok(SpecInfo {
@@ -220,7 +220,7 @@ impl CawsSpecResolver {
 
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             if trimmed.starts_with("title:") {
                 if let Some(t) = trimmed.strip_prefix("title:") {
                     title = t.trim().trim_matches('"').trim_matches('\'').to_string();
@@ -232,7 +232,7 @@ impl CawsSpecResolver {
                     }
                 }
             }
-            
+
             // Stop after finding both
             if !title.is_empty() && risk_tier != 2 {
                 break;
@@ -290,7 +290,7 @@ mod tests {
 
         let resolver = CawsSpecResolver::new(temp_dir.path()).unwrap();
         let resolved = resolver.resolve_spec(Some("user-auth"), None).unwrap();
-        
+
         assert_eq!(resolved, spec_path);
     }
 
@@ -306,7 +306,7 @@ mod tests {
 
         let resolver = CawsSpecResolver::new(temp_dir.path()).unwrap();
         let resolved = resolver.resolve_spec(None, None).unwrap();
-        
+
         assert_eq!(resolved, legacy_path);
     }
 
@@ -323,7 +323,7 @@ mod tests {
 
         let resolver = CawsSpecResolver::new(temp_dir.path()).unwrap();
         let resolved = resolver.resolve_spec(None, None).unwrap();
-        
+
         assert_eq!(resolved, spec_path);
     }
 
@@ -335,8 +335,16 @@ mod tests {
         fs::create_dir_all(&specs_dir).unwrap();
 
         // Create multiple specs
-        fs::write(specs_dir.join("feature-1.yaml"), "title: Feature 1\nrisk_tier: 2\n").unwrap();
-        fs::write(specs_dir.join("feature-2.yaml"), "title: Feature 2\nrisk_tier: 2\n").unwrap();
+        fs::write(
+            specs_dir.join("feature-1.yaml"),
+            "title: Feature 1\nrisk_tier: 2\n",
+        )
+        .unwrap();
+        fs::write(
+            specs_dir.join("feature-2.yaml"),
+            "title: Feature 2\nrisk_tier: 2\n",
+        )
+        .unwrap();
 
         let resolver = CawsSpecResolver::new(temp_dir.path()).unwrap();
         assert!(resolver.is_multi_agent_context());
@@ -350,18 +358,26 @@ mod tests {
         fs::create_dir_all(&specs_dir).unwrap();
 
         // Create specs
-        fs::write(specs_dir.join("feature-1.yaml"), "title: Feature 1\nrisk_tier: 1\n").unwrap();
-        fs::write(specs_dir.join("feature-2.yaml"), "title: Feature 2\nrisk_tier: 3\n").unwrap();
+        fs::write(
+            specs_dir.join("feature-1.yaml"),
+            "title: Feature 1\nrisk_tier: 1\n",
+        )
+        .unwrap();
+        fs::write(
+            specs_dir.join("feature-2.yaml"),
+            "title: Feature 2\nrisk_tier: 3\n",
+        )
+        .unwrap();
 
         let resolver = CawsSpecResolver::new(temp_dir.path()).unwrap();
         let specs = resolver.list_specs().unwrap();
-        
+
         assert_eq!(specs.len(), 2);
-        assert!(specs.iter().any(|s| s.id == "feature-1" && s.risk_tier == 1));
-        assert!(specs.iter().any(|s| s.id == "feature-2" && s.risk_tier == 3));
+        assert!(specs
+            .iter()
+            .any(|s| s.id == "feature-1" && s.risk_tier == 1));
+        assert!(specs
+            .iter()
+            .any(|s| s.id == "feature-2" && s.risk_tier == 3));
     }
 }
-
-
-
-

@@ -1,10 +1,10 @@
 //! Benchmark runner for model performance testing
 
-use schemars::JsonSchema;
+use crate::benchmark_types::*;
 use crate::scoring_system::MultiDimensionalScoringSystem;
 use crate::sla_validator::SlaValidator;
-use crate::benchmark_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -12,9 +12,8 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 /// Execution telemetry for comprehensive performance monitoring
-
 use serde::{Deserialize, Serialize};
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionTelemetry {
     execution_id: Uuid,
     #[serde(skip, default = "std::time::Instant::now")]
@@ -49,7 +48,11 @@ impl ExecutionTelemetry {
         }
     }
 
-    async fn record_pre_execution(&mut self, model: &ModelSpecification, micro_task: &MicroTask) -> Result<()> {
+    async fn record_pre_execution(
+        &mut self,
+        model: &ModelSpecification,
+        micro_task: &MicroTask,
+    ) -> Result<()> {
         self.model_name = model.name.clone();
         self.task_type = format!("{:?}", micro_task.task_type);
 
@@ -64,27 +67,50 @@ impl ExecutionTelemetry {
         self.backend_used = backend.to_string();
     }
 
-    async fn record_success(&mut self, output: &str, execution_time: std::time::Duration) -> Result<()> {
+    async fn record_success(
+        &mut self,
+        output: &str,
+        execution_time: std::time::Duration,
+    ) -> Result<()> {
         self.success = true;
         self.post_execution_memory_mb = self.get_current_memory_usage().await?;
         self.tokens_processed = self.estimate_tokens_processed(output);
 
         // Record performance metrics
-        self.performance_metrics.insert("execution_time_ms".to_string(), execution_time.as_millis() as f64);
-        self.performance_metrics.insert("memory_delta_mb".to_string(), (self.post_execution_memory_mb as f64 - self.pre_execution_memory_mb as f64));
-        self.performance_metrics.insert("tokens_per_second".to_string(), self.tokens_processed as f64 / execution_time.as_secs_f64());
+        self.performance_metrics.insert(
+            "execution_time_ms".to_string(),
+            execution_time.as_millis() as f64,
+        );
+        self.performance_metrics.insert(
+            "memory_delta_mb".to_string(),
+            (self.post_execution_memory_mb as f64 - self.pre_execution_memory_mb as f64),
+        );
+        self.performance_metrics.insert(
+            "tokens_per_second".to_string(),
+            self.tokens_processed as f64 / execution_time.as_secs_f64(),
+        );
 
         Ok(())
     }
 
-    async fn record_failure(&mut self, error: &anyhow::Error, execution_time: std::time::Duration) -> Result<()> {
+    async fn record_failure(
+        &mut self,
+        error: &anyhow::Error,
+        execution_time: std::time::Duration,
+    ) -> Result<()> {
         self.success = false;
         self.error_details = Some(error.to_string());
         self.post_execution_memory_mb = self.get_current_memory_usage().await?;
 
         // Record performance metrics even for failures
-        self.performance_metrics.insert("execution_time_ms".to_string(), execution_time.as_millis() as f64);
-        self.performance_metrics.insert("memory_delta_mb".to_string(), (self.post_execution_memory_mb as f64 - self.pre_execution_memory_mb as f64));
+        self.performance_metrics.insert(
+            "execution_time_ms".to_string(),
+            execution_time.as_millis() as f64,
+        );
+        self.performance_metrics.insert(
+            "memory_delta_mb".to_string(),
+            (self.post_execution_memory_mb as f64 - self.pre_execution_memory_mb as f64),
+        );
 
         Ok(())
     }
@@ -163,7 +189,11 @@ impl BenchmarkRunner {
         model: &ModelSpecification,
         micro_task: &MicroTask,
     ) {
-        let status = if telemetry.success { "SUCCESS" } else { "FAILED" };
+        let status = if telemetry.success {
+            "SUCCESS"
+        } else {
+            "FAILED"
+        };
 
         info!(
             "Model execution telemetry - Model: {}, Task: {}, Status: {}, Execution: {}ms, Memory: {}MB → {}MB, CPU: {:.1}%, Tokens: {}",
@@ -183,7 +213,10 @@ impl BenchmarkRunner {
                 "Performance metrics - Model: {}, TPS: {:.2}, Memory Delta: {:.1}MB",
                 telemetry.model_name,
                 tps,
-                telemetry.performance_metrics.get("memory_delta_mb").unwrap_or(&0.0)
+                telemetry
+                    .performance_metrics
+                    .get("memory_delta_mb")
+                    .unwrap_or(&0.0)
             );
         }
 
@@ -192,15 +225,14 @@ impl BenchmarkRunner {
             if let Some(error) = &telemetry.error_details {
                 warn!(
                     "Model execution failed - Model: {}, Task: {}, Error: {}",
-                    telemetry.model_name,
-                    telemetry.task_type,
-                    error
+                    telemetry.model_name, telemetry.task_type, error
                 );
             }
         }
 
         // Record telemetry for analytics (would integrate with observability system)
-        self.record_telemetry_for_analytics(telemetry, model, micro_task).await;
+        self.record_telemetry_for_analytics(telemetry, model, micro_task)
+            .await;
     }
 
     /// Record telemetry data for analytics and performance tracking
@@ -224,11 +256,17 @@ impl BenchmarkRunner {
             "Analytics recording - Model: {}, Success Rate: {:.1}%, Avg TPS: {:.2}",
             telemetry.model_name,
             if telemetry.success { 100.0 } else { 0.0 },
-            telemetry.performance_metrics.get("tokens_per_second").unwrap_or(&0.0)
+            telemetry
+                .performance_metrics
+                .get("tokens_per_second")
+                .unwrap_or(&0.0)
         );
     }
 
-    pub async fn run_micro_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+    pub async fn run_micro_benchmark(
+        &self,
+        _model: &ModelSpecification,
+    ) -> Result<BenchmarkResult> {
         Ok(BenchmarkResult {
             model_id: uuid::Uuid::new_v4(),
             benchmark_type: BenchmarkType::MicroBenchmark,
@@ -240,7 +278,10 @@ impl BenchmarkRunner {
         })
     }
 
-    pub async fn run_macro_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+    pub async fn run_macro_benchmark(
+        &self,
+        _model: &ModelSpecification,
+    ) -> Result<BenchmarkResult> {
         Ok(BenchmarkResult {
             model_id: uuid::Uuid::new_v4(),
             benchmark_type: BenchmarkType::MacroBenchmark,
@@ -252,7 +293,10 @@ impl BenchmarkRunner {
         })
     }
 
-    pub async fn run_quality_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+    pub async fn run_quality_benchmark(
+        &self,
+        _model: &ModelSpecification,
+    ) -> Result<BenchmarkResult> {
         Ok(BenchmarkResult {
             model_id: uuid::Uuid::new_v4(),
             benchmark_type: BenchmarkType::QualityBenchmark,
@@ -264,7 +308,10 @@ impl BenchmarkRunner {
         })
     }
 
-    pub async fn run_performance_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+    pub async fn run_performance_benchmark(
+        &self,
+        _model: &ModelSpecification,
+    ) -> Result<BenchmarkResult> {
         Ok(BenchmarkResult {
             model_id: uuid::Uuid::new_v4(),
             benchmark_type: BenchmarkType::PerformanceBenchmark,
@@ -276,7 +323,10 @@ impl BenchmarkRunner {
         })
     }
 
-    pub async fn run_compliance_benchmark(&self, _model: &ModelSpecification) -> Result<BenchmarkResult> {
+    pub async fn run_compliance_benchmark(
+        &self,
+        _model: &ModelSpecification,
+    ) -> Result<BenchmarkResult> {
         Ok(BenchmarkResult {
             model_id: uuid::Uuid::new_v4(),
             benchmark_type: BenchmarkType::ComplianceBenchmark,
@@ -296,8 +346,7 @@ pub struct BenchmarkRunner {
     sla_validator: SlaValidator,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkConfig {
     /// Number of iterations for each benchmark
     pub iterations: usize,
@@ -320,19 +369,16 @@ impl Default for BenchmarkConfig {
     }
 }
 
-
 // Helper structs for benchmark execution
 
-
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MicroTaskResult {
     execution_time: Duration,
     memory_usage_mb: f64,
     success: bool,
 }
 
-
-#[derive(Debug, Serialize, Deserialize) ]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ComplianceTestResult {
     compliance_score: f64,
     violation_count: usize,
@@ -355,7 +401,7 @@ impl Default for BenchmarkMetrics {
 /// Additional BenchmarkRunner methods
 /// Performance analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceAnalysis {
     pub overall_score: f32,
     pub bottlenecks: Vec<String>,
@@ -365,7 +411,7 @@ pub struct PerformanceAnalysis {
 
 /// Quality analysis results
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityAnalysis {
     pub overall_quality_score: f32,
     pub quality_issues: Vec<String>,

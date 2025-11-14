@@ -13,7 +13,7 @@ use crate::learning::{
     LearningPersistence, RewardWeights, Baseline,
 };
 use crate::learning::{
-    ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern, 
+    ExecutionRecord, WorkerPerformanceProfile, SuccessPattern, FailurePattern,
     OptimalConfig, ConfigurationRecommendations, OptimizationEvent, TaskPattern
 };
 use crate::worker_types::{TaskDefinition, TaskStatus, ExecutionOutcome, LearningMode, Priority, QualityRequirements, Progress, ValidationContext};
@@ -27,7 +27,7 @@ use sqlx::Row;
 
 // Import refactored modules
 use crate::learning_system::{
-    RealFairnessMonitor, RealAdaptiveSelector, RealConfigOptimizer, 
+    RealFairnessMonitor, RealAdaptiveSelector, RealConfigOptimizer,
     RealQueueHealthMonitor, RealFailureTaxonomy, RealLearningPersistence,
     QueueHealthMetrics, FailureClassification
 };
@@ -37,7 +37,7 @@ use crate::bridges::{
 use crate::execution_stats::ParallelExecutionStats;
 
 /// Orchestrator handle trait for sequential execution fallback
-/// 
+///
 /// Implementation: Sequential execution fallback is implemented below.
 /// This provides a fallback mechanism when parallel execution fails or
 /// is not suitable for a given task.
@@ -61,9 +61,9 @@ impl RealOrchestratorHandle {
 impl OrchestratorHandle for RealOrchestratorHandle {
     async fn execute_sequential(&self, task: ComplexTask) -> ParallelResult<TaskResult> {
         tracing::info!("Executing task sequentially: {}", task.title);
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Convert ComplexTask to TaskSpec for the executor
         let task_spec = TaskSpec {
             id: task.id.0,
@@ -102,16 +102,16 @@ impl OrchestratorHandle for RealOrchestratorHandle {
                 max_loc: task.scope.max_loc,
             },
         };
-        
+
         // Execute the task using the real TaskExecutor
         let worker_id = uuid::Uuid::new_v4();
         let execution_result = self.task_executor.execute_task(task_spec, worker_id).await
-            .map_err(|e| ParallelError::Coordination { 
-                message: format!("Task execution failed: {}", e) 
+            .map_err(|e| ParallelError::Coordination {
+                message: format!("Task execution failed: {}", e)
             })?;
-        
+
         let execution_time = start_time.elapsed();
-        
+
         // Convert execution result to TaskResult
         let task_result = TaskResult {
             task_id: task.id,
@@ -122,7 +122,7 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             summary: if execution_result.success {
                 format!("Sequential execution completed successfully: {}", execution_result.output)
             } else {
-                format!("Sequential execution failed: {}", 
+                format!("Sequential execution failed: {}",
                     execution_result.errors.first().unwrap_or(&"Unknown error".to_string()))
             },
             worker_breakdown: vec![WorkerBreakdown {
@@ -137,10 +137,10 @@ impl OrchestratorHandle for RealOrchestratorHandle {
             errors: execution_result.errors,
             metadata: execution_result.metadata,
         };
-        
-        tracing::info!("Sequential execution completed for task {}: success={}, time={:?}", 
+
+        tracing::info!("Sequential execution completed for task {}: success={}, time={:?}",
             task.title, task_result.success, execution_time);
-        
+
         Ok(task_result)
     }
 }
@@ -203,7 +203,7 @@ impl ParallelCoordinator {
         let communication_hub = CommunicationHub::new(Default::default());
         // Initialize quality bridge with real implementation
         let quality_bridge = Arc::new(OrchestrationQualityBridge::new());
-        
+
         // Initialize monitoring bridge with real implementation
         let monitoring_bridge = Arc::new(OrchestrationMonitoringBridge::new());
 
@@ -221,9 +221,9 @@ impl ParallelCoordinator {
         };
         let metrics_collector = Arc::new(ParallelWorkerMetricsCollector::new(reward_weights, baseline));
         let pattern_analyzer = Arc::new(PatternAnalyzer::new(5, 0.7));
-        
+
         // ✅ Learning Components - All adaptive learning system components initialized
-        // 
+        //
         // COMPLETION CHECKLIST:
         // [x] FairnessMonitor implementation completed
         // [x] AdaptiveSelector implementation completed
@@ -259,19 +259,19 @@ impl ParallelCoordinator {
         // BLOCKING: Yes - Required for adaptive learning features
         //
         // STATUS: ✅ COMPLETED - All learning components are fully functional
-        
+
         // Initialize database client for learning system components
         let db_client = Arc::new(data_infrastructure::client::DatabaseClient::new());
-        
+
         let fairness_monitor = Arc::new(RealFairnessMonitor::new(db_client.clone()));
         let adaptive_selector = Arc::new(RealAdaptiveSelector::new(db_client.clone(), pattern_analyzer.clone()));
         let config_optimizer = Arc::new(RealConfigOptimizer::new(db_client.clone()));
         // Initialize council bridge with real implementation
         let council_bridge = Arc::new(CouncilLearningBridge::new());
-        
+
         // Create real learning persistence with database client
         let learning_persistence = Arc::new(RealLearningPersistence::new(db_client.clone()));
-        
+
         let queue_health_monitor = Arc::new(RealQueueHealthMonitor::new(db_client.clone()));
         let failure_taxonomy = Arc::new(RealFailureTaxonomy::new(db_client.clone()));
 
@@ -547,12 +547,12 @@ impl ParallelCoordinator {
     async fn select_worker_for_subtask(&mut self, subtask: &SubTask) -> ParallelResult<WorkerId> {
         // Try to get available workers from worker manager
         let available_workers = self.worker_manager.active_worker_ids();
-        
+
         // If we have available workers and adaptive selector, use it for optimal selection
         if !available_workers.is_empty() {
             // Convert WorkerId (Uuid) to WorkerId (Uuid) - they're the same type
             let worker_ids: Vec<WorkerId> = available_workers.iter().cloned().collect();
-            
+
             // Use adaptive selector if available
             match self.adaptive_selector.select_worker(subtask, &worker_ids).await {
                 Ok(Some(selected_worker)) => {
@@ -567,7 +567,7 @@ impl ParallelCoordinator {
                 }
             }
         }
-        
+
         // Fallback to existing worker spawning logic
         self.worker_manager.spawn_worker(subtask.clone()).await
             .map_err(ParallelError::Worker)
@@ -586,7 +586,7 @@ impl ParallelCoordinator {
             // Extract metadata and add worker-specific information
             let mut metadata = result.metadata.clone();
             metadata.insert("subtask_id".to_string(), serde_json::Value::String(result.subtask_id.0.clone()));
-            
+
             // Extract worker specialty from metadata if available
             if let Some(specialty) = result.metadata.get("specialty") {
                 metadata.insert("specialty".to_string(), specialty.clone());
@@ -626,7 +626,7 @@ impl ParallelCoordinator {
             // Extract metadata and add worker-specific information
             let mut metadata = result.metadata.clone();
             metadata.insert("subtask_id".to_string(), serde_json::Value::String(result.subtask_id.0.clone()));
-            
+
             // Extract worker specialty from metadata if available
             if let Some(specialty) = result.metadata.get("specialty") {
                 metadata.insert("specialty".to_string(), specialty.clone());
@@ -736,7 +736,7 @@ impl ParallelCoordinator {
                 }
             }
         }
-        
+
         // Default quality requirements if not found in results
         QualityRequirements::default()
     }
@@ -757,27 +757,27 @@ impl ParallelCoordinator {
             if let Some(test_data) = result.metadata.get("test_results") {
                 test_results = Some(test_data.clone());
             }
-            
+
             // Extract coverage report if available
             if let Some(coverage_data) = result.metadata.get("coverage_report") {
                 coverage_report = Some(coverage_data.clone());
             }
-            
+
             // Extract lint report if available
             if let Some(lint_data) = result.metadata.get("lint_report") {
                 lint_report = Some(lint_data.clone());
             }
-            
+
             // Extract type check report if available
             if let Some(type_check_data) = result.metadata.get("type_check_report") {
                 type_check_report = Some(type_check_data.clone());
             }
-            
+
             // Extract mutation report if available
             if let Some(mutation_data) = result.metadata.get("mutation_report") {
                 mutation_report = Some(mutation_data.clone());
             }
-            
+
             // Extract provenance record if available
             if let Some(provenance_data) = result.metadata.get("provenance_record") {
                 provenance_record = Some(provenance_data.clone());
@@ -919,11 +919,11 @@ pub mod integration {
     }
 
     /// Convert Task from orchestration crate to ComplexTask for parallel execution
-    /// 
+    ///
     /// DEPENDENCY: Requires orchestration crate integration to be completed.
     /// Once orchestration module provides Task type, this method will convert it to ComplexTask
     /// format for parallel execution coordination.
-    /// 
+    ///
     /// Expected signature:
     /// ```rust
     /// pub fn convert_to_complex_task(task: orchestration::Task) -> Result<ComplexTask, ParallelError>
@@ -985,19 +985,19 @@ mod tests {
         for record in execution_records {
             self.metrics_collector.record_execution(record).await;
         }
-        
+
         // Publish signals to council learning system
         // Convert execution records to learning signals
         let signals = self.convert_to_learning_signals(task_id, &execution_records).await;
         self.council_bridge.publish_signals(signals).await?;
-        
+
         Ok(())
     }
 
     /// Convert execution records to learning signals
     async fn convert_to_learning_signals(&self, task_id: &TaskId, records: &[crate::learning::metrics_collector::ExecutionRecord]) -> Vec<crate::learning::council_bridge::ParallelWorkerSignal> {
         let mut signals = Vec::new();
-        
+
         // Collect current system metrics for disk/network I/O
         let system_metrics = self.system_metrics_collector.collect_system_metrics().await
             .unwrap_or_else(|e| {
@@ -1015,13 +1015,13 @@ mod tests {
                     timestamp: chrono::Utc::now(),
                 }
             });
-        
+
         // Convert bytes/sec to MB (approximate by dividing by 1_000_000)
         // Note: This is a simple conversion - in production, you might want to track
         // I/O over time intervals for more accurate measurements
         let network_io_mb = (system_metrics.network_io as f64) / 1_000_000.0;
         let disk_io_mb = (system_metrics.disk_io as f64) / 1_000_000.0;
-        
+
         for record in records {
             let signal = crate::learning::council_bridge::ParallelWorkerSignal::WorkerPerformance {
                 worker_id: record.worker_id.clone(),
@@ -1039,7 +1039,7 @@ mod tests {
             };
             signals.push(signal);
         }
-        
+
         signals
     }
 
@@ -1052,7 +1052,7 @@ mod tests {
             self.config.max_concurrent_workers,
             available_workers,
         ).await?;
-        
+
         Ok(recommendations)
     }
 
@@ -1060,7 +1060,7 @@ mod tests {
     async fn analyze_and_optimize(&self, execution_records: Vec<crate::learning::metrics_collector::ExecutionRecord>) -> anyhow::Result<()> {
         // Analyze execution records for patterns
         self.pattern_analyzer.analyze_execution_records(execution_records.clone()).await?;
-        
+
         // Get current configs from coordinator config
         let mut current_configs = std::collections::HashMap::new();
         current_configs.insert("max_concurrent_workers".to_string(), serde_json::Value::Number(self.config.max_concurrent_workers.into()));
@@ -1069,15 +1069,15 @@ mod tests {
         current_configs.insert("complexity_threshold".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(self.config.complexity_threshold as f64).unwrap_or(serde_json::Number::from(0))));
         current_configs.insert("enable_quality_gates".to_string(), serde_json::Value::Bool(self.config.enable_quality_gates));
         current_configs.insert("enable_dependency_resolution".to_string(), serde_json::Value::Bool(self.config.enable_dependency_resolution));
-        
+
         let recommendations = self.config_optimizer.analyze_and_recommend(execution_records, current_configs).await?;
-        
+
         // Apply recommendations if confidence is high enough
         if recommendations.overall_confidence > 0.8 {
             let events = self.config_optimizer.apply_recommendations(&recommendations.recommendations).await?;
             tracing::info!("Applied {} configuration optimizations", events.len());
         }
-        
+
         Ok(())
     }
 
@@ -1085,7 +1085,7 @@ mod tests {
     async fn check_queue_health(&self, worker_id: &WorkerId) -> anyhow::Result<crate::learning::queue_health::BackpressureDecision> {
         // Get actual queue metrics from queue health monitor
         let queue_metrics = self.queue_health_monitor.monitor_queue_health().await?;
-        
+
         // Extract metrics from queue health data
         let current_queue_size = queue_metrics.pending_tasks as u64;
         let processing_time_ms = (queue_metrics.avg_completion_time_seconds * 1000.0) as f64;
@@ -1095,14 +1095,14 @@ mod tests {
         } else {
             0.0
         };
-        
+
         self.queue_health_monitor.update_metrics(
             worker_id.to_string(),
             current_queue_size,
             processing_time_ms,
             wait_time_ms,
         ).await;
-        
+
         let decision = self.queue_health_monitor.recommend_backpressure(&worker_id.to_string()).await;
         Ok(decision)
     }
@@ -1111,12 +1111,12 @@ mod tests {
     async fn analyze_failures(&self, task_id: &TaskId, worker_id: &WorkerId, worker_error: &crate::error::WorkerError, metrics: &ExecutionMetrics) -> anyhow::Result<Option<crate::learning::failure_taxonomy::RootCauseAnalysis>> {
         // Convert WorkerError to error message string
         let error_message = format!("{:?}", worker_error);
-        
+
         // Convert ExecutionMetrics to task context HashMap
         let mut task_context = std::collections::HashMap::new();
         task_context.insert("task_id".to_string(), serde_json::Value::String(task_id.0.to_string()));
         task_context.insert("worker_id".to_string(), serde_json::Value::String(worker_id.0.to_string()));
-        
+
         if let Some(exec_time) = metrics.execution_time_ms {
             task_context.insert("execution_time_ms".to_string(), serde_json::Value::Number(exec_time.into()));
         }
@@ -1126,10 +1126,10 @@ mod tests {
         if let Some(memory) = metrics.memory_usage_mb {
             task_context.insert("memory_usage_mb".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(memory).unwrap_or(serde_json::Number::from(0))));
         }
-        
+
         // Classify failure using real failure taxonomy
         let classification = self.failure_taxonomy.classify_failure(&error_message, &task_context).await?;
-        
+
         // Convert FailureClassification to RootCauseAnalysis format
         // TODO: Define RootCauseAnalysis type and implement conversion:
         // 1. Type definition: Define RootCauseAnalysis type in learning module
@@ -1159,22 +1159,22 @@ mod tests {
     async fn persist_learning_data(&self, execution_records: Vec<crate::learning::metrics_collector::ExecutionRecord>) -> anyhow::Result<()> {
         // Store execution records
         self.learning_persistence.store_execution_records(execution_records.clone()).await?;
-        
+
         // Get actual worker profiles from metrics collector
         let worker_profiles = self.metrics_collector.get_worker_profiles().await
             .unwrap_or_else(|e| {
                 tracing::warn!("Failed to get worker profiles: {:?}", e);
                 std::collections::HashMap::new()
             });
-        
+
         self.learning_persistence.store_worker_profiles(worker_profiles).await?;
-        
+
         // Store patterns
         let (success_patterns, failure_patterns, optimal_configs) = self.pattern_analyzer.get_all_patterns().await;
         self.learning_persistence.store_success_patterns(success_patterns).await?;
         self.learning_persistence.store_failure_patterns(failure_patterns).await?;
         self.learning_persistence.store_optimal_configs(optimal_configs).await?;
-        
+
         Ok(())
     }
 
@@ -1182,7 +1182,7 @@ mod tests {
     pub async fn get_learning_stats(&self) -> anyhow::Result<serde_json::Value> {
         let (success_patterns, failure_patterns, optimal_configs) = self.pattern_analyzer.get_all_patterns().await;
         let optimization_events = self.config_optimizer.get_optimization_history().await;
-        
+
         Ok(serde_json::json!({
             "success_patterns_count": success_patterns.len(),
             "failure_patterns_count": failure_patterns.len(),
@@ -1194,10 +1194,10 @@ mod tests {
 }
 
 // ✅ Learning System Components - All real implementations completed
-// 
+//
 // COMPLETION CHECKLIST:
 // [x] RealFairnessMonitor - Worker fairness tracking implementation
-// [x] RealAdaptiveSelector - Dynamic worker selection implementation  
+// [x] RealAdaptiveSelector - Dynamic worker selection implementation
 // [x] RealConfigOptimizer - Configuration optimization implementation
 // [x] RealLearningPersistence - Learning data persistence implementation
 // [x] RealQueueHealthMonitor - Queue health monitoring implementation
@@ -1246,8 +1246,8 @@ impl RealFairnessMonitor {
             INSERT INTO worker_utilization_tracking (
                 worker_id, task_count, execution_time_ms, tracked_at
             ) VALUES ($1, $2, $3, NOW())
-            ON CONFLICT (worker_id, DATE(tracked_at)) 
-            DO UPDATE SET 
+            ON CONFLICT (worker_id, DATE(tracked_at))
+            DO UPDATE SET
                 task_count = worker_utilization_tracking.task_count + $2,
                 execution_time_ms = worker_utilization_tracking.execution_time_ms + $3,
                 updated_at = NOW()
@@ -1261,7 +1261,7 @@ impl RealFairnessMonitor {
     pub async fn calculate_fairness_score(&self) -> anyhow::Result<f64> {
         let query = r#"
             WITH worker_stats AS (
-                SELECT 
+                SELECT
                     worker_id,
                     AVG(task_count) as avg_tasks,
                     AVG(execution_time_ms) as avg_execution_time,
@@ -1271,15 +1271,15 @@ impl RealFairnessMonitor {
                 GROUP BY worker_id
             ),
             fairness_metrics AS (
-                SELECT 
+                SELECT
                     STDDEV(avg_tasks) as task_variance,
                     STDDEV(avg_execution_time) as time_variance,
                     AVG(avg_tasks) as overall_avg_tasks,
                     AVG(avg_execution_time) as overall_avg_time
                 FROM worker_stats
             )
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN overall_avg_tasks > 0 AND overall_avg_time > 0 THEN
                         1.0 - ((task_variance / overall_avg_tasks) + (time_variance / overall_avg_time)) / 2.0
                     ELSE 1.0
@@ -1299,7 +1299,7 @@ impl RealFairnessMonitor {
     /// Get worker utilization distribution
     pub async fn get_utilization_distribution(&self) -> anyhow::Result<HashMap<WorkerId, f64>> {
         let query = r#"
-            SELECT 
+            SELECT
                 worker_id,
                 AVG(task_count) as avg_tasks,
                 AVG(execution_time_ms) as avg_execution_time
@@ -1315,7 +1315,7 @@ impl RealFairnessMonitor {
             let worker_id: WorkerId = row.get(0);
             let avg_tasks: f64 = row.get(1);
             let avg_execution_time: f64 = row.get(2);
-            
+
             // Calculate utilization score (0.0 to 1.0)
             let utilization_score = (avg_tasks / 10.0).min(1.0) * 0.7 + (avg_execution_time / 30000.0).min(1.0) * 0.3;
             distribution.insert(worker_id, utilization_score);
@@ -1362,7 +1362,7 @@ impl RealAdaptiveSelector {
     /// Calculate worker suitability score for a specific task pattern
     async fn calculate_worker_score(&self, worker_id: &WorkerId, task_pattern: &TaskPattern) -> anyhow::Result<f64> {
         let query = r#"
-            SELECT 
+            SELECT
                 wp.specialty,
                 wp.total_executions,
                 wp.successful_executions,
@@ -1514,7 +1514,7 @@ impl RealConfigOptimizer {
     /// Analyze performance trends from historical data
     async fn analyze_performance_trend(&self) -> anyhow::Result<f64> {
         let query = r#"
-            SELECT 
+            SELECT
                 AVG(performance_feedback) as avg_performance,
                 COUNT(*) as optimization_count
             FROM optimization_events
@@ -1616,7 +1616,7 @@ impl RealQueueHealthMonitor {
     pub async fn monitor_queue_health(&self) -> anyhow::Result<QueueHealthMetrics> {
         let query = r#"
             WITH queue_stats AS (
-                SELECT 
+                SELECT
                     COUNT(*) as total_tasks,
                     COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_tasks,
                     COUNT(CASE WHEN status = 'running' THEN 1 END) as running_tasks,
@@ -1627,7 +1627,7 @@ impl RealQueueHealthMonitor {
                 FROM tasks
                 WHERE created_at > NOW() - INTERVAL '1 hour'
             )
-            SELECT 
+            SELECT
                 total_tasks,
                 pending_tasks,
                 running_tasks,
@@ -1635,7 +1635,7 @@ impl RealQueueHealthMonitor {
                 failed_tasks,
                 avg_execution_time,
                 oldest_pending_task,
-                CASE 
+                CASE
                     WHEN pending_tasks > 50 THEN 'critical'
                     WHEN pending_tasks > 20 THEN 'warning'
                     ELSE 'healthy'
@@ -1703,7 +1703,7 @@ impl RealFailureTaxonomy {
     pub async fn classify_failure(&self, error_message: &str, task_context: &TaskContext) -> anyhow::Result<FailureClassification> {
         // Analyze error message for patterns
         let error_lower = error_message.to_lowercase();
-        
+
         let failure_type = if error_lower.contains("timeout") || error_lower.contains("deadline") {
             FailureType::Timeout
         } else if error_lower.contains("memory") || error_lower.contains("out of memory") {
@@ -1789,7 +1789,7 @@ impl RealFailureTaxonomy {
     /// Calculate classification confidence
     fn calculate_confidence(&self, failure_type: &FailureType, error_message: &str) -> f64 {
         let error_lower = error_message.to_lowercase();
-        
+
         match failure_type {
             FailureType::Timeout => {
                 if error_lower.contains("timeout") && error_lower.contains("deadline") {
@@ -1916,7 +1916,7 @@ impl RealLearningPersistence {
 impl LearningPersistence for RealLearningPersistence {
     async fn store_execution_records(&self, records: Vec<ExecutionRecord>) -> anyhow::Result<()> {
         use data_infrastructure::models::ExecutionRecord as DbExecutionRecord;
-        
+
         for record in records {
             let db_record = DbExecutionRecord {
                 id: record.id,
@@ -1929,18 +1929,18 @@ impl LearningPersistence for RealLearningPersistence {
                 metadata: record.metadata,
                 created_at: record.created_at,
             };
-            
+
             self.db_client.create_execution_record(&db_record).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_execution_records(&self, pattern: &TaskPattern, limit: Option<usize>) -> anyhow::Result<Vec<ExecutionRecord>> {
         use data_infrastructure::models::ExecutionRecord as DbExecutionRecord;
-        
+
         let db_records = self.db_client.get_execution_records_by_pattern(pattern, limit).await?;
-        
+
         let records = db_records.into_iter().map(|db_record| ExecutionRecord {
             id: db_record.id,
             task_id: db_record.task_id,
@@ -1952,13 +1952,13 @@ impl LearningPersistence for RealLearningPersistence {
             metadata: db_record.metadata,
             created_at: db_record.created_at,
         }).collect();
-        
+
         Ok(records)
     }
-    
+
     async fn store_worker_profiles(&self, profiles: HashMap<WorkerId, WorkerPerformanceProfile>) -> anyhow::Result<()> {
         use data_infrastructure::models::WorkerPerformanceProfile as DbWorkerProfile;
-        
+
         for (worker_id, profile) in profiles {
             let db_profile = DbWorkerProfile {
                 worker_id: profile.worker_id,
@@ -1971,16 +1971,16 @@ impl LearningPersistence for RealLearningPersistence {
                 performance_trend: profile.performance_trend,
                 capability_scores: profile.capability_scores,
             };
-            
+
             self.db_client.create_worker_profile(&db_profile).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_worker_profile(&self, worker_id: &WorkerId) -> anyhow::Result<Option<WorkerPerformanceProfile>> {
         use data_infrastructure::models::WorkerPerformanceProfile as DbWorkerProfile;
-        
+
         if let Some(db_profile) = self.db_client.get_worker_profile(*worker_id).await? {
             Ok(Some(WorkerPerformanceProfile {
                 worker_id: db_profile.worker_id,
@@ -1997,10 +1997,10 @@ impl LearningPersistence for RealLearningPersistence {
             Ok(None)
         }
     }
-    
+
     async fn store_success_patterns(&self, patterns: Vec<SuccessPattern>) -> anyhow::Result<()> {
         use data_infrastructure::models::SuccessPattern as DbSuccessPattern;
-        
+
         for pattern in patterns {
             let db_pattern = DbSuccessPattern {
                 id: pattern.id,
@@ -2011,18 +2011,18 @@ impl LearningPersistence for RealLearningPersistence {
                 frequency: pattern.frequency,
                 created_at: pattern.created_at,
             };
-            
+
             self.db_client.create_success_pattern(&db_pattern).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_success_patterns(&self) -> anyhow::Result<Vec<SuccessPattern>> {
         use data_infrastructure::models::SuccessPattern as DbSuccessPattern;
-        
+
         let db_patterns = self.db_client.get_success_patterns().await?;
-        
+
         let patterns = db_patterns.into_iter().map(|db_pattern| SuccessPattern {
             id: db_pattern.id,
             pattern_type: db_pattern.pattern_type,
@@ -2032,13 +2032,13 @@ impl LearningPersistence for RealLearningPersistence {
             frequency: db_pattern.frequency,
             created_at: db_pattern.created_at,
         }).collect();
-        
+
         Ok(patterns)
     }
-    
+
     async fn store_failure_patterns(&self, patterns: Vec<FailurePattern>) -> anyhow::Result<()> {
         use data_infrastructure::models::FailurePattern as DbFailurePattern;
-        
+
         for pattern in patterns {
             let db_pattern = DbFailurePattern {
                 id: pattern.id,
@@ -2049,18 +2049,18 @@ impl LearningPersistence for RealLearningPersistence {
                 frequency: pattern.frequency,
                 created_at: pattern.created_at,
             };
-            
+
             self.db_client.create_failure_pattern(&db_pattern).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_failure_patterns(&self) -> anyhow::Result<Vec<FailurePattern>> {
         use data_infrastructure::models::FailurePattern as DbFailurePattern;
-        
+
         let db_patterns = self.db_client.get_failure_patterns().await?;
-        
+
         let patterns = db_patterns.into_iter().map(|db_pattern| FailurePattern {
             id: db_pattern.id,
             pattern_type: db_pattern.pattern_type,
@@ -2070,13 +2070,13 @@ impl LearningPersistence for RealLearningPersistence {
             frequency: db_pattern.frequency,
             created_at: db_pattern.created_at,
         }).collect();
-        
+
         Ok(patterns)
     }
-    
+
     async fn store_optimal_configs(&self, configs: Vec<OptimalConfig>) -> anyhow::Result<()> {
         use data_infrastructure::models::OptimalConfig as DbOptimalConfig;
-        
+
         for config in configs {
             let db_config = DbOptimalConfig {
                 id: config.id,
@@ -2087,18 +2087,18 @@ impl LearningPersistence for RealLearningPersistence {
                 confidence: config.confidence,
                 created_at: config.created_at,
             };
-            
+
             self.db_client.create_optimal_config(&db_config).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_optimal_configs(&self) -> anyhow::Result<Vec<OptimalConfig>> {
         use data_infrastructure::models::OptimalConfig as DbOptimalConfig;
-        
+
         let db_configs = self.db_client.get_optimal_configs().await?;
-        
+
         let configs = db_configs.into_iter().map(|db_config| OptimalConfig {
             id: db_config.id,
             config_type: db_config.config_type,
@@ -2113,13 +2113,13 @@ impl LearningPersistence for RealLearningPersistence {
             metadata: serde_json::Value::Object(serde_json::Map::new()),
             created_at: db_config.created_at,
         }).collect();
-        
+
         Ok(configs)
     }
-    
+
     async fn store_config_recommendations(&self, recommendations: HashMap<TaskPattern, ConfigurationRecommendations>) -> anyhow::Result<()> {
         use data_infrastructure::models::ConfigurationRecommendations as DbConfigRecommendations;
-        
+
         for (pattern, recommendation) in recommendations {
             let db_recommendation = DbConfigRecommendations {
                 pattern_id: pattern.id,
@@ -2130,16 +2130,16 @@ impl LearningPersistence for RealLearningPersistence {
                 confidence: recommendation.confidence,
                 reasoning: recommendation.reasoning,
             };
-            
+
             self.db_client.create_config_recommendation(&db_recommendation).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_config_recommendations(&self, pattern: &TaskPattern) -> anyhow::Result<Option<ConfigurationRecommendations>> {
         use data_infrastructure::models::ConfigurationRecommendations as DbConfigRecommendations;
-        
+
         if let Some(db_recommendation) = self.db_client.get_config_recommendation(pattern.id).await? {
             Ok(Some(ConfigurationRecommendations {
                 worker_selection: db_recommendation.worker_selection,
@@ -2153,10 +2153,10 @@ impl LearningPersistence for RealLearningPersistence {
             Ok(None)
         }
     }
-    
+
     async fn store_optimization_events(&self, events: Vec<OptimizationEvent>) -> anyhow::Result<()> {
         use data_infrastructure::models::OptimizationEvent as DbOptimizationEvent;
-        
+
         for event in events {
             let db_event = DbOptimizationEvent {
                 id: event.id,
@@ -2166,18 +2166,18 @@ impl LearningPersistence for RealLearningPersistence {
                 timestamp: event.timestamp,
                 metadata: event.metadata,
             };
-            
+
             self.db_client.create_optimization_event(&db_event).await?;
         }
-        
+
         Ok(())
     }
-    
+
     async fn get_optimization_events(&self, limit: Option<usize>) -> anyhow::Result<Vec<OptimizationEvent>> {
         use data_infrastructure::models::OptimizationEvent as DbOptimizationEvent;
-        
+
         let db_events = self.db_client.get_optimization_events(limit).await?;
-        
+
         let events = db_events.into_iter().map(|db_event| OptimizationEvent {
             id: db_event.id,
             event_type: db_event.event_type,
@@ -2186,7 +2186,7 @@ impl LearningPersistence for RealLearningPersistence {
             timestamp: db_event.timestamp,
             metadata: db_event.metadata,
         }).collect();
-        
+
         Ok(events)
     }
 }
@@ -2205,7 +2205,7 @@ impl OrchestrationQualityBridge {
             quality_thresholds: QualityRequirements::default(),
         }
     }
-    
+
     /// Validate execution artifacts against orchestration quality gates
     pub async fn validate_with_orchestration_gates(
         &self,
@@ -2214,7 +2214,7 @@ impl OrchestrationQualityBridge {
         requirements: &QualityRequirements,
     ) -> Result<bool, ParallelError> {
         tracing::info!("Running orchestration quality gates for task: {}", task_id.0);
-        
+
         // Check test coverage if available
         if let Some(test_results) = &artifacts.test_results {
             let coverage = test_results.coverage_percentage.unwrap_or(0.0);
@@ -2225,7 +2225,7 @@ impl OrchestrationQualityBridge {
                 });
             }
         }
-        
+
         // Check linting results if available
         if let Some(lint_results) = &artifacts.lint_results {
             if lint_results.error_count > 0 {
@@ -2235,7 +2235,7 @@ impl OrchestrationQualityBridge {
                 });
             }
         }
-        
+
         // Check security scan results if available
         if let Some(security_results) = &artifacts.security_scan_results {
             if security_results.vulnerability_count > 0 {
@@ -2245,20 +2245,20 @@ impl OrchestrationQualityBridge {
                 });
             }
         }
-        
+
         // Check performance metrics if available
         if let Some(performance_results) = &artifacts.performance_results {
             if let Some(max_execution_time) = requirements.max_execution_time_ms {
                 if performance_results.execution_time_ms > max_execution_time {
                     return Err(ParallelError::Validation {
-                        message: format!("Execution time {}ms exceeds limit {}ms", 
+                        message: format!("Execution time {}ms exceeds limit {}ms",
                             performance_results.execution_time_ms, max_execution_time),
                         source: None,
                     });
                 }
             }
         }
-        
+
         tracing::info!("Orchestration quality gates passed for task: {}", task_id.0);
         Ok(true)
     }
@@ -2301,7 +2301,7 @@ impl OrchestrationMonitoringBridge {
             metrics: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
     }
-    
+
     /// Record execution metrics
     pub async fn record_execution_metrics(
         &self,
@@ -2310,12 +2310,12 @@ impl OrchestrationMonitoringBridge {
         metrics: &ExecutionMetrics,
     ) -> Result<(), ParallelError> {
         tracing::debug!("Recording execution metrics for task: {}, worker: {}", task_id.0, worker_id.0);
-        
+
         // Store metrics in internal collection for monitoring
         let execution_time = metrics.execution_time_ms.unwrap_or(0) as f64;
         let cpu_usage = metrics.cpu_usage_percent.unwrap_or(0.0);
         let memory_usage = metrics.memory_usage_mb.unwrap_or(0.0);
-        
+
         // Store metrics with composite key for task-worker pair
         let metrics_key = format!("{}_{}", task_id.0, worker_id.0);
         {
@@ -2324,15 +2324,15 @@ impl OrchestrationMonitoringBridge {
             metrics_map.insert(format!("{}_cpu_percent", metrics_key), cpu_usage);
             metrics_map.insert(format!("{}_memory_mb", metrics_key), memory_usage);
         }
-        
+
         // Log metrics for debugging
         tracing::info!("Execution metrics - Task: {}, Worker: {}, Duration: {}ms, CPU: {}%, Memory: {}MB",
             task_id.0, worker_id.0, execution_time, cpu_usage, memory_usage
         );
-        
+
         Ok(())
     }
-    
+
     /// Record quality metrics
     pub async fn record_quality_metrics(
         &self,
@@ -2341,14 +2341,14 @@ impl OrchestrationMonitoringBridge {
         coverage_percentage: f64,
     ) -> Result<(), ParallelError> {
         tracing::debug!("Recording quality metrics for task: {}", task_id.0);
-        
+
         tracing::info!("Quality metrics - Task: {}, Quality Score: {:.2}, Coverage: {:.2}%",
             task_id.0, quality_score, coverage_percentage
         );
-        
+
         Ok(())
     }
-    
+
     /// Record error metrics
     pub async fn record_error_metrics(
         &self,
@@ -2357,11 +2357,11 @@ impl OrchestrationMonitoringBridge {
         error_count: u32,
     ) -> Result<(), ParallelError> {
         tracing::debug!("Recording error metrics for task: {}", task_id.0);
-        
+
         tracing::warn!("Error metrics - Task: {}, Error Type: {}, Count: {}",
             task_id.0, error_type, error_count
         );
-        
+
         Ok(())
     }
 }
@@ -2380,9 +2380,9 @@ impl CouncilLearningBridge {
             signals: std::sync::Arc::new(std::sync::RwLock::new(std::collections::VecDeque::new())),
         }
     }
-    
+
     /// Publish parallel worker signals to council
-    /// 
+    ///
     /// Converts ParallelWorkerSignal to LearningSignal format and sends to council bridge
     pub async fn publish_signals(&self, signals: Vec<crate::learning::council_bridge::ParallelWorkerSignal>) -> Result<(), ParallelError> {
         for signal in signals {
@@ -2420,16 +2420,16 @@ impl CouncilLearningBridge {
                     continue;
                 }
             };
-            
+
             // Send to council bridge
             self.send_learning_signal(learning_signal).await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Send learning signal to council
-    /// 
+    ///
     /// Sends learning signals to the council system for adaptive learning.
     /// Currently stores signals in bridge for processing. When council API is available,
     /// this will send signals via HTTP/gRPC to the council learning system.
@@ -2438,39 +2438,39 @@ impl CouncilLearningBridge {
         signal: crate::learning::council_bridge::LearningSignal,
     ) -> Result<(), ParallelError> {
         tracing::debug!("Sending learning signal to council: {:?}", signal);
-        
+
         // Store signal in bridge for processing
         {
             let mut signals = self.signals.write().unwrap();
             signals.push_back(signal.clone());
-            
+
             // Keep only last 500 signals to prevent memory growth
             if signals.len() > 500 {
                 signals.pop_front();
             }
         }
-        
+
         // Log signal for debugging
         tracing::info!("Learning signal sent - Task: {}, Worker: {}, Performance: {:.2}, Resource Usage: CPU: {:.1}%, Memory: {:.1}MB",
             signal.task_id, signal.worker_id, signal.performance_score,
             signal.resource_usage.cpu_percent, signal.resource_usage.memory_mb
         );
-        
+
         // TODO: When council integration is available:
         //  1. Send signal via council API client
         //  2. Handle response and errors
         //  3. Retry on transient failures
-        
+
         Ok(())
     }
-    
+
     /// Receive learning feedback from council
     pub async fn receive_learning_feedback(
         &self,
         task_id: &TaskId,
     ) -> Result<Option<crate::learning::council_bridge::LearningFeedback>, ParallelError> {
         tracing::debug!("Receiving learning feedback for task: {}", task_id.0);
-        
+
         // TODO: Implement council learning feedback integration:
         // 1. Feedback retrieval: Retrieve feedback from council
         //    - Query council for learning feedback for task
@@ -2494,14 +2494,14 @@ impl CouncilLearningBridge {
         // PRIORITY: Medium
         Ok(None)
     }
-    
+
     /// Get learning recommendations from council
     pub async fn get_learning_recommendations(
         &self,
         task_pattern: &TaskPattern,
     ) -> Result<Vec<crate::learning::council_bridge::LearningRecommendation>, ParallelError> {
         tracing::debug!("Getting learning recommendations for task pattern: {:?}", task_pattern);
-        
+
         // TODO: Implement council learning recommendations integration:
         // 1. Recommendation retrieval: Retrieve recommendations from council
         //    - Query council for learning recommendations based on task pattern

@@ -6,9 +6,9 @@
 //! @author @darianrosebrook
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
 use schemars::JsonSchema;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// Types of learning algorithms supported
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

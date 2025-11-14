@@ -33,7 +33,7 @@ impl FileWatcherAdapter {
             workspace_root: workspace_root.as_ref().to_path_buf(),
         }
     }
-    
+
     /// Handle file event from watcher
     pub async fn handle_file_event(
         &self,
@@ -41,10 +41,11 @@ impl FileWatcherAdapter {
         event_type: FileEventType,
         state_id: Option<StateId>,
     ) -> Result<(), String> {
-        let relative_path = path.strip_prefix(&self.workspace_root)
+        let relative_path = path
+            .strip_prefix(&self.workspace_root)
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|_| path.clone());
-        
+
         let event = match event_type {
             FileEventType::Created => WorkspaceStateEvent::FileCreated {
                 path: relative_path,
@@ -59,35 +60,28 @@ impl FileWatcherAdapter {
                 state_id,
             },
         };
-        
-        self.event_sender.send(event)
+
+        self.event_sender
+            .send(event)
             .map_err(|e| format!("Failed to send file event: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Check if file should generate embedding based on extension
-    pub fn should_generate_embedding(&self, path: &std::path::Path, embedding_extensions: &[String]) -> bool {
-        let extension = path.extension()
+    pub fn should_generate_embedding(
+        &self,
+        path: &std::path::Path,
+        embedding_extensions: &[String],
+    ) -> bool {
+        let extension = path
+            .extension()
             .and_then(|e| e.to_str())
             .map(|s| s.to_lowercase())
             .unwrap_or_default();
-        
-        embedding_extensions.iter().any(|ext| ext.to_lowercase() == extension)
+
+        embedding_extensions
+            .iter()
+            .any(|ext| ext.to_lowercase() == extension)
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

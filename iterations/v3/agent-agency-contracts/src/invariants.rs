@@ -6,9 +6,9 @@
 //!
 //! @author @darianrosebrook
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
 use crate::working_spec::WorkingSpec;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// CAWS invariant rules that are never waivable
 #[derive(Debug, Clone, PartialEq, JsonSchema)]
@@ -99,8 +99,11 @@ impl InvariantResults {
         // First, try to find Critical violations
         for check in &self.checks {
             if !check.passed {
-                if let Some(violation) = check.violations.iter()
-                    .find(|v| matches!(v.severity, Severity::Critical)) {
+                if let Some(violation) = check
+                    .violations
+                    .iter()
+                    .find(|v| matches!(v.severity, Severity::Critical))
+                {
                     return Some(violation.clone());
                 }
             }
@@ -108,8 +111,11 @@ impl InvariantResults {
         // If no Critical, return first High violation
         for check in &self.checks {
             if !check.passed {
-                if let Some(violation) = check.violations.iter()
-                    .find(|v| matches!(v.severity, Severity::High)) {
+                if let Some(violation) = check
+                    .violations
+                    .iter()
+                    .find(|v| matches!(v.severity, Severity::High))
+                {
                     return Some(violation.clone());
                 }
             }
@@ -160,10 +166,11 @@ fn check_no_console_log(spec: &WorkingSpec) -> InvariantCheck {
 fn check_no_placeholders(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if desc_lower.contains("todo") ||
-                      desc_lower.contains("fixme") ||
-                      desc_lower.contains("placeholder") ||
-                      desc_lower.contains("stub") {
+    let violations = if desc_lower.contains("todo")
+        || desc_lower.contains("fixme")
+        || desc_lower.contains("placeholder")
+        || desc_lower.contains("stub")
+    {
         vec![ViolationLocation {
             rule_id: "CAWS-CODE-001".to_string(),
             description: "TODO/FIXME/PLACEHOLDER detected - incomplete implementation".to_string(),
@@ -185,9 +192,10 @@ fn check_no_placeholders(spec: &WorkingSpec) -> InvariantCheck {
 fn check_structured_logging(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if !desc_lower.contains("tracing") &&
-                       !desc_lower.contains("structured logging") &&
-                       !desc_lower.contains("log::") {
+    let violations = if !desc_lower.contains("tracing")
+        && !desc_lower.contains("structured logging")
+        && !desc_lower.contains("log::")
+    {
         vec![ViolationLocation {
             rule_id: "CAWS-LOG-002".to_string(),
             description: "No structured logging mentioned - must use tracing crate".to_string(),
@@ -209,11 +217,12 @@ fn check_structured_logging(spec: &WorkingSpec) -> InvariantCheck {
 fn check_no_hardcoded_secrets(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if desc_lower.contains("hardcoded") &&
-                      (desc_lower.contains("password") ||
-                       desc_lower.contains("secret") ||
-                       desc_lower.contains("key") ||
-                       desc_lower.contains("token")) {
+    let violations = if desc_lower.contains("hardcoded")
+        && (desc_lower.contains("password")
+            || desc_lower.contains("secret")
+            || desc_lower.contains("key")
+            || desc_lower.contains("token"))
+    {
         vec![ViolationLocation {
             rule_id: "CAWS-SEC-001".to_string(),
             description: "Hardcoded secrets detected - use environment variables".to_string(),
@@ -235,13 +244,15 @@ fn check_no_hardcoded_secrets(spec: &WorkingSpec) -> InvariantCheck {
 fn check_semver_compliance(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if desc_lower.contains("breaking change") ||
-                      desc_lower.contains("breaking api") ||
-                      desc_lower.contains("incompatible") {
+    let violations = if desc_lower.contains("breaking change")
+        || desc_lower.contains("breaking api")
+        || desc_lower.contains("incompatible")
+    {
         // Check if version bump is mentioned
-        if !desc_lower.contains("major version") &&
-           !desc_lower.contains("version bump") &&
-           !desc_lower.contains("semver") {
+        if !desc_lower.contains("major version")
+            && !desc_lower.contains("version bump")
+            && !desc_lower.contains("semver")
+        {
             vec![ViolationLocation {
                 rule_id: "CAWS-API-001".to_string(),
                 description: "Breaking change without version strategy mentioned".to_string(),
@@ -266,16 +277,17 @@ fn check_semver_compliance(spec: &WorkingSpec) -> InvariantCheck {
 fn check_error_handling(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if (desc_lower.contains("network") ||
-                        desc_lower.contains("file") ||
-                        desc_lower.contains("database") ||
-                        desc_lower.contains("api call") ||
-                        desc_lower.contains("external service")) &&
-                       !desc_lower.contains("error handling") &&
-                       !desc_lower.contains("try/catch") &&
-                       !desc_lower.contains("result") &&
-                       !desc_lower.contains("option") &&
-                       !desc_lower.contains("?") {
+    let violations = if (desc_lower.contains("network")
+        || desc_lower.contains("file")
+        || desc_lower.contains("database")
+        || desc_lower.contains("api call")
+        || desc_lower.contains("external service"))
+        && !desc_lower.contains("error handling")
+        && !desc_lower.contains("try/catch")
+        && !desc_lower.contains("result")
+        && !desc_lower.contains("option")
+        && !desc_lower.contains("?")
+    {
         vec![ViolationLocation {
             rule_id: "CAWS-ERR-001".to_string(),
             description: "Fallible operations without error handling mentioned".to_string(),
@@ -297,16 +309,18 @@ fn check_error_handling(spec: &WorkingSpec) -> InvariantCheck {
 fn check_api_backward_compat(spec: &WorkingSpec) -> InvariantCheck {
     let desc_lower = spec.description.to_lowercase();
 
-    let violations = if (desc_lower.contains("remove") ||
-                        desc_lower.contains("delete") ||
-                        desc_lower.contains("change signature")) &&
-                       (desc_lower.contains("api") ||
-                        desc_lower.contains("endpoint") ||
-                        desc_lower.contains("function")) {
+    let violations = if (desc_lower.contains("remove")
+        || desc_lower.contains("delete")
+        || desc_lower.contains("change signature"))
+        && (desc_lower.contains("api")
+            || desc_lower.contains("endpoint")
+            || desc_lower.contains("function"))
+    {
         // Check if backward compatibility is addressed
-        if !desc_lower.contains("backward compatible") &&
-           !desc_lower.contains("versioned") &&
-           !desc_lower.contains("deprecated") {
+        if !desc_lower.contains("backward compatible")
+            && !desc_lower.contains("versioned")
+            && !desc_lower.contains("deprecated")
+        {
             vec![ViolationLocation {
                 rule_id: "CAWS-API-002".to_string(),
                 description: "API change without backward compatibility strategy".to_string(),
@@ -343,7 +357,8 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
         "error handling",
     ];
 
-    let caws_score = caws_indicators.iter()
+    let caws_score = caws_indicators
+        .iter()
         .filter(|indicator| desc_lower.contains(*indicator))
         .count();
 
@@ -352,7 +367,11 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
     } else {
         vec![ViolationLocation {
             rule_id: "CAWS-STD-001".to_string(),
-            description: format!("Low CAWS standards compliance ({} of {} indicators)", caws_score, caws_indicators.len()),
+            description: format!(
+                "Low CAWS standards compliance ({} of {} indicators)",
+                caws_score,
+                caws_indicators.len()
+            ),
             context: "Working specification description".to_string(),
             severity: Severity::Low,
         }]
@@ -369,13 +388,12 @@ fn check_caws_compliance(spec: &WorkingSpec) -> InvariantCheck {
 mod tests {
     use super::*;
     // Removed unused import: schemars::JsonSchema
-    use crate::working_spec::{
-        WorkingSpec, WorkingSpecMetadata, WorkingSpecConstraints, AcceptanceCriterion,
-        TestPlan, RollbackPlan, RollbackStrategy, DataImpact, WorkingSpecContext,
-        ScopeRestrictions,
-    };
     use crate::planning_io::{ChangeBudget, EnforcementMode};
     use crate::task_request::Environment;
+    use crate::working_spec::{
+        AcceptanceCriterion, DataImpact, RollbackPlan, RollbackStrategy, ScopeRestrictions,
+        TestPlan, WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, WorkingSpecMetadata,
+    };
 
     fn create_test_spec(description: &str) -> WorkingSpec {
         WorkingSpec {
@@ -454,7 +472,11 @@ mod tests {
     fn test_no_console_log_pass() {
         let spec = create_test_spec("Implement logging with tracing crate");
         let results = run_caws_invariants(&spec);
-        let check = results.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog)).unwrap();
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog))
+            .unwrap();
         assert!(check.passed);
     }
 
@@ -462,7 +484,11 @@ mod tests {
     fn test_no_console_log_fail() {
         let spec = create_test_spec("Use console.log for debugging");
         let results = run_caws_invariants(&spec);
-        let check = results.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog)).unwrap();
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog))
+            .unwrap();
         assert!(!check.passed);
         assert_eq!(check.violations.len(), 1);
         assert_eq!(check.violations[0].severity, Severity::High);
@@ -472,7 +498,11 @@ mod tests {
     fn test_no_placeholders_fail() {
         let spec = create_test_spec("TODO: implement authentication");
         let results = run_caws_invariants(&spec);
-        let check = results.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode)).unwrap();
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
         assert!(!check.passed);
         assert_eq!(check.violations[0].severity, Severity::Critical);
     }

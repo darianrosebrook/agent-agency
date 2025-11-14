@@ -10,8 +10,8 @@
 //!
 //! Ported from V2 CircuitBreaker.ts with Rust optimizations.
 
-use schemars::JsonSchema;
 use anyhow::Result;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
@@ -20,7 +20,8 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 // Type aliases for complex types
-type FallbackFn<T> = Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>;
+type FallbackFn<T> =
+    Box<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>;
 type ErrorType = Box<dyn std::error::Error + Send + Sync>;
 
 /// Error thrown when circuit breaker is open

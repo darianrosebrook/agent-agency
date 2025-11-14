@@ -3,11 +3,11 @@
 //! Deadpool-to-SQLx bridge for robust connection pooling with health checks,
 //! timeout handling, and comprehensive monitoring.
 
-use schemars::JsonSchema;
 use crate::database_config::DatabaseConfig;
 use crate::database_metrics::DatabaseMetrics;
 use anyhow::{Context, Result};
-use deadpool_postgres::{Config, ManagerConfig, RecyclingMethod, Runtime, Pool as DeadpoolPool};
+use deadpool_postgres::{Config, ManagerConfig, Pool as DeadpoolPool, RecyclingMethod, Runtime};
+use schemars::JsonSchema;
 use std::sync::Arc;
 use std::time::{Duration as StdDuration, Instant};
 use tracing::info;
@@ -29,7 +29,9 @@ impl DeadpoolSqlxBridge {
     /// Create a new bridge from deadpool configuration
     pub async fn new(config: DatabaseConfig, metrics: Arc<DatabaseMetrics>) -> Result<Self> {
         // Validate configuration for production safety
-        config.validate().map_err(|e| anyhow::anyhow!("Database configuration validation failed: {}", e))?;
+        config
+            .validate()
+            .map_err(|e| anyhow::anyhow!("Database configuration validation failed: {}", e))?;
         info!("Database configuration validated successfully");
 
         let mut pg_config = Config::new();
@@ -44,7 +46,9 @@ impl DeadpoolSqlxBridge {
         pg_config.pool = Some(deadpool_postgres::PoolConfig {
             max_size: config.pool_max.unwrap_or(10) as usize,
             timeouts: deadpool_postgres::Timeouts {
-                wait: Some(StdDuration::from_secs(config.connection_timeout_seconds.unwrap_or(30))),
+                wait: Some(StdDuration::from_secs(
+                    config.connection_timeout_seconds.unwrap_or(30),
+                )),
                 create: Some(StdDuration::from_secs(10)), // Connection creation timeout
                 recycle: Some(StdDuration::from_secs(5)), // Connection recycle timeout
             },
@@ -69,7 +73,7 @@ impl DeadpoolSqlxBridge {
         // Implement timeout and retry logic
         let connection = tokio::time::timeout(
             StdDuration::from_secs(self.config.connection_timeout_seconds.unwrap_or(30)),
-            self.deadpool.get()
+            self.deadpool.get(),
         )
         .await
         .context("Connection acquisition timeout")?
@@ -106,13 +110,21 @@ impl DeadpoolSqlxBridge {
     }
 
     /// Execute a query and return rows
-    pub async fn query(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<Vec<tokio_postgres::Row>> {
+    pub async fn query(
+        &self,
+        query: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<Vec<tokio_postgres::Row>> {
         let mut conn = self.acquire().await?;
         conn.execute_query(query, params).await
     }
 
     /// Execute a query and return affected row count
-    pub async fn execute(&self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<u64> {
+    pub async fn execute(
+        &self,
+        query: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<u64> {
         let conn = self.acquire().await?;
         let result = conn.connection.execute(query, params).await?;
         Ok(result)
@@ -132,7 +144,8 @@ impl DeadpoolSqlxConnection {
         let start_time = Instant::now();
 
         // Simple query to test connection health
-        let result = self.connection
+        let result = self
+            .connection
             .query_one("SELECT 1", &[])
             .await
             .context("Health check query failed")?;
@@ -143,17 +156,25 @@ impl DeadpoolSqlxConnection {
         // Verify the result
         let value: i32 = result.get(0);
         if value != 1 {
-            return Err(anyhow::anyhow!("Health check returned unexpected value: {}", value));
+            return Err(anyhow::anyhow!(
+                "Health check returned unexpected value: {}",
+                value
+            ));
         }
 
         Ok(())
     }
 
     /// Execute a query and return the connection for further use
-    pub async fn execute_query(&mut self, query: &str, params: &[&(dyn tokio_postgres::types::ToSql + Sync)]) -> Result<Vec<tokio_postgres::Row>> {
+    pub async fn execute_query(
+        &mut self,
+        query: &str,
+        params: &[&(dyn tokio_postgres::types::ToSql + Sync)],
+    ) -> Result<Vec<tokio_postgres::Row>> {
         let start_time = Instant::now();
 
-        let rows = self.connection
+        let rows = self
+            .connection
             .query(query, params)
             .await
             .context("Query execution failed")?;
@@ -164,5 +185,3 @@ impl DeadpoolSqlxConnection {
         Ok(rows)
     }
 }
-
-

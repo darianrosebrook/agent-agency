@@ -4,14 +4,16 @@
 //! composed and executed in sequence. Now uses common-pipeline framework
 //! for standardized patterns while maintaining domain-specific functionality.
 
-use schemars::JsonSchema;
 use crate::data_processing_types::*;
-use crate::{DataProcessingResult, DataProcessingError};
-use system_configuration::{SequentialPipeline, SequentialPipelineConfig, PipelineStage as SystemPipelineStage};
-use system_configuration::PipelineResult as SystemPipelineResult;
+use crate::{DataProcessingError, DataProcessingResult};
+use schemars::JsonSchema;
+use std::collections::HashMap;
 use std::default::Default;
-use std::collections::HashMap; 
-use tracing::warn; 
+use system_configuration::PipelineResult as SystemPipelineResult;
+use system_configuration::{
+    PipelineStage as SystemPipelineStage, SequentialPipeline, SequentialPipelineConfig,
+};
+use tracing::warn;
 
 // Local pipeline stage trait for domain-specific stages
 #[async_trait]
@@ -114,12 +116,14 @@ impl SystemPipelineStage<DataInput, DataInput> for PipelineStageAdapter {
                 let content = match &output.processed_content.data {
                     ProcessedContentData::Text(text) => DataContent::Text(text.clone()),
                     ProcessedContentData::Binary(binary) => DataContent::Binary(binary.clone()),
-                    ProcessedContentData::Structured(structured) => DataContent::Structured(structured.clone()),
+                    ProcessedContentData::Structured(structured) => {
+                        DataContent::Structured(structured.clone())
+                    }
                 };
-                
+
                 // Preserve original processing context if available, otherwise create new one
                 let processing_context = output.original_input.processing_context.clone();
-                
+
                 Ok(DataInput {
                     id: output.id.clone(),
                     source: output.original_input.source.clone(),
@@ -128,7 +132,10 @@ impl SystemPipelineStage<DataInput, DataInput> for PipelineStageAdapter {
                     processing_context,
                 })
             }
-            Err(e) => Err(system_configuration::PipelineError::stage_error(format!("{}", e), "pipeline_stage")),
+            Err(e) => Err(system_configuration::PipelineError::stage_error(
+                format!("{}", e),
+                "pipeline_stage",
+            )),
         }
     }
 }
@@ -192,8 +199,10 @@ impl PipelineStage for DataProcessingCompositeStage {
                             stream_id: format!("stage_output_{}", stage.name()),
                             content_type: ContentType::Structured,
                         }),
-                        content: DataContent::Structured(serde_json::to_value(&output.processed_content)
-                            .map_err(|e| DataProcessingError::Operation(e.to_string()))?),
+                        content: DataContent::Structured(
+                            serde_json::to_value(&output.processed_content)
+                                .map_err(|e| DataProcessingError::Operation(e.to_string()))?,
+                        ),
                         metadata: output.extracted_metadata.clone(),
                         processing_context: ProcessingContext {
                             request_id: input.processing_context.request_id.clone(),
@@ -206,7 +215,11 @@ impl PipelineStage for DataProcessingCompositeStage {
                     };
                 }
                 Err(e) => {
-                    return Err(DataProcessingError::Operation(format!("Stage {} failed: {}", stage.name(), e)));
+                    return Err(DataProcessingError::Operation(format!(
+                        "Stage {} failed: {}",
+                        stage.name(),
+                        e
+                    )));
                 }
             }
         }
@@ -222,7 +235,9 @@ impl PipelineStage for DataProcessingCompositeStage {
             id: ProcessingId::new(),
             original_input: input.clone(),
             processed_content: ProcessedContent {
-                data: ProcessedContentData::Structured(serde_json::Value::Object(serde_json::Map::new())),
+                data: ProcessedContentData::Structured(serde_json::Value::Object(
+                    serde_json::Map::new(),
+                )),
                 content_type: ContentType::Structured,
                 text_content: final_text_content,
                 structured_data: final_structured_data,
@@ -245,7 +260,10 @@ impl PipelineStage for DataProcessingCompositeStage {
         };
 
         // Calculate bytes processed now that we have the output
-        let bytes_processed = DataProcessingCompositeStage::calculate_bytes_processed_for_output(&input, &final_output)?;
+        let bytes_processed = DataProcessingCompositeStage::calculate_bytes_processed_for_output(
+            &input,
+            &final_output,
+        )?;
 
         // Update the processing stats with the calculated bytes
         let final_output = ProcessingOutput {
@@ -270,7 +288,10 @@ impl PipelineStage for DataProcessingCompositeStage {
 
 impl DataProcessingCompositeStage {
     /// Calculate bytes processed for a given input and output
-    fn calculate_bytes_processed_for_output(input: &DataInput, output: &ProcessingOutput) -> DataProcessingResult<u64> {
+    fn calculate_bytes_processed_for_output(
+        input: &DataInput,
+        output: &ProcessingOutput,
+    ) -> DataProcessingResult<u64> {
         let mut total_bytes = 0u64;
 
         // Calculate input bytes
@@ -311,7 +332,11 @@ impl DataProcessingCompositeStage {
                     }
                     Err(e) => {
                         // Fallback to estimate if file doesn't exist or can't be read
-                        warn!("Failed to read file metadata for {}: {}. Using estimate.", file_path.display(), e);
+                        warn!(
+                            "Failed to read file metadata for {}: {}. Using estimate.",
+                            file_path.display(),
+                            e
+                        );
                         bytes += file_path.to_string_lossy().len() as u64 * 100;
                     }
                 }
@@ -341,7 +366,9 @@ impl DataProcessingCompositeStage {
     }
 
     /// Calculate bytes from processed content (static version)
-    fn calculate_processed_content_bytes_static(content: &ProcessedContent) -> DataProcessingResult<u64> {
+    fn calculate_processed_content_bytes_static(
+        content: &ProcessedContent,
+    ) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
         match &content.data {
@@ -360,29 +387,46 @@ impl DataProcessingCompositeStage {
         }
 
         // Add entity bytes (estimate based on entity fields)
-        bytes += content.entities.iter().map(|e| {
-            e.id.len() as u64 + format!("{:?}", e.entity_type).len() as u64 + e.confidence.to_string().len() as u64
-        }).sum::<u64>();
-        
+        bytes += content
+            .entities
+            .iter()
+            .map(|e| {
+                e.id.len() as u64
+                    + format!("{:?}", e.entity_type).len() as u64
+                    + e.confidence.to_string().len() as u64
+            })
+            .sum::<u64>();
+
         // Add relationship bytes
-        bytes += content.relationships.iter().map(|r| {
-            r.id.len() as u64 + r.source_entity.len() as u64 + r.target_entity.len() as u64 + r.evidence.len() as u64
-        }).sum::<u64>();
-        
+        bytes += content
+            .relationships
+            .iter()
+            .map(|r| {
+                r.id.len() as u64
+                    + r.source_entity.len() as u64
+                    + r.target_entity.len() as u64
+                    + r.evidence.len() as u64
+            })
+            .sum::<u64>();
+
         // Add visual element bytes (estimate)
-        bytes += content.visual_elements.iter().map(|v| {
-            // Estimate size based on VisualElement fields
-            let mut size = 0u64;
-            if let Some(text) = &v.text_content {
-                size += text.len() as u64;
-            }
-            if let Some(desc) = &v.description {
-                size += desc.len() as u64;
-            }
-            size += 16; // element_type, position, confidence
-            size
-        }).sum::<u64>();
-        
+        bytes += content
+            .visual_elements
+            .iter()
+            .map(|v| {
+                // Estimate size based on VisualElement fields
+                let mut size = 0u64;
+                if let Some(text) = &v.text_content {
+                    size += text.len() as u64;
+                }
+                if let Some(desc) = &v.description {
+                    size += desc.len() as u64;
+                }
+                size += 16; // element_type, position, confidence
+                size
+            })
+            .sum::<u64>();
+
         // Add audio transcript bytes
         if let Some(audio) = &content.audio_transcript {
             bytes += audio.len() as u64;
@@ -392,7 +436,9 @@ impl DataProcessingCompositeStage {
     }
 
     /// Calculate bytes from extracted metadata (static version)
-    fn calculate_extracted_metadata_bytes_static(metadata: &HashMap<String, serde_json::Value>) -> DataProcessingResult<u64> {
+    fn calculate_extracted_metadata_bytes_static(
+        metadata: &HashMap<String, serde_json::Value>,
+    ) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(metadata)
             .map_err(|e| DataProcessingError::Serialization(e))?
             .len() as u64;
@@ -400,7 +446,9 @@ impl DataProcessingCompositeStage {
     }
 
     /// Calculate bytes from processing stats (static version)
-    fn calculate_processing_stats_bytes_static(stats: &ProcessingStats) -> DataProcessingResult<u64> {
+    fn calculate_processing_stats_bytes_static(
+        stats: &ProcessingStats,
+    ) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(stats)
             .map_err(|e| DataProcessingError::Serialization(e))?
             .len() as u64;
@@ -436,7 +484,10 @@ impl DataProcessingCompositeStage {
     }
 
     /// Calculate metadata overhead (static version)
-    fn calculate_metadata_overhead_static(_input: &DataInput, _output: &ProcessingOutput) -> DataProcessingResult<u64> {
+    fn calculate_metadata_overhead_static(
+        _input: &DataInput,
+        _output: &ProcessingOutput,
+    ) -> DataProcessingResult<u64> {
         // Estimate 10% overhead for metadata
         Ok(100) // Fixed overhead estimate
     }
@@ -475,29 +526,46 @@ impl DataPipeline {
             _config: config.clone(),
             _sequential_pipeline: Arc::new(sequential_pipeline),
             domain_stages: vec![], // Empty since stages are moved to composite_stage
-            stages: vec![], // Empty since stages are moved to composite_stage
-            composite_stage: DataProcessingCompositeStage { stages: Self::create_default_stages(&config).await? },
+            stages: vec![],        // Empty since stages are moved to composite_stage
+            composite_stage: DataProcessingCompositeStage {
+                stages: Self::create_default_stages(&config).await?,
+            },
         })
     }
 
     /// Create the default set of pipeline stages
-    async fn create_default_stages(_config: &PipelineConfig) -> DataProcessingResult<Vec<Box<dyn PipelineStage>>> {
+    async fn create_default_stages(
+        _config: &PipelineConfig,
+    ) -> DataProcessingResult<Vec<Box<dyn PipelineStage>>> {
         let mut stages = Vec::new();
 
         // Add ingestion stage
-        stages.push(Box::new(crate::ingestion::DefaultIngestionStage::new().await?) as Box<dyn PipelineStage>);
+        stages.push(
+            Box::new(crate::ingestion::DefaultIngestionStage::new().await?)
+                as Box<dyn PipelineStage>,
+        );
 
         // Add enrichment stage
-        stages.push(Box::new(crate::enrichment::DefaultEnrichmentStage::new(Default::default())) as Box<dyn PipelineStage>);
+        stages.push(Box::new(crate::enrichment::DefaultEnrichmentStage::new(
+            Default::default(),
+        )) as Box<dyn PipelineStage>);
 
         // Add indexing stage
-        stages.push(Box::new(crate::indexing::DefaultIndexingStage::new().await?) as Box<dyn PipelineStage>);
+        stages.push(
+            Box::new(crate::indexing::DefaultIndexingStage::new().await?) as Box<dyn PipelineStage>,
+        );
 
         // Add knowledge integration stage
-        stages.push(Box::new(crate::knowledge::DefaultKnowledgeStage::new().await?) as Box<dyn PipelineStage>);
+        stages.push(
+            Box::new(crate::knowledge::DefaultKnowledgeStage::new().await?)
+                as Box<dyn PipelineStage>,
+        );
 
         // Add operations stage
-        stages.push(Box::new(crate::operations::DefaultOperationsStage::new().await?) as Box<dyn PipelineStage>);
+        stages.push(
+            Box::new(crate::operations::DefaultOperationsStage::new().await?)
+                as Box<dyn PipelineStage>,
+        );
 
         Ok(stages)
     }
@@ -513,7 +581,7 @@ impl DataPipeline {
             DataContent::Text(text) => text.len(),
             DataContent::Binary(data) => data.len(),
             DataContent::Structured(_) => 0, // JSON size is hard to estimate
-            DataContent::File(_) => 0, // File size is hard to estimate without reading
+            DataContent::File(_) => 0,       // File size is hard to estimate without reading
         };
 
         // Process through each stage sequentially
@@ -527,7 +595,9 @@ impl DataPipeline {
                         content: match &output.processed_content.data {
                             ProcessedContentData::Text(text) => DataContent::Text(text.clone()),
                             ProcessedContentData::Binary(data) => DataContent::Binary(data.clone()),
-                            ProcessedContentData::Structured(value) => DataContent::Structured(value.clone()),
+                            ProcessedContentData::Structured(value) => {
+                                DataContent::Structured(value.clone())
+                            }
                         },
                         metadata: output.extracted_metadata.clone(),
                         processing_context: output.original_input.processing_context.clone(),
@@ -562,9 +632,14 @@ impl DataPipeline {
                 data: match &input.content {
                     DataContent::Text(text) => ProcessedContentData::Text(text.clone()),
                     DataContent::Binary(data) => ProcessedContentData::Binary(data.clone()),
-                    DataContent::Structured(value) => ProcessedContentData::Structured(value.clone()),
+                    DataContent::Structured(value) => {
+                        ProcessedContentData::Structured(value.clone())
+                    }
                     DataContent::File(file_path) => {
-                        match self.process_file_content(&file_path.to_string_lossy()).await {
+                        match self
+                            .process_file_content(&file_path.to_string_lossy())
+                            .await
+                        {
                             Ok(content) => content,
                             Err(e) => {
                                 warn!("Failed to process file {}: {}", file_path.display(), e);
@@ -577,7 +652,7 @@ impl DataPipeline {
                 text_content: None,
                 structured_data: None,
                 embeddings: None,
-                entities: vec![], // Will be populated by individual stages
+                entities: vec![],      // Will be populated by individual stages
                 relationships: vec![], // Will be populated by individual stages
                 visual_elements: vec![],
                 audio_transcript: None,
@@ -609,7 +684,11 @@ impl DataPipeline {
         }
 
         // Sort by relevance and deduplicate
-        all_results.sort_by(|a, b| b.relevance_score.partial_cmp(&a.relevance_score).unwrap_or(std::cmp::Ordering::Equal));
+        all_results.sort_by(|a, b| {
+            b.relevance_score
+                .partial_cmp(&a.relevance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         all_results.dedup_by_key(|r| r.id.clone());
 
         // Limit results
@@ -671,14 +750,19 @@ impl DataPipeline {
 
     /// Remove a pipeline stage by name (no-op if stage doesn't exist)
     pub fn remove_stage(&mut self, stage_name: &str) {
-        self.domain_stages.retain(|stage| stage.name() != stage_name);
+        self.domain_stages
+            .retain(|stage| stage.name() != stage_name);
         self.stages.retain(|stage| stage.name() != stage_name);
         // Note: composite_stage is rebuilt on next execution, so we don't modify it here
     }
 
     /// Calculate total bytes processed from input and output
     #[allow(dead_code)]
-    fn calculate_bytes_processed(&self, input: &DataInput, output: &ProcessingOutput) -> DataProcessingResult<u64> {
+    fn calculate_bytes_processed(
+        &self,
+        input: &DataInput,
+        output: &ProcessingOutput,
+    ) -> DataProcessingResult<u64> {
         let mut total_bytes = 0u64;
 
         // Calculate input bytes
@@ -720,7 +804,11 @@ impl DataPipeline {
                     }
                     Err(e) => {
                         // Fallback to estimate if file doesn't exist or can't be read
-                        warn!("Failed to read file metadata for {}: {}. Using estimate.", file_path.display(), e);
+                        warn!(
+                            "Failed to read file metadata for {}: {}. Using estimate.",
+                            file_path.display(),
+                            e
+                        );
                         bytes += file_path.to_string_lossy().len() as u64 * 100;
                     }
                 }
@@ -752,7 +840,10 @@ impl DataPipeline {
 
     /// Calculate bytes from processed content
     #[allow(dead_code)]
-    fn calculate_processed_content_bytes(&self, content: &ProcessedContent) -> DataProcessingResult<u64> {
+    fn calculate_processed_content_bytes(
+        &self,
+        content: &ProcessedContent,
+    ) -> DataProcessingResult<u64> {
         let mut bytes = 0u64;
 
         match &content.data {
@@ -771,29 +862,47 @@ impl DataPipeline {
         }
 
         // Add entity bytes (estimate based on entity fields)
-        bytes += content.entities.iter().map(|e| {
-            e.id.len() as u64 + e.name.len() as u64 + e.metadata.len() as u64 + e.positions.len() as u64 * 8
-        }).sum::<u64>();
-        
+        bytes += content
+            .entities
+            .iter()
+            .map(|e| {
+                e.id.len() as u64
+                    + e.name.len() as u64
+                    + e.metadata.len() as u64
+                    + e.positions.len() as u64 * 8
+            })
+            .sum::<u64>();
+
         // Add relationship bytes (estimate based on relationship fields)
-        bytes += content.relationships.iter().map(|r| {
-            r.id.len() as u64 + r.source_entity.len() as u64 + r.target_entity.len() as u64 + r.evidence.len() as u64
-        }).sum::<u64>();
-        
+        bytes += content
+            .relationships
+            .iter()
+            .map(|r| {
+                r.id.len() as u64
+                    + r.source_entity.len() as u64
+                    + r.target_entity.len() as u64
+                    + r.evidence.len() as u64
+            })
+            .sum::<u64>();
+
         // Add visual element bytes (estimate)
-        bytes += content.visual_elements.iter().map(|v| {
-            // Estimate size based on VisualElement fields
-            let mut size = 0u64;
-            if let Some(text) = &v.text_content {
-                size += text.len() as u64;
-            }
-            if let Some(desc) = &v.description {
-                size += desc.len() as u64;
-            }
-            size += 16; // element_type, position, confidence
-            size
-        }).sum::<u64>();
-        
+        bytes += content
+            .visual_elements
+            .iter()
+            .map(|v| {
+                // Estimate size based on VisualElement fields
+                let mut size = 0u64;
+                if let Some(text) = &v.text_content {
+                    size += text.len() as u64;
+                }
+                if let Some(desc) = &v.description {
+                    size += desc.len() as u64;
+                }
+                size += 16; // element_type, position, confidence
+                size
+            })
+            .sum::<u64>();
+
         // Add audio transcript bytes
         if let Some(audio) = &content.audio_transcript {
             bytes += audio.len() as u64;
@@ -804,7 +913,10 @@ impl DataPipeline {
 
     /// Calculate bytes from extracted metadata
     #[allow(dead_code)]
-    fn calculate_extracted_metadata_bytes(&self, metadata: &HashMap<String, serde_json::Value>) -> DataProcessingResult<u64> {
+    fn calculate_extracted_metadata_bytes(
+        &self,
+        metadata: &HashMap<String, serde_json::Value>,
+    ) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(metadata)
             .map_err(|e| DataProcessingError::Serialization(e))?
             .len() as u64;
@@ -813,7 +925,10 @@ impl DataPipeline {
 
     /// Calculate bytes from processing stats
     #[allow(dead_code)]
-    fn calculate_processing_stats_bytes(&self, stats: &ProcessingStats) -> DataProcessingResult<u64> {
+    fn calculate_processing_stats_bytes(
+        &self,
+        stats: &ProcessingStats,
+    ) -> DataProcessingResult<u64> {
         let json_size = serde_json::to_string(stats)
             .map_err(|e| DataProcessingError::Serialization(e))?
             .len() as u64;
@@ -851,22 +966,29 @@ impl DataPipeline {
 
     /// Calculate metadata overhead
     #[allow(dead_code)]
-    fn calculate_metadata_overhead(&self, _input: &DataInput, _output: &ProcessingOutput) -> DataProcessingResult<u64> {
+    fn calculate_metadata_overhead(
+        &self,
+        _input: &DataInput,
+        _output: &ProcessingOutput,
+    ) -> DataProcessingResult<u64> {
         // Estimate 10% overhead for metadata
         Ok(100) // Fixed overhead estimate
     }
 
     /// Process file content from filesystem
-    async fn process_file_content(&self, file_path: &str) -> DataProcessingResult<ProcessedContentData> {
-        use std::path::Path;
+    async fn process_file_content(
+        &self,
+        file_path: &str,
+    ) -> DataProcessingResult<ProcessedContentData> {
         use std::fs;
         use std::io::Read;
+        use std::path::Path;
 
         // Security check: prevent path traversal attacks
         let path = Path::new(file_path);
         if path.is_absolute() && !path.starts_with("/safe/") {
             return Err(DataProcessingError::Validation(
-                "Path traversal not allowed".to_string()
+                "Path traversal not allowed".to_string(),
             ));
         }
 
@@ -876,13 +998,15 @@ impl DataPipeline {
         }
 
         // Check file size (limit to 100MB for safety)
-        let metadata = fs::metadata(path)
-            .map_err(|e| DataProcessingError::Operation(format!("Failed to read metadata: {}", e)))?;
-        
-        if metadata.len() > 100 * 1024 * 1024 { // 100MB limit
+        let metadata = fs::metadata(path).map_err(|e| {
+            DataProcessingError::Operation(format!("Failed to read metadata: {}", e))
+        })?;
+
+        if metadata.len() > 100 * 1024 * 1024 {
+            // 100MB limit
             return Err(DataProcessingError::ResourceExhausted(format!(
-                "File {} is too large ({} bytes)", 
-                file_path, 
+                "File {} is too large ({} bytes)",
+                file_path,
                 metadata.len()
             )));
         }
@@ -897,35 +1021,44 @@ impl DataPipeline {
         match content_type {
             ContentType::Text | ContentType::Markdown | ContentType::Html | ContentType::Code => {
                 let mut content = String::new();
-                file.read_to_string(&mut content)
-                    .map_err(|e| DataProcessingError::Operation(format!("Failed to read text file: {}", e)))?;
-                
+                file.read_to_string(&mut content).map_err(|e| {
+                    DataProcessingError::Operation(format!("Failed to read text file: {}", e))
+                })?;
+
                 Ok(ProcessedContentData::Text(content))
             }
-            ContentType::Binary | ContentType::Pdf | ContentType::Image | ContentType::Video | ContentType::Audio | ContentType::Document => {
+            ContentType::Binary
+            | ContentType::Pdf
+            | ContentType::Image
+            | ContentType::Video
+            | ContentType::Audio
+            | ContentType::Document => {
                 let mut content = Vec::new();
-                file.read_to_end(&mut content)
-                    .map_err(|e| DataProcessingError::Operation(format!("Failed to read binary file: {}", e)))?;
-                
+                file.read_to_end(&mut content).map_err(|e| {
+                    DataProcessingError::Operation(format!("Failed to read binary file: {}", e))
+                })?;
+
                 Ok(ProcessedContentData::Binary(content))
             }
             ContentType::Structured | ContentType::Json | ContentType::Xml => {
                 let mut content = String::new();
-                file.read_to_string(&mut content)
-                    .map_err(|e| DataProcessingError::Operation(format!("Failed to read structured file: {}", e)))?;
-                
+                file.read_to_string(&mut content).map_err(|e| {
+                    DataProcessingError::Operation(format!("Failed to read structured file: {}", e))
+                })?;
+
                 // Try to parse as JSON
                 let json_value: serde_json::Value = serde_json::from_str(&content)
                     .map_err(|e| DataProcessingError::Serialization(e))?;
-                
+
                 Ok(ProcessedContentData::Structured(json_value))
             }
             ContentType::Unknown => {
                 // Default to binary for unknown types
                 let mut content = Vec::new();
-                file.read_to_end(&mut content)
-                    .map_err(|e| DataProcessingError::Operation(format!("Failed to read file: {}", e)))?;
-                
+                file.read_to_end(&mut content).map_err(|e| {
+                    DataProcessingError::Operation(format!("Failed to read file: {}", e))
+                })?;
+
                 Ok(ProcessedContentData::Binary(content))
             }
         }
@@ -949,7 +1082,6 @@ impl DataPipeline {
     }
 }
 
-
 /// Create a custom pipeline with specific stages
 pub fn create_custom_pipeline(
     config: PipelineConfig,
@@ -958,7 +1090,7 @@ pub fn create_custom_pipeline(
 ) -> DataPipeline {
     // Use the provided stages in the composite stage
     composite_stage.stages = stages;
-    
+
     // Create a simple sequential pipeline configuration
     let sequential_config = SequentialPipelineConfig {
         base: system_configuration::PipelineConfig {
@@ -979,14 +1111,14 @@ pub fn create_custom_pipeline(
         stage_timeout: std::time::Duration::from_secs(30),
         enable_stage_caching: false,
     };
-    
+
     let sequential_pipeline = SequentialPipeline::new(sequential_config);
-    
+
     DataPipeline {
         _config: config,
         _sequential_pipeline: Arc::new(sequential_pipeline),
         domain_stages: vec![], // Empty since stages are in composite_stage
-        stages: vec![], // Empty since we're not using this field
+        stages: vec![],        // Empty since we're not using this field
         composite_stage,
     }
 }
@@ -1050,7 +1182,11 @@ mod tests {
             Box::new(MockStage { name: "mock2" }) as Box<dyn PipelineStage>,
         ];
 
-        let pipeline = create_custom_pipeline(config, stages, DataProcessingCompositeStage { stages: vec![] }   );
+        let pipeline = create_custom_pipeline(
+            config,
+            stages,
+            DataProcessingCompositeStage { stages: vec![] },
+        );
         assert_eq!(pipeline.composite_stage.stages.len(), 2);
     }
 

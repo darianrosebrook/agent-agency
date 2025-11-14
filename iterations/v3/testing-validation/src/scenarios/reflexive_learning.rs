@@ -7,21 +7,21 @@
 //! - Curriculum learning progression
 //! - Adaptive resource allocation
 
-use std::time::Instant;
-use tracing::{info, error};
 use std::sync::Arc;
+use std::time::Instant;
+use tracing::{error, info};
 
-use crate::{TestResult, TestMetrics, harness::{TestEnvironment, LocalServiceManager}};
+use crate::{
+    harness::{LocalServiceManager, TestEnvironment},
+    TestMetrics, TestResult,
+};
 use agent_research::learning_service::ReflexiveLearningService;
 use agent_research::self_prompting_agent::learning_bridge::{
-    LearningService as LearningServiceTrait,
-    LearningContext as BridgeLearningContext,
-    TaskPerformance as BridgeTaskPerformance,
-    SystemMetrics as BridgeSystemMetrics,
-    OptimizationGoal as BridgeOptimizationGoal,
-    RecommendationType,
+    LearningContext as BridgeLearningContext, LearningService as LearningServiceTrait,
+    OptimizationGoal as BridgeOptimizationGoal, RecommendationType,
+    SystemMetrics as BridgeSystemMetrics, TaskPerformance as BridgeTaskPerformance,
 };
-use system_common_interfaces::learning::{SystemMetrics, OptimizationGoal, ResourceUsage};
+use system_common_interfaces::learning::{OptimizationGoal, ResourceUsage, SystemMetrics};
 use uuid::Uuid;
 
 /// Run the reflexive learning E2E test
@@ -43,7 +43,10 @@ pub async fn run_reflexive_learning_test(
             metrics.performance_data_points += result.data_points as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Performance data collection failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Performance data collection failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -59,7 +62,10 @@ pub async fn run_reflexive_learning_test(
             metrics.model_improvements += result.improvements as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Learning adaptation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Learning adaptation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -74,7 +80,10 @@ pub async fn run_reflexive_learning_test(
             metrics.curriculum_advancements += result.advancements as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Curriculum progression failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Curriculum progression failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -89,7 +98,10 @@ pub async fn run_reflexive_learning_test(
             metrics.performance_data_points += result.data_points as usize;
             if !result.passed {
                 passed = false;
-                errors.push(format!("Adaptive resource allocation failed: {}", result.error.unwrap_or_default()));
+                errors.push(format!(
+                    "Adaptive resource allocation failed: {}",
+                    result.error.unwrap_or_default()
+                ));
             }
         }
         Err(e) => {
@@ -171,16 +183,27 @@ async fn test_performance_data_collection(
     };
 
     // Collect performance data through learning service
-    let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
-        .map_err(|e| format!("Performance data collection failed: {}", e))?;
+    let insights =
+        LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance)
+            .await
+            .map_err(|e| format!("Performance data collection failed: {}", e))?;
 
-    let data_points = insights.patterns.len() as u64 + insights.improvements.len() as u64 + insights.recommendations.len() as u64;
+    let data_points = insights.patterns.len() as u64
+        + insights.improvements.len() as u64
+        + insights.recommendations.len() as u64;
 
-    info!("Collected {} data points from performance metrics", data_points);
+    info!(
+        "Collected {} data points from performance metrics",
+        data_points
+    );
 
     Ok(ReflexiveLearningTestResult {
         passed: data_points > 0,
-        error: if data_points == 0 { Some("No data points collected".to_string()) } else { None },
+        error: if data_points == 0 {
+            Some("No data points collected".to_string())
+        } else {
+            None
+        },
         data_points,
         iterations: 0,
         improvements: 0,
@@ -221,18 +244,27 @@ async fn test_learning_adaptation(
             quality_score: 0.8 + (i as f64 * 0.05),
         };
 
-        let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
-            .map_err(|e| format!("Learning adaptation failed: {}", e))?;
+        let insights =
+            LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance)
+                .await
+                .map_err(|e| format!("Learning adaptation failed: {}", e))?;
 
         iterations += 1;
         improvements += insights.improvements.len() as u64;
     }
 
-    info!("Completed {} learning iterations with {} improvements", iterations, improvements);
+    info!(
+        "Completed {} learning iterations with {} improvements",
+        iterations, improvements
+    );
 
     Ok(ReflexiveLearningTestResult {
         passed: iterations > 0 && improvements > 0,
-        error: if iterations == 0 { Some("No learning iterations completed".to_string()) } else { None },
+        error: if iterations == 0 {
+            Some("No learning iterations completed".to_string())
+        } else {
+            None
+        },
         data_points: 0,
         iterations,
         improvements,
@@ -273,11 +305,17 @@ async fn test_curriculum_progression(
             quality_score: 1.0 - (difficulty * 0.2),
         };
 
-        let insights = LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance).await
-            .map_err(|e| format!("Curriculum progression failed: {}", e))?;
+        let insights =
+            LearningServiceTrait::learn_from_execution(&*learning_service, &context, &performance)
+                .await
+                .map_err(|e| format!("Curriculum progression failed: {}", e))?;
 
         // Check if system recommends progression
-        if insights.recommendations.iter().any(|r| r.description.contains("curriculum") || r.description.contains("advance")) {
+        if insights
+            .recommendations
+            .iter()
+            .any(|r| r.description.contains("curriculum") || r.description.contains("advance"))
+        {
             advancements += 1;
         }
     }
@@ -317,19 +355,28 @@ async fn test_adaptive_resource_allocation(
         available_actions: vec!["increase_cpu".to_string(), "adjust_resources".to_string()],
     };
 
-    let insights = LearningServiceTrait::get_optimization_recommendations(&*learning_service, &context, BridgeOptimizationGoal::MinimizeTime).await
-        .map_err(|e| format!("Adaptive resource allocation failed: {}", e))?;
+    let insights = LearningServiceTrait::get_optimization_recommendations(
+        &*learning_service,
+        &context,
+        BridgeOptimizationGoal::MinimizeTime,
+    )
+    .await
+    .map_err(|e| format!("Adaptive resource allocation failed: {}", e))?;
 
     let data_points = insights.len() as u64;
-    let has_resource_recommendations = insights.iter().any(|r| {
-        matches!(r.recommendation_type, RecommendationType::AdjustResources)
-    });
+    let has_resource_recommendations = insights
+        .iter()
+        .any(|r| matches!(r.recommendation_type, RecommendationType::AdjustResources));
 
     info!("Generated {} optimization recommendations", data_points);
 
     Ok(ReflexiveLearningTestResult {
         passed: has_resource_recommendations || data_points > 0,
-        error: if !has_resource_recommendations && data_points == 0 { Some("No resource allocation recommendations".to_string()) } else { None },
+        error: if !has_resource_recommendations && data_points == 0 {
+            Some("No resource allocation recommendations".to_string())
+        } else {
+            None
+        },
         data_points,
         iterations: 0,
         improvements: 0,

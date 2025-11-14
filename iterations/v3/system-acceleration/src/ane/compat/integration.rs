@@ -10,8 +10,8 @@
 //! - Agent system integration points
 
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::compat::hardening::*;
 use crate::ane::compat::coreml::coreml::{detect_coreml_capabilities, load_model};
+use crate::ane::compat::hardening::*;
 use crate::ane::compat::registry::ModelRef;
 use crate::ane::compat::testing::PerformanceMetrics;
 use std::collections::HashMap;
@@ -95,8 +95,8 @@ impl Default for PerformanceTargets {
         Self {
             target_ane_speedup: 2.8,
             target_dispatch_rate: 0.7, // 70%
-            max_latency_ms: 250.0, // P95 < 250ms
-            min_success_rate: 0.95, // 95%
+            max_latency_ms: 250.0,     // P95 < 250ms
+            min_success_rate: 0.95,    // 95%
         }
     }
 }
@@ -167,19 +167,26 @@ impl CoreMLAccelerationSystem {
         let device_caps = DeviceMatrix::detect_current_device()
             .map_err(|e| ANEError::Internal(format!("Failed to detect device: {}", e)))?;
 
-        println!("   📱 Device detected: {} (ANE: {}, Memory: {}GB)",
-                device_caps.chip_family, device_caps.ane_performance_score > 0.0,
-                device_caps.unified_memory_gb);
+        println!(
+            "   📱 Device detected: {} (ANE: {}, Memory: {}GB)",
+            device_caps.chip_family,
+            device_caps.ane_performance_score > 0.0,
+            device_caps.unified_memory_gb
+        );
 
         // Initialize hardened executor
-        let executor = Arc::new(HardenedInferenceExecutor::new()
-            .map_err(|e| ANEError::Internal(format!("Failed to create executor: {}", e)))?);
+        let executor = Arc::new(
+            HardenedInferenceExecutor::new()
+                .map_err(|e| ANEError::Internal(format!("Failed to create executor: {}", e)))?,
+        );
 
         // Initialize health monitoring
         let health_monitor = Arc::new(health_monitoring::HealthMonitor::new());
 
         // Initialize resource management (use detected memory)
-        let resource_manager = Arc::new(resource_management::ResourceManager::new(device_caps.unified_memory_gb));
+        let resource_manager = Arc::new(resource_management::ResourceManager::new(
+            device_caps.unified_memory_gb,
+        ));
 
         // Initialize model registry
         let loaded_models = Arc::new(RwLock::new(HashMap::new()));
@@ -240,15 +247,20 @@ impl CoreMLAccelerationSystem {
         let capabilities = detect_coreml_capabilities();
 
         if !capabilities.ane_available && self.device_caps.ane_performance_score > 0.0 {
-            return Err(ANEError::Internal("ANE detected in capabilities but not available".to_string()));
+            return Err(ANEError::Internal(
+                "ANE detected in capabilities but not available".to_string(),
+            ));
         }
 
         // Test hardening integration
         let _executor_metrics = self.executor.get_metrics();
 
         // Test resource management
-        if !self.resource_manager.can_allocate(1024 * 1024) { // 1MB test
-            return Err(ANEError::Internal("Resource manager rejecting valid allocation".to_string()));
+        if !self.resource_manager.can_allocate(1024 * 1024) {
+            // 1MB test
+            return Err(ANEError::Internal(
+                "Resource manager rejecting valid allocation".to_string(),
+            ));
         }
 
         Ok(())
@@ -289,9 +301,9 @@ impl CoreMLAccelerationSystem {
                 println!("   ⚠️ System health: Degraded (acceptable for startup)");
                 Ok(())
             }
-            health_monitoring::HealthStatus::Critical => {
-                Err(ANEError::Internal("System health critical at startup".to_string()))
-            }
+            health_monitoring::HealthStatus::Critical => Err(ANEError::Internal(
+                "System health critical at startup".to_string(),
+            )),
             health_monitoring::HealthStatus::Offline => {
                 Err(ANEError::Internal("System offline at startup".to_string()))
             }
@@ -307,20 +319,30 @@ impl CoreMLAccelerationSystem {
         if validation.overall_status {
             *self.status.write().await = IntegrationStatus::PerformanceTargetsMet;
             println!("   ✅ Performance targets met!");
-            println!("   📈 ANE Speedup: {:.2}x (target: {:.1}x)",
-                    validation.ane_speedup_ratio.unwrap_or(0.0),
-                    self.performance_tracker.targets.target_ane_speedup);
-            println!("   🚀 Dispatch Rate: {:.1}% (target: {:.0}%)",
-                    validation.ane_dispatch_rate.unwrap_or(0.0) * 100.0,
-                    self.performance_tracker.targets.target_dispatch_rate * 100.0);
+            println!(
+                "   📈 ANE Speedup: {:.2}x (target: {:.1}x)",
+                validation.ane_speedup_ratio.unwrap_or(0.0),
+                self.performance_tracker.targets.target_ane_speedup
+            );
+            println!(
+                "   🚀 Dispatch Rate: {:.1}% (target: {:.0}%)",
+                validation.ane_dispatch_rate.unwrap_or(0.0) * 100.0,
+                self.performance_tracker.targets.target_dispatch_rate * 100.0
+            );
         } else {
-            println!("   ⚠️ Performance targets not yet met (may require actual inference testing)");
-            println!("   📈 ANE Speedup: {:.2}x (target: {:.1}x)",
-                    validation.ane_speedup_ratio.unwrap_or(0.0),
-                    self.performance_tracker.targets.target_ane_speedup);
-            println!("   🚀 Dispatch Rate: {:.1}% (target: {:.0}%)",
-                    validation.ane_dispatch_rate.unwrap_or(0.0) * 100.0,
-                    self.performance_tracker.targets.target_dispatch_rate * 100.0);
+            println!(
+                "   ⚠️ Performance targets not yet met (may require actual inference testing)"
+            );
+            println!(
+                "   📈 ANE Speedup: {:.2}x (target: {:.1}x)",
+                validation.ane_speedup_ratio.unwrap_or(0.0),
+                self.performance_tracker.targets.target_ane_speedup
+            );
+            println!(
+                "   🚀 Dispatch Rate: {:.1}% (target: {:.0}%)",
+                validation.ane_dispatch_rate.unwrap_or(0.0) * 100.0,
+                self.performance_tracker.targets.target_dispatch_rate * 100.0
+            );
         }
 
         // Mark as production ready if targets met, otherwise workflows validated
@@ -336,15 +358,21 @@ impl CoreMLAccelerationSystem {
         println!("📦 Loading model: {}", model_name);
 
         // Check resource availability
-        if !self.resource_manager.can_allocate(100 * 1024 * 1024) { // Assume 100MB per model
-            return Err(ANEError::Internal("Insufficient resources to load model".to_string()));
+        if !self.resource_manager.can_allocate(100 * 1024 * 1024) {
+            // Assume 100MB per model
+            return Err(ANEError::Internal(
+                "Insufficient resources to load model".to_string(),
+            ));
         }
 
         // Load the model
         let model_ref = load_model(model_path)?;
 
         // Register the model
-        self.loaded_models.write().await.insert(model_name.to_string(), model_ref.clone());
+        self.loaded_models
+            .write()
+            .await
+            .insert(model_name.to_string(), model_ref.clone());
 
         // Allocate resources
         self.resource_manager.allocate(100 * 1024 * 1024)?; // Track memory usage
@@ -440,11 +468,25 @@ impl CoreMLAccelerationSystem {
         };
 
         println!("   📊 Diagnostic complete");
-        println!("   - Core ML: {}", if diagnostic.core_ml_available { "✅ Available" } else { "❌ Unavailable" });
+        println!(
+            "   - Core ML: {}",
+            if diagnostic.core_ml_available {
+                "✅ Available"
+            } else {
+                "❌ Unavailable"
+            }
+        );
         println!("   - Health: {:?}", diagnostic.system_health);
         println!("   - Models loaded: {}", diagnostic.loaded_models);
         println!("   - Memory usage: {:.1}%", diagnostic.memory_usage_percent);
-        println!("   - Performance targets: {}", if diagnostic.performance_validation.overall_status { "✅ Met" } else { "⚠️ Not met" });
+        println!(
+            "   - Performance targets: {}",
+            if diagnostic.performance_validation.overall_status {
+                "✅ Met"
+            } else {
+                "⚠️ Not met"
+            }
+        );
 
         Ok(diagnostic)
     }
@@ -507,7 +549,8 @@ impl PerformanceTracker {
             // Calculate speedup ratio
             if cpu.avg_latency_ms > 0.0 {
                 validation.ane_speedup_ratio = Some(cpu.avg_latency_ms / ane.avg_latency_ms);
-                validation.speedup_target_met = validation.ane_speedup_ratio.unwrap() >= self.targets.target_ane_speedup;
+                validation.speedup_target_met =
+                    validation.ane_speedup_ratio.unwrap() >= self.targets.target_ane_speedup;
             }
 
             // TODO: Implement real-time ANE dispatch rate tracking
@@ -542,7 +585,8 @@ impl PerformanceTracker {
             // - Change Budget: ~80 LOC
             // - Reviewer Requirements: ANE acceleration domain expertise
             validation.ane_dispatch_rate = Some(0.85); // Temporary placeholder until real tracking is implemented
-            validation.dispatch_target_met = validation.ane_dispatch_rate.unwrap() >= self.targets.target_dispatch_rate;
+            validation.dispatch_target_met =
+                validation.ane_dispatch_rate.unwrap() >= self.targets.target_dispatch_rate;
         }
 
         // Check latency target (using ANE metrics if available, otherwise CPU)
@@ -555,10 +599,10 @@ impl PerformanceTracker {
         }
 
         // Overall status
-        validation.overall_status = validation.speedup_target_met &&
-                                   validation.dispatch_target_met &&
-                                   validation.latency_target_met &&
-                                   validation.success_rate_target_met;
+        validation.overall_status = validation.speedup_target_met
+            && validation.dispatch_target_met
+            && validation.latency_target_met
+            && validation.success_rate_target_met;
 
         *self.validation_results.write().await = validation;
     }
@@ -644,16 +688,20 @@ pub mod agent_integration {
             // Simulate inference operation
             let operation = || async {
                 // Simulate processing time (accelerated vs non-accelerated)
-                let processing_time = if self.acceleration_system.device_caps.ane_performance_score > 0.5 {
-                    Duration::from_millis(50) // Accelerated
-                } else {
-                    Duration::from_millis(150) // Non-accelerated
-                };
+                let processing_time =
+                    if self.acceleration_system.device_caps.ane_performance_score > 0.5 {
+                        Duration::from_millis(50) // Accelerated
+                    } else {
+                        Duration::from_millis(150) // Non-accelerated
+                    };
                 tokio::time::sleep(processing_time).await;
                 Ok(input.clone()) // Echo input as mock result
             };
 
-            let result = self.acceleration_system.execute_inference(operation).await?;
+            let result = self
+                .acceleration_system
+                .execute_inference(operation)
+                .await?;
 
             let execution_time = start_time.elapsed();
 
@@ -711,9 +759,17 @@ pub mod production_readiness {
         let status = system.get_status().await;
 
         let checklist = ReadinessChecklist {
-            components_integrated: matches!(status, IntegrationStatus::ProductionReady | IntegrationStatus::PerformanceTargetsMet | IntegrationStatus::WorkflowsValidated),
+            components_integrated: matches!(
+                status,
+                IntegrationStatus::ProductionReady
+                    | IntegrationStatus::PerformanceTargetsMet
+                    | IntegrationStatus::WorkflowsValidated
+            ),
             performance_targets_met: performance_validation.overall_status,
-            health_monitoring_active: !matches!(diagnostic.system_health, health_monitoring::HealthStatus::Offline),
+            health_monitoring_active: !matches!(
+                diagnostic.system_health,
+                health_monitoring::HealthStatus::Offline
+            ),
             resource_management_configured: diagnostic.memory_usage_percent >= 0.0,
             error_handling_robust: true, // Assumed based on hardening implementation
             monitoring_integrated: true, // Assumed based on metrics implementation
@@ -728,14 +784,20 @@ pub mod production_readiness {
             checklist.error_handling_robust,
             checklist.monitoring_integrated,
             checklist.agent_integration_ready,
-        ].iter().filter(|&&x| x).count();
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
 
         println!("   ✅ Readiness: {}/7 items complete", ready_items);
 
         if ready_items == 7 {
             println!("   🎉 System is PRODUCTION READY!");
         } else {
-            println!("   ⚠️ System needs {} more items for production readiness", 7 - ready_items);
+            println!(
+                "   ⚠️ System needs {} more items for production readiness",
+                7 - ready_items
+            );
         }
 
         Ok(checklist)

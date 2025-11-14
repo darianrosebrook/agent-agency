@@ -5,15 +5,19 @@
 //!
 //! @author @darianrosebrook
 
-use agent_agency_contracts::types::prelude::*;
 use agent_agency_contracts::types::council::{CouncilVerdict, FinalDecision};
-use agent_agency_contracts::types::data::{ProcessingId, ContentType, ProcessedContent};
-use agent_agency_contracts::{ExecutionContext, Milestone, MilestoneScope, AcceptanceCriterion, InterfaceContract, TestRequirement, EvidenceGate, MilestoneState, MilestonePriority, MoSCoWPriority, MilestoneMetrics};
-use agent_agency_contracts::types::planning::{ TaskScope};
-use serde_json;
-use uuid::Uuid;
+use agent_agency_contracts::types::data::{ContentType, ProcessedContent, ProcessingId};
+use agent_agency_contracts::types::planning::TaskScope;
+use agent_agency_contracts::types::prelude::*;
+use agent_agency_contracts::{
+    AcceptanceCriterion, EvidenceGate, ExecutionContext, InterfaceContract, Milestone,
+    MilestoneMetrics, MilestonePriority, MilestoneScope, MilestoneState, MoSCoWPriority,
+    TestRequirement,
+};
 use chrono::Utc;
+use serde_json;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Helper macro to test round-trip serialization
 #[allow(unused_macros)]
@@ -22,10 +26,9 @@ macro_rules! test_round_trip {
         #[test]
         fn $name() {
             let original = $value;
-            let json = serde_json::to_string(&original)
-                .expect("serialization should succeed");
-            let deserialized: $name = serde_json::from_str(&json)
-                .expect("deserialization should succeed");
+            let json = serde_json::to_string(&original).expect("serialization should succeed");
+            let deserialized: $name =
+                serde_json::from_str(&json).expect("deserialization should succeed");
             assert_eq!(original, deserialized, "round-trip should preserve values");
         }
     };
@@ -44,8 +47,8 @@ fn test_task_priority_round_trip() {
 
     for priority in priorities {
         let json = serde_json::to_string(&priority).expect("serialize TaskPriority");
-        let deserialized: TaskPriority = serde_json::from_str(&json)
-            .expect("deserialize TaskPriority");
+        let deserialized: TaskPriority =
+            serde_json::from_str(&json).expect("deserialize TaskPriority");
         assert_eq!(priority, deserialized);
     }
 }
@@ -60,24 +63,19 @@ fn test_execution_mode_round_trip() {
 
     for mode in modes {
         let json = serde_json::to_string(&mode).expect("serialize ExecutionMode");
-        let deserialized: ExecutionMode = serde_json::from_str(&json)
-            .expect("deserialize ExecutionMode");
+        let deserialized: ExecutionMode =
+            serde_json::from_str(&json).expect("deserialize ExecutionMode");
         assert_eq!(mode, deserialized);
     }
 }
 
 #[test]
 fn test_risk_tier_round_trip() {
-    let tiers = vec![
-        RiskTier::Tier1,
-        RiskTier::Tier2,
-        RiskTier::Tier3,
-    ];
+    let tiers = vec![RiskTier::Tier1, RiskTier::Tier2, RiskTier::Tier3];
 
     for tier in tiers {
         let json = serde_json::to_string(&tier).expect("serialize RiskTier");
-        let deserialized: RiskTier = serde_json::from_str(&json)
-            .expect("deserialize RiskTier");
+        let deserialized: RiskTier = serde_json::from_str(&json).expect("deserialize RiskTier");
         assert_eq!(tier, deserialized);
     }
 }
@@ -91,8 +89,7 @@ fn test_blast_radius_round_trip() {
     };
 
     let json = serde_json::to_string(&blast_radius).expect("serialize BlastRadius");
-    let deserialized: BlastRadius = serde_json::from_str(&json)
-        .expect("deserialize BlastRadius");
+    let deserialized: BlastRadius = serde_json::from_str(&json).expect("deserialize BlastRadius");
     assert_eq!(blast_radius.modules, deserialized.modules);
     assert_eq!(blast_radius.data_migration, deserialized.data_migration);
     assert_eq!(blast_radius.external_deps, deserialized.external_deps);
@@ -106,8 +103,7 @@ fn test_task_scope_round_trip() {
     };
 
     let json = serde_json::to_string(&scope).expect("serialize TaskScope");
-    let deserialized: TaskScope = serde_json::from_str(&json)
-        .expect("deserialize TaskScope");
+    let deserialized: TaskScope = serde_json::from_str(&json).expect("deserialize TaskScope");
     assert_eq!(scope.in_scope, deserialized.in_scope);
     assert_eq!(scope.out_scope, deserialized.out_scope);
 }
@@ -121,12 +117,14 @@ fn test_execution_context_round_trip() {
         planning_metadata: vec![
             ("key1".to_string(), serde_json::json!("value1")),
             ("key2".to_string(), serde_json::json!({"nested": true})),
-        ].into_iter().collect(),
+        ]
+        .into_iter()
+        .collect(),
     };
 
     let json = serde_json::to_string(&ctx).expect("serialize ExecutionContext");
-    let deserialized: ExecutionContext = serde_json::from_str(&json)
-        .expect("deserialize ExecutionContext");
+    let deserialized: ExecutionContext =
+        serde_json::from_str(&json).expect("deserialize ExecutionContext");
     assert_eq!(ctx.session_id, deserialized.session_id);
     assert_eq!(ctx.planning_engine, deserialized.planning_engine);
     assert_eq!(ctx.engine_version, deserialized.engine_version);
@@ -174,8 +172,7 @@ fn test_milestone_round_trip() {
     };
 
     let json = serde_json::to_string(&milestone).expect("serialize Milestone");
-    let deserialized: Milestone = serde_json::from_str(&json)
-        .expect("deserialize Milestone");
+    let deserialized: Milestone = serde_json::from_str(&json).expect("deserialize Milestone");
     assert_eq!(milestone.id, deserialized.id);
     assert_eq!(milestone.objective, deserialized.objective);
     assert_eq!(milestone.dependencies, deserialized.dependencies);
@@ -192,8 +189,8 @@ fn test_acceptance_criterion_round_trip() {
     };
 
     let json = serde_json::to_string(&criterion).expect("serialize AcceptanceCriterion");
-    let deserialized: AcceptanceCriterion = serde_json::from_str(&json)
-        .expect("deserialize AcceptanceCriterion");
+    let deserialized: AcceptanceCriterion =
+        serde_json::from_str(&json).expect("deserialize AcceptanceCriterion");
     assert_eq!(criterion.id, deserialized.id);
     assert_eq!(criterion.given, deserialized.given);
     assert_eq!(criterion.when, deserialized.when);
@@ -208,12 +205,14 @@ fn test_processed_content_round_trip() {
         metadata: vec![
             ("size".to_string(), serde_json::json!(1024)),
             ("encoding".to_string(), serde_json::json!("utf-8")),
-        ].into_iter().collect(),
+        ]
+        .into_iter()
+        .collect(),
     };
 
     let json = serde_json::to_string(&content).expect("serialize ProcessedContent");
-    let deserialized: ProcessedContent = serde_json::from_str(&json)
-        .expect("deserialize ProcessedContent");
+    let deserialized: ProcessedContent =
+        serde_json::from_str(&json).expect("deserialize ProcessedContent");
     assert_eq!(content.id, deserialized.id);
     assert_eq!(content.content_type, deserialized.content_type);
 }
@@ -228,8 +227,8 @@ fn test_council_verdict_round_trip() {
 
     for verdict in verdicts {
         let json = serde_json::to_string(&verdict).expect("serialize CouncilVerdict");
-        let deserialized: CouncilVerdict = serde_json::from_str(&json)
-            .expect("deserialize CouncilVerdict");
+        let deserialized: CouncilVerdict =
+            serde_json::from_str(&json).expect("deserialize CouncilVerdict");
         assert_eq!(verdict, deserialized);
     }
 }
@@ -246,8 +245,8 @@ fn test_final_decision_round_trip() {
     };
 
     let json = serde_json::to_string(&decision).expect("serialize FinalDecision");
-    let deserialized: FinalDecision = serde_json::from_str(&json)
-        .expect("deserialize FinalDecision");
+    let deserialized: FinalDecision =
+        serde_json::from_str(&json).expect("deserialize FinalDecision");
     assert_eq!(decision.id, deserialized.id);
     assert_eq!(decision.verdict, deserialized.verdict);
     assert_eq!(decision.reasoning, deserialized.reasoning);
@@ -297,10 +296,13 @@ fn test_partial_serde_with_optionals() {
     };
 
     let json = serde_json::to_string(&minimal_milestone).expect("serialize minimal Milestone");
-    let deserialized: Milestone = serde_json::from_str(&json)
-        .expect("deserialize minimal Milestone");
+    let deserialized: Milestone =
+        serde_json::from_str(&json).expect("deserialize minimal Milestone");
     assert_eq!(minimal_milestone.id, deserialized.id);
-    assert_eq!(minimal_milestone.estimated_duration, deserialized.estimated_duration);
+    assert_eq!(
+        minimal_milestone.estimated_duration,
+        deserialized.estimated_duration
+    );
 }
 
 #[test]
@@ -317,9 +319,8 @@ fn test_uuid_serialization_compatibility() {
     let json = serde_json::to_string(&ctx).expect("serialize ExecutionContext with UUID");
     // UUID should serialize as a string
     assert!(json.contains(&task_id.to_string()));
-    
-    let deserialized: ExecutionContext = serde_json::from_str(&json)
-        .expect("deserialize ExecutionContext with UUID");
+
+    let deserialized: ExecutionContext =
+        serde_json::from_str(&json).expect("deserialize ExecutionContext with UUID");
     assert_eq!(ctx.session_id, deserialized.session_id);
 }
-

@@ -1,8 +1,8 @@
 //! Decomposition strategies for different types of tasks
 
-use crate::parallel_types::*;
-use crate::worker_types::{SubTaskId, Priority, TaskScope};
 use crate::error::*;
+use crate::parallel_types::*;
+use crate::worker_types::{Priority, SubTaskId, TaskScope};
 use std::collections::HashMap;
 
 /// Decomposition strategy interface
@@ -12,7 +12,11 @@ pub trait DecompositionStrategy: Send + Sync {
     fn applies_to(&self, task: &ComplexTask) -> bool;
 
     /// Decompose the task into subtasks
-    async fn decompose(&self, task: &ComplexTask, analysis: &TaskAnalysis) -> DecompositionResult<Vec<SubTask>>;
+    async fn decompose(
+        &self,
+        task: &ComplexTask,
+        analysis: &TaskAnalysis,
+    ) -> DecompositionResult<Vec<SubTask>>;
 }
 
 /// Compilation error decomposition strategy
@@ -33,12 +37,16 @@ impl CompilationErrorStrategy {
 #[async_trait::async_trait]
 impl DecompositionStrategy for CompilationErrorStrategy {
     fn applies_to(&self, task: &ComplexTask) -> bool {
-        task.description.to_lowercase().contains("compile") ||
-        task.description.to_lowercase().contains("error") ||
-        task.description.to_lowercase().contains("build")
+        task.description.to_lowercase().contains("compile")
+            || task.description.to_lowercase().contains("error")
+            || task.description.to_lowercase().contains("build")
     }
 
-    async fn decompose(&self, task: &ComplexTask, analysis: &TaskAnalysis) -> DecompositionResult<Vec<SubTask>> {
+    async fn decompose(
+        &self,
+        task: &ComplexTask,
+        analysis: &TaskAnalysis,
+    ) -> DecompositionResult<Vec<SubTask>> {
         let mut subtasks = Vec::new();
 
         // Look for compilation error patterns in the analysis
@@ -130,13 +138,17 @@ impl RefactoringStrategy {
 #[async_trait::async_trait]
 impl DecompositionStrategy for RefactoringStrategy {
     fn applies_to(&self, task: &ComplexTask) -> bool {
-        task.description.to_lowercase().contains("refactor") ||
-        task.description.to_lowercase().contains("rename") ||
-        task.description.to_lowercase().contains("extract") ||
-        task.description.to_lowercase().contains("move")
+        task.description.to_lowercase().contains("refactor")
+            || task.description.to_lowercase().contains("rename")
+            || task.description.to_lowercase().contains("extract")
+            || task.description.to_lowercase().contains("move")
     }
 
-    async fn decompose(&self, task: &ComplexTask, analysis: &TaskAnalysis) -> DecompositionResult<Vec<SubTask>> {
+    async fn decompose(
+        &self,
+        task: &ComplexTask,
+        analysis: &TaskAnalysis,
+    ) -> DecompositionResult<Vec<SubTask>> {
         let mut subtasks = Vec::new();
 
         // Look for refactoring patterns
@@ -155,7 +167,7 @@ impl DecompositionStrategy for RefactoringStrategy {
                         status: SubTaskStatus::Pending,
                         priority: Priority::Medium,
                         estimated_duration: std::time::Duration::from_secs(
-                            (operation.complexity * 300.0) as u64
+                            (operation.complexity * 300.0) as u64,
                         ),
                         scope: TaskScope {
                             domains: vec![],
@@ -166,7 +178,9 @@ impl DecompositionStrategy for RefactoringStrategy {
                             max_files: None,
                             max_loc: None,
                         },
-                        specialty: WorkerSpecialty::Refactoring { patterns: vec!["code_cleanup".to_string(), "optimization".to_string()] },
+                        specialty: WorkerSpecialty::Refactoring {
+                            patterns: vec!["code_cleanup".to_string(), "optimization".to_string()],
+                        },
                         estimated_effort: (operation.complexity * 300.0),
                         metadata: HashMap::new(),
                     };
@@ -227,12 +241,16 @@ impl TestingStrategy {
 #[async_trait::async_trait]
 impl DecompositionStrategy for TestingStrategy {
     fn applies_to(&self, task: &ComplexTask) -> bool {
-        task.description.to_lowercase().contains("test") ||
-        task.description.to_lowercase().contains("coverage") ||
-        task.description.to_lowercase().contains("spec")
+        task.description.to_lowercase().contains("test")
+            || task.description.to_lowercase().contains("coverage")
+            || task.description.to_lowercase().contains("spec")
     }
 
-    async fn decompose(&self, task: &ComplexTask, analysis: &TaskAnalysis) -> DecompositionResult<Vec<SubTask>> {
+    async fn decompose(
+        &self,
+        task: &ComplexTask,
+        analysis: &TaskAnalysis,
+    ) -> DecompositionResult<Vec<SubTask>> {
         let mut subtasks = Vec::new();
 
         // Look for testing patterns
@@ -356,12 +374,16 @@ impl DocumentationStrategy {
 #[async_trait::async_trait]
 impl DecompositionStrategy for DocumentationStrategy {
     fn applies_to(&self, task: &ComplexTask) -> bool {
-        task.description.to_lowercase().contains("doc") ||
-        task.description.to_lowercase().contains("readme") ||
-        task.description.to_lowercase().contains("comment")
+        task.description.to_lowercase().contains("doc")
+            || task.description.to_lowercase().contains("readme")
+            || task.description.to_lowercase().contains("comment")
     }
 
-    async fn decompose(&self, task: &ComplexTask, analysis: &TaskAnalysis) -> DecompositionResult<Vec<SubTask>> {
+    async fn decompose(
+        &self,
+        task: &ComplexTask,
+        analysis: &TaskAnalysis,
+    ) -> DecompositionResult<Vec<SubTask>> {
         let mut subtasks = Vec::new();
 
         // Look for documentation patterns
@@ -493,8 +515,12 @@ impl StrategyRegistry {
     }
 
     /// Find applicable strategies for a task
-    pub fn find_applicable_strategies(&self, task: &ComplexTask) -> Vec<&dyn DecompositionStrategy> {
-        self.strategies.iter()
+    pub fn find_applicable_strategies(
+        &self,
+        task: &ComplexTask,
+    ) -> Vec<&dyn DecompositionStrategy> {
+        self.strategies
+            .iter()
             .filter(|strategy| strategy.applies_to(task))
             .map(|strategy| strategy.as_ref())
             .collect()
@@ -511,8 +537,3 @@ impl Default for StrategyRegistry {
         Self::new()
     }
 }
-
-
-
-
-

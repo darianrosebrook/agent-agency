@@ -6,19 +6,21 @@
 //! - Isolated workspace creation (Git worktrees)
 //! - Assertion framework for Council verdicts and CAWS compliance
 
-pub mod environment;
 pub mod assertions;
+pub mod environment;
 
-pub use environment::{TestEnvironment, TestWorkspace, default_process_output};
-pub use assertions::{AssertionFramework, AssertionType, SourceFile, Citation, CawsComplianceResult};
 #[cfg(feature = "full")]
 pub use assertions::FactChecker;
+pub use assertions::{
+    AssertionFramework, AssertionType, CawsComplianceResult, Citation, SourceFile,
+};
+pub use environment::{default_process_output, TestEnvironment, TestWorkspace};
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{info, warn};
 
-use crate::services::{OrchestratorService, OllamaService, PostgresService, ServiceManager};
+use crate::services::{OllamaService, OrchestratorService, PostgresService, ServiceManager};
 #[cfg(feature = "full")]
 use crate::test_helpers::create_test_autonomous_executor;
 // autonomous_executor module doesn't exist in agent-orchestration
@@ -40,7 +42,7 @@ impl LocalServiceManager {
 
         // Create comprehensive service manager to check and start dependencies
         let service_manager = ServiceManager::new();
-        
+
         // Check status of all services
         let statuses = service_manager.check_all_services().await;
         info!("Service status check:");
@@ -157,7 +159,8 @@ impl LocalServiceManager {
 
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
             }
-        }).await?;
+        })
+        .await?;
 
         info!("All services are healthy");
         Ok(())

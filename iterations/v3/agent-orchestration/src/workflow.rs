@@ -3,12 +3,13 @@
 //! This module manages the state transitions and workflow orchestration
 //! for council review sessions.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::council_errors::{CouncilError, CouncilResult};
 use crate::council::CouncilSession;
+use crate::council_errors::{CouncilError, CouncilResult};
 use crate::decision_making::FinalDecision;
 
 /// Workflow orchestrator for council sessions
@@ -57,7 +58,10 @@ pub enum WorkflowState {
     Timeout,
 
     /// Session escalated to human review
-    Escalated { reason: String, stakeholders: Vec<String> },
+    Escalated {
+        reason: String,
+        stakeholders: Vec<String>,
+    },
 }
 
 /// State transition record
@@ -105,7 +109,9 @@ impl CouncilWorkflow {
                 from_state: initial_state.clone(),
                 to_state: initial_state,
                 timestamp: start_time,
-                trigger: TransitionTrigger::Automatic { rule: "session_initialization".to_string() },
+                trigger: TransitionTrigger::Automatic {
+                    rule: "session_initialization".to_string(),
+                },
                 metadata: HashMap::new(),
             }],
             start_time,
@@ -113,7 +119,11 @@ impl CouncilWorkflow {
     }
 
     /// Transition to a new workflow state
-    pub fn transition_to(&mut self, new_state: WorkflowState, trigger: TransitionTrigger) -> CouncilResult<()> {
+    pub fn transition_to(
+        &mut self,
+        new_state: WorkflowState,
+        trigger: TransitionTrigger,
+    ) -> CouncilResult<()> {
         // Validate the transition
         self.validate_transition(&new_state)?;
 
@@ -140,10 +150,10 @@ impl CouncilWorkflow {
     pub fn is_terminal_state(&self) -> bool {
         matches!(
             self.workflow_state,
-            WorkflowState::Completed |
-            WorkflowState::Failed { .. } |
-            WorkflowState::Timeout |
-            WorkflowState::Escalated { .. }
+            WorkflowState::Completed
+                | WorkflowState::Failed { .. }
+                | WorkflowState::Timeout
+                | WorkflowState::Escalated { .. }
         )
     }
 
@@ -183,30 +193,42 @@ impl CouncilWorkflow {
             crate::decision_making::FinalDecision::Proceed { .. } => {
                 self.transition_to(
                     WorkflowState::Completed,
-                    TransitionTrigger::Automatic { rule: "decision_proceed".to_string() }
+                    TransitionTrigger::Automatic {
+                        rule: "decision_proceed".to_string(),
+                    },
                 )?;
-            },
+            }
             crate::decision_making::FinalDecision::Refine { .. } => {
                 self.transition_to(
                     WorkflowState::Completed,
-                    TransitionTrigger::Automatic { rule: "decision_refine".to_string() }
+                    TransitionTrigger::Automatic {
+                        rule: "decision_refine".to_string(),
+                    },
                 )?;
-            },
+            }
             crate::decision_making::FinalDecision::Reject { .. } => {
                 self.transition_to(
                     WorkflowState::Completed,
-                    TransitionTrigger::Automatic { rule: "decision_reject".to_string() }
+                    TransitionTrigger::Automatic {
+                        rule: "decision_reject".to_string(),
+                    },
                 )?;
-            },
-            crate::decision_making::FinalDecision::Escalate { reason, required_stakeholders, .. } => {
+            }
+            crate::decision_making::FinalDecision::Escalate {
+                reason,
+                required_stakeholders,
+                ..
+            } => {
                 self.transition_to(
                     WorkflowState::Escalated {
                         reason: reason.clone(),
                         stakeholders: required_stakeholders.clone(),
                     },
-                    TransitionTrigger::Automatic { rule: "decision_escalate".to_string() }
+                    TransitionTrigger::Automatic {
+                        rule: "decision_escalate".to_string(),
+                    },
                 )?;
-            },
+            }
         }
 
         Ok(())
@@ -217,25 +239,39 @@ impl CouncilWorkflow {
         let error_message = match error {
             CouncilError::JudgeError { judge_id, message } => {
                 format!("Judge {} failed: {}", judge_id, message)
-            },
+            }
             CouncilError::ConsensusFailure { reason } => {
                 format!("Consensus failure: {}", reason)
-            },
-            CouncilError::SessionTimeout { session_id, timeout_seconds } => {
-                format!("Session {} timed out after {} seconds", session_id, timeout_seconds)
-            },
-            CouncilError::QuorumFailure { available, required } => {
-                format!("Quorum failure: {}/{} judges available", available, required)
-            },
+            }
+            CouncilError::SessionTimeout {
+                session_id,
+                timeout_seconds,
+            } => {
+                format!(
+                    "Session {} timed out after {} seconds",
+                    session_id, timeout_seconds
+                )
+            }
+            CouncilError::QuorumFailure {
+                available,
+                required,
+            } => {
+                format!(
+                    "Quorum failure: {}/{} judges available",
+                    available, required
+                )
+            }
             _ => format!("Workflow error: {}", error),
         };
 
         self.transition_to(
-            WorkflowState::Failed { reason: error_message },
+            WorkflowState::Failed {
+                reason: error_message,
+            },
             TransitionTrigger::Error {
                 error_type: format!("{:?}", error.category()),
                 message: format!("{}", error),
-            }
+            },
         )?;
 
         Ok(())
@@ -261,38 +297,52 @@ impl CouncilWorkflow {
         match from_state {
             WorkflowState::Initialized => vec![
                 WorkflowState::JudgesAssigned,
-                WorkflowState::Failed { reason: "Initialization failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Initialization failed".to_string(),
+                },
             ],
 
             WorkflowState::JudgesAssigned => vec![
                 WorkflowState::ReviewsInProgress,
-                WorkflowState::Failed { reason: "Judge assignment failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Judge assignment failed".to_string(),
+                },
             ],
 
             WorkflowState::ReviewsInProgress => vec![
                 WorkflowState::ReviewsCompleted,
-                WorkflowState::Failed { reason: "Review process failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Review process failed".to_string(),
+                },
                 WorkflowState::Timeout,
             ],
 
             WorkflowState::ReviewsCompleted => vec![
                 WorkflowState::AggregationInProgress,
-                WorkflowState::Failed { reason: "Review completion failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Review completion failed".to_string(),
+                },
             ],
 
             WorkflowState::AggregationInProgress => vec![
                 WorkflowState::AggregationCompleted,
-                WorkflowState::Failed { reason: "Aggregation failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Aggregation failed".to_string(),
+                },
             ],
 
             WorkflowState::AggregationCompleted => vec![
                 WorkflowState::DecisionMaking,
-                WorkflowState::Failed { reason: "Aggregation completion failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Aggregation completion failed".to_string(),
+                },
             ],
 
             WorkflowState::DecisionMaking => vec![
                 WorkflowState::Completed,
-                WorkflowState::Failed { reason: "Decision making failed".to_string() },
+                WorkflowState::Failed {
+                    reason: "Decision making failed".to_string(),
+                },
                 WorkflowState::Escalated {
                     reason: "Decision escalation".to_string(),
                     stakeholders: vec![],
@@ -300,10 +350,10 @@ impl CouncilWorkflow {
             ],
 
             // Terminal states have no valid transitions
-            WorkflowState::Completed |
-            WorkflowState::Failed { .. } |
-            WorkflowState::Timeout |
-            WorkflowState::Escalated { .. } => vec![],
+            WorkflowState::Completed
+            | WorkflowState::Failed { .. }
+            | WorkflowState::Timeout
+            | WorkflowState::Escalated { .. } => vec![],
         }
     }
 
@@ -312,7 +362,9 @@ impl CouncilWorkflow {
         let total_transitions = self.state_history.len().saturating_sub(1); // Subtract initial state
         let duration_ms = self.duration().num_milliseconds() as u64;
 
-        let error_transitions = self.state_history.iter()
+        let error_transitions = self
+            .state_history
+            .iter()
             .filter(|t| matches!(t.trigger, TransitionTrigger::Error { .. }))
             .count();
 
@@ -383,7 +435,10 @@ impl WorkflowManager {
             return Err(CouncilError::WorkflowTransition {
                 from: "manager".to_string(),
                 to: "new_workflow".to_string(),
-                reason: format!("Maximum concurrent sessions ({}) exceeded", self.max_concurrent_sessions),
+                reason: format!(
+                    "Maximum concurrent sessions ({}) exceeded",
+                    self.max_concurrent_sessions
+                ),
             });
         }
 
@@ -412,7 +467,8 @@ impl WorkflowManager {
                 Ok(())
             } else {
                 // Put it back if not terminal
-                self.active_workflows.insert(session_id.to_string(), workflow);
+                self.active_workflows
+                    .insert(session_id.to_string(), workflow);
                 Err(CouncilError::WorkflowTransition {
                     from: "active".to_string(),
                     to: "completed".to_string(),
@@ -433,18 +489,24 @@ impl WorkflowManager {
         let total_active = self.active_workflows.len();
         let total_completed = self.completed_workflows.len();
 
-        let completed_successful = self.completed_workflows.iter()
+        let completed_successful = self
+            .completed_workflows
+            .iter()
             .filter(|w| matches!(w.current_state(), WorkflowState::Completed))
             .count();
 
-        let completed_failed = self.completed_workflows.iter()
+        let completed_failed = self
+            .completed_workflows
+            .iter()
             .filter(|w| matches!(w.current_state(), WorkflowState::Failed { .. }))
             .count();
 
         let average_duration_ms = if !self.completed_workflows.is_empty() {
-            self.completed_workflows.iter()
+            self.completed_workflows
+                .iter()
                 .map(|w| w.duration().num_milliseconds() as u64)
-                .sum::<u64>() / self.completed_workflows.len() as u64
+                .sum::<u64>()
+                / self.completed_workflows.len() as u64
         } else {
             0
         };

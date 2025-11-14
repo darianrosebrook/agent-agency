@@ -24,7 +24,7 @@ impl Default for NormalizationConfig {
     fn default() -> Self {
         Self {
             target_eol: Eol::Lf,
-        preserve_original_eol: true,
+            preserve_original_eol: true,
             text_files_only: true,
             exclude_patterns: vec![
                 "*.bin".to_string(),
@@ -121,14 +121,10 @@ impl TextNormalizer {
     }
 
     /// Normalize text content and return normalized content with metadata
-    pub fn normalize(
-        &mut self,
-        content: &[u8],
-        file_path: &str,
-    ) -> Result<NormalizationResult> {
+    pub fn normalize(&mut self, content: &[u8], file_path: &str) -> Result<NormalizationResult> {
         // Detect original EOL
         let original_eol = self.detect_eol(content);
-        
+
         // Check if normalization should be applied
         if !self.should_normalize(file_path, content) {
             return Ok(NormalizationResult {
@@ -163,12 +159,12 @@ impl TextNormalizer {
         if content.windows(2).any(|w| w == b"\r\n") {
             return Eol::Crlf;
         }
-        
+
         // Check for CR (old Mac)
         if content.contains(&b'\r') {
             return Eol::Cr;
         }
-        
+
         // Default to LF (Unix)
         Eol::Lf
     }
@@ -226,7 +222,7 @@ impl TextNormalizer {
             .iter()
             .filter(|&&b| (32..=126).contains(&b) || b == b'\n' || b == b'\r' || b == b'\t')
             .count();
-        
+
         let printable_ratio = printable_count as f64 / content.len() as f64;
         printable_ratio > 0.8
     }
@@ -262,7 +258,9 @@ impl TextNormalizer {
                         normalized.push(b'\r');
                         normalized.push(b'\n');
                         i += 1;
-                    } else if content[i] == b'\r' && (i + 1 >= content.len() || content[i + 1] != b'\n') {
+                    } else if content[i] == b'\r'
+                        && (i + 1 >= content.len() || content[i + 1] != b'\n')
+                    {
                         // CR -> CRLF
                         normalized.push(b'\r');
                         normalized.push(b'\n');
@@ -403,14 +401,20 @@ impl EolStats {
         // Count total lines: EOLs + 1 (for content that doesn't end with EOL)
         // If content ends with EOL, total_lines = EOLs; otherwise total_lines = EOLs + 1
         let eol_count = lf_lines + crlf_lines + cr_lines;
-        let ends_with_eol = content.last()
+        let ends_with_eol = content
+            .last()
             .map(|&b| b == b'\n' || b == b'\r')
             .unwrap_or(false);
-        let total_lines = if ends_with_eol { eol_count } else { eol_count + 1 };
+        let total_lines = if ends_with_eol {
+            eol_count
+        } else {
+            eol_count + 1
+        };
         let mixed_eol = [lf_lines, crlf_lines, cr_lines]
             .iter()
             .filter(|&&count| count > 0)
-            .count() > 1;
+            .count()
+            > 1;
 
         Self {
             total_lines,
@@ -440,15 +444,15 @@ mod tests {
     #[test]
     fn test_eol_detection() {
         let normalizer = TextNormalizer::new();
-        
+
         // Test LF
         let lf_content = b"line1\nline2\nline3";
         assert_eq!(normalizer.detect_eol(lf_content), Eol::Lf);
-        
+
         // Test CRLF
         let crlf_content = b"line1\r\nline2\r\nline3";
         assert_eq!(normalizer.detect_eol(crlf_content), Eol::Crlf);
-        
+
         // Test CR
         let cr_content = b"line1\rline2\rline3";
         assert_eq!(normalizer.detect_eol(cr_content), Eol::Cr);
@@ -459,10 +463,10 @@ mod tests {
         let mut config = NormalizationConfig::default();
         config.target_eol = Eol::Crlf;
         let mut normalizer = TextNormalizer::with_config(config);
-        
+
         let lf_content = b"line1\nline2\nline3";
         let result = normalizer.normalize(lf_content, "test.txt").unwrap();
-        
+
         assert_eq!(result.target_eol, Eol::Crlf);
         assert!(result.was_normalized);
         assert_eq!(result.normalized_content, b"line1\r\nline2\r\nline3");
@@ -473,10 +477,10 @@ mod tests {
         let mut config = NormalizationConfig::default();
         config.target_eol = Eol::Lf;
         let mut normalizer = TextNormalizer::with_config(config);
-        
+
         let crlf_content = b"line1\r\nline2\r\nline3";
         let result = normalizer.normalize(crlf_content, "test.txt").unwrap();
-        
+
         assert_eq!(result.target_eol, Eol::Lf);
         assert!(result.was_normalized);
         assert_eq!(result.normalized_content, b"line1\nline2\nline3");
@@ -486,7 +490,7 @@ mod tests {
     fn test_eol_stats() {
         let mixed_content = b"line1\nline2\r\nline3\rline4";
         let stats = EolStats::from_content(mixed_content);
-        
+
         assert_eq!(stats.total_lines, 4);
         assert_eq!(stats.lf_lines, 1);
         assert_eq!(stats.crlf_lines, 1);
@@ -497,13 +501,13 @@ mod tests {
     #[test]
     fn test_should_normalize() {
         let normalizer = TextNormalizer::new();
-        
+
         // Text file should be normalized
         assert!(normalizer.should_normalize("test.txt", b"Hello, world!"));
-        
+
         // Binary file should not be normalized
         assert!(!normalizer.should_normalize("test.bin", b"Hello\x00world"));
-        
+
         // Excluded pattern should not be normalized
         assert!(!normalizer.should_normalize("test.png", b"PNG data"));
     }
@@ -511,13 +515,13 @@ mod tests {
     #[test]
     fn test_line_counting() {
         let normalizer = TextNormalizer::new();
-        
+
         let lf_content = b"line1\nline2\nline3";
         assert_eq!(normalizer.count_lines(lf_content, Eol::Lf), 2);
-        
+
         let crlf_content = b"line1\r\nline2\r\nline3";
         assert_eq!(normalizer.count_lines(crlf_content, Eol::Crlf), 2);
-        
+
         let cr_content = b"line1\rline2\rline3";
         assert_eq!(normalizer.count_lines(cr_content, Eol::Cr), 2);
     }

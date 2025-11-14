@@ -7,21 +7,21 @@
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use uuid::Uuid;
+    use agent_orchestration::planning::data_infrastructure_types::{
+        models::{Judge, JudgeEvaluation},
+        CreateJudge, CreateJudgeEvaluation, DatabaseOperations,
+    };
     use data_infrastructure::DatabaseClient;
     use data_infrastructure::DatabaseConfig;
-    use agent_orchestration::planning::data_infrastructure_types::{
-        DatabaseOperations, CreateJudge, CreateJudgeEvaluation,
-        models::{Judge, JudgeEvaluation}
-    };
     use data_interfaces_adapters::database_operations_adapter::DatabaseOperationsAdapter;
+    use std::sync::Arc;
+    use uuid::Uuid;
 
     /// Helper to create a test database client
     async fn create_test_db_client() -> Arc<DatabaseClient> {
         let database_url = std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgresql://localhost:5432/agent_agency_test".to_string());
-        
+
         let config = DatabaseConfig {
             database_url: database_url.clone(),
             pool_max: Some(5),
@@ -29,10 +29,11 @@ mod tests {
             query_timeout: Some(60),
             ..Default::default()
         };
-        
+
         Arc::new(
-            DatabaseClient::new(config).await
-                .expect("Failed to create test database client")
+            DatabaseClient::new(config)
+                .await
+                .expect("Failed to create test database client"),
         )
     }
 
@@ -56,14 +57,15 @@ mod tests {
             }),
         };
 
-        let judge = adapter.create_judge(create_judge.clone()).await
+        let judge = adapter
+            .create_judge(create_judge.clone())
+            .await
             .expect("Failed to create judge");
 
         assert_eq!(judge.name, create_judge.name);
         assert!(judge.id != Uuid::nil());
 
-        let judges = adapter.get_judges().await
-            .expect("Failed to get judges");
+        let judges = adapter.get_judges().await.expect("Failed to get judges");
 
         assert!(judges.iter().any(|j| j.id == judge.id));
     }
@@ -89,7 +91,9 @@ mod tests {
             }),
         };
 
-        let judge = adapter.create_judge(create_judge).await
+        let judge = adapter
+            .create_judge(create_judge)
+            .await
             .expect("Failed to create judge");
 
         let task_id = Uuid::new_v4();
@@ -104,13 +108,17 @@ mod tests {
             score: 0.95,
         };
 
-        let evaluation = adapter.create_judge_evaluation(create_evaluation.clone()).await
+        let evaluation = adapter
+            .create_judge_evaluation(create_evaluation.clone())
+            .await
             .expect("Failed to create judge evaluation");
 
         assert_eq!(evaluation.judge_id, judge.id);
         assert_eq!(evaluation.task_id, task_id);
 
-        let evaluations = adapter.get_judge_evaluations(task_id).await
+        let evaluations = adapter
+            .get_judge_evaluations(task_id)
+            .await
             .expect("Failed to get judge evaluations");
 
         assert!(evaluations.iter().any(|e| e.id == evaluation.id));
@@ -123,10 +131,11 @@ mod tests {
         let adapter = DatabaseOperationsAdapter::new(db_client.clone());
 
         let nonexistent_task_id = Uuid::new_v4();
-        let evaluations = adapter.get_judge_evaluations(nonexistent_task_id).await
+        let evaluations = adapter
+            .get_judge_evaluations(nonexistent_task_id)
+            .await
             .expect("Failed to get judge evaluations");
 
         assert!(evaluations.is_empty());
     }
 }
-

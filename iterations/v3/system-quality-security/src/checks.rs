@@ -5,7 +5,10 @@ use regex::Regex;
 use std::collections::HashMap;
 
 /// Analyze duplicate struct names across all files
-pub fn check_duplicate_names(files: &HashMap<String, String>, config: &QualityGateConfig) -> Vec<QualityViolation> {
+pub fn check_duplicate_names(
+    files: &HashMap<String, String>,
+    config: &QualityGateConfig,
+) -> Vec<QualityViolation> {
     let mut violations = Vec::new();
     let mut name_counts: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -20,7 +23,10 @@ pub fn check_duplicate_names(files: &HashMap<String, String>, config: &QualityGa
         for line in content.lines() {
             if let Some(captures) = struct_regex.captures(line) {
                 let name = captures.get(1).unwrap().as_str().to_string();
-                name_counts.entry(name).or_insert_with(Vec::new).push(file_path.clone());
+                name_counts
+                    .entry(name)
+                    .or_insert_with(Vec::new)
+                    .push(file_path.clone());
             }
         }
     }
@@ -51,7 +57,10 @@ pub fn check_duplicate_names(files: &HashMap<String, String>, config: &QualityGa
 }
 
 /// Check for architectural violations
-pub fn check_architecture_violations(files: &HashMap<String, String>, _config: &QualityGateConfig) -> Vec<QualityViolation> {
+pub fn check_architecture_violations(
+    files: &HashMap<String, String>,
+    _config: &QualityGateConfig,
+) -> Vec<QualityViolation> {
     let mut violations = Vec::new();
 
     // Check for direct database access in API handlers
@@ -67,7 +76,9 @@ pub fn check_architecture_violations(files: &HashMap<String, String>, _config: &
                     line: None,
                     column: None,
                     message: "API handlers should not access database directly".to_string(),
-                    suggestion: Some("Use repository pattern or service layer for data access".to_string()),
+                    suggestion: Some(
+                        "Use repository pattern or service layer for data access".to_string(),
+                    ),
                     details: Some({
                         let mut details = HashMap::new();
                         details.insert("violation_type".to_string(), "direct_db_access".into());
@@ -83,11 +94,15 @@ pub fn check_architecture_violations(files: &HashMap<String, String>, _config: &
 }
 
 /// Check for security violations
-pub fn check_security_violations(files: &HashMap<String, String>, _config: &QualityGateConfig) -> Vec<QualityViolation> {
+pub fn check_security_violations(
+    files: &HashMap<String, String>,
+    _config: &QualityGateConfig,
+) -> Vec<QualityViolation> {
     let mut violations = Vec::new();
 
     // Check for hardcoded secrets
-    let secret_regex = Regex::new(r#"(?i)(password|secret|key|token)\s*[:=]\s*["'][^"']+["']"#).unwrap();
+    let secret_regex =
+        Regex::new(r#"(?i)(password|secret|key|token)\s*[:=]\s*["'][^"']+["']"#).unwrap();
     // Check for unsafe code blocks
     let unsafe_regex = Regex::new(r"unsafe\s*\{").unwrap();
 
@@ -101,7 +116,9 @@ pub fn check_security_violations(files: &HashMap<String, String>, _config: &Qual
                 line: None,
                 column: None,
                 message: "Potential hardcoded secret detected".to_string(),
-                suggestion: Some("Use environment variables or secure credential storage".to_string()),
+                suggestion: Some(
+                    "Use environment variables or secure credential storage".to_string(),
+                ),
                 details: Some({
                     let mut details = HashMap::new();
                     details.insert("violation_type".to_string(), "hardcoded_secret".into());
@@ -133,12 +150,16 @@ pub fn check_security_violations(files: &HashMap<String, String>, _config: &Qual
 }
 
 /// Check for dependency violations
-pub fn check_dependency_violations(files: &HashMap<String, String>, _config: &QualityGateConfig) -> Vec<QualityViolation> {
+pub fn check_dependency_violations(
+    files: &HashMap<String, String>,
+    _config: &QualityGateConfig,
+) -> Vec<QualityViolation> {
     let mut violations = Vec::new();
 
     for (file_path, content) in files {
         // Check for direct HTTP calls in business logic
-        if file_path.contains("src/") && !file_path.contains("api") && !file_path.contains("client") {
+        if file_path.contains("src/") && !file_path.contains("api") && !file_path.contains("client")
+        {
             if content.contains("reqwest::") || content.contains("hyper::") {
                 violations.push(QualityViolation {
                     rule: "dependency-violation".to_string(),
@@ -147,7 +168,9 @@ pub fn check_dependency_violations(files: &HashMap<String, String>, _config: &Qu
                     line: None,
                     column: None,
                     message: "Business logic should not make direct HTTP calls".to_string(),
-                    suggestion: Some("Use a dedicated HTTP client service or repository".to_string()),
+                    suggestion: Some(
+                        "Use a dedicated HTTP client service or repository".to_string(),
+                    ),
                     details: Some({
                         let mut details = HashMap::new();
                         details.insert("violation_type".to_string(), "direct_http".into());

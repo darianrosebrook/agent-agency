@@ -1,7 +1,7 @@
 //! Quality validators implementation
 
 use crate::parallel_types::*;
-use crate::{ValidationResult, ValidationContext};
+use crate::{ValidationContext, ValidationResult};
 use async_trait::async_trait;
 
 /// Compilation validator - ensures code compiles
@@ -12,23 +12,30 @@ impl super::gates::QualityValidatorTrait for CompilationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
-        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::path::Path::new(".")
-        });
-        
+        let workspace_root = context
+            .workspace_root
+            .as_deref()
+            .unwrap_or_else(|| std::path::Path::new("."));
+
         // Run cargo check on the package
         let output = match tokio::process::Command::new("cargo")
             .args(["check", "--package", package_name])
             .current_dir(workspace_root)
             .output()
-            .await {
-                Ok(output) => output,
-                Err(e) => return ValidationResult::Fail {
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => {
+                return ValidationResult::Fail {
                     score: 0.0,
                     details: format!("Failed to run cargo check: {}", e),
-                    suggestions: vec!["Check that cargo is installed".to_string(), "Verify package name is correct".to_string()],
-                },
-            };
+                    suggestions: vec![
+                        "Check that cargo is installed".to_string(),
+                        "Verify package name is correct".to_string(),
+                    ],
+                }
+            }
+        };
 
         if output.status.success() {
             ValidationResult::Pass {
@@ -70,23 +77,30 @@ impl super::gates::QualityValidatorTrait for TestValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
-        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::path::Path::new(".")
-        });
-        
+        let workspace_root = context
+            .workspace_root
+            .as_deref()
+            .unwrap_or_else(|| std::path::Path::new("."));
+
         // Run tests
         let test_output = match tokio::process::Command::new("cargo")
             .args(["test", "--package", package_name])
             .current_dir(workspace_root)
             .output()
-            .await {
-                Ok(output) => output,
-                Err(e) => return ValidationResult::Fail {
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => {
+                return ValidationResult::Fail {
                     score: 0.0,
                     details: format!("Failed to run cargo test: {}", e),
-                    suggestions: vec!["Check that cargo is installed".to_string(), "Verify package name is correct".to_string()],
-                },
-            };
+                    suggestions: vec![
+                        "Check that cargo is installed".to_string(),
+                        "Verify package name is correct".to_string(),
+                    ],
+                }
+            }
+        };
 
         if !test_output.status.success() {
             return ValidationResult::Fail {
@@ -110,8 +124,11 @@ impl super::gates::QualityValidatorTrait for TestValidator {
                 } else {
                     ValidationResult::Warning {
                         score: coverage / self.min_coverage,
-                        details: format!("Tests passed but coverage {:.1}% below required {:.1}%",
-                                       coverage * 100.0, self.min_coverage * 100.0),
+                        details: format!(
+                            "Tests passed but coverage {:.1}% below required {:.1}%",
+                            coverage * 100.0,
+                            self.min_coverage * 100.0
+                        ),
                         suggestions: vec![
                             "Add more unit tests".to_string(),
                             "Improve branch coverage in complex functions".to_string(),
@@ -142,23 +159,27 @@ impl super::gates::QualityValidatorTrait for LintValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
-        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::path::Path::new(".")
-        });
-        
+        let workspace_root = context
+            .workspace_root
+            .as_deref()
+            .unwrap_or_else(|| std::path::Path::new("."));
+
         // Run clippy
         let output = match tokio::process::Command::new("cargo")
             .args(["clippy", "--package", package_name, "--", "-D", "warnings"])
             .current_dir(workspace_root)
             .output()
-            .await {
-                Ok(output) => output,
-                Err(e) => return ValidationResult::Fail {
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => {
+                return ValidationResult::Fail {
                     score: 0.0,
                     details: format!("Failed to run clippy: {}", e),
                     suggestions: vec!["Check that cargo clippy is installed".to_string()],
-                },
-            };
+                }
+            }
+        };
 
         if output.status.success() {
             ValidationResult::Pass {
@@ -195,9 +216,13 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get workspace root, using default if not provided
         let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            &*Box::leak(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).into_boxed_path())
+            &*Box::leak(
+                std::env::current_dir()
+                    .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                    .into_boxed_path(),
+            )
         });
-        
+
         // Run cargo audit if available
         match tokio::process::Command::new("cargo")
             .args(["audit"])
@@ -205,12 +230,10 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
             .output()
             .await
         {
-            Ok(output) if output.status.success() => {
-                ValidationResult::Pass {
-                    score: 1.0,
-                    details: "No security vulnerabilities found".to_string(),
-                }
-            }
+            Ok(output) if output.status.success() => ValidationResult::Pass {
+                score: 1.0,
+                details: "No security vulnerabilities found".to_string(),
+            },
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let vuln_count = count_security_vulnerabilities(&stderr);
@@ -221,7 +244,7 @@ impl super::gates::QualityValidatorTrait for SecurityValidator {
                     (5.0 - vuln_count.min(5) as f32) / 5.0
                 };
 
-                    ValidationResult::Fail {
+                ValidationResult::Fail {
                     score,
                     details: format!("{} security vulnerabilities found", vuln_count),
                     suggestions: vec![
@@ -253,7 +276,9 @@ pub struct PerformanceValidator {
 
 impl PerformanceValidator {
     pub fn new(max_response_time_ms: u64) -> Self {
-        Self { max_response_time_ms }
+        Self {
+            max_response_time_ms,
+        }
     }
 }
 
@@ -267,17 +292,24 @@ impl super::gates::QualityValidatorTrait for PerformanceValidator {
         if execution_time_ms <= self.max_response_time_ms {
             ValidationResult::Pass {
                 score: 1.0,
-                details: format!("Execution completed in {}ms (within {}ms limit)",
-                               execution_time_ms, self.max_response_time_ms),
+                details: format!(
+                    "Execution completed in {}ms (within {}ms limit)",
+                    execution_time_ms, self.max_response_time_ms
+                ),
             }
         } else {
-            let overrun_percent = (execution_time_ms as f32 / self.max_response_time_ms as f32) - 1.0;
+            let overrun_percent =
+                (execution_time_ms as f32 / self.max_response_time_ms as f32) - 1.0;
             let score = (1.0 - overrun_percent.min(1.0)).max(0.0);
 
             ValidationResult::Warning {
                 score,
-                details: format!("Execution took {}ms ({}% over {}ms limit)",
-                               execution_time_ms, (overrun_percent * 100.0) as u32, self.max_response_time_ms),
+                details: format!(
+                    "Execution took {}ms ({}% over {}ms limit)",
+                    execution_time_ms,
+                    (overrun_percent * 100.0) as u32,
+                    self.max_response_time_ms
+                ),
                 suggestions: vec![
                     "Optimize performance-critical code paths".to_string(),
                     "Consider parallelization for CPU-intensive operations".to_string(),
@@ -296,23 +328,27 @@ impl super::gates::QualityValidatorTrait for DocumentationValidator {
     async fn validate(&self, context: &ValidationContext) -> ValidationResult {
         // Get package name and workspace root, using defaults if not provided
         let package_name = context.package_name.as_deref().unwrap_or("agent-workers");
-        let workspace_root = context.workspace_root.as_deref().unwrap_or_else(|| {
-            std::path::Path::new(".")
-        });
-        
+        let workspace_root = context
+            .workspace_root
+            .as_deref()
+            .unwrap_or_else(|| std::path::Path::new("."));
+
         // Run cargo doc to check documentation
         let output = match tokio::process::Command::new("cargo")
             .args(["doc", "--package", package_name, "--no-deps"])
             .current_dir(workspace_root)
             .output()
-            .await {
-                Ok(output) => output,
-                Err(e) => return ValidationResult::Fail {
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => {
+                return ValidationResult::Fail {
                     score: 0.0,
                     details: format!("Failed to run cargo doc: {}", e),
                     suggestions: vec!["Check that cargo is installed".to_string()],
-                },
-            };
+                }
+            }
+        };
 
         if output.status.success() {
             // Could check for undocumented items here
@@ -336,7 +372,8 @@ impl super::gates::QualityValidatorTrait for DocumentationValidator {
 /// Helper functions for parsing tool outputs
 
 fn count_compilation_errors(stderr: &str) -> usize {
-    stderr.lines()
+    stderr
+        .lines()
         .filter(|line| line.contains("error[E") || line.contains("error:"))
         .count()
 }
@@ -362,7 +399,10 @@ fn extract_compilation_suggestions(stderr: &str) -> Vec<String> {
     suggestions
 }
 
-async fn get_test_coverage(workspace_root: &std::path::Path, package_name: &str) -> std::result::Result<f32, anyhow::Error> {
+async fn get_test_coverage(
+    workspace_root: &std::path::Path,
+    package_name: &str,
+) -> std::result::Result<f32, anyhow::Error> {
     // Try to run tarpaulin for coverage
     let output = tokio::process::Command::new("cargo")
         .args(["tarpaulin", "--packages", package_name, "--out", "Json"])
@@ -385,13 +425,15 @@ async fn get_test_coverage(workspace_root: &std::path::Path, package_name: &str)
 }
 
 fn count_lint_warnings(stderr: &str) -> usize {
-    stderr.lines()
+    stderr
+        .lines()
         .filter(|line| line.contains("warning:") || line.contains("clippy::"))
         .count()
 }
 
 fn count_security_vulnerabilities(stderr: &str) -> usize {
-    stderr.lines()
+    stderr
+        .lines()
         .filter(|line| line.contains("vulnerability") || line.contains("advisory"))
         .count()
 }

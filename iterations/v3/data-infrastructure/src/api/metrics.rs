@@ -2,18 +2,18 @@
 //!
 //! Provides system metrics and monitoring endpoints.
 
+use anyhow::Result;
 use axum::{
     extract::State,
-    response::Json,
     response::sse::{Event, Sse},
+    response::Json,
 };
+use chrono::{Duration as ChronoDuration, Utc};
 use serde_json::json;
 use std::convert::Infallible;
 use std::time::Duration;
-use tokio_stream::{Stream, StreamExt};
 use tokio::time;
-use anyhow::Result;
-use chrono::{Utc, Duration as ChronoDuration};
+use tokio_stream::{Stream, StreamExt};
 
 /// Business metrics structure
 #[derive(Debug, Clone)]
@@ -59,11 +59,11 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
     // Count active users (sessions active in last hour)
     let active_users: i64 = sqlx::query_scalar::<_, i64>(
         r#"
-        SELECT COUNT(DISTINCT user_id) 
-        FROM sessions 
-        WHERE is_active = true 
+        SELECT COUNT(DISTINCT user_id)
+        FROM sessions
+        WHERE is_active = true
         AND expires_at > $1
-        "#
+        "#,
     )
     .bind(now)
     .fetch_one(pool)
@@ -73,10 +73,10 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
     // Count requests in last minute (from audit trail entries)
     let requests_last_minute: i64 = sqlx::query_scalar::<_, i64>(
         r#"
-        SELECT COUNT(*) 
-        FROM audit_trail_entries 
+        SELECT COUNT(*)
+        FROM audit_trail_entries
         WHERE created_at >= $1
-        "#
+        "#,
     )
     .bind(one_minute_ago)
     .fetch_one(pool)
@@ -88,10 +88,10 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
     // Calculate task throughput per hour (from task_executions)
     let tasks_last_hour: i64 = sqlx::query_scalar::<_, i64>(
         r#"
-        SELECT COUNT(*) 
-        FROM task_executions 
+        SELECT COUNT(*)
+        FROM task_executions
         WHERE execution_started_at >= $1
-        "#
+        "#,
     )
     .bind(one_hour_ago)
     .fetch_one(pool)
@@ -103,12 +103,12 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
     // Calculate average task completion time (from completed task_executions)
     let avg_completion_time: Option<i64> = sqlx::query_scalar::<_, Option<i64>>(
         r#"
-        SELECT AVG(execution_time_ms) 
-        FROM task_executions 
-        WHERE execution_completed_at IS NOT NULL 
+        SELECT AVG(execution_time_ms)
+        FROM task_executions
+        WHERE execution_completed_at IS NOT NULL
         AND execution_time_ms IS NOT NULL
         AND execution_started_at >= $1
-        "#
+        "#,
     )
     .bind(one_hour_ago)
     .fetch_one(pool)
@@ -120,10 +120,10 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
     // Calculate error rate (failed tasks / total tasks)
     let total_tasks: i64 = sqlx::query_scalar::<_, i64>(
         r#"
-        SELECT COUNT(*) 
-        FROM task_executions 
+        SELECT COUNT(*)
+        FROM task_executions
         WHERE execution_started_at >= $1
-        "#
+        "#,
     )
     .bind(one_hour_ago)
     .fetch_one(pool)
@@ -132,11 +132,11 @@ async fn collect_business_metrics(db_client: &crate::DatabaseClient) -> Result<B
 
     let failed_tasks: i64 = sqlx::query_scalar::<_, i64>(
         r#"
-        SELECT COUNT(*) 
-        FROM task_executions 
-        WHERE status = 'failed' 
+        SELECT COUNT(*)
+        FROM task_executions
+        WHERE status = 'failed'
         AND execution_started_at >= $1
-        "#
+        "#,
     )
     .bind(one_hour_ago)
     .fetch_one(pool)

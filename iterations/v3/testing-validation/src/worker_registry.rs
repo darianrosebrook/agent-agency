@@ -11,19 +11,19 @@ use tracing::info;
 /// Register standard workers in the database
 pub async fn register_standard_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<()> {
     let pool = db_client.pool();
-    
+
     info!("Registering standard workers in database...");
-    
+
     // Clean up old test workers first
     cleanup_test_workers(pool).await?;
-    
+
     // Register standard workers
     register_general_worker(pool).await?;
     register_file_editing_worker(pool).await?;
     register_code_generation_worker(pool).await?;
     register_testing_worker(pool).await?;
     register_documentation_worker(pool).await?;
-    
+
     info!("✅ All standard workers registered successfully");
     Ok(())
 }
@@ -33,23 +33,26 @@ async fn cleanup_test_workers(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     // Delete old "Default MCP Worker" entries (keep only the most recent)
     let deleted = sqlx::query(
         r#"
-        DELETE FROM workers 
-        WHERE name = 'Default MCP Worker' 
+        DELETE FROM workers
+        WHERE name = 'Default MCP Worker'
         AND id NOT IN (
-            SELECT id FROM workers 
-            WHERE name = 'Default MCP Worker' 
-            ORDER BY created_at DESC 
+            SELECT id FROM workers
+            WHERE name = 'Default MCP Worker'
+            ORDER BY created_at DESC
             LIMIT 1
         )
-        "#
+        "#,
     )
     .execute(pool)
     .await?;
-    
+
     if deleted.rows_affected() > 0 {
-        info!("Cleaned up {} duplicate test workers", deleted.rows_affected());
+        info!(
+            "Cleaned up {} duplicate test workers",
+            deleted.rows_affected()
+        );
     }
-    
+
     Ok(())
 }
 
@@ -57,25 +60,25 @@ async fn cleanup_test_workers(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     // Check if worker already exists
     let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'General Purpose Worker')"
+        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'General Purpose Worker')",
     )
     .fetch_one(pool)
     .await?;
-    
+
     if exists {
         info!("General Purpose Worker already exists, skipping");
         return Ok(());
     }
-    
+
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
             id, name, worker_type, specialty, model_name, endpoint,
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("General Purpose Worker")
@@ -96,7 +99,7 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("✅ Registered General Purpose Worker: {}", worker_id);
     Ok(())
 }
@@ -104,25 +107,25 @@ async fn register_general_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register File Editing Specialist
 async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'File Editing Worker')"
+        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'File Editing Worker')",
     )
     .fetch_one(pool)
     .await?;
-    
+
     if exists {
         info!("File Editing Worker already exists, skipping");
         return Ok(());
     }
-    
+
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
             id, name, worker_type, specialty, model_name, endpoint,
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("File Editing Worker")
@@ -146,7 +149,7 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("✅ Registered File Editing Worker: {}", worker_id);
     Ok(())
 }
@@ -154,25 +157,25 @@ async fn register_file_editing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()>
 /// Register Code Generation Specialist
 async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Code Generation Worker')"
+        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Code Generation Worker')",
     )
     .fetch_one(pool)
     .await?;
-    
+
     if exists {
         info!("Code Generation Worker already exists, skipping");
         return Ok(());
     }
-    
+
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
             id, name, worker_type, specialty, model_name, endpoint,
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Code Generation Worker")
@@ -195,7 +198,7 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("✅ Registered Code Generation Worker: {}", worker_id);
     Ok(())
 }
@@ -203,25 +206,25 @@ async fn register_code_generation_worker(pool: &sqlx::PgPool) -> anyhow::Result<
 /// Register Testing Specialist
 async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Testing Worker')"
+        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Testing Worker')",
     )
     .fetch_one(pool)
     .await?;
-    
+
     if exists {
         info!("Testing Worker already exists, skipping");
         return Ok(());
     }
-    
+
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
             id, name, worker_type, specialty, model_name, endpoint,
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Testing Worker")
@@ -245,7 +248,7 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("✅ Registered Testing Worker: {}", worker_id);
     Ok(())
 }
@@ -253,25 +256,25 @@ async fn register_testing_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
 /// Register Documentation Specialist
 async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     let exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Documentation Worker')"
+        "SELECT EXISTS(SELECT 1 FROM workers WHERE name = 'Documentation Worker')",
     )
     .fetch_one(pool)
     .await?;
-    
+
     if exists {
         info!("Documentation Worker already exists, skipping");
         return Ok(());
     }
-    
+
     let worker_id = uuid::Uuid::new_v4();
-    
+
     sqlx::query(
         r#"
         INSERT INTO workers (
             id, name, worker_type, specialty, model_name, endpoint,
             capabilities, performance_history, is_active, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        "#
+        "#,
     )
     .bind(worker_id)
     .bind("Documentation Worker")
@@ -294,7 +297,7 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
     .bind(true)
     .execute(pool)
     .await?;
-    
+
     info!("✅ Registered Documentation Worker: {}", worker_id);
     Ok(())
 }
@@ -302,21 +305,22 @@ async fn register_documentation_worker(pool: &sqlx::PgPool) -> anyhow::Result<()
 /// List all registered workers
 pub async fn list_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<Vec<WorkerInfo>> {
     let pool = db_client.pool();
-    
+
     let rows = sqlx::query(
         r#"
-        SELECT id, name, worker_type, specialty, model_name, endpoint, 
+        SELECT id, name, worker_type, specialty, model_name, endpoint,
                capabilities, is_active, created_at
         FROM workers
         WHERE is_active = true
         ORDER BY specialty, name
-        "#
+        "#,
     )
     .fetch_all(pool)
     .await?;
-    
-    let workers: Vec<WorkerInfo> = rows.into_iter().map(|row| {
-        WorkerInfo {
+
+    let workers: Vec<WorkerInfo> = rows
+        .into_iter()
+        .map(|row| WorkerInfo {
             id: row.get("id"),
             name: row.get("name"),
             worker_type: row.get("worker_type"),
@@ -326,9 +330,9 @@ pub async fn list_workers(db_client: Arc<DatabaseClient>) -> anyhow::Result<Vec<
             capabilities: row.try_get("capabilities").unwrap_or(json!({})),
             is_active: row.get("is_active"),
             created_at: row.get("created_at"),
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     Ok(workers)
 }
 
@@ -345,4 +349,3 @@ pub struct WorkerInfo {
     pub is_active: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
-

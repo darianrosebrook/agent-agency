@@ -3,9 +3,9 @@
 //! This module provides a consolidated error hierarchy for all security-related
 //! operations, preserving error specificity while eliminating duplication.
 
-use std::fmt;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
 /// Unified security error type
@@ -115,13 +115,17 @@ impl From<crate::data_encryption::EncryptionError> for SecurityError {
     fn from(err: crate::data_encryption::EncryptionError) -> Self {
         match err {
             crate::data_encryption::EncryptionError::KeyNotFound { key_id } => {
-                SecurityError::KeyNotFound { key_id: key_id.to_string() }
+                SecurityError::KeyNotFound {
+                    key_id: key_id.to_string(),
+                }
             }
             crate::data_encryption::EncryptionError::KeyInactive { key_id } => {
                 SecurityError::KeyInactive { key_id }
             }
             crate::data_encryption::EncryptionError::KeyExpired { key_id } => {
-                SecurityError::KeyExpired { key_id: key_id.to_string() }
+                SecurityError::KeyExpired {
+                    key_id: key_id.to_string(),
+                }
             }
             crate::data_encryption::EncryptionError::ConfigurationError { message } => {
                 SecurityError::ConfigurationError { message }
@@ -158,7 +162,9 @@ impl From<crate::keystore::KeystoreError> for SecurityError {
                 SecurityError::EncryptionFailed { message }
             }
             crate::keystore::KeystoreError::PermissionDenied { permission } => {
-                SecurityError::PermissionDenied { permission: format!("{:?}", permission) }
+                SecurityError::PermissionDenied {
+                    permission: format!("{:?}", permission),
+                }
             }
             crate::keystore::KeystoreError::KeyExpired { key_id } => {
                 SecurityError::KeyExpired { key_id }
@@ -189,7 +195,9 @@ impl From<crate::sandbox::SandboxError> for SecurityError {
                 SecurityError::SandboxExecutionFailed { message }
             }
             crate::sandbox::SandboxError::SandboxUnavailable { mode } => {
-                SecurityError::SandboxUnavailable { mode: format!("{:?}", mode) }
+                SecurityError::SandboxUnavailable {
+                    mode: format!("{:?}", mode),
+                }
             }
             crate::sandbox::SandboxError::InvalidConfig { message } => {
                 SecurityError::SandboxInvalidConfig { message }
@@ -269,7 +277,10 @@ mod tests {
         let secret_rotation_required = SecurityError::SecretRotationRequired {
             key: "api-secret-789".to_string(),
         };
-        assert_snapshot!("secret_rotation_required", secret_rotation_required.to_string());
+        assert_snapshot!(
+            "secret_rotation_required",
+            secret_rotation_required.to_string()
+        );
     }
 
     #[test]
@@ -302,8 +313,9 @@ mod tests {
             key: "my-secret".to_string(),
         };
         let sec_err: SecurityError = sc_err.into();
-        assert!(matches!(sec_err, SecurityError::SecretRotationRequired { .. }));
+        assert!(matches!(
+            sec_err,
+            SecurityError::SecretRotationRequired { .. }
+        ));
     }
 }
-
-

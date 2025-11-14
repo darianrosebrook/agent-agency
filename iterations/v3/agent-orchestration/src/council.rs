@@ -3,19 +3,23 @@
 //! The Council orchestrates the entire review process from judge selection
 //! through verdict aggregation to final decision making.
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::{timeout, Duration};
 use uuid::Uuid;
 // use rand::seq::SliceRandom;
 
 use crate::council_errors::{CouncilError, CouncilResult};
-use crate::judge_backup::{Judge, JudgeContribution};
+use crate::decision_making::{
+    ConsensusStrategy, DecisionContext, DecisionEngine, EmergencyFlags, FinalDecision,
+    HistoricalDecision, ImpactLevel, OrganizationalConstraints, ResourceConstraints,
+    RiskThresholds,
+};
 use crate::judge_backup::types::ReviewContext;
-use crate::verdict_aggregation::{VerdictAggregator, AggregationResult};
-use crate::decision_making::{DecisionEngine, FinalDecision, DecisionContext, OrganizationalConstraints, ResourceConstraints, HistoricalDecision, EmergencyFlags, ConsensusStrategy, RiskThresholds, ImpactLevel};
+use crate::judge_backup::{Judge, JudgeContribution};
+use crate::verdict_aggregation::{AggregationResult, VerdictAggregator};
 use agent_agency_contracts::types::planning::TaskDescriptor;
 
 #[cfg(feature = "memory")]
@@ -32,7 +36,10 @@ pub mod memory_types {
     pub type ExperienceOutcome = MemoryType;
 }
 
-use crate::error_handling::{AgencyError, CircuitBreaker, ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator, DegradationManager, DegradationPolicy, DegradationLevel};
+use crate::error_handling::{
+    AgencyError, CircuitBreaker, DegradationLevel, DegradationManager, DegradationPolicy,
+    ErrorHandlingCircuitBreakerConfig, RecoveryOrchestrator,
+};
 // use crate::risk_scorer::ComputationalComplexity; // TEMPORARILY DISABLED
 
 use tracing::instrument;
@@ -233,59 +240,61 @@ pub struct Council {
     /// Round-robin index for judge selection (atomic for thread safety)
     round_robin_index: std::sync::atomic::AtomicUsize,
     /// Performance tracking for judges (judge_id -> performance metrics)
-    judge_performance: std::sync::Arc<tokio::sync::RwLock<std::collections::HashMap<String, JudgePerformanceMetrics>>>,
+    judge_performance: std::sync::Arc<
+        tokio::sync::RwLock<std::collections::HashMap<String, JudgePerformanceMetrics>>,
+    >,
 }
 
-    /// Send learning signal to external council learning API
-    /// 
-    /// TODO: Implement council learning API client for adaptive learning
-    /// 
-    /// DEPENDENCY: Requires council learning API service/endpoint
-    /// 
-    /// Expected signature:
-    /// ```rust
-    /// pub async fn send_learning_signal(
-    ///     &self,
-    ///     signal: LearningSignal
-    /// ) -> CouncilResult<()>
-    /// ```
-    /// 
-    /// This method should:
-    /// 1. Serialize LearningSignal to API format
-    /// 2. Send HTTP/gRPC request to council learning API
-    /// 3. Handle response and errors
-    /// 4. Retry on transient failures (with exponential backoff)
-    /// 5. Integrate with circuit breaker for resilience
-    /// 
-    /// LearningSignal should include:
-    /// - task_id: String
-    /// - worker_id: String  
-    /// - performance_score: f64
-    /// - resource_usage: ResourceUsageMetrics (CPU, memory, disk, network)
-    /// - metadata: serde_json::Value (specialty, execution_time, success, etc.)
-    /// 
-    /// This method is needed by:
-    /// - agent-workers/src/coordinator_old.rs:2368 (council bridge integration)
-    /// - agent-workers/src/bridges.rs:219 (learning signal sending)
-    /// 
-    /// ACCEPTANCE CRITERIA:
-    /// - [ ] HTTP/gRPC client implementation
-    /// - [ ] Request serialization (LearningSignal -> API format)
-    /// - [ ] Error handling and retry logic
-    /// - [ ] Circuit breaker integration
-    /// - [ ] Unit tests with 80%+ coverage
-    /// - [ ] Integration test with mock council API
-    /// - [ ] Configuration for API endpoint URL
-    /// 
-    /// ESTIMATED EFFORT: 8 hours
-    /// PRIORITY: MEDIUM
-    /// BLOCKING: agent-workers learning signal integration
-    /// 
-    /// CONFIGURATION NEEDED:
-    /// - Council API endpoint URL (env var: COUNCIL_API_URL)
-    /// - API authentication token (env var: COUNCIL_API_TOKEN)
-    /// - Request timeout (default: 5s)
-    /// - Retry configuration (max_retries: 3, backoff: exponential)
+/// Send learning signal to external council learning API
+///
+/// TODO: Implement council learning API client for adaptive learning
+///
+/// DEPENDENCY: Requires council learning API service/endpoint
+///
+/// Expected signature:
+/// ```rust
+/// pub async fn send_learning_signal(
+///     &self,
+///     signal: LearningSignal
+/// ) -> CouncilResult<()>
+/// ```
+///
+/// This method should:
+/// 1. Serialize LearningSignal to API format
+/// 2. Send HTTP/gRPC request to council learning API
+/// 3. Handle response and errors
+/// 4. Retry on transient failures (with exponential backoff)
+/// 5. Integrate with circuit breaker for resilience
+///
+/// LearningSignal should include:
+/// - task_id: String
+/// - worker_id: String
+/// - performance_score: f64
+/// - resource_usage: ResourceUsageMetrics (CPU, memory, disk, network)
+/// - metadata: serde_json::Value (specialty, execution_time, success, etc.)
+///
+/// This method is needed by:
+/// - agent-workers/src/coordinator_old.rs:2368 (council bridge integration)
+/// - agent-workers/src/bridges.rs:219 (learning signal sending)
+///
+/// ACCEPTANCE CRITERIA:
+/// - [ ] HTTP/gRPC client implementation
+/// - [ ] Request serialization (LearningSignal -> API format)
+/// - [ ] Error handling and retry logic
+/// - [ ] Circuit breaker integration
+/// - [ ] Unit tests with 80%+ coverage
+/// - [ ] Integration test with mock council API
+/// - [ ] Configuration for API endpoint URL
+///
+/// ESTIMATED EFFORT: 8 hours
+/// PRIORITY: MEDIUM
+/// BLOCKING: agent-workers learning signal integration
+///
+/// CONFIGURATION NEEDED:
+/// - Council API endpoint URL (env var: COUNCIL_API_URL)
+/// - API authentication token (env var: COUNCIL_API_TOKEN)
+/// - Request timeout (default: 5s)
+/// - Retry configuration (max_retries: 3, backoff: exponential)
 
 impl Council {
     /// Create a new council with available judges
@@ -316,7 +325,9 @@ impl Council {
                 recovery_orchestrator: None,
                 degradation_manager: None,
                 round_robin_index: std::sync::atomic::AtomicUsize::new(0),
-                judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+                judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(
+                    std::collections::HashMap::new(),
+                )),
             }
         }
     }
@@ -344,7 +355,9 @@ impl Council {
             #[cfg(feature = "memory")]
             memory_system,
             round_robin_index: std::sync::atomic::AtomicUsize::new(0),
-            judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            judge_performance: std::sync::Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
         }
     }
 
@@ -419,15 +432,13 @@ impl Council {
                 "quality_judge".to_string(),
                 DegradationPolicy {
                     component: "quality_judge".to_string(),
-                    levels: vec![
-                        DegradationLevel {
-                            name: "skip_detailed_checks".to_string(),
-                            description: "Skip detailed code quality analysis".to_string(),
-                            performance_impact: 0.2,
-                            functionality_impact: 0.1,
-                            recovery_priority: 4,
-                        },
-                    ],
+                    levels: vec![DegradationLevel {
+                        name: "skip_detailed_checks".to_string(),
+                        description: "Skip detailed code quality analysis".to_string(),
+                        performance_impact: 0.2,
+                        functionality_impact: 0.1,
+                        recovery_priority: 4,
+                    }],
                     recovery_conditions: vec![
                         "memory_usage < 80%".to_string(),
                         "cpu_usage < 70%".to_string(),
@@ -478,20 +489,21 @@ impl Council {
         // Run the complete review process with timeout
         let result = timeout(
             Duration::from_secs(self.config.session_timeout_seconds),
-            self.run_review_process(&mut session, review_context)
-        ).await;
+            self.run_review_process(&mut session, review_context),
+        )
+        .await;
 
         match result {
             Ok(Ok(())) => {
                 session.end_time = Some(chrono::Utc::now());
                 session.status = SessionStatus::Completed;
                 Ok(session)
-            },
+            }
             Ok(Err(e)) => {
                 session.end_time = Some(chrono::Utc::now());
                 session.status = SessionStatus::Failed;
                 Err(e)
-            },
+            }
             Err(_) => {
                 session.end_time = Some(chrono::Utc::now());
                 session.status = SessionStatus::Timeout;
@@ -499,7 +511,7 @@ impl Council {
                     session_id,
                     timeout_seconds: self.config.session_timeout_seconds,
                 })
-            },
+            }
         }
     }
 
@@ -510,7 +522,8 @@ impl Council {
     ) -> CouncilResult<()> {
         // Phase 1: Judge selection
         session.status = SessionStatus::JudgeSelection;
-        self.select_judges_for_session(session, &review_context).await?;
+        self.select_judges_for_session(session, &review_context)
+            .await?;
 
         if session.selected_judges.len() < self.config.min_judges_required {
             return Err(CouncilError::QuorumFailure {
@@ -525,31 +538,39 @@ impl Council {
 
         // Phase 3: Verdict aggregation
         session.status = SessionStatus::AggregationInProgress;
-        let aggregation_result = self.verdict_aggregator.aggregate_verdicts(
-            session.contributions.clone(),
-            &review_context,
-        ).await?;
+        let aggregation_result = self
+            .verdict_aggregator
+            .aggregate_verdicts(session.contributions.clone(), &review_context)
+            .await?;
         session.aggregation_result = Some(aggregation_result);
 
         // Phase 4: Final decision making
         session.status = SessionStatus::DecisionMaking;
         let decision_context = self.create_decision_context(&review_context);
-        let final_decision = self.decision_engine.make_decision(
-            session.aggregation_result.as_ref().unwrap(),
-            &decision_context,
-        ).await?;
+        let final_decision = self
+            .decision_engine
+            .make_decision(
+                session.aggregation_result.as_ref().unwrap(),
+                &decision_context,
+            )
+            .await?;
         session.final_decision = Some(final_decision.clone());
 
         // Store decision outcome in memory for future learning
-        let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&review_context.working_spec)
-            .map_err(|e| CouncilError::InvalidInput { message: format!("Failed to parse working spec: {}", e) })?;
-        
+        let working_spec: crate::council_types::WorkingSpec =
+            serde_json::from_str(&review_context.working_spec).map_err(|e| {
+                CouncilError::InvalidInput {
+                    message: format!("Failed to parse working spec: {}", e),
+                }
+            })?;
+
         self.store_decision_memory(
             session.session_id.clone(),
             &convert_local_to_contract_spec(&working_spec),
             &final_decision,
             &convert_local_to_contract_risk_tier(working_spec.risk_tier as u8),
-        ).await;
+        )
+        .await;
 
         Ok(())
     }
@@ -559,7 +580,9 @@ impl Council {
         session: &mut CouncilSession,
         context: &ReviewContext,
     ) -> CouncilResult<()> {
-        let available_judges = self.available_judges.iter()
+        let available_judges = self
+            .available_judges
+            .iter()
             .filter(|judge| judge.is_available())
             .collect::<Vec<_>>();
 
@@ -567,31 +590,38 @@ impl Council {
             JudgeSelectionStrategy::AllAvailable => {
                 // For AllAvailable strategy, select ALL available judges (up to max_judges_per_session)
                 // This ensures all judges participate in reviews
-                let count = available_judges.len().min(self.config.max_judges_per_session);
+                let count = available_judges
+                    .len()
+                    .min(self.config.max_judges_per_session);
                 available_judges.into_iter().take(count).cloned().collect()
-            },
-            JudgeSelectionStrategy::SpecializationBased => {
-                self.select_by_specialization(&available_judges, context, self.config.max_judges_per_session)
-            },
+            }
+            JudgeSelectionStrategy::SpecializationBased => self.select_by_specialization(
+                &available_judges,
+                context,
+                self.config.max_judges_per_session,
+            ),
             JudgeSelectionStrategy::RoundRobin => {
                 // Round-robin selection with state tracking
                 let available_count = available_judges.len();
                 if available_count == 0 {
                     Vec::new()
                 } else {
-                    let start_index = self.round_robin_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst) % available_count;
+                    let start_index = self
+                        .round_robin_index
+                        .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+                        % available_count;
                     let mut selected = Vec::new();
                     let mut current_index = start_index;
-                    
+
                     // Take up to max_judges_per_session judges starting from round-robin index
                     for _ in 0..self.config.max_judges_per_session.min(available_count) {
                         selected.push(available_judges[current_index].clone());
                         current_index = (current_index + 1) % available_count;
                     }
-                    
+
                     selected
                 }
-            },
+            }
             JudgeSelectionStrategy::Random => {
                 // TODO: Implement proper random selection with weighted distribution
                 //       Currently uses simple shuffle; should implement weighted random selection considering judge expertise and availability.
@@ -629,16 +659,21 @@ impl Council {
                 use rand::seq::SliceRandom;
                 let mut rng = rand::thread_rng();
                 judges.shuffle(&mut rng);
-                judges.into_iter().take(self.config.max_judges_per_session).cloned().collect()
-            },
+                judges
+                    .into_iter()
+                    .take(self.config.max_judges_per_session)
+                    .cloned()
+                    .collect()
+            }
             JudgeSelectionStrategy::PerformanceWeighted => {
                 // Performance-weighted selection based on historical metrics
                 let performance = self.judge_performance.read().await;
-                let mut judge_scores: Vec<(Arc<dyn Judge>, f64)> = available_judges.iter()
+                let mut judge_scores: Vec<(Arc<dyn Judge>, f64)> = available_judges
+                    .iter()
                     .map(|judge| {
                         let judge_id = judge.config().judge_id.clone();
                         let base_score = judge.specialization_score(context);
-                        
+
                         // Weight by performance metrics if available
                         let performance_weight = if let Some(metrics) = performance.get(&judge_id) {
                             // Combine success rate and response time into a performance score
@@ -652,21 +687,23 @@ impl Council {
                         } else {
                             0.5 // Default performance weight if no metrics
                         };
-                        
+
                         // Combine specialization score (70%) with performance weight (30%)
                         let combined_score = base_score * 0.7 + performance_weight * 0.3;
                         ((*judge).clone(), combined_score)
                     })
                     .collect();
-                
+
                 // Sort by combined score (descending)
-                judge_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-                
-                judge_scores.into_iter()
+                judge_scores
+                    .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+                judge_scores
+                    .into_iter()
                     .take(self.config.max_judges_per_session)
                     .map(|(judge, _)| judge)
                     .collect()
-            },
+            }
         };
 
         session.selected_judges = selected_judges;
@@ -679,7 +716,8 @@ impl Council {
         context: &ReviewContext,
         max_count: usize,
     ) -> Vec<Arc<dyn Judge>> {
-        let mut judge_scores: Vec<(Arc<dyn Judge>, f64)> = available_judges.iter()
+        let mut judge_scores: Vec<(Arc<dyn Judge>, f64)> = available_judges
+            .iter()
             .map(|judge| {
                 let specialization_score = judge.specialization_score(context);
                 ((*judge).clone(), specialization_score)
@@ -689,7 +727,8 @@ impl Council {
         // Sort by specialization score (descending)
         judge_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        judge_scores.into_iter()
+        judge_scores
+            .into_iter()
             .take(max_count)
             .map(|(judge, _)| judge)
             .collect()
@@ -718,9 +757,13 @@ impl Council {
                     let result = timeout(
                         Duration::from_secs(judge_timeout),
                         Self::conduct_single_judge_review_with_error_handling(
-                            judge_for_first_attempt, &context, circuit_breakers, recovery_orchestrator.clone()
-                        )
-                    ).await;
+                            judge_for_first_attempt,
+                            &context,
+                            circuit_breakers,
+                            recovery_orchestrator.clone(),
+                        ),
+                    )
+                    .await;
 
                     match result {
                         Ok(Ok(contribution)) => Ok(contribution),
@@ -734,8 +777,10 @@ impl Council {
                                         // Try the review again after recovery
                                         match timeout(
                                             Duration::from_secs(judge_timeout),
-                                            Self::conduct_single_judge_review(judge, &context)
-                                        ).await {
+                                            Self::conduct_single_judge_review(judge, &context),
+                                        )
+                                        .await
+                                        {
                                             Ok(Ok(contribution)) => Ok(contribution),
                                             _ => Err(AgencyError::new(
                                                 crate::error_handling::ErrorCategory::Internal,
@@ -743,7 +788,7 @@ impl Council {
                                                 "Failed to recover from judge error",
                                                 crate::error_handling::ErrorSeverity::Error,
                                                 "council",
-                                                "conduct_judge_reviews"
+                                                "conduct_judge_reviews",
                                             )),
                                         }
                                     }
@@ -759,7 +804,7 @@ impl Council {
                             "Judge review timed out",
                             crate::error_handling::ErrorSeverity::Warning,
                             "council",
-                            "conduct_judge_reviews"
+                            "conduct_judge_reviews",
                         )),
                     }
                 });
@@ -777,12 +822,13 @@ impl Council {
                         let judge_id = contribution.judge_id.clone();
                         // Estimate response time from contribution if available
                         let response_time_ms = contribution.processing_time_ms;
-                        self.update_judge_performance(&judge_id, response_time_ms, true).await;
-                    },
+                        self.update_judge_performance(&judge_id, response_time_ms, true)
+                            .await;
+                    }
                     Ok(Err(agency_error)) => {
                         tracing::warn!("Judge review failed with error handling: {}", agency_error);
                         // Performance update skipped for failures without judge_id
-                        
+
                         // Check if we should degrade this component
                         if let Some(degradation_manager) = &self.degradation_manager {
                             if let Some(degradation_level) = degradation_manager
@@ -794,19 +840,23 @@ impl Council {
                                     .await;
                             }
                         }
-                    },
+                    }
                     Err(e) => {
                         tracing::error!("Judge task panicked: {}", e);
-                    },
+                    }
                 }
             }
-            
+
             // Validate that all selected judges contributed
             if contributions.len() < session.selected_judges.len() {
                 let missing_count = session.selected_judges.len() - contributions.len();
-                tracing::warn!("Only {} of {} judges contributed verdicts ({} missing)", 
-                    contributions.len(), session.selected_judges.len(), missing_count);
-                
+                tracing::warn!(
+                    "Only {} of {} judges contributed verdicts ({} missing)",
+                    contributions.len(),
+                    session.selected_judges.len(),
+                    missing_count
+                );
+
                 // If we don't meet minimum quorum, return error
                 if contributions.len() < self.config.min_judges_required {
                     return Err(CouncilError::QuorumFailure {
@@ -815,9 +865,12 @@ impl Council {
                     });
                 }
             } else {
-                tracing::info!("All {} judges contributed verdicts successfully", contributions.len());
+                tracing::info!(
+                    "All {} judges contributed verdicts successfully",
+                    contributions.len()
+                );
             }
-            
+
             // Assign contributions to session
             session.contributions = contributions;
             return Ok(());
@@ -833,37 +886,45 @@ impl Council {
                         context,
                         self.circuit_breakers.clone(),
                         self.recovery_orchestrator.clone(),
-                    )
-                ).await;
+                    ),
+                )
+                .await;
 
                 match result {
                     Ok(Ok(contribution)) => {
                         contributions.push(contribution);
                         // Update performance metrics
                         let response_time_ms = start_time.elapsed().as_millis() as u64;
-                        self.update_judge_performance(&judge_id, response_time_ms, true).await;
-                    },
+                        self.update_judge_performance(&judge_id, response_time_ms, true)
+                            .await;
+                    }
                     Ok(Err(agency_error)) => {
                         tracing::warn!("Judge review failed: {}", agency_error);
                         // Update performance metrics (failure)
                         let response_time_ms = start_time.elapsed().as_millis() as u64;
-                        self.update_judge_performance(&judge_id, response_time_ms, false).await;
-                    },
+                        self.update_judge_performance(&judge_id, response_time_ms, false)
+                            .await;
+                    }
                     Err(_) => {
                         tracing::warn!("Judge review timed out");
                         // Update performance metrics (timeout)
                         let response_time_ms = start_time.elapsed().as_millis() as u64;
-                        self.update_judge_performance(&judge_id, response_time_ms, false).await;
-                    },
+                        self.update_judge_performance(&judge_id, response_time_ms, false)
+                            .await;
+                    }
                 }
             }
-            
+
             // Validate that all selected judges contributed (sequential path)
             if contributions.len() < session.selected_judges.len() {
                 let missing_count = session.selected_judges.len() - contributions.len();
-                tracing::warn!("Only {} of {} judges contributed verdicts ({} missing)", 
-                    contributions.len(), session.selected_judges.len(), missing_count);
-                
+                tracing::warn!(
+                    "Only {} of {} judges contributed verdicts ({} missing)",
+                    contributions.len(),
+                    session.selected_judges.len(),
+                    missing_count
+                );
+
                 // If we don't meet minimum quorum, return error
                 if contributions.len() < self.config.min_judges_required {
                     return Err(CouncilError::QuorumFailure {
@@ -872,7 +933,10 @@ impl Council {
                     });
                 }
             } else {
-                tracing::info!("All {} judges contributed verdicts successfully", contributions.len());
+                tracing::info!(
+                    "All {} judges contributed verdicts successfully",
+                    contributions.len()
+                );
             }
         }
 
@@ -896,76 +960,96 @@ impl Council {
                 &format!("Judge {} is not available", judge.config().name),
                 crate::error_handling::ErrorSeverity::Warning,
                 "council",
-                "conduct_single_judge_review_with_error_handling"
+                "conduct_single_judge_review_with_error_handling",
             ));
         }
 
         // Execute the judge review with circuit breaker protection if applicable
         let verdict_result = if let Some(circuit_breaker) = circuit_breakers.get("llm_service") {
             // Use circuit breaker for LLM-based judges
-            circuit_breaker.execute(|| async {
-                let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
-                let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
-                    .map_err(|e| AgencyError::new(
-                        crate::error_handling::ErrorCategory::Validation,
-                        "INVALID_WORKING_SPEC",
-                        &format!("Failed to parse working spec: {}", e),
-                        crate::error_handling::ErrorSeverity::Error,
-                        "council",
-                        "conduct_single_judge_review_with_error_handling"
-                    ))?;
+            circuit_breaker
+                .execute(|| async {
+                    let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
+                    let working_spec: crate::council_types::WorkingSpec =
+                        serde_json::from_str(&context.working_spec).map_err(|e| {
+                            AgencyError::new(
+                                crate::error_handling::ErrorCategory::Validation,
+                                "INVALID_WORKING_SPEC",
+                                &format!("Failed to parse working spec: {}", e),
+                                crate::error_handling::ErrorSeverity::Error,
+                                "council",
+                                "conduct_single_judge_review_with_error_handling",
+                            )
+                        })?;
 
-                // TODO: Use proper description field instead of title
-                // - [ ] Extract description from working_spec.description field
-                // - [ ] Use description for judge evaluation instead of title
-                // - [ ] Handle missing description gracefully with fallback
-                // - [ ] Add unit tests with various description formats
-                // - [ ] Add integration tests with real judge evaluations
-                judge.evaluate(
-                    spec_id,
-                    &working_spec.title,
-                    &working_spec.title,
-                    &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
-                ).await.map_err(|e| {
-                    AgencyError::new(
-                        crate::error_handling::ErrorCategory::ExternalService,
-                        "JUDGE_REVIEW_FAILED",
-                        &format!("Judge review failed: {}", e),
-                        crate::error_handling::ErrorSeverity::Error,
-                        "council",
-                        "conduct_single_judge_review_with_error_handling"
-                    )
+                    // TODO: Use proper description field instead of title
+                    // - [ ] Extract description from working_spec.description field
+                    // - [ ] Use description for judge evaluation instead of title
+                    // - [ ] Handle missing description gracefully with fallback
+                    // - [ ] Add unit tests with various description formats
+                    // - [ ] Add integration tests with real judge evaluations
+                    judge
+                        .evaluate(
+                            spec_id,
+                            &working_spec.title,
+                            &working_spec.title,
+                            &working_spec
+                                .acceptance_criteria
+                                .iter()
+                                .map(|ac| ac.then.clone())
+                                .collect::<Vec<_>>(),
+                        )
+                        .await
+                        .map_err(|e| {
+                            AgencyError::new(
+                                crate::error_handling::ErrorCategory::ExternalService,
+                                "JUDGE_REVIEW_FAILED",
+                                &format!("Judge review failed: {}", e),
+                                crate::error_handling::ErrorSeverity::Error,
+                                "council",
+                                "conduct_single_judge_review_with_error_handling",
+                            )
+                        })
                 })
-            }).await
+                .await
         } else {
             // Direct execution for other judges
             {
                 let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
-                let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
-                    .map_err(|e| AgencyError::new(
-                        crate::error_handling::ErrorCategory::Validation,
-                        "INVALID_WORKING_SPEC",
-                        &format!("Failed to parse working spec: {}", e),
-                        crate::error_handling::ErrorSeverity::Error,
-                        "council",
-                        "conduct_single_judge_review_with_error_handling"
-                    ))?;
+                let working_spec: crate::council_types::WorkingSpec =
+                    serde_json::from_str(&context.working_spec).map_err(|e| {
+                        AgencyError::new(
+                            crate::error_handling::ErrorCategory::Validation,
+                            "INVALID_WORKING_SPEC",
+                            &format!("Failed to parse working spec: {}", e),
+                            crate::error_handling::ErrorSeverity::Error,
+                            "council",
+                            "conduct_single_judge_review_with_error_handling",
+                        )
+                    })?;
 
                 // TODO: Use proper description field instead of title (see line 882 for details)
-                judge.evaluate(
-                    spec_id,
-                    &working_spec.title,
-                    &working_spec.title,
-                    &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
-                ).await
-            }.map_err(|e| {
+                judge
+                    .evaluate(
+                        spec_id,
+                        &working_spec.title,
+                        &working_spec.title,
+                        &working_spec
+                            .acceptance_criteria
+                            .iter()
+                            .map(|ac| ac.then.clone())
+                            .collect::<Vec<_>>(),
+                    )
+                    .await
+            }
+            .map_err(|e| {
                 AgencyError::new(
                     crate::error_handling::ErrorCategory::ExternalService,
                     "JUDGE_REVIEW_FAILED",
                     &format!("Judge review failed: {}", e),
                     crate::error_handling::ErrorSeverity::Error,
                     "council",
-                    "conduct_single_judge_review_with_error_handling"
+                    "conduct_single_judge_review_with_error_handling",
                 )
             })
         };
@@ -980,31 +1064,40 @@ impl Council {
                             // Recovery successful, try again
                             {
                                 let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
-                                let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
-                                    .map_err(|e| AgencyError::new(
-                                        crate::error_handling::ErrorCategory::Validation,
-                                        "INVALID_WORKING_SPEC",
-                                        &format!("Failed to parse working spec: {}", e),
-                                        crate::error_handling::ErrorSeverity::Error,
-                                        "council",
-                                        "conduct_single_judge_review_with_error_handling"
-                                    ))?;
-                                
+                                let working_spec: crate::council_types::WorkingSpec =
+                                    serde_json::from_str(&context.working_spec).map_err(|e| {
+                                        AgencyError::new(
+                                            crate::error_handling::ErrorCategory::Validation,
+                                            "INVALID_WORKING_SPEC",
+                                            &format!("Failed to parse working spec: {}", e),
+                                            crate::error_handling::ErrorSeverity::Error,
+                                            "council",
+                                            "conduct_single_judge_review_with_error_handling",
+                                        )
+                                    })?;
+
                                 // TODO: Use proper description field instead of title (see line 882 for details)
-                                judge.evaluate(
-                                    spec_id,
-                                    &working_spec.title,
-                                    &working_spec.title,
-                                    &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
-                                ).await
-                            }.map_err(|e| {
+                                judge
+                                    .evaluate(
+                                        spec_id,
+                                        &working_spec.title,
+                                        &working_spec.title,
+                                        &working_spec
+                                            .acceptance_criteria
+                                            .iter()
+                                            .map(|ac| ac.then.clone())
+                                            .collect::<Vec<_>>(),
+                                    )
+                                    .await
+                            }
+                            .map_err(|e| {
                                 AgencyError::new(
                                     crate::error_handling::ErrorCategory::ExternalService,
                                     "JUDGE_REVIEW_FAILED_AFTER_RECOVERY",
                                     &format!("Judge review failed even after recovery: {}", e),
                                     crate::error_handling::ErrorSeverity::Error,
                                     "council",
-                                    "conduct_single_judge_review_with_error_handling"
+                                    "conduct_single_judge_review_with_error_handling",
                                 )
                             })?
                         }
@@ -1039,17 +1132,28 @@ impl Council {
         let start_time = std::time::Instant::now();
         let verdict = {
             let spec_id = uuid::Uuid::new_v4(); // Generate a spec ID
-            let working_spec: crate::council_types::WorkingSpec = serde_json::from_str(&context.working_spec)
-                .map_err(|e| CouncilError::InvalidInput { message: format!("Failed to parse working spec: {}", e) })?;
-            
+            let working_spec: crate::council_types::WorkingSpec =
+                serde_json::from_str(&context.working_spec).map_err(|e| {
+                    CouncilError::InvalidInput {
+                        message: format!("Failed to parse working spec: {}", e),
+                    }
+                })?;
+
             // TODO: Use proper description field instead of title (see line 882 for details)
-            judge.evaluate(
-                spec_id,
-                &working_spec.title,
-                &working_spec.title, // TODO: Extract proper description from working spec
-                &working_spec.acceptance_criteria.iter().map(|ac| ac.then.clone()).collect::<Vec<_>>(),
-            ).await
-        }.map_err(|e| CouncilError::JudgeError {
+            judge
+                .evaluate(
+                    spec_id,
+                    &working_spec.title,
+                    &working_spec.title, // TODO: Extract proper description from working spec
+                    &working_spec
+                        .acceptance_criteria
+                        .iter()
+                        .map(|ac| ac.then.clone())
+                        .collect::<Vec<_>>(),
+                )
+                .await
+        }
+        .map_err(|e| CouncilError::JudgeError {
             judge_id: judge.config().judge_id.clone(),
             message: format!("Judge evaluation failed: {}", e),
         })?;
@@ -1064,7 +1168,7 @@ impl Council {
             reasoning: "Mock judge decision".to_string(),
             processing_time_ms,
             model_version: "mock-model-v1".to_string(), // In real implementation, get from judge
-            token_usage: 100, // Default token usage
+            token_usage: 100,                           // Default token usage
             metadata: std::collections::HashMap::new(),
         })
     }
@@ -1102,86 +1206,89 @@ impl Council {
         let historical_precedents = if self.has_memory_support() {
             // Use async block to call async method in sync context
             tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current()
-                    .block_on(async {
-                        // Convert ReviewContext to proper types
-                        let working_spec = crate::council_types::WorkingSpec {
-                            version: "1.0".to_string(),
-                            id: format!("review_{}", review_context.session_id),
-                            title: "Review Session".to_string(),
-                            description: review_context.working_spec.clone(),
-                            goals: vec![],
-                            risk_tier: review_context.risk_tier as u32,
-                            constraints: crate::council_types::WorkingSpecConstraints {
-                                max_duration_minutes: Some(60),
-                                max_iterations: Some(10),
-                                budget_limits: None,
-                                scope_restrictions: None,
-                            },
-                            acceptance_criteria: vec![],
-                            test_plan: crate::council_types::TestPlan {
-                                unit_tests: vec![],
-                                integration_tests: vec![],
-                                e2e_scenarios: vec![],
-                                coverage_targets: None,
-                            },
-                            rollback_plan: agent_agency_contracts::RollbackPlan {
-                                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
-                                automated_steps: vec!["Revert git commit".to_string()],
-                                manual_steps: vec![],
-                                data_impact: agent_agency_contracts::DataImpact::None,
-                                downtime_required: Some(false),
-                                rollback_window_minutes: Some(5),
-                            },
-                            context: agent_agency_contracts::WorkingSpecContext {
-                                workspace_root: std::env::current_dir().unwrap_or_default().to_string_lossy().to_string(),
-                                git_branch: "main".to_string(),
-                                recent_changes: vec![],
-                                dependencies: std::collections::HashMap::new(),
-                                environment: agent_agency_contracts::task_request::Environment::Development,
-                            },
-                            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
-                                max_files: 50,
-                                max_loc: 1000,
-                                max_migrations: 5,
-                                allow_breaking_changes: false,
-                                allow_new_dependencies: false,
-                                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
-                            },
-                            created_at: chrono::Utc::now(),
-                            updated_at: chrono::Utc::now(),
+                tokio::runtime::Handle::current().block_on(async {
+                    // Convert ReviewContext to proper types
+                    let working_spec = crate::council_types::WorkingSpec {
+                        version: "1.0".to_string(),
+                        id: format!("review_{}", review_context.session_id),
+                        title: "Review Session".to_string(),
+                        description: review_context.working_spec.clone(),
+                        goals: vec![],
+                        risk_tier: review_context.risk_tier as u32,
+                        constraints: crate::council_types::WorkingSpecConstraints {
+                            max_duration_minutes: Some(60),
+                            max_iterations: Some(10),
+                            budget_limits: None,
+                            scope_restrictions: None,
+                        },
+                        acceptance_criteria: vec![],
+                        test_plan: crate::council_types::TestPlan {
+                            unit_tests: vec![],
+                            integration_tests: vec![],
+                            e2e_scenarios: vec![],
                             coverage_targets: None,
-                            file_changes: vec![],
-                            milestones: vec![],
-                            quality_gates: None,
-                            scope: vec![],
-                            overview: String::new(),
-                            non_functional_requirements: None,
-                            validation_results: None,
-                            metadata: None,
-                        };
-                        let risk_tier = match working_spec.risk_tier {
-                            1 => agent_agency_contracts::types::prelude::RiskTier::Tier1,
-                            2 => agent_agency_contracts::types::prelude::RiskTier::Tier2,
-                            3 => agent_agency_contracts::types::prelude::RiskTier::Tier3,
-                            _ => agent_agency_contracts::types::prelude::RiskTier::Tier3,
-                        };
-                        self.retrieve_historical_decisions(&working_spec, &risk_tier).await
-                    })
+                        },
+                        rollback_plan: agent_agency_contracts::RollbackPlan {
+                            strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+                            automated_steps: vec!["Revert git commit".to_string()],
+                            manual_steps: vec![],
+                            data_impact: agent_agency_contracts::DataImpact::None,
+                            downtime_required: Some(false),
+                            rollback_window_minutes: Some(5),
+                        },
+                        context: agent_agency_contracts::WorkingSpecContext {
+                            workspace_root: std::env::current_dir()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string(),
+                            git_branch: "main".to_string(),
+                            recent_changes: vec![],
+                            dependencies: std::collections::HashMap::new(),
+                            environment:
+                                agent_agency_contracts::task_request::Environment::Development,
+                        },
+                        change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                            max_files: 50,
+                            max_loc: 1000,
+                            max_migrations: 5,
+                            allow_breaking_changes: false,
+                            allow_new_dependencies: false,
+                            enforcement_mode:
+                                agent_agency_contracts::planning_io::BudgetEnforcement::Warning,
+                        },
+                        created_at: chrono::Utc::now(),
+                        updated_at: chrono::Utc::now(),
+                        coverage_targets: None,
+                        file_changes: vec![],
+                        milestones: vec![],
+                        quality_gates: None,
+                        scope: vec![],
+                        overview: String::new(),
+                        non_functional_requirements: None,
+                        validation_results: None,
+                        metadata: None,
+                    };
+                    let risk_tier = match working_spec.risk_tier {
+                        1 => agent_agency_contracts::types::prelude::RiskTier::Tier1,
+                        2 => agent_agency_contracts::types::prelude::RiskTier::Tier2,
+                        3 => agent_agency_contracts::types::prelude::RiskTier::Tier3,
+                        _ => agent_agency_contracts::types::prelude::RiskTier::Tier3,
+                    };
+                    self.retrieve_historical_decisions(&working_spec, &risk_tier)
+                        .await
+                })
             })
         } else {
             // Fallback to minimal historical precedent if no memory
-            vec![
-                HistoricalDecision {
-                    decision_id: "default-001".to_string(),
-                    similar_task_features: vec!["general_development".to_string()],
-                    outcome: crate::decision_making::DecisionOutcome::Success {
-                        quality_score: 0.7,
-                        time_to_completion: 3600 * 24 * 14, // 2 weeks
-                    },
-                    lessons_learned: vec!["Quality requires planning".to_string()],
-                }
-            ]
+            vec![HistoricalDecision {
+                decision_id: "default-001".to_string(),
+                similar_task_features: vec!["general_development".to_string()],
+                outcome: crate::decision_making::DecisionOutcome::Success {
+                    quality_score: 0.7,
+                    time_to_completion: 3600 * 24 * 14, // 2 weeks
+                },
+                lessons_learned: vec!["Quality requires planning".to_string()],
+            }]
         };
 
         let emergency_flags = EmergencyFlags {
@@ -1222,19 +1329,24 @@ impl Council {
 
     /// Remove a judge from the council
     pub fn remove_judge(&mut self, judge_id: &str) {
-        self.available_judges.retain(|judge| judge.config().judge_id != judge_id);
+        self.available_judges
+            .retain(|judge| judge.config().judge_id != judge_id);
     }
 
     /// Get council health metrics
     pub fn health_metrics(&self) -> CouncilHealthMetrics {
-        let available_judges = self.available_judges.iter()
+        let available_judges = self
+            .available_judges
+            .iter()
             .filter(|judge| judge.is_available())
             .count();
 
         let average_response_time = if !self.available_judges.is_empty() {
-            self.available_judges.iter()
+            self.available_judges
+                .iter()
                 .map(|judge| judge.health_metrics().response_time_avg_ms as u64)
-                .sum::<u64>() / self.available_judges.len() as u64
+                .sum::<u64>()
+                / self.available_judges.len() as u64
         } else {
             0
         };
@@ -1249,9 +1361,12 @@ impl Council {
 
     /// Check if memory system is available
     pub fn has_memory_support(&self) -> bool {
-        #[cfg(feature = "memory")] {
+        #[cfg(feature = "memory")]
+        {
             self.memory_system.is_some()
-        } #[cfg(not(feature = "memory"))] {
+        }
+        #[cfg(not(feature = "memory"))]
+        {
             false
         }
     }
@@ -1261,7 +1376,7 @@ impl Council {
     async fn retrieve_historical_decisions(
         &self,
         working_spec: &agent_agency_contracts::WorkingSpec,
-        risk_tier: &agent_agency_contracts::types::prelude::RiskTier,
+        _risk_tier: &agent_agency_contracts::types::prelude::RiskTier,
     ) -> Vec<crate::decision_making::HistoricalDecision> {
         if let Some(ref memory_system) = self.memory_system {
             // Create context for memory retrieval
@@ -1275,12 +1390,16 @@ impl Council {
                 description: format!("Making council decision for spec: {}", working_spec.title),
             };
 
-            match memory_system.retrieve_contextual_memories(&task_context, 10).await {
-                Ok(memories) => {
-                    memories.into_iter()
-                        .filter_map(|memory| self.convert_contextual_memory_to_historical_decision(&memory))
-                        .collect()
-                }
+            match memory_system
+                .retrieve_contextual_memories(&task_context, 10)
+                .await
+            {
+                Ok(memories) => memories
+                    .into_iter()
+                    .filter_map(|memory| {
+                        self.convert_contextual_memory_to_historical_decision(&memory)
+                    })
+                    .collect(),
                 Err(e) => {
                     warn!("Failed to retrieve historical decisions from memory: {}", e);
                     vec![]
@@ -1320,7 +1439,9 @@ impl Council {
                 }
             }
             false => {
-                let reason = experience.outcome.error_message
+                let reason = experience
+                    .outcome
+                    .error_message
                     .clone()
                     .unwrap_or_else(|| "Unknown failure".to_string());
                 crate::decision_making::DecisionOutcome::Failure {
@@ -1331,7 +1452,10 @@ impl Council {
         };
 
         // Extract similar task features from description
-        let similar_task_features = experience.context.description.split_whitespace()
+        let similar_task_features = experience
+            .context
+            .description
+            .split_whitespace()
             .take(5) // Use first 5 words as features
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
@@ -1359,7 +1483,11 @@ impl Council {
         if let Some(ref memory_system) = self.memory_system {
             let experience_context = memory_types::ExperienceContext {
                 description: format!("Council decision outcome for: {}", working_spec.title),
-                domain: vec!["council".to_string(), "decision_making".to_string(), "learning".to_string()],
+                domain: vec![
+                    "council".to_string(),
+                    "decision_making".to_string(),
+                    "learning".to_string(),
+                ],
                 task_type: "council_decision_outcome".to_string(),
                 temporal_context: Some(agent_memory::TemporalContext {
                     timestamp: chrono::Utc::now(),
@@ -1371,7 +1499,9 @@ impl Council {
 
             // Determine success based on decision
             let (success, performance_score) = match final_decision {
-                crate::decision_making::FinalDecision::Proceed { confidence, .. } => (true, Some(*confidence)),
+                crate::decision_making::FinalDecision::Proceed { confidence, .. } => {
+                    (true, Some(*confidence))
+                }
                 crate::decision_making::FinalDecision::Refine { .. } => (false, Some(0.3f64)),
                 crate::decision_making::FinalDecision::Reject { .. } => (false, Some(0.0f64)),
                 crate::decision_making::FinalDecision::Escalate { .. } => (false, Some(0.5f64)),
@@ -1381,12 +1511,21 @@ impl Council {
                 success,
                 performance_score: performance_score.map(|s| s as f32),
                 quality_score: performance_score.unwrap_or(0.0) as f64,
-                error_message: if success { None } else { Some("decision_rejected".to_string()) },
+                error_message: if success {
+                    None
+                } else {
+                    Some("decision_rejected".to_string())
+                },
                 execution_time_ms: Some(1000), // Default execution time
                 learned_capabilities: vec!["council_decision_making".to_string()],
-                metadata: std::collections::HashMap::from([
-                    ("success_factors".to_string(), serde_json::json!(if success { vec!["quality_approved"] } else { vec![] })),
-                ]),
+                metadata: std::collections::HashMap::from([(
+                    "success_factors".to_string(),
+                    serde_json::json!(if success {
+                        vec!["quality_approved"]
+                    } else {
+                        vec![]
+                    }),
+                )]),
             };
 
             let experience = memory_types::AgentExperience {
@@ -1398,10 +1537,12 @@ impl Council {
                 input: serde_json::to_string(&serde_json::json!({
                     "working_spec": working_spec,
                     "risk_tier": risk_tier
-                })).unwrap_or_else(|_| "{}".to_string()),
+                }))
+                .unwrap_or_else(|_| "{}".to_string()),
                 output: serde_json::to_string(&serde_json::json!({
                     "final_decision": format!("{:?}", final_decision)
-                })).unwrap_or_else(|_| "{}".to_string()),
+                }))
+                .unwrap_or_else(|_| "{}".to_string()),
                 outcome,
                 memory_type: agent_memory::memory_types::MemoryType::Episodic,
                 timestamp: chrono::Utc::now(),
@@ -1427,41 +1568,42 @@ impl Council {
     }
 
     /// Update judge performance metrics after a review
-    async fn update_judge_performance(
-        &self,
-        judge_id: &str,
-        response_time_ms: u64,
-        success: bool,
-    ) {
+    async fn update_judge_performance(&self, judge_id: &str, response_time_ms: u64, success: bool) {
         let mut performance = self.judge_performance.write().await;
-        let metrics = performance.entry(judge_id.to_string())
-            .or_insert_with(|| JudgePerformanceMetrics {
-                avg_response_time_ms: 0,
-                success_rate: 0.0,
-                review_count: 0,
-                last_used_at: None,
-            });
+        let metrics =
+            performance
+                .entry(judge_id.to_string())
+                .or_insert_with(|| JudgePerformanceMetrics {
+                    avg_response_time_ms: 0,
+                    success_rate: 0.0,
+                    review_count: 0,
+                    last_used_at: None,
+                });
 
         // Update metrics using exponential moving average
         metrics.review_count += 1;
-        
+
         // Update average response time (exponential moving average with alpha=0.3)
         let alpha = 0.3;
-        metrics.avg_response_time_ms = ((alpha * response_time_ms as f64) + 
-            ((1.0 - alpha) * metrics.avg_response_time_ms as f64)) as u64;
-        
+        metrics.avg_response_time_ms = ((alpha * response_time_ms as f64)
+            + ((1.0 - alpha) * metrics.avg_response_time_ms as f64))
+            as u64;
+
         // Update success rate (exponential moving average)
         let success_value = if success { 1.0 } else { 0.0 };
         metrics.success_rate = (alpha * success_value) + ((1.0 - alpha) * metrics.success_rate);
-        
+
         // Update last used timestamp
         metrics.last_used_at = Some(chrono::Utc::now());
     }
 
     /// Start a new council session for reviewing a task
-    pub async fn start_session(&self, task_descriptor: &TaskDescriptor) -> CouncilResult<CouncilSession> {
-        use uuid::Uuid;
+    pub async fn start_session(
+        &self,
+        task_descriptor: &TaskDescriptor,
+    ) -> CouncilResult<CouncilSession> {
         use chrono::Utc;
+        use uuid::Uuid;
 
         // Convert task descriptor to working spec format
         let working_spec = self.convert_task_to_working_spec(task_descriptor)?;
@@ -1483,8 +1625,10 @@ impl Council {
             session_id: session.session_id.clone(),
             working_spec: serde_json::to_string(&session.working_spec).unwrap_or_default(),
             risk_tier: match task_descriptor.priority {
-                agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::High => 1,
-                agent_agency_contracts::types::planning::TaskPriority::Normal | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Critical
+                | agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Normal
+                | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
                 agent_agency_contracts::types::planning::TaskPriority::Low => 3,
                 agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
             },
@@ -1493,16 +1637,21 @@ impl Council {
         };
 
         // Select judges for this session
-        self.select_judges_for_session(&mut session, &context).await?;
+        self.select_judges_for_session(&mut session, &context)
+            .await?;
 
         Ok(session)
     }
 
-
     /// Convert task descriptor to working spec format
-    fn convert_task_to_working_spec(&self, task_descriptor: &TaskDescriptor) -> CouncilResult<agent_agency_contracts::WorkingSpec> {
-        use agent_agency_contracts::{WorkingSpec, WorkingSpecConstraints, WorkingSpecContext, TestPlan, RollbackPlan};
+    fn convert_task_to_working_spec(
+        &self,
+        task_descriptor: &TaskDescriptor,
+    ) -> CouncilResult<agent_agency_contracts::WorkingSpec> {
         use agent_agency_contracts::task_request::Environment;
+        use agent_agency_contracts::{
+            RollbackPlan, TestPlan, WorkingSpec, WorkingSpecConstraints, WorkingSpecContext,
+        };
 
         // Create a basic working spec from task descriptor
         let working_spec = WorkingSpec {
@@ -1527,9 +1676,11 @@ impl Council {
                 rollback_window_minutes: Some(30),
             },
             risk_tier: match task_descriptor.priority {
-                agent_agency_contracts::types::planning::TaskPriority::Critical | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Critical
+                | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
                 agent_agency_contracts::types::planning::TaskPriority::High => 1,
-                agent_agency_contracts::types::planning::TaskPriority::Normal | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Normal
+                | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
                 agent_agency_contracts::types::planning::TaskPriority::Low => 3,
             },
             constraints: WorkingSpecConstraints {
@@ -1577,7 +1728,10 @@ impl CouncilSession {
     /// or Council.review_working_spec() to populate final_decision. If the session hasn't been reviewed yet,
     /// use Council.review_working_spec() instead.
     #[cfg(feature = "api-server")]
-    pub async fn review_task(&self, task: &crate::OrchestratedTask) -> CouncilResult<crate::council_types::ConsensusResult> {
+    pub async fn review_task(
+        &self,
+        task: &crate::OrchestratedTask,
+    ) -> CouncilResult<crate::council_types::ConsensusResult> {
         // If session already has a final decision, convert it to ConsensusResult
         if let Some(ref decision) = self.final_decision {
             match decision {
@@ -1585,30 +1739,39 @@ impl CouncilSession {
                     return Ok(crate::council_types::ConsensusResult {
                         approved: true,
                         confidence: *confidence,
-                        reason: format!("Task approved by council with {:.1}% confidence", confidence * 100.0),
+                        reason: format!(
+                            "Task approved by council with {:.1}% confidence",
+                            confidence * 100.0
+                        ),
                     });
-                },
-                FinalDecision::Refine { refinement_directive, .. } => {
+                }
+                FinalDecision::Refine {
+                    refinement_directive,
+                    ..
+                } => {
                     return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.5,
-                        reason: format!("Task requires refinement: {} changes required", refinement_directive.required_changes.len()),
+                        reason: format!(
+                            "Task requires refinement: {} changes required",
+                            refinement_directive.required_changes.len()
+                        ),
                     });
-                },
+                }
                 FinalDecision::Reject { reason, .. } => {
                     return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.2,
                         reason: reason.clone(),
                     });
-                },
+                }
                 FinalDecision::Escalate { reason, .. } => {
                     return Ok(crate::council_types::ConsensusResult {
                         approved: false,
                         confidence: 0.3,
                         reason: reason.clone(),
                     });
-                },
+                }
             }
         }
 
@@ -1624,15 +1787,18 @@ impl CouncilSession {
         //      - Aggregate verdicts
         //      - Make final decision
         //   4. Use the returned CouncilSession's final_decision
-        
+
         warn!("CouncilSession.review_task() called on session without final_decision. Use Council.review_working_spec() to perform full review.");
-        
+
         // Fallback: return basic approval if session status indicates completion
         if matches!(self.status, SessionStatus::Completed) {
             Ok(crate::council_types::ConsensusResult {
                 approved: true,
                 confidence: 0.8,
-                reason: format!("Session {} completed without explicit decision", self.session_id),
+                reason: format!(
+                    "Session {} completed without explicit decision",
+                    self.session_id
+                ),
             })
         } else {
             Err(CouncilError::InvalidInput {
@@ -1657,9 +1823,9 @@ struct CouncilHealthMetrics {
 
 /// Create a default council with mock judges
 pub fn create_default_council() -> CouncilResult<Council> {
+    use crate::decision_making::create_decision_engine;
     use crate::judge_backup::mock::create_mock_judge_panel;
     use crate::verdict_aggregation::create_verdict_aggregator;
-    use crate::decision_making::create_decision_engine;
 
     let config = CouncilConfig {
         session_timeout_seconds: 300, // 5 minutes
@@ -1675,25 +1841,35 @@ pub fn create_default_council() -> CouncilResult<Council> {
         enable_error_recovery: true,
     };
 
-    let judges = create_mock_judge_panel().into_iter()
+    let judges = create_mock_judge_panel()
+        .into_iter()
         .map(|judge| Arc::from(judge) as Arc<dyn Judge>)
         .collect();
 
     let verdict_aggregator = Arc::new(create_verdict_aggregator());
     let decision_engine = create_decision_engine();
 
-    Ok(Council::new(config, judges, verdict_aggregator, decision_engine))
+    Ok(Council::new(
+        config,
+        judges,
+        verdict_aggregator,
+        decision_engine,
+    ))
 }
 
 /// Convert local WorkingSpec to contract WorkingSpec
 /// Note: council_types::WorkingSpec is a re-export of contracts::WorkingSpec, so this is just a clone
-fn convert_local_to_contract_spec(local_spec: &crate::council_types::WorkingSpec) -> agent_agency_contracts::WorkingSpec {
+fn convert_local_to_contract_spec(
+    local_spec: &crate::council_types::WorkingSpec,
+) -> agent_agency_contracts::WorkingSpec {
     // council_types::WorkingSpec is already contracts::WorkingSpec (it's a re-export from council_types.rs)
     local_spec.clone()
 }
 
 /// Convert local RiskTier to contract RiskTier
-fn convert_local_to_contract_risk_tier(local_tier: u8) -> agent_agency_contracts::task_request::RiskTier {
+fn convert_local_to_contract_risk_tier(
+    local_tier: u8,
+) -> agent_agency_contracts::task_request::RiskTier {
     match local_tier {
         1 => agent_agency_contracts::task_request::RiskTier::Tier1,
         2 => agent_agency_contracts::task_request::RiskTier::Tier2,
@@ -1704,12 +1880,12 @@ fn convert_local_to_contract_risk_tier(local_tier: u8) -> agent_agency_contracts
 
 impl Council {
     /// Conduct a debate between competing solutions from multiple workers
-    /// 
+    ///
     /// This implements the CAWS Debate protocol where:
     /// 1. Each worker defends its solution with evidence
     /// 2. Judges evaluate arguments (not raw data)
     /// 3. Highest-scoring solution wins
-    /// 
+    ///
     /// Scoring formula (from theory.md):
     /// S = 0.4E + 0.3B + 0.2G + 0.1P
     /// Where:
@@ -1734,7 +1910,7 @@ impl Council {
             let solution = &solutions[0];
             let plea = self.generate_worker_plea(solution).await?;
             let score = self.evaluate_solution_plea(&plea, solution).await?;
-            
+
             return Ok(DebateResult {
                 winner_solution_id: solution.solution_id.clone(),
                 winner_worker_id: solution.worker_id.clone(),
@@ -1745,7 +1921,10 @@ impl Council {
             });
         }
 
-        tracing::info!("Conducting debate between {} competing solutions", solutions.len());
+        tracing::info!(
+            "Conducting debate between {} competing solutions",
+            solutions.len()
+        );
 
         // Phase 1: Each worker defends its solution
         let mut pleas = Vec::new();
@@ -1762,8 +1941,13 @@ impl Council {
         }
 
         // Phase 3: Select highest-scoring solution
-        let winner = solution_scores.iter()
-            .max_by(|a, b| a.total_score.partial_cmp(&b.total_score).unwrap_or(std::cmp::Ordering::Equal))
+        let winner = solution_scores
+            .iter()
+            .max_by(|a, b| {
+                a.total_score
+                    .partial_cmp(&b.total_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .ok_or_else(|| CouncilError::InvalidInput {
                 message: "Failed to determine debate winner".to_string(),
             })?;
@@ -1771,7 +1955,7 @@ impl Council {
         // Calculate confidence based on score difference
         let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
         scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         let confidence = if scores.len() >= 2 {
             // Confidence based on gap between winner and second place
             let gap = scores[0] - scores[1];
@@ -1797,12 +1981,15 @@ impl Council {
     async fn generate_worker_plea(&self, solution: &WorkerSolution) -> CouncilResult<WorkerPlea> {
         // Extract strength claims from evidence
         let mut strength_claims = Vec::new();
-        
+
         // Evidence completeness claims
         if !solution.evidence.test_results.is_empty() {
-            strength_claims.push(format!("{} test cases passed", solution.evidence.test_results.len()));
+            strength_claims.push(format!(
+                "{} test cases passed",
+                solution.evidence.test_results.len()
+            ));
         }
-        
+
         if let Some(coverage) = solution.evidence.coverage_metrics {
             if coverage >= 0.8 {
                 strength_claims.push(format!("High test coverage: {:.1}%", coverage * 100.0));
@@ -1821,7 +2008,12 @@ impl Council {
         }
 
         // Gate integrity claims
-        if solution.evidence.lint_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+        if solution
+            .evidence
+            .lint_results
+            .iter()
+            .all(|r| r.contains("passed") || r.contains("ok"))
+        {
             strength_claims.push("All linting checks passed".to_string());
         }
 
@@ -1835,7 +2027,12 @@ impl Council {
         if !solution.evidence.budget_adherence.within_budget {
             weakness_acknowledgments.push("Budget exceeded".to_string());
         }
-        if solution.evidence.coverage_metrics.map(|c| c < 0.8).unwrap_or(true) {
+        if solution
+            .evidence
+            .coverage_metrics
+            .map(|c| c < 0.8)
+            .unwrap_or(true)
+        {
             weakness_acknowledgments.push("Test coverage below threshold".to_string());
         }
         if solution.evidence.test_results.is_empty() {
@@ -1846,7 +2043,11 @@ impl Council {
         let evidence_summary = format!(
             "Tests: {}, Coverage: {:.1}%, Budget: {} files/{} lines, Lint: {} checks",
             solution.evidence.test_results.len(),
-            solution.evidence.coverage_metrics.map(|c| c * 100.0).unwrap_or(0.0),
+            solution
+                .evidence
+                .coverage_metrics
+                .map(|c| c * 100.0)
+                .unwrap_or(0.0),
             solution.evidence.budget_adherence.files_changed,
             solution.evidence.budget_adherence.lines_changed,
             solution.evidence.lint_results.len(),
@@ -1854,10 +2055,7 @@ impl Council {
 
         let defense_argument = format!(
             "Solution {} proposes: {}\n\nEvidence: {}\n\nRationale: {}",
-            solution.solution_id,
-            solution.working_spec.title,
-            evidence_summary,
-            solution.rationale,
+            solution.solution_id, solution.working_spec.title, evidence_summary, solution.rationale,
         );
 
         Ok(WorkerPlea {
@@ -1951,13 +2149,15 @@ impl Council {
 
         // Calculate adherence percentage for both files and lines
         let files_adherence = if budget.max_files_allowed > 0 {
-            (budget.max_files_allowed as f64 - budget.files_changed as f64) / budget.max_files_allowed as f64
+            (budget.max_files_allowed as f64 - budget.files_changed as f64)
+                / budget.max_files_allowed as f64
         } else {
             1.0
         };
 
         let lines_adherence = if budget.max_lines_allowed > 0 {
-            (budget.max_lines_allowed as f64 - budget.lines_changed as f64) / budget.max_lines_allowed as f64
+            (budget.max_lines_allowed as f64 - budget.lines_changed as f64)
+                / budget.max_lines_allowed as f64
         } else {
             1.0
         };
@@ -1973,7 +2173,12 @@ impl Council {
 
         // Test results gate
         total_gates += 1;
-        if !evidence.test_results.is_empty() && evidence.test_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+        if !evidence.test_results.is_empty()
+            && evidence
+                .test_results
+                .iter()
+                .all(|r| r.contains("passed") || r.contains("ok"))
+        {
             passed_gates += 1;
         }
 
@@ -1987,7 +2192,12 @@ impl Council {
 
         // Lint gate
         total_gates += 1;
-        if !evidence.lint_results.is_empty() && evidence.lint_results.iter().all(|r| r.contains("passed") || r.contains("ok")) {
+        if !evidence.lint_results.is_empty()
+            && evidence
+                .lint_results
+                .iter()
+                .all(|r| r.contains("passed") || r.contains("ok"))
+        {
             passed_gates += 1;
         }
 
@@ -2056,19 +2266,29 @@ impl Council {
         );
 
         notes.push_str("Scoring breakdown:\n");
-        notes.push_str(&format!("  - Evidence Completeness: {:.3}\n", winner.evidence_completeness));
-        notes.push_str(&format!("  - Budget Adherence: {:.3}\n", winner.budget_adherence));
-        notes.push_str(&format!("  - Gate Integrity: {:.3}\n", winner.gate_integrity));
-        notes.push_str(&format!("  - Provenance Clarity: {:.3}\n", winner.provenance_clarity));
+        notes.push_str(&format!(
+            "  - Evidence Completeness: {:.3}\n",
+            winner.evidence_completeness
+        ));
+        notes.push_str(&format!(
+            "  - Budget Adherence: {:.3}\n",
+            winner.budget_adherence
+        ));
+        notes.push_str(&format!(
+            "  - Gate Integrity: {:.3}\n",
+            winner.gate_integrity
+        ));
+        notes.push_str(&format!(
+            "  - Provenance Clarity: {:.3}\n",
+            winner.provenance_clarity
+        ));
 
         if scores.len() > 1 {
             notes.push_str("\nAll solutions scored:\n");
             for score in scores {
                 notes.push_str(&format!(
                     "  - Solution {} (Worker {}): {:.3}\n",
-                    score.solution_id,
-                    score.worker_id,
-                    score.total_score,
+                    score.solution_id, score.worker_id, score.total_score,
                 ));
             }
         }

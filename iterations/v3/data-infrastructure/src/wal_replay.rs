@@ -8,10 +8,10 @@ use chrono::{DateTime, Utc};
 use serde_json::Value as JsonValue;
 use sqlx::{PgPool, Transaction};
 use std::sync::Arc;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::wal_storage::{WalRecord, WalOperationType, WalStorage};
+use crate::wal_storage::{WalOperationType, WalRecord, WalStorage};
 
 /// WAL replay configuration
 #[derive(Debug, Clone)]
@@ -90,16 +90,21 @@ impl WalReplayEngine {
     ) -> Result<WalReplayStatus> {
         let replay_id = Uuid::new_v4();
         let start_time = Utc::now();
-        
-        info!("Starting WAL replay: {} from {} to {}", 
-              replay_id, backup_time, config.target_time);
+
+        info!(
+            "Starting WAL replay: {} from {} to {}",
+            replay_id, backup_time, config.target_time
+        );
 
         // Get WAL records for replay
-        let records = self.storage.get_records_for_replay(
-            backup_time,
-            config.target_time,
-            config.table_filter.as_deref(),
-        ).await?;
+        let records = self
+            .storage
+            .get_records_for_replay(
+                backup_time,
+                config.target_time,
+                config.table_filter.as_deref(),
+            )
+            .await?;
 
         if records.is_empty() {
             info!("No WAL records to replay");
@@ -132,9 +137,9 @@ impl WalReplayEngine {
         };
 
         // Group records by transaction for atomic replay
-        let mut records_by_transaction: std::collections::HashMap<Uuid, Vec<WalRecord>> = 
+        let mut records_by_transaction: std::collections::HashMap<Uuid, Vec<WalRecord>> =
             std::collections::HashMap::new();
-        
+
         for record in records {
             records_by_transaction
                 .entry(record.transaction_id)
@@ -151,7 +156,7 @@ impl WalReplayEngine {
 
         for transaction_id in sorted_transactions {
             let transaction_records = records_by_transaction.get(transaction_id).unwrap();
-            
+
             match self.replay_transaction(transaction_records, &config).await {
                 Ok(record_ids) => {
                     applied_record_ids.extend(record_ids);
@@ -161,7 +166,7 @@ impl WalReplayEngine {
                 Err(e) => {
                     status.records_failed += transaction_records.len();
                     error!("Failed to replay transaction {}: {}", transaction_id, e);
-                    
+
                     if config.stop_on_error {
                         status.status = ReplayStatus::Failed;
                         status.error_message = Some(e.to_string());
@@ -171,7 +176,7 @@ impl WalReplayEngine {
             }
 
             status.records_processed += transaction_records.len();
-            status.progress_percent = 
+            status.progress_percent =
                 (status.records_processed as f64 / total_records as f64) * 100.0;
 
             // Update checkpoint periodically
@@ -180,9 +185,9 @@ impl WalReplayEngine {
                     warn!("Failed to mark records as applied: {}", e);
                 }
                 applied_record_ids.clear();
-                
-                self.create_checkpoint(&replay_id, status.records_processed, 
-                                     *transaction_id).await?;
+
+                self.create_checkpoint(&replay_id, status.records_processed, *transaction_id)
+                    .await?;
             }
         }
 
@@ -197,9 +202,17 @@ impl WalReplayEngine {
         status.status = ReplayStatus::Completed;
         status.progress_percent = 100.0;
 
-        info!("WAL replay completed: {} ({} records, {} transactions, {}ms)",
-              replay_id, status.records_applied, status.transactions_processed,
-              status.end_time.unwrap().signed_duration_since(start_time).num_milliseconds());
+        info!(
+            "WAL replay completed: {} ({} records, {} transactions, {}ms)",
+            replay_id,
+            status.records_applied,
+            status.transactions_processed,
+            status
+                .end_time
+                .unwrap()
+                .signed_duration_since(start_time)
+                .num_milliseconds()
+        );
 
         Ok(status)
     }
@@ -236,7 +249,10 @@ impl WalReplayEngine {
             match self.apply_record(&mut tx, record).await {
                 Ok(()) => {
                     applied_ids.push(record.id);
-                    debug!("Applied WAL record: {} ({})", record.id, record.operation_type);
+                    debug!(
+                        "Applied WAL record: {} ({})",
+                        record.id, record.operation_type
+                    );
                 }
                 Err(e) => {
                     warn!("Failed to apply WAL record {}: {}", record.id, e);
@@ -249,7 +265,9 @@ impl WalReplayEngine {
         }
 
         // Commit transaction
-        tx.commit().await.context("Failed to commit transaction replay")?;
+        tx.commit()
+            .await
+            .context("Failed to commit transaction replay")?;
 
         Ok(applied_ids)
     }
@@ -286,7 +304,9 @@ impl WalReplayEngine {
         tx: &mut Transaction<'_, sqlx::Postgres>,
         record: &WalRecord,
     ) -> Result<()> {
-        let new_data = record.new_data.as_ref()
+        let new_data = record
+            .new_data
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("INSERT operation missing new_data"))?;
 
         let columns: Vec<String> = if let Some(obj) = new_data.as_object() {
@@ -295,13 +315,9 @@ impl WalReplayEngine {
             return Err(anyhow::anyhow!("Invalid new_data format for INSERT"));
         };
 
-        let placeholders: Vec<String> = (1..=columns.len())
-            .map(|i| format!("${}", i))
-            .collect();
+        let placeholders: Vec<String> = (1..=columns.len()).map(|i| format!("${}", i)).collect();
 
-        let _values: Vec<&JsonValue> = columns.iter()
-            .map(|col| &new_data[col])
-            .collect();
+        let _values: Vec<&JsonValue> = columns.iter().map(|col| &new_data[col]).collect();
 
         let query = format!(
             "INSERT INTO {}.{} ({}) VALUES ({})",
@@ -314,8 +330,10 @@ impl WalReplayEngine {
         sqlx::query(&query)
             .execute(&mut **tx)
             .await
-            .context(format!("Failed to apply INSERT to {}.{}", 
-                           record.schema_name, record.table_name))?;
+            .context(format!(
+                "Failed to apply INSERT to {}.{}",
+                record.schema_name, record.table_name
+            ))?;
 
         Ok(())
     }
@@ -326,11 +344,14 @@ impl WalReplayEngine {
         tx: &mut Transaction<'_, sqlx::Postgres>,
         record: &WalRecord,
     ) -> Result<()> {
-        let new_data = record.new_data.as_ref()
+        let new_data = record
+            .new_data
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("UPDATE operation missing new_data"))?;
 
         let updates: Vec<String> = if let Some(obj) = new_data.as_object() {
-            obj.keys().enumerate()
+            obj.keys()
+                .enumerate()
                 .map(|(i, col)| format!("{} = ${}", col, i + 1))
                 .collect()
         } else {
@@ -349,21 +370,24 @@ impl WalReplayEngine {
         } else if let Some(ref old_data) = record.old_data {
             // Use old_data to identify record (primary key fields)
             if let Some(obj) = old_data.as_object() {
-                let conditions: Vec<String> = obj.keys()
+                let conditions: Vec<String> = obj
+                    .keys()
                     .filter(|k| *k == "id" || k.ends_with("_id"))
                     .map(|k| format!("{} = '{}'", k, obj[k]))
                     .collect();
-                
+
                 if conditions.is_empty() {
                     return Err(anyhow::anyhow!("Cannot identify record for UPDATE"));
                 }
-                
+
                 conditions.join(" AND ")
             } else {
                 return Err(anyhow::anyhow!("Invalid old_data format for UPDATE"));
             }
         } else {
-            return Err(anyhow::anyhow!("UPDATE operation missing record identifier"));
+            return Err(anyhow::anyhow!(
+                "UPDATE operation missing record identifier"
+            ));
         };
 
         let query = format!(
@@ -377,8 +401,10 @@ impl WalReplayEngine {
         sqlx::query(&query)
             .execute(&mut **tx)
             .await
-            .context(format!("Failed to apply UPDATE to {}.{}", 
-                           record.schema_name, record.table_name))?;
+            .context(format!(
+                "Failed to apply UPDATE to {}.{}",
+                record.schema_name, record.table_name
+            ))?;
 
         Ok(())
     }
@@ -394,35 +420,38 @@ impl WalReplayEngine {
             format!("id = '{}'", record_id)
         } else if let Some(ref old_data) = record.old_data {
             if let Some(obj) = old_data.as_object() {
-                let conditions: Vec<String> = obj.keys()
+                let conditions: Vec<String> = obj
+                    .keys()
                     .filter(|k| *k == "id" || k.ends_with("_id"))
                     .map(|k| format!("{} = '{}'", k, obj[k]))
                     .collect();
-                
+
                 if conditions.is_empty() {
                     return Err(anyhow::anyhow!("Cannot identify record for DELETE"));
                 }
-                
+
                 conditions.join(" AND ")
             } else {
                 return Err(anyhow::anyhow!("Invalid old_data format for DELETE"));
             }
         } else {
-            return Err(anyhow::anyhow!("DELETE operation missing record identifier"));
+            return Err(anyhow::anyhow!(
+                "DELETE operation missing record identifier"
+            ));
         };
 
         let query = format!(
             "DELETE FROM {}.{} WHERE {}",
-            record.schema_name,
-            record.table_name,
-            where_clause
+            record.schema_name, record.table_name, where_clause
         );
 
         sqlx::query(&query)
             .execute(&mut **tx)
             .await
-            .context(format!("Failed to apply DELETE to {}.{}", 
-                           record.schema_name, record.table_name))?;
+            .context(format!(
+                "Failed to apply DELETE to {}.{}",
+                record.schema_name, record.table_name
+            ))?;
 
         Ok(())
     }
@@ -435,15 +464,16 @@ impl WalReplayEngine {
     ) -> Result<()> {
         let query = format!(
             "TRUNCATE TABLE {}.{}",
-            record.schema_name,
-            record.table_name
+            record.schema_name, record.table_name
         );
 
         sqlx::query(&query)
             .execute(&mut **tx)
             .await
-            .context(format!("Failed to apply TRUNCATE to {}.{}", 
-                           record.schema_name, record.table_name))?;
+            .context(format!(
+                "Failed to apply TRUNCATE to {}.{}",
+                record.schema_name, record.table_name
+            ))?;
 
         Ok(())
     }
@@ -454,7 +484,9 @@ impl WalReplayEngine {
         tx: &mut Transaction<'_, sqlx::Postgres>,
         record: &WalRecord,
     ) -> Result<()> {
-        let sql = record.sql_statement.as_ref()
+        let sql = record
+            .sql_statement
+            .as_ref()
             .ok_or_else(|| anyhow::anyhow!("DDL operation missing sql_statement"))?;
 
         sqlx::query(sql)
@@ -477,8 +509,11 @@ impl WalReplayEngine {
 
         if let Some(ref checksum) = record.checksum {
             if checksum != &expected {
-                return Err(anyhow::anyhow!("Checksum mismatch: expected {}, got {}", 
-                                          expected, checksum));
+                return Err(anyhow::anyhow!(
+                    "Checksum mismatch: expected {}, got {}",
+                    expected,
+                    checksum
+                ));
             }
         }
 
@@ -495,7 +530,7 @@ impl WalReplayEngine {
         sqlx::query(
             r#"
             INSERT INTO wal_replay_checkpoints (
-                replay_id, last_sequence_number, last_transaction_id, 
+                replay_id, last_sequence_number, last_transaction_id,
                 records_applied, status
             )
             VALUES ($1, $2, $3, $4, 'IN_PROGRESS')
@@ -517,4 +552,3 @@ impl WalReplayEngine {
         Ok(())
     }
 }
-

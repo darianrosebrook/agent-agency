@@ -4,11 +4,11 @@
 // This module provides a direct Core ML implementation using the agentbridge
 // FFI functions for Core ML model operations.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
-use std::path::Path;
-use std::ffi::CString;
+use schemars::JsonSchema;
 use std::collections::HashMap;
+use std::ffi::CString;
+use std::path::Path;
 
 // Import runtime check and FFI functions from model module
 use super::model::{coreml_runtime_available, coreml_unavailable_error};
@@ -121,7 +121,8 @@ impl CoreMLModel {
             return Err(coreml_unavailable_error());
         }
 
-        let path_str = path.to_str()
+        let path_str = path
+            .to_str()
             .ok_or_else(|| ANEError::InvalidInput("Invalid path encoding".to_string()))?;
 
         Ok(CoreMLModel {
@@ -168,11 +169,16 @@ impl CoreMLModel {
                 } else {
                     "Unknown error loading Core ML model".to_string()
                 };
-                return Err(ANEError::Internal(format!("Failed to load Core ML model: {}", error_msg)));
+                return Err(ANEError::Internal(format!(
+                    "Failed to load Core ML model: {}",
+                    error_msg
+                )));
             }
 
             if model_ref == 0 {
-                return Err(ANEError::Internal("Failed to create model handle".to_string()));
+                return Err(ANEError::Internal(
+                    "Failed to create model handle".to_string(),
+                ));
             }
 
             self.model_ref = Some(model_ref);
@@ -181,17 +187,23 @@ impl CoreMLModel {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+            Err(ANEError::Internal(
+                "Core ML not available on this platform".to_string(),
+            ))
         }
     }
 
     /// Get the model reference, loading if necessary
     fn get_model_ref(&mut self) -> Result<u64> {
         self.ensure_loaded()?;
-        self.model_ref.ok_or_else(|| ANEError::Internal("Model not loaded".to_string()))
+        self.model_ref
+            .ok_or_else(|| ANEError::Internal("Model not loaded".to_string()))
     }
 
-    pub fn prediction_from_features(&mut self, features: &MLFeatureProvider) -> Result<MLFeatureProvider> {
+    pub fn prediction_from_features(
+        &mut self,
+        features: &MLFeatureProvider,
+    ) -> Result<MLFeatureProvider> {
         self.prediction_from_features_with_output_names(features, None)
     }
 
@@ -201,7 +213,9 @@ impl CoreMLModel {
         output_names: Option<&[String]>,
     ) -> Result<MLFeatureProvider> {
         if !TARGET_APPLE_SILICON {
-            return Err(ANEError::NotImplemented("Core ML prediction only supported on macOS".to_string()));
+            return Err(ANEError::NotImplemented(
+                "Core ML prediction only supported on macOS".to_string(),
+            ));
         }
 
         if !coreml_runtime_available() {
@@ -217,10 +231,7 @@ impl CoreMLModel {
             let mut create_error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
             let create_result = unsafe {
-                agentbridge_dict_provider_create(
-                    &mut input_provider_ref,
-                    &mut create_error_ptr,
-                )
+                agentbridge_dict_provider_create(&mut input_provider_ref, &mut create_error_ptr)
             };
 
             if create_result != 0 {
@@ -234,15 +245,19 @@ impl CoreMLModel {
                 } else {
                     "Unknown error creating input provider".to_string()
                 };
-                return Err(ANEError::Internal(format!("Failed to create input provider: {}", error_msg)));
+                return Err(ANEError::Internal(format!(
+                    "Failed to create input provider: {}",
+                    error_msg
+                )));
             }
 
             // Set features in the input provider
             for (name, value) in &features.features {
                 match value {
                     MLFeatureValue::MultiArray(array) => {
-                        let name_cstr = CString::new(name.as_str())
-                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+                        let name_cstr = CString::new(name.as_str()).map_err(|e| {
+                            ANEError::InvalidInput(format!("Invalid feature name: {}", e))
+                        })?;
 
                         // Create MLMultiArray through agentbridge
                         let mut array_ref: u64 = 0;
@@ -271,7 +286,10 @@ impl CoreMLModel {
                             } else {
                                 "Unknown error creating array".to_string()
                             };
-                            return Err(ANEError::Internal(format!("Failed to create array: {}", error_msg)));
+                            return Err(ANEError::Internal(format!(
+                                "Failed to create array: {}",
+                                error_msg
+                            )));
                         }
 
                         // Set feature in provider
@@ -304,8 +322,9 @@ impl CoreMLModel {
                         }
                     }
                     MLFeatureValue::State(kv_state) => {
-                        let name_cstr = CString::new(name.as_str())
-                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+                        let name_cstr = CString::new(name.as_str()).map_err(|e| {
+                            ANEError::InvalidInput(format!("Invalid feature name: {}", e))
+                        })?;
 
                         let model_ref = self.get_model_ref()?;
 
@@ -337,8 +356,9 @@ impl CoreMLModel {
                         }
                     }
                     MLFeatureValue::Image(image_data) => {
-                        let name_cstr = CString::new(name.as_str())
-                            .map_err(|e| ANEError::InvalidInput(format!("Invalid feature name: {}", e)))?;
+                        let name_cstr = CString::new(name.as_str()).map_err(|e| {
+                            ANEError::InvalidInput(format!("Invalid feature name: {}", e))
+                        })?;
 
                         // Extract image dimensions from the data
                         // For RGB images: data length = width * height * 3
@@ -384,7 +404,7 @@ impl CoreMLModel {
                         // - Reviewer Requirements: CoreML metadata and image processing expertise
                         let channels = 3; // RGB
                         let total_pixels = image_data.len() / channels;
-                        
+
                         if image_data.len() % channels != 0 {
                             unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
                             return Err(ANEError::InvalidInput(format!(
@@ -400,7 +420,8 @@ impl CoreMLModel {
                         let height = dimension;
 
                         // Validate inferred dimensions match data length
-                        let expected_length = ((width as usize) * (height as usize) * channels) as usize;
+                        let expected_length =
+                            ((width as usize) * (height as usize) * channels) as usize;
                         if image_data.len() != expected_length {
                             unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
                             return Err(ANEError::InvalidInput(format!(
@@ -440,7 +461,10 @@ impl CoreMLModel {
                     _ => {
                         // Other feature types not yet supported
                         unsafe { agentbridge_dict_provider_destroy(input_provider_ref) };
-                        return Err(ANEError::NotImplemented(format!("Feature type not yet supported for feature '{}'", name)));
+                        return Err(ANEError::NotImplemented(format!(
+                            "Feature type not yet supported for feature '{}'",
+                            name
+                        )));
                     }
                 }
             }
@@ -476,17 +500,27 @@ impl CoreMLModel {
             }
 
             if output_provider_ref == 0 {
-                return Err(ANEError::Internal("No output provider returned from inference".to_string()));
+                return Err(ANEError::Internal(
+                    "No output provider returned from inference".to_string(),
+                ));
             }
 
             // Try to extract output - use provided output names or fall back to common names
-            let default_output_names = vec!["output", "var_0", "var0", "predictions", "logits", "features", "probabilities"];
+            let default_output_names = vec![
+                "output",
+                "var_0",
+                "var0",
+                "predictions",
+                "logits",
+                "features",
+                "probabilities",
+            ];
             let output_names: Vec<&str> = if let Some(names) = output_names {
                 names.iter().map(|s| s.as_str()).collect()
             } else {
                 default_output_names
             };
-            
+
             let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
             let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
             let mut output_shape_len: i32 = 0;
@@ -498,15 +532,23 @@ impl CoreMLModel {
             // Prefer outputs that look like arrays/probabilities over string labels
             let mut sorted_output_names = output_names.clone();
             sorted_output_names.sort_by(|a, b| {
-                let a_is_array = a.contains("prob") || a.contains("logit") || a.contains("feature") || a.contains("output") || a.contains("var");
-                let b_is_array = b.contains("prob") || b.contains("logit") || b.contains("feature") || b.contains("output") || b.contains("var");
+                let a_is_array = a.contains("prob")
+                    || a.contains("logit")
+                    || a.contains("feature")
+                    || a.contains("output")
+                    || a.contains("var");
+                let b_is_array = b.contains("prob")
+                    || b.contains("logit")
+                    || b.contains("feature")
+                    || b.contains("output")
+                    || b.contains("var");
                 match (a_is_array, b_is_array) {
-                    (true, false) => std::cmp::Ordering::Less,  // a comes first
+                    (true, false) => std::cmp::Ordering::Less, // a comes first
                     (false, true) => std::cmp::Ordering::Greater, // b comes first
                     _ => std::cmp::Ordering::Equal,
                 }
             });
-            
+
             for output_name in &sorted_output_names {
                 let output_name_cstr = match CString::new(*output_name) {
                     Ok(cstr) => cstr,
@@ -556,7 +598,10 @@ impl CoreMLModel {
                         extract_error_ptr = std::ptr::null_mut();
                     }
                 } else if extract_result != 0 {
-                    eprintln!("⚠️ Failed to extract '{}': extract_result={}", output_name, extract_result);
+                    eprintln!(
+                        "⚠️ Failed to extract '{}': extract_result={}",
+                        output_name, extract_result
+                    );
                 }
             }
 
@@ -603,20 +648,24 @@ impl CoreMLModel {
                 }),
             );
 
-        Ok(MLFeatureProvider {
+            Ok(MLFeatureProvider {
                 features: output_features,
-        })
+            })
         }
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+            Err(ANEError::Internal(
+                "Core ML not available on this platform".to_string(),
+            ))
         }
     }
 
     pub fn model_info(&mut self) -> Result<String> {
         if !TARGET_APPLE_SILICON {
-            return Err(ANEError::NotImplemented("Core ML model info only supported on macOS".to_string()));
+            return Err(ANEError::NotImplemented(
+                "Core ML model info only supported on macOS".to_string(),
+            ));
         }
 
         if !coreml_runtime_available() {
@@ -630,13 +679,8 @@ impl CoreMLModel {
             let mut info_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
             let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-            let result = unsafe {
-                agentbridge_model_get_info(
-                    model_ref,
-                    &mut info_ptr,
-                    &mut error_ptr,
-                )
-            };
+            let result =
+                unsafe { agentbridge_model_get_info(model_ref, &mut info_ptr, &mut error_ptr) };
 
             if result != 0 {
                 let error_msg = if !error_ptr.is_null() {
@@ -649,7 +693,10 @@ impl CoreMLModel {
                 } else {
                     "Unknown error getting model info".to_string()
                 };
-                return Err(ANEError::Internal(format!("Failed to get model info: {}", error_msg)));
+                return Err(ANEError::Internal(format!(
+                    "Failed to get model info: {}",
+                    error_msg
+                )));
             }
 
             if info_ptr.is_null() {
@@ -668,7 +715,9 @@ impl CoreMLModel {
 
         #[cfg(not(target_os = "macos"))]
         {
-            Err(ANEError::Internal("Core ML not available on this platform".to_string()))
+            Err(ANEError::Internal(
+                "Core ML not available on this platform".to_string(),
+            ))
         }
     }
 }
@@ -691,7 +740,9 @@ pub struct MLFeatureProvider {
 }
 
 impl MLFeatureProvider {
-    pub fn from_dictionary(dict: &std::collections::HashMap<String, MLFeatureValue>) -> Result<Self> {
+    pub fn from_dictionary(
+        dict: &std::collections::HashMap<String, MLFeatureValue>,
+    ) -> Result<Self> {
         Ok(MLFeatureProvider {
             features: dict.clone(),
         })
@@ -705,7 +756,7 @@ pub enum MLFeatureValue {
     String(String),
     Int64(i64),
     Double(f64),
-    Image(Vec<u8>), // Image data (raw bytes for CoreML image processing)
+    Image(Vec<u8>),       // Image data (raw bytes for CoreML image processing)
     State(KvStateHandle), // State feature for stateful models (KV cache)
 }
 
@@ -726,7 +777,8 @@ impl MLMultiArray {
         if data.len() != total_elements {
             return Err(ANEError::InvalidInput(format!(
                 "Data length {} doesn't match shape product {}",
-                data.len(), total_elements
+                data.len(),
+                total_elements
             )));
         }
 
@@ -769,7 +821,7 @@ impl Default for MLModelConfiguration {
 
 // Simple model reference wrapper
 #[derive(Debug, Clone, JsonSchema)]
-pub struct ModelRef (u64);
+pub struct ModelRef(u64);
 
 impl ModelRef {
     pub fn new(handle: u64) -> Self {
@@ -816,7 +868,7 @@ mod tests {
     fn test_coreml_model_creation() {
         let path = Path::new("/tmp/test.mlmodel");
         let result = CoreMLModel::from_path(path);
-        
+
         if TARGET_APPLE_SILICON {
             assert!(result.is_ok());
             let model = result.unwrap();
@@ -857,7 +909,7 @@ mod tests {
     #[test]
     fn test_coreml_integration() {
         let result = test_coreml_integration_inner();
-        
+
         if TARGET_APPLE_SILICON {
             assert!(result.is_ok());
         } else {

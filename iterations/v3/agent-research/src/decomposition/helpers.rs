@@ -23,10 +23,26 @@ impl ConfidenceCalculator {
 
         // Increase confidence for claims with specific technical terms
         let technical_terms = [
-            "function", "method", "class", "struct", "enum", "trait",
-            "database", "query", "table", "index", "cache", "memory",
-            "performance", "latency", "throughput", "efficiency",
-            "security", "authentication", "authorization", "encryption",
+            "function",
+            "method",
+            "class",
+            "struct",
+            "enum",
+            "trait",
+            "database",
+            "query",
+            "table",
+            "index",
+            "cache",
+            "memory",
+            "performance",
+            "latency",
+            "throughput",
+            "efficiency",
+            "security",
+            "authentication",
+            "authorization",
+            "encryption",
         ];
 
         for term in &technical_terms {
@@ -97,27 +113,42 @@ impl ClaimTypeInferer {
         let text_lower = claim_text.to_lowercase();
 
         // Requirement claims
-        if text_lower.contains("must") || text_lower.contains("should") ||
-           text_lower.contains("required") || text_lower.contains("shall") ||
-           text_lower.contains("needs to") || text_lower.contains("has to") {
+        if text_lower.contains("must")
+            || text_lower.contains("should")
+            || text_lower.contains("required")
+            || text_lower.contains("shall")
+            || text_lower.contains("needs to")
+            || text_lower.contains("has to")
+        {
             ClaimType::Requirement
         }
         // Conditional claims
-        else if text_lower.contains("when") || text_lower.contains("if") ||
-                text_lower.contains("unless") || text_lower.contains("provided that") ||
-                text_lower.contains("assuming") || text_lower.contains("given that") {
+        else if text_lower.contains("when")
+            || text_lower.contains("if")
+            || text_lower.contains("unless")
+            || text_lower.contains("provided that")
+            || text_lower.contains("assuming")
+            || text_lower.contains("given that")
+        {
             ClaimType::Conditional
         }
         // Causal claims
-        else if text_lower.contains("causes") || text_lower.contains("leads to") ||
-                text_lower.contains("results in") || text_lower.contains("because") ||
-                text_lower.contains("due to") || text_lower.contains("therefore") {
+        else if text_lower.contains("causes")
+            || text_lower.contains("leads to")
+            || text_lower.contains("results in")
+            || text_lower.contains("because")
+            || text_lower.contains("due to")
+            || text_lower.contains("therefore")
+        {
             ClaimType::Causal
         }
         // Quantitative claims
-        else if claim_text.chars().any(|c| c.is_ascii_digit()) ||
-                text_lower.contains("percent") || text_lower.contains("percentage") ||
-                text_lower.contains("times") || text_lower.contains("rate") {
+        else if claim_text.chars().any(|c| c.is_ascii_digit())
+            || text_lower.contains("percent")
+            || text_lower.contains("percentage")
+            || text_lower.contains("times")
+            || text_lower.contains("rate")
+        {
             ClaimType::Quantitative
         }
         // Default to factual
@@ -131,22 +162,34 @@ impl ClaimTypeInferer {
         let text_lower = claim_text.to_lowercase();
 
         // Testable claims
-        if text_lower.contains("test") || text_lower.contains("verify") ||
-           text_lower.contains("validate") || text_lower.contains("measure") ||
-           text_lower.contains("benchmark") || text_lower.contains("check") {
+        if text_lower.contains("test")
+            || text_lower.contains("verify")
+            || text_lower.contains("validate")
+            || text_lower.contains("measure")
+            || text_lower.contains("benchmark")
+            || text_lower.contains("check")
+        {
             VerifiabilityLevel::DirectlyVerifiable
         }
         // Quantifiable claims
-        else if claim_text.chars().any(|c| c.is_ascii_digit()) ||
-                text_lower.contains("performance") || text_lower.contains("latency") ||
-                text_lower.contains("throughput") || text_lower.contains("memory") ||
-                text_lower.contains("cpu") || text_lower.contains("efficiency") {
+        else if claim_text.chars().any(|c| c.is_ascii_digit())
+            || text_lower.contains("performance")
+            || text_lower.contains("latency")
+            || text_lower.contains("throughput")
+            || text_lower.contains("memory")
+            || text_lower.contains("cpu")
+            || text_lower.contains("efficiency")
+        {
             VerifiabilityLevel::IndirectlyVerifiable
         }
         // Observable claims
-        else if text_lower.contains("visible") || text_lower.contains("observable") ||
-                text_lower.contains("detectable") || text_lower.contains("monitor") ||
-                text_lower.contains("log") || text_lower.contains("trace") {
+        else if text_lower.contains("visible")
+            || text_lower.contains("observable")
+            || text_lower.contains("detectable")
+            || text_lower.contains("monitor")
+            || text_lower.contains("log")
+            || text_lower.contains("trace")
+        {
             VerifiabilityLevel::LowVerifiability
         }
         // Default to qualitative
@@ -180,18 +223,19 @@ impl TextProcessor {
 
         // TODO: Implement comprehensive verb pattern detection using NLP
         //       Currently uses basic pattern matching; should use NLP techniques for accurate verb pattern detection.
-        let verbs = ["is", "are", "was", "were", "has", "have", "had",
-                    "does", "do", "did", "can", "could", "will", "would",
-                    "should", "may", "might", "must", "shall"];
+        let verbs = [
+            "is", "are", "was", "were", "has", "have", "had", "does", "do", "did", "can", "could",
+            "will", "would", "should", "may", "might", "must", "shall",
+        ];
 
-        let action_verbs = ["create", "read", "write", "delete", "process",
-                           "handle", "manage", "provide", "return", "accept",
-                           "send", "receive", "store", "load", "save"];
+        let action_verbs = [
+            "create", "read", "write", "delete", "process", "handle", "manage", "provide",
+            "return", "accept", "send", "receive", "store", "load", "save",
+        ];
 
-        let has_verb = words.iter().any(|word|
-            verbs.contains(word) ||
-            action_verbs.iter().any(|av| word.starts_with(av))
-        );
+        let has_verb = words
+            .iter()
+            .any(|word| verbs.contains(word) || action_verbs.iter().any(|av| word.starts_with(av)));
 
         has_verb
     }
@@ -199,9 +243,9 @@ impl TextProcessor {
     /// Extract keywords from text
     pub fn extract_keywords(text: &str) -> Vec<String> {
         let stop_words = [
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to",
-            "for", "of", "with", "by", "as", "is", "are", "was", "were",
-            "has", "have", "had", "will", "would", "could", "should", "may"
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+            "by", "as", "is", "are", "was", "were", "has", "have", "had", "will", "would", "could",
+            "should", "may",
         ];
 
         text.to_lowercase()
@@ -223,17 +267,14 @@ impl TextProcessor {
             return 0.0;
         }
 
-        let avg_word_length: f32 = words.iter()
-            .map(|w| w.len() as f32)
-            .sum::<f32>() / word_count as f32;
+        let avg_word_length: f32 =
+            words.iter().map(|w| w.len() as f32).sum::<f32>() / word_count as f32;
 
-        let sentence_count = text.split('.').count() +
-                           text.split('!').count() +
-                           text.split('?').count() - 2; // Subtract 2 for empty splits
+        let sentence_count =
+            text.split('.').count() + text.split('!').count() + text.split('?').count() - 2; // Subtract 2 for empty splits
 
-        let complexity = (avg_word_length * 0.3) +
-                        (word_count as f32 * 0.1) +
-                        (sentence_count as f32 * 0.2);
+        let complexity =
+            (avg_word_length * 0.3) + (word_count as f32 * 0.1) + (sentence_count as f32 * 0.2);
 
         complexity.min(10.0) // Cap at 10
     }
@@ -244,7 +285,11 @@ pub struct IdGenerator;
 
 impl IdGenerator {
     /// Generate a deterministic claim ID
-    pub fn generate_claim_id(task_id: uuid::Uuid, sentence_index: usize, clause_index: usize) -> uuid::Uuid {
+    pub fn generate_claim_id(
+        task_id: uuid::Uuid,
+        sentence_index: usize,
+        clause_index: usize,
+    ) -> uuid::Uuid {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 

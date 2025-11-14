@@ -67,12 +67,12 @@ impl Default for ContentStrategy {
     fn default() -> Self {
         Self {
             defaults: ContentThresholds {
-                max_full_size: 2048,      // 2KB
+                max_full_size: 2048,        // 2KB
                 max_diff_size: 1024 * 1024, // 1MB
                 min_diff_ratio: 0.45,
                 target_chunk_size: 16 * 1024, // 16KB
                 min_chunk_size: 4 * 1024,     // 4KB
-                max_chunk_size: 64 * 1024,   // 64KB
+                max_chunk_size: 64 * 1024,    // 64KB
             },
             overrides: HashMap::new(),
             text_detection: TextDetectionConfig {
@@ -158,11 +158,14 @@ impl ContentStrategy {
     }
 
     /// Add an override for a specific glob pattern
-    pub fn add_override(&mut self, pattern: String, override_config: ContentOverride) -> Result<()> {
+    pub fn add_override(
+        &mut self,
+        pattern: String,
+        override_config: ContentOverride,
+    ) -> Result<()> {
         // Validate the glob pattern
-        Pattern::new(&pattern)
-            .map_err(|e| anyhow!("Invalid glob pattern '{}': {}", pattern, e))?;
-        
+        Pattern::new(&pattern).map_err(|e| anyhow!("Invalid glob pattern '{}': {}", pattern, e))?;
+
         self.overrides.insert(pattern, override_config);
         Ok(())
     }
@@ -186,7 +189,7 @@ impl ContentStrategy {
     /// Find matching override for a path
     fn find_override(&self, path: &Path) -> Option<&ContentOverride> {
         let path_str = path.to_string_lossy();
-        
+
         for (pattern, override_config) in &self.overrides {
             if let Ok(glob_pattern) = Pattern::new(pattern) {
                 if glob_pattern.matches(&path_str) {
@@ -194,7 +197,7 @@ impl ContentStrategy {
                 }
             }
         }
-        
+
         None
     }
 
@@ -299,7 +302,7 @@ impl ContentStrategy {
             .iter()
             .filter(|&&b| (32..=126).contains(&b) || b == b'\n' || b == b'\r' || b == b'\t')
             .count();
-        
+
         let printable_ratio = printable_count as f64 / content.len() as f64;
         printable_ratio > 0.8
     }
@@ -356,7 +359,7 @@ impl ContentStrategy {
             .zip(new.iter())
             .take_while(|(a, b)| a == b)
             .count();
-        
+
         let common_suffix = base
             .iter()
             .rev()
@@ -366,7 +369,7 @@ impl ContentStrategy {
 
         let common_chars = common_prefix + common_suffix;
         let max_len = base.len().max(new.len());
-        
+
         1.0 - (common_chars as f64 / max_len as f64)
     }
 
@@ -404,13 +407,13 @@ mod tests {
     #[test]
     fn test_default_strategy() {
         let strategy = ContentStrategy::new();
-        
+
         // Small text file should use full storage
         let small_text = b"Hello, world!";
         let decision = strategy
             .determine_strategy(&PathBuf::from("test.txt"), small_text, None)
             .unwrap();
-        
+
         assert_eq!(decision.kind, PayloadKind::Full);
         assert_eq!(decision.codec, Codec::Zstd);
         assert!(decision.eol.is_some());
@@ -419,7 +422,7 @@ mod tests {
     #[test]
     fn test_override_pattern() {
         let mut strategy = ContentStrategy::new();
-        
+
         // Add override for large files
         strategy
             .add_override(
@@ -446,7 +449,7 @@ mod tests {
         let decision = strategy
             .determine_strategy(&PathBuf::from("test.large"), &large_content, None)
             .unwrap();
-        
+
         assert_eq!(decision.kind, PayloadKind::ChunkMap);
         assert_eq!(decision.codec, Codec::Gzip);
         assert_eq!(decision.eol, Some(Eol::Lf));
@@ -455,11 +458,11 @@ mod tests {
     #[test]
     fn test_text_detection() {
         let strategy = ContentStrategy::new();
-        
+
         // Text content
         let text_content = b"Hello, world!\nThis is a test.";
         assert!(strategy.detect_text(text_content));
-        
+
         // Binary content
         let binary_content = b"Hello\x00world\xff\xfe";
         assert!(!strategy.detect_text(binary_content));
@@ -468,15 +471,15 @@ mod tests {
     #[test]
     fn test_eol_detection() {
         let strategy = ContentStrategy::new();
-        
+
         // LF
         let lf_content = b"line1\nline2\nline3";
         assert_eq!(strategy.detect_eol(lf_content), Eol::Lf);
-        
+
         // CRLF
         let crlf_content = b"line1\r\nline2\r\nline3";
         assert_eq!(strategy.detect_eol(crlf_content), Eol::Crlf);
-        
+
         // CR
         let cr_content = b"line1\rline2\rline3";
         assert_eq!(strategy.detect_eol(cr_content), Eol::Cr);

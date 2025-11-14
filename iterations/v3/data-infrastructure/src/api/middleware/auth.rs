@@ -8,9 +8,7 @@
 //!
 //! @author @darianrosebrook
 
-use axum::{
-    http::{header::AUTHORIZATION, HeaderMap, StatusCode},
-};
+use axum::http::{header::AUTHORIZATION, HeaderMap, StatusCode};
 use chrono::Utc;
 use sha2::{Digest, Sha256};
 use tracing::{error, warn};
@@ -141,8 +139,7 @@ impl axum::extract::FromRequestParts<ApiState> for VerifiedUser {
         state: &ApiState,
     ) -> Result<Self, Self::Rejection> {
         // Extract token from headers
-        let token = extract_bearer_token(&parts.headers)
-            .ok_or(StatusCode::UNAUTHORIZED)?;
+        let token = extract_bearer_token(&parts.headers).ok_or(StatusCode::UNAUTHORIZED)?;
 
         // Hash token for database lookup
         let token_hash = hash_token(&token);
@@ -267,12 +264,16 @@ pub fn has_role(user: &User, role: &str) -> bool {
 
 /// Helper function to check if user has any of the specified roles
 pub fn has_any_role(user: &User, roles: &[&str]) -> bool {
-    roles.iter().any(|role| user.roles.contains(&role.to_string()))
+    roles
+        .iter()
+        .any(|role| user.roles.contains(&role.to_string()))
 }
 
 /// Helper function to check if user has all of the specified roles
 pub fn has_all_roles(user: &User, roles: &[&str]) -> bool {
-    roles.iter().all(|role| user.roles.contains(&role.to_string()))
+    roles
+        .iter()
+        .all(|role| user.roles.contains(&role.to_string()))
 }
 
 /// Extract and validate viewer user from token
@@ -305,7 +306,10 @@ impl axum::extract::FromRequestParts<ApiState> for ViewerUser {
         let verified_user = VerifiedUser::from_request_parts(parts, state).await?;
 
         // Check if user has viewer, user, or admin role (any valid role)
-        if !has_any_role(&verified_user.0, &[roles::VIEWER, roles::USER, roles::ADMIN]) {
+        if !has_any_role(
+            &verified_user.0,
+            &[roles::VIEWER, roles::USER, roles::ADMIN],
+        ) {
             warn!(
                 "User {} attempted viewer access but has no valid role: {:?}",
                 verified_user.0.id, verified_user.0.roles
@@ -387,4 +391,3 @@ mod tests {
         assert_eq!(hash1.len(), 64);
     }
 }
-

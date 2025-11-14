@@ -1,15 +1,15 @@
 //! Parallel worker metrics collector
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{TaskId, WorkerId};
 use crate::learning::types::*;
 use crate::worker_types::{ExecutionOutcome, LearningMode};
+use crate::{TaskId, WorkerId};
 
 /// Collects and analyzes metrics from parallel worker execution
 pub struct ParallelWorkerMetricsCollector {
@@ -71,23 +71,25 @@ impl ParallelWorkerMetricsCollector {
         record: &ExecutionRecord,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut profiles = self.worker_profiles.write().await;
-        
-        let profile = profiles.entry(worker_id).or_insert_with(|| WorkerPerformanceProfile {
-            worker_id,
-            specialty: crate::parallel_types::WorkerSpecialty::General, // Default specialty
-            total_executions: 0,
-            successful_executions: 0,
-            average_execution_time_ms: 0.0,
-            average_quality_score: 0.0,
-            last_updated: Utc::now(),
-            performance_trend: PerformanceTrend::Unknown,
-            capability_scores: HashMap::new(),
-            task_count: 0,
-            success_rate: 0.0,
-            quality_score: 0.0,
-            specialization_score: 0.0,
-            metadata: HashMap::new(),
-        });
+
+        let profile = profiles
+            .entry(worker_id)
+            .or_insert_with(|| WorkerPerformanceProfile {
+                worker_id,
+                specialty: crate::parallel_types::WorkerSpecialty::General, // Default specialty
+                total_executions: 0,
+                successful_executions: 0,
+                average_execution_time_ms: 0.0,
+                average_quality_score: 0.0,
+                last_updated: Utc::now(),
+                performance_trend: PerformanceTrend::Unknown,
+                capability_scores: HashMap::new(),
+                task_count: 0,
+                success_rate: 0.0,
+                quality_score: 0.0,
+                specialization_score: 0.0,
+                metadata: HashMap::new(),
+            });
 
         // Update profile statistics
         profile.total_executions += 1;
@@ -97,9 +99,10 @@ impl ParallelWorkerMetricsCollector {
 
         // Update running averages
         let total = profile.total_executions as f64;
-        profile.average_execution_time_ms = 
-            (profile.average_execution_time_ms * (total - 1.0) + record.execution_time_ms as f64) / total;
-        profile.average_quality_score = 
+        profile.average_execution_time_ms = (profile.average_execution_time_ms * (total - 1.0)
+            + record.execution_time_ms as f64)
+            / total;
+        profile.average_quality_score =
             (profile.average_quality_score * (total - 1.0) + record.quality_score) / total;
 
         profile.last_updated = Utc::now();
@@ -126,7 +129,9 @@ impl ParallelWorkerMetricsCollector {
     }
 
     /// Get performance statistics
-    pub async fn get_performance_stats(&self) -> Result<PerformanceStats, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_performance_stats(
+        &self,
+    ) -> Result<PerformanceStats, Box<dyn std::error::Error + Send + Sync>> {
         let records = self.execution_records.read().await;
         let profiles = self.worker_profiles.read().await;
 
@@ -139,7 +144,8 @@ impl ParallelWorkerMetricsCollector {
         };
 
         let avg_execution_time = if total_executions > 0 {
-            records.iter().map(|r| r.execution_time_ms).sum::<u64>() as f64 / total_executions as f64
+            records.iter().map(|r| r.execution_time_ms).sum::<u64>() as f64
+                / total_executions as f64
         } else {
             0.0
         };
@@ -162,20 +168,26 @@ impl ParallelWorkerMetricsCollector {
     }
 
     /// Get worker performance profiles
-    pub async fn get_worker_profiles(&self) -> Result<HashMap<WorkerId, WorkerPerformanceProfile>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_worker_profiles(
+        &self,
+    ) -> Result<HashMap<WorkerId, WorkerPerformanceProfile>, Box<dyn std::error::Error + Send + Sync>>
+    {
         let profiles = self.worker_profiles.read().await;
         Ok(profiles.clone())
     }
 
     /// Get execution records
-    pub async fn get_execution_records(&self, limit: Option<usize>) -> Result<Vec<ExecutionRecord>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get_execution_records(
+        &self,
+        limit: Option<usize>,
+    ) -> Result<Vec<ExecutionRecord>, Box<dyn std::error::Error + Send + Sync>> {
         let records = self.execution_records.read().await;
         let mut result = records.clone();
-        
+
         if let Some(limit) = limit {
             result.truncate(limit);
         }
-        
+
         Ok(result)
     }
 }
@@ -191,6 +203,5 @@ struct PerformanceStats {
     pub average_quality_score: f64,
     pub active_workers: usize,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }

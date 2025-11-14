@@ -3,8 +3,8 @@
 //! Manages registration, discovery, and metadata for all CAWS tools
 //! in the ecosystem, providing unified access and governance.
 
+use anyhow::{Context, Result};
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -168,7 +168,11 @@ pub trait Tool: Send + Sync {
     fn metadata(&self) -> ToolMetadata;
 
     /// Execute the tool
-    async fn execute(&self, parameters: serde_json::Value, context: Option<&str>) -> Result<serde_json::Value>;
+    async fn execute(
+        &self,
+        parameters: serde_json::Value,
+        context: Option<&str>,
+    ) -> Result<serde_json::Value>;
 
     /// Validate tool parameters
     async fn validate_parameters(&self, parameters: &serde_json::Value) -> Result<()> {
@@ -177,8 +181,14 @@ pub trait Tool: Send + Sync {
             let compiled = jsonschema::JSONSchema::compile(schema)
                 .map_err(|e| anyhow::anyhow!("Invalid schema: {}", e))?;
 
-            compiled.validate(parameters)
-                .map_err(|e| anyhow::anyhow!("Parameter validation failed: {}", e.map(|err| format!("{:?}", err)).collect::<Vec<_>>().join(", ")))?;
+            compiled.validate(parameters).map_err(|e| {
+                anyhow::anyhow!(
+                    "Parameter validation failed: {}",
+                    e.map(|err| format!("{:?}", err))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            })?;
         }
 
         Ok(())
@@ -218,7 +228,10 @@ impl ToolRegistry {
         let metadata = tool.metadata().clone();
         let tool_name = metadata.name.clone();
 
-        info!("Registering tool: {} (category: {:?})", tool_name, metadata.category);
+        info!(
+            "Registering tool: {} (category: {:?})",
+            tool_name, metadata.category
+        );
 
         // Check if tool already exists
         {
@@ -247,7 +260,10 @@ impl ToolRegistry {
         {
             let mut categories = self.categories.write().await;
             let category_key = format!("{:?}", metadata.category);
-            categories.entry(category_key).or_insert_with(Vec::new).push(tool_name.clone());
+            categories
+                .entry(category_key)
+                .or_insert_with(Vec::new)
+                .push(tool_name.clone());
         }
 
         debug!("Successfully registered tool: {}", tool_name);
@@ -306,7 +322,8 @@ impl ToolRegistry {
 
         let category_key = format!("{:?}", category);
         if let Some(tool_names) = categories.get(&category_key) {
-            tool_names.iter()
+            tool_names
+                .iter()
                 .filter_map(|name| tools.get(name).cloned())
                 .collect()
         } else {
@@ -328,7 +345,8 @@ impl ToolRegistry {
     /// Search tools by capability
     pub async fn search_by_capability(&self, capability: &str) -> Vec<RegisteredTool> {
         let tools = self.tools.read().await;
-        tools.values()
+        tools
+            .values()
             .filter(|tool| tool.metadata.capabilities.contains(&capability.to_string()))
             .cloned()
             .collect()
@@ -427,7 +445,10 @@ impl ToolRegistry {
         let health = self.health_monitor.read().await;
 
         let export = RegistryExport {
-            tools: tools.iter().map(|(name, tool)| (name.clone(), tool.metadata.clone())).collect(),
+            tools: tools
+                .iter()
+                .map(|(name, tool)| (name.clone(), tool.metadata.clone()))
+                .collect(),
             categories: categories.clone(),
             health: health.clone(),
             exported_at: chrono::Utc::now(),
@@ -470,5 +491,3 @@ impl Default for ToolRegistry {
         Self::new()
     }
 }
-
-

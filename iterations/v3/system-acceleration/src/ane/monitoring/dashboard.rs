@@ -3,10 +3,12 @@
 //! Provides a comprehensive dashboard for monitoring YOLO inference performance,
 //! ANE utilization, and optimization recommendations.
 
-use schemars::JsonSchema;
 use crate::ane::monitoring::yolo_monitor::{YOLOPerformanceMonitor, YOLOPerformanceThresholds};
-use crate::ane::optimization::ane_optimizer::{ANEOptimizer, ANEOptimizationStrategy, ANEMemoryOptimizer, BatchOptimizer};
+use crate::ane::optimization::ane_optimizer::{
+    ANEMemoryOptimizer, ANEOptimizationStrategy, ANEOptimizer, BatchOptimizer,
+};
 use crate::telemetry::TelemetryCollector;
+use schemars::JsonSchema;
 use std::time::{Duration, Instant};
 use tracing::warn;
 
@@ -38,16 +40,25 @@ impl YOLOPerformanceDashboard {
     }
 
     /// Record a YOLO inference and update all monitoring systems
-    pub async fn record_inference(&mut self, metrics: crate::ane::monitoring::yolo_monitor::YOLOPerformanceMetrics) -> crate::ane::ane_errors::Result<()> {
+    pub async fn record_inference(
+        &mut self,
+        metrics: crate::ane::monitoring::yolo_monitor::YOLOPerformanceMetrics,
+    ) -> crate::ane::ane_errors::Result<()> {
         // Record in YOLO monitor
         self.yolo_monitor.record_inference(metrics.clone())?;
 
         // Record in optimizer for adaptation
-        self.ane_optimizer.record_performance("yolo", metrics.total_inference_time_ms);
+        self.ane_optimizer
+            .record_performance("yolo", metrics.total_inference_time_ms);
 
         // Check memory optimization
-        if self.memory_optimizer.should_optimize_memory(metrics.memory_usage_mb) {
-            let recommendations = self.memory_optimizer.get_memory_recommendations(metrics.memory_usage_mb);
+        if self
+            .memory_optimizer
+            .should_optimize_memory(metrics.memory_usage_mb)
+        {
+            let recommendations = self
+                .memory_optimizer
+                .get_memory_recommendations(metrics.memory_usage_mb);
             for rec in recommendations {
                 warn!("Memory optimization needed: {}", rec);
             }
@@ -55,7 +66,9 @@ impl YOLOPerformanceDashboard {
 
         // Update batch optimizer with throughput estimate
         let throughput = 1000.0 / metrics.total_inference_time_ms; // inferences per second
-        let _new_batch_size = self.batch_optimizer.optimize_batch_size(throughput, metrics.total_inference_time_ms);
+        let _new_batch_size = self
+            .batch_optimizer
+            .optimize_batch_size(throughput, metrics.total_inference_time_ms);
 
         // Generate periodic reports
         if self.dashboard_enabled && self.last_report_time.elapsed() >= self.report_interval {
@@ -76,11 +89,22 @@ impl YOLOPerformanceDashboard {
         // Basic Statistics
         println!(" Performance Statistics:");
         println!("   Total Inferences: {}", stats.total_inferences);
-        println!("   Average Inference Time: {:.1}ms", stats.average_inference_time_ms);
-        println!("   Min/Max Inference Time: {:.1}ms / {:.1}ms",
-                stats.min_inference_time_ms, stats.max_inference_time_ms);
-        println!("   Average Memory Usage: {:.1}MB", stats.average_memory_usage_mb);
-        println!("   Average Objects Detected: {:.1}", stats.average_objects_detected);
+        println!(
+            "   Average Inference Time: {:.1}ms",
+            stats.average_inference_time_ms
+        );
+        println!(
+            "   Min/Max Inference Time: {:.1}ms / {:.1}ms",
+            stats.min_inference_time_ms, stats.max_inference_time_ms
+        );
+        println!(
+            "   Average Memory Usage: {:.1}MB",
+            stats.average_memory_usage_mb
+        );
+        println!(
+            "   Average Objects Detected: {:.1}",
+            stats.average_objects_detected
+        );
 
         // ANE Utilization
         if let Some(ane_util) = stats.average_ane_utilization_percent {
@@ -96,7 +120,10 @@ impl YOLOPerformanceDashboard {
         }
 
         // CPU Fallback Rate
-        println!("   CPU Fallback Rate: {:.1}%", stats.cpu_fallback_rate * 100.0);
+        println!(
+            "   CPU Fallback Rate: {:.1}%",
+            stats.cpu_fallback_rate * 100.0
+        );
         if stats.cpu_fallback_rate > 0.1 {
             println!("   ⚠️  High CPU fallback rate detected");
         }
@@ -139,7 +166,10 @@ impl YOLOPerformanceDashboard {
         println!("   Memory Strategy: {:?}", opt_params.memory_strategy);
         println!("   Compute Units: {:?}", opt_params.compute_units);
 
-        println!("\n Dashboard updated at {}", chrono::Utc::now().format("%H:%M:%S UTC"));
+        println!(
+            "\n Dashboard updated at {}",
+            chrono::Utc::now().format("%H:%M:%S UTC")
+        );
     }
 
     /// Get real-time performance metrics
@@ -174,11 +204,17 @@ impl YOLOPerformanceDashboard {
             _ => {}
         }
 
-        if matches!(opt_params.compute_units, crate::ane::optimization::ane_optimizer::ComputeUnitPreference::ANE) {
+        if matches!(
+            opt_params.compute_units,
+            crate::ane::optimization::ane_optimizer::ComputeUnitPreference::ANE
+        ) {
             active.push("ANE acceleration".to_string());
         }
 
-        if matches!(opt_params.memory_strategy, crate::ane::optimization::ane_optimizer::MemoryStrategy::Pooled) {
+        if matches!(
+            opt_params.memory_strategy,
+            crate::ane::optimization::ane_optimizer::MemoryStrategy::Pooled
+        ) {
             active.push("Memory pooling".to_string());
         }
 
@@ -256,7 +292,14 @@ impl PerformanceAlerts {
         }
     }
 
-    pub fn add_alert(&mut self, level: AlertLevel, message: String, metric: String, value: f64, threshold: f64) {
+    pub fn add_alert(
+        &mut self,
+        level: AlertLevel,
+        message: String,
+        metric: String,
+        value: f64,
+        threshold: f64,
+    ) {
         let alert = PerformanceAlert {
             timestamp: chrono::Utc::now(),
             level: level.clone(),
@@ -310,11 +353,13 @@ impl PerformancePredictor {
     }
 
     pub fn record_inference_time(&mut self, inference_time_ms: f64) {
-        self.historical_data.push((chrono::Utc::now(), inference_time_ms));
+        self.historical_data
+            .push((chrono::Utc::now(), inference_time_ms));
 
         // Keep only data within the prediction window
         let cutoff = chrono::Utc::now() - chrono::Duration::hours(self.prediction_window_hours);
-        self.historical_data.retain(|(timestamp, _)| *timestamp > cutoff);
+        self.historical_data
+            .retain(|(timestamp, _)| *timestamp > cutoff);
     }
 
     pub fn predict_future_performance(&self) -> Option<PerformancePrediction> {
@@ -322,7 +367,9 @@ impl PerformancePredictor {
             return None; // Need minimum data for prediction
         }
 
-        let recent_data: Vec<f64> = self.historical_data.iter()
+        let recent_data: Vec<f64> = self
+            .historical_data
+            .iter()
             .rev()
             .take(20)
             .map(|(_, time)| *time)
@@ -333,8 +380,16 @@ impl PerformancePredictor {
         // Simple trend analysis
         // Note: recent_data is reversed (most recent first), so first_half is more recent than second_half
         let trend = if recent_data.len() >= 2 {
-            let first_half: Vec<f64> = recent_data.iter().take(recent_data.len() / 2).cloned().collect();
-            let second_half: Vec<f64> = recent_data.iter().skip(recent_data.len() / 2).cloned().collect();
+            let first_half: Vec<f64> = recent_data
+                .iter()
+                .take(recent_data.len() / 2)
+                .cloned()
+                .collect();
+            let second_half: Vec<f64> = recent_data
+                .iter()
+                .skip(recent_data.len() / 2)
+                .cloned()
+                .collect();
 
             let avg_first = first_half.iter().sum::<f64>() / first_half.len() as f64;
             let avg_second = second_half.iter().sum::<f64>() / second_half.len() as f64;

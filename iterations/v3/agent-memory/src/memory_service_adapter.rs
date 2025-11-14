@@ -73,29 +73,33 @@ impl MemoryService for PgMemoryService {
             .map_err(|e| MemoryError::Query(format!("Failed to insert memory_embeddings: {e}")))?;
 
         // Extract fields from metadata for agent_experiences
-        let agent_id = record.metadata
+        let agent_id = record
+            .metadata
             .get("agent_id")
             .and_then(|v| v.as_str())
             .unwrap_or("memory_service")
             .to_string();
-        let task_id = record.metadata
+        let task_id = record
+            .metadata
             .get("task_id")
             .and_then(|v| v.as_str())
             .unwrap_or_else(|| &record.id.0)
             .to_string();
-        
+
         // Extract input/output from metadata or use content
-        let input = record.metadata
+        let input = record
+            .metadata
             .get("input")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| record.content.clone());
-        let output = record.metadata
+        let output = record
+            .metadata
             .get("output")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .unwrap_or_else(|| record.content.clone());
-        
+
         // Extract context and outcome from metadata, or create defaults
         let context_json = record.metadata
             .get("context")
@@ -104,17 +108,17 @@ impl MemoryService for PgMemoryService {
                 "description": format!("Memory record: {}", record.content.chars().take(100).collect::<String>()),
                 "domain": vec!["memory_service"]
             }));
-        let outcome_json = record.metadata
-            .get("outcome")
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!({
+        let outcome_json = record.metadata.get("outcome").cloned().unwrap_or_else(|| {
+            serde_json::json!({
                 "success": true,
                 "performance_score": record.importance as f64,
                 "quality_score": record.importance as f64
-            }));
-        
+            })
+        });
+
         // Extract memory_type from metadata (default to Episodic)
-        let memory_type_int = record.metadata
+        let memory_type_int = record
+            .metadata
             .get("memory_type")
             .and_then(|v| v.as_i64())
             .unwrap_or(0i64) as i32;
@@ -151,7 +155,10 @@ impl MemoryService for PgMemoryService {
             .await
             .map_err(|e| MemoryError::Query(format!("Failed to insert agent_experiences: {e}")))?;
 
-        info!("memory_id = {} persisted to memory_embeddings and agent_experiences", record.id.0);
+        info!(
+            "memory_id = {} persisted to memory_embeddings and agent_experiences",
+            record.id.0
+        );
 
         Ok(record)
     }
@@ -192,7 +199,9 @@ impl MemoryService for PgMemoryService {
             .map_err(|e| MemoryError::Query(format!("Failed to update memory_embeddings: {e}")))?;
 
         if rows.rows_affected() == 0 {
-            return Err(MemoryError::Query("No rows updated in memory_embeddings".into()));
+            return Err(MemoryError::Query(
+                "No rows updated in memory_embeddings".into(),
+            ));
         }
 
         Ok(record)
@@ -236,7 +245,9 @@ impl MemoryService for PgMemoryService {
                 embedding,
                 content,
                 metadata: metadata
-                    .and_then(|v| serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok())
+                    .and_then(|v| {
+                        serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok()
+                    })
                     .unwrap_or_default(),
                 created_at: created_at.unwrap_or_else(Utc::now),
                 updated_at: updated_at.unwrap_or_else(Utc::now),
@@ -298,7 +309,9 @@ impl MemoryService for PgMemoryService {
                     embedding: None, // Not returned in search
                     content,
                     metadata: metadata
-                        .and_then(|v| serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok())
+                        .and_then(|v| {
+                            serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok()
+                        })
                         .unwrap_or_default(),
                     created_at: created_at.unwrap_or_else(Utc::now),
                     updated_at: updated_at.unwrap_or_else(Utc::now),
@@ -306,7 +319,10 @@ impl MemoryService for PgMemoryService {
                     importance: importance as f32,
                     decay_factor: 1.0,
                 };
-                results.push(ScoredMemory { record, score: similarity as f32 });
+                results.push(ScoredMemory {
+                    record,
+                    score: similarity as f32,
+                });
             }
             return Ok(results);
         }
@@ -345,7 +361,9 @@ impl MemoryService for PgMemoryService {
                     embedding: None,
                     content,
                     metadata: metadata
-                        .and_then(|v| serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok())
+                        .and_then(|v| {
+                            serde_json::from_value::<HashMap<String, serde_json::Value>>(v).ok()
+                        })
                         .unwrap_or_default(),
                     created_at: created_at.unwrap_or_else(Utc::now),
                     updated_at: updated_at.unwrap_or_else(Utc::now),
@@ -372,17 +390,13 @@ impl MemoryService for PgMemoryService {
             .map_err(|e| MemoryError::Query(format!("Failed to update access: {e}")))?;
 
         // Also update last_accessed explicitly to the provided time if different
-        let _ = sqlx::query(
-            "UPDATE memory_embeddings SET last_accessed = $2 WHERE memory_id = $1",
-        )
-        .bind(memory_uuid)
-        .bind(when)
-        .execute(&*self.db_pool)
-        .await
-        .map_err(|e| MemoryError::Query(format!("Failed to set last_accessed: {e}")))?;
+        let _ = sqlx::query("UPDATE memory_embeddings SET last_accessed = $2 WHERE memory_id = $1")
+            .bind(memory_uuid)
+            .bind(when)
+            .execute(&*self.db_pool)
+            .await
+            .map_err(|e| MemoryError::Query(format!("Failed to set last_accessed: {e}")))?;
 
         Ok(())
     }
 }
-
-

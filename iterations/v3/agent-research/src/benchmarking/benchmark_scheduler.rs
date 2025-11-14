@@ -97,7 +97,7 @@ impl BenchmarkScheduler {
         dataset_version: Option<String>,
     ) -> Result<Uuid> {
         let scheduled_at = cadence.next_scheduled_time(Utc::now());
-        
+
         let scheduled = ScheduledBenchmark {
             id: Uuid::new_v4(),
             benchmark_type: benchmark_type.clone(),
@@ -111,7 +111,7 @@ impl BenchmarkScheduler {
 
         let mut benchmarks = self.scheduled_benchmarks.write().await;
         benchmarks.push(scheduled.clone());
-        
+
         // If scheduled time is in the past or very soon, add to queue
         if scheduled_at <= Utc::now() + chrono::Duration::minutes(5) {
             let mut queue = self.task_queue.write().await;
@@ -157,7 +157,10 @@ impl BenchmarkScheduler {
             .await?;
         ids.push(weekly_id);
 
-        info!("Scheduled default benchmarks: {} daily, {} weekly", daily_id, weekly_id);
+        info!(
+            "Scheduled default benchmarks: {} daily, {} weekly",
+            daily_id, weekly_id
+        );
         Ok(ids)
     }
 
@@ -175,7 +178,8 @@ impl BenchmarkScheduler {
 
             // Check if benchmark is due
             let is_due = benchmark.scheduled_at <= now;
-            let should_reschedule = benchmark.last_executed_at
+            let should_reschedule = benchmark
+                .last_executed_at
                 .map(|last| {
                     let next = benchmark.cadence.next_scheduled_time(last);
                     next <= now
@@ -185,16 +189,14 @@ impl BenchmarkScheduler {
             if should_reschedule {
                 // Update scheduled time for next execution
                 benchmark.scheduled_at = benchmark.cadence.next_scheduled_time(now);
-                
+
                 // Add to queue
                 queue.push_back(benchmark.clone());
                 queued_count += 1;
 
                 debug!(
                     "Queued benchmark {} (type: {:?}, cadence: {:?})",
-                    benchmark.id,
-                    benchmark.benchmark_type,
-                    benchmark.cadence
+                    benchmark.id, benchmark.benchmark_type, benchmark.cadence
                 );
             }
         }
@@ -217,12 +219,15 @@ impl BenchmarkScheduler {
     /// Mark benchmark as executed
     pub async fn mark_executed(&self, benchmark_id: Uuid) -> Result<()> {
         let mut benchmarks = self.scheduled_benchmarks.write().await;
-        
+
         if let Some(benchmark) = benchmarks.iter_mut().find(|b| b.id == benchmark_id) {
             benchmark.last_executed_at = Some(Utc::now());
             info!("Marked benchmark {} as executed", benchmark_id);
         } else {
-            warn!("Benchmark {} not found for marking as executed", benchmark_id);
+            warn!(
+                "Benchmark {} not found for marking as executed",
+                benchmark_id
+            );
         }
 
         Ok(())
@@ -241,7 +246,7 @@ impl BenchmarkScheduler {
     /// Cancel a scheduled benchmark
     pub async fn cancel_benchmark(&self, benchmark_id: Uuid) -> Result<()> {
         let mut benchmarks = self.scheduled_benchmarks.write().await;
-        
+
         if let Some(benchmark) = benchmarks.iter_mut().find(|b| b.id == benchmark_id) {
             benchmark.active = false;
             info!("Cancelled benchmark {}", benchmark_id);
@@ -262,4 +267,3 @@ impl Default for BenchmarkScheduler {
         Self::new()
     }
 }
-

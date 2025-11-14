@@ -3,14 +3,14 @@
 //! Main orchestrator that coordinates text, visual, and graph indexing
 //! with unified search capabilities and storage management.
 
-use schemars::JsonSchema;
-use super::text::{TextIndexer, TextDocument};
-use super::visual::{VisualIndexer, VisualDocument};
-use super::graph::{GraphIndexer, NodeProperty, GraphEdge};
-use super::search::{MultimodalSearchEngine, MultimodalQuery, UnifiedSearchResult};
+use super::graph::{GraphEdge, GraphIndexer, NodeProperty};
+use super::search::{MultimodalQuery, MultimodalSearchEngine, UnifiedSearchResult};
 use super::storage::EmbeddingStorage;
+use super::text::{TextDocument, TextIndexer};
+use super::visual::{VisualDocument, VisualIndexer};
 use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -90,19 +90,30 @@ impl MultimodalIndexer {
     }
 
     /// Search across all modalities
-    pub async fn multimodal_search(&self, query: MultimodalQuery) -> Result<Vec<UnifiedSearchResult>> {
+    pub async fn multimodal_search(
+        &self,
+        query: MultimodalQuery,
+    ) -> Result<Vec<UnifiedSearchResult>> {
         let engine = self.search_engine.read().await;
         engine.search(query).await
     }
 
     /// Text search only
-    pub async fn text_search(&self, query: &str, limit: usize) -> Result<Vec<super::text::SearchResult>> {
+    pub async fn text_search(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<super::text::SearchResult>> {
         let indexer = self.text_indexer.read().await;
         Ok(indexer.bm25_search(query, limit))
     }
 
     /// Visual search only
-    pub async fn visual_search(&self, embedding: &EmbeddingVector, limit: usize) -> Result<Vec<super::visual::VisualSearchResult>> {
+    pub async fn visual_search(
+        &self,
+        embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Result<Vec<super::visual::VisualSearchResult>> {
         let indexer = self.visual_indexer.read().await;
         Ok(indexer.visual_search(embedding, limit))
     }
@@ -256,5 +267,3 @@ impl MultimodalIndexerBuilder {
         indexer
     }
 }
-
-

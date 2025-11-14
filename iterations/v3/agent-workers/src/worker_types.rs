@@ -1,7 +1,7 @@
 //! Worker pool types and data structures
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -68,12 +68,8 @@ impl Default for QualityRequirements {
 // Use shared types from contracts
 use agent_agency_contracts::{
     task_executor::{ExecutionStatus, TaskExecutionResult},
-    WorkerHealthMetrics,
-    WorkerHealthStatus,
-    WorkerRegistration,
-    WorkerType,
-    RiskTier,
-    TaskPriority as ContractTaskPriority,
+    RiskTier, TaskPriority as ContractTaskPriority, WorkerHealthMetrics, WorkerHealthStatus,
+    WorkerRegistration, WorkerType,
 };
 
 // Define our own TaskPriority to avoid conflicts
@@ -157,14 +153,13 @@ impl Clock for SystemClock {
 /// Default ID generator implementation using UUID v4
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct UuidGenerator ;
+pub struct UuidGenerator;
 
 impl IdGenerator for UuidGenerator {
     fn generate(&self) -> Uuid {
         Uuid::new_v4()
     }
 }
-
 
 /// Worker status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -192,10 +187,8 @@ pub struct Worker {
     pub health_metrics: Option<WorkerHealthMetrics>,
     pub last_health_check: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub last_heartbeat: DateTime<Utc>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
@@ -237,15 +230,12 @@ pub struct TaskAssignment {
     #[schemars(with = "String")]
     pub worker_id: Uuid,
     #[schemars(with = "String")]
-
     pub assigned_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub estimated_completion: DateTime<Utc>,
     pub priority: TaskPriority,
     pub requirements: TaskRequirements,
 }
-
 
 /// Task requirements for routing
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
@@ -309,7 +299,11 @@ pub const META_TOKENS_USED: &str = "tokens_used";
 
 /// Extract the execution status from a contract result, defaulting by success flag.
 pub fn get_execution_status(result: &TaskExecutionResult) -> ExecutionStatus {
-    if let Some(value) = result.metadata.get(META_EXECUTION_STATUS).and_then(|v| v.as_str()) {
+    if let Some(value) = result
+        .metadata
+        .get(META_EXECUTION_STATUS)
+        .and_then(|v| v.as_str())
+    {
         match value {
             "Pending" => ExecutionStatus::Pending,
             "Running" => ExecutionStatus::Running,
@@ -366,16 +360,13 @@ pub fn get_caws_compliance(result: &TaskExecutionResult) -> Option<CawsComplianc
 
 /// Retrieve token usage information if available.
 pub fn get_tokens_used(result: &TaskExecutionResult) -> Option<u32> {
-    result
-        .metadata
-        .get(META_TOKENS_USED)
-        .and_then(|value| {
-            if let Some(num) = value.as_u64() {
-                Some(num as u32)
-            } else {
-                value.as_str().and_then(|s| s.parse::<u32>().ok())
-            }
-        })
+    result.metadata.get(META_TOKENS_USED).and_then(|value| {
+        if let Some(num) = value.as_u64() {
+            Some(num as u32)
+        } else {
+            value.as_str().and_then(|s| s.parse::<u32>().ok())
+        }
+    })
 }
 
 /// Quality metrics
@@ -450,7 +441,6 @@ pub struct WorkerPoolStats {
     pub average_queue_time_ms: f64,
     pub pool_uptime_seconds: u64,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -475,7 +465,6 @@ pub struct WorkerHealthCheck {
     pub response_time_ms: u64,
     pub error_message: Option<String>,
     #[schemars(with = "String")]
-
     pub checked_at: DateTime<Utc>,
 }
 
@@ -487,7 +476,6 @@ pub struct TaskRoutingResult {
     pub selected_workers: Vec<WorkerAssignmentDetails>,
     pub routing_reasoning: String,
     #[schemars(with = "String")]
-
     pub estimated_completion_time: DateTime<Utc>,
     pub confidence_score: f32,
 }
@@ -537,7 +525,7 @@ pub enum WorkerPoolEvent {
         is_healthy: bool,
         response_time_ms: u64,
         #[schemars(with = "String")]
-    checked_at: DateTime<Utc>,
+        checked_at: DateTime<Utc>,
     },
     HealthCheckFailed {
         worker_id: Uuid,
@@ -550,7 +538,6 @@ pub enum WorkerPoolEvent {
         threshold: f64,
     },
 }
-
 
 /// Worker update request
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -712,9 +699,8 @@ impl Worker {
         // Update average execution time
         let total_time = self.performance_metrics.average_execution_time_ms
             * (self.performance_metrics.total_tasks - 1) as f64;
-        self.performance_metrics.average_execution_time_ms = (total_time
-            + result.duration_ms as f64)
-            / self.performance_metrics.total_tasks as f64;
+        self.performance_metrics.average_execution_time_ms =
+            (total_time + result.duration_ms as f64) / self.performance_metrics.total_tasks as f64;
 
         // Update average quality score
         if let Some(output) = get_worker_output(result) {
@@ -911,10 +897,7 @@ mod tests {
             META_WORKER_OUTPUT.to_string(),
             serde_json::to_value(&worker_output).unwrap(),
         );
-        metadata.insert(
-            META_TOKENS_USED.to_string(),
-            serde_json::json!(1500),
-        );
+        metadata.insert(META_TOKENS_USED.to_string(), serde_json::json!(1500));
 
         let result = TaskExecutionResult {
             execution_id: Uuid::new_v4(),
@@ -973,7 +956,6 @@ pub struct TaskContext {
     pub parameters: std::collections::HashMap<String, serde_json::Value>,
 }
 
-
 /// Task specification for workers
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskSpec {
@@ -984,7 +966,6 @@ pub struct TaskSpec {
     pub requirements: TaskRequirements,
     pub context: TaskContext,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub deadline: Option<DateTime<Utc>>,
     pub risk_tier: RiskTier,
@@ -1103,7 +1084,7 @@ pub enum WorkerMessage {
         worker_id: Uuid,
         subtask_id: Uuid,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     Progress {
         worker_id: Uuid,
@@ -1111,28 +1092,28 @@ pub enum WorkerMessage {
         progress_percentage: f32,
         message: String,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     Blocked {
         worker_id: Uuid,
         subtask_id: Uuid,
         reason: String,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     Completed {
         worker_id: Uuid,
         subtask_id: Uuid,
         result: WorkerOutput,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
     Failed {
         worker_id: Uuid,
         subtask_id: Uuid,
         error: String,
         #[schemars(with = "String")]
-    timestamp: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
     },
 }
 
@@ -1191,7 +1172,6 @@ pub struct Progress {
     pub overall_percentage: f32,
     pub estimated_completion: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub last_updated: DateTime<Utc>,
 }
 
@@ -1266,10 +1246,8 @@ pub struct Artifact {
     pub content: String,
     pub metadata: HashMap<String, serde_json::Value>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub modified_at: DateTime<Utc>,
 }
 

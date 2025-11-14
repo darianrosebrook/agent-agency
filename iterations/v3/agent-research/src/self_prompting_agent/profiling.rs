@@ -27,13 +27,16 @@ impl PerformanceProfiler {
         Ok(PerformanceReport {
             operation: operation.to_string(),
             duration_ms: duration.as_millis() as f64,
-            memory_mb: 50.0, // Stub value
+            memory_mb: 50.0,   // Stub value
             cpu_percent: 25.0, // Stub value
         })
     }
 
     /// Run performance benchmark
-    pub async fn benchmark(&self, benchmark: &PerformanceBenchmark) -> Result<BenchmarkResult, String> {
+    pub async fn benchmark(
+        &self,
+        benchmark: &PerformanceBenchmark,
+    ) -> Result<BenchmarkResult, String> {
         let start = Instant::now();
         let mut results = Vec::new();
 
@@ -60,7 +63,7 @@ impl PerformanceProfiler {
 
 /// Performance report for single operation
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceReport {
     pub operation: String,
     pub duration_ms: f64,
@@ -70,7 +73,7 @@ pub struct PerformanceReport {
 
 /// Performance benchmark configuration
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceBenchmark {
     pub name: String,
     pub iterations: usize,
@@ -79,7 +82,7 @@ pub struct PerformanceBenchmark {
 
 /// Benchmark result
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     pub benchmark_name: String,
     pub total_duration_ms: f64,
@@ -124,7 +127,9 @@ impl ProfilingSession {
         ProfilingReport {
             session_name: self.name,
             total_duration_ms: total_duration.as_millis() as f64,
-            checkpoints: self.checkpoints.into_iter()
+            checkpoints: self
+                .checkpoints
+                .into_iter()
                 .map(|(name, duration)| Checkpoint {
                     name,
                     duration_ms: duration.as_millis() as f64,
@@ -136,7 +141,7 @@ impl ProfilingSession {
 
 /// Profiling report
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfilingReport {
     pub session_name: String,
     pub total_duration_ms: f64,
@@ -145,7 +150,7 @@ pub struct ProfilingReport {
 
 /// Performance checkpoint
 
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Checkpoint {
     pub name: String,
     pub duration_ms: f64,

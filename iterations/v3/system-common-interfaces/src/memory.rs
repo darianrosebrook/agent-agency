@@ -7,17 +7,16 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 
 /// Unique identifier types
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct MemoryId (pub String);
+pub struct MemoryId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-pub struct WorkspaceId (pub String);
+pub struct WorkspaceId(pub String);
 
 /// Memory record stored/retrieved by the memory service
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
@@ -86,10 +85,15 @@ pub trait MemoryService: Send + Sync + std::fmt::Debug {
     async fn get(&self, id: &MemoryId) -> std::result::Result<Option<MemoryRecord>, MemoryError>;
 
     /// Search memories by text/vector and filters
-    async fn search(&self, query: MemoryQuery) -> std::result::Result<Vec<ScoredMemory>, MemoryError>;
+    async fn search(
+        &self,
+        query: MemoryQuery,
+    ) -> std::result::Result<Vec<ScoredMemory>, MemoryError>;
 
     /// Record access time and optionally adjust importance/decay
-    async fn touch(&self, id: &MemoryId, when: DateTime<Utc>) -> std::result::Result<(), MemoryError>;
+    async fn touch(
+        &self,
+        id: &MemoryId,
+        when: DateTime<Utc>,
+    ) -> std::result::Result<(), MemoryError>;
 }
-
-

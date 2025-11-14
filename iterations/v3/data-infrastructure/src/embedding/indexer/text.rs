@@ -3,10 +3,10 @@
 //! BM25 sparse indexing, dense embeddings, and HNSW-based
 //! approximate nearest neighbor search for text documents.
 
-use schemars::JsonSchema;
-use crate::embedding::embedding_types::*;
 use crate::embedding::embedding_service::EmbeddingServiceFactory;
+use crate::embedding::embedding_types::*;
 use anyhow::Result;
+use schemars::JsonSchema;
 use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -68,21 +68,26 @@ impl TextIndexer {
 
     /// Initialize embedding service (lazy initialization)
     async fn get_embedding_service(&self) -> Result<&dyn crate::embedding::EmbeddingService> {
-        self.embedding_service.get_or_try_init(|| async {
-            let config = crate::embedding::EmbeddingConfig {
-                model_name: "embeddinggemma".to_string(),
-                dimension: 768,
-                batch_size: 32,
-                cache_size: 1000,
-                timeout_ms: 30000,
-            };
-            
-            let service = EmbeddingServiceFactory::create_with_auto_detect(config, Some("embeddinggemma".to_string())).await;
-            // EmbeddingService trait already has Send + Sync bounds
-            Ok(service)
-        })
-        .await
-        .map(|s| s.as_ref())
+        self.embedding_service
+            .get_or_try_init(|| async {
+                let config = crate::embedding::EmbeddingConfig {
+                    model_name: "embeddinggemma".to_string(),
+                    dimension: 768,
+                    batch_size: 32,
+                    cache_size: 1000,
+                    timeout_ms: 30000,
+                };
+
+                let service = EmbeddingServiceFactory::create_with_auto_detect(
+                    config,
+                    Some("embeddinggemma".to_string()),
+                )
+                .await;
+                // EmbeddingService trait already has Send + Sync bounds
+                Ok(service)
+            })
+            .await
+            .map(|s| s.as_ref())
     }
 
     /// Index a text document
@@ -126,7 +131,11 @@ impl TextIndexer {
     }
 
     /// Search using dense embeddings and HNSW
-    pub fn semantic_search(&self, query_embedding: &EmbeddingVector, limit: usize) -> Vec<SearchResult> {
+    pub fn semantic_search(
+        &self,
+        query_embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Vec<SearchResult> {
         let mut results = Vec::new();
 
         for (doc_id, embedding) in &self.dense_embeddings {
@@ -145,7 +154,12 @@ impl TextIndexer {
     }
 
     /// Hybrid search combining BM25 and semantic search
-    pub fn hybrid_search(&self, query: &str, query_embedding: &EmbeddingVector, limit: usize) -> Vec<SearchResult> {
+    pub fn hybrid_search(
+        &self,
+        query: &str,
+        query_embedding: &EmbeddingVector,
+        limit: usize,
+    ) -> Vec<SearchResult> {
         let bm25_results = self.bm25_search(query, limit * 2);
         let semantic_results = self.semantic_search(query_embedding, limit * 2);
 
@@ -166,7 +180,8 @@ impl TextIndexer {
     // Private helper methods
 
     fn build_bm25_index(&mut self, doc: &TextDocument) {
-        let terms: Vec<String> = doc.content
+        let terms: Vec<String> = doc
+            .content
             .split_whitespace()
             .map(|s| s.to_lowercase())
             .collect();
@@ -209,31 +224,43 @@ impl TextIndexer {
 
     /// Generate dense embedding using CoreML (fallback to DummyEmbeddingProvider)
     async fn generate_embedding_async(&self, content: &str) -> Result<EmbeddingVector> {
-        use tracing::{info, debug};
-        
-        info!("Generating dense embedding for content (length: {})", content.len());
-        
+        use tracing::{debug, info};
+
+        info!(
+            "Generating dense embedding for content (length: {})",
+            content.len()
+        );
+
         // Get embedding service (lazy initialization)
         let service = self.get_embedding_service().await?;
-        
+
         // Generate embedding
-        let stored_embedding = service.generate_embedding(content, crate::embedding::ContentType::Text, "text_indexer").await?;
-        
-        debug!("Generated embedding with {} dimensions", stored_embedding.vector.values.len());
-        
+        let stored_embedding = service
+            .generate_embedding(content, crate::embedding::ContentType::Text, "text_indexer")
+            .await?;
+
+        debug!(
+            "Generated embedding with {} dimensions",
+            stored_embedding.vector.values.len()
+        );
+
         // StoredEmbedding already contains EmbeddingVector, so we can use it directly
         Ok(stored_embedding.vector)
     }
 
     /// Generate dense embedding using CoreML (synchronous wrapper)
     fn generate_embedding(&self, content: &str) -> Result<EmbeddingVector> {
-        tokio::runtime::Handle::current().block_on(async {
-            self.generate_embedding_async(content).await
-        })
+        tokio::runtime::Handle::current()
+            .block_on(async { self.generate_embedding_async(content).await })
     }
 
     fn cosine_similarity(&self, a: &EmbeddingVector, b: &EmbeddingVector) -> f64 {
-        let dot_product: f64 = a.values.iter().zip(&b.values).map(|(x, y)| (*x as f64) * (*y as f64)).sum();
+        let dot_product: f64 = a
+            .values
+            .iter()
+            .zip(&b.values)
+            .map(|(x, y)| (*x as f64) * (*y as f64))
+            .sum();
         let norm_a: f64 = a.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
         let norm_b: f64 = b.values.iter().map(|x| (*x as f64) * (*x as f64)).sum();
 
@@ -255,7 +282,12 @@ impl TextIndexer {
         }
     }
 
-    fn combine_search_results(&self, bm25: Vec<SearchResult>, semantic: Vec<SearchResult>, limit: usize) -> Vec<SearchResult> {
+    fn combine_search_results(
+        &self,
+        bm25: Vec<SearchResult>,
+        semantic: Vec<SearchResult>,
+        limit: usize,
+    ) -> Vec<SearchResult> {
         let mut combined = HashMap::new();
 
         // Add BM25 results with weight
@@ -265,7 +297,9 @@ impl TextIndexer {
 
         // Add semantic results with weight
         for result in semantic {
-            let entry = combined.entry(result.document_id).or_insert((0.0, result.clone()));
+            let entry = combined
+                .entry(result.document_id)
+                .or_insert((0.0, result.clone()));
             entry.0 += result.score * 0.4;
             // Keep the result with higher individual score
             if result.score > entry.1.score {
@@ -282,13 +316,16 @@ impl TextIndexer {
 
     fn initialize_hnsw_metadata(&mut self, model: &str) {
         if !self.hnsw_metadata.contains_key(model) {
-            self.hnsw_metadata.insert(model.to_string(), HnswMetadata {
-                dimensions: 768, // Default embedding dimension
-                max_connections: 32,
-                ef_construction: 200,
-                ef_search: 64,
-                index_size: 0,
-            });
+            self.hnsw_metadata.insert(
+                model.to_string(),
+                HnswMetadata {
+                    dimensions: 768, // Default embedding dimension
+                    max_connections: 32,
+                    ef_construction: 200,
+                    ef_search: 64,
+                    index_size: 0,
+                },
+            );
         }
     }
 }
@@ -311,5 +348,3 @@ pub struct IndexStatistics {
     pub models_indexed: usize,
     pub index_sizes: usize,
 }
-
-

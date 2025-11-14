@@ -1,7 +1,7 @@
 //! Research agent types and data structures
 
-use schemars::JsonSchema;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -10,7 +10,7 @@ use uuid::Uuid;
 pub use agent_agency_contracts::types::research::QueryType;
 
 /// Research priority levels
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ResearchPriority {
     Low = 1,
     Normal = 2,
@@ -19,7 +19,7 @@ pub enum ResearchPriority {
 }
 
 /// Fusion methods for combining multimodal search results
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FusionMethod {
     /// Reciprocal Rank Fusion
     RRF,
@@ -30,13 +30,13 @@ pub enum FusionMethod {
 }
 
 /// Search context for multimodal knowledge seeking
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchContext {
     pub project_scope: Option<String>,
 }
 
 /// Configuration update for research agent
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConfigurationUpdate {
     VectorSearch(VectorSearchConfig),
     WebScraping(WebScrapingConfig),
@@ -44,7 +44,7 @@ pub enum ConfigurationUpdate {
 }
 
 /// Knowledge query for research
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeQuery {
     pub id: Uuid,
     pub query: String,
@@ -56,7 +56,7 @@ pub struct KnowledgeQuery {
 }
 
 /// Search result from various sources
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub id: Uuid,
     pub title: String,
@@ -69,7 +69,7 @@ pub struct SearchResult {
 }
 
 /// Knowledge source types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KnowledgeSource {
     /// Web page content
     WebPage(String),
@@ -104,7 +104,7 @@ impl std::fmt::Display for KnowledgeSource {
 }
 
 /// Research query
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchQuery {
     pub id: Uuid,
     pub query: String,
@@ -120,7 +120,7 @@ pub struct ResearchQuery {
 }
 
 /// Research result
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchResult {
     pub query_id: Uuid,
     pub source: KnowledgeSource,
@@ -136,7 +136,7 @@ pub struct ResearchResult {
 }
 
 /// Synthesized context
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SynthesizedContext {
     pub id: Uuid,
     pub query_id: Uuid,
@@ -151,7 +151,7 @@ pub struct SynthesizedContext {
 }
 
 /// Cross-reference between knowledge sources
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossReference {
     pub source_id: Uuid,
     pub target_id: Uuid,
@@ -161,7 +161,7 @@ pub struct CrossReference {
 }
 
 /// Types of cross-references
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CrossReferenceType {
     /// Source supports target
     Supports,
@@ -178,7 +178,7 @@ pub enum CrossReferenceType {
 }
 
 /// Vector embedding for semantic search
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorEmbedding {
     pub id: Uuid,
     pub content_id: Uuid,
@@ -190,7 +190,7 @@ pub struct VectorEmbedding {
 }
 
 /// Knowledge base entry
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnowledgeEntry {
     pub id: Uuid,
     pub title: String,
@@ -211,7 +211,7 @@ pub struct KnowledgeEntry {
 }
 
 /// Content types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ContentType {
     /// Plain text content
     Text,
@@ -234,7 +234,7 @@ pub enum ContentType {
 }
 
 /// Web scraping result
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebScrapingResult {
     pub url: String,
     pub title: String,
@@ -249,7 +249,7 @@ pub struct WebScrapingResult {
 }
 
 /// Content processing result
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContentProcessingResult {
     pub original_content: String,
     pub processed_content: String,
@@ -263,7 +263,7 @@ pub struct ContentProcessingResult {
 }
 
 /// Research performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchMetrics {
     pub total_queries: u64,
     pub successful_queries: u64,
@@ -300,7 +300,7 @@ impl Default for ResearchMetrics {
 }
 
 /// Research agent status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize) ]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ResearchAgentStatus {
     /// Agent is available for queries
     Available,
@@ -315,7 +315,7 @@ pub enum ResearchAgentStatus {
 }
 
 /// Research configuration update
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchConfigUpdate {
     pub field: String,
     pub value: serde_json::Value,
@@ -324,7 +324,7 @@ pub struct ResearchConfigUpdate {
 }
 
 /// Research session for tracking related queries
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchSession {
     pub id: Uuid,
     pub session_name: String,
@@ -339,7 +339,7 @@ pub struct ResearchSession {
 }
 
 /// Research agent capabilities
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchCapabilities {
     pub supported_query_types: Vec<QueryType>,
     pub supported_sources: Vec<KnowledgeSource>,
@@ -353,14 +353,14 @@ pub struct ResearchCapabilities {
 }
 
 /// Performance configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceConfig {
     pub max_concurrent_requests: usize,
     pub request_timeout_ms: u64,
 }
 
 /// Research agent configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchAgentConfig {
     pub vector_search: VectorSearchConfig,
     pub web_scraping: WebScrapingConfig,
@@ -416,7 +416,7 @@ impl Default for ResearchAgentConfig {
 }
 
 /// Vector search configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VectorSearchConfig {
     pub enabled: bool,
     pub qdrant_url: String,
@@ -429,7 +429,7 @@ pub struct VectorSearchConfig {
 }
 
 /// Web scraping configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebScrapingConfig {
     pub enabled: bool,
     pub max_depth: u32,
@@ -443,7 +443,7 @@ pub struct WebScrapingConfig {
 }
 
 /// Context synthesis configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextSynthesisConfig {
     pub enabled: bool,
     pub similarity_threshold: f32,
@@ -453,7 +453,7 @@ pub struct ContextSynthesisConfig {
 }
 
 /// Fuzzy matching configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FuzzyMatchingConfig {
     pub enabled: bool,
     pub similarity_threshold: f32,
@@ -463,7 +463,7 @@ pub struct FuzzyMatchingConfig {
 }
 
 /// Content processing configuration
-#[derive(Debug, Clone, Serialize, Deserialize) ]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContentProcessingConfig {
     pub enable_cleaning: bool,
     pub enable_markdown: bool,

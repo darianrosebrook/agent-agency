@@ -12,12 +12,12 @@ use std::sync::Arc;
 
 #[cfg(feature = "tool-chain")]
 use agent_agency_contracts::{
-    ToolChainPlanner,
-    types::tool_chain::{
-        ToolChainPlan, PlanningContext, ValidationResult, PlanningStats,
-        TaskComplexity, RiskLevel, RiskAssessment, QualityMetrics,
-    },
     errors::ToolChainResult,
+    types::tool_chain::{
+        PlanningContext, PlanningStats, QualityMetrics, RiskAssessment, RiskLevel, TaskComplexity,
+        ToolChainPlan, ValidationResult,
+    },
+    ToolChainPlanner,
 };
 
 /// Adapter that wraps system-federated-ml::ToolChainPlanner to implement contracts::ToolChainPlanner
@@ -66,10 +66,15 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         };
 
         // Plan the tool chain using the real planner
-        let tool_chain = self.planner.plan_chain(&planning_context, &constraints).await
-            .map_err(|e| agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "tool-chain".to_string()
-            })?;
+        let tool_chain = self
+            .planner
+            .plan_chain(&planning_context, &constraints)
+            .await
+            .map_err(
+                |e| agent_agency_contracts::ContractError::ServiceUnavailable {
+                    service: "tool-chain".to_string(),
+                },
+            )?;
 
         // Convert back to contracts types
         let plan = self.convert_tool_chain_to_contracts(tool_chain, &context);
@@ -99,7 +104,10 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         let mut seen_tools = HashSet::new();
         for (idx, tool_id) in plan.tool_sequence.iter().enumerate() {
             if seen_tools.contains(tool_id) {
-                issues.push(format!("Duplicate tool '{}' found at position {}", tool_id, idx));
+                issues.push(format!(
+                    "Duplicate tool '{}' found at position {}",
+                    tool_id, idx
+                ));
                 score -= 0.1;
             } else {
                 seen_tools.insert(tool_id.clone());
@@ -107,21 +115,30 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // 2. Validate dependencies
-        debug!("Validating dependencies for {} tools", plan.tool_sequence.len());
+        debug!(
+            "Validating dependencies for {} tools",
+            plan.tool_sequence.len()
+        );
 
         // Check that all dependencies reference existing tools
         let tool_set: HashSet<String> = plan.tool_sequence.iter().cloned().collect();
         for (tool_id, deps) in &plan.dependencies {
             // Check if the tool itself exists in the sequence
             if !tool_set.contains(tool_id) {
-                warnings.push(format!("Dependency map references tool '{}' that is not in tool sequence", tool_id));
+                warnings.push(format!(
+                    "Dependency map references tool '{}' that is not in tool sequence",
+                    tool_id
+                ));
                 score -= 0.05;
             }
 
             // Check if all dependencies exist
             for dep in deps {
                 if !tool_set.contains(dep) {
-                    issues.push(format!("Tool '{}' depends on '{}' which is not in tool sequence", tool_id, dep));
+                    issues.push(format!(
+                        "Tool '{}' depends on '{}' which is not in tool sequence",
+                        tool_id, dep
+                    ));
                     score -= 0.15;
                 }
             }
@@ -137,7 +154,9 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // 4. Validate dependency consistency with tool sequence order
         debug!("Validating dependency order consistency");
         let mut order_violations = 0;
-        let tool_positions: HashMap<String, usize> = plan.tool_sequence.iter()
+        let tool_positions: HashMap<String, usize> = plan
+            .tool_sequence
+            .iter()
             .enumerate()
             .map(|(idx, tool_id)| (tool_id.clone(), idx))
             .collect();
@@ -176,13 +195,23 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // 6. Check for missing error handling
-        if plan.tool_sequence.len() > 3 && !plan.tool_sequence.iter().any(|t| t.contains("error") || t.contains("validate") || t.contains("check")) {
-            suggestions.push("Consider adding error handling or validation steps for longer tool chains".to_string());
+        if plan.tool_sequence.len() > 3
+            && !plan
+                .tool_sequence
+                .iter()
+                .any(|t| t.contains("error") || t.contains("validate") || t.contains("check"))
+        {
+            suggestions.push(
+                "Consider adding error handling or validation steps for longer tool chains"
+                    .to_string(),
+            );
         }
 
         // 7. Validate risk assessment consistency
         if plan.risk_assessment.confidence_score < 0.5 && plan.tool_sequence.len() > 5 {
-            warnings.push("Low confidence score for complex tool chain - consider simplifying".to_string());
+            warnings.push(
+                "Low confidence score for complex tool chain - consider simplifying".to_string(),
+            );
             score -= 0.1;
         }
 
@@ -209,9 +238,18 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             suggestions,
             metadata: HashMap::from([
                 ("tool_count".to_string(), plan.tool_sequence.len().into()),
-                ("dependency_count".to_string(), plan.dependencies.len().into()),
-                ("estimated_duration_ms".to_string(), plan.estimated_duration_ms.into()),
-                ("estimated_cost_cents".to_string(), plan.estimated_cost_cents.into()),
+                (
+                    "dependency_count".to_string(),
+                    plan.dependencies.len().into(),
+                ),
+                (
+                    "estimated_duration_ms".to_string(),
+                    plan.estimated_duration_ms.into(),
+                ),
+                (
+                    "estimated_cost_cents".to_string(),
+                    plan.estimated_cost_cents.into(),
+                ),
             ]),
         })
     }
@@ -268,7 +306,9 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 
         for tool in tool_sequence {
             if !visited.contains(tool) {
-                if let Some(cycle) = dfs(tool, dependencies, &mut visited, &mut rec_stack, &mut path) {
+                if let Some(cycle) =
+                    dfs(tool, dependencies, &mut visited, &mut rec_stack, &mut path)
+                {
                     return Some(cycle.join(" -> "));
                 }
             }
@@ -295,12 +335,16 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         let mut optimizations_applied = Vec::new();
 
         // Normalize criteria to lowercase for case-insensitive matching
-        let criteria: Vec<String> = optimization_criteria.iter()
+        let criteria: Vec<String> = optimization_criteria
+            .iter()
             .map(|c| c.to_lowercase())
             .collect();
 
         // 1. Parallelization optimization
-        if criteria.iter().any(|c| c.contains("parallel") || c.contains("concurrent") || c.contains("speed")) {
+        if criteria
+            .iter()
+            .any(|c| c.contains("parallel") || c.contains("concurrent") || c.contains("speed"))
+        {
             debug!("Applying parallelization optimization");
             let parallelized = self.optimize_parallelization(&optimized_plan).await?;
             if parallelized.tool_sequence != optimized_plan.tool_sequence {
@@ -310,7 +354,10 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // 2. Cost optimization
-        if criteria.iter().any(|c| c.contains("cost") || c.contains("cheap") || c.contains("budget")) {
+        if criteria
+            .iter()
+            .any(|c| c.contains("cost") || c.contains("cheap") || c.contains("budget"))
+        {
             debug!("Applying cost optimization");
             let cost_optimized = self.optimize_cost(&optimized_plan).await?;
             if cost_optimized.estimated_cost_cents < optimized_plan.estimated_cost_cents {
@@ -320,7 +367,12 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // 3. Time optimization (duration minimization)
-        if criteria.iter().any(|c| c.contains("time") || c.contains("duration") || c.contains("fast") || c.contains("speed")) {
+        if criteria.iter().any(|c| {
+            c.contains("time")
+                || c.contains("duration")
+                || c.contains("fast")
+                || c.contains("speed")
+        }) {
             debug!("Applying time optimization");
             let time_optimized = self.optimize_time(&optimized_plan).await?;
             if time_optimized.estimated_duration_ms < optimized_plan.estimated_duration_ms {
@@ -330,7 +382,10 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // 4. Resource usage optimization
-        if criteria.iter().any(|c| c.contains("resource") || c.contains("memory") || c.contains("cpu")) {
+        if criteria
+            .iter()
+            .any(|c| c.contains("resource") || c.contains("memory") || c.contains("cpu"))
+        {
             debug!("Applying resource usage optimization");
             let resource_optimized = self.optimize_resources(&optimized_plan).await?;
             optimized_plan = resource_optimized;
@@ -339,9 +394,9 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 
         // Update quality metrics based on optimizations
         if !optimizations_applied.is_empty() {
-            optimized_plan.quality_metrics.efficiency_score = 
+            optimized_plan.quality_metrics.efficiency_score =
                 (optimized_plan.quality_metrics.efficiency_score * 0.9 + 0.1).min(1.0);
-            optimized_plan.quality_metrics.performance_score = 
+            optimized_plan.quality_metrics.performance_score =
                 (optimized_plan.quality_metrics.performance_score * 0.9 + 0.1).min(1.0);
         }
 
@@ -359,8 +414,13 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
     }
 
     /// Optimize tool chain for parallelization
-    async fn optimize_parallelization(&self, plan: &ToolChainPlan) -> ToolChainResult<ToolChainPlan> {
-        use agent_agency_contracts::planning_io::{DependencyNode, DependencyEdge, DependencyNodeType, DependencyEdgeType};
+    async fn optimize_parallelization(
+        &self,
+        plan: &ToolChainPlan,
+    ) -> ToolChainResult<ToolChainPlan> {
+        use agent_agency_contracts::planning_io::{
+            DependencyEdge, DependencyEdgeType, DependencyNode, DependencyNodeType,
+        };
         use std::collections::HashMap;
 
         // Handle edge case: empty tool sequence
@@ -375,14 +435,17 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         let avg_time_per_tool = plan.estimated_duration_ms / plan.tool_sequence.len() as u64;
 
         for tool_id in &plan.tool_sequence {
-            nodes.insert(tool_id.clone(), DependencyNode {
-                milestone_id: tool_id.clone(),
-                node_type: DependencyNodeType::Milestone,
-                estimated_cost: avg_cost_per_tool,
-                estimated_time_ms: avg_time_per_tool,
-                resource_requirements: HashMap::new(),
-                metadata: HashMap::new(),
-            });
+            nodes.insert(
+                tool_id.clone(),
+                DependencyNode {
+                    milestone_id: tool_id.clone(),
+                    node_type: DependencyNodeType::Milestone,
+                    estimated_cost: avg_cost_per_tool,
+                    estimated_time_ms: avg_time_per_tool,
+                    resource_requirements: HashMap::new(),
+                    metadata: HashMap::new(),
+                },
+            );
         }
 
         let mut edges = Vec::new();
@@ -399,11 +462,12 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         }
 
         // Identify parallel groups using graph algorithms
-        let parallel_groups = crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
-            .unwrap_or_else(|_| {
-                // Fallback: each tool in its own group (sequential)
-                plan.tool_sequence.iter().map(|t| vec![t.clone()]).collect()
-            });
+        let parallel_groups =
+            crate::planning::graph_algorithms::identify_parallel_groups(&nodes, &edges)
+                .unwrap_or_else(|_| {
+                    // Fallback: each tool in its own group (sequential)
+                    plan.tool_sequence.iter().map(|t| vec![t.clone()]).collect()
+                });
 
         // Reorder tool sequence to maximize parallel execution
         // Flatten parallel groups while preserving dependency order
@@ -432,7 +496,7 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         let mut optimized_duration_ms = 0u64;
         if !plan.tool_sequence.is_empty() {
             let avg_time_per_tool = plan.estimated_duration_ms / plan.tool_sequence.len() as u64;
-            
+
             for group in &parallel_groups {
                 if !group.is_empty() {
                     // Estimate: tools in parallel group execute concurrently
@@ -480,7 +544,9 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // Simple cost optimization: if we can identify expensive tools, defer them
         // This is a placeholder - full implementation would query tool cost database
         let estimated_cost_reduction = (plan.estimated_cost_cents as f64 * 0.05) as u32; // 5% reduction estimate
-        optimized_plan.estimated_cost_cents = plan.estimated_cost_cents.saturating_sub(estimated_cost_reduction);
+        optimized_plan.estimated_cost_cents = plan
+            .estimated_cost_cents
+            .saturating_sub(estimated_cost_reduction);
 
         tracing::debug!(
             plan_id = %plan.id,
@@ -498,7 +564,7 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // This builds on parallelization optimization
 
         let parallelized = self.optimize_parallelization(plan).await?;
-        
+
         // Additional time optimizations:
         // 1. Identify and optimize critical path
         // 2. Reduce wait times between dependent tools
@@ -508,7 +574,9 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 
         // Estimate additional time savings from critical path optimization
         let time_reduction = (optimized_plan.estimated_duration_ms as f64 * 0.1) as u64; // 10% additional reduction
-        optimized_plan.estimated_duration_ms = optimized_plan.estimated_duration_ms.saturating_sub(time_reduction);
+        optimized_plan.estimated_duration_ms = optimized_plan
+            .estimated_duration_ms
+            .saturating_sub(time_reduction);
 
         tracing::debug!(
             plan_id = %plan.id,
@@ -554,19 +622,35 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
 #[cfg(feature = "tool-chain")]
 impl ToolChainPlannerAdapter {
     /// Convert contracts TaskComplexity to system-federated-ml TaskComplexity
-    fn map_task_complexity(&self, complexity: TaskComplexity) -> system_federated_ml::tool_chain_planner::TaskComplexity {
+    fn map_task_complexity(
+        &self,
+        complexity: TaskComplexity,
+    ) -> system_federated_ml::tool_chain_planner::TaskComplexity {
         match complexity {
-            TaskComplexity::Simple => system_federated_ml::tool_chain_planner::TaskComplexity::Simple,
-            TaskComplexity::Moderate => system_federated_ml::tool_chain_planner::TaskComplexity::Moderate,
-            TaskComplexity::Complex => system_federated_ml::tool_chain_planner::TaskComplexity::Complex,
-            TaskComplexity::VeryComplex => system_federated_ml::tool_chain_planner::TaskComplexity::VeryComplex,
+            TaskComplexity::Simple => {
+                system_federated_ml::tool_chain_planner::TaskComplexity::Simple
+            }
+            TaskComplexity::Moderate => {
+                system_federated_ml::tool_chain_planner::TaskComplexity::Moderate
+            }
+            TaskComplexity::Complex => {
+                system_federated_ml::tool_chain_planner::TaskComplexity::Complex
+            }
+            TaskComplexity::VeryComplex => {
+                system_federated_ml::tool_chain_planner::TaskComplexity::VeryComplex
+            }
         }
     }
 
     /// Convert contracts RiskLevel to system-federated-ml RiskLevel
-    fn map_risk_level(&self, risk_level: RiskLevel) -> system_federated_ml::tool_chain_planner::RiskLevel {
+    fn map_risk_level(
+        &self,
+        risk_level: RiskLevel,
+    ) -> system_federated_ml::tool_chain_planner::RiskLevel {
         match risk_level {
-            RiskLevel::Conservative => system_federated_ml::tool_chain_planner::RiskLevel::Conservative,
+            RiskLevel::Conservative => {
+                system_federated_ml::tool_chain_planner::RiskLevel::Conservative
+            }
             RiskLevel::Balanced => system_federated_ml::tool_chain_planner::RiskLevel::Balanced,
             RiskLevel::Aggressive => system_federated_ml::tool_chain_planner::RiskLevel::Aggressive,
         }
@@ -588,7 +672,10 @@ impl ToolChainPlannerAdapter {
         let risk_assessment = RiskAssessment {
             risk_level: context.risk_tolerance.clone(),
             risk_factors: vec!["Tool chain complexity".to_string()],
-            mitigation_strategies: vec!["Parallel execution".to_string(), "Error handling".to_string()],
+            mitigation_strategies: vec![
+                "Parallel execution".to_string(),
+                "Error handling".to_string(),
+            ],
             confidence_score: 0.85,
         };
 
@@ -614,7 +701,10 @@ impl ToolChainPlannerAdapter {
 
     /// Extract tool sequence from ToolChain DAG using topological sort
     /// Traverses the DAG topologically to determine correct execution order
-    fn extract_tool_sequence(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> Vec<String> {
+    fn extract_tool_sequence(
+        &self,
+        tool_chain: &system_federated_ml::tool_chain_planner::ToolChain,
+    ) -> Vec<String> {
         use petgraph::algo::toposort;
         use tracing::debug;
 
@@ -632,7 +722,10 @@ impl ToolChainPlannerAdapter {
                 let tool_sequence: Vec<String> = sorted_indices
                     .into_iter()
                     .filter_map(|idx| {
-                        tool_chain.dag.node_weight(idx).map(|node| node.tool_id.clone())
+                        tool_chain
+                            .dag
+                            .node_weight(idx)
+                            .map(|node| node.tool_id.clone())
                     })
                     .collect();
 
@@ -652,9 +745,14 @@ impl ToolChainPlannerAdapter {
                 );
 
                 // Fallback: return tools in node order (not ideal, but better than empty)
-                tool_chain.dag.node_indices()
+                tool_chain
+                    .dag
+                    .node_indices()
                     .filter_map(|idx| {
-                        tool_chain.dag.node_weight(idx).map(|node| node.tool_id.clone())
+                        tool_chain
+                            .dag
+                            .node_weight(idx)
+                            .map(|node| node.tool_id.clone())
                     })
                     .collect()
             }
@@ -663,10 +761,14 @@ impl ToolChainPlannerAdapter {
 
     /// Extract dependencies from ToolChain DAG edges
     /// Builds a dependency map: tool_id -> [dependent_tool_ids]
-    fn extract_dependencies(&self, tool_chain: &system_federated_ml::tool_chain_planner::ToolChain) -> std::collections::HashMap<String, Vec<String>> {
+    fn extract_dependencies(
+        &self,
+        tool_chain: &system_federated_ml::tool_chain_planner::ToolChain,
+    ) -> std::collections::HashMap<String, Vec<String>> {
         use tracing::debug;
 
-        let mut dependencies: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut dependencies: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
 
         // Handle edge case: empty DAG
         if tool_chain.dag.node_count() == 0 {
@@ -675,7 +777,8 @@ impl ToolChainPlannerAdapter {
         }
 
         // Build a map from NodeIndex to tool_id for efficient lookup
-        let mut node_to_tool_id: std::collections::HashMap<petgraph::graph::NodeIndex, String> = std::collections::HashMap::new();
+        let mut node_to_tool_id: std::collections::HashMap<petgraph::graph::NodeIndex, String> =
+            std::collections::HashMap::new();
         for idx in tool_chain.dag.node_indices() {
             if let Some(node) = tool_chain.dag.node_weight(idx) {
                 node_to_tool_id.insert(idx, node.tool_id.clone());
@@ -686,10 +789,9 @@ impl ToolChainPlannerAdapter {
         // For each edge (from -> to), 'to' depends on 'from'
         for edge_idx in tool_chain.dag.edge_indices() {
             if let Some((from_idx, to_idx)) = tool_chain.dag.edge_endpoints(edge_idx) {
-                if let (Some(from_tool_id), Some(to_tool_id)) = (
-                    node_to_tool_id.get(&from_idx),
-                    node_to_tool_id.get(&to_idx),
-                ) {
+                if let (Some(from_tool_id), Some(to_tool_id)) =
+                    (node_to_tool_id.get(&from_idx), node_to_tool_id.get(&to_idx))
+                {
                     // Add 'from' as a dependency of 'to'
                     dependencies
                         .entry(to_tool_id.clone())

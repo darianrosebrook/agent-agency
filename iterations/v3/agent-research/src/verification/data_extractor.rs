@@ -2,17 +2,21 @@
 //!
 //! This module handles parsing of data/statistics and extracting data-derived claims.
 
-use regex::Regex;
 use crate::verification::types::*;
-use crate::{AtomicClaim, ClaimType, VerifiabilityLevel, ClaimScope, DataImpact};
+use crate::{AtomicClaim, ClaimScope, ClaimType, DataImpact, VerifiabilityLevel};
 use anyhow::Result;
+use regex::Regex;
 
 /// Data claim extractor
 pub struct DataExtractor;
 
 impl DataExtractor {
     /// Extract claims from data analysis output
-    pub async fn extract_data_claims(&self, analysis_output: &DataAnalysisOutput, data_schema: &DataSchema) -> Result<Vec<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn extract_data_claims(
+        &self,
+        analysis_output: &DataAnalysisOutput,
+        data_schema: &DataSchema,
+    ) -> Result<Vec<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         let mut claims = Vec::new();
 
         // Parse data analysis results
@@ -43,7 +47,10 @@ impl DataExtractor {
     }
 
     /// Parse data analysis results from raw text or structured data
-    pub fn parse_data_analysis_results(&self, analysis_output: &DataAnalysisOutput) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn parse_data_analysis_results(
+        &self,
+        analysis_output: &DataAnalysisOutput,
+    ) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
             statistical: analysis_output.results.statistical.clone(),
             correlations: analysis_output.correlations.clone(),
@@ -70,33 +77,49 @@ impl DataExtractor {
     }
 
     /// Parse statistical output from raw text
-    fn parse_statistical_output(&self, text: &str) -> Result<Vec<StatisticalResult>, Box<dyn std::error::Error + Send + Sync>> {
+    fn parse_statistical_output(
+        &self,
+        text: &str,
+    ) -> Result<Vec<StatisticalResult>, Box<dyn std::error::Error + Send + Sync>> {
         let re = Regex::new(r"(?i)(\w+)\s+(mean|median|std_dev|p_value)\s*=\s*([\-0-9.]+)")?;
-        Ok(re.captures_iter(text)
-          .filter_map(|c| Some(StatisticalResult {
-              metric:   c.get(2)?.as_str().to_string(),
-              value:    c.get(3)?.as_str().parse().ok()?,
-              confidence: 1.0, // default confidence
-              context: Some(c.get(1)?.as_str().to_string()), // use first capture as context
-          }))
-          .collect())
+        Ok(re
+            .captures_iter(text)
+            .filter_map(|c| {
+                Some(StatisticalResult {
+                    metric: c.get(2)?.as_str().to_string(),
+                    value: c.get(3)?.as_str().parse().ok()?,
+                    confidence: 1.0, // default confidence
+                    context: Some(c.get(1)?.as_str().to_string()), // use first capture as context
+                })
+            })
+            .collect())
     }
 
     /// Parse correlation output from raw text
-    fn parse_correlation_output(&self, text: &str) -> Result<Vec<CorrelationResult>, Box<dyn std::error::Error + Send + Sync>> {
+    fn parse_correlation_output(
+        &self,
+        text: &str,
+    ) -> Result<Vec<CorrelationResult>, Box<dyn std::error::Error + Send + Sync>> {
         let re = Regex::new(r"(?i)corr\((\w+),\s*(\w+)\)\s*=\s*([\-0-9.]+),\s*p\s*=\s*([0-9.]+)")?;
-        Ok(re.captures_iter(text)
-          .filter_map(|c| Some(CorrelationResult {
-              variable1: c.get(1)?.as_str().to_string(),
-              variable2: c.get(2)?.as_str().to_string(),
-              correlation: c.get(3)?.as_str().parse().ok()?,
-              correlation_coefficient: c.get(3)?.as_str().parse().ok()?,
-              significance: c.get(4)?.as_str().parse().ok()?, // p-value becomes significance
-          })).collect())
+        Ok(re
+            .captures_iter(text)
+            .filter_map(|c| {
+                Some(CorrelationResult {
+                    variable1: c.get(1)?.as_str().to_string(),
+                    variable2: c.get(2)?.as_str().to_string(),
+                    correlation: c.get(3)?.as_str().parse().ok()?,
+                    correlation_coefficient: c.get(3)?.as_str().parse().ok()?,
+                    significance: c.get(4)?.as_str().parse().ok()?, // p-value becomes significance
+                })
+            })
+            .collect())
     }
 
     /// Parse mixed analysis output
-    fn parse_mixed_analysis_output(&self, text: &str) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
+    fn parse_mixed_analysis_output(
+        &self,
+        text: &str,
+    ) -> Result<DataAnalysisResults, Box<dyn std::error::Error + Send + Sync>> {
         let mut results = DataAnalysisResults {
             statistical: vec![],
             patterns: vec![],
@@ -105,8 +128,12 @@ impl DataExtractor {
         };
 
         // Call both parsers and combine
-        results.statistical.extend(self.parse_statistical_output(text)?);
-        results.correlations.extend(self.parse_correlation_output(text)?);
+        results
+            .statistical
+            .extend(self.parse_statistical_output(text)?);
+        results
+            .correlations
+            .extend(self.parse_correlation_output(text)?);
 
         // Extract insights from remaining text
         let insight_patterns = [
@@ -128,9 +155,18 @@ impl DataExtractor {
     }
 
     /// Extract statistical claim from data
-    fn extract_statistical_claim(&self, stat: &StatisticalResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
+    fn extract_statistical_claim(
+        &self,
+        stat: &StatisticalResult,
+        _schema: &DataSchema,
+    ) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         // Create claim about statistical finding
-        let claim_text = format!("{} has {} of {:.3}", stat.context.as_deref().unwrap_or("variable"), stat.metric, stat.value);
+        let claim_text = format!(
+            "{} has {} of {:.3}",
+            stat.context.as_deref().unwrap_or("variable"),
+            stat.metric,
+            stat.value
+        );
 
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
@@ -160,7 +196,11 @@ impl DataExtractor {
     }
 
     /// Extract insight claim from analysis
-    fn extract_insight_claim(&self, insight: &str, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
+    fn extract_insight_claim(
+        &self,
+        insight: &str,
+        _schema: &DataSchema,
+    ) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(Some(AtomicClaim {
             id: uuid::Uuid::new_v4(),
             claim_text: insight.to_string(),
@@ -189,7 +229,11 @@ impl DataExtractor {
     }
 
     /// Extract correlation claim from data
-    fn extract_correlation_claim(&self, correlation: &CorrelationResult, _schema: &DataSchema) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
+    fn extract_correlation_claim(
+        &self,
+        correlation: &CorrelationResult,
+        _schema: &DataSchema,
+    ) -> Result<Option<AtomicClaim>, Box<dyn std::error::Error + Send + Sync>> {
         let strength = if correlation.correlation_coefficient.abs() > 0.7 {
             "strong"
         } else if correlation.correlation_coefficient.abs() > 0.3 {

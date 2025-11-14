@@ -25,6 +25,9 @@ members = [
     "development-tools",  # NEW: Unified development workflow & quality assurance (caws/runtime-validator + apps/tools/caws + codemod + templates)
     "testing-validation",  # NEW: End-to-end autonomous flow tests with real service integrations
 ]
+exclude = [
+    "test-infrastructure",  # Standalone test infrastructure verification
+]
 
 [workspace.package]
 version = "0.1.0"

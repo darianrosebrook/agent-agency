@@ -3,10 +3,10 @@
 //! Defines the comprehensive working specification that guides autonomous
 //! task execution with detailed constraints, acceptance criteria, and rollback plans.
 
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
+use crate::planning_io::{ChangeBudget, Milestone};
 use crate::task_request::Environment;
-use crate::planning_io::{Milestone, ChangeBudget};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// CAWS-validated working specification for task execution
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -97,26 +97,34 @@ pub struct WorkingSpec {
 impl WorkingSpec {
     /// Get maximum files allowed from budget constraints
     pub fn max_files(&self) -> Option<u32> {
-        self.constraints.budget_limits.as_ref()
+        self.constraints
+            .budget_limits
+            .as_ref()
             .and_then(|b| b.max_files)
     }
 
     /// Get maximum LOC allowed from budget constraints
     pub fn max_loc(&self) -> Option<u32> {
-        self.constraints.budget_limits.as_ref()
+        self.constraints
+            .budget_limits
+            .as_ref()
             .and_then(|b| b.max_loc)
     }
 
     /// Get allowed paths from scope restrictions
     pub fn allowed_paths(&self) -> Vec<String> {
-        self.constraints.scope_restrictions.as_ref()
+        self.constraints
+            .scope_restrictions
+            .as_ref()
             .map(|s| s.allowed_paths.clone())
             .unwrap_or_default()
     }
 
     /// Get blocked paths from scope restrictions
     pub fn blocked_paths(&self) -> Vec<String> {
-        self.constraints.scope_restrictions.as_ref()
+        self.constraints
+            .scope_restrictions
+            .as_ref()
             .map(|s| s.blocked_paths.clone())
             .unwrap_or_default()
     }
@@ -539,7 +547,9 @@ pub struct WorkingSpecMetadata {
 }
 
 /// Validate a working spec value against the JSON schema
-pub fn validate_working_spec_value(value: &serde_json::Value) -> Result<(), crate::contract_errors::ContractError> {
+pub fn validate_working_spec_value(
+    value: &serde_json::Value,
+) -> Result<(), crate::contract_errors::ContractError> {
     use crate::contract_errors::{ContractError, ContractKind};
     use crate::schema::WORKING_SPEC_SCHEMA;
 

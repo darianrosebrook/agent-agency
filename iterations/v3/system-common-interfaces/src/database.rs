@@ -7,12 +7,12 @@
 //! other crates can depend on the interface without depending on concrete DB code.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-use crate::{Result, QueryParams, ApiResponse};
+use crate::{ApiResponse, QueryParams, Result};
 
 /// Generic database record identifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,7 +201,7 @@ pub struct CreateAuditEntry {
 }
 
 /// Database audit operations interface for audit trail persistence
-/// 
+///
 /// This trait provides audit-specific database operations without requiring
 /// the full DatabaseOperations trait, allowing crates to use audit persistence
 /// without creating circular dependencies.

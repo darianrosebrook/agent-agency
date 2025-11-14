@@ -1,10 +1,10 @@
-use crate::policy_audit::SecurityAuditor;
 use crate::command_execution::CommandExecutionController;
 use crate::file_access::FileAccessController;
 use crate::policies::SecurityPolicy;
+use crate::policy_audit::SecurityAuditor;
+use crate::policy_types::*;
 use crate::rate_limiting::RateLimiter;
 use crate::secrets_detection::SecretsDetector;
-use crate::policy_types::*;
 
 use anyhow::Result;
 use chrono::Utc;
@@ -528,7 +528,6 @@ impl SecurityPolicyEnforcer {
 
     /// Validate workspace boundary constraints
     fn is_valid_workspace_boundary(&self, workspace_path: &std::path::Path) -> bool {
-
         // Check if workspace path exists and is a directory
         if !workspace_path.exists() || !workspace_path.is_dir() {
             return false;
@@ -581,7 +580,10 @@ impl SecurityPolicyEnforcer {
 
         for restricted in &restricted_paths {
             if workspace_str.starts_with(restricted) {
-                tracing::warn!("Workspace blocked: path in restricted system directory: {}", workspace_str);
+                tracing::warn!(
+                    "Workspace blocked: path in restricted system directory: {}",
+                    workspace_str
+                );
                 return false;
             }
         }
@@ -589,18 +591,21 @@ impl SecurityPolicyEnforcer {
         // Blocklist: Prevent workspace in user home directories (too broad access)
         if let Ok(home) = std::env::var("HOME") {
             if workspace_str.starts_with(&home) {
-                tracing::warn!("Workspace blocked: path in user home directory: {}", workspace_str);
+                tracing::warn!(
+                    "Workspace blocked: path in user home directory: {}",
+                    workspace_str
+                );
                 return false;
             }
         }
 
         // Allowlist: Only allow specific safe directories
         let allowed_patterns = [
-            "/Users/*/Projects",  // User project directories
-            "/Users/*/workspace", // User workspace directories
-            "/tmp/agent_*",       // Agent-specific temp directories
-            "/var/agent_*",       // Agent system directories
-            "C:\\Users\\*\\Projects", // Windows user project directories
+            "/Users/*/Projects",       // User project directories
+            "/Users/*/workspace",      // User workspace directories
+            "/tmp/agent_*",            // Agent-specific temp directories
+            "/var/agent_*",            // Agent system directories
+            "C:\\Users\\*\\Projects",  // Windows user project directories
             "C:\\Users\\*\\workspace", // Windows user workspace directories
         ];
 
@@ -613,7 +618,10 @@ impl SecurityPolicyEnforcer {
         }
 
         if !is_allowed {
-            tracing::warn!("Workspace blocked: path not in allowed patterns: {}", workspace_str);
+            tracing::warn!(
+                "Workspace blocked: path not in allowed patterns: {}",
+                workspace_str
+            );
             return false;
         }
 
@@ -646,7 +654,11 @@ impl SecurityPolicyEnforcer {
                     use std::os::unix::fs::MetadataExt;
                     let current_uid = unsafe { libc::getuid() };
                     if metadata.uid() != current_uid {
-                        tracing::warn!("Workspace not owned by current user: {} vs {}", metadata.uid(), current_uid);
+                        tracing::warn!(
+                            "Workspace not owned by current user: {} vs {}",
+                            metadata.uid(),
+                            current_uid
+                        );
                         return false;
                     }
                 }
@@ -669,9 +681,16 @@ impl SecurityPolicyEnforcer {
         let mut file_count = 0u64;
 
         // Walk directory tree and check size limits
-        fn calculate_size(path: &std::path::Path, total_size: &mut u64, file_count: &mut u64) -> std::io::Result<()> {
+        fn calculate_size(
+            path: &std::path::Path,
+            total_size: &mut u64,
+            file_count: &mut u64,
+        ) -> std::io::Result<()> {
             if *file_count > MAX_FILE_COUNT {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Too many files"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Too many files",
+                ));
             }
 
             let metadata = std::fs::metadata(path)?;
@@ -691,12 +710,20 @@ impl SecurityPolicyEnforcer {
         match calculate_size(workspace_path, &mut total_size, &mut file_count) {
             Ok(_) => {
                 if total_size > MAX_WORKSPACE_SIZE_BYTES {
-                    tracing::warn!("Workspace too large: {} bytes (max: {} bytes)", total_size, MAX_WORKSPACE_SIZE_BYTES);
+                    tracing::warn!(
+                        "Workspace too large: {} bytes (max: {} bytes)",
+                        total_size,
+                        MAX_WORKSPACE_SIZE_BYTES
+                    );
                     return false;
                 }
 
                 if file_count > MAX_FILE_COUNT {
-                    tracing::warn!("Workspace has too many files: {} (max: {})", file_count, MAX_FILE_COUNT);
+                    tracing::warn!(
+                        "Workspace has too many files: {} (max: {})",
+                        file_count,
+                        MAX_FILE_COUNT
+                    );
                     return false;
                 }
             }
@@ -712,7 +739,10 @@ impl SecurityPolicyEnforcer {
     /// Validate workspace isolation and sandboxing
     fn validate_workspace_isolation(&self, workspace_path: &std::path::Path) -> bool {
         // Check for symlinks that could escape the workspace
-        fn check_symlinks(path: &std::path::Path, workspace_root: &std::path::Path) -> std::io::Result<bool> {
+        fn check_symlinks(
+            path: &std::path::Path,
+            workspace_root: &std::path::Path,
+        ) -> std::io::Result<bool> {
             let metadata = std::fs::metadata(path)?;
             if metadata.file_type().is_symlink() {
                 let target = std::fs::read_link(path)?;
@@ -720,7 +750,8 @@ impl SecurityPolicyEnforcer {
                     target
                 } else {
                     path.parent().unwrap().join(target)
-                }.canonicalize()?;
+                }
+                .canonicalize()?;
 
                 // Check if symlink target is outside workspace
                 if !canonical_target.starts_with(workspace_root) {
@@ -770,8 +801,11 @@ impl SecurityPolicyEnforcer {
     }
 
     /// Perform security checks on path resolution
-    fn check_path_security(&self, resolved_path: &std::path::Path, workspace_root: &std::path::Path) -> bool {
-
+    fn check_path_security(
+        &self,
+        resolved_path: &std::path::Path,
+        workspace_root: &std::path::Path,
+    ) -> bool {
         // Check for path traversal attacks (.. components)
         if let Some(path_str) = resolved_path.to_str() {
             if path_str.contains("..") {

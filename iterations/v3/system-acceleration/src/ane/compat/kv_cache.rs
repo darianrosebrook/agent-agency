@@ -4,8 +4,8 @@
 //! enabling efficient sequential processing in transformer models.
 
 use crate::ane::ane_errors::{ANEError, Result};
-use crate::ane::compat::types::{KvStateHandle, MLFeatureProvider};
 use crate::ane::compat::registry::ModelRef;
+use crate::ane::compat::types::{KvStateHandle, MLFeatureProvider};
 
 // FFI declarations for KV cache functions
 #[cfg(target_os = "macos")]
@@ -22,15 +22,9 @@ extern "C" {
 
     pub fn agentbridge_kv_state_destroy(kv_ref: u64) -> i32;
 
-    pub fn agentbridge_kv_state_step(
-        kv_ref: u64,
-        out_error: *mut *mut std::ffi::c_char,
-    ) -> i32;
+    pub fn agentbridge_kv_state_step(kv_ref: u64, out_error: *mut *mut std::ffi::c_char) -> i32;
 
-    pub fn agentbridge_kv_state_reset(
-        kv_ref: u64,
-        out_error: *mut *mut std::ffi::c_char,
-    ) -> i32;
+    pub fn agentbridge_kv_state_reset(kv_ref: u64, out_error: *mut *mut std::ffi::c_char) -> i32;
 
     pub fn agentbridge_model_run_inference_with_kv(
         model_ref: u64,
@@ -65,8 +59,8 @@ impl KvStateHandle {
         let mut state_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = super::registry::registry::with_model_handle(*model_ref, |model_handle| {
-            unsafe {
+        let result =
+            super::registry::registry::with_model_handle(*model_ref, |model_handle| unsafe {
                 agentbridge_kv_state_create(
                     model_handle.as_ptr() as u64,
                     n_layers as i32,
@@ -76,8 +70,8 @@ impl KvStateHandle {
                     &mut state_ref,
                     &mut error_ptr,
                 )
-            }
-        }).ok_or_else(|| ANEError::Internal("Model not found in registry".to_string()))?;
+            })
+            .ok_or_else(|| ANEError::Internal("Model not found in registry".to_string()))?;
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -115,9 +109,7 @@ impl KvStateHandle {
 
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_kv_state_step(self.handle(), &mut error_ptr)
-        };
+        let result = unsafe { agentbridge_kv_state_step(self.handle(), &mut error_ptr) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -144,9 +136,7 @@ impl KvStateHandle {
 
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let result = unsafe {
-            agentbridge_kv_state_reset(self.handle(), &mut error_ptr)
-        };
+        let result = unsafe { agentbridge_kv_state_reset(self.handle(), &mut error_ptr) };
 
         if result != 0 {
             let error_msg = if !error_ptr.is_null() {

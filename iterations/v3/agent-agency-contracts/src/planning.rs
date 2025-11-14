@@ -7,14 +7,14 @@
 //! @author @darianrosebrook
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use uuid::Uuid;
 // Note: TaskDescriptor is defined in the orchestrator crate, not contracts
-use crate::ExecutionPlan;
 use crate::types::planning::PlanningStrategy;
+use crate::ExecutionPlan;
 use crate::PlanState;
 // Use unified validation types
 use crate::types::validation::ValidationResult;
@@ -31,16 +31,11 @@ pub trait PlanningEngine: Send + Sync {
     ) -> Result<ExecutionPlan, PlanningError>;
 
     /// Validate a plan against constraints and requirements
-    async fn validate_plan(
-        &self,
-        plan: &ExecutionPlan,
-    ) -> Result<ValidationResult, PlanningError>;
+    async fn validate_plan(&self, plan: &ExecutionPlan) -> Result<ValidationResult, PlanningError>;
 
     /// Execute a plan with milestone tracking and progress monitoring
-    async fn execute_plan(
-        &self,
-        plan: ExecutionPlan,
-    ) -> Result<PlanExecutionResult, PlanningError>;
+    async fn execute_plan(&self, plan: ExecutionPlan)
+        -> Result<PlanExecutionResult, PlanningError>;
 
     /// Get planning engine capabilities and supported features
     fn capabilities(&self) -> PlanningCapabilities;
@@ -68,7 +63,6 @@ pub struct PlanningCapabilities {
     /// Maximum plan complexity (estimated milestones)
     pub max_plan_complexity: usize,
 }
-
 
 /// Planning operation errors
 #[derive(Debug, thiserror::Error)]
@@ -106,7 +100,6 @@ pub enum PlanningError {
     #[error("Other error: {0}")]
     Other(String),
 }
-
 
 /// Plan execution result
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -629,53 +622,62 @@ pub enum PlanExecutionState {
     Cancelled,
 }
 
-    #[test]
-    fn test_planning_capabilities_serialization() {
-        let capabilities = PlanningCapabilities {
-            supports_parallel_execution: true,
-            supports_dependency_analysis: true,
-            supports_adaptive_planning: false,
-            max_milestone_parallelism: 5,
-            supported_strategies: vec![PlanningStrategy::TopDown, PlanningStrategy::DependencyDriven],
-            max_plan_complexity: 20,
-        };
+#[test]
+fn test_planning_capabilities_serialization() {
+    let capabilities = PlanningCapabilities {
+        supports_parallel_execution: true,
+        supports_dependency_analysis: true,
+        supports_adaptive_planning: false,
+        max_milestone_parallelism: 5,
+        supported_strategies: vec![
+            PlanningStrategy::TopDown,
+            PlanningStrategy::DependencyDriven,
+        ],
+        max_plan_complexity: 20,
+    };
 
-        let serialized = serde_json::to_string(&capabilities).unwrap();
-        let deserialized: PlanningCapabilities = serde_json::from_str(&serialized).unwrap();
+    let serialized = serde_json::to_string(&capabilities).unwrap();
+    let deserialized: PlanningCapabilities = serde_json::from_str(&serialized).unwrap();
 
-        assert_eq!(capabilities.supports_parallel_execution, deserialized.supports_parallel_execution);
-        assert_eq!(capabilities.max_milestone_parallelism, deserialized.max_milestone_parallelism);
-    }
+    assert_eq!(
+        capabilities.supports_parallel_execution,
+        deserialized.supports_parallel_execution
+    );
+    assert_eq!(
+        capabilities.max_milestone_parallelism,
+        deserialized.max_milestone_parallelism
+    );
+}
 
-    #[test]
-    fn test_validation_result_creation() {
-        let result: ValidationResult = ValidationResult {
-            valid: true,
-            score: 0.95,
-            issues: vec![],
-            warnings: vec!["Consider adding more tests".to_string()],
-            suggestions: vec!["Add integration tests".to_string()],
-            metadata: std::collections::HashMap::new(),
-        };
+#[test]
+fn test_validation_result_creation() {
+    let result: ValidationResult = ValidationResult {
+        valid: true,
+        score: 0.95,
+        issues: vec![],
+        warnings: vec!["Consider adding more tests".to_string()],
+        suggestions: vec!["Add integration tests".to_string()],
+        metadata: std::collections::HashMap::new(),
+    };
 
-        assert!(result.valid);
-        assert_eq!(result.score, 0.95);
-        assert!(result.issues.is_empty());
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.suggestions.len(), 1);
-    }
+    assert!(result.valid);
+    assert_eq!(result.score, 0.95);
+    assert!(result.issues.is_empty());
+    assert_eq!(result.warnings.len(), 1);
+    assert_eq!(result.suggestions.len(), 1);
+}
 
-    #[test]
-    fn test_execution_event_creation() {
-        let event = ExecutionEvent {
-            event_type: ExecutionEventType::PlanStarted,
-            timestamp: Utc::now(),
-            milestone_id: None,
-            description: "Plan execution initiated".to_string(),
-            metadata: HashMap::new(),
-        };
+#[test]
+fn test_execution_event_creation() {
+    let event = ExecutionEvent {
+        event_type: ExecutionEventType::PlanStarted,
+        timestamp: Utc::now(),
+        milestone_id: None,
+        description: "Plan execution initiated".to_string(),
+        metadata: HashMap::new(),
+    };
 
-        assert_eq!(event.event_type, ExecutionEventType::PlanStarted);
-        assert!(event.milestone_id.is_none());
-        assert_eq!(event.description, "Plan execution initiated");
+    assert_eq!(event.event_type, ExecutionEventType::PlanStarted);
+    assert!(event.milestone_id.is_none());
+    assert_eq!(event.description, "Plan execution initiated");
 }
