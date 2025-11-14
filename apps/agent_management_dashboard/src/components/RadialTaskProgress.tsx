@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { gsap } from "gsap";
 import {
   CheckCircle2,
@@ -77,6 +77,21 @@ export function RadialTaskProgress({
     return value.toFixed(decimals);
   };
 
+  // Create stable ref callback factory using useCallback
+  // This prevents infinite loops by ensuring ref callbacks don't change on every render
+  const createSegmentRef = useCallback((index: number) => {
+    return (el: SVGPathElement | null) => {
+      // Only update if the element actually changed
+      if (el) {
+        segmentsRef.current[index] = el;
+      } else if (segmentsRef.current[index]) {
+        // Clean up when element is removed, but don't set to undefined
+        // as that could cause issues with array length checks
+        segmentsRef.current[index] = undefined as any;
+      }
+    };
+  }, []);
+
   // Memoize segments to ensure consistent generation between server and client
   const segments = useMemo(() => {
     const segmentList = [];
@@ -86,6 +101,11 @@ export function RadialTaskProgress({
     const innerRadius = 70;
     const centerX = 120;
     const centerY = 120;
+
+    // Initialize segmentsRef array to correct size if needed
+    if (segmentsRef.current.length !== totalSegments) {
+      segmentsRef.current = new Array(totalSegments);
+    }
 
     for (let i = 0; i < totalSegments; i++) {
       const startAngle = i * segmentAngle - 90; // Start from top
@@ -123,9 +143,7 @@ export function RadialTaskProgress({
       segmentList.push(
         <path
           key={i}
-          ref={(el) => {
-            if (el) segmentsRef.current[i] = el;
-          }}
+          ref={createSegmentRef(i)}
           d={pathData}
           fill={i < completedSegments ? "#fafafa" : "#454545"}
         />
@@ -133,7 +151,7 @@ export function RadialTaskProgress({
     }
 
     return segmentList;
-  }, [totalSegments, completedSegments]);
+  }, [totalSegments, completedSegments, createSegmentRef]);
 
   // Animate segments with GSAP when progress changes
   useEffect(() => {
