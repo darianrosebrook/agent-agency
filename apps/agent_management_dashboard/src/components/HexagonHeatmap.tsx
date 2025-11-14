@@ -104,8 +104,22 @@ export function HexagonHeatmap({
           listTasks(),
           getAgents(),
         ]);
-        setTasks(tasksData.tasks);
-        setAgents(agentsData);
+        // Safely extract tasks array with fallback
+        const tasksArray = Array.isArray(tasksData?.tasks) 
+          ? tasksData.tasks 
+          : Array.isArray(tasksData) 
+          ? tasksData 
+          : [];
+        
+        // Safely extract agents array with fallback
+        const agentsArray = Array.isArray(agentsData?.agents)
+          ? agentsData.agents
+          : Array.isArray(agentsData)
+          ? agentsData
+          : [];
+        
+        setTasks(tasksArray);
+        setAgents(agentsArray);
       } catch (err) {
         console.error("Failed to fetch tasks and agents:", err);
         setError(err instanceof Error ? err : new Error("Failed to load data"));
@@ -126,6 +140,9 @@ export function HexagonHeatmap({
   const hexagons = useMemo(() => {
     const center: Axial = { q: 0, r: 0 };
     const cells = hexSpiral(center, radius);
+
+    // Ensure tasks is always an array
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
 
     // Create agent lookup map
     const agentMap = new Map<string, Agent>();
@@ -150,7 +167,7 @@ export function HexagonHeatmap({
       const { x, y } = axialToPixel(hex, hexSize);
       
       // Get task for this hexagon (or use empty if we run out of tasks)
-      const task = tasks[idx] ?? null;
+      const task = safeTasks[idx] ?? null;
       const completion = task ? getTaskCompletion(task) : 0;
       const agentId = task?.worker_id || null;
       const agent = agentId ? agentMap.get(agentId) : null;
@@ -220,8 +237,8 @@ export function HexagonHeatmap({
                 ? "Loading tasks and agents..."
                 : error
                 ? `Error: ${error.message}`
-                : tasks.length > 0
-                ? `${tasks.length} tasks tracked across ${agents.length} AI agents`
+                : Array.isArray(tasks) && tasks.length > 0
+                ? `${tasks.length} tasks tracked across ${Array.isArray(agents) ? agents.length : 0} AI agents`
                 : "No tasks available"}
             </p>
           </div>
