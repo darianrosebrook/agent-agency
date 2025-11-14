@@ -152,6 +152,32 @@ The system enforces quality gates through automated validation:
   - **Functional Correctness** (30%): Code compilation, functionality, requirements
   - **Efficiency** (10%): Resource usage vs. problem complexity
 
+## Hardware Acceleration (Apple Silicon ANE)
+
+### ANE Performance Investigation - Conclusion
+
+Comprehensive benchmarking with micro models and Mistral 7B FP16 has conclusively demonstrated that **ANE is working correctly** - the ~0.95-1.01x speedup observed is a **platform characteristic**, not a bug.
+
+**Key Findings**:
+
+- ✅ **ANE is functional end-to-end**: Runtime path is correct, ANE is participating (47.4% utilization confirms participation)
+- ✅ **Platform characteristic confirmed**: Micro models and Mistral show identical behavior, proving this is hardware/platform behavior, not a runtime or conversion issue
+- ✅ **Input pooling is the optimization lever**: ~30ms allocation overhead eliminated with input pooling (~40% latency improvement: 75ms → 46ms)
+- ✅ **Backend selection for FP16 Mistral**: CPU and ANE are latency-equivalent (~46ms with input pooling); choose based on power profile, thermal headroom, and CPU resource sharing
+- ✅ **For meaningful speedups**: Need to change the problem (quantization INT8/INT4, smaller models) rather than tuning the existing FP16 Mistral graph
+
+**Production Recommendations**:
+
+- **Make input pooling the default** in production path (~40% latency improvement)
+- **Backend selection**: For FP16 Mistral, CPU and ANE are equivalent; choose based on power/concurrency, not speed
+- **Future track for speedups**: Quantized micro models → quantized small transformer → determine if ANE produces meaningful speedup on quantized workloads
+
+**Documentation**:
+
+- **[ANE Performance Conclusion](./docs/ANE_PERFORMANCE_CONCLUSION.md)**: Complete investigation summary
+- **[Benchmark Report](./docs/BENCHMARK_REPORT.md)**: Comprehensive performance analysis
+- **[Benchmark Stats Summary](./docs/BENCHMARK_STATS_SUMMARY.md)**: Quick reference statistics
+
 ## Project Structure
 
 The V3 codebase is organized into focused crates with clear responsibilities:
