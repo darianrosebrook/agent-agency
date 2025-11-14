@@ -5,10 +5,10 @@
 //!
 //! @author @darianrosebrook
 
-
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};use agent_agency_contracts::TaskDescriptor;
+use agent_agency_contracts::TaskDescriptor;
 use anyhow::Result;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
 
@@ -180,7 +180,9 @@ impl EvidenceEnrichmentCoordinator {
         }
 
         // Perform enrichment
-        let enriched = self.perform_enrichment(evidence_id, content, task_context).await?;
+        let enriched = self
+            .perform_enrichment(evidence_id, content, task_context)
+            .await?;
 
         // Cache the result
         self.cache.insert(evidence_id.to_string(), enriched.clone());
@@ -205,7 +207,9 @@ impl EvidenceEnrichmentCoordinator {
 
         // Extract multimodal context if enabled
         if self.config.enable_multimodal {
-            multimodal_context = self.extract_multimodal_context(content, task_context).await?;
+            multimodal_context = self
+                .extract_multimodal_context(content, task_context)
+                .await?;
         }
 
         // Perform semantic analysis if enabled
@@ -230,7 +234,7 @@ impl EvidenceEnrichmentCoordinator {
     async fn extract_multimodal_context(
         &self,
         content: &str,
-        task_context: &TaskDescriptor,
+        _task_context: &TaskDescriptor,
     ) -> Result<Vec<MultimodalContext>> {
         debug!("Extracting multimodal context");
 
@@ -433,11 +437,13 @@ impl EvidenceEnrichmentCoordinator {
         let positive_words = ["good", "great", "excellent", "amazing", "wonderful"]; // Temporary: keyword matching until NLP model integration
         let negative_words = ["bad", "terrible", "awful", "horrible", "disappointing"];
 
-        let positive_count = positive_words.iter()
+        let positive_count = positive_words
+            .iter()
             .map(|word| content.to_lowercase().matches(word).count())
             .sum::<usize>();
 
-        let negative_count = negative_words.iter()
+        let negative_count = negative_words
+            .iter()
             .map(|word| content.to_lowercase().matches(word).count())
             .sum::<usize>();
 
@@ -493,19 +499,19 @@ impl EvidenceEnrichmentCoordinator {
         SentimentScore {
             score,
             label,
-            confidence: 0.7, // Temporary: hardcoded until confidence calculation is implemented
+            confidence: 0.7, // Hardcoded - see TODO above for implementation details
         }
     }
 
     /// Extract topics from content
-    fn extract_topics(&self, content: &str) -> Vec<String> {
+    fn extract_topics(&self, _content: &str) -> Vec<String> {
         // TODO: Implement proper topic extraction using NLP
         //       Currently returns placeholder topics; should use NLP techniques to extract actual topics from content.
         vec!["technology".to_string(), "development".to_string()]
     }
 
     /// Extract named entities from content
-    fn extract_entities(&self, content: &str) -> Vec<NamedEntity> {
+    fn extract_entities(&self, _content: &str) -> Vec<NamedEntity> {
         // TODO: Implement proper named entity recognition
         //       Currently returns empty list; should use NER to extract named entities from content.
         vec![]
@@ -533,7 +539,8 @@ impl EvidenceEnrichmentCoordinator {
         let avg_relevance: f32 = multimodal_context
             .iter()
             .map(|ctx| ctx.relevance_score)
-            .sum::<f32>() / multimodal_context.len() as f32;
+            .sum::<f32>()
+            / multimodal_context.len() as f32;
 
         confidence += avg_relevance * 0.1;
 
@@ -588,7 +595,8 @@ impl EvidenceEnrichmentCoordinator {
             // - CAWS Tier: 3 (cache optimization)
             // - Change Budget: ~80 LOC
             // - Reviewer Requirements: Cache algorithms expertise
-            let keys_to_remove: Vec<String> = self.cache // Temporary: oldest-first until LRU eviction is implemented
+            let keys_to_remove: Vec<String> = self
+                .cache // Temporary: oldest-first until LRU eviction is implemented
                 .iter()
                 .take(self.cache.len() - self.config.max_cache_size)
                 .map(|(k, _)| k.clone())

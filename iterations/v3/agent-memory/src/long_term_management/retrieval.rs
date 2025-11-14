@@ -38,13 +38,15 @@ impl LongTermRetrievalEngine {
 
         // First, try to retrieve from active memory
         if let Some(active_results) = &query.active_memory_results {
-            active_memories = self.filter_and_rank_active_memories(active_results, query).await?;
+            active_memories = self
+                .filter_and_rank_active_memories(active_results, query)
+                .await?;
         }
 
         // If we need more results and archival retrieval is enabled, check archives
-        if self.config.enable_archival_retrieval &&
-           active_memories.len() < query.min_results as usize {
-
+        if self.config.enable_archival_retrieval
+            && active_memories.len() < query.min_results as usize
+        {
             archival_memories = self.retrieve_from_archives(query).await?;
         }
 
@@ -52,7 +54,9 @@ impl LongTermRetrievalEngine {
         let archival_count = archival_memories.len();
 
         // Combine and rerank results
-        let combined_results = self.combine_and_rerank_results(active_memories, archival_memories, query).await?;
+        let combined_results = self
+            .combine_and_rerank_results(active_memories, archival_memories, query)
+            .await?;
 
         // Apply retrieval boost if enabled
         let boosted_results = if self.config.retrieval_boost_enabled {
@@ -88,16 +92,20 @@ impl LongTermRetrievalEngine {
 
         // Simulate archival retrieval with timeout
         let retrieval_future = self.perform_archival_retrieval(query);
-        let timeout_duration = std::time::Duration::from_millis(self.config.max_archival_retrieval_time_ms);
+        let timeout_duration =
+            std::time::Duration::from_millis(self.config.max_archival_retrieval_time_ms);
 
         match tokio::time::timeout(timeout_duration, retrieval_future).await {
             Ok(Ok(memories)) => {
                 // Cache the results
-                self.cache_retrieval_results(query.query_id.clone(), memories.clone()).await;
+                self.cache_retrieval_results(query.query_id.clone(), memories.clone())
+                    .await;
                 Ok(memories)
             }
             Ok(Err(e)) => Err(e),
-            Err(_) => Err(crate::MemoryError::Other("Archival retrieval timeout".to_string())),
+            Err(_) => Err(crate::MemoryError::Other(
+                "Archival retrieval timeout".to_string(),
+            )),
         }
     }
 
@@ -172,13 +180,19 @@ impl LongTermRetrievalEngine {
         // Sort by long-term relevance
         let mut scored_memories: Vec<(f32, crate::memory_types::Memory)> = Vec::new();
         for memory in filtered {
-            let score = self.calculate_long_term_relevance(&memory, query).await.unwrap_or(0.0);
+            let score = self
+                .calculate_long_term_relevance(&memory, query)
+                .await
+                .unwrap_or(0.0);
             scored_memories.push((score, memory));
         }
-        
+
         scored_memories.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-        
-        let sorted_memories: Vec<crate::memory_types::Memory> = scored_memories.into_iter().map(|(_, memory)| memory).collect();
+
+        let sorted_memories: Vec<crate::memory_types::Memory> = scored_memories
+            .into_iter()
+            .map(|(_, memory)| memory)
+            .collect();
 
         Ok(sorted_memories)
     }
@@ -197,7 +211,6 @@ impl LongTermRetrievalEngine {
         // - [ ] Combine multiple signals into composite score
         // - [ ] Add unit tests with various memory and query types
         // - [ ] Add integration tests with real relevance data
-        // Placeholder implementation
         // In practice, this would consider:
         // - Memory age and decay
         // - Historical access patterns
@@ -226,14 +239,23 @@ impl LongTermRetrievalEngine {
             let relevance_a = self.calculate_final_relevance(a, query);
             let relevance_b = self.calculate_final_relevance(b, query);
 
-            relevance_b.partial_cmp(&relevance_a).unwrap_or(std::cmp::Ordering::Equal)
+            relevance_b
+                .partial_cmp(&relevance_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        Ok(combined.into_iter().take(query.max_results as usize).collect())
+        Ok(combined
+            .into_iter()
+            .take(query.max_results as usize)
+            .collect())
     }
 
     /// Calculate final relevance score combining multiple factors
-    fn calculate_final_relevance(&self, _memory: &crate::memory_types::Memory, _query: &LongTermRetrievalQuery) -> f32 {
+    fn calculate_final_relevance(
+        &self,
+        _memory: &crate::memory_types::Memory,
+        _query: &LongTermRetrievalQuery,
+    ) -> f32 {
         // TODO: Implement real final relevance calculation
         // - [ ] Combine recency score (weighted by time decay)
         // - [ ] Factor in importance score from memory metadata
@@ -306,7 +328,8 @@ impl LongTermRetrievalEngine {
     /// Check retrieval cache
     fn check_retrieval_cache(&self, query_id: &str) -> Option<Vec<crate::memory_types::Memory>> {
         if let Ok(uuid) = Uuid::parse_str(query_id) {
-            self.retrieval_cache.get(&uuid)
+            self.retrieval_cache
+                .get(&uuid)
                 .filter(|entry| !entry.is_expired())
                 .map(|entry| entry.memories.clone())
         } else {
@@ -315,7 +338,11 @@ impl LongTermRetrievalEngine {
     }
 
     /// Cache retrieval results
-    async fn cache_retrieval_results(&self, query_id: String, memories: Vec<crate::memory_types::Memory>) {
+    async fn cache_retrieval_results(
+        &self,
+        query_id: String,
+        memories: Vec<crate::memory_types::Memory>,
+    ) {
         let entry = RetrievalCacheEntry {
             memories,
             cached_at: chrono::Utc::now(),
@@ -362,7 +389,31 @@ impl LongTermRetrievalEngine {
 
     /// Calculate cache hit rate
     fn calculate_cache_hit_rate(&self) -> f32 {
-        // Placeholder implementation
+        // TODO: Implement real cache hit rate calculation
+        //       Currently returns hardcoded value; should calculate from actual cache statistics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Track cache hits and misses in cache statistics
+        // [ ] Calculate hit rate as hits / (hits + misses)
+        // [ ] Handle edge cases (no accesses, division by zero)
+        // [ ] Add unit tests with various cache scenarios
+        // [ ] Add integration tests with real cache usage
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Hit rate reflects actual cache performance
+        // - Returns 0.0 when no cache accesses
+        // - Handles division by zero gracefully
+        //
+        // DEPENDENCIES:
+        // - Cache statistics tracking (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring/metrics)
+        // - Change Budget: ~40 LOC
         0.75
     }
 }
@@ -426,18 +477,25 @@ impl RetrievalOptimizationEngine {
     }
 
     /// Optimize retrieval strategy based on performance history
-    pub async fn optimize_strategy(&mut self, latest_performance: RetrievalPerformance) -> RetrievalOptimization {
+    pub async fn optimize_strategy(
+        &mut self,
+        latest_performance: RetrievalPerformance,
+    ) -> RetrievalOptimization {
         self.performance_history.push(latest_performance.clone());
 
         // Keep only recent history
         if self.performance_history.len() > 100 {
-            self.performance_history.drain(0..self.performance_history.len() - 100);
+            self.performance_history
+                .drain(0..self.performance_history.len() - 100);
         }
 
         // Analyze patterns and suggest optimizations
-        let avg_retrieval_time = self.performance_history.iter()
+        let avg_retrieval_time = self
+            .performance_history
+            .iter()
             .map(|p| p.retrieval_time_ms)
-            .sum::<u64>() as f64 / self.performance_history.len() as f64;
+            .sum::<u64>() as f64
+            / self.performance_history.len() as f64;
 
         let optimization = if avg_retrieval_time > 1000.0 {
             RetrievalOptimization::EnableArchivalRetrieval

@@ -30,10 +30,10 @@ impl MemoryLifecycleManager {
             let action = self.manager.evaluate_lifecycle(&metadata).await?;
 
             match action {
-                MemoryLifecycleAction::StayActive |
-                MemoryLifecycleAction::StayAging |
-                MemoryLifecycleAction::StayArchived |
-                MemoryLifecycleAction::KeepArchived => {
+                MemoryLifecycleAction::StayActive
+                | MemoryLifecycleAction::StayAging
+                | MemoryLifecycleAction::StayArchived
+                | MemoryLifecycleAction::KeepArchived => {
                     stay_count += 1;
                 }
                 _ => {
@@ -122,7 +122,9 @@ impl MemoryLifecycleManager {
             // Use the memory ID directly as the key for access patterns
             if let Some(access_pattern) = access_patterns.get(memory_id) {
                 let old_importance = metadata.importance_score;
-                self.manager.apply_reinforcement(metadata, access_pattern).await?;
+                self.manager
+                    .apply_reinforcement(metadata, access_pattern)
+                    .await?;
 
                 let importance_gain = metadata.importance_score - old_importance;
                 if importance_gain > 0.01 {
@@ -154,9 +156,37 @@ impl MemoryLifecycleManager {
         }
     }
 
-    /// Apply single transition (placeholder implementation)
-    async fn apply_single_transition(&self, _transition: &LifecycleTransition) -> crate::MemoryResult<()> {
-        // In practice, this would update the memory in the database
+    /// Apply single transition
+    async fn apply_single_transition(
+        &self,
+        _transition: &LifecycleTransition,
+    ) -> crate::MemoryResult<()> {
+        // TODO: Implement real lifecycle transition application
+        //       Currently returns Ok without updating memory; should update memory state in database.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Update memory state in database with new lifecycle state
+        // [ ] Validate transition is allowed from current state
+        // [ ] Persist state change with timestamp
+        // [ ] Handle database errors gracefully
+        // [ ] Add unit tests with various transition scenarios
+        // [ ] Add integration tests with real database updates
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory state is updated in database
+        // - Invalid transitions return appropriate error
+        // - State changes are persisted with timestamps
+        //
+        // DEPENDENCIES:
+        // - Database memory update operations (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data persistence)
+        // - Change Budget: ~80 LOC
         Ok(())
     }
 

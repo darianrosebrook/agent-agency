@@ -6,22 +6,22 @@
 //!
 //! @author @darianrosebrook
 
+use anyhow::Result;
+use chrono::Utc;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use anyhow::Result;
-use uuid::Uuid;
-use tracing::{info, warn, error, debug};
-use tokio::time::interval;
 use tokio::sync::RwLock;
-use std::collections::HashMap;
-use chrono::Utc;
+use tokio::time::interval;
+use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 use crate::planning::worker_assignment::{WorkerAssignmentStrategy, WorkerPerformance};
 
 #[cfg(feature = "model-management")]
 use agent_model_management::deployment::DeploymentOrchestrator;
 #[cfg(feature = "model-management")]
-use agent_model_management::types::{HotSwapStrategy, HotSwapResult};
+use agent_model_management::types::{HotSwapResult, HotSwapStrategy};
 
 #[cfg(not(feature = "model-management"))]
 // Placeholder types when model-management feature is disabled
@@ -43,8 +43,33 @@ pub struct DeploymentOrchestrator;
 
 #[cfg(not(feature = "model-management"))]
 impl DeploymentOrchestrator {
-    /// PLACEHOLDER: Perform hot-swap of model version for a worker
-    /// This is a stub implementation when model-management feature is disabled.
+    /// TODO: Implement hot-swap of model version for a worker
+    ///       This is a stub implementation when model-management feature is disabled.
+    ///       Currently returns error; should implement model version hot-swapping.
+    ///
+    /// COMPLETION CHECKLIST:
+    /// [ ] Implement model version hot-swap logic
+    /// [ ] Support different hot-swap strategies (rolling, canary, instant)
+    /// [ ] Handle model loading and unloading
+    /// [ ] Track model version changes
+    /// [ ] Add unit tests with various swap scenarios
+    /// [ ] Add integration tests with real model management
+    ///
+    /// ACCEPTANCE CRITERIA:
+    /// - Model versions can be hot-swapped without downtime
+    /// - Different swap strategies work correctly
+    /// - Model loading errors are handled gracefully
+    ///
+    /// DEPENDENCIES:
+    /// - Model management feature (Required)
+    ///
+    /// ESTIMATED EFFORT: 4-6 hours
+    /// PRIORITY: Medium
+    /// BLOCKING: No (feature-gated)
+    ///
+    /// GOVERNANCE:
+    /// - CAWS Tier: 2 (model lifecycle management)
+    /// - Change Budget: ~150 LOC
     pub async fn perform_hot_swap(
         &self,
         _model_id: &str,
@@ -64,20 +89,20 @@ impl DeploymentOrchestrator {
 pub struct ModelLifecycleConfig {
     /// Performance check interval in seconds
     pub check_interval_secs: u64,
-    
+
     /// Performance degradation threshold (0.0-1.0)
     /// If performance score drops below this, trigger hot-swap
     pub performance_threshold: f64,
-    
+
     /// Minimum number of tasks before considering swap
     pub min_tasks_for_evaluation: u64,
-    
+
     /// Minimum time since last swap before allowing another (seconds)
     pub min_swap_cooldown_secs: u64,
-    
+
     /// Enable automatic hot-swapping
     pub enable_auto_swap: bool,
-    
+
     /// Hot-swap strategy to use
     pub swap_strategy: HotSwapStrategy,
 }
@@ -85,10 +110,10 @@ pub struct ModelLifecycleConfig {
 impl Default for ModelLifecycleConfig {
     fn default() -> Self {
         Self {
-            check_interval_secs: 60, // Check every minute
-            performance_threshold: 0.5, // Swap if performance drops below 50%
+            check_interval_secs: 60,      // Check every minute
+            performance_threshold: 0.5,   // Swap if performance drops below 50%
             min_tasks_for_evaluation: 10, // Need at least 10 tasks to evaluate
-            min_swap_cooldown_secs: 300, // 5 minutes between swaps
+            min_swap_cooldown_secs: 300,  // 5 minutes between swaps
             enable_auto_swap: true,
             swap_strategy: HotSwapStrategy::Gradual {
                 steps: 3,
@@ -102,16 +127,16 @@ impl Default for ModelLifecycleConfig {
 pub struct ModelLifecycleManager {
     /// Worker assignment strategy (for accessing performance cache)
     worker_assignment: Arc<WorkerAssignmentStrategy>,
-    
+
     /// Deployment orchestrator (for performing hot-swaps)
     deployment_orchestrator: Option<Arc<DeploymentOrchestrator>>,
-    
+
     /// Configuration
     config: ModelLifecycleConfig,
-    
+
     /// Last swap time per worker (worker_id -> timestamp)
     last_swap_times: Arc<RwLock<HashMap<Uuid, chrono::DateTime<Utc>>>>,
-    
+
     /// Monitoring task handle
     monitoring_handle: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>>,
 }
@@ -151,24 +176,29 @@ impl ModelLifecycleManager {
 
         let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(config.check_interval_secs));
-            
+
             loop {
                 interval.tick().await;
-                
+
                 if let Err(e) = Self::check_and_swap_models(
                     &worker_assignment,
                     &deployment_orchestrator,
                     &config,
                     &last_swap_times,
-                ).await {
+                )
+                .await
+                {
                     error!("Error in model lifecycle monitoring: {}", e);
                 }
             }
         });
 
         *self.monitoring_handle.write().await = Some(handle);
-        info!("Model lifecycle manager: monitoring started (interval: {}s)", self.config.check_interval_secs);
-        
+        info!(
+            "Model lifecycle manager: monitoring started (interval: {}s)",
+            self.config.check_interval_secs
+        );
+
         Ok(())
     }
 
@@ -190,13 +220,16 @@ impl ModelLifecycleManager {
     ) -> Result<()> {
         // Get performance cache
         let performance_cache = worker_assignment.get_performance_cache().await?;
-        
+
         // Check each worker's performance
         for (worker_id, performance) in performance_cache.iter() {
             // Skip if not enough tasks for evaluation
             let total_tasks = performance.tasks_completed + performance.tasks_failed;
             if total_tasks < config.min_tasks_for_evaluation {
-                debug!("Worker {}: insufficient tasks ({}) for evaluation", worker_id, total_tasks);
+                debug!(
+                    "Worker {}: insufficient tasks ({}) for evaluation",
+                    worker_id, total_tasks
+                );
                 continue;
             }
 
@@ -204,9 +237,7 @@ impl ModelLifecycleManager {
             if performance.performance_score < config.performance_threshold {
                 warn!(
                     "Worker {}: performance degraded (score: {:.2}, threshold: {:.2})",
-                    worker_id,
-                    performance.performance_score,
-                    config.performance_threshold
+                    worker_id, performance.performance_score, config.performance_threshold
                 );
 
                 // Check cooldown period
@@ -225,26 +256,37 @@ impl ModelLifecycleManager {
                 drop(last_swap_times_guard);
 
                 // Trigger hot-swap
-                info!("Worker {}: triggering hot-swap due to performance degradation", worker_id);
-                
+                info!(
+                    "Worker {}: triggering hot-swap due to performance degradation",
+                    worker_id
+                );
+
                 // Get worker model information from database
                 let worker = match worker_assignment.get_worker_by_id(*worker_id).await {
                     Ok(Some(w)) => w,
                     Ok(None) => {
-                        warn!("Worker {}: not found in database, skipping hot-swap", worker_id);
+                        warn!(
+                            "Worker {}: not found in database, skipping hot-swap",
+                            worker_id
+                        );
                         continue;
                     }
                     Err(e) => {
-                        error!("Worker {}: failed to retrieve worker from database: {}", worker_id, e);
+                        error!(
+                            "Worker {}: failed to retrieve worker from database: {}",
+                            worker_id, e
+                        );
                         continue;
                     }
                 };
 
                 // Use worker's model_name as the model_id for hot-swap
                 let current_model_id = worker.model_name.clone();
-                
+
                 // Query for optimal new version/model using PerformanceTracker if available
-                let (model_id, new_version) = if let Some(tracker) = worker_assignment.get_performance_tracker() {
+                let (model_id, new_version) = if let Some(tracker) =
+                    worker_assignment.get_performance_tracker()
+                {
                     // Get all model performance data sorted by performance score (highest first)
                     match tracker.get_model_performance().await {
                         Ok(performances) => {
@@ -282,12 +324,10 @@ impl ModelLifecycleManager {
                     // PerformanceTracker not available, use "latest" version of current model
                     (current_model_id, "latest".to_string())
                 };
-                
+
                 debug!(
                     "Worker {}: hot-swapping model {} to version {}",
-                    worker_id,
-                    model_id,
-                    new_version
+                    worker_id, model_id, new_version
                 );
 
                 match deployment_orchestrator
@@ -297,12 +337,15 @@ impl ModelLifecycleManager {
                     Ok(result) => {
                         if result.success {
                             info!("Worker {}: hot-swap completed successfully", worker_id);
-                            
+
                             // Update last swap time
                             let mut last_swap_times_guard = last_swap_times.write().await;
                             last_swap_times_guard.insert(*worker_id, Utc::now());
                         } else {
-                            warn!("Worker {}: hot-swap completed but reported failure", worker_id);
+                            warn!(
+                                "Worker {}: hot-swap completed but reported failure",
+                                worker_id
+                            );
                         }
                     }
                     Err(e) => {
@@ -312,8 +355,7 @@ impl ModelLifecycleManager {
             } else {
                 debug!(
                     "Worker {}: performance acceptable (score: {:.2})",
-                    worker_id,
-                    performance.performance_score
+                    worker_id, performance.performance_score
                 );
             }
         }
@@ -333,11 +375,18 @@ impl ModelLifecycleManager {
             .ok_or_else(|| anyhow::anyhow!("Deployment orchestrator not available"))?;
 
         let model_id = format!("worker-{}", worker_id);
-        
-        info!("Manually triggering hot-swap for worker {} to version {}", worker_id, new_model_version);
-        
+
+        info!(
+            "Manually triggering hot-swap for worker {} to version {}",
+            worker_id, new_model_version
+        );
+
         let result = deployment_orchestrator
-            .perform_hot_swap(&model_id, new_model_version, self.config.swap_strategy.clone())
+            .perform_hot_swap(
+                &model_id,
+                new_model_version,
+                self.config.swap_strategy.clone(),
+            )
             .await?;
 
         if result.success {
@@ -364,4 +413,3 @@ impl Drop for ModelLifecycleManager {
         }
     }
 }
-

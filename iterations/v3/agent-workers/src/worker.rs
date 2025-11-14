@@ -2,13 +2,13 @@
 //!
 //! This module provides worker management functionality for the coordinator.
 
-use crate::{WorkerId, WorkerSpecialty, SubTask, TaskId, SubTaskId, ParallelError, ParallelResult};
+use crate::worker_types::{Artifact, Worker, WorkerPerformanceMetrics, WorkerStatus};
 use crate::WorkerCapabilities;
-use crate::worker_types::{Worker, WorkerStatus, WorkerPerformanceMetrics, Artifact};
+use crate::{ParallelError, ParallelResult, SubTask, SubTaskId, TaskId, WorkerId, WorkerSpecialty};
+use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::Utc;
 
 // MCP integration for tool execution
 use agent_mcp;
@@ -72,11 +72,13 @@ impl WorkerManager {
         worker_id: WorkerId,
     ) -> ParallelResult<SubTaskExecutionResult> {
         // Get the worker
-        let worker = self.get_worker(&worker_id).await
-            .ok_or_else(|| ParallelError::Coordination {
-                message: format!("Worker {} not found", worker_id),
-                source: None,
-            })?;
+        let worker =
+            self.get_worker(&worker_id)
+                .await
+                .ok_or_else(|| ParallelError::Coordination {
+                    message: format!("Worker {} not found", worker_id),
+                    source: None,
+                })?;
 
         // Assign the worker to the subtask
         self.assign_worker(&worker_id).await?;
@@ -97,7 +99,8 @@ impl WorkerManager {
         let tool_request = create_tool_execution_request(tool_id, &subtask, &execution_context)?;
 
         // Execute via MCP integration (placeholder - would use real MCP client)
-        let execution_result = execute_via_mcp_placeholder(tool_request).await
+        let execution_result = execute_via_mcp_placeholder(tool_request)
+            .await
             .map_err(|e| ParallelError::Coordination {
                 message: format!("MCP execution failed: {}", e),
                 source: Some(Box::new(std::io::Error::new(std::io::ErrorKind::Other, e))),
@@ -113,7 +116,7 @@ impl WorkerManager {
         let quality_score = execution_result.quality_score;
         let artifacts = execution_result.artifacts;
         let errors = execution_result.errors;
-        
+
         // Release the worker
         let _ = self.release_worker(&worker_id).await;
 
@@ -184,19 +187,25 @@ struct MCPExecutionResult {
 }
 
 /// Create execution context from subtask and worker
-fn create_execution_context(subtask: &SubTask, worker: &Worker) -> Result<MCPExecutionContext, ParallelError> {
+fn create_execution_context(
+    subtask: &SubTask,
+    worker: &Worker,
+) -> Result<MCPExecutionContext, ParallelError> {
     // Create basic execution context
     // TODO: Extract actual context from subtask metadata
     Ok(MCPExecutionContext {
         working_directory: "/tmp".to_string(), // Placeholder
         environment_variables: HashMap::new(),
-        input_files: vec![], // TODO: Extract from subtask scope
+        input_files: vec![],       // TODO: Extract from subtask scope
         timeout_seconds: Some(30), // Default timeout
     })
 }
 
 /// Select appropriate MCP tool for subtask execution
-fn select_tool_for_subtask(subtask: &SubTask, _capabilities: &WorkerCapabilities) -> Result<String, ParallelError> {
+fn select_tool_for_subtask(
+    subtask: &SubTask,
+    _capabilities: &WorkerCapabilities,
+) -> Result<String, ParallelError> {
     // Simple tool selection based on specialty
     // TODO: Implement intelligent tool selection based on subtask requirements
     match subtask.specialty {
@@ -221,7 +230,7 @@ fn create_tool_execution_request(
     subtask: &SubTask,
     context: &MCPExecutionContext,
 ) -> Result<agent_mcp::mcp_types::ToolExecutionRequest, ParallelError> {
-    use agent_mcp::mcp_types::{ToolExecutionRequest, ExecutionContext};
+    use agent_mcp::mcp_types::{ExecutionContext, ToolExecutionRequest};
 
     // Create MCP execution context
     // TODO: Populate metadata with task context and execution information
@@ -278,7 +287,10 @@ fn create_tool_execution_request(
     let params_map: HashMap<String, serde_json::Value> = serde_json::from_value(parameters)
         .map_err(|e| ParallelError::Coordination {
             message: format!("Failed to create parameters: {}", e),
-            source: Some(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))),
+            source: Some(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                e,
+            ))),
         })?;
 
     // TODO: Use actual tool registry to get real UUID:
@@ -316,11 +328,10 @@ fn create_tool_execution_request(
     })
 }
 
-/// Execute via MCP (placeholder implementation)
+/// Execute via MCP
 async fn execute_via_mcp_placeholder(
     _request: agent_mcp::mcp_types::ToolExecutionRequest,
 ) -> Result<MCPExecutionResult, ParallelError> {
-    // Placeholder: Simulate MCP execution
     // TODO: Replace with real MCP client call
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 

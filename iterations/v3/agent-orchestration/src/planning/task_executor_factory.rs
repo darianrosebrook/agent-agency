@@ -3,18 +3,24 @@
 //! This factory provides different execution strategies (parallel, sequential, hybrid)
 //! and ensures proper dependency injection for all task executors.
 
-use std::sync::Arc;
+use agent_agency_contracts::task_executor::{
+    TaskExecutionResult, TaskExecutionStats, TaskExecutor, TaskExecutorHealth, TaskSpec,
+};
+use agent_workers::{
+    MCPWorkerPool, TaskDefinition, TaskPriority as WorkerTaskPriority, TaskResult,
+};
+#[cfg(feature = "task-queue")]
+use data_infrastructure::queue::TaskQueueService;
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-use uuid::Uuid;
-use tracing::{debug, warn, info};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
-use agent_workers::{MCPWorkerPool, TaskDefinition, TaskResult, TaskPriority as WorkerTaskPriority};
-use agent_agency_contracts::task_executor::{TaskExecutor, TaskSpec, TaskExecutionResult, TaskExecutorHealth, TaskExecutionStats};
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 /// Execution strategy for task execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -70,8 +76,12 @@ pub struct TaskExecutorFactory {
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
     /// MCP worker pool for real task execution (if available)
     mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
-    /// Task queue service (if available) - TODO: Enable when data-infrastructure integration is available
-    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder for TaskQueueService
+    /// Task queue service (if available)
+    #[cfg(feature = "task-queue")]
+    task_queue: Option<Arc<TaskQueueService>>,
+    /// Task queue service (placeholder when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     /// Audit trail manager for logging
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
 }
@@ -95,7 +105,10 @@ impl TaskExecutorFactory {
     }
 
     /// Configure with worker pool integration
-    pub fn with_worker_pool(mut self, worker_pool: Arc<dyn crate::planning::plan_executor::WorkerPool>) -> Self {
+    pub fn with_worker_pool(
+        mut self,
+        worker_pool: Arc<dyn crate::planning::plan_executor::WorkerPool>,
+    ) -> Self {
         self.worker_pool = Some(worker_pool);
         self
     }
@@ -107,20 +120,35 @@ impl TaskExecutorFactory {
     }
 
     /// Configure with task queue service
-    /// TODO: Enable when data-infrastructure integration is available
-    pub fn with_task_queue(self, _task_queue: Arc<dyn std::marker::Send + std::marker::Sync + 'static>) -> Self {
-        // self.task_queue = Some(task_queue);
+    #[cfg(feature = "task-queue")]
+    pub fn with_task_queue(mut self, task_queue: Arc<TaskQueueService>) -> Self {
+        self.task_queue = Some(task_queue);
+        self
+    }
+
+    /// Configure with task queue service (placeholder when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    pub fn with_task_queue(
+        self,
+        _task_queue: Arc<dyn std::marker::Send + std::marker::Sync + 'static>,
+    ) -> Self {
         self
     }
 
     /// Configure with audit trail manager
-    pub fn with_audit_trail(mut self, audit_manager: Arc<crate::audit_trail::AuditTrailManager>) -> Self {
+    pub fn with_audit_trail(
+        mut self,
+        audit_manager: Arc<crate::audit_trail::AuditTrailManager>,
+    ) -> Self {
         self.audit_manager = Some(audit_manager);
         self
     }
 
     /// Create a TaskExecutor with the specified strategy
-    pub fn create_executor(&self, strategy: ExecutionStrategy) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+    pub fn create_executor(
+        &self,
+        strategy: ExecutionStrategy,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
         let config = TaskExecutorConfig {
             strategy,
             ..self.default_config.clone()
@@ -135,20 +163,30 @@ impl TaskExecutorFactory {
     }
 
     /// Create a TaskExecutor with default strategy
-    pub fn create_default_executor(&self) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+    pub fn create_default_executor(
+        &self,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
         self.create_executor(self.default_config.strategy)
     }
 
     /// Create a sequential task executor
-    fn create_sequential_executor(&self, config: TaskExecutorConfig) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
-        debug!("Creating sequential task executor with config: {:?}", config);
+    fn create_sequential_executor(
+        &self,
+        config: TaskExecutorConfig,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+        debug!(
+            "Creating sequential task executor with config: {:?}",
+            config
+        );
 
         let executor = SequentialTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
             self.mcp_worker_pool.clone(),
-            // TODO: Enable task_queue when data-infrastructure integration is available
-            // self.task_queue.clone(),
+            #[cfg(feature = "task-queue")]
+            self.task_queue.clone(),
+            #[cfg(not(feature = "task-queue"))]
+            self.task_queue.clone(), // Placeholder
             self.audit_manager.clone(),
         );
 
@@ -156,15 +194,20 @@ impl TaskExecutorFactory {
     }
 
     /// Create a parallel task executor
-    fn create_parallel_executor(&self, config: TaskExecutorConfig) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+    fn create_parallel_executor(
+        &self,
+        config: TaskExecutorConfig,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
         debug!("Creating parallel task executor with config: {:?}", config);
 
         let executor = ParallelTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
             self.mcp_worker_pool.clone(),
-            // TODO: Enable task_queue when data-infrastructure integration is available
-            // self.task_queue.clone(),
+            #[cfg(feature = "task-queue")]
+            self.task_queue.clone(),
+            #[cfg(not(feature = "task-queue"))]
+            None, // Placeholder
             self.audit_manager.clone(),
         );
 
@@ -172,14 +215,19 @@ impl TaskExecutorFactory {
     }
 
     /// Create a hybrid task executor
-    fn create_hybrid_executor(&self, config: TaskExecutorConfig) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+    fn create_hybrid_executor(
+        &self,
+        config: TaskExecutorConfig,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
         debug!("Creating hybrid task executor with config: {:?}", config);
 
         let executor = HybridTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
-            // TODO: Enable task_queue when data-infrastructure integration is available
-            // self.task_queue.clone(),
+            #[cfg(feature = "task-queue")]
+            self.task_queue.clone(),
+            #[cfg(not(feature = "task-queue"))]
+            self.task_queue.clone(), // Placeholder
             self.audit_manager.clone(),
         );
 
@@ -187,14 +235,19 @@ impl TaskExecutorFactory {
     }
 
     /// Create an adaptive task executor
-    fn create_adaptive_executor(&self, config: TaskExecutorConfig) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
+    fn create_adaptive_executor(
+        &self,
+        config: TaskExecutorConfig,
+    ) -> Result<Arc<dyn TaskExecutor>, TaskExecutorFactoryError> {
         debug!("Creating adaptive task executor with config: {:?}", config);
 
         let executor = AdaptiveTaskExecutor::new(
             config.clone(),
             self.worker_pool.clone(),
-            // TODO: Enable task_queue when data-infrastructure integration is available
-            // self.task_queue.clone(),
+            #[cfg(feature = "task-queue")]
+            self.task_queue.clone(),
+            #[cfg(not(feature = "task-queue"))]
+            self.task_queue.clone(), // Placeholder
             self.audit_manager.clone(),
         );
 
@@ -227,8 +280,12 @@ pub struct SequentialTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
     mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
-    // TODO: Enable task_queue when data-infrastructure integration is available
-    // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+    /// Task queue service (when feature enabled)
+    #[cfg(feature = "task-queue")]
+    task_queue: Option<Arc<TaskQueueService>>,
+    /// Task queue service placeholder (when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
     /// Active task cancellation tokens: task_id -> CancellationToken
@@ -239,10 +296,22 @@ impl std::fmt::Debug for SequentialTaskExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SequentialTaskExecutor")
             .field("config", &self.config)
-            .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
-            .field("mcp_worker_pool", &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"))
+            .field(
+                "worker_pool",
+                &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"),
+            )
+            .field(
+                "mcp_worker_pool",
+                &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"),
+            )
             .field("audit_manager", &self.audit_manager)
-            .field("circuit_breaker", &self.circuit_breaker.as_ref().map(|_| "Some(CircuitBreaker)"))
+            .field(
+                "circuit_breaker",
+                &self
+                    .circuit_breaker
+                    .as_ref()
+                    .map(|_| "Some(CircuitBreaker)"),
+            )
             .finish()
     }
 }
@@ -252,8 +321,10 @@ impl SequentialTaskExecutor {
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
         mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
-        // TODO: Enable task_queue when data-infrastructure integration is available
-        // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+        #[cfg(feature = "task-queue")]
+        task_queue: Option<Arc<TaskQueueService>>,
+        #[cfg(not(feature = "task-queue"))]
+        task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         // Create circuit breaker for task execution resilience
@@ -270,7 +341,7 @@ impl SequentialTaskExecutor {
             config,
             worker_pool,
             mcp_worker_pool,
-            // task_queue,
+            task_queue,
             audit_manager,
             circuit_breaker,
             active_tasks: Arc::new(RwLock::new(HashMap::new())),
@@ -285,7 +356,7 @@ impl SequentialTaskExecutor {
     ) -> Result<TaskDefinition, Box<dyn std::error::Error + Send + Sync>> {
         // Extract required tools from task spec
         let mut required_tools = Vec::new();
-        
+
         // Add tools based on task scope
         if let Some(scope) = &task_spec.scope {
             if !scope.files_affected.is_empty() || !scope.domains.is_empty() {
@@ -293,7 +364,7 @@ impl SequentialTaskExecutor {
                 required_tools.push("file_read".to_string());
             }
         }
-        
+
         // Add tools from required capabilities
         for capability in &task_spec.required_capabilities {
             match capability.as_str() {
@@ -324,30 +395,47 @@ impl SequentialTaskExecutor {
         // Convert priority
         let priority: WorkerTaskPriority = match task_spec.priority {
             agent_agency_contracts::types::planning::TaskPriority::Low => WorkerTaskPriority::Low,
-            agent_agency_contracts::types::planning::TaskPriority::Normal => WorkerTaskPriority::Medium,
-            agent_agency_contracts::types::planning::TaskPriority::Medium => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                WorkerTaskPriority::Medium
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                WorkerTaskPriority::Medium
+            }
             agent_agency_contracts::types::planning::TaskPriority::High => WorkerTaskPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Urgent => WorkerTaskPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Critical => WorkerTaskPriority::Critical,
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => {
+                WorkerTaskPriority::High
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                WorkerTaskPriority::Critical
+            }
         };
 
         // Build task parameters from task spec
         let mut parameters = HashMap::new();
         parameters.insert("title".to_string(), serde_json::json!(task_spec.title));
-        parameters.insert("description".to_string(), serde_json::json!(task_spec.description));
-        
+        parameters.insert(
+            "description".to_string(),
+            serde_json::json!(task_spec.description),
+        );
+
         if let Some(scope) = &task_spec.scope {
-            parameters.insert("scope".to_string(), serde_json::json!({
-                "domains": scope.domains,
-                "files_affected": scope.files_affected,
-                "max_loc": scope.max_loc,
-            }));
+            parameters.insert(
+                "scope".to_string(),
+                serde_json::json!({
+                    "domains": scope.domains,
+                    "files_affected": scope.files_affected,
+                    "max_loc": scope.max_loc,
+                }),
+            );
         }
-        
+
         if let Some(worktree_path) = worktree_path {
-            parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
+            parameters.insert(
+                "worktree_path".to_string(),
+                serde_json::json!(worktree_path.display().to_string()),
+            );
         }
-        
+
         // Add context information
         for (key, value) in &task_spec.context {
             parameters.insert(format!("context_{}", key), value.clone());
@@ -368,7 +456,10 @@ impl SequentialTaskExecutor {
             metadata: {
                 let mut metadata = HashMap::new();
                 if let Some(working_spec_id) = &task_spec.working_spec_id {
-                    metadata.insert("working_spec_id".to_string(), serde_json::json!(working_spec_id));
+                    metadata.insert(
+                        "working_spec_id".to_string(),
+                        serde_json::json!(working_spec_id),
+                    );
                 }
                 if let Some(risk_tier) = task_spec.risk_tier {
                     metadata.insert("risk_tier".to_string(), serde_json::json!(risk_tier));
@@ -388,11 +479,14 @@ impl SequentialTaskExecutor {
         task_spec: &TaskSpec,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> TaskExecutionResult {
-        let completed_at = started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
+        let completed_at =
+            started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
         let duration_ms = task_result.execution_time_ms;
 
         // Extract worker_id from worker_breakdown if available
-        let worker_id = task_result.worker_breakdown.first()
+        let worker_id = task_result
+            .worker_breakdown
+            .first()
             .map(|breakdown| breakdown.worker_id.0);
 
         TaskExecutionResult {
@@ -403,14 +497,26 @@ impl SequentialTaskExecutor {
             errors: task_result.errors.clone(),
             metadata: {
                 let mut metadata = HashMap::new();
-                metadata.insert("execution_time_ms".to_string(), serde_json::json!(duration_ms));
-                metadata.insert("subtasks_completed".to_string(), serde_json::json!(task_result.subtasks_completed));
-                metadata.insert("total_subtasks".to_string(), serde_json::json!(task_result.total_subtasks));
+                metadata.insert(
+                    "execution_time_ms".to_string(),
+                    serde_json::json!(duration_ms),
+                );
+                metadata.insert(
+                    "subtasks_completed".to_string(),
+                    serde_json::json!(task_result.subtasks_completed),
+                );
+                metadata.insert(
+                    "total_subtasks".to_string(),
+                    serde_json::json!(task_result.total_subtasks),
+                );
                 if let Some(tool_used) = &task_result.tool_used {
                     metadata.insert("tool_used".to_string(), serde_json::json!(tool_used));
                 }
                 if let Some(error_message) = &task_result.error_message {
-                    metadata.insert("error_message".to_string(), serde_json::json!(error_message));
+                    metadata.insert(
+                        "error_message".to_string(),
+                        serde_json::json!(error_message),
+                    );
                 }
                 // Add quality scores to metadata
                 for (key, value) in &task_result.quality_scores {
@@ -437,7 +543,10 @@ impl TaskExecutor for SequentialTaskExecutor {
         task_spec: TaskSpec,
         worker_id: Uuid,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        debug!("Executing task {} sequentially on worker {}", task_spec.id, worker_id);
+        debug!(
+            "Executing task {} sequentially on worker {}",
+            task_spec.id, worker_id
+        );
 
         // Implemented: Real worker execution via MCPWorkerPool
         let started_at = chrono::Utc::now();
@@ -452,13 +561,19 @@ impl TaskExecutor for SequentialTaskExecutor {
 
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            if let Err(e) = audit.record_task_execution_start(
-                task_spec.id,
-                execution_id,
-                Some(worker_id),
-                None, // correlation_id can be added if available
-            ).await {
-                warn!("Failed to record task execution start in audit trail: {}", e);
+            if let Err(e) = audit
+                .record_task_execution_start(
+                    task_spec.id,
+                    execution_id,
+                    Some(worker_id),
+                    None, // correlation_id can be added if available
+                )
+                .await
+            {
+                warn!(
+                    "Failed to record task execution start in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -500,7 +615,7 @@ impl TaskExecutor for SequentialTaskExecutor {
         // but we track cancellation state and can check it before/during execution
         let task_result = if cancellation_token.is_cancelled() {
             // Task was cancelled before execution started
-            use agent_workers::{TaskStatus, TaskId};
+            use agent_workers::{TaskId, TaskStatus};
             TaskResult {
                 task_id: TaskId(task_spec.id), // TaskId is a newtype wrapper around Uuid
                 success: false,
@@ -525,8 +640,11 @@ impl TaskExecutor for SequentialTaskExecutor {
                         // Task was cancelled during execution - update result to reflect cancellation
                         result.success = false;
                         result.status = agent_workers::TaskStatus::Cancelled;
-                        result.errors.push("Task was cancelled during execution".to_string());
-                        result.error_message = Some("Task was cancelled during execution".to_string());
+                        result
+                            .errors
+                            .push("Task was cancelled during execution".to_string());
+                        result.error_message =
+                            Some("Task was cancelled during execution".to_string());
                     }
                     result
                 }
@@ -551,14 +669,17 @@ impl TaskExecutor for SequentialTaskExecutor {
 
         // Convert TaskResult to TaskExecutionResult
         let mut result = self.task_result_to_execution_result(&task_result, &task_spec, started_at);
-        
+
         // Ensure execution_id matches what we recorded at start
         result.execution_id = execution_id;
 
         // Record execution completion in audit trail
         if let Some(audit) = &self.audit_manager {
             if let Err(e) = audit.record_task_execution_completion(&result, None).await {
-                warn!("Failed to record task execution completion in audit trail: {}", e);
+                warn!(
+                    "Failed to record task execution completion in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -608,7 +729,7 @@ impl TaskExecutor for SequentialTaskExecutor {
 
                 // Execute task and track result in circuit breaker
                 let result = self.execute_task(task_spec.clone(), worker_id).await;
-                
+
                 // Record result in circuit breaker
                 match &result {
                     Ok(_) => {
@@ -630,7 +751,9 @@ impl TaskExecutor for SequentialTaskExecutor {
         }
     }
 
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutorHealth {
             status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
             last_execution_time: Some(chrono::Utc::now()),
@@ -641,7 +764,9 @@ impl TaskExecutor for SequentialTaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutionStats {
             total_executions: 100,
             successful_executions: 95,
@@ -673,7 +798,7 @@ impl TaskExecutor for SequentialTaskExecutor {
 
             // Record cancellation in audit trail
             if let Some(audit) = &self.audit_manager {
-                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
 
@@ -686,13 +811,22 @@ impl TaskExecutor for SequentialTaskExecutor {
                     severity: AuditSeverity::Info,
                     actor: "orchestrator".to_string(),
                     operation: "task_cancellation".to_string(),
-                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    message: Some(format!(
+                        "Task {} cancelled on worker {}",
+                        task_id, worker_id
+                    )),
                     operation_id: Some(task_id.to_string()),
                     target: Some(worker_id.to_string()),
                     parameters: {
                         let mut params = HashMap::new();
-                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        params.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
                         params
                     },
                     result: AuditResult::Success {
@@ -704,11 +838,21 @@ impl TaskExecutor for SequentialTaskExecutor {
                     performance: None,
                     context: {
                         let mut ctx = HashMap::new();
-                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        ctx.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
                         ctx
                     },
-                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string()],
+                    tags: vec![
+                        "orchestration".to_string(),
+                        "cancellation".to_string(),
+                        "task_management".to_string(),
+                    ],
                 };
 
                 tracing::info!(
@@ -723,7 +867,10 @@ impl TaskExecutor for SequentialTaskExecutor {
 
             Ok(())
         } else {
-            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            warn!(
+                "Task {} not found in active tasks - may have already completed",
+                task_id
+            );
             // Task not found - may have already completed or never started
             // Still return success as cancellation request was processed
             Ok(())
@@ -736,23 +883,44 @@ pub struct ParallelTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
     mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
-    // TODO: Enable task_queue when data-infrastructure integration is available
-    // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+    /// Task queue service (when feature enabled)
+    #[cfg(feature = "task-queue")]
+    task_queue: Option<Arc<TaskQueueService>>,
+    /// Task queue service placeholder (when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
     circuit_breaker: Option<Arc<crate::error_handling::CircuitBreaker>>,
-    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
+    active_tasks: Arc<
+        tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>,
+    >,
 }
 
 impl std::fmt::Debug for ParallelTaskExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParallelTaskExecutor")
             .field("config", &self.config)
-            .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
-            .field("mcp_worker_pool", &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"))
+            .field(
+                "worker_pool",
+                &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"),
+            )
+            .field(
+                "mcp_worker_pool",
+                &self.mcp_worker_pool.as_ref().map(|_| "Some(MCPWorkerPool)"),
+            )
             .field("audit_manager", &self.audit_manager)
-            .field("semaphore", &format!("Semaphore(permits: {})", self.semaphore.available_permits()))
-            .field("circuit_breaker", &self.circuit_breaker.as_ref().map(|_| "Some(CircuitBreaker)"))
+            .field(
+                "semaphore",
+                &format!("Semaphore(permits: {})", self.semaphore.available_permits()),
+            )
+            .field(
+                "circuit_breaker",
+                &self
+                    .circuit_breaker
+                    .as_ref()
+                    .map(|_| "Some(CircuitBreaker)"),
+            )
             .finish()
     }
 }
@@ -762,8 +930,10 @@ impl ParallelTaskExecutor {
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
         mcp_worker_pool: Option<Arc<MCPWorkerPool>>,
-        // TODO: Enable task_queue when data-infrastructure integration is available
-        // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+        #[cfg(feature = "task-queue")]
+        task_queue: Option<Arc<TaskQueueService>>,
+        #[cfg(not(feature = "task-queue"))]
+        task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         let semaphore = tokio::sync::Semaphore::new(config.max_concurrent_tasks);
@@ -782,7 +952,7 @@ impl ParallelTaskExecutor {
             config,
             worker_pool,
             mcp_worker_pool,
-            // task_queue,
+            task_queue,
             audit_manager,
             semaphore,
             circuit_breaker,
@@ -799,7 +969,7 @@ impl ParallelTaskExecutor {
     ) -> Result<TaskDefinition, Box<dyn std::error::Error + Send + Sync>> {
         // Extract required tools from task spec
         let mut required_tools = Vec::new();
-        
+
         // Add tools based on task scope
         if let Some(scope) = &task_spec.scope {
             if !scope.files_affected.is_empty() || !scope.domains.is_empty() {
@@ -807,7 +977,7 @@ impl ParallelTaskExecutor {
                 required_tools.push("file_read".to_string());
             }
         }
-        
+
         // Add tools from required capabilities
         for capability in &task_spec.required_capabilities {
             match capability.as_str() {
@@ -837,30 +1007,47 @@ impl ParallelTaskExecutor {
         // Convert priority
         let priority: WorkerTaskPriority = match task_spec.priority {
             agent_agency_contracts::types::planning::TaskPriority::Low => WorkerTaskPriority::Low,
-            agent_agency_contracts::types::planning::TaskPriority::Normal => WorkerTaskPriority::Medium,
-            agent_agency_contracts::types::planning::TaskPriority::Medium => WorkerTaskPriority::Medium,
+            agent_agency_contracts::types::planning::TaskPriority::Normal => {
+                WorkerTaskPriority::Medium
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Medium => {
+                WorkerTaskPriority::Medium
+            }
             agent_agency_contracts::types::planning::TaskPriority::High => WorkerTaskPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Urgent => WorkerTaskPriority::High,
-            agent_agency_contracts::types::planning::TaskPriority::Critical => WorkerTaskPriority::Critical,
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => {
+                WorkerTaskPriority::High
+            }
+            agent_agency_contracts::types::planning::TaskPriority::Critical => {
+                WorkerTaskPriority::Critical
+            }
         };
 
         // Build task parameters from task spec
         let mut parameters = HashMap::new();
         parameters.insert("title".to_string(), serde_json::json!(task_spec.title));
-        parameters.insert("description".to_string(), serde_json::json!(task_spec.description));
-        
+        parameters.insert(
+            "description".to_string(),
+            serde_json::json!(task_spec.description),
+        );
+
         if let Some(scope) = &task_spec.scope {
-            parameters.insert("scope".to_string(), serde_json::json!({
-                "domains": scope.domains,
-                "files_affected": scope.files_affected,
-                "max_loc": scope.max_loc,
-            }));
+            parameters.insert(
+                "scope".to_string(),
+                serde_json::json!({
+                    "domains": scope.domains,
+                    "files_affected": scope.files_affected,
+                    "max_loc": scope.max_loc,
+                }),
+            );
         }
-        
+
         if let Some(worktree_path) = worktree_path {
-            parameters.insert("worktree_path".to_string(), serde_json::json!(worktree_path.display().to_string()));
+            parameters.insert(
+                "worktree_path".to_string(),
+                serde_json::json!(worktree_path.display().to_string()),
+            );
         }
-        
+
         // Add context information
         for (key, value) in &task_spec.context {
             parameters.insert(format!("context_{}", key), value.clone());
@@ -881,7 +1068,10 @@ impl ParallelTaskExecutor {
             metadata: {
                 let mut metadata = HashMap::new();
                 if let Some(working_spec_id) = &task_spec.working_spec_id {
-                    metadata.insert("working_spec_id".to_string(), serde_json::json!(working_spec_id));
+                    metadata.insert(
+                        "working_spec_id".to_string(),
+                        serde_json::json!(working_spec_id),
+                    );
                 }
                 if let Some(risk_tier) = task_spec.risk_tier {
                     metadata.insert("risk_tier".to_string(), serde_json::json!(risk_tier));
@@ -902,11 +1092,14 @@ impl ParallelTaskExecutor {
         task_spec: &TaskSpec,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> TaskExecutionResult {
-        let completed_at = started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
+        let completed_at =
+            started_at + chrono::Duration::milliseconds(task_result.execution_time_ms as i64);
         let duration_ms = task_result.execution_time_ms;
 
         // Extract worker_id from worker_breakdown if available
-        let worker_id = task_result.worker_breakdown.first()
+        let worker_id = task_result
+            .worker_breakdown
+            .first()
             .map(|breakdown| breakdown.worker_id.0);
 
         TaskExecutionResult {
@@ -917,14 +1110,26 @@ impl ParallelTaskExecutor {
             errors: task_result.errors.clone(),
             metadata: {
                 let mut metadata = HashMap::new();
-                metadata.insert("execution_time_ms".to_string(), serde_json::json!(duration_ms));
-                metadata.insert("subtasks_completed".to_string(), serde_json::json!(task_result.subtasks_completed));
-                metadata.insert("total_subtasks".to_string(), serde_json::json!(task_result.total_subtasks));
+                metadata.insert(
+                    "execution_time_ms".to_string(),
+                    serde_json::json!(duration_ms),
+                );
+                metadata.insert(
+                    "subtasks_completed".to_string(),
+                    serde_json::json!(task_result.subtasks_completed),
+                );
+                metadata.insert(
+                    "total_subtasks".to_string(),
+                    serde_json::json!(task_result.total_subtasks),
+                );
                 if let Some(tool_used) = &task_result.tool_used {
                     metadata.insert("tool_used".to_string(), serde_json::json!(tool_used));
                 }
                 if let Some(error_message) = &task_result.error_message {
-                    metadata.insert("error_message".to_string(), serde_json::json!(error_message));
+                    metadata.insert(
+                        "error_message".to_string(),
+                        serde_json::json!(error_message),
+                    );
                 }
                 // Add quality scores to metadata
                 for (key, value) in &task_result.quality_scores {
@@ -951,10 +1156,16 @@ impl TaskExecutor for ParallelTaskExecutor {
         task_spec: TaskSpec,
         worker_id: Uuid,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        debug!("Executing task {} in parallel on worker {}", task_spec.id, worker_id);
+        debug!(
+            "Executing task {} in parallel on worker {}",
+            task_spec.id, worker_id
+        );
 
         // Acquire semaphore permit for parallel execution
-        let _permit = self.semaphore.acquire().await
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
             .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
         // Implemented: Real worker execution via MCPWorkerPool with parallel concurrency control
@@ -970,13 +1181,19 @@ impl TaskExecutor for ParallelTaskExecutor {
 
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            if let Err(e) = audit.record_task_execution_start(
-                task_spec.id,
-                execution_id,
-                Some(worker_id),
-                None, // correlation_id can be added if available
-            ).await {
-                warn!("Failed to record task execution start in audit trail: {}", e);
+            if let Err(e) = audit
+                .record_task_execution_start(
+                    task_spec.id,
+                    execution_id,
+                    Some(worker_id),
+                    None, // correlation_id can be added if available
+                )
+                .await
+            {
+                warn!(
+                    "Failed to record task execution start in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -1021,14 +1238,17 @@ impl TaskExecutor for ParallelTaskExecutor {
             }
         };
 
-        info!("Executing task {} in parallel via MCPWorkerPool (permit acquired)", task_spec.id);
+        info!(
+            "Executing task {} in parallel via MCPWorkerPool (permit acquired)",
+            task_spec.id
+        );
 
         // Execute task via MCP worker pool with cancellation support
         // Note: MCPWorkerPool doesn't support cancellation tokens directly,
         // but we track cancellation state and can check it before/during execution
         let task_result = if cancellation_token.is_cancelled() {
             // Task was cancelled before execution started
-            use agent_workers::{TaskStatus, TaskId};
+            use agent_workers::{TaskId, TaskStatus};
             TaskResult {
                 task_id: TaskId(task_spec.id),
                 success: false,
@@ -1053,8 +1273,11 @@ impl TaskExecutor for ParallelTaskExecutor {
                         // Task was cancelled during execution - update result to reflect cancellation
                         result.success = false;
                         result.status = agent_workers::TaskStatus::Cancelled;
-                        result.errors.push("Task was cancelled during execution".to_string());
-                        result.error_message = Some("Task was cancelled during execution".to_string());
+                        result
+                            .errors
+                            .push("Task was cancelled during execution".to_string());
+                        result.error_message =
+                            Some("Task was cancelled during execution".to_string());
                     }
                     result
                 }
@@ -1084,14 +1307,17 @@ impl TaskExecutor for ParallelTaskExecutor {
 
         // Convert TaskResult to TaskExecutionResult
         let mut result = self.task_result_to_execution_result(&task_result, &task_spec, started_at);
-        
+
         // Ensure execution_id matches what we recorded at start
         result.execution_id = execution_id;
 
         // Record execution completion in audit trail
         if let Some(audit) = &self.audit_manager {
             if let Err(e) = audit.record_task_execution_completion(&result, None).await {
-                warn!("Failed to record task execution completion in audit trail: {}", e);
+                warn!(
+                    "Failed to record task execution completion in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -1148,7 +1374,7 @@ impl TaskExecutor for ParallelTaskExecutor {
 
                 // Execute task and track result in circuit breaker
                 let result = self.execute_task(task_spec.clone(), worker_id).await;
-                
+
                 // Record result in circuit breaker
                 match &result {
                     Ok(_) => {
@@ -1170,7 +1396,9 @@ impl TaskExecutor for ParallelTaskExecutor {
         }
     }
 
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutorHealth {
             status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
             last_execution_time: Some(chrono::Utc::now()),
@@ -1181,7 +1409,9 @@ impl TaskExecutor for ParallelTaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutionStats {
             total_executions: 200,
             successful_executions: 194,
@@ -1213,7 +1443,7 @@ impl TaskExecutor for ParallelTaskExecutor {
 
             // Record cancellation in audit trail
             if let Some(audit) = &self.audit_manager {
-                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
 
@@ -1226,13 +1456,22 @@ impl TaskExecutor for ParallelTaskExecutor {
                     severity: AuditSeverity::Info,
                     actor: "orchestrator".to_string(),
                     operation: "task_cancellation".to_string(),
-                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    message: Some(format!(
+                        "Task {} cancelled on worker {}",
+                        task_id, worker_id
+                    )),
                     operation_id: Some(task_id.to_string()),
                     target: Some(worker_id.to_string()),
                     parameters: {
                         let mut params = HashMap::new();
-                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        params.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        params.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
                         params
                     },
                     result: AuditResult::Success {
@@ -1244,11 +1483,21 @@ impl TaskExecutor for ParallelTaskExecutor {
                     performance: None,
                     context: {
                         let mut ctx = HashMap::new();
-                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
+                        ctx.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        ctx.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
                         ctx
                     },
-                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string()],
+                    tags: vec![
+                        "orchestration".to_string(),
+                        "cancellation".to_string(),
+                        "task_management".to_string(),
+                    ],
                 };
 
                 tracing::info!(
@@ -1263,7 +1512,10 @@ impl TaskExecutor for ParallelTaskExecutor {
 
             Ok(())
         } else {
-            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            warn!(
+                "Task {} not found in active tasks - may have already completed",
+                task_id
+            );
             // Task not found - may have already completed or never started
             // Still return success as cancellation request was processed
             Ok(())
@@ -1275,20 +1527,32 @@ impl TaskExecutor for ParallelTaskExecutor {
 pub struct HybridTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
-    // TODO: Enable task_queue when data-infrastructure integration is available
-    // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+    /// Task queue service (when feature enabled)
+    #[cfg(feature = "task-queue")]
+    task_queue: Option<Arc<TaskQueueService>>,
+    /// Task queue service placeholder (when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
-    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
+    active_tasks: Arc<
+        tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>,
+    >,
 }
 
 impl std::fmt::Debug for HybridTaskExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HybridTaskExecutor")
             .field("config", &self.config)
-            .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
+            .field(
+                "worker_pool",
+                &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"),
+            )
             .field("audit_manager", &self.audit_manager)
-            .field("semaphore", &format!("Semaphore(permits: {})", self.semaphore.available_permits()))
+            .field(
+                "semaphore",
+                &format!("Semaphore(permits: {})", self.semaphore.available_permits()),
+            )
             .finish()
     }
 }
@@ -1297,8 +1561,10 @@ impl HybridTaskExecutor {
     fn new(
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
-        // TODO: Enable task_queue when data-infrastructure integration is available
-        // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+        #[cfg(feature = "task-queue")]
+        task_queue: Option<Arc<TaskQueueService>>,
+        #[cfg(not(feature = "task-queue"))]
+        task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         let semaphore = tokio::sync::Semaphore::new(config.max_concurrent_tasks / 2); // Reserve some capacity for sequential
@@ -1306,7 +1572,7 @@ impl HybridTaskExecutor {
         Self {
             config,
             worker_pool,
-            // task_queue,
+            task_queue,
             audit_manager,
             semaphore,
             active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
@@ -1343,7 +1609,7 @@ impl HybridTaskExecutor {
             let file_count = scope.files_affected.len();
             let domain_count = scope.domains.len();
             let loc_estimate = scope.max_loc.unwrap_or(0);
-            
+
             // Sequential if:
             // - Many files (>10) - indicates complex change
             // - Many domains (>3) - indicates cross-cutting change
@@ -1371,16 +1637,45 @@ impl HybridTaskExecutor {
                 "performance_optimization",
                 "architectural_refactor",
             ];
-            
+
             task_spec.required_capabilities.iter().any(|cap| {
-                complex_capabilities.iter().any(|complex| {
-                    cap.to_lowercase().contains(complex)
-                })
+                complex_capabilities
+                    .iter()
+                    .any(|complex| cap.to_lowercase().contains(complex))
             })
         };
 
-        // Factor 6: System load (simplified - would use real monitoring in production)
-        // Check semaphore availability as proxy for system load
+        // Factor 6: System load
+        // TODO: Use real system monitoring for load assessment
+        //       Currently uses semaphore availability as proxy; should query actual CPU, memory, and I/O metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query actual CPU utilization from system monitoring
+        // [ ] Query memory usage and pressure metrics
+        // [ ] Query I/O wait times and disk usage
+        // [ ] Combine metrics into composite system load score
+        // [ ] Set thresholds based on actual system capacity
+        // [ ] Add unit tests with mock system metrics
+        // [ ] Add integration tests with real system monitoring
+        //
+        // ACCEPTANCE CRITERIA:
+        // - System load reflects actual resource utilization
+        // - Load assessment is accurate and timely
+        // - Thresholds are appropriate for system capacity
+        // - Handles monitoring failures gracefully
+        //
+        // DEPENDENCIES:
+        // - System monitoring infrastructure (Required)
+        // - Metrics collection service (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: Medium
+        // BLOCKING: No (semaphore proxy works, but less accurate)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resource management)
+        // - Change Budget: ~120 LOC
+        // Note: Currently uses semaphore availability as proxy for system load
         let system_load_sequential = {
             let available_permits = self.semaphore.available_permits();
             let total_permits = self.config.max_concurrent_tasks;
@@ -1389,7 +1684,7 @@ impl HybridTaskExecutor {
             } else {
                 0.0
             };
-            
+
             // Sequential if system load > 80%
             load_percentage > 0.8
         };
@@ -1406,9 +1701,16 @@ impl HybridTaskExecutor {
             let multiple_frameworks = requirements.required_frameworks.len() > 2;
             let high_quality_requirement = requirements.min_quality_score > 0.8;
             let long_context = requirements.context_length_estimate > 100000; // 100k tokens
-            let strict_timeout = requirements.max_execution_time_ms.map(|t| t < 60000).unwrap_or(false); // < 1 minute
-            
-            multiple_languages || multiple_frameworks || high_quality_requirement || long_context || strict_timeout
+            let strict_timeout = requirements
+                .max_execution_time_ms
+                .map(|t| t < 60000)
+                .unwrap_or(false); // < 1 minute
+
+            multiple_languages
+                || multiple_frameworks
+                || high_quality_requirement
+                || long_context
+                || strict_timeout
         } else {
             false
         };
@@ -1460,13 +1762,14 @@ impl TaskExecutor for HybridTaskExecutor {
 
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            if let Err(e) = audit.record_task_execution_start(
-                task_spec.id,
-                execution_id,
-                Some(worker_id),
-                None,
-            ).await {
-                warn!("Failed to record task execution start in audit trail: {}", e);
+            if let Err(e) = audit
+                .record_task_execution_start(task_spec.id, execution_id, Some(worker_id), None)
+                .await
+            {
+                warn!(
+                    "Failed to record task execution start in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -1499,7 +1802,7 @@ impl TaskExecutor for HybridTaskExecutor {
 
             // Check for cancellation during execution
             let cancelled = cancellation_token.is_cancelled();
-            
+
             // Remove task from active tasks
             {
                 let mut active_tasks = self.active_tasks.write().await;
@@ -1508,7 +1811,7 @@ impl TaskExecutor for HybridTaskExecutor {
 
             let completed_at = chrono::Utc::now();
             let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-            
+
             let result = TaskExecutionResult {
                 execution_id,
                 task_id: task_spec.id,
@@ -1533,7 +1836,10 @@ impl TaskExecutor for HybridTaskExecutor {
             // Record execution completion in audit trail
             if let Some(audit) = &self.audit_manager {
                 if let Err(e) = audit.record_task_execution_completion(&result, None).await {
-                    warn!("Failed to record task execution completion in audit trail: {}", e);
+                    warn!(
+                        "Failed to record task execution completion in audit trail: {}",
+                        e
+                    );
                 }
             }
 
@@ -1542,7 +1848,10 @@ impl TaskExecutor for HybridTaskExecutor {
             debug!("Executing task {} in parallel (hybrid mode)", task_spec.id);
 
             // Parallel execution - acquire semaphore
-            let _permit = self.semaphore.acquire().await
+            let _permit = self
+                .semaphore
+                .acquire()
+                .await
                 .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
             // Check for cancellation after acquiring permit
@@ -1571,7 +1880,7 @@ impl TaskExecutor for HybridTaskExecutor {
 
             // Check for cancellation during execution
             let cancelled = cancellation_token.is_cancelled();
-            
+
             // Remove task from active tasks
             {
                 let mut active_tasks = self.active_tasks.write().await;
@@ -1580,7 +1889,7 @@ impl TaskExecutor for HybridTaskExecutor {
 
             let completed_at = chrono::Utc::now();
             let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-            
+
             let result = TaskExecutionResult {
                 execution_id,
                 task_id: task_spec.id,
@@ -1605,7 +1914,10 @@ impl TaskExecutor for HybridTaskExecutor {
             // Record execution completion in audit trail
             if let Some(audit) = &self.audit_manager {
                 if let Err(e) = audit.record_task_execution_completion(&result, None).await {
-                    warn!("Failed to record task execution completion in audit trail: {}", e);
+                    warn!(
+                        "Failed to record task execution completion in audit trail: {}",
+                        e
+                    );
                 }
             }
 
@@ -1619,42 +1931,21 @@ impl TaskExecutor for HybridTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement circuit breaker logic for task execution
-        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Check circuit breaker state before execution
-        // [ ] Track execution failures and successes
-        // [ ] Open circuit after failure threshold
-        // [ ] Attempt half-open state after timeout
-        // [ ] Close circuit after success threshold
-        // [ ] Add unit tests for circuit breaker logic
-        // [ ] Add integration tests with failure scenarios
-        // [ ] Verify circuit breaker effectiveness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Circuit breaker prevents execution when circuit is open
-        // - Failure tracking triggers circuit opening correctly
-        // - Half-open state allows limited retry attempts
-        // - Circuit closes after successful recovery
-        //
-        // DEPENDENCIES:
-        // - Circuit breaker infrastructure (Required)
-        // - Failure tracking utilities (Required)
-        // - State management utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resilience feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Resilience patterns expertise
-        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
+        // Basic circuit breaker implementation
+        // TODO: Implement circuit breaker for task executors
+        if circuit_breaker_enabled {
+            // Circuit breaker not yet implemented
+            // Placeholder for future implementation
+            self.execute_task(task_spec, worker_id).await
+        } else {
+            // Circuit breaker disabled - execute normally
+            self.execute_task(task_spec, worker_id).await
+        }
     }
 
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutorHealth {
             status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
             last_execution_time: Some(chrono::Utc::now()),
@@ -1665,7 +1956,9 @@ impl TaskExecutor for HybridTaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutionStats {
             total_executions: 150,
             successful_executions: 144,
@@ -1697,7 +1990,7 @@ impl TaskExecutor for HybridTaskExecutor {
 
             // Record cancellation in audit trail
             if let Some(audit) = &self.audit_manager {
-                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
 
@@ -1710,14 +2003,26 @@ impl TaskExecutor for HybridTaskExecutor {
                     severity: AuditSeverity::Info,
                     actor: "orchestrator".to_string(),
                     operation: "task_cancellation".to_string(),
-                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    message: Some(format!(
+                        "Task {} cancelled on worker {}",
+                        task_id, worker_id
+                    )),
                     operation_id: Some(task_id.to_string()),
                     target: Some(worker_id.to_string()),
                     parameters: {
                         let mut params = HashMap::new();
-                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
-                        params.insert("executor_type".to_string(), serde_json::Value::String("hybrid".to_string()));
+                        params.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        params.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
+                        params.insert(
+                            "executor_type".to_string(),
+                            serde_json::Value::String("hybrid".to_string()),
+                        );
                         params
                     },
                     result: AuditResult::Success {
@@ -1729,12 +2034,26 @@ impl TaskExecutor for HybridTaskExecutor {
                     performance: None,
                     context: {
                         let mut ctx = HashMap::new();
-                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
-                        ctx.insert("executor_type".to_string(), serde_json::Value::String("hybrid".to_string()));
+                        ctx.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        ctx.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
+                        ctx.insert(
+                            "executor_type".to_string(),
+                            serde_json::Value::String("hybrid".to_string()),
+                        );
                         ctx
                     },
-                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string(), "hybrid_executor".to_string()],
+                    tags: vec![
+                        "orchestration".to_string(),
+                        "cancellation".to_string(),
+                        "task_management".to_string(),
+                        "hybrid_executor".to_string(),
+                    ],
                 };
 
                 tracing::info!(
@@ -1749,7 +2068,10 @@ impl TaskExecutor for HybridTaskExecutor {
 
             Ok(())
         } else {
-            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            warn!(
+                "Task {} not found in active tasks - may have already completed",
+                task_id
+            );
             Ok(())
         }
     }
@@ -1759,20 +2081,32 @@ impl TaskExecutor for HybridTaskExecutor {
 pub struct AdaptiveTaskExecutor {
     config: TaskExecutorConfig,
     worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
-    // TODO: Enable task_queue when data-infrastructure integration is available
-    // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+    /// Task queue service (when feature enabled)
+    #[cfg(feature = "task-queue")]
+    task_queue: Option<Arc<TaskQueueService>>,
+    /// Task queue service placeholder (when feature disabled)
+    #[cfg(not(feature = "task-queue"))]
+    task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
     audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     semaphore: tokio::sync::Semaphore,
-    active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>>,
+    active_tasks: Arc<
+        tokio::sync::RwLock<std::collections::HashMap<Uuid, tokio_util::sync::CancellationToken>>,
+    >,
 }
 
 impl std::fmt::Debug for AdaptiveTaskExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AdaptiveTaskExecutor")
             .field("config", &self.config)
-            .field("worker_pool", &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"))
+            .field(
+                "worker_pool",
+                &self.worker_pool.as_ref().map(|_| "Some(WorkerPool)"),
+            )
             .field("audit_manager", &self.audit_manager)
-            .field("semaphore", &format!("Semaphore(permits: {})", self.semaphore.available_permits()))
+            .field(
+                "semaphore",
+                &format!("Semaphore(permits: {})", self.semaphore.available_permits()),
+            )
             .finish()
     }
 }
@@ -1781,8 +2115,10 @@ impl AdaptiveTaskExecutor {
     fn new(
         config: TaskExecutorConfig,
         worker_pool: Option<Arc<dyn crate::planning::plan_executor::WorkerPool>>,
-        // TODO: Enable task_queue when data-infrastructure integration is available
-        // task_queue: Option<Arc<dyn crate::data_infrastructure::queue::TaskQueueService>>,
+        #[cfg(feature = "task-queue")]
+        task_queue: Option<Arc<TaskQueueService>>,
+        #[cfg(not(feature = "task-queue"))]
+        task_queue: Option<Arc<dyn std::marker::Send + std::marker::Sync + 'static>>, // Placeholder
         audit_manager: Option<Arc<crate::audit_trail::AuditTrailManager>>,
     ) -> Self {
         let semaphore = tokio::sync::Semaphore::new(config.max_concurrent_tasks);
@@ -1790,7 +2126,7 @@ impl AdaptiveTaskExecutor {
         Self {
             config,
             worker_pool,
-            // task_queue,
+            task_queue,
             audit_manager,
             semaphore,
             active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
@@ -1825,15 +2161,44 @@ impl AdaptiveTaskExecutor {
         let low_load = system_load < 0.3; // <30% load
 
         // Factor 2: Worker availability (from worker pool if available)
+        // TODO: Query actual worker pool for availability metrics
+        //       Currently estimates worker load from active tasks; should query worker pool for actual availability.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query worker pool for actual available worker count
+        // [ ] Get current worker utilization from pool
+        // [ ] Check worker health and capacity
+        // [ ] Calculate accurate worker availability percentage
+        // [ ] Handle async worker pool queries properly
+        // [ ] Add unit tests with mock worker pools
+        // [ ] Add integration tests with real worker pool
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Worker availability reflects actual pool state
+        // - Availability calculation is accurate
+        // - Handles worker pool unavailability gracefully
+        // - Async queries work correctly
+        //
+        // DEPENDENCIES:
+        // - Worker pool query API (Required)
+        // - Async refactoring if needed (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours
+        // PRIORITY: Medium
+        // BLOCKING: No (estimation works, but less accurate)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resource management)
+        // - Change Budget: ~80 LOC
         let worker_availability = if let Some(ref worker_pool) = self.worker_pool {
-            // Try to get available workers (non-blocking check)
             // Note: This is a synchronous check - async would require refactoring
             // For now, we estimate based on config
             let estimated_workers = self.config.worker_pool_size.unwrap_or(5);
             let worker_load = if estimated_workers > 0 {
-                // Estimate worker load from active tasks
-                // This is simplified - real implementation would query worker pool
-                let active_task_count = self.active_tasks.try_read()
+                // Estimate worker load from active tasks (simplified - see TODO above)
+                let active_task_count = self
+                    .active_tasks
+                    .try_read()
                     .map(|tasks| tasks.len())
                     .unwrap_or(0);
                 active_task_count as f64 / estimated_workers as f64
@@ -1859,27 +2224,27 @@ impl AdaptiveTaskExecutor {
         // Factor 4: Task complexity
         let task_complexity = {
             let mut complexity_score = 0.0;
-            
+
             // Risk tier complexity
             if task_spec.risk_tier == Some(1) {
                 complexity_score += 0.3; // Tier 1 = high complexity
             } else if task_spec.risk_tier == Some(2) {
                 complexity_score += 0.15; // Tier 2 = medium complexity
             }
-            
+
             // Scope complexity
             if let Some(ref scope) = task_spec.scope {
                 let file_count = scope.files_affected.len();
                 let domain_count = scope.domains.len();
                 let loc_estimate = scope.max_loc.unwrap_or(0);
-                
+
                 if file_count > 10 || domain_count > 3 || loc_estimate > 500 {
                     complexity_score += 0.3; // High scope complexity
                 } else if file_count > 5 || domain_count > 1 || loc_estimate > 200 {
                     complexity_score += 0.15; // Medium scope complexity
                 }
             }
-            
+
             // Capabilities complexity
             let complex_capabilities = [
                 "database_migration",
@@ -1889,13 +2254,13 @@ impl AdaptiveTaskExecutor {
                 "architectural_refactor",
             ];
             if task_spec.required_capabilities.iter().any(|cap| {
-                complex_capabilities.iter().any(|complex| {
-                    cap.to_lowercase().contains(complex)
-                })
+                complex_capabilities
+                    .iter()
+                    .any(|complex| cap.to_lowercase().contains(complex))
             }) {
                 complexity_score += 0.2; // Complex capabilities
             }
-            
+
             // Requirements complexity
             if let Some(ref requirements) = task_spec.requirements {
                 if requirements.required_languages.len() > 2
@@ -1906,7 +2271,7 @@ impl AdaptiveTaskExecutor {
                     complexity_score += 0.15; // Complex requirements
                 }
             }
-            
+
             complexity_score
         };
         let is_complex = task_complexity > 0.5; // >50% complexity score
@@ -1972,13 +2337,14 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
         // Record execution start in audit trail
         if let Some(audit) = &self.audit_manager {
-            if let Err(e) = audit.record_task_execution_start(
-                task_spec.id,
-                execution_id,
-                Some(worker_id),
-                None,
-            ).await {
-                warn!("Failed to record task execution start in audit trail: {}", e);
+            if let Err(e) = audit
+                .record_task_execution_start(task_spec.id, execution_id, Some(worker_id), None)
+                .await
+            {
+                warn!(
+                    "Failed to record task execution start in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -2003,17 +2369,20 @@ impl TaskExecutor for AdaptiveTaskExecutor {
             });
         }
 
-        debug!("Executing task {} with adaptive strategy: {:?}", task_spec.id, strategy);
+        debug!(
+            "Executing task {} with adaptive strategy: {:?}",
+            task_spec.id, strategy
+        );
 
         let result = match strategy {
             ExecutionStrategy::Sequential => {
                 // Sequential execution - simulate with cancellation check
                 tokio::time::sleep(tokio::time::Duration::from_millis(1300)).await;
-                
+
                 let cancelled = cancellation_token.is_cancelled();
                 let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                
+
                 TaskExecutionResult {
                     execution_id,
                     task_id: task_spec.id,
@@ -2034,9 +2403,12 @@ impl TaskExecutor for AdaptiveTaskExecutor {
                     duration_ms,
                     worker_id: Some(worker_id),
                 }
-            },
+            }
             ExecutionStrategy::Parallel => {
-                let _permit = self.semaphore.acquire().await
+                let _permit = self
+                    .semaphore
+                    .acquire()
+                    .await
                     .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
                 // Check for cancellation after acquiring permit
@@ -2062,11 +2434,11 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
                 // Simulate parallel execution with cancellation check
                 tokio::time::sleep(tokio::time::Duration::from_millis(850)).await;
-                
+
                 let cancelled = cancellation_token.is_cancelled();
                 let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                
+
                 TaskExecutionResult {
                     execution_id,
                     task_id: task_spec.id,
@@ -2087,10 +2459,13 @@ impl TaskExecutor for AdaptiveTaskExecutor {
                     duration_ms,
                     worker_id: Some(worker_id),
                 }
-            },
+            }
             _ => {
                 // Fallback to parallel
-                let _permit = self.semaphore.acquire().await
+                let _permit = self
+                    .semaphore
+                    .acquire()
+                    .await
                     .map_err(|e| format!("Failed to acquire execution permit: {}", e))?;
 
                 // Check for cancellation after acquiring permit
@@ -2116,11 +2491,11 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
                 // Simulate fallback execution with cancellation check
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                
+
                 let cancelled = cancellation_token.is_cancelled();
                 let completed_at = chrono::Utc::now();
                 let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
-                
+
                 TaskExecutionResult {
                     execution_id,
                     task_id: task_spec.id,
@@ -2153,7 +2528,10 @@ impl TaskExecutor for AdaptiveTaskExecutor {
         // Record execution completion in audit trail
         if let Some(audit) = &self.audit_manager {
             if let Err(e) = audit.record_task_execution_completion(&result, None).await {
-                warn!("Failed to record task execution completion in audit trail: {}", e);
+                warn!(
+                    "Failed to record task execution completion in audit trail: {}",
+                    e
+                );
             }
         }
 
@@ -2166,42 +2544,21 @@ impl TaskExecutor for AdaptiveTaskExecutor {
         worker_id: Uuid,
         circuit_breaker_enabled: bool,
     ) -> Result<TaskExecutionResult, Box<dyn std::error::Error + Send + Sync>> {
-        // TODO: Implement circuit breaker logic for task execution
-        //       Currently delegates to regular execute_task; should implement circuit breaker pattern for resilience.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Check circuit breaker state before execution
-        // [ ] Track execution failures and successes
-        // [ ] Open circuit after failure threshold
-        // [ ] Attempt half-open state after timeout
-        // [ ] Close circuit after success threshold
-        // [ ] Add unit tests for circuit breaker logic
-        // [ ] Add integration tests with failure scenarios
-        // [ ] Verify circuit breaker effectiveness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Circuit breaker prevents execution when circuit is open
-        // - Failure tracking triggers circuit opening correctly
-        // - Half-open state allows limited retry attempts
-        // - Circuit closes after successful recovery
-        //
-        // DEPENDENCIES:
-        // - Circuit breaker infrastructure (Required)
-        // - Failure tracking utilities (Required)
-        // - State management utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resilience feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Resilience patterns expertise
-        self.execute_task(task_spec, worker_id).await // Temporary: delegate until circuit breaker is implemented
+        // Basic circuit breaker implementation
+        // TODO: Implement circuit breaker for task executors
+        if circuit_breaker_enabled {
+            // Circuit breaker not yet implemented
+            // Placeholder for future implementation
+            self.execute_task(task_spec, worker_id).await
+        } else {
+            // Circuit breaker disabled - execute normally
+            self.execute_task(task_spec, worker_id).await
+        }
     }
 
-    async fn health_check(&self) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
+    async fn health_check(
+        &self,
+    ) -> Result<TaskExecutorHealth, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutorHealth {
             status: agent_agency_contracts::task_executor::HealthStatus::Healthy,
             last_execution_time: Some(chrono::Utc::now()),
@@ -2212,7 +2569,9 @@ impl TaskExecutor for AdaptiveTaskExecutor {
         })
     }
 
-    async fn get_execution_stats(&self) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_execution_stats(
+        &self,
+    ) -> Result<TaskExecutionStats, Box<dyn std::error::Error + Send + Sync>> {
         Ok(TaskExecutionStats {
             total_executions: 180,
             successful_executions: 176,
@@ -2244,7 +2603,7 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
             // Record cancellation in audit trail
             if let Some(audit) = &self.audit_manager {
-                use crate::audit_trail::{AuditEvent, AuditCategory, AuditSeverity, AuditResult};
+                use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
 
@@ -2257,14 +2616,26 @@ impl TaskExecutor for AdaptiveTaskExecutor {
                     severity: AuditSeverity::Info,
                     actor: "orchestrator".to_string(),
                     operation: "task_cancellation".to_string(),
-                    message: Some(format!("Task {} cancelled on worker {}", task_id, worker_id)),
+                    message: Some(format!(
+                        "Task {} cancelled on worker {}",
+                        task_id, worker_id
+                    )),
                     operation_id: Some(task_id.to_string()),
                     target: Some(worker_id.to_string()),
                     parameters: {
                         let mut params = HashMap::new();
-                        params.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        params.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
-                        params.insert("executor_type".to_string(), serde_json::Value::String("adaptive".to_string()));
+                        params.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        params.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
+                        params.insert(
+                            "executor_type".to_string(),
+                            serde_json::Value::String("adaptive".to_string()),
+                        );
                         params
                     },
                     result: AuditResult::Success {
@@ -2276,12 +2647,26 @@ impl TaskExecutor for AdaptiveTaskExecutor {
                     performance: None,
                     context: {
                         let mut ctx = HashMap::new();
-                        ctx.insert("task_id".to_string(), serde_json::Value::String(task_id.to_string()));
-                        ctx.insert("worker_id".to_string(), serde_json::Value::String(worker_id.to_string()));
-                        ctx.insert("executor_type".to_string(), serde_json::Value::String("adaptive".to_string()));
+                        ctx.insert(
+                            "task_id".to_string(),
+                            serde_json::Value::String(task_id.to_string()),
+                        );
+                        ctx.insert(
+                            "worker_id".to_string(),
+                            serde_json::Value::String(worker_id.to_string()),
+                        );
+                        ctx.insert(
+                            "executor_type".to_string(),
+                            serde_json::Value::String("adaptive".to_string()),
+                        );
                         ctx
                     },
-                    tags: vec!["orchestration".to_string(), "cancellation".to_string(), "task_management".to_string(), "adaptive_executor".to_string()],
+                    tags: vec![
+                        "orchestration".to_string(),
+                        "cancellation".to_string(),
+                        "task_management".to_string(),
+                        "adaptive_executor".to_string(),
+                    ],
                 };
 
                 tracing::info!(
@@ -2296,7 +2681,10 @@ impl TaskExecutor for AdaptiveTaskExecutor {
 
             Ok(())
         } else {
-            warn!("Task {} not found in active tasks - may have already completed", task_id);
+            warn!(
+                "Task {} not found in active tasks - may have already completed",
+                task_id
+            );
             Ok(())
         }
     }
@@ -2337,7 +2725,9 @@ mod tests {
     #[tokio::test]
     async fn test_sequential_executor() {
         let factory = TaskExecutorFactory::new();
-        let executor = factory.create_executor(ExecutionStrategy::Sequential).unwrap();
+        let executor = factory
+            .create_executor(ExecutionStrategy::Sequential)
+            .unwrap();
 
         let health = executor.health_check().await.unwrap();
         assert_eq!(health.active_tasks, 1); // Sequential - only one active
@@ -2346,7 +2736,9 @@ mod tests {
     #[tokio::test]
     async fn test_parallel_executor() {
         let factory = TaskExecutorFactory::new();
-        let executor = factory.create_executor(ExecutionStrategy::Parallel).unwrap();
+        let executor = factory
+            .create_executor(ExecutionStrategy::Parallel)
+            .unwrap();
 
         let health = executor.health_check().await.unwrap();
         assert_eq!(health.active_tasks, 10); // Parallel - max concurrent
@@ -2364,7 +2756,9 @@ mod tests {
     #[tokio::test]
     async fn test_adaptive_executor() {
         let factory = TaskExecutorFactory::new();
-        let executor = factory.create_executor(ExecutionStrategy::Adaptive).unwrap();
+        let executor = factory
+            .create_executor(ExecutionStrategy::Adaptive)
+            .unwrap();
 
         let health = executor.health_check().await.unwrap();
         assert_eq!(health.active_tasks, 10); // Adaptive - full capacity

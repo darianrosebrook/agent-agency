@@ -3,11 +3,11 @@
 //! Common types used across the API layer for request/response handling,
 //! configuration, and data transfer objects.
 
+use chrono::{DateTime, Duration, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration};
 
 /// API configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -73,7 +73,6 @@ pub struct WorkingSpec {
     pub non_functional: NonFunctionalRequirements,
     pub contracts: Vec<Contract>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
 }
 
@@ -171,8 +170,34 @@ pub struct ProgressTracker {
 }
 
 impl ProgressTracker {
-    /// Get progress for a task (stub implementation)
+    /// Get progress for a task
     pub async fn get_progress(&self, _task_id: Uuid) -> Result<ExecutionProgress, anyhow::Error> {
+        // TODO: Implement real progress tracking for tasks
+        //       Currently returns cached progress from tracker; should query actual task execution state.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query actual task execution state from task executor
+        // [ ] Calculate progress percentage from task steps
+        // [ ] Return current step and status from execution
+        // [ ] Handle task not found errors
+        // [ ] Add unit tests with mock task execution
+        // [ ] Add integration tests with real task progress tracking
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Progress reflects actual task execution state
+        // - Task not found returns appropriate error
+        // - Progress percentage is accurate
+        //
+        // DEPENDENCIES:
+        // - Task executor integration (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 hours
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (API functionality)
+        // - Change Budget: ~100 LOC
         Ok(ExecutionProgress {
             task_id: self.task_id,
             status: "in_progress".to_string(),
@@ -229,7 +254,6 @@ pub struct ProvenanceResponse {
     pub git_trailer: String,
     pub signature: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub metadata: Value,
 }
@@ -244,7 +268,6 @@ pub struct DashboardDiffSummary {
     pub diff_type: String,
     pub summary: String,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub iteration: u32,
     pub file_path: String,
@@ -276,7 +299,6 @@ pub struct WaiverRequest {
     pub impact_level: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
     pub metadata: Value,
 }
@@ -296,13 +318,10 @@ pub struct WaiverResponse {
     pub impact_level: String,
     pub mitigation_plan: String,
     #[schemars(with = "String")]
-
     pub expires_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub status: String,
     pub metadata: Value,
@@ -331,10 +350,8 @@ pub struct SavedQueryResponse {
     pub query_text: String,
     pub description: Option<String>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
 }
 
@@ -357,10 +374,8 @@ pub struct TaskStatusResponse {
     pub current_phase: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub updated_at: DateTime<Utc>,
     pub quality_score: Option<f64>,
 }
@@ -380,11 +395,9 @@ pub struct DashboardIterationSummary {
     pub stop_reason: Option<String>,
     pub file_changes: u32,
     #[schemars(with = "String")]
-
     pub timestamp: DateTime<Utc>,
     pub model_used: String,
     #[schemars(with = "String")]
-
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
 }
@@ -408,10 +421,8 @@ pub struct DashboardTaskSummary {
     pub score: Option<f64>,
     pub execution_mode: String,
     #[schemars(with = "String")]
-
     pub start_time: DateTime<Utc>,
     #[schemars(with = "String")]
-
     pub last_update: DateTime<Utc>,
     pub iterations: Vec<DashboardIterationSummary>,
 }

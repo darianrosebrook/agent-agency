@@ -37,7 +37,7 @@ impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
         // - [ ] Handle encryption errors and edge cases
         // - [ ] Add unit tests with real encryption
         // - [ ] Add integration tests with encrypted computations
-        // Placeholder: In practice, this would use a real HE scheme like Paillier or CKKS
+        // In practice, this would use a real HE scheme like Paillier or CKKS
         debug!("Encrypting {} bytes of data", data.len());
         Ok(data.to_vec()) // No-op for placeholder
     }

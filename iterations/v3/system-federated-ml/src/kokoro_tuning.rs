@@ -127,17 +127,42 @@ impl KokoroTuner {
 
     /// Enable Apple Silicon orchestration for enhanced performance
     pub async fn with_apple_silicon_orchestration(mut self) -> Result<Self> {
-        // Stub implementation for Apple Silicon orchestration
+        // TODO: Implement Apple Silicon orchestration for enhanced performance
+        //       Currently returns self without configuration; should set up ANE acceleration and resource management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Configure ANE acceleration for ML workloads
+        // [ ] Set up resource management for Apple Silicon
+        // [ ] Enable performance monitoring for ANE
+        // [ ] Handle platform detection and errors
+        // [ ] Add unit tests with Apple Silicon scenarios
+        // [ ] Add integration tests with real ANE acceleration
+        //
+        // ACCEPTANCE CRITERIA:
+        // - ANE acceleration is properly configured
+        // - Resource management is set up correctly
+        // - Platform detection works correctly
+        //
+        // DEPENDENCIES:
+        // - ANE acceleration infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (performance optimization)
+        // - Change Budget: ~100 LOC
         Ok(self)
     }
 
     /// Establish baseline performance metrics
-    /// 
+    ///
     /// Converts PerformanceMetrics to TuningMetrics and stores as baseline
     /// for future improvement comparisons.
     pub async fn establish_baseline(&self, metrics: crate::performance_monitor::PerformanceMetrics) -> Result<()> {
         info!("Establishing baseline performance metrics");
-        
+
         // Convert PerformanceMetrics to TuningMetrics
         let baseline_tuning_metrics = TuningMetrics {
             throughput_ops_per_sec: metrics.throughput as f32,
@@ -149,30 +174,58 @@ impl KokoroTuner {
             throughput_improvement: 1.0, // Baseline has no improvement
             quality_degradation: 0.0, // Baseline has no degradation
         };
-        
+
         // Update baseline in performance tracker
         // Note: baseline_metrics is not mutable, so we need to update through a method
         // Since PerformanceTracker is private, we'll update best_metrics to match baseline
         // and the tracker will use baseline_metrics for comparison
         self.performance_tracker.update_baseline(baseline_tuning_metrics.clone()).await;
-        
+
         // Also update best_metrics to baseline initially
         self.performance_tracker.update_best_metrics(baseline_tuning_metrics).await;
-        
+
         info!(
             "Baseline established: throughput={:.1} ops/sec, latency={:.1}ms, cpu={:.1}%",
             baseline_tuning_metrics.throughput_ops_per_sec,
             baseline_tuning_metrics.latency_p95_ms,
             baseline_tuning_metrics.cpu_utilization_percent
         );
-        
+
         Ok(())
     }
 
     /// Perform final tuning with optimization results
     #[cfg(feature = "bayesian_opt")]
     pub async fn final_tune(&self, _optimization_result: &OptimizationResult) -> Result<TuningResult> {
-        // Stub implementation for final tuning
+        // TODO: Implement final tuning with optimization results
+        //       Currently returns hardcoded stub results; should apply optimization parameters and measure actual performance.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Apply optimization parameters from optimization result
+        // [ ] Execute tuning trial with optimized parameters
+        // [ ] Measure actual performance metrics
+        // [ ] Compare against baseline to calculate improvement
+        // [ ] Return real tuning results with actual metrics
+        // [ ] Add unit tests with various optimization results
+        // [ ] Add integration tests with real tuning scenarios
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Optimization parameters are properly applied
+        // - Actual performance metrics are measured
+        // - Improvement is calculated correctly
+        // - Results reflect real tuning outcomes
+        //
+        // DEPENDENCIES:
+        // - Tuning trial execution (Required)
+        // - Performance measurement (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (ML optimization)
+        // - Change Budget: ~150 LOC
         Ok(TuningResult {
             session_id: "stub_session".to_string(),
             parameters: std::collections::HashMap::new(),
@@ -437,7 +490,7 @@ impl PerformanceTracker {
             throughput_improvement: 1.0,
             quality_degradation: 0.0,
         };
-        
+
         Self {
             baseline_metrics: Arc::new(RwLock::new(default_metrics.clone())),
             best_metrics: Arc::new(RwLock::new(default_metrics)),
@@ -448,12 +501,12 @@ impl PerformanceTracker {
     async fn evaluate_improvement(&self, new_metrics: &TuningMetrics) -> bool {
         let baseline = self.baseline_metrics.read().await;
         let best = self.best_metrics.read().await;
-        
+
         // Compare against baseline for absolute improvement
         let throughput_improvement = new_metrics.throughput_ops_per_sec / baseline.throughput_ops_per_sec - 1.0;
         let latency_improvement = baseline.latency_p95_ms / new_metrics.latency_p95_ms - 1.0;
         let accuracy_improvement = new_metrics.accuracy_score - baseline.accuracy_score;
-        
+
         // Also check if it's better than current best
         let vs_best_throughput = new_metrics.throughput_ops_per_sec / best.throughput_ops_per_sec - 1.0;
         let vs_best_latency = best.latency_p95_ms / new_metrics.latency_p95_ms - 1.0;
@@ -472,7 +525,7 @@ impl PerformanceTracker {
         let mut best = self.best_metrics.write().await;
         *best = new_metrics;
     }
-    
+
     async fn update_baseline(&self, baseline: TuningMetrics) {
         let mut baseline_metrics = self.baseline_metrics.write().await;
         *baseline_metrics = baseline;

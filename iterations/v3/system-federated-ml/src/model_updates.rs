@@ -350,6 +350,10 @@ pub struct AggregationStats {
     pub average_quality_score: f32,
 }
 
+// TODO: Implement UpdateValidator in validation.rs
+//       This is a placeholder type that should be properly implemented in validation.rs.
+//       Currently provides minimal stub implementation. Should implement full validation logic.
+//
 // Placeholder for the UpdateValidator that will be implemented in validation.rs
 #[derive(Debug)]
 pub struct UpdateValidator ;
@@ -360,7 +364,36 @@ impl UpdateValidator {
     }
 
     pub async fn validate_update(&self, update: &ModelUpdate) -> Result<ValidationResult> {
-        // Basic validation - in practice this would be more comprehensive
+        // TODO: Implement comprehensive model update validation
+        //       Currently uses basic validation; should implement comprehensive validation logic.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Validate update parameters are valid and within expected ranges
+        // [ ] Check update quality metrics meet thresholds
+        // [ ] Verify update compatibility with model version
+        // [ ] Validate training metadata is accurate
+        // [ ] Check for malicious or corrupted updates
+        // [ ] Add unit tests with various validation scenarios
+        // [ ] Add integration tests with real model updates
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Validation catches invalid updates correctly
+        // - Quality metrics are properly validated
+        // - Compatibility checks work correctly
+        // - Security checks prevent malicious updates
+        //
+        // DEPENDENCIES:
+        // - Validation framework (Required)
+        // - Security validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: High (security/data integrity)
+        // BLOCKING: No (basic validation exists)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security/data integrity)
+        // - Change Budget: ~120 LOC
+        // Note: Currently only checks basic requirements - needs comprehensive validation
         let is_valid = !update.parameters.is_empty() &&
                       update.metadata.training_samples > 0;
 

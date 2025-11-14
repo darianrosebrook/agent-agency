@@ -5,34 +5,38 @@
 //!
 //! @author @darianrosebrook
 
+use agent_agency_contracts::planning::{
+    ExecutionEventType, ExecutionEvidence, PlanExecutionResult,
+};
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
+use rand::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tokio::sync::Semaphore;
 use tokio::time::{timeout, Duration};
-use anyhow::{anyhow, Result};
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use rand::prelude::*;
-use tokio::sync::RwLock;
-use agent_agency_contracts::planning::{PlanningEngine, PlanExecutionResult, ExecutionEvidence, ExecutionEventType};
 
+use crate::audit_trail::AuditTrailManager;
 use crate::planning::{
-    plan_types::{ExecutionPlan, ParallelBatch, BatchStatus, ResourceUtilization, ResourceRequirements},
-    todo_integration::TodoIntegration,
+    council_monitor::CouncilMonitor,
     dependency_resolver::DependencyResolver,
     evidence::EvidenceCollector,
     parallel_coordinator::ParallelCoordinator,
-    worker_assignment::WorkerAssignmentStrategy,
+    plan_types::{
+        BatchStatus, ExecutionPlan, ParallelBatch, ResourceRequirements, ResourceUtilization,
+    },
     scope_guard::ScopeGuard,
-    council_monitor::CouncilMonitor,
+    todo_integration::TodoIntegration,
+    worker_assignment::WorkerAssignmentStrategy,
     worker_lifecycle_manager::WorkerLifecycleManager,
     worktree_manager::WorktreeManager,
 };
 use crate::workers::execution_bridge::WorkerExecutionBridge;
 use agent_agency_contracts::execution_artifacts::ExecutionArtifacts;
-use crate::audit_trail::AuditTrailManager;
 use agent_agency_contracts::planning::QualityMetrics;
 
 /// TODO integration interface with interior mutability
@@ -69,15 +73,27 @@ impl FailureOracle {
 #[async_trait::async_trait]
 impl TodoInterface for TodoAdapter {
     async fn initialize_plan(&self, plan_id: Uuid, title: &str) -> Result<()> {
-        self.inner.write().await.initialize_plan_todos(plan_id, title).await
+        self.inner
+            .write()
+            .await
+            .initialize_plan_todos(plan_id, title)
+            .await
     }
 
     async fn can_progress_to_milestone(&self, plan_id: Uuid, milestone_id: &str) -> Result<bool> {
-        self.inner.read().await.can_progress_to_milestone(plan_id, milestone_id).await
+        self.inner
+            .read()
+            .await
+            .can_progress_to_milestone(plan_id, milestone_id)
+            .await
     }
 
     async fn milestone_completed(&self, plan_id: Uuid, milestone_id: &str) -> Result<()> {
-        self.inner.write().await.milestone_completed(plan_id, milestone_id).await
+        self.inner
+            .write()
+            .await
+            .milestone_completed(plan_id, milestone_id)
+            .await
     }
 }
 
@@ -354,7 +370,7 @@ impl Default for ExecutionConfig {
         Self {
             max_parallel_milestones: 3,
             milestone_timeout_ms: 300000, // 5 minutes
-            batch_timeout_ms: 600000, // 10 minutes
+            batch_timeout_ms: 600000,     // 10 minutes
             continue_on_failure: false,
             council_oversight: CouncilOversightLevel::Standard,
             evidence_settings: EvidenceSettings::default(),
@@ -479,7 +495,7 @@ impl PlanExecutor {
             Arc::new(crate::evaluation::determinism::SystemClock),
             #[cfg(feature = "evaluation")]
             Arc::new(crate::evaluation::determinism::ThreadSafeRngSource::new(
-                Box::new(crate::evaluation::determinism::SystemRng::new())
+                Box::new(crate::evaluation::determinism::SystemRng::new()),
             )),
         )
     }
@@ -525,7 +541,7 @@ impl PlanExecutor {
             rng_source,
             config,
             coordination_trace: Arc::new(tokio::sync::RwLock::new(
-                crate::planning::plan_types::CoordinationTrace::new(plan_id)
+                crate::planning::plan_types::CoordinationTrace::new(plan_id),
             )),
         }
     }
@@ -566,7 +582,7 @@ impl PlanExecutor {
             failure_oracle: Arc::new(FailureOracle::new(42)), // Fixed seed for deterministic testing
             config,
             coordination_trace: Arc::new(tokio::sync::RwLock::new(
-                crate::planning::plan_types::CoordinationTrace::new(plan_id)
+                crate::planning::plan_types::CoordinationTrace::new(plan_id),
             )),
         }
     }
@@ -619,7 +635,9 @@ impl PlanExecutor {
                 metadata: std::collections::HashMap::new(),
             };
 
-            audit_manager.record_orchestration_decision(decision_point).await?;
+            audit_manager
+                .record_orchestration_decision(decision_point)
+                .await?;
         }
         Ok(())
     }
@@ -648,7 +666,13 @@ impl PlanExecutor {
             // Store coordination event for evaluation framework
             #[cfg(feature = "evaluation")]
             {
-                audit_manager.record_coordination_event(event.clone()).await?;
+                let _ = audit_manager
+                    .record_coordination_event(event.clone())
+                    .await?;
+            }
+            #[cfg(not(feature = "evaluation"))]
+            {
+                let _ = audit_manager; // Suppress unused variable warning when feature disabled
             }
 
             // Record coordination event in dedicated trace
@@ -697,12 +721,20 @@ impl PlanExecutor {
         match self.config.council_oversight {
             None => Ok(()),
             Notify => {
-                self.council_monitor.notify(phase, &self.plan.contract_plan).await?;
+                self.council_monitor
+                    .notify(phase, &self.plan.contract_plan)
+                    .await?;
                 Ok(())
             }
-            Standard => self.council_monitor.observe(phase, &self.plan.contract_plan).await,
+            Standard => {
+                self.council_monitor
+                    .observe(phase, &self.plan.contract_plan)
+                    .await
+            }
             Approve | Full => {
-                self.council_monitor.request_approval(phase, &self.plan.contract_plan).await
+                self.council_monitor
+                    .request_approval(phase, &self.plan.contract_plan)
+                    .await
             }
         }
     }
@@ -717,10 +749,12 @@ impl PlanExecutor {
             None,
             None,
             format!("Plan '{}' execution started", self.plan.contract_plan.title),
-            HashMap::from([
-                ("milestone_count".into(), self.plan.contract_plan.milestones.len().into()),
-            ])
-        ).await?;
+            HashMap::from([(
+                "milestone_count".into(),
+                self.plan.contract_plan.milestones.len().into(),
+            )]),
+        )
+        .await?;
 
         // Validate plan can be executed
         self.validate_plan_for_execution().await?;
@@ -729,7 +763,9 @@ impl PlanExecutor {
         self.council_gate("pre-execution").await?;
 
         // Initialize TODO tracking for plan
-        self.todo_integration.initialize_plan(self.plan.contract_plan.id, &self.plan.contract_plan.title).await?;
+        self.todo_integration
+            .initialize_plan(self.plan.contract_plan.id, &self.plan.contract_plan.title)
+            .await?;
 
         // Resolve execution dependencies
         let dep = DependencyResolver::new(self.plan.contract_plan.dependency_graph.clone());
@@ -737,17 +773,23 @@ impl PlanExecutor {
 
         // Initialize plan with execution batches
         let mut plan = self.plan.clone();
-        plan.execution_context.parallel_batches = batches.iter().enumerate().map(|(i, ids)| ParallelBatch {
-            batch_index: i,
-            milestone_ids: ids.clone(),
-            status: BatchStatus::Pending,
-            started_at: None,
-            completed_at: None,
-            resource_requirements: ResourceRequirements::default(),
-        }).collect();
+        plan.execution_context.parallel_batches = batches
+            .iter()
+            .enumerate()
+            .map(|(i, ids)| ParallelBatch {
+                batch_index: i,
+                milestone_ids: ids.clone(),
+                status: BatchStatus::Pending,
+                started_at: None,
+                completed_at: None,
+                resource_requirements: ResourceRequirements::default(),
+            })
+            .collect();
 
         // Execute batches with proper parallelism control
-        let coordinator = self.parallel_coordinator.upgrade()
+        let coordinator = self
+            .parallel_coordinator
+            .upgrade()
             .ok_or_else(|| anyhow!("Parallel coordinator dropped"))?;
 
         let mut all_evidence = ExecutionEvidence {
@@ -776,7 +818,9 @@ impl PlanExecutor {
             let _permit = self.parallel_limit.acquire_many(permits as u32).await?;
 
             // Execute batch
-            let res = coordinator.execute_batch_parallel(&mut plan, batch_index).await?;
+            let res = coordinator
+                .execute_batch_parallel(&mut plan, batch_index)
+                .await?;
             total_failed += res.failed;
             total_success += res.successful;
 
@@ -784,7 +828,11 @@ impl PlanExecutor {
             for mid in &ids {
                 if let Some(m) = plan.contract_plan.milestones.iter().find(|m| &m.id == mid) {
                     if m.state == agent_agency_contracts::planning_io::MilestoneState::Completed {
-                        if let Ok(bundle) = self.evidence_collector.collect_evidence(m, &plan.contract_plan.id.to_string()).await {
+                        if let Ok(bundle) = self
+                            .evidence_collector
+                            .collect_evidence(m, &plan.contract_plan.id.to_string())
+                            .await
+                        {
                             let converted = bundle.artifacts.into_iter().map(|a| {
                                 agent_agency_contracts::planning::EvidenceArtifact {
                                     artifact_type: agent_agency_contracts::planning::ArtifactType::TestResults, // refine mapping as needed
@@ -805,10 +853,15 @@ impl PlanExecutor {
                                         .collect(),
                                 }
                             }).collect::<Vec<_>>();
-                            all_evidence.milestone_evidence.insert(mid.clone(), converted);
+                            all_evidence
+                                .milestone_evidence
+                                .insert(mid.clone(), converted);
 
                             // Mark TODO completion
-                            let _ = self.todo_integration.milestone_completed(plan.contract_plan.id, mid).await;
+                            let _ = self
+                                .todo_integration
+                                .milestone_completed(plan.contract_plan.id, mid)
+                                .await;
                         }
                     }
                 }
@@ -818,7 +871,11 @@ impl PlanExecutor {
             {
                 let b = &mut plan.execution_context.parallel_batches[batch_index];
                 b.completed_at = Some(self.now());
-                b.status = if res.failed == 0 { BatchStatus::Completed } else { BatchStatus::Failed };
+                b.status = if res.failed == 0 {
+                    BatchStatus::Completed
+                } else {
+                    BatchStatus::Failed
+                };
             }
 
             self.council_gate("post-batch").await.ok();
@@ -857,16 +914,25 @@ impl PlanExecutor {
 
         // Log plan completion
         self.audit(
-            if success { AuditEventType::PlanCompleted } else { AuditEventType::PlanFailed },
+            if success {
+                AuditEventType::PlanCompleted
+            } else {
+                AuditEventType::PlanFailed
+            },
             None,
             None,
-            format!("Plan '{}' execution {}", self.plan.contract_plan.title, if success { "completed" } else { "failed" }),
+            format!(
+                "Plan '{}' execution {}",
+                self.plan.contract_plan.title,
+                if success { "completed" } else { "failed" }
+            ),
             HashMap::from([
                 ("success".into(), success.into()),
                 ("total_duration_ms".into(), total_ms.into()),
                 ("milestones_completed".into(), total_success.into()),
-            ])
-        ).await?;
+            ]),
+        )
+        .await?;
 
         Ok(PlanExecutionResult {
             plan_id: self.plan.contract_plan.id,
@@ -889,14 +955,18 @@ impl PlanExecutor {
         }
 
         // Check if plan has been approved
-        if self.plan.contract_plan.state != agent_agency_contracts::planning_io::PlanState::Approved {
+        if self.plan.contract_plan.state != agent_agency_contracts::planning_io::PlanState::Approved
+        {
             return Err(anyhow!("Plan must be approved before execution"));
         }
 
         // Validate all milestones have required evidence gates
         for milestone in &self.plan.contract_plan.milestones {
             if milestone.evidence_gate.required_artifacts.is_empty() {
-                return Err(anyhow!("Milestone '{}' missing evidence gate requirements", milestone.id));
+                return Err(anyhow!(
+                    "Milestone '{}' missing evidence gate requirements",
+                    milestone.id
+                ));
             }
         }
 
@@ -913,7 +983,7 @@ impl PlanExecutor {
         all_evidence: &mut ExecutionEvidence,
     ) -> Result<()> {
         // Update batch status
-        if let Some(state) = &mut plan.execution_state {
+        if let Some(_state) = &mut plan.execution_state {
             // Note: parallel_batches access commented out due to double borrow issues
             // if let Some(current_batch) = state.parallel_batches.get_mut(batch_index) {
             //     current_batch.started_at = Some(Utc::now());
@@ -937,9 +1007,13 @@ impl PlanExecutor {
         plan.execution_context.parallel_batches = vec![batch.clone()];
 
         // Execute batch using parallel coordinator
-        let parallel_coordinator = self.parallel_coordinator.upgrade()
+        let parallel_coordinator = self
+            .parallel_coordinator
+            .upgrade()
             .ok_or_else(|| anyhow!("Parallel coordinator has been dropped"))?;
-        let batch_result = parallel_coordinator.execute_batch_parallel(plan, batch_index).await?;
+        let batch_result = parallel_coordinator
+            .execute_batch_parallel(plan, batch_index)
+            .await?;
 
         // Process results
         let _batch_success = batch_result.failed == 0;
@@ -947,10 +1021,20 @@ impl PlanExecutor {
         // Collect evidence from successful executions
         // Evidence is collected by checking milestone state after batch execution completes
         for milestone_id in &milestone_ids {
-            if let Some(milestone) = plan.contract_plan.milestones.iter().find(|m| m.id == *milestone_id) {
-                if milestone.state == agent_agency_contracts::planning_io::MilestoneState::Completed {
+            if let Some(milestone) = plan
+                .contract_plan
+                .milestones
+                .iter()
+                .find(|m| m.id == *milestone_id)
+            {
+                if milestone.state == agent_agency_contracts::planning_io::MilestoneState::Completed
+                {
                     // Collect evidence for completed milestone
-                    if let Ok(evidence_bundle) = self.evidence_collector.collect_evidence(milestone, &plan.contract_plan.id.to_string()).await {
+                    if let Ok(evidence_bundle) = self
+                        .evidence_collector
+                        .collect_evidence(milestone, &plan.contract_plan.id.to_string())
+                        .await
+                    {
                         // Convert EvidenceBundle to Vec<EvidenceArtifact>
                         let contract_artifacts: Vec<agent_agency_contracts::planning::EvidenceArtifact> = evidence_bundle.artifacts
                             .into_iter()
@@ -979,7 +1063,9 @@ impl PlanExecutor {
                                     .collect(),
                             })
                             .collect();
-                        all_evidence.milestone_evidence.insert(milestone_id.clone(), contract_artifacts);
+                        all_evidence
+                            .milestone_evidence
+                            .insert(milestone_id.clone(), contract_artifacts);
                     }
                 }
             }
@@ -1007,18 +1093,32 @@ impl PlanExecutor {
 
     /// Execute individual milestone
     #[allow(dead_code)] // Reserved for future use
-    async fn execute_milestone(&self, plan: ExecutionPlan, milestone_id: String) -> Result<MilestoneExecutionResult> {
+    async fn execute_milestone(
+        &self,
+        plan: ExecutionPlan,
+        milestone_id: String,
+    ) -> Result<MilestoneExecutionResult> {
         let milestone_start = Utc::now();
 
         // Find milestone
-        let milestone = plan.contract_plan.milestones.iter()
+        let milestone = plan
+            .contract_plan
+            .milestones
+            .iter()
             .find(|m| m.id == milestone_id)
             .ok_or_else(|| anyhow!("Milestone '{}' not found", milestone_id))?
             .clone();
 
         // Check quality gates before execution
-        if !self.todo_integration.can_progress_to_milestone(plan.contract_plan.id, &milestone_id).await? {
-            return Err(anyhow!("Cannot execute milestone '{}': quality gates not satisfied", milestone_id));
+        if !self
+            .todo_integration
+            .can_progress_to_milestone(plan.contract_plan.id, &milestone_id)
+            .await?
+        {
+            return Err(anyhow!(
+                "Cannot execute milestone '{}': quality gates not satisfied",
+                milestone_id
+            ));
         }
 
         // Log milestone start
@@ -1027,10 +1127,9 @@ impl PlanExecutor {
             Some(milestone_id.clone()),
             None,
             format!("Milestone '{}' execution started", milestone.objective),
-            HashMap::from([
-                ("objective".into(), milestone.objective.clone().into()),
-            ])
-        ).await?;
+            HashMap::from([("objective".into(), milestone.objective.clone().into())]),
+        )
+        .await?;
 
         // Assign worker with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(&milestone).await?;
@@ -1049,9 +1148,13 @@ impl PlanExecutor {
             },
             vec![], // Could be populated with alternative workers considered
             format!("Worker {}", worker_id),
-            format!("Assigned worker {} to milestone {} based on capability matching", worker_id, milestone_id),
+            format!(
+                "Assigned worker {} to milestone {} based on capability matching",
+                worker_id, milestone_id
+            ),
             0.9, // High confidence for worker assignments
-        ).await?;
+        )
+        .await?;
 
         // Record coordination event
         self.record_coordination_event(
@@ -1059,12 +1162,16 @@ impl PlanExecutor {
             Some(self.plan.contract_plan.id),
             Some(milestone_id.clone()),
             Some(worker_id),
-            std::collections::HashMap::from([
-                ("objective".to_string(), serde_json::Value::String(milestone.objective.clone())),
-            ]),
-        ).await?;
+            std::collections::HashMap::from([(
+                "objective".to_string(),
+                serde_json::Value::String(milestone.objective.clone()),
+            )]),
+        )
+        .await?;
 
-        self.worker_pool.assign_worker(worker_id, milestone_id.clone()).await?;
+        self.worker_pool
+            .assign_worker(worker_id, milestone_id.clone())
+            .await?;
 
         // Log worker assignment
         self.audit(
@@ -1072,18 +1179,25 @@ impl PlanExecutor {
             Some(milestone_id.clone()),
             Some(worker_id),
             format!("Worker assigned to milestone"),
-            HashMap::new()
-        ).await?;
+            HashMap::new(),
+        )
+        .await?;
 
         // Acquire scope locks
-        self.scope_guard.acquire_locks(milestone_id.clone(), &milestone.scope).await?;
+        self.scope_guard
+            .acquire_locks(milestone_id.clone(), &milestone.scope)
+            .await?;
 
         // Execute milestone with timeout
         let milestone_timeout = Duration::from_millis(self.config.milestone_timeout_ms);
-        let execution_result = match timeout(milestone_timeout, self.execute_milestone_impl(&milestone)).await {
-            Ok(result) => result,
-            Err(_) => Err(anyhow!("Milestone execution timed out after {}ms", self.config.milestone_timeout_ms)),
-        };
+        let execution_result =
+            match timeout(milestone_timeout, self.execute_milestone_impl(&milestone)).await {
+                Ok(result) => result,
+                Err(_) => Err(anyhow!(
+                    "Milestone execution timed out after {}ms",
+                    self.config.milestone_timeout_ms
+                )),
+            };
 
         // Release scope locks
         self.scope_guard.release_locks(milestone_id.clone()).await?;
@@ -1093,11 +1207,18 @@ impl PlanExecutor {
 
         // Collect evidence
         let evidence = if self.config.evidence_settings.collect_evidence {
-            match self.evidence_collector.collect_evidence(&milestone, &plan.contract_plan.id.to_string()).await {
+            match self
+                .evidence_collector
+                .collect_evidence(&milestone, &plan.contract_plan.id.to_string())
+                .await
+            {
                 Ok(evidence) => Some(evidence),
                 Err(e) => {
                     // Log evidence collection failure but don't fail milestone
-                    println!("Evidence collection failed for milestone '{}': {}", milestone_id, e);
+                    println!(
+                        "Evidence collection failed for milestone '{}': {}",
+                        milestone_id, e
+                    );
                     None
                 }
             }
@@ -1112,20 +1233,33 @@ impl PlanExecutor {
 
         // Log milestone completion
         self.audit(
-            if success { AuditEventType::MilestoneCompleted } else { AuditEventType::MilestoneFailed },
+            if success {
+                AuditEventType::MilestoneCompleted
+            } else {
+                AuditEventType::MilestoneFailed
+            },
             Some(milestone_id.clone()),
             Some(worker_id),
             format!("Milestone {}", if success { "completed" } else { "failed" }),
             HashMap::from([
                 ("execution_time_ms".into(), execution_time_ms.into()),
                 ("success".into(), success.into()),
-            ])
-        ).await?;
+            ]),
+        )
+        .await?;
 
         // Update TODO system on milestone completion
         if success {
-            if let Err(e) = self.todo_integration.milestone_completed(plan.contract_plan.id, &milestone_id).await {
-                tracing::warn!("Failed to complete TODO step for milestone {}: {}", milestone_id, e);
+            if let Err(e) = self
+                .todo_integration
+                .milestone_completed(plan.contract_plan.id, &milestone_id)
+                .await
+            {
+                tracing::warn!(
+                    "Failed to complete TODO step for milestone {}: {}",
+                    milestone_id,
+                    e
+                );
             }
         }
 
@@ -1151,19 +1285,28 @@ impl PlanExecutor {
                 }
                 stats
             }
-            Err(_) => std::collections::HashMap::new()
+            Err(_) => std::collections::HashMap::new(),
         }
     }
 
     /// Execute milestone implementation using real worker system via WorkerExecutionBridge
-    pub async fn execute_milestone_impl(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<ExecutionArtifacts> {
+    pub async fn execute_milestone_impl(
+        &self,
+        milestone: &agent_agency_contracts::planning_io::Milestone,
+    ) -> Result<ExecutionArtifacts> {
         // Find suitable worker for this milestone with chain-of-thought recording
         let worker_id = self.worker_assigner.assign_worker(milestone).await?;
 
         // Handle worker assignment via lifecycle manager
         if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
-            if let Err(e) = lifecycle_manager.handle_assignment(worker_id, milestone).await {
-                tracing::warn!("Failed to handle worker assignment via lifecycle manager: {}", e);
+            if let Err(e) = lifecycle_manager
+                .handle_assignment(worker_id, milestone)
+                .await
+            {
+                tracing::warn!(
+                    "Failed to handle worker assignment via lifecycle manager: {}",
+                    e
+                );
                 // Continue execution even if lifecycle tracking fails
             }
         }
@@ -1182,9 +1325,13 @@ impl PlanExecutor {
             },
             vec![], // Could be populated with alternative workers considered
             format!("Worker {}", worker_id),
-            format!("Assigned worker {} to milestone {} for individual execution", worker_id, milestone.id),
+            format!(
+                "Assigned worker {} to milestone {} for individual execution",
+                worker_id, milestone.id
+            ),
             0.85, // Slightly lower confidence for individual assignments
-        ).await?;
+        )
+        .await?;
 
         // Record coordination event for individual execution
         self.record_coordination_event(
@@ -1192,27 +1339,40 @@ impl PlanExecutor {
             Some(self.plan.contract_plan.id),
             Some(milestone.id.clone()),
             Some(worker_id),
-            std::collections::HashMap::from([
-                ("execution_mode".to_string(), serde_json::Value::String("individual".to_string())),
-            ]),
-        ).await?;
+            std::collections::HashMap::from([(
+                "execution_mode".to_string(),
+                serde_json::Value::String("individual".to_string()),
+            )]),
+        )
+        .await?;
 
         // Get worktree path for this milestone
         // Note: ParallelCoordinator may have already created a worktree, so we try to find it by milestone_id first
         let worktree_path = if let Some(ref worktree_manager) = self.worktree_manager {
             // First, try to find worktree by milestone_id (in case ParallelCoordinator created it)
-            match worktree_manager.get_worktree_path_by_milestone(&milestone.id).await {
+            match worktree_manager
+                .get_worktree_path_by_milestone(&milestone.id)
+                .await
+            {
                 Ok(path) => {
-                    tracing::info!("Found existing worktree for milestone {}: {}", milestone.id, path.display());
+                    tracing::info!(
+                        "Found existing worktree for milestone {}: {}",
+                        milestone.id,
+                        path.display()
+                    );
                     path
-                },
+                }
                 Err(_) => {
                     // Try to get existing worktree for this worker
                     match worktree_manager.get_worktree_path(worker_id).await {
                         Ok(path) => {
-                            tracing::info!("Using existing worktree for worker {}: {}", worker_id, path.display());
+                            tracing::info!(
+                                "Using existing worktree for worker {}: {}",
+                                worker_id,
+                                path.display()
+                            );
                             path
-                        },
+                        }
                         Err(_) => {
                             // Create worktree if it doesn't exist
                             tracing::info!("No worktree found for worker {} or milestone {}, creating new worktree", worker_id, milestone.id);
@@ -1227,7 +1387,11 @@ impl PlanExecutor {
                                     worktree_info.worktree_path
                                 }
                                 Err(e) => {
-                                    tracing::error!("Failed to create worktree for worker {}: {}", worker_id, e);
+                                    tracing::error!(
+                                        "Failed to create worktree for worker {}: {}",
+                                        worker_id,
+                                        e
+                                    );
                                     // Fallback to current directory if worktree creation fails
                                     tracing::warn!("Falling back to current directory due to worktree creation failure");
                                     std::path::PathBuf::from(".")
@@ -1246,14 +1410,27 @@ impl PlanExecutor {
         // Execute using WorkerExecutionBridge if available, otherwise fall back to simulation
         let artifacts = if let Some(ref worker_bridge) = self.worker_bridge {
             // Real execution via WorkerExecutionBridge
-            tracing::info!("Executing milestone {} via WorkerExecutionBridge with worker {}", milestone.id, worker_id);
-            
-            match worker_bridge.execute_milestone(milestone, &worktree_path, worker_id).await {
+            tracing::info!(
+                "Executing milestone {} via WorkerExecutionBridge with worker {}",
+                milestone.id,
+                worker_id
+            );
+
+            match worker_bridge
+                .execute_milestone(milestone, &worktree_path, worker_id)
+                .await
+            {
                 Ok(artifacts) => {
                     // Handle worker completion via lifecycle manager
                     if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
-                        if let Err(e) = lifecycle_manager.handle_completion(worker_id, artifacts.clone()).await {
-                            tracing::warn!("Failed to handle worker completion via lifecycle manager: {}", e);
+                        if let Err(e) = lifecycle_manager
+                            .handle_completion(worker_id, artifacts.clone())
+                            .await
+                        {
+                            tracing::warn!(
+                                "Failed to handle worker completion via lifecycle manager: {}",
+                                e
+                            );
                         }
                     }
                     artifacts
@@ -1261,8 +1438,14 @@ impl PlanExecutor {
                 Err(e) => {
                     // Handle worker failure via lifecycle manager
                     if let Some(ref lifecycle_manager) = self.worker_lifecycle_manager {
-                        if let Err(lifecycle_err) = lifecycle_manager.handle_failure(worker_id, e.to_string()).await {
-                            tracing::warn!("Failed to handle worker failure via lifecycle manager: {}", lifecycle_err);
+                        if let Err(lifecycle_err) = lifecycle_manager
+                            .handle_failure(worker_id, e.to_string())
+                            .await
+                        {
+                            tracing::warn!(
+                                "Failed to handle worker failure via lifecycle manager: {}",
+                                lifecycle_err
+                            );
                         }
                     }
                     return Err(anyhow!("Worker execution failed: {}", e));
@@ -1270,7 +1453,9 @@ impl PlanExecutor {
             }
         } else {
             // Fallback: No bridge available - return error (should not happen in production)
-            return Err(anyhow!("WorkerExecutionBridge not available - cannot execute milestone"));
+            return Err(anyhow!(
+                "WorkerExecutionBridge not available - cannot execute milestone"
+            ));
         };
 
         Ok(artifacts)
@@ -1278,7 +1463,10 @@ impl PlanExecutor {
 
     /// Create worker context from milestone
     #[allow(dead_code)] // Reserved for future use
-    fn create_worker_context(&self, milestone: &agent_agency_contracts::planning_io::Milestone) -> Result<agent_agency_contracts::WorkerContext> {
+    fn create_worker_context(
+        &self,
+        milestone: &agent_agency_contracts::planning_io::Milestone,
+    ) -> Result<agent_agency_contracts::WorkerContext> {
         Ok(agent_agency_contracts::WorkerContext {
             task_id: milestone.id.parse().unwrap_or(uuid::Uuid::new_v4()), // Use milestone ID as UUID if possible
             description: milestone.objective.clone(),
@@ -1286,36 +1474,68 @@ impl PlanExecutor {
             priority: self.map_milestone_priority(milestone.priority.clone()),
             working_spec_id: self.plan.contract_plan.working_spec_id.clone(),
             metadata: std::collections::HashMap::from([
-                ("milestone_id".to_string(), serde_json::Value::String(milestone.id.clone())),
-                ("risk_tier".to_string(), serde_json::Value::Number(milestone.risk_tier.into())),
-                ("estimated_effort".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(milestone.estimated_effort).unwrap())),
+                (
+                    "milestone_id".to_string(),
+                    serde_json::Value::String(milestone.id.clone()),
+                ),
+                (
+                    "risk_tier".to_string(),
+                    serde_json::Value::Number(milestone.risk_tier.into()),
+                ),
+                (
+                    "estimated_effort".to_string(),
+                    serde_json::Value::Number(
+                        serde_json::Number::from_f64(milestone.estimated_effort).unwrap(),
+                    ),
+                ),
             ]),
         })
     }
 
     /// Map milestone priority to worker priority
     #[allow(dead_code)] // Reserved for future use
-    fn map_milestone_priority(&self, priority: agent_agency_contracts::planning_io::MilestonePriority) -> agent_agency_contracts::TaskPriority {
+    fn map_milestone_priority(
+        &self,
+        priority: agent_agency_contracts::planning_io::MilestonePriority,
+    ) -> agent_agency_contracts::TaskPriority {
         match priority {
-            agent_agency_contracts::planning_io::MilestonePriority::Low => agent_agency_contracts::TaskPriority::Low,
-            agent_agency_contracts::planning_io::MilestonePriority::Normal => agent_agency_contracts::TaskPriority::Medium,
-            agent_agency_contracts::planning_io::MilestonePriority::High => agent_agency_contracts::TaskPriority::High,
-            agent_agency_contracts::planning_io::MilestonePriority::Critical => agent_agency_contracts::TaskPriority::Critical,
+            agent_agency_contracts::planning_io::MilestonePriority::Low => {
+                agent_agency_contracts::TaskPriority::Low
+            }
+            agent_agency_contracts::planning_io::MilestonePriority::Normal => {
+                agent_agency_contracts::TaskPriority::Medium
+            }
+            agent_agency_contracts::planning_io::MilestonePriority::High => {
+                agent_agency_contracts::TaskPriority::High
+            }
+            agent_agency_contracts::planning_io::MilestonePriority::Critical => {
+                agent_agency_contracts::TaskPriority::Critical
+            }
         }
     }
 
     /// Execute milestone with assigned worker
     #[allow(dead_code)] // Reserved for future use
-    async fn execute_with_worker(&self, worker: &WorkerInfo, context: &agent_agency_contracts::WorkerContext) -> Result<()> {
+    async fn execute_with_worker(
+        &self,
+        worker: &WorkerInfo,
+        context: &agent_agency_contracts::WorkerContext,
+    ) -> Result<()> {
         // Execute using the worker's execution capabilities
         // Worker assignment validates capabilities before execution
 
         // Check if worker has required capabilities
-        let has_required_capabilities = context.required_capabilities.iter()
+        let has_required_capabilities = context
+            .required_capabilities
+            .iter()
             .all(|cap| worker.capabilities.contains(cap));
 
         if !has_required_capabilities {
-            return Err(anyhow!("Worker {} lacks required capabilities: {:?}", worker.id.to_string(), context.required_capabilities));
+            return Err(anyhow!(
+                "Worker {} lacks required capabilities: {:?}",
+                worker.id.to_string(),
+                context.required_capabilities
+            ));
         }
 
         // Simulate execution time based on worker load and task complexity
@@ -1335,13 +1555,19 @@ impl PlanExecutor {
 
         // Simulate occasional failures based on worker health
         if matches!(worker.health, WorkerHealth::Unhealthy) {
-            return Err(anyhow!("Worker {} is unhealthy and failed execution", worker.id.to_string()));
+            return Err(anyhow!(
+                "Worker {} is unhealthy and failed execution",
+                worker.id.to_string()
+            ));
         }
 
         if worker.load > 0.9 {
             // High load can cause failures
             if self.failure_oracle.chance(0.1) {
-                return Err(anyhow!("Worker {} overloaded and failed execution", worker.id.to_string()));
+                return Err(anyhow!(
+                    "Worker {} overloaded and failed execution",
+                    worker.id.to_string()
+                ));
             }
         }
 
@@ -1350,18 +1576,26 @@ impl PlanExecutor {
 
     /// Update plan state for milestone completion
     #[allow(dead_code)] // Reserved for future use
-    async fn update_plan_state_for_milestone(&self, plan: &mut ExecutionPlan, milestone_id: &str, success: bool) -> Result<()> {
+    async fn update_plan_state_for_milestone(
+        &self,
+        plan: &mut ExecutionPlan,
+        milestone_id: &str,
+        success: bool,
+    ) -> Result<()> {
         if let Some(state) = &mut plan.execution_state {
             if success {
                 state.completed_milestones.insert(milestone_id.to_string());
             } else {
-                state.failed_milestones.insert(milestone_id.to_string(), "Execution failed".to_string());
+                state
+                    .failed_milestones
+                    .insert(milestone_id.to_string(), "Execution failed".to_string());
             }
             state.executing_milestones.remove(milestone_id);
 
             // Update progress
             state.progress.milestones_completed = state.completed_milestones.len();
-            state.progress.overall_completion = state.progress.milestones_completed as f64 / state.progress.total_milestones as f64;
+            state.progress.overall_completion =
+                state.progress.milestones_completed as f64 / state.progress.total_milestones as f64;
         }
 
         Ok(())
@@ -1370,20 +1604,26 @@ impl PlanExecutor {
     /// Calculate parallel time saved
     async fn estimate_parallel_savings(&self, plan: &ExecutionPlan) -> u64 {
         let batches = &plan.execution_context.parallel_batches;
-        if batches.is_empty() { return 0; }
+        if batches.is_empty() {
+            return 0;
+        }
 
-        let par_ms = batches.iter()
+        let par_ms = batches
+            .iter()
             .filter_map(|b| Some((b.started_at?, b.completed_at?)))
             .map(|(s, e)| (e - s).num_milliseconds().max(0) as u64)
             .sum::<u64>();
 
         // Crude sequential estimate: sum of milestone durations in these batches
-        let seq_ms = batches.iter().filter_map(|b| {
-            match (b.started_at, b.completed_at) {
-                (Some(s), Some(e)) => Some(((e - s).num_milliseconds().max(0) as u64) * (b.milestone_ids.len() as u64)),
-                _ => None
-            }
-        }).sum::<u64>();
+        let seq_ms = batches
+            .iter()
+            .filter_map(|b| match (b.started_at, b.completed_at) {
+                (Some(s), Some(e)) => Some(
+                    ((e - s).num_milliseconds().max(0) as u64) * (b.milestone_ids.len() as u64),
+                ),
+                _ => None,
+            })
+            .sum::<u64>();
 
         seq_ms.saturating_sub(par_ms)
     }
@@ -1391,7 +1631,7 @@ impl PlanExecutor {
     /// Calculate resource utilization from execution plan structure
     async fn calculate_resource_utilization(&self, plan: &ExecutionPlan) -> ResourceUtilization {
         let batches = &plan.execution_context.parallel_batches;
-        
+
         // Handle edge case: no batches
         if batches.is_empty() {
             return ResourceUtilization {
@@ -1415,13 +1655,13 @@ impl PlanExecutor {
 
         for batch in batches {
             let req = &batch.resource_requirements;
-            
+
             // Sum resource requirements (assuming parallel execution uses max resources)
             total_cpu_cores = total_cpu_cores.max(req.total_cpu_cores);
             peak_memory_mb = peak_memory_mb.max(req.peak_memory_mb);
             total_disk_mb += req.total_disk_mb;
             peak_network_mbps = peak_network_mbps.max(req.network_requirements.peak_bandwidth_mbps);
-            
+
             // Calculate execution time if timestamps available
             if let (Some(start), Some(end)) = (batch.started_at, batch.completed_at) {
                 let duration_ms = end.signed_duration_since(start).num_milliseconds().max(0) as u64;
@@ -1434,14 +1674,35 @@ impl PlanExecutor {
         // For CPU: assume 100% utilization during execution, calculate percentage of total time
         // For memory/disk: use peak values
         // For network: use peak bandwidth
-        
-        // Estimate CPU utilization percentage
-        // This is a simplified model based on resource requirements
-        // In a real implementation, this would query actual CPU usage metrics
-        // For now, we estimate based on:
-        // - Number of CPU cores requested (more cores = higher utilization)
-        // - Number of parallel batches (more parallelism = higher utilization)
-        // - Execution duration (longer execution = sustained utilization)
+
+        // TODO: Improve CPU utilization estimation with actual metrics
+        //       Currently uses simplified model based on resource requirements.
+        //       Should query actual CPU usage metrics for accurate estimation.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Query actual CPU usage metrics from system
+        // [ ] Track CPU utilization over execution time
+        // [ ] Calculate average/utilization percentages from real data
+        // [ ] Handle metric collection errors gracefully
+        // [ ] Add unit tests with mock CPU metrics
+        // [ ] Add integration tests with real CPU monitoring
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CPU utilization reflects actual system usage
+        // - Metrics are accurate and timely
+        // - Error handling works correctly
+        //
+        // DEPENDENCIES:
+        // - CPU monitoring infrastructure (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: Medium
+        // BLOCKING: No (current estimation works, but could be more accurate)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (resource monitoring)
+        // - Change Budget: ~100 LOC
+        // Note: Currently estimates based on CPU cores, parallel batches, and execution duration
         let cpu_percent = if batches_with_timestamps > 0 && total_execution_time_ms > 0 {
             // Calculate estimated CPU utilization based on parallel execution
             // Assume each CPU core contributes ~25% utilization per batch
@@ -1510,9 +1771,12 @@ impl PlanExecutor {
             match artifact.artifact_type {
                 agent_agency_contracts::planning::ArtifactType::CoverageReport => {
                     // Try to extract coverage from data field
-                    if let Some(coverage) = artifact.data.get("line_coverage")
+                    if let Some(coverage) = artifact
+                        .data
+                        .get("line_coverage")
                         .or_else(|| artifact.data.get("coverage"))
-                        .and_then(|v| v.as_f64()) {
+                        .and_then(|v| v.as_f64())
+                    {
                         coverage_values.push(coverage);
                     }
                     // Also check metadata
@@ -1530,8 +1794,7 @@ impl PlanExecutor {
                         }
                     }
                     // Check data field for coverage
-                    if let Some(coverage) = artifact.data.get("coverage")
-                        .and_then(|v| v.as_f64()) {
+                    if let Some(coverage) = artifact.data.get("coverage").and_then(|v| v.as_f64()) {
                         coverage_values.push(coverage);
                     }
                 }
@@ -1556,16 +1819,25 @@ impl PlanExecutor {
         // Extract mutation testing scores from evidence artifacts
         let mut mutation_scores = Vec::new();
         for artifact in &all_artifacts {
-            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::MutationScore) {
+            if matches!(
+                artifact.artifact_type,
+                agent_agency_contracts::planning::ArtifactType::MutationScore
+            ) {
                 // Try to extract mutation score from data field
-                if let Some(score) = artifact.data.get("mutation_score")
+                if let Some(score) = artifact
+                    .data
+                    .get("mutation_score")
                     .or_else(|| artifact.data.get("score"))
-                    .and_then(|v| v.as_f64()) {
+                    .and_then(|v| v.as_f64())
+                {
                     mutation_scores.push(score);
                 }
                 // Also check metadata
-                if let Some(score_str) = artifact.metadata.get("mutation_score")
-                    .or_else(|| artifact.metadata.get("score")) {
+                if let Some(score_str) = artifact
+                    .metadata
+                    .get("mutation_score")
+                    .or_else(|| artifact.metadata.get("score"))
+                {
                     if let Ok(score) = score_str.parse::<f64>() {
                         mutation_scores.push(score);
                     }
@@ -1590,17 +1862,26 @@ impl PlanExecutor {
         // Count security issues from security scan artifacts
         let mut security_issues_found = 0usize;
         for artifact in &all_artifacts {
-            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::SecurityScan) {
+            if matches!(
+                artifact.artifact_type,
+                agent_agency_contracts::planning::ArtifactType::SecurityScan
+            ) {
                 // Try to extract issue count from data field
-                if let Some(count) = artifact.data.get("issues")
+                if let Some(count) = artifact
+                    .data
+                    .get("issues")
                     .or_else(|| artifact.data.get("vulnerabilities"))
                     .or_else(|| artifact.data.get("security_issues"))
-                    .and_then(|v| v.as_u64()) {
+                    .and_then(|v| v.as_u64())
+                {
                     security_issues_found += count as usize;
                 }
                 // Also check metadata
-                if let Some(count_str) = artifact.metadata.get("issues")
-                    .or_else(|| artifact.metadata.get("vulnerabilities")) {
+                if let Some(count_str) = artifact
+                    .metadata
+                    .get("issues")
+                    .or_else(|| artifact.metadata.get("vulnerabilities"))
+                {
                     if let Ok(count) = count_str.parse::<usize>() {
                         security_issues_found += count;
                     }
@@ -1611,11 +1892,17 @@ impl PlanExecutor {
         // Count performance regressions from performance test artifacts
         let mut performance_regressions = 0usize;
         for artifact in &all_artifacts {
-            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::PerformanceMetrics) {
+            if matches!(
+                artifact.artifact_type,
+                agent_agency_contracts::planning::ArtifactType::PerformanceMetrics
+            ) {
                 // Try to extract regression count from data field
-                if let Some(count) = artifact.data.get("regressions")
+                if let Some(count) = artifact
+                    .data
+                    .get("regressions")
                     .or_else(|| artifact.data.get("performance_regressions"))
-                    .and_then(|v| v.as_u64()) {
+                    .and_then(|v| v.as_u64())
+                {
                     performance_regressions += count as usize;
                 }
                 // Also check metadata
@@ -1632,17 +1919,22 @@ impl PlanExecutor {
         let mut code_quality_score = 1.0f64;
         let mut total_lint_issues = 0usize;
         let mut lint_errors = 0usize;
-        
+
         for artifact in &all_artifacts {
-            if matches!(artifact.artifact_type, agent_agency_contracts::planning::ArtifactType::CodeQuality) {
+            if matches!(
+                artifact.artifact_type,
+                agent_agency_contracts::planning::ArtifactType::CodeQuality
+            ) {
                 // Try to extract linting issues from data field
-                if let Some(issues) = artifact.data.get("total_issues")
+                if let Some(issues) = artifact
+                    .data
+                    .get("total_issues")
                     .or_else(|| artifact.data.get("issues"))
-                    .and_then(|v| v.as_u64()) {
+                    .and_then(|v| v.as_u64())
+                {
                     total_lint_issues += issues as usize;
                 }
-                if let Some(errors) = artifact.data.get("errors")
-                    .and_then(|v| v.as_u64()) {
+                if let Some(errors) = artifact.data.get("errors").and_then(|v| v.as_u64()) {
                     lint_errors += errors as usize;
                 }
                 // Also check metadata
@@ -1688,9 +1980,13 @@ impl PlanExecutor {
     }
 
     /// Calculate performance metrics from execution plan structure
-    fn calculate_performance_metrics(&self, plan: &ExecutionPlan, total_duration_ms: u64) -> agent_agency_contracts::PerformanceMetrics {
+    fn calculate_performance_metrics(
+        &self,
+        plan: &ExecutionPlan,
+        total_duration_ms: u64,
+    ) -> agent_agency_contracts::PerformanceMetrics {
         let batches = &plan.execution_context.parallel_batches;
-        
+
         // Handle edge cases: no batches or empty batches
         if batches.is_empty() {
             return agent_agency_contracts::PerformanceMetrics {
@@ -1703,12 +1999,11 @@ impl PlanExecutor {
         }
 
         // Filter batches with valid timestamps
-        let batches_with_timestamps: Vec<_> = batches.iter()
-            .filter_map(|b| {
-                match (b.started_at, b.completed_at) {
-                    (Some(start), Some(end)) => Some((b.batch_index, start, end, &b.milestone_ids)),
-                    _ => None,
-                }
+        let batches_with_timestamps: Vec<_> = batches
+            .iter()
+            .filter_map(|b| match (b.started_at, b.completed_at) {
+                (Some(start), Some(end)) => Some((b.batch_index, start, end, &b.milestone_ids)),
+                _ => None,
             })
             .collect();
 
@@ -1724,23 +2019,26 @@ impl PlanExecutor {
         }
 
         // Calculate sequential execution time: sum of all batch durations
-        let sequential_execution_time_ms: u64 = batches_with_timestamps.iter()
+        let sequential_execution_time_ms: u64 = batches_with_timestamps
+            .iter()
             .map(|(_, start, end, _)| {
                 (end.signed_duration_since(*start).num_milliseconds().max(0)) as u64
             })
             .sum();
 
         // Calculate parallel execution time: time from first batch start to last batch completion
-        let first_start = batches_with_timestamps.iter()
+        let first_start = batches_with_timestamps
+            .iter()
             .map(|(_, start, _, _)| *start)
             .min()
             .unwrap_or_else(|| chrono::Utc::now());
-        
-        let last_completion = batches_with_timestamps.iter()
+
+        let last_completion = batches_with_timestamps
+            .iter()
             .map(|(_, _, end, _)| *end)
             .max()
             .unwrap_or_else(|| chrono::Utc::now());
-        
+
         let parallel_execution_time_ms = last_completion
             .signed_duration_since(first_start)
             .num_milliseconds()
@@ -1748,9 +2046,10 @@ impl PlanExecutor {
 
         // Calculate dependency wait time: time batches waited for dependencies to complete
         let mut dependency_wait_time_ms = 0u64;
-        
+
         // Build a map of batch completion times by milestone IDs
-        let mut milestone_completion_times: std::collections::HashMap<String, DateTime<Utc>> = std::collections::HashMap::new();
+        let mut milestone_completion_times: std::collections::HashMap<String, DateTime<Utc>> =
+            std::collections::HashMap::new();
         for (_, start, end, milestone_ids) in &batches_with_timestamps {
             for milestone_id in *milestone_ids {
                 milestone_completion_times.insert(milestone_id.clone(), *end);
@@ -1765,9 +2064,13 @@ impl PlanExecutor {
                 for edge in &plan.contract_plan.dependency_graph.edges {
                     if edge.to == *milestone_id {
                         // This milestone depends on edge.from
-                        if let Some(dep_completion_time) = milestone_completion_times.get(&edge.from) {
+                        if let Some(dep_completion_time) =
+                            milestone_completion_times.get(&edge.from)
+                        {
                             // Calculate wait time: difference between dependency completion and batch start
-                            let wait_time = start.signed_duration_since(*dep_completion_time).num_milliseconds();
+                            let wait_time = start
+                                .signed_duration_since(*dep_completion_time)
+                                .num_milliseconds();
                             if wait_time > 0 {
                                 dependency_wait_time_ms += wait_time as u64;
                             }
@@ -1808,7 +2111,10 @@ impl PlanExecutor {
     }
 
     /// Build execution timeline with batch and milestone-level events
-    async fn build_execution_timeline(&self, plan: &ExecutionPlan) -> Vec<agent_agency_contracts::planning::ExecutionEvent> {
+    async fn build_execution_timeline(
+        &self,
+        plan: &ExecutionPlan,
+    ) -> Vec<agent_agency_contracts::planning::ExecutionEvent> {
         let mut events = Vec::new();
 
         // Add batch-level events
@@ -1856,7 +2162,9 @@ impl PlanExecutor {
                         },
                         timestamp: execution_event.timestamp,
                         milestone_id: Some(milestone.id.clone()),
-                        description: execution_event.metadata.get("description")
+                        description: execution_event
+                            .metadata
+                            .get("description")
                             .and_then(|v| v.as_str())
                             .unwrap_or(&milestone.objective)
                             .to_string(),
@@ -1870,20 +2178,55 @@ impl PlanExecutor {
             match &milestone.state {
                 agent_agency_contracts::planning_io::MilestoneState::Completed => {
                     // Only add if we don't already have a completion event from metrics
-                    let has_completion_event = milestone.metrics.as_ref()
-                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneCompleted"))
+                    let has_completion_event = milestone
+                        .metrics
+                        .as_ref()
+                        .map(|m| {
+                            m.execution_events
+                                .iter()
+                                .any(|e| e.event_type == "MilestoneCompleted")
+                        })
                         .unwrap_or(false);
-                    
+
                     if !has_completion_event {
                         // Try to infer completion timestamp from metrics execution_time_ms
                         if let Some(ref metrics) = milestone.metrics {
-                            // Estimate completion time (simplified - would need actual start time)
+                            // TODO: Calculate completion time from actual start time
+                            //       Currently uses Utc::now() as fallback; should calculate from start time + execution_time_ms.
+                            //
+                            // COMPLETION CHECKLIST:
+                            // [ ] Find milestone start event or started_at timestamp
+                            // [ ] Calculate completion = start_time + execution_time_ms
+                            // [ ] Handle missing start time gracefully (use fallback)
+                            // [ ] Ensure timestamp accuracy and consistency
+                            // [ ] Add unit tests with various start/completion scenarios
+                            // [ ] Add integration tests with real milestone execution
+                            //
+                            // ACCEPTANCE CRITERIA:
+                            // - Completion time is calculated from actual start time
+                            // - Timestamps are accurate and consistent
+                            // - Handles missing start time gracefully
+                            //
+                            // DEPENDENCIES:
+                            // - Milestone start time tracking (Required)
+                            //
+                            // ESTIMATED EFFORT: 2-3 hours
+                            // PRIORITY: Low
+                            // BLOCKING: No (fallback works, but less accurate)
+                            //
+                            // GOVERNANCE:
+                            // - CAWS Tier: 3 (timestamp accuracy)
+                            // - Change Budget: ~40 LOC
+                            // Note: Currently uses Utc::now() as fallback - should use start_time + execution_time_ms
                             let estimated_completion = Utc::now(); // Fallback to now
                             events.push(agent_agency_contracts::planning::ExecutionEvent {
                                 event_type: ExecutionEventType::MilestoneCompleted,
                                 timestamp: estimated_completion,
                                 milestone_id: Some(milestone.id.clone()),
-                                description: format!("Milestone '{}' completed", milestone.objective),
+                                description: format!(
+                                    "Milestone '{}' completed",
+                                    milestone.objective
+                                ),
                                 metadata: HashMap::from([
                                     ("execution_time_ms".into(), metrics.execution_time_ms.into()),
                                     ("objective".into(), milestone.objective.clone().into()),
@@ -1894,16 +2237,25 @@ impl PlanExecutor {
                 }
                 agent_agency_contracts::planning_io::MilestoneState::Failed { reason } => {
                     // Only add if we don't already have a failure event from metrics
-                    let has_failure_event = milestone.metrics.as_ref()
-                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneFailed"))
+                    let has_failure_event = milestone
+                        .metrics
+                        .as_ref()
+                        .map(|m| {
+                            m.execution_events
+                                .iter()
+                                .any(|e| e.event_type == "MilestoneFailed")
+                        })
                         .unwrap_or(false);
-                    
+
                     if !has_failure_event {
                         events.push(agent_agency_contracts::planning::ExecutionEvent {
                             event_type: ExecutionEventType::MilestoneFailed,
                             timestamp: Utc::now(), // Fallback timestamp
                             milestone_id: Some(milestone.id.clone()),
-                            description: format!("Milestone '{}' failed: {}", milestone.objective, reason),
+                            description: format!(
+                                "Milestone '{}' failed: {}",
+                                milestone.objective, reason
+                            ),
                             metadata: HashMap::from([
                                 ("reason".into(), reason.clone().into()),
                                 ("objective".into(), milestone.objective.clone().into()),
@@ -1913,10 +2265,16 @@ impl PlanExecutor {
                 }
                 agent_agency_contracts::planning_io::MilestoneState::InProgress => {
                     // Add milestone started event if not already present
-                    let has_start_event = milestone.metrics.as_ref()
-                        .map(|m| m.execution_events.iter().any(|e| e.event_type == "MilestoneStarted"))
+                    let has_start_event = milestone
+                        .metrics
+                        .as_ref()
+                        .map(|m| {
+                            m.execution_events
+                                .iter()
+                                .any(|e| e.event_type == "MilestoneStarted")
+                        })
                         .unwrap_or(false);
-                    
+
                     if !has_start_event {
                         events.push(agent_agency_contracts::planning::ExecutionEvent {
                             event_type: ExecutionEventType::MilestoneStarted,
@@ -1925,7 +2283,10 @@ impl PlanExecutor {
                             description: format!("Milestone '{}' started", milestone.objective),
                             metadata: HashMap::from([
                                 ("objective".into(), milestone.objective.clone().into()),
-                                ("priority".into(), format!("{:?}", milestone.priority).into()),
+                                (
+                                    "priority".into(),
+                                    format!("{:?}", milestone.priority).into(),
+                                ),
                             ]),
                         });
                     }
@@ -1956,7 +2317,10 @@ impl PlanExecutor {
                             event_type: ExecutionEventType::MilestoneCompleted,
                             timestamp: coord_event.timestamp,
                             milestone_id: Some(milestone_id.clone()),
-                            description: format!("Milestone {} coordination completed", milestone_id),
+                            description: format!(
+                                "Milestone {} coordination completed",
+                                milestone_id
+                            ),
                             metadata: coord_event.details.clone(),
                         });
                     }
@@ -2057,7 +2421,9 @@ impl PlanExecutor {
     }
 
     /// Get coordination trace statistics
-    pub async fn get_coordination_trace_statistics(&self) -> crate::planning::plan_types::CoordinationTraceStatistics {
+    pub async fn get_coordination_trace_statistics(
+        &self,
+    ) -> crate::planning::plan_types::CoordinationTraceStatistics {
         let trace = self.coordination_trace.read().await;
         trace.get_statistics()
     }
@@ -2114,7 +2480,10 @@ mod tests {
         assert_eq!(config.max_parallel_milestones, 5);
         assert_eq!(config.milestone_timeout_ms, 300000);
         assert!(!config.continue_on_failure);
-        assert!(matches!(config.council_oversight, CouncilOversightLevel::Approve));
+        assert!(matches!(
+            config.council_oversight,
+            CouncilOversightLevel::Approve
+        ));
     }
 
     #[test]

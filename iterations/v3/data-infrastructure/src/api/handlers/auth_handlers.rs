@@ -1,13 +1,13 @@
 //! Authentication API handlers
-//! 
+//!
 //! This module contains all API handlers related to user authentication,
 //! including login, logout, token refresh, password reset, and current user retrieval.
 
-use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tracing::warn;
+use uuid::Uuid;
 
 // Note: Handler implementations are in api-server.rs
 // This module exports types and helper functions for reference
@@ -15,8 +15,7 @@ use tracing::warn;
 /// Login request
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {
-    pub email: Option<String>,
-    pub username: Option<String>,
+    pub username: String,
     pub password: String,
 }
 
@@ -33,25 +32,11 @@ pub struct LoginResponse {
 #[derive(Debug, Serialize)]
 pub struct UserResponse {
     pub id: String,
-    pub email: String,
     pub username: String,
     pub name: Option<String>,
     pub roles: Vec<String>,
     pub is_active: bool,
     pub last_login: Option<DateTime<Utc>>,
-}
-
-/// Password reset request
-#[derive(Debug, Deserialize)]
-pub struct PasswordResetRequest {
-    pub email: String,
-}
-
-/// Password reset confirm request
-#[derive(Debug, Deserialize)]
-pub struct PasswordResetConfirmRequest {
-    pub token: String,
-    pub new_password: String,
 }
 
 /// Refresh token request
@@ -77,7 +62,7 @@ fn generate_token(user_id: &Uuid, roles: &[String]) -> String {
     let timestamp = Utc::now().timestamp();
     let roles_str = roles.join(",");
     let token_data = format!("{}:{}:{}", user_id, roles_str, timestamp);
-    use base64::{Engine as _, engine::general_purpose};
+    use base64::{engine::general_purpose, Engine as _};
     general_purpose::STANDARD.encode(token_data.as_bytes())
 }
 
@@ -171,9 +156,9 @@ pub async fn _login_handler_reference(
             },
             last_login: None,
         };
-        
+
         let _ = state.api.db_client.update_user(user.id, update).await;
-        
+
         warn!("Failed login attempt for user: {}", user.id);
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -213,7 +198,7 @@ pub async fn _login_handler_reference(
     let refresh_token = generate_token(&user.id, &user.roles);
     let token_hash = hash_token(&token);
     let refresh_token_hash = Some(hash_token(&refresh_token));
-    
+
     let expires_at = Utc::now() + ChronoDuration::hours(24);
     let refresh_expires_at = Some(Utc::now() + ChronoDuration::days(7));
 
@@ -240,7 +225,7 @@ pub async fn _login_handler_reference(
     match state.api.db_client.create_session(session).await {
         Ok(_) => {
             info!("Successful login for user: {}", user.id);
-            
+
             Ok(Json(LoginResponse {
                 token,
                 refresh_token: Some(refresh_token),
@@ -291,7 +276,7 @@ pub async fn logout_handler(
             refresh_expires_at: None,
             is_active: Some(false),
         };
-        
+
         match state.api.db_client.update_session(session.id, update).await {
             Ok(_) => {
                 info!("User logged out: {}", session.user_id);
@@ -372,11 +357,39 @@ pub async fn refresh_token_handler(
 ) -> Result<Json<LoginResponse>, StatusCode> {
     let refresh_token_hash = hash_token(&refresh_req.refresh_token);
 
-    // Find session by refresh token
-    // Note: We need to search sessions for matching refresh_token_hash
-    // For now, this is a simplified implementation
-    // TODO: Add get_session_by_refresh_token_hash to DatabaseOperations
-    
+    // TODO: Implement refresh token validation and session lookup
+    //       Currently returns NOT_IMPLEMENTED; should validate refresh token and return new access token.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Add get_session_by_refresh_token_hash to DatabaseOperations
+    // [ ] Query database for session with matching refresh token hash
+    // [ ] Validate refresh token hasn't expired
+    // [ ] Validate session is still active
+    // [ ] Generate new access token
+    // [ ] Update session with new access token and timestamp
+    // [ ] Return new access token and refresh token
+    // [ ] Handle invalid/expired refresh tokens with appropriate errors
+    // [ ] Add unit tests with various token scenarios
+    // [ ] Add integration tests with real database sessions
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Refresh tokens are validated correctly
+    // - New access tokens are generated and returned
+    // - Expired/invalid tokens return appropriate errors
+    // - Session state is properly updated
+    //
+    // DEPENDENCIES:
+    // - DatabaseOperations.get_session_by_refresh_token_hash (Required)
+    // - Token generation utilities (Required)
+    // - Session management (Required)
+    //
+    // ESTIMATED EFFORT: 4-6 hours
+    // PRIORITY: High (authentication functionality)
+    // BLOCKING: Yes (refresh token flow is broken)
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (authentication security)
+    // - Change Budget: ~150 LOC
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
@@ -475,9 +488,9 @@ pub async fn confirm_password_reset_handler(
         Ok(_) => {
             // Mark token as used
             let _ = state.api.db_client.mark_password_reset_token_used(reset_token.id).await;
-            
+
             info!("Password reset completed for user: {}", user.id);
-            
+
             Ok(Json(serde_json::json!({
                 "status": "success",
                 "message": "Password reset successfully"

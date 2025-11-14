@@ -3,8 +3,8 @@
 //! This module provides optional IOKit integration for hardware telemetry
 //! including temperature, power consumption, and device status monitoring.
 
-use schemars::JsonSchema;
 use crate::ane::ane_errors::{ANEError, Result};
+use schemars::JsonSchema;
 use tracing::{info, warn};
 
 /// Target platform detection
@@ -27,7 +27,14 @@ pub mod iokit {
         use std::process::Command;
 
         let output = Command::new("powermetrics")
-            .args(&["--samplers", "thermal", "--sample-count", "1", "--format", "csv"])
+            .args(&[
+                "--samplers",
+                "thermal",
+                "--sample-count",
+                "1",
+                "--format",
+                "csv",
+            ])
             .output()
             .ok()?;
 
@@ -38,10 +45,12 @@ pub mod iokit {
             if line.contains("CPU die temperature") || line.contains("CPU Temperature") {
                 // Extract numeric value from line like "CPU die temperature: 45.0 C"
                 if let Some(temp_str) = line.split(':').nth(1) {
-                    if let Some(temp_value) = temp_str.trim()
+                    if let Some(temp_value) = temp_str
+                        .trim()
                         .split_whitespace()
                         .next()
-                        .and_then(|s| s.parse::<f32>().ok()) {
+                        .and_then(|s| s.parse::<f32>().ok())
+                    {
                         return Some(temp_value);
                     }
                 }
@@ -107,7 +116,14 @@ pub mod iokit {
         use std::process::Command;
 
         let output = Command::new("powermetrics")
-            .args(&["--samplers", "power", "--sample-count", "1", "--format", "csv"])
+            .args(&[
+                "--samplers",
+                "power",
+                "--sample-count",
+                "1",
+                "--format",
+                "csv",
+            ])
             .output()
             .ok()?;
 
@@ -117,10 +133,12 @@ pub mod iokit {
         for line in output_str.lines() {
             if line.contains("Combined Power") || line.contains("CPU Power") {
                 if let Some(power_str) = line.split(':').nth(1) {
-                    if let Some(power_value) = power_str.trim()
+                    if let Some(power_value) = power_str
+                        .trim()
                         .split_whitespace()
                         .next()
-                        .and_then(|s| s.parse::<f32>().ok()) {
+                        .and_then(|s| s.parse::<f32>().ok())
+                    {
                         return Some(power_value);
                     }
                 }
@@ -128,10 +146,7 @@ pub mod iokit {
         }
 
         // Fallback: estimate based on battery discharge rate
-        let output = Command::new("pmset")
-            .args(&["-g", "batt"])
-            .output()
-            .ok()?;
+        let output = Command::new("pmset").args(&["-g", "batt"]).output().ok()?;
 
         let _output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -194,10 +209,12 @@ pub mod iokit {
             if line.contains("ANE") && line.contains("temperature") {
                 // Parse ANE temperature if available
                 if let Some(temp_str) = line.split(':').nth(1) {
-                    if let Some(temp_value) = temp_str.trim()
+                    if let Some(temp_value) = temp_str
+                        .trim()
                         .split_whitespace()
                         .next()
-                        .and_then(|s| s.parse::<f32>().ok()) {
+                        .and_then(|s| s.parse::<f32>().ok())
+                    {
                         return Some(temp_value);
                     }
                 }
@@ -210,7 +227,7 @@ pub mod iokit {
     }
 
     /// Get ANE-specific power consumption
-    /// 
+    ///
     /// This would query ANE power consumption if available
     pub fn ane_power_watts() -> Option<f32> {
         // Attempt to estimate ANE power consumption from system metrics
@@ -227,10 +244,12 @@ pub mod iokit {
         for line in output_str.lines() {
             if line.contains("ANE") && line.contains("Power") {
                 if let Some(power_str) = line.split(':').nth(1) {
-                    if let Some(power_value) = power_str.trim()
+                    if let Some(power_value) = power_str
+                        .trim()
                         .split_whitespace()
                         .next()
-                        .and_then(|s| s.parse::<f32>().ok()) {
+                        .and_then(|s| s.parse::<f32>().ok())
+                    {
                         return Some(power_value);
                     }
                 }
@@ -244,17 +263,14 @@ pub mod iokit {
     }
 
     /// Get system thermal pressure level
-    /// 
+    ///
     /// Returns thermal pressure as a percentage (0.0-100.0)
     pub fn thermal_pressure_percent() -> Option<f32> {
         // Query thermal pressure from system management
         use std::process::Command;
 
         // Try to get thermal pressure from pmset
-        let output = Command::new("pmset")
-            .args(&["-g", "therm"])
-            .output()
-            .ok()?;
+        let output = Command::new("pmset").args(&["-g", "therm"]).output().ok()?;
 
         let output_str = String::from_utf8(output.stdout).ok()?;
 
@@ -263,8 +279,7 @@ pub mod iokit {
         for line in output_str.lines() {
             if line.contains("CPU_Speed_Limit") || line.contains("Speed_Limit") {
                 if let Some(limit_str) = line.split('=').nth(1) {
-                    if let Some(limit_value) = limit_str.trim()
-                        .parse::<f32>().ok() {
+                    if let Some(limit_value) = limit_str.trim().parse::<f32>().ok() {
                         // Convert speed limit to thermal pressure percentage
                         // 100 = no thermal pressure, lower values = higher thermal pressure
                         let pressure = (100.0 - limit_value).max(0.0);
@@ -306,7 +321,10 @@ pub mod iokit {
         let output_str = String::from_utf8(output.stdout).ok()?;
 
         // Check if this Mac has fans
-        if output_str.contains("Fan") || output_str.contains("Mac Studio") || output_str.contains("Mac Pro") {
+        if output_str.contains("Fan")
+            || output_str.contains("Mac Studio")
+            || output_str.contains("Mac Pro")
+        {
             // This Mac might have fans - try to get fan speed
             let output = Command::new("powermetrics")
                 .args(&["--samplers", "thermal", "--sample-count", "1"])
@@ -319,10 +337,12 @@ pub mod iokit {
             for line in output_str.lines() {
                 if line.contains("Fan") && line.contains("RPM") {
                     if let Some(speed_str) = line.split(':').nth(1) {
-                        if let Some(speed_value) = speed_str.trim()
+                        if let Some(speed_value) = speed_str
+                            .trim()
                             .split_whitespace()
                             .next()
-                            .and_then(|s| s.parse::<f32>().ok()) {
+                            .and_then(|s| s.parse::<f32>().ok())
+                        {
                             // Convert RPM to percentage (assuming max ~6000 RPM)
                             let percentage = (speed_value / 6000.0).min(1.0);
                             return Some(percentage);
@@ -353,9 +373,12 @@ pub mod iokit {
         for line in output_str.lines() {
             if line.contains("Temperature") || line.contains("BatteryTemperature") {
                 if let Some(temp_str) = line.split('=').nth(1) {
-                    if let Some(temp_value) = temp_str.trim()
+                    if let Some(temp_value) = temp_str
+                        .trim()
                         .trim_matches(|c: char| !c.is_numeric() && c != '.')
-                        .parse::<f32>().ok() {
+                        .parse::<f32>()
+                        .ok()
+                    {
                         // ioreg temperatures are often in Celsius or need conversion
                         // Most Apple systems report in Celsius directly
                         return Some(temp_value);
@@ -401,21 +424,138 @@ pub mod iokit {
             thermal_pressure: thermal_pressure_percent().unwrap_or(0.0),
         }
     }
+
+    /// Measure ANE utilization percentage (0.0 to 1.0)
+    ///
+    /// Uses powermetrics to query ANE compute utilization.
+    /// Returns the percentage of time ANE is actively processing.
+    pub fn ane_utilization_percent() -> Option<f32> {
+        use std::process::Command;
+
+        // Use powermetrics to get ANE utilization data
+        let output = Command::new("powermetrics")
+            .args(&[
+                "--samplers",
+                "cpu_power,gpu_power",
+                "--sample-count",
+                "1",
+                "--format",
+                "csv",
+            ])
+            .output()
+            .ok()?;
+
+        let output_str = String::from_utf8(output.stdout).ok()?;
+
+        // Look for ANE-specific utilization metrics
+        // powermetrics may report ANE usage in different formats
+        for line in output_str.lines() {
+            // Look for ANE utilization patterns
+            if line.contains("ANE") || line.contains("Neural Engine") {
+                // Try to extract utilization percentage
+                // Format might be: "ANE Utilization: 85.0%" or "ANE: 85%"
+                if let Some(util_str) = line
+                    .split(':')
+                    .nth(1)
+                    .or_else(|| line.split_whitespace().find(|s| s.contains('%')))
+                {
+                    // Extract numeric value before %
+                    let cleaned = util_str
+                        .trim()
+                        .trim_matches(|c: char| !c.is_numeric() && c != '.');
+                    if let Ok(util_value) = cleaned.parse::<f32>() {
+                        // Convert percentage to 0.0-1.0 range
+                        return Some((util_value / 100.0).min(1.0).max(0.0));
+                    }
+                }
+            }
+        }
+
+        // Alternative: Estimate from power consumption
+        // If ANE power is high relative to baseline, utilization is likely high
+        if let Some(ane_power) = ane_power_watts() {
+            // ANE idle power ~0.1W, max power ~2W
+            // Estimate utilization from power consumption
+            let baseline_power = 0.1;
+            let max_power = 2.0;
+            let utilization = ((ane_power - baseline_power) / (max_power - baseline_power))
+                .min(1.0)
+                .max(0.0);
+            return Some(utilization);
+        }
+
+        // Fallback: Try to infer from CPU/GPU activity patterns
+        // If system is doing neural network work but CPU/GPU aren't maxed, ANE might be active
+        None
+    }
+
+    /// Get ANE compute statistics
+    ///
+    /// Returns detailed ANE utilization and performance metrics
+    pub fn ane_compute_stats() -> Option<ANEComputeStats> {
+        let utilization = ane_utilization_percent()?;
+        let power = ane_power_watts();
+        let temperature = ane_temperature_celsius();
+
+        Some(ANEComputeStats {
+            utilization_percent: utilization * 100.0,
+            power_watts: power,
+            temperature_celsius: temperature,
+            is_active: utilization > 0.1, // Consider active if >10% utilization
+        })
+    }
 }
 
+/// ANE compute statistics
+#[derive(Debug, Clone, JsonSchema)]
+pub struct ANEComputeStats {
+    /// ANE utilization percentage (0.0-100.0)
+    pub utilization_percent: f32,
+    /// ANE power consumption in watts
+    pub power_watts: Option<f32>,
+    /// ANE temperature in Celsius
+    pub temperature_celsius: Option<f32>,
+    /// Whether ANE is currently active
+    pub is_active: bool,
+}
+
+/// TODO: Document stub implementation for non-Apple Silicon platforms
+///       This is an intentional stub when running on non-Apple Silicon platforms.
+///       ANE functionality is not available on these platforms. Consider adding platform-specific alternatives.
+///
 /// Stub implementation for non-Apple Silicon platforms
 #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
 pub mod iokit {
     use super::*;
 
-    pub fn temperature_celsius() -> Option<f32> { None }
-    pub fn power_watts() -> Option<f32> { None }
-    pub fn ane_temperature_celsius() -> Option<f32> { None }
-    pub fn ane_power_watts() -> Option<f32> { None }
-    pub fn thermal_pressure_percent() -> Option<f32> { None }
-    pub fn fan_speed_percent() -> Option<f32> { None }
-    pub fn battery_temperature_celsius() -> Option<f32> { None }
-    
+    pub fn temperature_celsius() -> Option<f32> {
+        None
+    }
+    pub fn power_watts() -> Option<f32> {
+        None
+    }
+    pub fn ane_temperature_celsius() -> Option<f32> {
+        None
+    }
+    pub fn ane_power_watts() -> Option<f32> {
+        None
+    }
+    pub fn thermal_pressure_percent() -> Option<f32> {
+        None
+    }
+    pub fn fan_speed_percent() -> Option<f32> {
+        None
+    }
+    pub fn battery_temperature_celsius() -> Option<f32> {
+        None
+    }
+    pub fn ane_utilization_percent() -> Option<f32> {
+        None
+    }
+    pub fn ane_compute_stats() -> Option<ANEComputeStats> {
+        None
+    }
+
     pub fn thermal_status() -> ThermalStatus {
         ThermalStatus {
             system_temperature: 25.0,
@@ -426,7 +566,7 @@ pub mod iokit {
             is_throttling: false,
         }
     }
-    
+
     pub fn power_status() -> PowerStatus {
         PowerStatus {
             system_power: 0.0,
@@ -566,9 +706,7 @@ pub fn shutdown_monitoring() -> Result<()> {
     // Kill any lingering powermetrics processes that might have been started
     use std::process::Command;
 
-    let _ = Command::new("pkill")
-        .args(&["-f", "powermetrics"])
-        .status(); // Ignore errors as this is cleanup
+    let _ = Command::new("pkill").args(&["-f", "powermetrics"]).status(); // Ignore errors as this is cleanup
 
     info!("IOKit monitoring system shut down successfully");
     Ok(())
@@ -624,7 +762,7 @@ mod tests {
     fn test_monitoring_lifecycle() {
         let init_result = initialize_monitoring();
         let shutdown_result = shutdown_monitoring();
-        
+
         if TARGET_APPLE_SILICON {
             assert!(init_result.is_ok());
             assert!(shutdown_result.is_ok());

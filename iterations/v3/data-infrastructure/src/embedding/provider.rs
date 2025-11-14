@@ -4,17 +4,17 @@
 //! Uses embeddinggemma (768-dim) as the standard CoreML embedding model.
 //! Decision: Selected embeddinggemma over e5-small-v2 due to better quality and availability.
 
-use schemars::JsonSchema;
 use crate::embedding::embedding_types::*;
 use crate::embedding::model_loading::EmbeddingModel;
 use crate::embedding::tokenization::Tokenizer;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
-use tracing::{info, warn};
+use schemars::JsonSchema;
+use std::ffi::CString;
 use std::hash::Hasher;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::ffi::CString;
+use tracing::{info, warn};
 
 // External C functions for Core ML bridge
 #[cfg(target_os = "macos")]
@@ -88,6 +88,9 @@ use hf_hub::api::sync::Api;
 
 /// CLIP model wrapper for candle
 struct ClipModelWrapper {
+    // Reserved for v4: CLIP model loading implementation
+    // Model field will be used when CLIP API migration is complete
+    #[allow(dead_code)]
     model: ClipModel,
     device: Device,
 }
@@ -114,7 +117,6 @@ pub trait EmbeddingProvider: Send + Sync {
     /// Check if the provider is available
     async fn health_check(&self) -> Result<bool>;
 }
-
 
 /// CoreML embedding provider using Apple Neural Engine acceleration
 ///
@@ -162,22 +164,26 @@ impl CoreMLEmbeddingProvider {
         tokenizer: Arc<dyn Tokenizer>,
         max_length: Option<usize>,
     ) -> Result<Self> {
-        info!("Loading CoreML embedding model: {} ({} dimensions)", model_name, dimension);
+        info!(
+            "Loading CoreML embedding model: {} ({} dimensions)",
+            model_name, dimension
+        );
 
         // Check if we're on Apple Silicon
         let ane_available = cfg!(target_os = "macos") && cfg!(target_arch = "aarch64");
-        
+
         if !ane_available {
             warn!("CoreML embeddings only available on Apple Silicon - falling back to CPU");
         }
 
         // Load model via CoreML bridge using agentbridge_model_create
-        let model_path_str = model_path.to_str()
+        let model_path_str = model_path
+            .to_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid model path encoding"))?;
-        
+
         let c_path = CString::new(model_path_str)
             .map_err(|e| anyhow::anyhow!("Failed to create C string: {}", e))?;
-        
+
         // Create config JSON for ANE acceleration if available
         let config_json = if ane_available {
             r#"{"computeUnits": "cpuAndNeuralEngine"}"#
@@ -186,10 +192,10 @@ impl CoreMLEmbeddingProvider {
         };
         let config_json_cstr = CString::new(config_json)
             .map_err(|e| anyhow::anyhow!("Failed to create config JSON: {}", e))?;
-        
+
         let mut model_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
-        
+
         let create_result = unsafe {
             agentbridge_model_create(
                 c_path.as_ptr(),
@@ -210,14 +216,21 @@ impl CoreMLEmbeddingProvider {
             } else {
                 "Unknown error creating model".to_string()
             };
-            return Err(anyhow::anyhow!("Failed to create CoreML embedding model from {}: {}", model_path_str, error_msg));
+            return Err(anyhow::anyhow!(
+                "Failed to create CoreML embedding model from {}: {}",
+                model_path_str,
+                error_msg
+            ));
         }
 
         if model_ref == 0 {
             return Err(anyhow::anyhow!("Model creation returned null reference"));
         }
 
-        info!("✅ Loaded CoreML embedding model: {} (ANE={})", model_name, ane_available);
+        info!(
+            "✅ Loaded CoreML embedding model: {} (ANE={})",
+            model_name, ane_available
+        );
 
         Ok(Self {
             model_ref,
@@ -236,7 +249,14 @@ impl CoreMLEmbeddingProvider {
         model_path: PathBuf,
         tokenizer: Arc<dyn Tokenizer>,
     ) -> Result<Self> {
-        Self::new(model_path, "embeddinggemma".to_string(), 768, tokenizer, Some(512)).await
+        Self::new(
+            model_path,
+            "embeddinggemma".to_string(),
+            768,
+            tokenizer,
+            Some(512),
+        )
+        .await
     }
 
     /// Run CoreML inference for a single text using provider-based API
@@ -244,7 +264,7 @@ impl CoreMLEmbeddingProvider {
     async fn run_coreml_inference(&self, text: &str) -> Result<Vec<f32>> {
         // Tokenize text
         let tokens = self.tokenizer.encode(text).await?;
-        
+
         // Truncate if necessary
         let tokens = if tokens.len() > self.max_length {
             tokens[..self.max_length].to_vec()
@@ -259,11 +279,10 @@ impl CoreMLEmbeddingProvider {
         // Create input provider
         let mut input_provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
-        
-        let provider_status = unsafe {
-            agentbridge_dict_provider_create(&mut input_provider_ref, &mut error_ptr)
-        };
-        
+
+        let provider_status =
+            unsafe { agentbridge_dict_provider_create(&mut input_provider_ref, &mut error_ptr) };
+
         if provider_status != 0 {
             let error_msg = if !error_ptr.is_null() {
                 unsafe {
@@ -275,7 +294,10 @@ impl CoreMLEmbeddingProvider {
             } else {
                 "Unknown error creating input provider".to_string()
             };
-            return Err(anyhow::anyhow!("Failed to create input provider: {}", error_msg));
+            return Err(anyhow::anyhow!(
+                "Failed to create input provider: {}",
+                error_msg
+            ));
         }
 
         // Create input array
@@ -305,13 +327,16 @@ impl CoreMLEmbeddingProvider {
             } else {
                 "Unknown error creating input array".to_string()
             };
-            return Err(anyhow::anyhow!("Failed to create input array: {}", error_msg));
+            return Err(anyhow::anyhow!(
+                "Failed to create input array: {}",
+                error_msg
+            ));
         }
 
         // Set array as feature in provider (typically "input_ids" for embedding models)
         let input_name = CString::new("input_ids")
             .map_err(|e| anyhow::anyhow!("Failed to create input name: {}", e))?;
-        
+
         let feature_status = unsafe {
             agentbridge_dict_provider_set_feature_multiarray(
                 input_provider_ref,
@@ -336,7 +361,10 @@ impl CoreMLEmbeddingProvider {
             } else {
                 "Unknown error setting feature".to_string()
             };
-            return Err(anyhow::anyhow!("Failed to set input feature: {}", error_msg));
+            return Err(anyhow::anyhow!(
+                "Failed to set input feature: {}",
+                error_msg
+            ));
         }
 
         // Run inference
@@ -373,12 +401,12 @@ impl CoreMLEmbeddingProvider {
         // Extract output from provider (typically "output" or "embeddings" for embedding models)
         let output_name = CString::new("output")
             .map_err(|e| anyhow::anyhow!("Failed to create output name: {}", e))?;
-        
+
         let mut output_data_ptr: *mut f32 = std::ptr::null_mut();
         let mut output_shape_ptr: *mut i32 = std::ptr::null_mut();
         let mut output_shape_len: i32 = 0;
         let mut output_data_len: i32 = 0;
-        
+
         let get_status = unsafe {
             agentbridge_provider_get_feature_float32(
                 output_provider_ref,
@@ -407,7 +435,10 @@ impl CoreMLEmbeddingProvider {
             } else {
                 "Unknown error getting output".to_string()
             };
-            return Err(anyhow::anyhow!("Failed to get output from provider: {}", error_msg));
+            return Err(anyhow::anyhow!(
+                "Failed to get output from provider: {}",
+                error_msg
+            ));
         }
 
         if output_data_ptr.is_null() {
@@ -457,7 +488,9 @@ impl CoreMLEmbeddingProvider {
     /// Run CoreML inference for a single text (non-macOS stub)
     #[cfg(not(target_os = "macos"))]
     async fn run_coreml_inference(&self, _text: &str) -> Result<Vec<f32>> {
-        Err(anyhow::anyhow!("CoreML inference not available on this platform"))
+        Err(anyhow::anyhow!(
+            "CoreML inference not available on this platform"
+        ))
     }
 }
 
@@ -468,7 +501,7 @@ impl EmbeddingProvider for CoreMLEmbeddingProvider {
 
         for text in texts {
             let embedding_values = self.run_coreml_inference(text).await?;
-            
+
             if embedding_values.len() != self.dimension {
                 return Err(anyhow::anyhow!(
                     "Embedding dimension mismatch: expected {}, got {}",
@@ -477,7 +510,10 @@ impl EmbeddingProvider for CoreMLEmbeddingProvider {
                 ));
             }
 
-            embeddings.push(EmbeddingVector::new(embedding_values, self.model_name.clone()));
+            embeddings.push(EmbeddingVector::new(
+                embedding_values,
+                self.model_name.clone(),
+            ));
         }
 
         Ok(embeddings)
@@ -525,12 +561,24 @@ impl Drop for CoreMLEmbeddingProvider {
 
 // Contracts adapter implementation
 impl agent_agency_contracts::types::research::EmbeddingProvider for CoreMLEmbeddingProvider {
-    fn embed<'a>(&'a self, text: &'a str) -> agent_agency_contracts::types::research::BoxFuture<'a, Result<agent_agency_contracts::types::research::Embedding, agent_agency_contracts::types::research::EmbeddingError>> {
-        use agent_agency_contracts::types::research::{Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint};
-        
+    fn embed<'a>(
+        &'a self,
+        text: &'a str,
+    ) -> agent_agency_contracts::types::research::BoxFuture<
+        'a,
+        Result<
+            agent_agency_contracts::types::research::Embedding,
+            agent_agency_contracts::types::research::EmbeddingError,
+        >,
+    > {
+        use agent_agency_contracts::types::research::{
+            Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint,
+        };
+
         let text = text.to_string();
         Box::pin(async move {
-            self.run_coreml_inference(&text).await
+            self.run_coreml_inference(&text)
+                .await
                 .map_err(|e| EmbeddingError {
                     code: EmbeddingErrorCode::Internal,
                     message: e.to_string(),
@@ -543,25 +591,38 @@ impl agent_agency_contracts::types::research::EmbeddingProvider for CoreMLEmbedd
                 .map(|vec| Embedding(vec))
         })
     }
-    
-    fn embed_many<'a>(&'a self, texts: &'a [String]) -> agent_agency_contracts::types::research::BoxFuture<'a, Result<Vec<agent_agency_contracts::types::research::Embedding>, agent_agency_contracts::types::research::EmbeddingError>> {
-        use agent_agency_contracts::types::research::{Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint};
-        
+
+    fn embed_many<'a>(
+        &'a self,
+        texts: &'a [String],
+    ) -> agent_agency_contracts::types::research::BoxFuture<
+        'a,
+        Result<
+            Vec<agent_agency_contracts::types::research::Embedding>,
+            agent_agency_contracts::types::research::EmbeddingError,
+        >,
+    > {
+        use agent_agency_contracts::types::research::{
+            Embedding, EmbeddingError, EmbeddingErrorCode, RetryHint,
+        };
+
         let texts = texts.to_vec();
         Box::pin(async move {
             let mut results = Vec::new();
             for text in texts {
                 match self.run_coreml_inference(&text).await {
                     Ok(vec) => results.push(Embedding(vec)),
-                    Err(e) => return Err(EmbeddingError {
-                        code: EmbeddingErrorCode::Internal,
-                        message: e.to_string(),
-                        transient: false,
-                        hint: Some(RetryHint {
-                            retryable: false,
-                            after_ms: None,
-                        }),
-                    }),
+                    Err(e) => {
+                        return Err(EmbeddingError {
+                            code: EmbeddingErrorCode::Internal,
+                            message: e.to_string(),
+                            transient: false,
+                            hint: Some(RetryHint {
+                                retryable: false,
+                                after_ms: None,
+                            }),
+                        })
+                    }
                 }
             }
             Ok(results)
@@ -692,7 +753,8 @@ impl SafeTensorsEmbeddingProvider {
         max_length: usize,
     ) -> Result<Self> {
         // Load SafeTensors model
-        let model = crate::embedding::model_loading::SafeTensorsModel::load_from_path(&model_path).await?;
+        let model =
+            crate::embedding::model_loading::SafeTensorsModel::load_from_path(&model_path).await?;
 
         Ok(Self {
             model: Arc::new(model),
@@ -709,7 +771,8 @@ impl SafeTensorsEmbeddingProvider {
         tokenizer: Arc<dyn crate::embedding::tokenization::Tokenizer>,
         max_length: usize,
     ) -> Result<Self> {
-        let model = crate::embedding::model_loading::SafeTensorsModel::from_pretrained(model_id).await?;
+        let model =
+            crate::embedding::model_loading::SafeTensorsModel::from_pretrained(model_id).await?;
         let model_name = model_id.to_string();
 
         Ok(Self {
@@ -731,23 +794,21 @@ impl OnnxEmbeddingProvider {
         model_name: String,
         max_length: usize,
     ) -> Result<Self> {
-        use ort::session::Session;
-        
+        use crate::embedding::ort_compat::create_session_from_file;
+
         // Detect Apple Silicon and configure providers
-        let session = if Self::is_apple_silicon() {
+        if Self::is_apple_silicon() {
             info!("Detected Apple Silicon - using CoreMLExecutionProvider for ANE acceleration");
-            // PLACEHOLDER: CoreML EP setup needs verification of ort 2.0 RC API
-            // Try to enable CoreML with ANE
-            Session::builder()?
-                .commit_from_file(model_path)?
         } else {
             info!("Non-Apple Silicon system - using CPUExecutionProvider");
-            Session::builder()?
-                .commit_from_file(model_path)?
-        };
-        
+        }
+
+        // Create session using compatibility layer (handles API differences)
+        let session = create_session_from_file(&model_path)
+            .context("Failed to create ONNX Runtime session")?;
+
         info!("ONNX Runtime session created successfully");
-        
+
         Ok(Self {
             session: std::sync::Mutex::new(session),
             tokenizer,
@@ -756,7 +817,7 @@ impl OnnxEmbeddingProvider {
             model_name,
         })
     }
-    
+
     /// Check if running on Apple Silicon
     fn is_apple_silicon() -> bool {
         #[cfg(target_arch = "aarch64")]
@@ -768,50 +829,59 @@ impl OnnxEmbeddingProvider {
             false
         }
     }
-    
+
     /// Generate embeddings using ONNX Runtime
     async fn run_onnx_inference(&self, input_ids: &[i64]) -> Result<Vec<f32>> {
+        use crate::embedding::ort_compat::{array2_to_vec, ort_error_to_anyhow};
+        use ndarray::Array2;
         use ort::inputs;
         use ort::value::Value;
-        use ndarray::Array2;
-        
+
         // Prepare input tensor [batch_size, sequence_length]
         let batch_size = 1;
         let sequence_length = input_ids.len();
-        let input_array = Array2::from_shape_vec(
-            (batch_size, sequence_length),
-            input_ids.to_vec(),
-        )?;
-        
-        // Create Value from ndarray (ort expects Value type)
-        let input_value = Value::from_array(input_array)?;
-        
+        let input_array =
+            Array2::from_shape_vec((batch_size, sequence_length), input_ids.to_vec())?;
+
+        // Convert Array2 to Vec (ort's Value::from_array requires OwnedTensorArrayData)
+        let input_vec = array2_to_vec(&input_array);
+        let shape = vec![batch_size as i64, sequence_length as i64];
+
+        // Create Value from Vec (ort API expects (shape, data) tuple)
+        let input_value = Value::from_array((shape, input_vec)).map_err(ort_error_to_anyhow)?;
+
         // Run inference - inputs! macro returns Vec directly (no ? operator)
         let input_map = inputs!["input_ids" => input_value];
-        let mut session_guard = self.session.lock().map_err(|e| anyhow::anyhow!("Failed to lock session: {:?}", e))?;
-        let outputs = session_guard.run(input_map)?;
-        
+        let mut session_guard = self
+            .session
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Failed to lock session: {:?}", e))?;
+        let outputs = session_guard.run(input_map).map_err(ort_error_to_anyhow)?;
+
         // Extract output tensor (embeddings)
         // try_extract_tensor returns (&Shape, &[f32]) tuple
         let (output_shape, output_data) = outputs["embeddings"]
             .try_extract_tensor::<f32>()
-            .map_err(|e| anyhow::anyhow!("Failed to extract output tensor: {:?}", e))?;
-        
+            .map_err(ort_error_to_anyhow)?;
+
         // Parse shape - output is [batch_size, sequence_length, hidden_dim]
         // Shape implements IntoIterator, so we can collect it
         let shape_dims: Vec<i64> = output_shape.iter().copied().collect();
         if shape_dims.len() != 3 {
-            return Err(anyhow::anyhow!("Expected 3D output tensor, got shape: {:?}", shape_dims));
+            return Err(anyhow::anyhow!(
+                "Expected 3D output tensor, got shape: {:?}",
+                shape_dims
+            ));
         }
-        
+
         let _batch_size = shape_dims[0] as usize;
         let seq_len = shape_dims[1] as usize;
         let hidden_dim = shape_dims[2] as usize;
-        
+
         // Mean pooling: average across sequence length
         // output_data is flattened, so we need to index it correctly
         let mut embedding = vec![0.0; hidden_dim];
-        
+
         for i in 0..hidden_dim {
             let mut sum = 0.0;
             for j in 0..seq_len {
@@ -821,7 +891,7 @@ impl OnnxEmbeddingProvider {
             }
             embedding[i] = sum / seq_len as f32;
         }
-        
+
         Ok(embedding)
     }
 }
@@ -868,24 +938,24 @@ impl EmbeddingProvider for SafeTensorsEmbeddingProvider {
 impl EmbeddingProvider for OnnxEmbeddingProvider {
     async fn generate_embeddings(&self, texts: &[String]) -> Result<Vec<EmbeddingVector>> {
         let mut embeddings = Vec::with_capacity(texts.len());
-        
+
         for text in texts {
             // Tokenize
             let tokens = self.tokenizer.encode(text).await?;
-            
+
             // Truncate if necessary
             let tokens = if tokens.len() > self.max_length {
                 tokens[..self.max_length].to_vec()
             } else {
                 tokens
             };
-            
+
             // Convert to i64 for ONNX Runtime (token IDs are integers)
             let input_ids: Vec<i64> = tokens.iter().map(|&x| x as i64).collect();
-            
+
             // Run ONNX inference
             let embedding_values = self.run_onnx_inference(&input_ids).await?;
-            
+
             // Normalize embedding to unit vector
             let norm = embedding_values.iter().map(|x| x * x).sum::<f32>().sqrt();
             let normalized: Vec<f32> = if norm > 0.0 {
@@ -893,10 +963,10 @@ impl EmbeddingProvider for OnnxEmbeddingProvider {
             } else {
                 embedding_values
             };
-            
+
             embeddings.push(EmbeddingVector::from_values(normalized));
         }
-        
+
         Ok(embeddings)
     }
 
@@ -944,6 +1014,9 @@ pub struct ClipEmbeddingProvider {
     variant: ClipModelVariant,
     model_name: String,
     dimension: usize,
+    // Reserved for v4: Model path will be used when lazy loading is implemented
+    // See load_clip_model_from_path() for future implementation
+    #[allow(dead_code)]
     model_path: Option<PathBuf>,
 }
 
@@ -960,10 +1033,22 @@ impl ClipEmbeddingProvider {
 
         // Get model ID and tokenizer name based on variant
         let (_model_id, tokenizer_name) = match variant {
-            ClipModelVariant::VitB32 => ("openai/clip-vit-base-patch32", "openai/clip-vit-base-patch32"),
-            ClipModelVariant::VitB16 => ("openai/clip-vit-base-patch16", "openai/clip-vit-base-patch16"),
-            ClipModelVariant::VitL14 => ("openai/clip-vit-large-patch14", "openai/clip-vit-large-patch14"),
-            ClipModelVariant::VitL14336 => ("openai/clip-vit-large-patch14-336", "openai/clip-vit-large-patch14-336"),
+            ClipModelVariant::VitB32 => (
+                "openai/clip-vit-base-patch32",
+                "openai/clip-vit-base-patch32",
+            ),
+            ClipModelVariant::VitB16 => (
+                "openai/clip-vit-base-patch16",
+                "openai/clip-vit-base-patch16",
+            ),
+            ClipModelVariant::VitL14 => (
+                "openai/clip-vit-large-patch14",
+                "openai/clip-vit-large-patch14",
+            ),
+            ClipModelVariant::VitL14336 => (
+                "openai/clip-vit-large-patch14-336",
+                "openai/clip-vit-large-patch14-336",
+            ),
         };
 
         // Try to load tokenizer from HuggingFace cache or download
@@ -975,7 +1060,10 @@ impl ClipEmbeddingProvider {
                 if let Ok(tokenizer_path) = repo.get("tokenizer.json") {
                     match tokenizers::Tokenizer::from_file(&tokenizer_path) {
                         Ok(tok) => {
-                            info!("Loaded CLIP tokenizer from HuggingFace cache: {}", tokenizer_name);
+                            info!(
+                                "Loaded CLIP tokenizer from HuggingFace cache: {}",
+                                tokenizer_name
+                            );
                             tok
                         }
                         Err(e) => {
@@ -1001,11 +1089,9 @@ impl ClipEmbeddingProvider {
 
         // Model will be loaded lazily on first use (async loading required)
         let model = None;
-        
+
         // Try to get model path from environment or HuggingFace cache
-        let model_path = std::env::var("CLIP_MODEL_PATH")
-            .ok()
-            .map(PathBuf::from);
+        let model_path = std::env::var("CLIP_MODEL_PATH").ok().map(PathBuf::from);
 
         Ok(Self {
             model,
@@ -1026,8 +1112,8 @@ impl ClipEmbeddingProvider {
     /// Create a basic tokenizer fallback
     fn create_basic_tokenizer() -> Result<tokenizers::Tokenizer> {
         use tokenizers::models::wordpiece::WordPiece;
-        use tokenizers::pre_tokenizers::whitespace::Whitespace;
         use tokenizers::normalizers::strip::Strip;
+        use tokenizers::pre_tokenizers::whitespace::Whitespace;
         use tokenizers::processors::roberta::RobertaProcessing;
 
         let wordpiece = WordPiece::builder()
@@ -1039,16 +1125,17 @@ impl ClipEmbeddingProvider {
         let mut tok = tokenizers::Tokenizer::new(wordpiece);
         tok.with_pre_tokenizer(Whitespace::default());
         tok.with_normalizer(Strip::new(true, true));
-        tok.with_post_processor(
-            RobertaProcessing::new(
-                ("</s>".to_string(), 2),
-                ("</s>".to_string(), 2)
-            )
-        );
+        tok.with_post_processor(RobertaProcessing::new(
+            ("</s>".to_string(), 2),
+            ("</s>".to_string(), 2),
+        ));
         Ok(tok)
     }
 
     /// Load CLIP model from HuggingFace or local path
+    /// Reserved for v4: CLIP model loading requires API migration
+    /// See PLACEHOLDER comments in implementation for details
+    #[allow(dead_code)]
     async fn load_clip_model(
         model_id: &str,
         device: &Device,
@@ -1065,26 +1152,49 @@ impl ClipEmbeddingProvider {
         // Try to load from HuggingFace Hub
         let api = Api::new()?;
         let repo = api.model(model_id.to_string());
-        
+
         // Load config - CLIP config structure varies by model, we'll construct it from JSON
         let config_filename = "config.json";
         let config_path = repo.get(config_filename)?;
         let config_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&config_path)?)?;
-        
-        // Extract config values needed for ClipModel::new()
-        // Note: candle-transformers 0.9 requires constructing config manually or using defaults
-        // For now, we'll use a simplified approach - CLIP models may need model-specific config handling
-        
+
+        // TODO: Implement CLIP config construction from config.json
+        //       candle-transformers 0.9 API requires manual config construction. Currently returns error.
+        //       Should parse config.json and construct ClipConfig properly.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Parse config.json into ClipConfig structure
+        // [ ] Extract required fields (image_size, vision_config, text_config, etc.)
+        // [ ] Handle model-specific config variations
+        // [ ] Construct ClipModel with proper config and weights
+        // [ ] Create VarBuilder from safetensors weights
+        // [ ] Add unit tests with various CLIP model configs
+        // [ ] Add integration tests with real CLIP model loading
+        //
+        // ACCEPTANCE CRITERIA:
+        // - CLIP models load successfully with parsed config
+        // - Config parsing handles model-specific variations
+        // - Errors provide helpful guidance when config is invalid
+        //
+        // DEPENDENCIES:
+        // - candle-transformers ClipConfig API (Required)
+        // - Config JSON structure understanding (Required)
+        //
+        // ESTIMATED EFFORT: 4-6 hours
+        // PRIORITY: Medium
+        // BLOCKING: No (CLIP models return error, other providers work)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (model loading functionality)
+        // - Change Budget: ~150 LOC
+        // Note: VarBuilder would be created with: VarBuilder::from_safetensors(&weights, candle_core::DType::F32, device)
+
         // Load model weights (safetensors format)
         let model_filename = "model.safetensors";
         let model_path = repo.get(model_filename)?;
         let weights_bytes = std::fs::read(&model_path)?;
         let _weights = safetensors::SafeTensors::deserialize(&weights_bytes)?;
 
-        // PLACEHOLDER: CLIP config construction - candle-transformers 0.9 API requires manual config
-        // This is a simplified approach - full implementation would parse config.json properly
-        // For now, return error indicating manual config needed
-        // Note: VarBuilder would be created with: VarBuilder::from_safetensors(&weights, candle_core::DType::F32, device)
         return Err(anyhow::anyhow!(
             "CLIP model loading requires manual config construction. Config JSON: {:?}. \
              Please implement proper ClipConfig construction from config.json or use a different embedding provider.",
@@ -1093,13 +1203,17 @@ impl ClipEmbeddingProvider {
     }
 
     /// Load CLIP model from local path
+    /// Reserved for v4: CLIP model loading requires API migration
+    /// See PLACEHOLDER comments in implementation for details
+    #[allow(dead_code)]
     async fn load_clip_model_from_path(
         path: &PathBuf,
         _device: &Device,
     ) -> Result<ClipModelWrapper> {
         // Load config
         let config_path = path.join("config.json");
-        let config_json: serde_json::Value = serde_json::from_slice(&tokio::fs::read(&config_path).await?)?;
+        let config_json: serde_json::Value =
+            serde_json::from_slice(&tokio::fs::read(&config_path).await?)?;
 
         // Load model weights
         let model_path = path.join("model.safetensors");
@@ -1143,15 +1257,15 @@ impl ClipEmbeddingProvider {
         for text in texts {
             // Tokenize text - convert &String to &str
             let text_str: &str = text.as_str();
-            let encoding = self.tokenizer
+            let encoding = self
+                .tokenizer
                 .encode(text_str, true)
                 .map_err(|e| anyhow::anyhow!("Tokenization failed: {}", e))?;
-            
+
             let token_ids: Vec<u32> = encoding.get_ids().iter().map(|&id| id as u32).collect();
-            
+
             // Convert to tensor
-            let _tokens = Tensor::new(token_ids.as_slice(), &model_wrapper.device)?
-                .unsqueeze(0)?; // Add batch dimension
+            let _tokens = Tensor::new(token_ids.as_slice(), &model_wrapper.device)?.unsqueeze(0)?; // Add batch dimension
 
             // PLACEHOLDER: CLIP text model forward pass
             // candle-transformers 0.9 ClipModel API changed - text_model() is private
@@ -1185,19 +1299,19 @@ impl EmbeddingProvider for ClipEmbeddingProvider {
     async fn health_check(&self) -> Result<bool> {
         // Check if tokenizer is available
         let tokenizer_ok = self.tokenizer.encode("health check test", true).is_ok();
-        
+
         // Check if model is loaded
         let model_ok = self.model.is_some();
-        
+
         if !tokenizer_ok {
             warn!("CLIP provider health check failed: tokenizer error");
             return Ok(false);
         }
-        
+
         if !model_ok {
             warn!("CLIP provider health check: model not loaded (will be loaded on first use)");
         }
-        
+
         Ok(true)
     }
 }

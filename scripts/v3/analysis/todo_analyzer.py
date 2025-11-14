@@ -1672,9 +1672,9 @@ class HiddenTodoAnalyzer:
             dependencies['caws_tier'] = int(tier_match.group(1))
         
         # Look for PRIORITY
-        priority_match = re.search(r'PRIORITY:\s*{Critical|High|Medium|Low}', todo_text)
+        priority_match = re.search(r'PRIORITY:\s*(Critical|High|Medium|Low)(?:[^\n]*)?', todo_text)
         if priority_match:
-            dependencies['priority'] = priority_match.group(0).split(':')[1].strip()
+            dependencies['priority'] = priority_match.group(1).strip()
         
         # Look for ESTIMATED EFFORT
         effort_match = re.search(r'ESTIMATED EFFORT:\s*([^\\n]+)', todo_text)

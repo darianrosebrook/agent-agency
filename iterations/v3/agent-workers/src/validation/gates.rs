@@ -1,10 +1,10 @@
 //! Quality gates and validation framework
 
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
 use crate::parallel_types::*;
-use crate::{ValidationResult, ValidationContext};
+use crate::{ValidationContext, ValidationResult};
 use async_trait::async_trait;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// Quality gate definition
 pub struct QualityGate {
@@ -32,7 +32,35 @@ impl Clone for QualityGate {
     }
 }
 
-/// Dummy validator for cloning - this is a workaround
+/// TODO: Fix cloning limitation for QualityGate with trait object validators
+///       QualityGate needs Clone but validators are trait objects which can't be cloned.
+///       Currently uses dummy validator as workaround; should refactor to support proper cloning.
+///
+/// COMPLETION CHECKLIST:
+/// [ ] Refactor QualityGate to avoid Clone requirement OR
+/// [ ] Use Arc<dyn QualityValidatorTrait> to enable cloning OR
+/// [ ] Use enum-based validators instead of trait objects
+/// [ ] Remove dummy validator workaround
+/// [ ] Add unit tests with cloned quality gates
+/// [ ] Add integration tests with validation scenarios
+///
+/// ACCEPTANCE CRITERIA:
+/// - QualityGate can be cloned properly
+/// - Cloned gates maintain validator behavior
+/// - No dummy validators in production code
+///
+/// DEPENDENCIES:
+/// - QualityGate design refactoring (Required)
+///
+/// ESTIMATED EFFORT: 3-4 hours
+/// PRIORITY: Low
+/// BLOCKING: No (workaround exists)
+///
+/// GOVERNANCE:
+/// - CAWS Tier: 3 (design refactoring)
+/// - Change Budget: ~100 LOC
+
+/// Dummy validator for cloning - temporary workaround
 struct DummyValidator;
 
 #[async_trait::async_trait]
@@ -79,7 +107,10 @@ impl QualityGate {
             Err(_) => crate::ValidationResult::Fail {
                 score: 0.0,
                 details: format!("Validation timeout after {} seconds", self.timeout_seconds),
-                suggestions: vec!["Increase timeout".to_string(), "Check validator implementation".to_string()],
+                suggestions: vec![
+                    "Increase timeout".to_string(),
+                    "Check validator implementation".to_string(),
+                ],
             },
         }
     }
@@ -111,10 +142,7 @@ impl QualityGateRunner {
     }
 
     /// Run all quality gates
-    pub async fn run_all_gates(
-        &self,
-        context: &ValidationContext,
-    ) -> Vec<GateResult> {
+    pub async fn run_all_gates(&self, context: &ValidationContext) -> Vec<GateResult> {
         let mut results = Vec::new();
 
         for gate in &self.gates {
@@ -147,9 +175,7 @@ impl QualityGateRunner {
         let total_gates = results.len();
         let passed_gates = results.iter().filter(|r| r.passes).count();
         let failed_gates = total_gates - passed_gates;
-        let blocking_failures = results.iter()
-            .filter(|r| r.blocking && !r.passes)
-            .count();
+        let blocking_failures = results.iter().filter(|r| r.blocking && !r.passes).count();
 
         let overall_score = if total_gates > 0 {
             passed_gates as f32 / total_gates as f32
@@ -210,10 +236,10 @@ pub struct GateSummary {
 pub mod presets {
     use super::*;
     use crate::validation::CompilationValidator;
-    use crate::validation::TestValidator;
     use crate::validation::LintValidator;
-    use crate::validation::SecurityValidator;
     use crate::validation::PerformanceValidator;
+    use crate::validation::SecurityValidator;
+    use crate::validation::TestValidator;
 
     /// Create compilation quality gate
     pub fn compilation_gate() -> QualityGate {
@@ -221,7 +247,7 @@ pub mod presets {
             "compilation".to_string(),
             "Ensures code compiles without errors".to_string(),
             CompilationValidator,
-            1.0, // Must pass completely
+            1.0,  // Must pass completely
             true, // Blocking
         )
     }
@@ -231,8 +257,8 @@ pub mod presets {
         QualityGate::new(
             "testing".to_string(),
             format!("Ensures test coverage meets {}%", min_coverage * 100.0),
-TestValidator::new(min_coverage),
-            1.0, // Must pass
+            TestValidator::new(min_coverage),
+            1.0,  // Must pass
             true, // Blocking
         )
     }
@@ -242,8 +268,8 @@ TestValidator::new(min_coverage),
         QualityGate::new(
             "linting".to_string(),
             "Ensures code passes linting checks".to_string(),
-LintValidator,
-            1.0, // Must pass completely
+            LintValidator,
+            1.0,   // Must pass completely
             false, // Not blocking
         )
     }
@@ -253,8 +279,8 @@ LintValidator,
         QualityGate::new(
             "security".to_string(),
             "Ensures code passes security checks".to_string(),
-SecurityValidator,
-            1.0, // Must pass completely
+            SecurityValidator,
+            1.0,  // Must pass completely
             true, // Blocking
         )
     }
@@ -264,8 +290,8 @@ SecurityValidator,
         QualityGate::new(
             "performance".to_string(),
             format!("Ensures performance within {}ms", max_response_time_ms),
-PerformanceValidator::new(max_response_time_ms),
-            0.8, // 80% acceptable
+            PerformanceValidator::new(max_response_time_ms),
+            0.8,   // 80% acceptable
             false, // Not blocking
         )
     }
@@ -282,9 +308,7 @@ PerformanceValidator::new(max_response_time_ms),
 
     /// Create minimal quality gates (fast feedback)
     pub fn minimal_gates() -> Vec<QualityGate> {
-        vec![
-            compilation_gate(),
-        ]
+        vec![compilation_gate()]
     }
 
     /// Create comprehensive quality gates (slow but thorough)

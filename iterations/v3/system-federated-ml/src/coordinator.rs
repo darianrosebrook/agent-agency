@@ -444,7 +444,11 @@ pub struct RoundInfo {
 }
 
 
-// Placeholder types for dependencies that will be implemented in other modules
+// TODO: Verify all dependency types are properly implemented
+//       These are type imports for dependencies that should be implemented in other modules.
+//       Ensure all referenced types are available and properly implemented.
+//
+// Dependency types for coordinator module
 use crate::aggregation::SecureAggregator;
 use crate::protocol::{FederationProtocol, ProtocolMessage};
 use crate::participant::FederationParticipant;
