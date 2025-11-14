@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import {
   CheckCircle2,
@@ -77,22 +77,8 @@ export function RadialTaskProgress({
     return value.toFixed(decimals);
   };
 
-  // Create stable ref callback factory using useCallback
-  // This prevents infinite loops by ensuring ref callbacks don't change on every render
-  const createSegmentRef = useCallback((index: number) => {
-    return (el: SVGPathElement | null) => {
-      // Only update if the element actually changed
-      if (el) {
-        segmentsRef.current[index] = el;
-      } else if (segmentsRef.current[index]) {
-        // Clean up when element is removed, but don't set to undefined
-        // as that could cause issues with array length checks
-        segmentsRef.current[index] = undefined as any;
-      }
-    };
-  }, []);
-
   // Memoize segments to ensure consistent generation between server and client
+  // Note: Refs are collected in useEffect to prevent infinite loops
   const segments = useMemo(() => {
     const segmentList = [];
     const segmentAngle = 360 / totalSegments;
@@ -101,11 +87,6 @@ export function RadialTaskProgress({
     const innerRadius = 70;
     const centerX = 120;
     const centerY = 120;
-
-    // Initialize segmentsRef array to correct size if needed
-    if (segmentsRef.current.length !== totalSegments) {
-      segmentsRef.current = new Array(totalSegments);
-    }
 
     for (let i = 0; i < totalSegments; i++) {
       const startAngle = i * segmentAngle - 90; // Start from top
@@ -143,7 +124,7 @@ export function RadialTaskProgress({
       segmentList.push(
         <path
           key={i}
-          ref={createSegmentRef(i)}
+          data-segment-index={i}
           d={pathData}
           fill={i < completedSegments ? "#fafafa" : "#454545"}
         />
@@ -151,7 +132,22 @@ export function RadialTaskProgress({
     }
 
     return segmentList;
-  }, [totalSegments, completedSegments, createSegmentRef]);
+  }, [totalSegments, completedSegments]);
+
+  // Collect refs in useEffect to prevent infinite loops
+  // This runs after render, so it doesn't trigger re-renders
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    // Query all segment paths and store refs in correct order
+    const paths = svgRef.current.querySelectorAll<SVGPathElement>('[data-segment-index]');
+    const sortedPaths = Array.from(paths).sort((a, b) => {
+      const indexA = parseInt(a.getAttribute('data-segment-index') || '0', 10);
+      const indexB = parseInt(b.getAttribute('data-segment-index') || '0', 10);
+      return indexA - indexB;
+    });
+    segmentsRef.current = sortedPaths;
+  }, [segments]);
 
   // Animate segments with GSAP when progress changes
   useEffect(() => {
