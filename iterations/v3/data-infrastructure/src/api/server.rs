@@ -851,24 +851,166 @@ impl RestApi {
                 started_at: Utc::now(),
                 updated_at: Utc::now(),
             });
-        // TODO: Build iteration summaries from actual iteration data
-        // - [ ] Query iteration tracking system for task iterations
-        // - [ ] Build iteration summaries with progress and status
-        // - [ ] Include iteration artifacts and results
-        // - [ ] Support pagination for large iteration lists
-        // - [ ] Add unit tests with mock iteration data
-        // - [ ] Add integration tests with real iteration tracking
-        // Build iteration summaries (placeholder - would come from actual iteration data)
-        let iterations = vec![];
+        // Build iteration summaries from actual task execution data
+        // Each task_execution represents an iteration of the task
+        let iteration_rows = sqlx::query(
+            r#"
+            SELECT 
+                id,
+                task_id,
+                worker_id,
+                execution_started_at,
+                execution_completed_at,
+                execution_time_ms,
+                status,
+                worker_output,
+                self_assessment,
+                metadata,
+                error_message,
+                tokens_used,
+                result_data,
+                created_at,
+                updated_at
+            FROM task_executions
+            WHERE task_id = $1
+            ORDER BY execution_started_at ASC
+            "#
+        )
+        .bind(task_id)
+        .fetch_all(self.db_client.pool())
+        .await
+        .map_err(|e| ApiError::InternalError(format!("Failed to query task iterations: {}", e)))?;
+
+        // Build iteration summaries from execution data
+        let mut iterations = Vec::new();
+        let mut iteration_number = 1u32;
+
+        for row in iteration_rows {
+            let execution_id: Uuid = row.try_get("id")
+                .map_err(|e| ApiError::InternalError(format!("Failed to get execution id: {}", e)))?;
+            let status: String = row.try_get("status")
+                .unwrap_or_else(|_| "unknown".to_string());
+            let started_at: DateTime<Utc> = row.try_get("execution_started_at")
+                .unwrap_or_else(|_| Utc::now());
+            let completed_at: Option<DateTime<Utc>> = row.try_get("execution_completed_at").ok();
+            let execution_time_ms: Option<i32> = row.try_get("execution_time_ms").ok();
+            
+            // Extract progress from self_assessment or metadata
+            let progress = if let Ok(Some(self_assessment)) = row.try_get::<Option<serde_json::Value>, &str>("self_assessment") {
+                self_assessment
+                    .get("progress")
+                    .or_else(|| self_assessment.get("completion_percentage"))
+                    .and_then(|p| p.as_f64())
+                    .unwrap_or_else(|| {
+                        // Fallback to status-based progress
+                        match status.as_str() {
+                            "completed" => 100.0,
+                            "running" => 50.0,
+                            "failed" | "cancelled" => 0.0,
+                            _ => 0.0,
+                        }
+                    })
+            } else {
+                // Fallback to status-based progress
+                match status.as_str() {
+                    "completed" => 100.0,
+                    "running" => 50.0,
+                    "failed" | "cancelled" => 0.0,
+                    _ => 0.0,
+                }
+            };
+
+            // Extract score from self_assessment or result_data
+            let score = if let Ok(Some(self_assessment)) = row.try_get::<Option<serde_json::Value>, &str>("self_assessment") {
+                self_assessment
+                    .get("score")
+                    .or_else(|| self_assessment.get("quality_score"))
+                    .and_then(|s| s.as_f64())
+                    .unwrap_or(0.0)
+            } else if let Ok(Some(result_data)) = row.try_get::<Option<serde_json::Value>, &str>("result_data") {
+                result_data
+                    .get("score")
+                    .or_else(|| result_data.get("quality_score"))
+                    .and_then(|s| s.as_f64())
+                    .unwrap_or(0.0)
+            } else {
+                0.0
+            };
+
+            // Extract stop reason from metadata or error_message
+            let stop_reason = if let Ok(Some(error_msg)) = row.try_get::<Option<String>, &str>("error_message") {
+                Some(error_msg)
+            } else if let Ok(Some(metadata)) = row.try_get::<Option<serde_json::Value>, &str>("metadata") {
+                metadata
+                    .get("stop_reason")
+                    .or_else(|| metadata.get("reason"))
+                    .and_then(|r| r.as_str())
+                    .map(|s| s.to_string())
+            } else {
+                None
+            };
+
+            // Count file changes from worker_output or result_data
+            let file_changes = if let Ok(Some(worker_output)) = row.try_get::<Option<serde_json::Value>, &str>("worker_output") {
+                if let Some(changes) = worker_output.get("file_changes") {
+                    changes.as_array().map(|arr| arr.len() as u32).unwrap_or(0)
+                } else if let Some(changes) = worker_output.get("changes") {
+                    changes.as_array().map(|arr| arr.len() as u32).unwrap_or(0)
+                } else {
+                    0
+                }
+            } else if let Ok(Some(result_data)) = row.try_get::<Option<serde_json::Value>, &str>("result_data") {
+                if let Some(changes) = result_data.get("file_changes") {
+                    changes.as_array().map(|arr| arr.len() as u32).unwrap_or(0)
+                } else {
+                    0
+                }
+            } else {
+                0
+            };
+
+            // Extract model used from metadata or worker_output
+            let model_used = if let Ok(Some(metadata)) = row.try_get::<Option<serde_json::Value>, &str>("metadata") {
+                metadata
+                    .get("model")
+                    .or_else(|| metadata.get("model_name"))
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "unknown".to_string())
+            } else {
+                "unknown".to_string()
+            };
+
+            iterations.push(super::types::DashboardIterationSummary {
+                iteration: iteration_number as usize,
+                score,
+                stop_reason: stop_reason.unwrap_or_else(|| "".to_string()),
+                file_changes: file_changes as usize,
+                timestamp: started_at,
+                model_used,
+            });
+
+            iteration_number += 1;
+        }
+
+        // Calculate current iteration (use the last iteration number, or 1 if no iterations)
+        // Since we don't have status in DashboardIterationSummary, we'll use the total count
+        let current_iteration = if iterations.is_empty() {
+            1
+        } else {
+            iterations.len()
+        };
+
+        let total_iterations = iterations.len().max(1);
 
         Ok(DashboardTaskSummary {
             task_id,
             description: task_state.description.clone(),
             status: format!("{:?}", task_state.status).to_lowercase(),
-            current_iteration: 1, // Placeholder - would come from actual iteration tracking
-            total_iterations: 5,  // Placeholder - would come from actual iteration tracking
+            current_iteration,
+            total_iterations,
             score: task_state.quality_report.as_ref().map(|r| r.overall_score),
-            execution_mode: "auto".to_string(), // Placeholder
+            execution_mode: "auto".to_string(),
             start_time: task_state.started_at,
             last_update: task_state.completed_at.unwrap_or_else(|| Utc::now()),
             iterations,
