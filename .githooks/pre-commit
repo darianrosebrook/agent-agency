@@ -1,56 +1,61 @@
 #!/bin/bash
 
-# CAWS Pre-commit Hook - Hidden TODO Analyzer + Quality Gates (Waiver-Aware)
+# CAWS Pre-commit Hook - Quality Gates with Waiver Support
 # @author @darianrosebrook
+# Uses .mjs todo-analyzer through quality gates runner (waiver-aware)
+# Replaces Python analyzer which doesn't check waivers
 
-echo "🔍 CAWS Pre-commit Hook: Running quality checks..."
+echo "🚦 Running CAWS Quality Gates (Pre-commit Mode)..."
 
 # Get staged files that are being committed
-STAGED_FILES=$(git diff --cached --name-only | tr '\n' ' ')
+STAGED_FILES=$(git diff --cached --name-only)
 
 if [ -z "$STAGED_FILES" ]; then
     echo "ℹ️  No files staged for commit"
     exit 0
 fi
 
-echo "📁 Files to check: $STAGED_FILES"
-
-# Check if Python is available
-if ! command -v python3 &> /dev/null; then
-    echo "⚠️  Python3 not found - skipping hidden TODO check"
-else
-    # Check if the analyzer script exists
-    if [ -f "iterations/v3/scripts/todo_analyzer.py" ]; then
-        # Run the analyzer in warn-only mode
-        echo "🔍 Running hidden TODO analysis..."
-        cd iterations/v3
-        python3 scripts/todo_analyzer.py --files $STAGED_FILES --warn-only --verbose
-        cd ../..
-    else
-        echo "⚠️  TODO analyzer script not found - skipping check"
-    fi
-fi
-
-# Run CAWS quality gates with waiver recognition (warn-only mode for pre-commit)
+# Run CAWS quality gates with waiver recognition
+# This uses the .mjs todo-analyzer which respects CAWS waivers
 if [ -f "scripts/quality-gates/run-quality-gates.mjs" ]; then
-    echo "🔍 Running CAWS quality gates (waiver-aware)..."
-    
     # Check if Node.js is available
     if command -v node &> /dev/null; then
-        # Run quality gates in commit context (warns but doesn't block)
-        node scripts/quality-gates/run-quality-gates.mjs --context commit --quiet || {
-            echo ""
-            echo "⚠️  QUALITY GATE VIOLATIONS DETECTED"
-            echo "   The commit will proceed, but please review the violations above"
-            echo "   Waived violations are allowed and logged for audit"
-            echo "   You can bypass this check with: git commit --no-verify"
-        }
+        # Check if dependencies are installed
+        if [ ! -d "node_modules" ] || [ ! -f "node_modules/js-yaml/package.json" ]; then
+            echo "⚠️  Quality gates dependencies not installed"
+            echo "💡 Run 'npm install' to enable quality checking"
+            echo "💡 Proceeding with commit (dependencies missing)"
+            exit 0
+        fi
+        
+        # Run quality gates in commit context (blocks on unwaived violations)
+        # The quality gates runner uses .mjs todo-analyzer which checks waivers
+        if node scripts/quality-gates/run-quality-gates.mjs --context commit 2>&1; then
+            echo "✅ Quality gates passed"
+            exit 0
+        else
+            EXIT_CODE=$?
+            # Check if it's a dependency error vs actual violations
+            if [ $EXIT_CODE -eq 1 ]; then
+                echo ""
+                echo "❌ Quality gate violations detected - commit blocked"
+                echo "💡 Fix the violations above before committing"
+                echo "💡 Waived violations are allowed (check .caws/waivers/active-waivers.yaml)"
+                echo "💡 You can bypass this check with: git commit --no-verify"
+            else
+                echo ""
+                echo "⚠️  Quality gates script error (exit code: $EXIT_CODE)"
+                echo "💡 This may be a dependency issue - run 'npm install'"
+                echo "💡 Proceeding with commit (script error)"
+            fi
+            exit $EXIT_CODE
+        fi
     else
         echo "⚠️  Node.js not found - skipping quality gates check"
+        echo "💡 Install Node.js to enable automatic quality checking"
+        exit 0
     fi
 else
     echo "⚠️  Quality gates script not found - skipping check"
+    exit 0
 fi
-
-echo "✅ Pre-commit checks completed"
-exit 0
