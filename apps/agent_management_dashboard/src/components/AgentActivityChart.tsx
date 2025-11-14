@@ -46,12 +46,25 @@ export function AgentActivityChart({
         startDate.setDate(startDate.getDate() - days);
         const startDateStr = startDate.toISOString().split("T")[0];
 
-        const [activity, agentsList] = await Promise.all([
+        const [activityResponse, agentsListResponse] = await Promise.all([
           getAgentActivity({
             start_date: startDateStr,
           }),
           getAgents(),
         ]);
+
+        // Safely extract arrays
+        const activity = Array.isArray(activityResponse?.activity)
+          ? activityResponse.activity
+          : Array.isArray(activityResponse)
+          ? activityResponse
+          : [];
+        
+        const agentsList = Array.isArray(agentsListResponse?.agents)
+          ? agentsListResponse.agents
+          : Array.isArray(agentsListResponse)
+          ? agentsListResponse
+          : [];
 
         setActivityData(activity);
         setAgents(agentsList);
@@ -73,14 +86,18 @@ export function AgentActivityChart({
 
   // Transform activity data into chart format
   const chartData = useMemo(() => {
-    if (activityData.length === 0 || agents.length === 0) {
+    // Ensure both are arrays before checking length
+    const safeActivityData = Array.isArray(activityData) ? activityData : [];
+    const safeAgents = Array.isArray(agents) ? agents : [];
+    
+    if (safeActivityData.length === 0 || safeAgents.length === 0) {
       return [];
     }
 
     // Group activity by timestamp and agent
     const activityMap: Record<string, Record<string, number>> = {};
 
-    activityData.forEach((point) => {
+    safeActivityData.forEach((point) => {
       const timestamp = point.timestamp.split("T")[0]; // Use date only
       if (!activityMap[timestamp]) {
         activityMap[timestamp] = {};
@@ -95,7 +112,7 @@ export function AgentActivityChart({
     const dataPoints: ActivityDataPoint[] = Object.entries(activityMap).map(
       ([timestamp, agentCounts]) => {
         const dataPoint: ActivityDataPoint = { timestamp };
-        agents.forEach((agent) => {
+        safeAgents.forEach((agent) => {
           dataPoint[agent.id] = agentCounts[agent.id] || 0;
         });
         return dataPoint;

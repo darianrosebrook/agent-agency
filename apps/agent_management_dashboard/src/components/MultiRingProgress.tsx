@@ -40,8 +40,9 @@ export function MultiRingProgress({
         // If no projectId provided, get the first project
         if (!targetProjectId) {
           const projects = await listProjects();
-          if (projects.projects.length > 0) {
-            targetProjectId = projects.projects[0].project_id;
+          const projectsArray = Array.isArray(projects?.projects) ? projects.projects : [];
+          if (projectsArray.length > 0) {
+            targetProjectId = projectsArray[0].project_id;
             setCurrentProjectId(targetProjectId);
           } else {
             setMilestones([]);

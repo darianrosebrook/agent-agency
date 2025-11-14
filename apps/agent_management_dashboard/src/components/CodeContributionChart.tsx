@@ -40,9 +40,16 @@ export function CodeContributionChart({
         startDate.setDate(startDate.getDate() - days);
         const startDateStr = startDate.toISOString().split("T")[0];
 
-        const contributions = await getContributions({
+        const contributionsResponse = await getContributions({
           start_date: startDateStr,
         });
+
+        // Safely extract contributions array
+        const contributions = Array.isArray(contributionsResponse?.contributions)
+          ? contributionsResponse.contributions
+          : Array.isArray(contributionsResponse)
+          ? contributionsResponse
+          : [];
 
         // Transform API response to chart data format
         // Group by day and aggregate contributions

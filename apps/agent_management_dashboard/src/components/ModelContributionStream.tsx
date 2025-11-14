@@ -40,7 +40,14 @@ export function ModelContributionStream({
       setError(null);
 
       try {
-        const modelContributions = await getModelContributions();
+        const modelContributionsResponse = await getModelContributions();
+
+        // Safely extract modelContributions array
+        const modelContributions = Array.isArray(modelContributionsResponse?.contributions)
+          ? modelContributionsResponse.contributions
+          : Array.isArray(modelContributionsResponse)
+          ? modelContributionsResponse
+          : [];
 
         // Transform API response to stream chart format
         // Map model names to chart keys (normalize to lowercase, handle variations)

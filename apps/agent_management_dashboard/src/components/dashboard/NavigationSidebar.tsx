@@ -70,8 +70,10 @@ export function Sidebar() {
     async function fetchRecentProjects() {
       try {
         const response = await listProjects();
+        // Safely extract projects array
+        const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
         // Sort by updated_at (most recently updated first) and take top 3
-        const sorted = response.projects
+        const sorted = projectsArray
           .sort((a, b) => {
             const aTime = new Date(a.updated_at || a.created_at).getTime();
             const bTime = new Date(b.updated_at || b.created_at).getTime();
