@@ -80,12 +80,15 @@ export function AnalyticsMetrics({
   }
 
   // Parse success rate from string format "XX.XX%" to number
-  const parseSuccessRate = (rateStr: string): number => {
+  const parseSuccessRate = (rateStr: string | undefined | null): number => {
+    if (!rateStr || typeof rateStr !== 'string') {
+      return 0;
+    }
     const match = rateStr.match(/(\d+\.?\d*)/);
     return match ? parseFloat(match[1]) : 0;
   };
 
-  const successRate = successRates
+  const successRate = successRates?.success_rate
     ? parseSuccessRate(successRates.success_rate)
     : 0;
   const performanceScore = performanceAnalytics?.performance_score ?? 0;
