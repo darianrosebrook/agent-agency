@@ -88,12 +88,18 @@ export function AnalyticsMetrics({
     return match ? parseFloat(match[1]) : 0;
   };
 
+  // Safely format a number with toFixed, handling NaN and undefined
+  const safeToFixed = (value: number | undefined | null, decimals: number = 1): string => {
+    const num = typeof value === 'number' && !isNaN(value) ? value : 0;
+    return num.toFixed(decimals);
+  };
+
   const successRate = successRates?.success_rate
     ? parseSuccessRate(successRates.success_rate)
     : 0;
   const performanceScore = performanceAnalytics?.performance_score ?? 0;
   const avgDuration = performanceAnalytics?.average_task_duration_ms ?? 0;
-  const avgDurationSeconds = (avgDuration / 1000).toFixed(1);
+  const avgDurationSeconds = safeToFixed(avgDuration / 1000, 1);
 
   return (
     <BentoPanel>
@@ -104,7 +110,7 @@ export function AnalyticsMetrics({
           {/* Success Rate */}
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Success Rate</div>
-            <div className={styles.metricValue}>{successRate.toFixed(1)}%</div>
+            <div className={styles.metricValue}>{safeToFixed(successRate, 1)}%</div>
             {successRates && (
               <div className={styles.metricDetail}>
                 {successRates.completed} / {successRates.total_tasks} tasks
@@ -116,7 +122,7 @@ export function AnalyticsMetrics({
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Performance Score</div>
             <div className={styles.metricValue}>
-              {performanceScore.toFixed(1)}
+              {safeToFixed(performanceScore, 1)}
             </div>
             {performanceAnalytics && (
               <div className={styles.metricDetail}>
@@ -156,7 +162,7 @@ export function AnalyticsMetrics({
               <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>Avg Chain of Thought</div>
                 <div className={styles.metricValue}>
-                  {taskAnalytics.average_chain_of_thought_entries.toFixed(1)}
+                  {safeToFixed(taskAnalytics.average_chain_of_thought_entries, 1)}
                 </div>
                 <div className={styles.metricDetail}>Entries per task</div>
               </div>
