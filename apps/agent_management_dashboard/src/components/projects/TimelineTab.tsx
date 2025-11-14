@@ -60,9 +60,13 @@ export function TimelineTab() {
 
         // Create a map of agent IDs to agent names
         const agentMap = new Map<string, string>();
-        agentsData.forEach((agent) => {
-          agentMap.set(agent.id, agent.name);
-        });
+        if (Array.isArray(agentsData)) {
+          agentsData.forEach((agent) => {
+            agentMap.set(agent.id, agent.name);
+          });
+        } else {
+          console.warn("Agents data is not an array:", agentsData);
+        }
         
         // Transform API tasks to TimelineTask format
         const timelineTasks: TimelineTask[] = tasksResponse.tasks

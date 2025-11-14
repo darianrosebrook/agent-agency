@@ -68,9 +68,13 @@ export function TimelineTab() {
   const timelineTasks = useMemo(() => {
     // Create agent lookup map
     const agentMap = new Map<string, Agent>();
-    agents.forEach((agent) => {
-      agentMap.set(agent.id, agent);
-    });
+    if (Array.isArray(agents)) {
+      agents.forEach((agent) => {
+        agentMap.set(agent.id, agent);
+      });
+    } else {
+      console.warn("Agents data is not an array:", agents);
+    }
 
     return tasks.map((task): TimelineTask => {
       const agent = task.worker_id ? agentMap.get(task.worker_id) : null;

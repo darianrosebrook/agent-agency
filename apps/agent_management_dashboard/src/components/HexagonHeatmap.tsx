@@ -126,12 +126,16 @@ export function HexagonHeatmap({
   const hexagons = useMemo(() => {
     const center: Axial = { q: 0, r: 0 };
     const cells = hexSpiral(center, radius);
-    
+
     // Create agent lookup map
     const agentMap = new Map<string, Agent>();
-    agents.forEach((agent) => {
-      agentMap.set(agent.id, agent);
-    });
+    if (Array.isArray(agents)) {
+      agents.forEach((agent) => {
+        agentMap.set(agent.id, agent);
+      });
+    } else {
+      console.warn("Agents data is not an array:", agents);
+    }
 
     // Calculate completion percentage for each task
     const getTaskCompletion = (task: Task): number => {

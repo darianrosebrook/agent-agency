@@ -102,9 +102,13 @@ export function TimelineTab() {
 
         // Create a map of worker_id to agent name
         const workerMap = new Map<string, string>();
-        agentsResponse.forEach((agent) => {
-          workerMap.set(agent.id, agent.name);
-        });
+        if (Array.isArray(agentsResponse)) {
+          agentsResponse.forEach((agent) => {
+            workerMap.set(agent.id, agent.name);
+          });
+        } else {
+          console.warn("Agents response is not an array:", agentsResponse);
+        }
 
         // Transform tasks to TimelineTask format
         const timelineTasks: TimelineTask[] = tasksResponse.tasks
