@@ -18,12 +18,12 @@ CREATE TABLE IF NOT EXISTS wal_log_records (
     replayed_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_wal_recorded_at ON wal_log_records(recorded_at);
-CREATE INDEX idx_wal_transaction ON wal_log_records(transaction_id);
-CREATE INDEX idx_wal_sequence ON wal_log_records(sequence_number);
-CREATE INDEX idx_wal_table ON wal_log_records(schema_name, table_name);
-CREATE INDEX idx_wal_applied ON wal_log_records(applied);
-CREATE INDEX idx_wal_operation ON wal_log_records(operation_type);
+CREATE INDEX IF NOT EXISTS idx_wal_recorded_at ON wal_log_records(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_wal_transaction ON wal_log_records(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_wal_sequence ON wal_log_records(sequence_number);
+CREATE INDEX IF NOT EXISTS idx_wal_table ON wal_log_records(schema_name, table_name);
+CREATE INDEX IF NOT EXISTS idx_wal_applied ON wal_log_records(applied);
+CREATE INDEX IF NOT EXISTS idx_wal_operation ON wal_log_records(operation_type);
 
 -- WAL replay checkpoint tracking
 CREATE TABLE IF NOT EXISTS wal_replay_checkpoints (
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS wal_replay_checkpoints (
     metadata JSONB DEFAULT '{}'
 );
 
-CREATE INDEX idx_wal_replay_id ON wal_replay_checkpoints(replay_id);
-CREATE INDEX idx_wal_replay_status ON wal_replay_checkpoints(status);
+CREATE INDEX IF NOT EXISTS idx_wal_replay_id ON wal_replay_checkpoints(replay_id);
+CREATE INDEX IF NOT EXISTS idx_wal_replay_status ON wal_replay_checkpoints(status);
 
 -- Function to get WAL records for a time range
 CREATE OR REPLACE FUNCTION get_wal_records_for_replay(

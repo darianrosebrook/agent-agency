@@ -21,6 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_plan_execution_results_created_at ON plan_executi
 CREATE INDEX IF NOT EXISTS idx_plan_execution_results_final_state ON plan_execution_results(final_state);
 
 -- Trigger for updated_at timestamp
+DROP TRIGGER IF EXISTS update_plan_execution_results_updated_at ON plan_execution_results;
 CREATE TRIGGER update_plan_execution_results_updated_at 
     BEFORE UPDATE ON plan_execution_results 
     FOR EACH ROW 

@@ -44,11 +44,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers to automatically update search vectors
+DROP TRIGGER IF EXISTS trigger_update_session_title_search ON chat_sessions;
 CREATE TRIGGER trigger_update_session_title_search
     BEFORE INSERT OR UPDATE OF title ON chat_sessions
     FOR EACH ROW
     EXECUTE FUNCTION update_chat_session_title_search();
 
+DROP TRIGGER IF EXISTS trigger_update_message_content_search ON chat_messages;
 CREATE TRIGGER trigger_update_message_content_search
     BEFORE INSERT OR UPDATE OF content ON chat_messages
     FOR EACH ROW

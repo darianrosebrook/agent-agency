@@ -50,6 +50,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_rate_limit_blocks_updated_at ON rate_limit_blocks;
 CREATE TRIGGER trigger_update_rate_limit_blocks_updated_at
     BEFORE UPDATE ON rate_limit_blocks
     FOR EACH ROW
@@ -65,6 +66,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_rate_limit_suspicious_timestamps ON rate_limit_suspicious;
 CREATE TRIGGER trigger_update_rate_limit_suspicious_timestamps
     BEFORE UPDATE ON rate_limit_suspicious
     FOR EACH ROW

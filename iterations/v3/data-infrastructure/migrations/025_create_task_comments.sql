@@ -41,6 +41,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_task_comment_updated_at ON task_comments;
 CREATE TRIGGER trigger_update_task_comment_updated_at
     BEFORE UPDATE ON task_comments
     FOR EACH ROW
