@@ -20,6 +20,8 @@ pub mod metrics;
 pub mod middleware;
 #[cfg(feature = "orchestration")]
 pub mod openapi;
+#[cfg(feature = "orchestration")]
+pub mod openapi_paths;
 pub mod pagination;
 pub mod server;
 pub mod transform;

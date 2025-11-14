@@ -39,9 +39,11 @@ export interface KokoroTTSResult {
   error?: string;
 }
 
+import { env } from "../utils/env";
+
 const DEFAULT_CONFIG: Required<KokoroTTSConfig> = {
-  baseUrl: process.env.KOKORO_ONNX_URL || "http://localhost:8000",
-  enabled: process.env.KOKORO_TTS_ENABLED !== "false",
+  baseUrl: env.KOKORO_ONNX_URL,
+  enabled: env.KOKORO_TTS_ENABLED,
   timeout: 30000, // 30 seconds
 };
 
@@ -76,10 +78,9 @@ export async function generateVoicemail(
     // Prepare request payload (Kokoro uses /audio/speech endpoint)
     const requestPayload: KokoroTTSRequest = {
       text: text.trim(),
-      voice:
-        process.env.KOKORO_VOICE || process.env.KOKORO_SPEAKER_ID || "bm_fable",
-      speed: parseFloat(process.env.KOKORO_SPEED || "1.2"),
-      lang: process.env.KOKORO_LANG || "en-us",
+      voice: env.KOKORO_VOICE,
+      speed: env.KOKORO_SPEED,
+      lang: env.KOKORO_LANG,
       format: "wav", // Use WAV format for better compatibility
       stream: false, // Don't stream for voicemail generation
       no_cache: false,

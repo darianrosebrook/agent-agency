@@ -13,6 +13,7 @@ import React, { Component, type ReactNode } from "react";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
 import { Button } from "./primitives/button";
 import { ErrorDisplay } from "./ErrorDisplay";
+import { env } from "../lib/utils/env";
 import styles from "./ErrorBoundary.module.scss";
 
 interface Props {
@@ -106,7 +107,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error Details (only in development) */}
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {env.DEV && this.state.error && (
               <div className={styles.errorDetails}>
                 <h3 className={styles.errorDetailsTitle}>
                   Error Details

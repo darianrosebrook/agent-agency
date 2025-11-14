@@ -13,6 +13,7 @@ import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { Button } from "./primitives/button";
 import { parseApiError, isRetryableError } from "../lib/errors";
 import { cn } from "./primitives/utils";
+import { env } from "../lib/utils/env";
 import styles from "./ErrorDisplay.module.scss";
 
 interface ErrorDisplayProps {
@@ -43,7 +44,7 @@ export function ErrorDisplay({
         <div className={styles.errorMessage}>
           {appError.getUserMessage()}
         </div>
-        {process.env.NODE_ENV === "development" && appError.details && (
+        {env.DEV && appError.details && (
           <div className={styles.errorDetails}>
             {JSON.stringify(appError.details, null, 2)}
           </div>

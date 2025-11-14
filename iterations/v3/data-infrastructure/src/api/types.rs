@@ -75,7 +75,7 @@ pub struct TaskStatusResponse {
 }
 
 /// Task result response
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TaskResultResponse {
     #[schemars(with = "String")]
     pub task_id: Uuid,

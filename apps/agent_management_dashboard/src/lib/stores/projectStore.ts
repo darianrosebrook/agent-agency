@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { z } from "zod";
+import { env } from "../utils/env";
 import {
   ProjectSchema,
   ProjectResponseSchema,
@@ -116,7 +117,7 @@ function validateApiResponse<T>(
 }
 
 export const useProjectStore = create<ProjectState>()(
-  process.env.NODE_ENV === "development"
+  env.DEV
     ? devtools(
         (set, get) => ({
           // Initial state
@@ -397,8 +398,7 @@ export const useProjectStore = create<ProjectState>()(
             set({ isLoading: true, error: null });
 
             try {
-              const apiUrl =
-                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const apiUrl = env.API_URL;
               const data = await apiPatch<unknown>(
                 `${apiUrl}/api/v1/projects/${projectId}`,
                 validatedRequest
@@ -446,8 +446,7 @@ export const useProjectStore = create<ProjectState>()(
             get().optimisticAddTask(projectId, optimisticTask);
 
             try {
-              const apiUrl =
-                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const apiUrl = env.API_URL;
               const data = await apiPost<unknown>(
                 `${apiUrl}/api/v1/projects/${projectId}/tasks`,
                 validatedTask
@@ -517,8 +516,7 @@ export const useProjectStore = create<ProjectState>()(
             get().optimisticUpdateTask(projectId, taskId, validatedUpdates);
 
             try {
-              const apiUrl =
-                process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+              const apiUrl = env.API_URL;
               const data = await apiPatch<unknown>(
                 `${apiUrl}/api/v1/projects/${projectId}/tasks/${taskId}`,
                 validatedUpdates

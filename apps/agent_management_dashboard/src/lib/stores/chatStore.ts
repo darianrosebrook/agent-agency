@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { z } from "zod";
+import { env } from "../utils/env";
 import {
   MessageSchema,
   ChatSessionResponseSchema,
@@ -121,7 +122,7 @@ function validateApiResponse<T>(
 }
 
 export const useChatStore = create<ChatState>()(
-  process.env.NODE_ENV === "development"
+  env.DEV
     ? devtools(
         (set, get) => ({
       // Initial state
@@ -206,8 +207,7 @@ export const useChatStore = create<ChatState>()(
         const loadingToast = toastLoading("Loading chat sessions...");
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiGet<unknown>(`${apiUrl}/api/v1/chat/sessions`, {
             retry: { maxAttempts: 3, initialDelay: 1000 },
           });
@@ -245,8 +245,7 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiPost<unknown>(
             `${apiUrl}/api/v1/chat/sessions`,
             validatedRequest
@@ -287,8 +286,7 @@ export const useChatStore = create<ChatState>()(
         const loadingToast = toastLoading("Loading messages...");
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiGet<unknown>(
             `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             { retry: { maxAttempts: 3, initialDelay: 1000 } }
@@ -340,8 +338,7 @@ export const useChatStore = create<ChatState>()(
         get().optimisticAddMessage(optimisticMessage);
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiPost<unknown>(
             `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             {
@@ -509,8 +506,7 @@ export const useChatStore = create<ChatState>()(
         const loadingToast = toastLoading("Loading chat sessions...");
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiGet<unknown>(`${apiUrl}/api/v1/chat/sessions`, {
             retry: { maxAttempts: 3, initialDelay: 1000 },
           });
@@ -548,8 +544,7 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiPost<unknown>(
             `${apiUrl}/api/v1/chat/sessions`,
             validatedRequest
@@ -590,8 +585,7 @@ export const useChatStore = create<ChatState>()(
         const loadingToast = toastLoading("Loading messages...");
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiGet<unknown>(
             `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             { retry: { maxAttempts: 3, initialDelay: 1000 } }
@@ -643,8 +637,7 @@ export const useChatStore = create<ChatState>()(
         get().optimisticAddMessage(optimisticMessage);
 
         try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+          const apiUrl = env.API_URL;
           const data = await apiPost<unknown>(
             `${apiUrl}/api/v1/chat/sessions/${sessionId}/messages`,
             {

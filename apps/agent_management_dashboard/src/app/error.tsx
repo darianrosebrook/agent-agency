@@ -7,8 +7,9 @@
  */
 
 import { useEffect } from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { env } from "../lib/utils/env";
 import styles from "./error.module.scss";
 
 interface ErrorProps {
@@ -70,7 +71,7 @@ export default function Error({ error, reset }: ErrorProps) {
         </div>
 
         {/* Error Details (only in development) */}
-        {process.env.NODE_ENV === "development" && (
+        {env.DEV && (
           <div className={styles.errorDetails}>
             <h3 className={styles.errorDetailsTitle}>Error Details</h3>
             <pre className={styles.errorDetailsPre}>

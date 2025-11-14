@@ -14,6 +14,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../primitives/button";
 import { parseApiError, isRetryableError } from "../../lib/errors";
 import { cn } from "../primitives/utils";
+import { env } from "../../lib/utils/env";
 import styles from "./ChatMessageError.module.scss";
 
 interface ChatMessageErrorProps {
@@ -63,7 +64,7 @@ function extractErrorMessage(error: unknown): string {
     }
 
     // Fallback to JSON stringify for complex objects
-    if (process.env.NODE_ENV === "development") {
+    if (env.DEV) {
       return JSON.stringify(errorObj, null, 2);
     }
   }
@@ -82,7 +83,7 @@ export function ChatMessageError({
 
   // Log error for debugging
   React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    if (env.DEV) {
       console.error("Chat message error:", error);
     }
   }, [error]);
@@ -97,7 +98,7 @@ export function ChatMessageError({
         <div className={styles.chatMessageErrorTitle}>
           {appError.getUserMessage() || errorMessage}
         </div>
-        {process.env.NODE_ENV === "development" && appError.details && (
+        {env.DEV && appError.details && (
           <div className={styles.chatMessageErrorDetails}>
             {JSON.stringify(appError.details, null, 2)}
           </div>

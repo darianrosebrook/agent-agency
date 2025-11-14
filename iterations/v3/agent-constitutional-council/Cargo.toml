@@ -31,7 +31,7 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 agent-orchestration = { path = "../agent-orchestration", default-features = false, features = ["research", "memory"] }
 
 # Database access for verdict history queries
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 
 [features]
 default = ["orchestration-research", "orchestration-coreml"]  # Enable research and CoreML by default for production

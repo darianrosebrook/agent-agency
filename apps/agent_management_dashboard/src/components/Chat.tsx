@@ -10,6 +10,7 @@ import { useChatStore } from "../lib/stores";
 import { useStreamingResponse } from "../lib/hooks";
 import type { Message } from "../lib/schemas/chat";
 import { ErrorDisplay } from "./ErrorDisplay";
+import { env } from "../lib/utils/env";
 import styles from "./chat/Chat.module.scss";
 
 export function Chat() {
@@ -182,7 +183,7 @@ export function Chat() {
     // Start streaming response from API
     // TODO: Replace with actual API endpoint when backend is ready
     // For now, fallback to simulation if API is not available
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+    const apiUrl = env.NEXT_PUBLIC_API_URL;
 
     try {
       startStreaming({

@@ -13,6 +13,7 @@ import React, { Component, type ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../primitives/button";
 import { ErrorDisplay } from "../ErrorDisplay";
+import { env } from "../../lib/utils/env";
 import styles from "./ScopedErrorBoundary.module.scss";
 
 interface ScopedErrorBoundaryProps {
@@ -156,7 +157,7 @@ export class ScopedErrorBoundary extends Component<
                 Retry
               </Button>
             </div>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {env.DEV && this.state.error && (
               <details className={styles.scopedErrorDebug}>
                 <summary>Debug Info</summary>
                 <pre className={styles.scopedErrorDebugPre}>

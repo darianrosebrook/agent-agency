@@ -12,6 +12,7 @@ import { useStreamingResponse } from "../../lib/hooks";
 import type { Message } from "../../lib/schemas/chat";
 import { simulateAIResponse } from "./ChatAIHelper";
 import { cn } from "../primitives/utils";
+import { env } from "../../lib/utils/env";
 import styles from "./Chat.module.scss";
 
 // Types imported from schemas
@@ -33,7 +34,7 @@ export function Chat() {
   const messages = currentChat?.messages ?? [];
 
   // Get API base URL from environment or use proxy
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api/proxy/api/v1";
+  const apiBaseUrl = env.NEXT_PUBLIC_API_URL;
 
   // Track accumulated content for streaming
   const streamingContentRef = useRef<string>("");

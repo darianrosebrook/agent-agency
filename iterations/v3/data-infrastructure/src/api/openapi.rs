@@ -4,16 +4,70 @@
 //!
 //! @author @darianrosebrook
 
+use crate::api::api_errors::ErrorResponse;
+use crate::api::handlers::auth_handlers::{LoginRequest, LoginResponse, RefreshTokenRequest, UserResponse};
+use crate::api::openapi_paths;
+use crate::api::types::{TaskResultResponse, TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse};
+use crate::chat_service::{ChatMessage, ChatSession};
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
-use utoipa::openapi::{PathItem, Paths, Response, Responses};
 use utoipa::{Modify, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 /// OpenAPI specification for Agent Agency API
 #[derive(OpenApi)]
 #[openapi(
-    paths(),
-    components(schemas()),
+    paths(
+        openapi_paths::health_check_doc,
+        openapi_paths::system_health_check_doc,
+        openapi_paths::submit_task_doc,
+        openapi_paths::list_tasks_doc,
+        openapi_paths::get_task_status_doc,
+        openapi_paths::get_task_result_doc,
+        openapi_paths::cancel_task_doc,
+        openapi_paths::pause_task_doc,
+        openapi_paths::resume_task_doc,
+        openapi_paths::get_chain_of_thought_doc,
+        openapi_paths::get_council_decisions_doc,
+        openapi_paths::get_worker_actions_doc,
+        openapi_paths::list_chat_sessions_doc,
+        openapi_paths::create_chat_session_doc,
+        openapi_paths::get_chat_messages_doc,
+        openapi_paths::send_chat_message_doc,
+        openapi_paths::login_doc,
+        openapi_paths::logout_doc,
+        openapi_paths::refresh_token_doc,
+        openapi_paths::get_current_user_doc,
+        openapi_paths::list_provenance_doc,
+        openapi_paths::get_provenance_by_commit_doc,
+        openapi_paths::get_system_metrics_doc,
+        openapi_paths::list_projects_doc,
+        openapi_paths::get_project_doc,
+        openapi_paths::get_project_tasks_doc,
+        openapi_paths::list_database_tables_doc,
+        openapi_paths::get_table_schema_doc,
+        openapi_paths::execute_query_doc,
+        openapi_paths::get_task_analytics_doc,
+        openapi_paths::get_performance_analytics_doc,
+        openapi_paths::get_success_rates_doc,
+        openapi_paths::list_agents_doc,
+        openapi_paths::get_agent_doc,
+        openapi_paths::get_agent_stats_doc,
+    ),
+    components(schemas(
+        TaskSubmissionRequest,
+        TaskSubmissionResponse,
+        TaskStatusResponse,
+        ChatSession,
+        ChatMessage,
+        LoginRequest,
+        LoginResponse,
+        RefreshTokenRequest,
+        UserResponse,
+        ErrorResponse,
+        openapi_paths::CreateChatSessionRequest,
+        openapi_paths::SendChatMessageRequest,
+        openapi_paths::ExecuteQueryRequest,
+    )),
     modifiers(&SecurityAddon),
     tags(
         (name = "Health", description = "System health and status endpoints"),
