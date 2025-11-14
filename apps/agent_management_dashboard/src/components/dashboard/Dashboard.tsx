@@ -10,6 +10,7 @@ import { getTasksStats } from "../../lib/api/tasks";
 import type { TasksStats } from "../../lib/api/tasks";
 import { getContributions, getModelContributions } from "../../lib/api/agents";
 import { getEfficiencyMetrics } from "../../lib/api/observability";
+import { ChartErrorBoundary } from "../errors/ChartErrorBoundary";
 
 const TaskProgressChart = lazy(() =>
   import("../TaskProgressChart").then((mod) => ({
@@ -121,82 +122,102 @@ export function Dashboard() {
         {/* Task Progress Chart - spans 2 rows and 5 columns */}
         <div className={cn(styles.colSpan5, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <TaskProgressChart />
+            <ChartErrorBoundary chartName="Task Progress">
+              <TaskProgressChart />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Radial Task Progress - spans 2 rows and 7 columns */}
         <div className={cn(styles.colSpan7, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <RadialTaskProgress />
+            <ChartErrorBoundary chartName="Radial Task Progress">
+              <RadialTaskProgress />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Hexagon Heatmap - spans 6 rows and 8 columns */}
         <div className={cn(styles.colSpan8, styles.rowSpan6)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <HexagonHeatmap radius={8} hexSize={28} />
+            <ChartErrorBoundary chartName="Task Heatmap">
+              <HexagonHeatmap radius={8} hexSize={28} />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Multi-Ring Progress - spans 6 rows and 4 columns */}
         <div className={cn(styles.colSpan4, styles.rowSpan6)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <MultiRingProgress />
+            <ChartErrorBoundary chartName="Multi-Ring Progress">
+              <MultiRingProgress />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Code Contribution Chart - spans 3 rows and 12 columns */}
         <div className={cn(styles.colSpan12, styles.rowSpan3)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <CodeContributionChart
-              title="Overall Contribution"
-              subtitle="2 Agents over the last 30 days"
-              days={30}
-            />
+            <ChartErrorBoundary chartName="Code Contribution">
+              <CodeContributionChart
+                title="Overall Contribution"
+                subtitle="2 Agents over the last 30 days"
+                days={30}
+              />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Small panels row */}
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <ModelContributionStream
-              title="Model Contributions"
-              subtitle="Lines of code by AI model"
-            />
+            <ChartErrorBoundary chartName="Model Contributions">
+              <ModelContributionStream
+                title="Model Contributions"
+                subtitle="Lines of code by AI model"
+              />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <TaskCompletionGauge
-              title="Task Balance"
-              subtitle="Completion vs Creation Rate"
-            />
+            <ChartErrorBoundary chartName="Task Balance">
+              <TaskCompletionGauge
+                title="Task Balance"
+                subtitle="Completion vs Creation Rate"
+              />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         <div className={cn(styles.colSpan4, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <ServerEfficiencyChart title="Server Efficiency Analysis" />
+            <ChartErrorBoundary chartName="Server Efficiency">
+              <ServerEfficiencyChart title="Server Efficiency Analysis" />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Analytics Metrics - spans 2 rows and 8 columns */}
         <div className={cn(styles.colSpan8, styles.rowSpan2)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <AnalyticsMetrics title="Analytics Overview" />
+            <ChartErrorBoundary chartName="Analytics Metrics">
+              <AnalyticsMetrics title="Analytics Overview" />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
 
         {/* Agent Activity Chart - spans 3 rows and 12 columns */}
         <div className={cn(styles.colSpan12, styles.rowSpan3)}>
           <Suspense fallback={<ChartSkeleton />}>
-            <AgentActivityChart
-              title="Agent Activity"
-              subtitle="Activity over the last 7 days"
-              days={7}
-            />
+            <ChartErrorBoundary chartName="Agent Activity">
+              <AgentActivityChart
+                title="Agent Activity"
+                subtitle="Activity over the last 7 days"
+                days={7}
+              />
+            </ChartErrorBoundary>
           </Suspense>
         </div>
       </div>

@@ -81,6 +81,8 @@ use data_interfaces_adapters::orchestration_adapter::UnifiedOrchestratorAdapter;
 #[cfg(feature = "orchestration")]
 use data_infrastructure::api::handlers::*;
 #[cfg(feature = "orchestration")]
+use data_infrastructure::api::openapi::{create_swagger_ui, get_openapi_spec};
+#[cfg(feature = "orchestration")]
 use data_infrastructure::api::types::ApiConfig as DataApiConfig;
 #[cfg(feature = "orchestration")]
 use data_infrastructure::api::{ApiState, RestApi};
@@ -542,6 +544,14 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .route("/api/v1/health", get(health_handler))
         .route("/metrics", get(get_metrics_handler))
         .route("/", get(root_handler));
+
+    // OpenAPI documentation endpoints
+    #[cfg(feature = "orchestration")]
+    {
+        router = router
+            .route("/api-docs/openapi.json", axum::routing::get(get_openapi_spec))
+            .merge(create_swagger_ui());
+    }
 
     // Task management endpoints
     router = router

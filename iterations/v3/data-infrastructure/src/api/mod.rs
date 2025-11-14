@@ -18,6 +18,8 @@ pub mod handlers;
 pub mod health;
 pub mod metrics;
 pub mod middleware;
+#[cfg(feature = "orchestration")]
+pub mod openapi;
 pub mod pagination;
 pub mod server;
 pub mod transform;

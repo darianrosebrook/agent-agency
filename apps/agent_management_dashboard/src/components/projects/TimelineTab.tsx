@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GanttChart } from "./GanttChart";
-import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
+import { Calendar, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getAgents, type Agent } from "../../lib/api/agents";
+import { getProjectTasks } from "../../lib/api/projects";
 import { Button } from "../primitives/button";
 import {
   Select,
@@ -11,9 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../primitives/select";
+import { GanttChart } from "./GanttChart";
 import { useProjectContext } from "./ProjectContext";
-import { getProjectTasks } from "../../lib/api/projects";
-import { getAgents, type Agent } from "../../lib/api/agents";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -67,14 +67,14 @@ export function TimelineTab() {
         } else {
           console.warn("Agents data is not an array:", agentsData);
         }
-        
+
         // Transform API tasks to TimelineTask format
         const timelineTasks: TimelineTask[] = tasksResponse.tasks
           .map((task) => {
             // Parse dates with validation
             const startDate = new Date(task.created_at);
             let endDate: Date;
-            
+
             if (task.completed_at) {
               endDate = new Date(task.completed_at);
             } else if (task.updated_at) {
@@ -84,13 +84,13 @@ export function TimelineTab() {
               endDate = new Date(startDate);
               endDate.setDate(endDate.getDate() + 1);
             }
-            
+
             // Ensure end date is not before start date
             if (endDate < startDate) {
               endDate = new Date(startDate);
               endDate.setDate(endDate.getDate() + 1);
             }
-            
+
             // Validate dates are not invalid
             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
               console.warn(`Invalid dates for task ${task.task_id}:`, {
@@ -101,12 +101,15 @@ export function TimelineTab() {
               // Skip invalid dates
               return null;
             }
-            
+
             // Map status to TimelineTask status
             let status: "completed" | "in-progress" | "pending" = "pending";
             if (task.status === "completed") {
               status = "completed";
-            } else if (task.status === "in_progress" || task.status === "running") {
+            } else if (
+              task.status === "in_progress" ||
+              task.status === "running"
+            ) {
               status = "in-progress";
             }
 
@@ -122,9 +125,10 @@ export function TimelineTab() {
             // Get agent name from assignment
             // If unassigned, treat as orchestrator-managed (planning/coordination phase)
             const workerId = task.assigned_worker_id ?? null;
-            const workerName = workerId && agentMap.has(workerId) 
-              ? agentMap.get(workerId)! 
-              : "Orchestrator";
+            const workerName =
+              workerId && agentMap.has(workerId)
+                ? agentMap.get(workerId)!
+                : "Orchestrator";
 
             return {
               id: task.task_id,
@@ -143,7 +147,9 @@ export function TimelineTab() {
         setTasks(timelineTasks);
       } catch (err) {
         console.error("Failed to fetch project tasks:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load tasks"));
+        setError(
+          err instanceof Error ? err : new Error("Failed to load tasks")
+        );
         setTasks([]);
       } finally {
         setIsLoading(false);
@@ -230,9 +236,13 @@ export function TimelineTab() {
         {isLoading ? (
           <div className={styles.loadingMessage}>Loading timeline...</div>
         ) : error ? (
-          <div className={styles.errorMessage}>Error loading timeline: {error.message}</div>
+          <div className={styles.errorMessage}>
+            Error loading timeline: {error.message}
+          </div>
         ) : filteredTasks.length === 0 ? (
-          <div className={styles.emptyMessage}>No tasks found for this project.</div>
+          <div className={styles.emptyMessage}>
+            No tasks found for this project.
+          </div>
         ) : (
           <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
         )}

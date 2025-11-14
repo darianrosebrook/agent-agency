@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Calendar, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getAgents } from "../lib/api/agents";
+import { listTasks, type Task } from "../lib/api/tasks";
 import { GanttChart } from "./GanttChart";
-import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
+import styles from "./TimelineTab.module.scss";
 import { Button } from "./primitives/button";
 import {
   Select,
@@ -11,9 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./primitives/select";
-import styles from "./TimelineTab.module.scss";
-import { listTasks, type Task } from "../lib/api/tasks";
-import { getAgents, type Agent } from "../lib/api/agents";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
 
@@ -30,7 +30,9 @@ export interface TimelineTask {
 }
 
 // Helper function to map task status to timeline status
-function mapTaskStatus(status: string): "completed" | "in-progress" | "pending" {
+function mapTaskStatus(
+  status: string
+): "completed" | "in-progress" | "pending" {
   if (status === "completed") return "completed";
   if (status === "in_progress" || status === "running") return "in-progress";
   return "pending";
@@ -39,22 +41,25 @@ function mapTaskStatus(status: string): "completed" | "in-progress" | "pending" 
 // Helper function to extract tags from metadata
 function extractTags(metadata?: Record<string, unknown>): string[] {
   if (!metadata) return [];
-  
+
   // Check for tags array in metadata
   if (Array.isArray(metadata.tags)) {
-    return metadata.tags.map(tag => String(tag));
+    return metadata.tags.map((tag) => String(tag));
   }
-  
+
   // Check for tags as comma-separated string
   if (typeof metadata.tags === "string") {
-    return metadata.tags.split(",").map(tag => tag.trim()).filter(Boolean);
+    return metadata.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
   }
-  
+
   // Extract from other metadata fields if available
   const tags: string[] = [];
   if (metadata.priority) tags.push(`Priority: ${metadata.priority}`);
   if (metadata.risk_tier) tags.push(`Risk: ${metadata.risk_tier}`);
-  
+
   return tags;
 }
 
@@ -65,17 +70,17 @@ function calculateEndDate(task: Task): Date {
     const deadline = new Date(task.metadata.deadline);
     if (!isNaN(deadline.getTime())) return deadline;
   }
-  
+
   // Use completed_at if task is completed
   if (task.completed_at) {
     return new Date(task.completed_at);
   }
-  
+
   // Use updated_at as fallback
   if (task.updated_at) {
     return new Date(task.updated_at);
   }
-  
+
   // Default to 7 days from start date
   const startDate = task.created_at ? new Date(task.created_at) : new Date();
   return new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -92,7 +97,7 @@ export function TimelineTab() {
     async function fetchData() {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Fetch tasks and agents in parallel
         const [tasksResponse, agentsResponse] = await Promise.all([
@@ -119,7 +124,9 @@ export function TimelineTab() {
           .map((task) => {
             const workerId = task.worker_id || "";
             const workerName = workerMap.get(workerId) || "Unassigned";
-            const startDate = task.created_at ? new Date(task.created_at) : new Date();
+            const startDate = task.created_at
+              ? new Date(task.created_at)
+              : new Date();
             const endDate = calculateEndDate(task);
             const tags = extractTags(task.metadata);
 
@@ -139,7 +146,9 @@ export function TimelineTab() {
         setTasks(timelineTasks);
       } catch (err) {
         console.error("Failed to fetch timeline data:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load timeline data"));
+        setError(
+          err instanceof Error ? err : new Error("Failed to load timeline data")
+        );
         setTasks([]);
       } finally {
         setIsLoading(false);
@@ -224,9 +233,7 @@ export function TimelineTab() {
               >
                 <ZoomOut className={styles.zoomIcon} />
               </Button>
-              <span className={styles.zoomLabel}>
-                {zoomLevel}
-              </span>
+              <span className={styles.zoomLabel}>{zoomLevel}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -247,7 +254,8 @@ export function TimelineTab() {
           <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
         ) : (
           <div className={styles.emptyState}>
-            No tasks with assigned workers found. Assign workers to tasks to see them on the timeline.
+            No tasks with assigned workers found. Assign workers to tasks to see
+            them on the timeline.
           </div>
         )}
       </div>

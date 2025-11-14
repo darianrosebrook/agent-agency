@@ -71,7 +71,9 @@ export function Sidebar() {
       try {
         const response = await listProjects();
         // Safely extract projects array
-        const projectsArray = Array.isArray(response?.projects) ? response.projects : [];
+        const projectsArray = Array.isArray(response?.projects)
+          ? response.projects
+          : [];
         // Sort by updated_at (most recently updated first) and take top 3
         const sorted = projectsArray
           .sort((a, b) => {

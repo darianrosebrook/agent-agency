@@ -6,6 +6,7 @@
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use agent_agency_contracts::{ExecutionArtifacts, QualityReport, WorkingSpec};
@@ -34,7 +35,7 @@ pub struct ApiConfig {
 }
 
 /// Task submission request
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct TaskSubmissionRequest {
     /// Natural language task description
     pub description: String,
@@ -51,7 +52,7 @@ pub struct TaskSubmissionRequest {
 }
 
 /// Task submission response
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct TaskSubmissionResponse {
     #[schemars(with = "String")]
     pub task_id: Uuid,
@@ -61,7 +62,7 @@ pub struct TaskSubmissionResponse {
 }
 
 /// Task status response
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct TaskStatusResponse {
     #[schemars(with = "String")]
     pub task_id: Uuid,
@@ -74,7 +75,7 @@ pub struct TaskStatusResponse {
 }
 
 /// Task result response
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct TaskResultResponse {
     #[schemars(with = "String")]
     pub task_id: Uuid,

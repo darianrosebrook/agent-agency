@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { GanttChart } from "./GanttChart";
-import { ZoomIn, ZoomOut, Calendar } from "lucide-react";
+import { Calendar, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { getAgents, type Agent } from "../../lib/api/agents";
+import { listTasks, type Task } from "../../lib/api/tasks";
 import { Button } from "../primitives/button";
 import {
   Select,
@@ -11,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../primitives/select";
-import { listTasks, type Task } from "../../lib/api/tasks";
-import { getAgents, type Agent } from "../../lib/api/agents";
+import { GanttChart } from "./GanttChart";
 import styles from "./TimelineTab.module.scss";
 
 export type ZoomLevel = "day" | "week" | "month" | "quarter";
@@ -50,7 +50,9 @@ export function TimelineTab() {
         setAgents(agentsData);
       } catch (err) {
         console.error("Failed to fetch tasks and agents:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load timeline data"));
+        setError(
+          err instanceof Error ? err : new Error("Failed to load timeline data")
+        );
         setTasks([]);
         setAgents([]);
       } finally {
@@ -78,10 +80,10 @@ export function TimelineTab() {
 
     return tasks.map((task): TimelineTask => {
       const agent = task.worker_id ? agentMap.get(task.worker_id) : null;
-      const startDate = task.started_at 
-        ? new Date(task.started_at) 
+      const startDate = task.started_at
+        ? new Date(task.started_at)
         : new Date(task.created_at);
-      
+
       // Calculate end date: use completed_at if available, otherwise estimate
       let endDate: Date;
       if (task.completed_at) {
@@ -222,7 +224,7 @@ export function TimelineTab() {
             <p>No tasks available for timeline</p>
           </div>
         ) : (
-        <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
+          <GanttChart tasks={filteredTasks} zoomLevel={zoomLevel} />
         )}
       </div>
     </div>

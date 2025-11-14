@@ -2,19 +2,19 @@
 // Main stylesheet replacing globals.css
 // Preserves CSS variables for runtime theme switching while removing Tailwind dependencies
 
-@use 'base/fonts';
-@use 'base/reset';
-@use 'base/typography';
-@use 'tokens/animations' as *;
+@use "base/fonts";
+@use "base/reset";
+@use "base/typography";
+@use "tokens/animations" as *;
 
 // CSS Variables - Preserved for runtime theme switching
 // These are kept as CSS variables to support dark mode and theme switching
 :root {
   --font-size: 16px;
-  --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-nohemi: 'Nohemi', ui-sans-serif, system-ui, sans-serif;
-  --font-monaspace: 'Monaspace Neon', ui-monospace, monospace;
-  --font-newsreader: 'Newsreader', Georgia, serif;
+  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-nohemi: "Nohemi", ui-sans-serif, system-ui, sans-serif;
+  --font-monaspace: "Monaspace Neon", ui-monospace, monospace;
+  --font-newsreader: "Newsreader", Georgia, serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -146,4 +146,3 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter);
 }
-

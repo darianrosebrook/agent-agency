@@ -1,11 +1,11 @@
 // Base Typography Styles
 // Typography styles matching globals.css but using SCSS tokens
 
-@use '../tokens' as *;
+@use "../tokens" as *;
 
 // Base typography (only applied when no Tailwind text class is present)
 // This matches the :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) selector
-:where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+:where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
   h1 {
     font-family: var(--font-nohemi);
     font-size: 96px;
@@ -82,4 +82,3 @@
 html {
   font-size: var(--font-size);
 }
-

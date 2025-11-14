@@ -7,14 +7,16 @@ use crate::database_metrics::DatabaseMetrics;
 use crate::simple_client::DatabaseClient;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::sync::Arc;
 use std::time::Instant;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Chat session representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct ChatSession {
     pub id: Uuid,
     pub workspace_id: Option<Uuid>,
@@ -31,7 +33,7 @@ pub struct ChatSession {
 }
 
 /// Chat message representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, ToSchema)]
 pub struct ChatMessage {
     pub id: Uuid,
     pub session_id: Uuid,

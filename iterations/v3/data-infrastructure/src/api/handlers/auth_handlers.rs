@@ -4,9 +4,11 @@
 //! including login, logout, token refresh, password reset, and current user retrieval.
 
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tracing::warn;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use argon2::{Algorithm, Argon2, PasswordHash, PasswordHasher, PasswordVerifier, Version};
 use password_hash::{rand_core::OsRng, SaltString};
@@ -15,14 +17,14 @@ use password_hash::{rand_core::OsRng, SaltString};
 // This module exports types and helper functions for reference
 
 /// Login request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema, ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
 }
 
 /// Login response
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema, ToSchema)]
 pub struct LoginResponse {
     pub token: String,
     pub refresh_token: Option<String>,
@@ -31,7 +33,7 @@ pub struct LoginResponse {
 }
 
 /// User response (without password hash)
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema, ToSchema)]
 pub struct UserResponse {
     pub id: String,
     pub username: String,
@@ -42,7 +44,7 @@ pub struct UserResponse {
 }
 
 /// Refresh token request
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema, ToSchema)]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }

@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { BentoPanel } from "./compounds/BentoPanel";
+import { useEffect, useState } from "react";
 import {
-  getTaskAnalytics,
   getPerformanceAnalytics,
   getSuccessRates,
-  type TaskAnalytics,
+  getTaskAnalytics,
   type PerformanceAnalytics,
   type SuccessRates,
+  type TaskAnalytics,
 } from "../lib/api/analytics";
 import styles from "./AnalyticsMetrics.module.scss";
+import { BentoPanel } from "./compounds/BentoPanel";
 
 interface AnalyticsMetricsProps {
   title?: string;
@@ -81,7 +81,7 @@ export function AnalyticsMetrics({
 
   // Parse success rate from string format "XX.XX%" to number
   const parseSuccessRate = (rateStr: string | undefined | null): number => {
-    if (!rateStr || typeof rateStr !== 'string') {
+    if (!rateStr || typeof rateStr !== "string") {
       return 0;
     }
     const match = rateStr.match(/(\d+\.?\d*)/);
@@ -89,8 +89,11 @@ export function AnalyticsMetrics({
   };
 
   // Safely format a number with toFixed, handling NaN and undefined
-  const safeToFixed = (value: number | undefined | null, decimals: number = 1): string => {
-    const num = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const safeToFixed = (
+    value: number | undefined | null,
+    decimals: number = 1
+  ): string => {
+    const num = typeof value === "number" && !isNaN(value) ? value : 0;
     return num.toFixed(decimals);
   };
 
@@ -110,7 +113,9 @@ export function AnalyticsMetrics({
           {/* Success Rate */}
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Success Rate</div>
-            <div className={styles.metricValue}>{safeToFixed(successRate, 1)}%</div>
+            <div className={styles.metricValue}>
+              {safeToFixed(successRate, 1)}%
+            </div>
             {successRates && (
               <div className={styles.metricDetail}>
                 {successRates.completed} / {successRates.total_tasks} tasks
@@ -162,7 +167,10 @@ export function AnalyticsMetrics({
               <div className={styles.metricCard}>
                 <div className={styles.metricLabel}>Avg Chain of Thought</div>
                 <div className={styles.metricValue}>
-                  {safeToFixed(taskAnalytics.average_chain_of_thought_entries, 1)}
+                  {safeToFixed(
+                    taskAnalytics.average_chain_of_thought_entries,
+                    1
+                  )}
                 </div>
                 <div className={styles.metricDetail}>Entries per task</div>
               </div>
@@ -173,12 +181,3 @@ export function AnalyticsMetrics({
     </BentoPanel>
   );
 }
-
-
-
-
-
-
-
-
-

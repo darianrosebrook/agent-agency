@@ -1,7 +1,7 @@
 // Kanban Board Design Tokens
 // All Kanban-specific measurements and values
 
-@use './_colors' as *;
+@use "./_colors" as *;
 
 // Column dimensions
 $kanban-column-width: 639.41px;
@@ -61,5 +61,3 @@ $kanban-tag-priority-medium-bg: #1f2d3a;
 $kanban-tag-priority-medium-text: #54a0ff;
 $kanban-tag-default-bg: $color-neutral-800;
 $kanban-tag-default-text: $kanban-text-secondary;
-
-

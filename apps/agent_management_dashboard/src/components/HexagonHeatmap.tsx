@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getAgents, type Agent } from "../lib/api/agents";
+import { listTasks, type Task } from "../lib/api/tasks";
+import styles from "./HexagonHeatmap.module.scss";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "./primitives/tooltip";
-import { listTasks, type Task } from "../lib/api/tasks";
-import { getAgents, type Agent } from "../lib/api/agents";
-import styles from "./HexagonHeatmap.module.scss";
 
 type Axial = { q: number; r: number };
 
@@ -105,19 +105,19 @@ export function HexagonHeatmap({
           getAgents(),
         ]);
         // Safely extract tasks array with fallback
-        const tasksArray = Array.isArray(tasksData?.tasks) 
-          ? tasksData.tasks 
-          : Array.isArray(tasksData) 
-          ? tasksData 
+        const tasksArray = Array.isArray(tasksData?.tasks)
+          ? tasksData.tasks
+          : Array.isArray(tasksData)
+          ? tasksData
           : [];
-        
+
         // Safely extract agents array with fallback
         const agentsArray = Array.isArray(agentsData?.agents)
           ? agentsData.agents
           : Array.isArray(agentsData)
           ? agentsData
           : [];
-        
+
         setTasks(tasksArray);
         setAgents(agentsArray);
       } catch (err) {
@@ -165,7 +165,7 @@ export function HexagonHeatmap({
     // Map tasks to hexagons
     const data: HexagonData[] = cells.map((hex, idx) => {
       const { x, y } = axialToPixel(hex, hexSize);
-      
+
       // Get task for this hexagon (or use empty if we run out of tasks)
       const task = safeTasks[idx] ?? null;
       const completion = task ? getTaskCompletion(task) : 0;
@@ -238,7 +238,9 @@ export function HexagonHeatmap({
                 : error
                 ? `Error: ${error.message}`
                 : Array.isArray(tasks) && tasks.length > 0
-                ? `${tasks.length} tasks tracked across ${Array.isArray(agents) ? agents.length : 0} AI agents`
+                ? `${tasks.length} tasks tracked across ${
+                    Array.isArray(agents) ? agents.length : 0
+                  } AI agents`
                 : "No tasks available"}
             </p>
           </div>

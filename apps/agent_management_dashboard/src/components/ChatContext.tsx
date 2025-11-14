@@ -1,15 +1,22 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
-import type { Message } from "../lib/schemas/chat";
 import {
-  getChatSessions,
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import {
   createChatSession,
   getChatMessages,
+  getChatSessions,
   sendChatMessage,
-  type ChatSessionResponse,
   type ChatMessageResponse,
+  type ChatSessionResponse,
 } from "../lib/api/chat";
+import type { Message } from "../lib/schemas/chat";
 
 interface ChatData {
   id: string;
@@ -88,7 +95,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Fetch chat sessions from API
       // TODO: Get workspace_id from authenticated user context
       const sessions = await getChatSessions(undefined, {
@@ -128,7 +135,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       setChats(chatData);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to load chat sessions";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load chat sessions";
       setError(errorMessage);
       console.error("Failed to load chat sessions:", err);
     } finally {
@@ -179,7 +187,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const createNewChat = useCallback(async (): Promise<string> => {
     try {
       const title = generateChatTitle();
-      
+
       // Create chat session in database via API
       const session = await createChatSession(
         { title },
@@ -198,13 +206,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       // Add to local state
       setChats((prev) => [newChat, ...prev]);
       setCurrentChatId(session.id);
-      
+
       return session.id;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to create chat session";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to create chat session";
       setError(errorMessage);
       console.error("Failed to create chat session:", err);
-      
+
       // Fallback: create local-only chat if API fails
       const fallbackId = `chat-${Date.now()}`;
       const fallbackChat: ChatData = {
@@ -213,10 +222,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         messages: [],
         createdAt: new Date(),
       };
-      
+
       setChats((prev) => [fallbackChat, ...prev]);
       setCurrentChatId(fallbackId);
-      
+
       return fallbackId;
     }
   }, []);
@@ -225,56 +234,61 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setCurrentChatId(chatId);
   };
 
-  const addMessageToCurrentChat = useCallback(async (message: Message) => {
-    if (!currentChatId) return;
+  const addMessageToCurrentChat = useCallback(
+    async (message: Message) => {
+      if (!currentChatId) return;
 
-    try {
-      // Send message to API and get response
-      const apiMessage = await sendChatMessage(
-        currentChatId,
-        message.content,
-        message.role,
-        message.metadata as Record<string, unknown> | undefined
-      );
+      try {
+        // Send message to API and get response
+        const apiMessage = await sendChatMessage(
+          currentChatId,
+          message.content,
+          message.role,
+          message.metadata as Record<string, unknown> | undefined
+        );
 
-      // Map API response to UI Message format
-      const mappedMessage = mapMessageResponse(apiMessage);
+        // Map API response to UI Message format
+        const mappedMessage = mapMessageResponse(apiMessage);
 
-      // Update local state with both user message and API response
-      setChats((prev) =>
-        prev.map((chat) => {
-          if (chat.id === currentChatId) {
-            // Add user message if it's not already in the list
-            const hasUserMessage = chat.messages.some((m) => m.id === message.id);
-            const messagesToAdd = hasUserMessage
-              ? [mappedMessage]
-              : [message, mappedMessage];
+        // Update local state with both user message and API response
+        setChats((prev) =>
+          prev.map((chat) => {
+            if (chat.id === currentChatId) {
+              // Add user message if it's not already in the list
+              const hasUserMessage = chat.messages.some(
+                (m) => m.id === message.id
+              );
+              const messagesToAdd = hasUserMessage
+                ? [mappedMessage]
+                : [message, mappedMessage];
 
-            return {
-              ...chat,
-              messages: [...chat.messages, ...messagesToAdd],
-            };
-          }
-          return chat;
-        })
-      );
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      
-      // Fallback: add message to local state only
-      setChats((prev) =>
-        prev.map((chat) => {
-          if (chat.id === currentChatId) {
-            return {
-              ...chat,
-              messages: [...chat.messages, message],
-            };
-          }
-          return chat;
-        })
-      );
-    }
-  }, [currentChatId]);
+              return {
+                ...chat,
+                messages: [...chat.messages, ...messagesToAdd],
+              };
+            }
+            return chat;
+          })
+        );
+      } catch (err) {
+        console.error("Failed to send message:", err);
+
+        // Fallback: add message to local state only
+        setChats((prev) =>
+          prev.map((chat) => {
+            if (chat.id === currentChatId) {
+              return {
+                ...chat,
+                messages: [...chat.messages, message],
+              };
+            }
+            return chat;
+          })
+        );
+      }
+    },
+    [currentChatId]
+  );
 
   const updateMessageInCurrentChat = (
     messageId: string,

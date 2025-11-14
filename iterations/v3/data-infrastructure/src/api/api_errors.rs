@@ -10,11 +10,12 @@ use axum::{
 };
 use schemars::JsonSchema;
 use serde::Serialize;
+use utoipa::ToSchema;
 use std::fmt;
 use uuid::Uuid;
 
 /// Standardized error response format matching open-webui patterns
-#[derive(Debug, Clone, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, JsonSchema, ToSchema)]
 pub struct ErrorResponse {
     /// Human-readable error message
     pub error: String,

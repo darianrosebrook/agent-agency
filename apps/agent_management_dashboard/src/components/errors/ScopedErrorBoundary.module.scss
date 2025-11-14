@@ -1,0 +1,88 @@
+.scopedErrorBoundary {
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-card);
+  margin: 1rem 0;
+}
+
+.scopedErrorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.scopedErrorIcon {
+  color: var(--color-destructive);
+  margin-bottom: 0.5rem;
+}
+
+.scopedErrorIconSvg {
+  width: 2rem;
+  height: 2rem;
+}
+
+.scopedErrorText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scopedErrorTitle {
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-foreground);
+  margin: 0;
+}
+
+.scopedErrorDescription {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+  margin: 0;
+}
+
+.scopedErrorDetails {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.scopedErrorActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.scopedErrorButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scopedErrorButtonIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.scopedErrorDebug {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--color-muted);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+}
+
+.scopedErrorDebugPre {
+  margin: 0.5rem 0 0 0;
+  padding: 0.5rem;
+  background-color: var(--color-background);
+  border-radius: calc(var(--radius) - 2px);
+  overflow-x: auto;
+  font-family: var(--font-monaspace);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
