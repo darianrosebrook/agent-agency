@@ -2,6 +2,8 @@
 // Mapped from CSS variables in globals.css
 // CSS variables are preserved for runtime theme switching
 
+@use "sass:color";
+
 // Primary colors
 $color-primary: #030213;
 $color-primary-foreground: oklch(1 0 0);
@@ -46,15 +48,15 @@ $color-switch-background: #cbced4;
 
 // Surface colors (derived from card colors)
 $color-surface: $color-card;
-$color-surface-hover: lighten($color-card, 2%);
+$color-surface-hover: color.adjust($color-card, $lightness: 2%);
 
 // Text colors
 $color-text: $color-foreground;
 $color-text-secondary: $color-muted-foreground;
 
 // Hover states
-$color-primary-hover: darken($color-primary, 10%);
-$color-primary-light: lighten($color-primary, 30%);
+$color-primary-hover: color.adjust($color-primary, $lightness: -10%);
+$color-primary-light: color.adjust($color-primary, $lightness: 30%);
 
 // Ring color
 $color-ring: oklch(0.708 0 0);
