@@ -208,6 +208,19 @@ export async function sendChatMessage(
 }
 
 /**
+ * Get a chat session by ID
+ *
+ * @param sessionId - Chat session UUID
+ */
+export async function getChatSession(
+  sessionId: string
+): Promise<ChatSessionResponse> {
+  const url = `${API_BASE}/chat/sessions/${sessionId}`;
+
+  return apiGet<ChatSessionResponse>(url);
+}
+
+/**
  * Delete a chat session
  *
  * @param sessionId - Chat session UUID

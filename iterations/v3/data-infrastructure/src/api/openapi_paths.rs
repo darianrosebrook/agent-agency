@@ -7,12 +7,12 @@
 //! @author @darianrosebrook
 
 use crate::api::api_errors::ErrorResponse;
+use crate::api::api_types::{LinkProvenanceRequest, SaveQueryRequest, WaiverApprovalRequest, WaiverRequest};
 use crate::api::handlers::auth_handlers::{LoginRequest, LoginResponse, RefreshTokenRequest, UserResponse};
-use crate::api::types::{TaskResultResponse, TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse};
+use crate::api::types::{TaskStatusResponse, TaskSubmissionRequest, TaskSubmissionResponse};
 use crate::chat_service::{ChatMessage, ChatSession};
 use axum::http::StatusCode;
 use axum::response::Json;
-use utoipa::OpenApi;
 use uuid::Uuid;
 
 /// Health check endpoint
@@ -598,6 +598,832 @@ pub async fn get_agent_stats_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<
     Err(StatusCode::NOT_IMPLEMENTED)
 }
 
+/// Get agent health
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/{id}/health",
+    tag = "Agents",
+    params(
+        ("id" = Uuid, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Agent health status", body = serde_json::Value),
+        (status = 404, description = "Agent not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agent_health_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get agent metrics
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/{id}/metrics",
+    tag = "Agents",
+    params(
+        ("id" = Uuid, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Agent metrics", body = serde_json::Value),
+        (status = 404, description = "Agent not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agent_metrics_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get agent logs
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/{id}/logs",
+    tag = "Agents",
+    params(
+        ("id" = Uuid, Path, description = "Agent ID"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of log entries"),
+        ("offset" = Option<i32>, Query, description = "Offset for pagination")
+    ),
+    responses(
+        (status = 200, description = "Agent logs", body = serde_json::Value),
+        (status = 404, description = "Agent not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agent_logs_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get agents statistics
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/stats",
+    tag = "Agents",
+    responses(
+        (status = 200, description = "Overall agent statistics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agents_stats_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get agents task completion
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/tasks/completion",
+    tag = "Agents",
+    responses(
+        (status = 200, description = "Agent task completion metrics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agents_tasks_completion_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get agents efficiency
+#[utoipa::path(
+    get,
+    path = "/api/v1/agents/efficiency",
+    tag = "Agents",
+    responses(
+        (status = 200, description = "Agent efficiency metrics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agents_efficiency_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get task statistics
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/stats",
+    tag = "Tasks",
+    responses(
+        (status = 200, description = "Task statistics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_tasks_stats_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get task statistics history
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/stats/history",
+    tag = "Tasks",
+    params(
+        ("days" = Option<i32>, Query, description = "Number of days of history")
+    ),
+    responses(
+        (status = 200, description = "Task statistics history", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_tasks_stats_history_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get task logs
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{task_id}/logs",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of log entries"),
+        ("offset" = Option<i32>, Query, description = "Offset for pagination")
+    ),
+    responses(
+        (status = 200, description = "Task logs", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_task_logs_doc(_task_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get task progress
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{task_id}/progress",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID")
+    ),
+    responses(
+        (status = 200, description = "Task progress", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_task_progress_doc(_task_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get task events
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{task_id}/events",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of events"),
+        ("offset" = Option<i32>, Query, description = "Offset for pagination")
+    ),
+    responses(
+        (status = 200, description = "Task events", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_task_events_doc(_task_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get task comments
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{task_id}/comments",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID")
+    ),
+    responses(
+        (status = 200, description = "Task comments", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_task_comments_doc(_task_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Create task comment
+#[utoipa::path(
+    post,
+    path = "/api/v1/tasks/{task_id}/comments",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID")
+    ),
+    request_body = CreateTaskCommentRequest,
+    responses(
+        (status = 201, description = "Comment created", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn create_task_comment_doc(
+    _task_id: axum::extract::Path<Uuid>,
+    _body: Json<CreateTaskCommentRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get task provenance
+#[utoipa::path(
+    get,
+    path = "/api/v1/tasks/{task_id}/provenance",
+    tag = "Tasks",
+    params(
+        ("task_id" = Uuid, Path, description = "Task ID")
+    ),
+    responses(
+        (status = 200, description = "Task provenance", body = serde_json::Value),
+        (status = 404, description = "Task not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_task_provenance_doc(_task_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// List judges
+#[utoipa::path(
+    get,
+    path = "/api/v1/judges",
+    tag = "Judges",
+    responses(
+        (status = 200, description = "List of judges", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn list_judges_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get judge details
+#[utoipa::path(
+    get,
+    path = "/api/v1/judges/{id}",
+    tag = "Judges",
+    params(
+        ("id" = Uuid, Path, description = "Judge ID")
+    ),
+    responses(
+        (status = 200, description = "Judge details", body = serde_json::Value),
+        (status = 404, description = "Judge not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_judge_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get judge statistics
+#[utoipa::path(
+    get,
+    path = "/api/v1/judges/stats",
+    tag = "Judges",
+    responses(
+        (status = 200, description = "Judge statistics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_judges_stats_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get judge stats
+#[utoipa::path(
+    get,
+    path = "/api/v1/judges/{id}/stats",
+    tag = "Judges",
+    params(
+        ("id" = Uuid, Path, description = "Judge ID")
+    ),
+    responses(
+        (status = 200, description = "Judge statistics", body = serde_json::Value),
+        (status = 404, description = "Judge not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_judge_stats_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get judge evaluations
+#[utoipa::path(
+    get,
+    path = "/api/v1/judges/{id}/evaluations",
+    tag = "Judges",
+    params(
+        ("id" = Uuid, Path, description = "Judge ID"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of evaluations"),
+        ("offset" = Option<i32>, Query, description = "Offset for pagination")
+    ),
+    responses(
+        (status = 200, description = "Judge evaluations", body = serde_json::Value),
+        (status = 404, description = "Judge not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_judge_evaluations_doc(_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get telemetry contributions
+#[utoipa::path(
+    get,
+    path = "/api/v1/telemetry/contributions",
+    tag = "Telemetry",
+    responses(
+        (status = 200, description = "Contributions telemetry", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_contributions_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get model contributions
+#[utoipa::path(
+    get,
+    path = "/api/v1/telemetry/model-contributions",
+    tag = "Telemetry",
+    responses(
+        (status = 200, description = "Model contributions telemetry", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_model_contributions_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get agent activity
+#[utoipa::path(
+    get,
+    path = "/api/v1/telemetry/agent-activity",
+    tag = "Telemetry",
+    params(
+        ("days" = Option<i32>, Query, description = "Number of days of activity")
+    ),
+    responses(
+        (status = 200, description = "Agent activity telemetry", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_agent_activity_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get observability efficiency
+#[utoipa::path(
+    get,
+    path = "/api/v1/observability/efficiency",
+    tag = "Observability",
+    responses(
+        (status = 200, description = "Efficiency metrics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_efficiency_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get system metrics (observability)
+#[utoipa::path(
+    get,
+    path = "/api/v1/observability/system-metrics",
+    tag = "Observability",
+    responses(
+        (status = 200, description = "System metrics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_observability_system_metrics_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get observability alerts
+#[utoipa::path(
+    get,
+    path = "/api/v1/observability/alerts",
+    tag = "Observability",
+    params(
+        ("severity" = Option<String>, Query, description = "Filter by severity"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of alerts")
+    ),
+    responses(
+        (status = 200, description = "System alerts", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_alerts_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get system health
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/health",
+    tag = "System",
+    responses(
+        (status = 200, description = "System health status", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_system_health_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get system resources
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/resources",
+    tag = "System",
+    responses(
+        (status = 200, description = "System resource usage", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_system_resources_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get session status
+#[utoipa::path(
+    get,
+    path = "/api/v1/sessions/{session_id}",
+    tag = "Sessions",
+    params(
+        ("session_id" = Uuid, Path, description = "Session ID")
+    ),
+    responses(
+        (status = 200, description = "Session status", body = serde_json::Value),
+        (status = 404, description = "Session not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_session_status_doc(_session_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Pause session
+#[utoipa::path(
+    post,
+    path = "/api/v1/sessions/{session_id}/pause",
+    tag = "Sessions",
+    params(
+        ("session_id" = Uuid, Path, description = "Session ID")
+    ),
+    responses(
+        (status = 200, description = "Session paused", body = serde_json::Value),
+        (status = 404, description = "Session not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn pause_session_doc(_session_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Resume session
+#[utoipa::path(
+    post,
+    path = "/api/v1/sessions/{session_id}/resume",
+    tag = "Sessions",
+    params(
+        ("session_id" = Uuid, Path, description = "Session ID")
+    ),
+    responses(
+        (status = 200, description = "Session resumed", body = serde_json::Value),
+        (status = 404, description = "Session not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn resume_session_doc(_session_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Cancel session
+#[utoipa::path(
+    post,
+    path = "/api/v1/sessions/{session_id}/cancel",
+    tag = "Sessions",
+    params(
+        ("session_id" = Uuid, Path, description = "Session ID")
+    ),
+    responses(
+        (status = 200, description = "Session cancelled", body = serde_json::Value),
+        (status = 404, description = "Session not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn cancel_session_doc(_session_id: axum::extract::Path<Uuid>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get chat session
+#[utoipa::path(
+    get,
+    path = "/api/v1/chat/sessions/{session_id}",
+    tag = "Chat",
+    params(
+        ("session_id" = Uuid, Path, description = "Session ID")
+    ),
+    responses(
+        (status = 200, description = "Chat session", body = ChatSession),
+        (status = 404, description = "Session not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_chat_session_doc(_session_id: axum::extract::Path<Uuid>) -> Result<Json<ChatSession>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Search
+#[utoipa::path(
+    get,
+    path = "/api/v1/search",
+    tag = "Search",
+    params(
+        ("q" = String, Query, description = "Search query"),
+        ("type" = Option<String>, Query, description = "Search type (tasks, agents, projects)"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of results")
+    ),
+    responses(
+        (status = 200, description = "Search results", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn search_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// List queries
+#[utoipa::path(
+    get,
+    path = "/api/v1/queries",
+    tag = "Queries",
+    responses(
+        (status = 200, description = "List of saved queries", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn list_queries_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Save query
+#[utoipa::path(
+    post,
+    path = "/api/v1/queries",
+    tag = "Queries",
+    request_body = SaveQueryRequest,
+    responses(
+        (status = 201, description = "Query saved", body = serde_json::Value),
+        (status = 400, description = "Invalid query", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn save_query_doc(_body: Json<SaveQueryRequest>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Delete query
+#[utoipa::path(
+    delete,
+    path = "/api/v1/queries/{query_id}",
+    tag = "Queries",
+    params(
+        ("query_id" = Uuid, Path, description = "Query ID")
+    ),
+    responses(
+        (status = 200, description = "Query deleted"),
+        (status = 404, description = "Query not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn delete_query_doc(_query_id: axum::extract::Path<Uuid>) -> Result<StatusCode, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get query performance summary
+#[utoipa::path(
+    get,
+    path = "/api/v1/query-performance/summary",
+    tag = "Query Performance",
+    responses(
+        (status = 200, description = "Query performance summary", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_query_performance_summary_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!({}))
+}
+
+/// Get query performance metrics
+#[utoipa::path(
+    get,
+    path = "/api/v1/query-performance/metrics",
+    tag = "Query Performance",
+    responses(
+        (status = 200, description = "Query performance metrics", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_query_performance_metrics_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get slow queries
+#[utoipa::path(
+    get,
+    path = "/api/v1/query-performance/slow",
+    tag = "Query Performance",
+    params(
+        ("limit" = Option<i32>, Query, description = "Maximum number of slow queries")
+    ),
+    responses(
+        (status = 200, description = "Slow queries", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_slow_queries_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get top slow queries
+#[utoipa::path(
+    get,
+    path = "/api/v1/query-performance/top-slow",
+    tag = "Query Performance",
+    params(
+        ("limit" = Option<i32>, Query, description = "Number of top slow queries")
+    ),
+    responses(
+        (status = 200, description = "Top slow queries", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_top_slow_queries_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Link provenance
+#[utoipa::path(
+    post,
+    path = "/api/v1/provenance/link",
+    tag = "Provenance",
+    request_body = LinkProvenanceRequest,
+    responses(
+        (status = 200, description = "Provenance linked", body = serde_json::Value),
+        (status = 400, description = "Invalid request", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn link_provenance_doc(_body: Json<LinkProvenanceRequest>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Verify provenance
+#[utoipa::path(
+    get,
+    path = "/api/v1/provenance/verify/{commit_hash}",
+    tag = "Provenance",
+    params(
+        ("commit_hash" = String, Path, description = "Git commit hash")
+    ),
+    responses(
+        (status = 200, description = "Provenance verification result", body = serde_json::Value),
+        (status = 404, description = "Commit not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn verify_provenance_doc(_commit_hash: axum::extract::Path<String>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// List waivers
+#[utoipa::path(
+    get,
+    path = "/api/v1/waivers",
+    tag = "Waivers",
+    params(
+        ("status" = Option<String>, Query, description = "Filter by status"),
+        ("task_id" = Option<Uuid>, Query, description = "Filter by task ID")
+    ),
+    responses(
+        (status = 200, description = "List of waivers", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn list_waivers_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Create waiver
+#[utoipa::path(
+    post,
+    path = "/api/v1/waivers",
+    tag = "Waivers",
+    request_body = WaiverRequest,
+    responses(
+        (status = 201, description = "Waiver created", body = serde_json::Value),
+        (status = 400, description = "Invalid request", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn create_waiver_doc(_body: Json<WaiverRequest>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Approve waiver
+#[utoipa::path(
+    post,
+    path = "/api/v1/waivers/{waiver_id}/approve",
+    tag = "Waivers",
+    params(
+        ("waiver_id" = Uuid, Path, description = "Waiver ID")
+    ),
+    request_body = WaiverApprovalRequest,
+    responses(
+        (status = 200, description = "Waiver approved", body = serde_json::Value),
+        (status = 404, description = "Waiver not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn approve_waiver_doc(
+    _waiver_id: axum::extract::Path<Uuid>,
+    _body: Json<WaiverApprovalRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// List SLOs
+#[utoipa::path(
+    get,
+    path = "/api/v1/slos",
+    tag = "SLOs",
+    responses(
+        (status = 200, description = "List of SLOs", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn list_slos_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
+/// Get SLO status
+#[utoipa::path(
+    get,
+    path = "/api/v1/slos/{slo_name}/status",
+    tag = "SLOs",
+    params(
+        ("slo_name" = String, Path, description = "SLO name")
+    ),
+    responses(
+        (status = 200, description = "SLO status", body = serde_json::Value),
+        (status = 404, description = "SLO not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_slo_status_doc(_slo_name: axum::extract::Path<String>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// Get SLO measurements
+#[utoipa::path(
+    get,
+    path = "/api/v1/slos/{slo_name}/measurements",
+    tag = "SLOs",
+    params(
+        ("slo_name" = String, Path, description = "SLO name"),
+        ("days" = Option<i32>, Query, description = "Number of days of measurements")
+    ),
+    responses(
+        (status = 200, description = "SLO measurements", body = serde_json::Value),
+        (status = 404, description = "SLO not found", body = ErrorResponse)
+    )
+)]
+#[allow(dead_code)]
+pub async fn get_slo_measurements_doc(_slo_name: axum::extract::Path<String>) -> Result<Json<serde_json::Value>, StatusCode> {
+    Err(StatusCode::NOT_IMPLEMENTED)
+}
+
+/// List SLO alerts
+#[utoipa::path(
+    get,
+    path = "/api/v1/slo-alerts",
+    tag = "SLOs",
+    params(
+        ("severity" = Option<String>, Query, description = "Filter by severity"),
+        ("limit" = Option<i32>, Query, description = "Maximum number of alerts")
+    ),
+    responses(
+        (status = 200, description = "SLO alerts", body = serde_json::Value)
+    )
+)]
+#[allow(dead_code)]
+pub async fn list_slo_alerts_doc() -> Json<serde_json::Value> {
+    Json(serde_json::json!([]))
+}
+
 /// Request types for chat endpoints
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct CreateChatSessionRequest {
@@ -618,4 +1444,12 @@ pub struct ExecuteQueryRequest {
     pub query: String,
     pub parameters: Option<serde_json::Value>,
 }
+
+/// Request type for task comment
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub struct CreateTaskCommentRequest {
+    pub content: String,
+    pub metadata: Option<serde_json::Value>,
+}
+
 

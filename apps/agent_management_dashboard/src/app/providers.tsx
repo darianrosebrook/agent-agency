@@ -7,6 +7,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Sidebar as NavigationSidebar } from "@/components/dashboard/NavigationSidebar";
 import { Toaster } from "@/components/primitives/sonner";
 import { ProjectProvider } from "@/components/ProjectContext";
+import { ApiProvider } from "@/lib/providers/ApiProvider";
 import { useNotificationSync } from "@/hooks/useNotificationSync";
 import { polyfillClassNameSplit } from "@/lib/utils/className-fix";
 import { deduplicateNotifications } from "@/lib/stores/notificationStore";
@@ -42,9 +43,11 @@ export function Providers({ children }: { children: ReactNode }) {
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return (
-      <ProjectProvider>
-        <div className={styles.providersContainer}>{children}</div>
-      </ProjectProvider>
+      <ApiProvider>
+        <ProjectProvider>
+          <div className={styles.providersContainer}>{children}</div>
+        </ProjectProvider>
+      </ApiProvider>
     );
   }
 
@@ -55,15 +58,17 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <ProjectProvider>
-      <ErrorBoundary>
-        <div className={styles.providersContainer}>
-          <NavigationSidebar />
-          <main className={styles.main}>{children}</main>
-        </div>
-        <Toaster />
-      </ErrorBoundary>
-      </ProjectProvider>
+      <ApiProvider>
+        <ProjectProvider>
+          <ErrorBoundary>
+            <div className={styles.providersContainer}>
+              <NavigationSidebar />
+              <main className={styles.main}>{children}</main>
+            </div>
+            <Toaster />
+          </ErrorBoundary>
+        </ProjectProvider>
+      </ApiProvider>
     </ThemeProvider>
   );
 }

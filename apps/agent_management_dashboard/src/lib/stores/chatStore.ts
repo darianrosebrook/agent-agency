@@ -28,8 +28,14 @@ import { parseApiError } from "../errors";
 import { apiGet, apiPost } from "../utils/api";
 
 interface ChatState {
-  // State
+  // State (cached from database)
   chats: ChatData[];
+  cacheMetadata: {
+    lastFetched: number;
+    ttl: number; // Time-to-live in milliseconds (30 seconds for chats)
+  };
+  
+  // UI State
   currentChatId: string | null;
   isLoading: boolean;
   error: Error | null;
@@ -50,13 +56,17 @@ interface ChatState {
   ) => void;
 
   // API actions (with Zod validation)
-  fetchChatSessions: () => Promise<void>;
+  fetchChatSessions: (forceRefresh?: boolean) => Promise<void>;
   createChatSession: (request: { title?: string }) => Promise<string>;
   fetchChatMessages: (sessionId: string) => Promise<void>;
   addMessage: (
     sessionId: string,
     message: Omit<Message, "id" | "timestamp">
   ) => Promise<void>;
+  
+  // Cache management
+  refreshChats: () => Promise<void>; // Force refresh from database
+  isCacheStale: () => boolean; // Check if cache needs refresh
 
   // Optimistic updates
   optimisticAddMessage: (message: Message) => void;
@@ -426,6 +436,10 @@ export const useChatStore = create<ChatState>()(
     : ((set, get) => ({
       // Initial state
       chats: [],
+      cacheMetadata: {
+        lastFetched: 0,
+        ttl: 30000, // 30 seconds for chat sessions
+      },
       currentChatId: null,
       isLoading: false,
       error: null,
