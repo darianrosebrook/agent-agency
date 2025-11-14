@@ -431,12 +431,13 @@ fn extract_output_tensor(_prediction: &MLFeatureProvider) -> Result<Tensor> {
     }
 }
 
-/// Run inference on a loaded model using opaque reference
-pub fn run_inference(
-    model_ref: ModelRef,
-    input_name: &str,
-    input_data: &[f32],
-    input_shape: &[usize],
+/// Run inference using a raw model handle pointer with multiple inputs (for use in spawn_blocking threads)
+/// This function does not access the thread-local registry, making it safe to call
+/// from any thread after extracting the handle pointer.
+pub fn run_inference_with_handle_multi_input(
+    model_handle_ptr: u64,
+    input_features: &HashMap<String, MLFeatureValue>,
+    output_name: &str,
 ) -> Result<Tensor> {
     if !coreml_runtime_available() {
         return Err(ANEError::Internal(
@@ -446,42 +447,24 @@ pub fn run_inference(
 
     #[cfg(target_os = "macos")]
     {
-        // Convert input shape to i32 array for Core ML
-        let shape_i32: Vec<i32> = input_shape.iter().map(|&x| x as i32).collect();
-
-        // Create input tensor
-        let input_array = MLMultiArray::from_slice(input_data, &shape_i32)
-            .map_err(|e| ANEError::Internal(format!("Failed to create input tensor: {}", e)))?;
-
-        // Create input feature dictionary
-        let mut input_features = HashMap::new();
-        input_features.insert(
-            input_name.to_string(),
-            MLFeatureValue::MultiArray(input_array),
-        );
-
-        // Create input provider
-        // Get model handle for state features if needed
-        let model_handle =
-            registry::with_model_handle(model_ref.clone(), |handle| handle.as_ptr() as u64);
+        // Create input provider with model handle for state features
         let input_provider =
-            MLDictionaryFeatureProvider::from_dictionary(&input_features, model_handle).map_err(
+            MLDictionaryFeatureProvider::from_dictionary(input_features, Some(model_handle_ptr)).map_err(
                 |e| ANEError::Internal(format!("Failed to create input provider: {}", e)),
             )?;
 
-        // Run inference using scoped handle access
+        // Run inference using the handle pointer directly
         let mut output_provider_ref: u64 = 0;
         let mut error_ptr: *mut std::ffi::c_char = std::ptr::null_mut();
 
-        let inference_result = registry::with_model_handle(model_ref, |model_handle| unsafe {
+        let inference_result = unsafe {
             agentbridge_model_run_inference(
-                model_handle.as_ptr() as u64,
+                model_handle_ptr,
                 input_provider.ptr() as u64,
                 &mut output_provider_ref,
                 &mut error_ptr,
             )
-        })
-        .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+        };
 
         if inference_result != 0 {
             let error_msg = if !error_ptr.is_null() {
@@ -503,23 +486,10 @@ pub fn run_inference(
             ));
         }
 
-        // Query model metadata for output feature names
-        // Use first output name from model metadata, or fallback to input name
-        let output_name = match query_model_outputs(model_ref.clone()) {
-            Ok(output_specs) => {
-                if !output_specs.is_empty() {
-                    // Use first output feature name from model metadata
-                    output_specs[0].name.clone()
-                } else {
-                    // No outputs found in metadata, fallback to input name
-                    input_name.to_string()
-                }
-            }
-            Err(_) => {
-                // Query failed, fallback to input name
-                input_name.to_string()
-            }
-        };
+        // Query model metadata for output feature names using the handle
+        // We can't use query_model_outputs here because it needs ModelRef and registry access
+        // Instead, try common output names for Mistral models
+        let output_name = "logits".to_string(); // StatefulMistral typically uses "logits"
         
         let output_name_cstr = CString::new(output_name.clone())
             .map_err(|e| ANEError::Internal(format!("Invalid output name: {}", e)))?;
@@ -554,7 +524,7 @@ pub fn run_inference(
                     msg
                 }
             } else {
-                format!("Unknown error extracting output feature '{}'", input_name)
+                format!("Unknown error extracting output feature '{}'", output_name)
             };
             return Err(ANEError::Internal(error_msg));
         }
@@ -597,6 +567,51 @@ pub fn run_inference(
             "Core ML not available on this platform".to_string(),
         ))
     }
+}
+
+/// Run inference using a raw model handle pointer (for use in spawn_blocking threads)
+/// This is a convenience wrapper that creates a single-input feature dictionary.
+pub fn run_inference_with_handle(
+    model_handle_ptr: u64,
+    input_name: &str,
+    input_data: &[f32],
+    input_shape: &[usize],
+) -> Result<Tensor> {
+    // Convert input shape to i32 array for Core ML
+    let shape_i32: Vec<i32> = input_shape.iter().map(|&x| x as i32).collect();
+
+    // Create input tensor
+    let input_array = MLMultiArray::from_slice(input_data, &shape_i32)
+        .map_err(|e| ANEError::Internal(format!("Failed to create input tensor: {}", e)))?;
+
+    // Create input feature dictionary
+    let mut input_features = HashMap::new();
+    input_features.insert(
+        input_name.to_string(),
+        MLFeatureValue::MultiArray(input_array),
+    );
+
+    // Use default output name "logits" for single-input inference
+    run_inference_with_handle_multi_input(model_handle_ptr, &input_features, "logits")
+}
+
+/// Run inference on a loaded model using opaque reference
+/// This version uses ModelRef and accesses the thread-local registry
+/// It extracts the handle and delegates to run_inference_with_handle
+pub fn run_inference(
+    model_ref: ModelRef,
+    input_name: &str,
+    input_data: &[f32],
+    input_shape: &[usize],
+) -> Result<Tensor> {
+    // Extract model handle pointer from thread-local registry
+    let model_handle_ptr: u64 = registry::with_model_handle(model_ref, |handle| {
+        handle.as_ptr() as u64
+    })
+    .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+
+    // Delegate to the handle-based version
+    run_inference_with_handle(model_handle_ptr, input_name, input_data, input_shape)
 }
 
 /// Unload a model and free resources using opaque reference

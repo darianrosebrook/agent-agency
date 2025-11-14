@@ -9,6 +9,77 @@ use crate::ane::policy::{BackendPolicy, PerformancePolicy, TaskType};
 use candle_core::{Device, IndexOp, Tensor};
 use rand::Rng;
 use schemars::JsonSchema;
+use std::time::Instant;
+
+/// Prefill vs decode performance metrics
+#[derive(Debug, Clone)]
+pub struct PrefillDecodeMetrics {
+    /// Time to first token (prefill latency) in milliseconds
+    pub ttft_ms: f64,
+    /// Per-token decode latency in milliseconds (average)
+    pub decode_ms_per_token: f64,
+    /// All per-token decode latencies (for percentile analysis)
+    pub decode_latencies_ms: Vec<f64>,
+    /// Number of tokens generated (excluding input)
+    pub tokens_generated: usize,
+    /// Total generation time (prefill + decode) in milliseconds
+    pub total_generation_ms: f64,
+}
+
+impl PrefillDecodeMetrics {
+    pub fn new() -> Self {
+        Self {
+            ttft_ms: 0.0,
+            decode_ms_per_token: 0.0,
+            decode_latencies_ms: Vec::new(),
+            tokens_generated: 0,
+            total_generation_ms: 0.0,
+        }
+    }
+
+    /// Calculate average decode latency from collected measurements
+    pub fn calculate_average_decode(&mut self) {
+        if !self.decode_latencies_ms.is_empty() {
+            self.decode_ms_per_token = self.decode_latencies_ms.iter().sum::<f64>()
+                / self.decode_latencies_ms.len() as f64;
+        }
+    }
+
+    /// Get P50 decode latency
+    pub fn p50_decode_ms(&self) -> f64 {
+        if self.decode_latencies_ms.is_empty() {
+            return 0.0;
+        }
+        let mut sorted = self.decode_latencies_ms.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted[sorted.len() * 50 / 100]
+    }
+
+    /// Get P95 decode latency
+    pub fn p95_decode_ms(&self) -> f64 {
+        if self.decode_latencies_ms.is_empty() {
+            return 0.0;
+        }
+        let mut sorted = self.decode_latencies_ms.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted[sorted.len() * 95 / 100]
+    }
+
+    /// Get tokens per second (throughput)
+    pub fn tokens_per_second(&self) -> f64 {
+        if self.total_generation_ms == 0.0 {
+            return 0.0;
+        }
+        (self.tokens_generated as f64 * 1000.0) / self.total_generation_ms
+    }
+}
+
+/// Mistral inference result with performance metrics
+#[derive(Debug, Clone)]
+pub struct MistralInferenceResult {
+    pub text: String,
+    pub metrics: PrefillDecodeMetrics,
+}
 
 /// Inference options for Mistral models
 #[derive(Debug, Clone, JsonSchema)]
@@ -211,12 +282,22 @@ pub async fn generate_debate_argument(
     parse_debate_response(&response)
 }
 
-/// Generate text using Mistral model
+/// Generate text using Mistral model (returns text only, for backward compatibility)
 pub async fn generate_text(
     model: &mut MistralModel,
     prompt: &str,
     options: &MistralInferenceOptions,
 ) -> Result<String> {
+    let result = generate_text_with_metrics(model, prompt, options).await?;
+    Ok(result.text)
+}
+
+/// Generate text using Mistral model with prefill/decode metrics
+pub async fn generate_text_with_metrics(
+    model: &mut MistralModel,
+    prompt: &str,
+    options: &MistralInferenceOptions,
+) -> Result<MistralInferenceResult> {
     // Update last accessed time (std::sync::Mutex, no await needed)
     if let Ok(mut last_accessed) = model.last_accessed.lock() {
         *last_accessed = std::time::Instant::now();
@@ -312,6 +393,11 @@ pub async fn generate_text(
     // Pre-allocate capacity to avoid reallocations
     generated_tokens.reserve(input_tokens.len() + options.max_tokens);
 
+    // Initialize metrics tracking
+    let mut metrics = PrefillDecodeMetrics::new();
+    let generation_start = Instant::now();
+    let mut prefill_complete = false;
+
     for _ in 0..options.max_tokens {
         // Prepare input for next token prediction
         let input_len = generated_tokens.len();
@@ -328,6 +414,7 @@ pub async fn generate_text(
         .unsqueeze(0)?;
 
         // Run inference through Core ML with timeout
+        let step_start = Instant::now();
         let step_future = run_mistral_inference(model, &input_tensor);
         let logits = match tokio::time::timeout(
             std::time::Duration::from_millis(options.timeout_ms),
@@ -341,6 +428,17 @@ pub async fn generate_text(
                 return Err(ANEError::Timeout(options.timeout_ms));
             }
         };
+        let step_duration_ms = step_start.elapsed().as_secs_f64() * 1000.0;
+
+        // Track prefill (first token) vs decode (subsequent tokens)
+        if !prefill_complete {
+            // First token generation = prefill phase
+            metrics.ttft_ms = step_duration_ms;
+            prefill_complete = true;
+        } else {
+            // Subsequent tokens = decode phase
+            metrics.decode_latencies_ms.push(step_duration_ms);
+        }
 
         // Sample next token
         let next_token = sample_token(&logits, &options)?;
@@ -366,15 +464,22 @@ pub async fn generate_text(
         .tokenizer
         .decode(&generated_tokens[input_tokens.len()..])?;
 
+    // Finalize metrics
+    metrics.tokens_generated = generated_tokens.len() - input_tokens.len();
+    metrics.total_generation_ms = generation_start.elapsed().as_secs_f64() * 1000.0;
+    metrics.calculate_average_decode();
+
     // Record successful inference
     model.circuit_breaker.record_success();
 
-    Ok(generated_text)
+    Ok(MistralInferenceResult {
+        text: generated_text,
+        metrics,
+    })
 }
 
 /// Run Mistral inference through Core ML
 async fn run_mistral_inference(model: &MistralModel, input_tensor: &Tensor) -> Result<Tensor> {
-    use crate::ane::compat::coreml_module::run_inference;
 
     // Get the model reference from SafeModelHandle
     let model_ref = model.handle.get_model_ref(); // SafeModelHandle.get_model_ref() returns ModelRef
@@ -404,16 +509,87 @@ async fn run_mistral_inference(model: &MistralModel, input_tensor: &Tensor) -> R
     // Input shape for CoreML: [batch_size, sequence_length]
     let input_shape = vec![batch_size, seq_len];
 
-    // Mistral models typically use "input_ids" as the input feature name
-    // This may need to be configurable based on the actual model schema
-    let input_name = "input_ids".to_string();
+    // StatefulMistral models use "inputIds" (camelCase) and "causalMask" (camelCase)
+    // Query the model to get actual input names, or try both conventions
+    let model_ref_for_query = model_ref;
+    let input_specs = crate::ane::compat::coreml::query_model_inputs(model_ref_for_query)
+        .unwrap_or_default();
+    
+    // Find the input name - prefer camelCase (inputIds) for StatefulMistral
+    let input_name = input_specs.iter()
+        .find(|spec| spec.name.to_lowercase() == "inputids")
+        .map(|spec| spec.name.clone())
+        .unwrap_or_else(|| {
+            // Fallback to snake_case if not found
+            "inputIds".to_string()
+        });
+
+    // Check if causalMask is required (StatefulMistral models typically need it)
+    let needs_causal_mask = input_specs.iter()
+        .any(|spec| spec.name.to_lowercase() == "causalmask" || spec.name.to_lowercase() == "attention_mask");
+
+    // CRITICAL: Extract model handle pointer before spawn_blocking to avoid thread-local registry access
+    // The registry is thread-local, so we need to get the handle on the current thread
+    use crate::ane::compat::coreml::registry;
+    let model_handle_ptr: u64 = registry::with_model_handle(model_ref, |handle| {
+        handle.as_ptr() as u64
+    })
+    .ok_or_else(|| ANEError::InvalidInput("Model not found in registry".to_string()))?;
+
+    // Prepare data for input features (all Send-safe types)
+    let input_data_clone = input_data.clone();
+    let input_shape_i32: Vec<i32> = input_shape.iter().map(|&x| x as i32).collect();
+    let input_name_clone = input_name.clone();
+    let needs_causal_mask_clone = needs_causal_mask;
+    
+    // Find mask name if needed (before moving into closure)
+    let mask_name = if needs_causal_mask {
+        input_specs.iter()
+            .find(|spec| {
+                let name_lower = spec.name.to_lowercase();
+                name_lower == "causalmask" || name_lower == "attention_mask"
+            })
+            .map(|spec| spec.name.clone())
+            .unwrap_or_else(|| "causalMask".to_string())
+    } else {
+        String::new()
+    };
 
     // CRITICAL: Wrap blocking FFI call in spawn_blocking to prevent async runtime starvation
     // The Core ML FFI call is synchronous and can block for extended periods. If called
     // directly in async context, it can block the async runtime thread and prevent watchdog
     // check-ins, causing kernel panics. spawn_blocking moves the work to a separate thread pool.
+    // We pass the handle pointer directly to avoid thread-local registry access.
     let output_tensor = tokio::task::spawn_blocking(move || {
-        run_inference(model_ref, &input_name, &input_data, &input_shape)
+        // Create input features dictionary inside the closure (after moving Send-safe data)
+        use crate::ane::compat::types::{MLMultiArray, MLFeatureValue};
+        use std::collections::HashMap;
+        
+        // Create inputIds array (token IDs as f32, but values are integers)
+        let input_ids_array = MLMultiArray::from_slice(&input_data_clone, &input_shape_i32)
+            .map_err(|e| ANEError::Internal(format!("Failed to create inputIds array: {}", e)))?;
+        
+        let mut input_features = HashMap::new();
+        input_features.insert(input_name_clone, MLFeatureValue::MultiArray(input_ids_array));
+        
+        // Add causalMask if required (StatefulMistral models need this)
+        if needs_causal_mask_clone {
+            // Create a simple causal mask: [1, 1, 1, 1] for StatefulMistral
+            // This is a minimal mask that indicates all positions are valid
+            // Store as f32 (value 1.0) - CoreML will handle the conversion to int32 if needed
+            let causal_mask_data = vec![1.0f32; 1]; // Single value: 1.0
+            let causal_mask_shape = vec![1, 1, 1, 1]; // [batch, height, width, channels] format
+            let causal_mask_shape_i32: Vec<i32> = causal_mask_shape.iter().map(|&x| x as i32).collect();
+            
+            let causal_mask_array = MLMultiArray::from_slice(&causal_mask_data, &causal_mask_shape_i32)
+                .map_err(|e| ANEError::Internal(format!("Failed to create causalMask array: {}", e)))?;
+            
+            input_features.insert(mask_name, MLFeatureValue::MultiArray(causal_mask_array));
+        }
+        
+        // Use the multi-input function that accepts a HashMap of features
+        use crate::ane::compat::coreml_module::run_inference_with_handle_multi_input;
+        run_inference_with_handle_multi_input(model_handle_ptr, &input_features, "logits")
     })
     .await
     .map_err(|e| ANEError::Internal(format!("Inference task panicked: {}", e)))?
