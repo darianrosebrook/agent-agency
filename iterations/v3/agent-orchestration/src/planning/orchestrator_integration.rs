@@ -12,6 +12,44 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 // TODO: Re-enable agent_workers import when circular dependency is resolved
+//       Currently commented out due to circular dependency between orchestrator and agent_workers modules.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Resolve circular dependency between orchestrator_integration and agent_workers modules
+// [ ] Re-enable agent_workers import: use agent_workers::{MCPWorkerPool, WorkerHandle};
+// [ ] Update all references to use imported types instead of placeholders
+// [ ] Verify compilation and test suite passes
+// [ ] Update documentation to reflect resolved dependency
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] agent_workers import successfully compiles without circular dependency errors
+// [ ] MCPWorkerPool and WorkerHandle types are accessible and functional
+// [ ] All existing functionality continues to work
+// [ ] No performance regressions introduced
+// [ ] Code maintains type safety and compile-time guarantees
+//
+// DEPENDENCIES:
+// [ ] Circular dependency resolution between orchestrator and agent_workers (Required)
+// [ ] Module structure refactoring if needed
+//
+// ESTIMATED EFFORT: 2-3 days
+// PRIORITY: High
+// BLOCKING: Yes - prevents full integration with worker pool
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=5, max_loc=300
+// - Reviewer Requirements: Code review by architecture team for dependency management
 // use agent_workers::{MCPWorkerPool, WorkerHandle};
 use crate::planning::{
     council_monitor::CouncilMonitor, council_review::CouncilPlanReview,
@@ -983,6 +1021,49 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
 
 /// Mock worker pool interface for development
 /// TODO: Replace with real MCPWorkerPool when circular dependency is resolved
+///       Currently uses mock implementation due to circular dependency; should use actual MCPWorkerPool from agent_workers crate.
+///       <One-sentence context & why this exists>
+///
+/// COMPLETION CHECKLIST:
+/// [ ] Primary functionality implemented
+/// [ ] Resolve circular dependency between orchestrator_integration and agent_workers modules
+/// [ ] Replace MockWorkerPoolTrait with actual MCPWorkerPool from agent_workers
+/// [ ] Update MockWorkerHandle to use WorkerHandle from agent_workers
+/// [ ] Update all method signatures to match real MCPWorkerPool interface
+/// [ ] Remove mock implementations and use real worker pool functionality
+/// [ ] Update tests to use real worker pool instead of mocks
+/// [ ] API/data structures defined & stable
+/// [ ] Error handling + validation aligned with error taxonomy
+/// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+/// [ ] Integration tests for external systems/contracts
+/// [ ] Documentation: public API + system behavior
+/// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+/// [ ] Security posture reviewed (inputs, authz, sandboxing)
+/// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+/// [ ] Configurability and feature flags defined if relevant
+/// [ ] Failure-mode cards documented (degradation paths)
+///
+/// ACCEPTANCE CRITERIA:
+/// [ ] MCPWorkerPool successfully imported and instantiated
+/// [ ] All worker pool operations function correctly
+/// [ ] No performance regressions compared to mock implementation
+/// [ ] Proper error handling for worker pool failures
+/// [ ] Worker assignment and task distribution works as expected
+/// [ ] Code maintains type safety and compile-time guarantees
+///
+/// DEPENDENCIES:
+/// [ ] Circular dependency resolution between orchestrator and agent_workers (Required)
+/// [ ] MCPWorkerPool implementation in agent_workers crate (Required)
+/// [ ] WorkerHandle interface compatibility
+///
+/// ESTIMATED EFFORT: 2-3 days
+/// PRIORITY: High
+/// BLOCKING: Yes - prevents real worker pool integration
+///
+/// GOVERNANCE:
+/// - CAWS Tier: 2 (features, APIs, data writes)
+/// - Change Budget: max_files=8, max_loc=500
+/// - Reviewer Requirements: Code review by distributed systems team
 #[async_trait::async_trait]
 trait MockWorkerPoolTrait: Send + Sync {
     async fn list_workers(&self) -> Vec<MockWorkerHandle>;

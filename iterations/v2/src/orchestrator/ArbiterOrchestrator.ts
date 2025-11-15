@@ -2243,14 +2243,40 @@ export class ArbiterOrchestrator {
     relevantFiles: any[]
   ): number {
     // TODO: Implement comprehensive agent-file familiarity scoring
-    // - Query agent's historical file interaction patterns from database
-    // - Calculate familiarity based on edit frequency, success rates, and file types
-    // - Implement file complexity assessment and agent capability matching
-    // - Support familiarity decay over time and recency weighting
-    // - Add collaborative filtering for similar agents' file experiences
-    // - Implement familiarity prediction for new files based on patterns
-    // - Support familiarity-based routing optimization and recommendations
-    // - Add familiarity analytics and agent skill development tracking
+    //       Currently returns hardcoded familiarity score; should implement comprehensive scoring based on agent historical file interactions, performance metrics, and collaborative filtering.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Query agent's historical file interaction patterns from database
+    // [ ] Calculate familiarity based on edit frequency, success rates, and file types
+    // [ ] Implement file complexity assessment and agent capability matching
+    // [ ] Support familiarity decay over time and recency weighting
+    // [ ] Add collaborative filtering for similar agents' file experiences
+    // [ ] Implement familiarity prediction for new files based on patterns
+    // [ ] Support familiarity-based routing optimization and recommendations
+    // [ ] Add familiarity analytics and agent skill development tracking
+    //
+    // ACCEPTANCE CRITERIA:
+    // [ ] Familiarity scores correlate with actual agent performance on files
+    // [ ] Higher scores for recently and frequently edited files by the agent
+    // [ ] Collaborative filtering provides meaningful recommendations
+    // [ ] Familiarity decays appropriately over time
+    // [ ] Performance metrics include task completion rates and error frequency
+    // [ ] File complexity assessment considers size, language, and domain complexity
+    //
+    // DEPENDENCIES:
+    // [ ] Agent performance database schema and repository layer
+    // [ ] Historical task completion tracking system
+    // [ ] File metadata service for complexity assessment
+    // [ ] Agent capability profiling system
+    //
+    // ESTIMATED EFFORT: 3-4 weeks
+    // PRIORITY: Medium (enhances routing but not critical)
+    // BLOCKING: No
+    //
+    // CAWS TIER: T2 (features, APIs, data writes)
+    // CHANGE BUDGET: max_files=15, max_loc=800
+    // REVIEWER REQUIREMENTS: Code review by ML engineering team
     if (!relevantFiles.length) return 0.5;
 
     // For now, assume agents have some baseline familiarity

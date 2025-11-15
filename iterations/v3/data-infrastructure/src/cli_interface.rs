@@ -581,7 +581,49 @@ impl CliInterface {
         ];
 
         // TODO: Integrate real task status data
-        //       Currently uses demo rotation; should query actual task status data from system.
+        //       Currently uses demo rotation with hardcoded status messages; should query actual task status from system APIs and databases.
+        //       <One-sentence context & why this exists>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Integrate with task execution system to get real status data
+        // [ ] Query task status from database/API instead of demo rotation
+        // [ ] Handle different task states (pending, running, completed, failed)
+        // [ ] Update status messages to reflect actual task progress
+        // [ ] Implement real-time status updates if possible
+        // [ ] Add error handling for status query failures
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // [ ] Task status reflects actual system state, not demo data
+        // [ ] Status updates in real-time or near real-time
+        // [ ] Proper error handling when task status is unavailable
+        // [ ] Status messages are informative and accurate
+        // [ ] Performance impact is minimal on CLI responsiveness
+        // [ ] Works across different task types and execution environments
+        //
+        // DEPENDENCIES:
+        // [ ] Task execution system with status tracking (Required)
+        // [ ] Database/API access for task status queries (Required)
+        // [ ] Task status data model and serialization
+        //
+        // ESTIMATED EFFORT: 1-2 days
+        // PRIORITY: Medium
+        // BLOCKING: No - CLI works with demo data
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (features, APIs, data writes)
+        // - Change Budget: max_files=4, max_loc=200
+        // - Reviewer Requirements: Code review by CLI team
         let status_idx = (Utc::now().timestamp() / 10 % statuses.len() as i64) as usize;
         let (status, message, progress, phase) = &statuses[status_idx];
 
@@ -905,9 +947,100 @@ impl CliInterface {
         if dashboard {
             println!(" Dashboard enabled: Real-time iteration tracking available");
             // TODO: Start dashboard server
+            //       Currently only prints message; should start actual web dashboard server for real-time iteration tracking and monitoring.
+            //       <One-sentence context & why this exists>
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Implement web dashboard server (HTTP/WebSocket)
+            // [ ] Create dashboard UI for real-time iteration tracking
+            // [ ] Connect dashboard to task execution system for live updates
+            // [ ] Add dashboard metrics and visualization
+            // [ ] Implement dashboard authentication and security
+            // [ ] Add dashboard configuration options (port, host, etc.)
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // [ ] Dashboard server starts successfully when --dashboard flag is used
+            // [ ] Real-time updates show current task progress and status
+            // [ ] Dashboard UI is responsive and user-friendly
+            // [ ] WebSocket connections handle multiple concurrent clients
+            // [ ] Dashboard gracefully handles server shutdown
+            // [ ] Proper error messages when dashboard fails to start
+            //
+            // DEPENDENCIES:
+            // [ ] Web framework (actix-web, warp, etc.) (Required)
+            // [ ] WebSocket library for real-time updates (Required)
+            // [ ] HTML/CSS/JS frontend framework (Optional)
+            // [ ] Task execution system integration (Required)
+            //
+            // ESTIMATED EFFORT: 3-5 days
+            // PRIORITY: Medium
+            // BLOCKING: No - CLI works without dashboard
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (features, APIs, data writes)
+            // - Change Budget: max_files=10, max_loc=800
+            // - Reviewer Requirements: Code review by frontend/web team
         }
 
         // TODO: Implement actual self-prompting execution
+        //       Currently only prints configuration and warning; should implement full self-prompting execution with iterative improvement, guardrail checking, and task completion.
+        //       <One-sentence context & why this exists>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement iterative self-prompting execution loop
+        // [ ] Integrate with AI model for prompt generation and refinement
+        // [ ] Add guardrail checking at each iteration
+        // [ ] Implement task completion detection and validation
+        // [ ] Add iteration limit enforcement and early termination
+        // [ ] Implement file watching and automatic re-execution
+        // [ ] Add progress tracking and status reporting
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // [ ] Self-prompting execution completes tasks successfully
+        // [ ] Each iteration improves upon the previous result
+        // [ ] Guardrails prevent unsafe or incorrect executions
+        // [ ] File watching triggers re-execution when files change
+        // [ ] Maximum iterations are respected and enforced
+        // [ ] Progress is clearly reported to user
+        // [ ] Execution can be interrupted gracefully
+        //
+        // DEPENDENCIES:
+        // [ ] AI model integration for prompt generation (Required)
+        // [ ] Guardrail system for safety checking (Required)
+        // [ ] File watching system (Required)
+        // [ ] Task execution engine (Required)
+        // [ ] Progress tracking and reporting system (Optional)
+        //
+        // ESTIMATED EFFORT: 5-7 days
+        // PRIORITY: High
+        // BLOCKING: Yes - this is core self-prompting functionality
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (auth, billing, critical features)
+        // - Change Budget: max_files=15, max_loc=1000
+        // - Reviewer Requirements: Code review by AI/ML team and security team
         println!(" Task: {}", description);
         println!(" Files: {:?}", files);
         println!(" Model: {:?}", model);

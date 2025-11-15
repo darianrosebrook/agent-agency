@@ -706,14 +706,98 @@ impl GarbageCollector {
     /// Get object age in seconds
     fn get_object_age(&self, _digest: &Digest) -> Result<Option<u64>> {
         // TODO: Implement based on your object store
-        // This would return the age of the object in seconds
+        //       Currently returns hardcoded 0; should implement object age calculation based on object store metadata and timestamps.
+        //       <One-sentence context & why this exists>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Query object store metadata for creation/modification timestamps
+        // [ ] Calculate age as current time minus object timestamp
+        // [ ] Handle missing timestamp metadata gracefully
+        // [ ] Support different timestamp fields (created_at, modified_at, etc.)
+        // [ ] Add caching for frequently accessed objects
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // [ ] Object age calculation returns accurate ages for existing objects
+        // [ ] Missing timestamp metadata handled gracefully (returns None)
+        // [ ] Age calculations are consistent across calls
+        // [ ] Performance impact is minimal on GC operations
+        // [ ] Works with different object store implementations
+        //
+        // DEPENDENCIES:
+        // [ ] Object store with timestamp metadata support (Required)
+        // [ ] Time source for current time calculation (Required)
+        // [ ] Metadata schema understanding (Optional)
+        //
+        // ESTIMATED EFFORT: 1-2 days
+        // PRIORITY: Low
+        // BLOCKING: No - GC works with default age 0
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (features, APIs, data writes)
+        // - Change Budget: max_files=4, max_loc=150
+        // - Reviewer Requirements: Code review by GC team
         Ok(Some(0))
     }
 
     /// Pack an object
     fn pack_object(&mut self, _digest: &Digest) -> Result<()> {
         // TODO: Implement packing logic
-        // This would move the object to a pack file
+        //       Currently returns success without action; should implement object packing to move objects into pack files for storage efficiency.
+        //       <One-sentence context & why this exists>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Locate existing object in loose storage
+        // [ ] Read object data and metadata
+        // [ ] Create or update pack file with object
+        // [ ] Update pack file index with object location
+        // [ ] Remove object from loose storage
+        // [ ] Update object references to point to pack file
+        // [ ] Handle pack file size limits and rotation
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // [ ] Objects are successfully moved from loose to pack storage
+        // [ ] Pack files are created with proper structure and indexing
+        // [ ] Object references are updated correctly
+        // [ ] Loose storage is cleaned up after packing
+        // [ ] Pack file integrity is maintained
+        // [ ] Performance improvement is measurable
+        //
+        // DEPENDENCIES:
+        // [ ] Pack file format specification (Required)
+        // [ ] Pack file indexing system (Required)
+        // [ ] Loose storage cleanup mechanism (Required)
+        // [ ] Reference update system (Required)
+        //
+        // ESTIMATED EFFORT: 3-4 days
+        // PRIORITY: Medium
+        // BLOCKING: No - GC works without packing
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (features, APIs, data writes)
+        // - Change Budget: max_files=8, max_loc=400
+        // - Reviewer Requirements: Code review by storage team
         Ok(())
     }
 

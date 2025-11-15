@@ -1868,10 +1868,52 @@ export class InfrastructureController {
       to: toComponentId,
     });
 
-    // In a real implementation, this might:
-    // 1. Update nginx configuration
-    // 2. Update HAProxy configuration
-    // 3. Update systemd service dependencies
+    // TODO: Implement real systemd traffic redirection
+    //       Currently only logs the operation; should implement actual systemd service configuration updates for traffic redirection with proper load balancer integration.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Update nginx configuration for traffic redirection
+    // [ ] Update HAProxy configuration for backend routing
+    // [ ] Update systemd service dependencies and socket activation
+    // [ ] Implement graceful traffic draining during redirection
+    // [ ] Add configuration validation and rollback capabilities
+    // [ ] Support multiple load balancer types (nginx, HAProxy, Traefik)
+    // [ ] Implement traffic redirection monitoring and health checks
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Traffic redirection works without service interruption
+    // - Nginx configuration updates are applied and reloaded successfully
+    // - HAProxy backend configurations are updated with proper health checks
+    // - Systemd service dependencies are managed correctly
+    // - Configuration changes can be rolled back on failure
+    // - Traffic monitoring shows successful redirection completion
+    // - Integration tests validate redirection against real load balancers
+    //
+    // DEPENDENCIES:
+    // - Load balancer configuration APIs (nginx, HAProxy) (Required)
+    // - Systemd service management capabilities (Required)
+    // - Configuration validation and templating (Required)
+    // - Traffic monitoring and health check systems (Required)
+    //
+    // ESTIMATED EFFORT: 16-20 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (infrastructure management)
+    // - Change Budget: ~300 LOC
+    // - Reviewer Requirements: Infrastructure automation and load balancing expertise
 
     // Simulate configuration update
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -1924,10 +1966,52 @@ export class InfrastructureController {
       to: toComponentId,
     });
 
-    // In a real implementation, this might:
-    // 1. Update nginx upstream configuration
-    // 2. Update HAProxy backend configuration
-    // 3. Update process manager configuration
+    // TODO: Implement real process traffic redirection
+    //       Currently only logs the operation; should implement actual process traffic redirection with reverse proxy configuration updates and process manager integration.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Update nginx upstream configuration for process routing
+    // [ ] Update HAProxy backend configuration with process endpoints
+    // [ ] Update process manager configuration (PM2, systemd, supervisor)
+    // [ ] Implement graceful connection draining during redirection
+    // [ ] Add process health monitoring and automatic failover
+    // [ ] Support multiple reverse proxy types and configurations
+    // [ ] Implement traffic redirection with session persistence
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Process traffic redirection works without connection drops
+    // - Nginx upstream configurations are updated and reloaded
+    // - HAProxy backend configurations route to correct processes
+    // - Process manager configurations maintain service availability
+    // - Session persistence is maintained during redirection
+    // - Connection draining completes before process termination
+    // - Integration tests validate redirection against real process managers
+    //
+    // DEPENDENCIES:
+    // - Reverse proxy configuration APIs (nginx, HAProxy) (Required)
+    // - Process manager integration APIs (PM2, systemd, supervisor) (Required)
+    // - Connection draining and session management (Required)
+    // - Process health monitoring and failover systems (Required)
+    //
+    // ESTIMATED EFFORT: 14-18 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (infrastructure management)
+    // - Change Budget: ~280 LOC
+    // - Reviewer Requirements: Process management and reverse proxy expertise
 
     // Simulate configuration update
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -1944,11 +2028,54 @@ export class InfrastructureController {
       to: toComponentId,
     });
 
-    // In a real implementation, this might:
-    // 1. Update service registry (Consul, etcd, etc.)
-    // 2. Update DNS records
-    // 3. Update load balancer configuration
-    // 4. Update service mesh configuration
+    // TODO: Implement real generic traffic redirection
+    //       Currently only logs the operation; should implement comprehensive traffic redirection across multiple infrastructure layers including service registries, DNS, and service meshes.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Update service registry (Consul, etcd, ZooKeeper) for service discovery
+    // [ ] Update DNS records for hostname resolution and routing
+    // [ ] Update load balancer configuration for traffic distribution
+    // [ ] Update service mesh configuration (Istio, Linkerd, Consul Connect)
+    // [ ] Implement coordinated updates across all infrastructure layers
+    // [ ] Add traffic redirection validation and health checks
+    // [ ] Support rollback capabilities for failed redirections
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Traffic redirection works across all supported infrastructure types
+    // - Service registry updates propagate within SLA timeframes
+    // - DNS record updates resolve correctly across global DNS
+    // - Load balancer configurations distribute traffic appropriately
+    // - Service mesh configurations route traffic through correct service versions
+    // - Coordinated updates prevent traffic blackholes during transitions
+    // - Rollback mechanisms restore previous configurations on failure
+    // - Integration tests validate end-to-end traffic redirection
+    //
+    // DEPENDENCIES:
+    // - Service registry APIs (Consul, etcd, ZooKeeper) (Required)
+    // - DNS management APIs (Route53, Cloudflare, etc.) (Required)
+    // - Load balancer configuration APIs (Required)
+    // - Service mesh control plane APIs (Istio, Linkerd) (Required)
+    // - Coordination and rollback orchestration (Required)
+    //
+    // ESTIMATED EFFORT: 20-24 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (infrastructure management)
+    // - Change Budget: ~400 LOC
+    // - Reviewer Requirements: Distributed systems and service mesh expertise
 
     // Simulate configuration update
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -2008,9 +2135,52 @@ export class InfrastructureController {
   private async drainConnections(componentId: string): Promise<void> {
     this.logger.info("Draining connections", { componentId });
 
-    // In a real implementation, this would:
-    // 1. Stop accepting new connections
-    // 2. Wait for existing connections to complete
+    // TODO: Implement real connection draining
+    //       Currently only logs the operation; should implement proper connection draining with graceful shutdown, connection tracking, and timeout handling.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Stop accepting new connections at load balancer/reverse proxy level
+    // [ ] Wait for existing connections to complete with configurable timeouts
+    // [ ] Track active connection counts and draining progress
+    // [ ] Implement graceful shutdown signals to application processes
+    // [ ] Add connection draining monitoring and alerting
+    // [ ] Support forced termination after grace period
+    // [ ] Implement connection draining rollback capabilities
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - New connections are blocked during draining period
+    // - Existing connections complete within configured grace period
+    // - Connection draining progress is monitored and reported
+    // - Graceful shutdown signals are sent to application processes
+    // - Forced termination works when grace period expires
+    // - Rollback restores connection acceptance on failure
+    // - Integration tests validate draining against real load balancers
+    //
+    // DEPENDENCIES:
+    // - Load balancer connection management APIs (Required)
+    // - Process signal handling capabilities (Required)
+    // - Connection tracking and monitoring (Required)
+    // - Timeout and deadline management (Required)
+    //
+    // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (infrastructure management)
+    // - Change Budget: ~250 LOC
+    // - Reviewer Requirements: Infrastructure automation and process management expertise
     // 3. Force close remaining connections after timeout
 
     // Simulate connection draining
@@ -2023,11 +2193,54 @@ export class InfrastructureController {
   ): Promise<void> {
     this.logger.info("Updating registries", { componentId, status });
 
-    // In a real implementation, this would:
-    // 1. Update service registry (Consul, etcd, etc.)
-    // 2. Update load balancer health checks
-    // 3. Update monitoring systems
-    // 4. Update DNS records if needed
+    // TODO: Implement real registry updates
+    //       Currently only logs the operation; should implement comprehensive registry updates across service discovery, load balancers, monitoring, and DNS systems.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Update service registry (Consul, etcd, ZooKeeper) with service status
+    // [ ] Update load balancer health checks and target configurations
+    // [ ] Update monitoring systems with service status changes
+    // [ ] Update DNS records for service discovery and routing
+    // [ ] Implement coordinated updates across all registry systems
+    // [ ] Add registry update validation and health verification
+    // [ ] Support rollback capabilities for failed registry updates
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Registry updates propagate across all supported systems
+    // - Service registry reflects accurate service status and endpoints
+    // - Load balancer health checks update within SLA timeframes
+    // - Monitoring systems receive status change notifications
+    // - DNS records update correctly for service discovery
+    // - Coordinated updates prevent service discovery inconsistencies
+    // - Rollback mechanisms restore previous registry state on failure
+    // - Integration tests validate registry updates against real systems
+    //
+    // DEPENDENCIES:
+    // - Service registry APIs (Consul, etcd, ZooKeeper) (Required)
+    // - Load balancer management APIs (Required)
+    // - Monitoring system integration APIs (Required)
+    // - DNS management APIs (Optional)
+    // - Coordination and rollback orchestration (Required)
+    //
+    // ESTIMATED EFFORT: 18-22 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 1 (infrastructure management)
+    // - Change Budget: ~350 LOC
+    // - Reviewer Requirements: Service discovery and infrastructure automation expertise
 
     // Simulate registry update
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -3158,10 +3371,53 @@ export class InfrastructureController {
         instanceCount: instances.length,
       });
 
-      // In a real implementation, this would:
-      // 1. Update Traefik configuration file
-      // 2. Add labels to containers/services
-      // 3. Update service discovery backend
+      // TODO: Implement real Traefik registration
+      //       Currently only logs the operation; should implement proper Traefik configuration updates, container labeling, and service discovery integration.
+      //
+      // COMPLETION CHECKLIST:
+      // [ ] Primary functionality implemented
+      // [ ] Update Traefik dynamic configuration file with service definitions
+      // [ ] Add proper labels to Docker containers for Traefik routing
+      // [ ] Update service discovery backend with service endpoints
+      // [ ] Implement Traefik configuration validation and reloading
+      // [ ] Add Traefik health check and routing verification
+      // [ ] Support Traefik middlewares and routing rules configuration
+      // [ ] Implement configuration rollback for failed registrations
+      // [ ] API/data structures defined & stable
+      // [ ] Error handling + validation aligned with error taxonomy
+      // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+      // [ ] Integration tests for external systems/contracts
+      // [ ] Documentation: public API + system behavior
+      // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+      // [ ] Security posture reviewed (inputs, authz, sandboxing)
+      // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+      // [ ] Configurability and feature flags defined if relevant
+      // [ ] Failure-mode cards documented (degradation paths)
+      //
+      // ACCEPTANCE CRITERIA:
+      // - Traefik configuration updates apply correctly and reload successfully
+      // - Docker container labels enable proper service routing
+      // - Service discovery backend reflects accurate service endpoints
+      // - Traefik routing rules work for registered services
+      // - Health checks and middlewares function as configured
+      // - Configuration validation prevents invalid deployments
+      // - Rollback restores previous configuration on registration failure
+      // - Integration tests validate Traefik routing against real deployments
+      //
+      // DEPENDENCIES:
+      // - Traefik configuration API or file system access (Required)
+      // - Docker API for container labeling (Required)
+      // - Service discovery backend integration (Required)
+      // - Traefik configuration validation tools (Required)
+      //
+      // ESTIMATED EFFORT: 14-18 hours (medium confidence)
+      // PRIORITY: High
+      // BLOCKING: No
+      //
+      // GOVERNANCE:
+      // - CAWS Tier: 1 (infrastructure management)
+      // - Change Budget: ~300 LOC
+      // - Reviewer Requirements: Container orchestration and reverse proxy expertise
 
       // Simulate registration
       await new Promise((resolve) => setTimeout(resolve, 1000));

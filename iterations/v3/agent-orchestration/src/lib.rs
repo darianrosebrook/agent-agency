@@ -570,6 +570,54 @@ mod test_utils {
 }
 
 // TODO: These modules were moved during refactor - need to locate or recreate
+//       Several modules were moved during architecture refactor; need to locate existing implementations or recreate missing functionality.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Locate existing models module implementation
+// [ ] Locate existing resilience module implementation
+// [ ] Locate existing claim_extraction_multimodal module implementation
+// [ ] Locate existing learning module implementation
+// [ ] Locate existing model_client module implementation
+// [ ] Locate existing advanced_monitoring module implementation
+// [ ] Locate existing intelligent_testing module implementation
+// [ ] Re-enable pub mod declarations for found modules
+// [ ] Recreate missing modules if implementations don't exist
+// [ ] Update imports in dependent code
+// [ ] Verify compilation after module restoration
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] All module imports compile successfully
+// [ ] No missing module compilation errors
+// [ ] Module functionality works as expected
+// [ ] API compatibility maintained for existing code
+// [ ] All dependent code can import required modules
+// [ ] Module re-exports work correctly
+//
+// DEPENDENCIES:
+// [ ] Architecture refactor documentation (Required)
+// [ ] Module location mapping from refactor (Required)
+// [ ] Original module implementations or specifications (Required)
+//
+// ESTIMATED EFFORT: 3-5 days
+// PRIORITY: High
+// BLOCKING: Yes - prevents module usage across codebase
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=15, max_loc=1000
+// - Reviewer Requirements: Code review by architecture team
 // pub mod models;
 // pub mod resilience;
 // pub mod claim_extraction_multimodal;
@@ -734,6 +782,51 @@ pub use council_types::{ChangeBudget, ConsensusResult, FinalVerdict, Task};
 // Frontier items are available through the module declaration above
 
 // TODO: These re-exports reference missing modules
+//       Several re-exports reference modules that were moved or removed during refactor; need to locate modules and restore re-exports.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Locate resilience module and verify ResilienceManager exists
+// [ ] Locate claim_extraction_multimodal module and verify types exist
+// [ ] Locate advanced_monitoring module and verify SLO types exist
+// [ ] Locate verdict module and verify VerdictStore types exist
+// [ ] Locate coordinator::orchestrator module and verify ConsensusCoordinator exists
+// [ ] Re-enable pub use statements for found modules and types
+// [ ] Update import paths if modules moved to different locations
+// [ ] Verify compilation after re-enabling re-exports
+// [ ] Update dependent code that may be importing through these re-exports
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] All re-export statements compile successfully
+// [ ] No missing module/type compilation errors
+// [ ] Dependent code can import types through re-exports
+// [ ] API compatibility maintained for existing code
+// [ ] Re-exports work correctly from external crates
+//
+// DEPENDENCIES:
+// [ ] Module restoration from earlier TODO (Required)
+// [ ] Architecture refactor documentation (Required)
+// [ ] Type definitions for all re-exported items (Required)
+//
+// ESTIMATED EFFORT: 2-3 days
+// PRIORITY: Medium
+// BLOCKING: Yes - breaks API compatibility
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=10, max_loc=500
+// - Reviewer Requirements: Code review by API team
 // pub use resilience::ResilienceManager;
 // pub use claim_extraction_multimodal::{MultimodalEvidenceEnricher, ClaimWithMultimodalEvidence};
 // pub use advanced_monitoring::{SLOTracker, SLOStatus, SLOAlert, AlertLevel, SLOComponent, SLODashboardSummary};
@@ -773,6 +866,50 @@ pub use audit_trail::{
 pub use frontier::{Frontier, FrontierConfig, FrontierStats, TaskEntry, TaskStatus};
 
 // TODO: These re-exports reference missing modules
+//       Arbiter module exports reference missing arbiter module; need to locate or recreate arbiter functionality and restore re-exports.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Locate arbiter module implementation
+// [ ] Verify ArbiterOrchestrator type exists
+// [ ] Verify ArbiterConfig, ArbiterVerdict, VerdictStatus exist
+// [ ] Verify WorkerOutput, EvidenceManifest, DebateResult, ArbiterError exist
+// [ ] Re-enable pub use arbiter statement with all types
+// [ ] Update import paths if arbiter module moved
+// [ ] Verify compilation after re-enabling re-exports
+// [ ] Update dependent code that may be importing arbiter types
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] Arbiter re-export statements compile successfully
+// [ ] No missing arbiter module/type compilation errors
+// [ ] Dependent code can import arbiter types through re-exports
+// [ ] API compatibility maintained for existing code
+// [ ] Arbiter functionality works as expected
+//
+// DEPENDENCIES:
+// [ ] Arbiter module implementation or recreation (Required)
+// [ ] Arbiter type definitions (Required)
+// [ ] Architecture documentation for arbiter placement (Optional)
+//
+// ESTIMATED EFFORT: 1-2 days
+// PRIORITY: Medium
+// BLOCKING: Yes - breaks arbiter API access
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=8, max_loc=400
+// - Reviewer Requirements: Code review by orchestration team
 // Arbiter exports
 // pub use arbiter::{
 //     ArbiterOrchestrator, ArbiterConfig, ArbiterVerdict, VerdictStatus,
@@ -787,6 +924,48 @@ pub use types::{DiffStats, MultimodalProcessingResult, MultimodalTask, Orchestra
 
 #[cfg(feature = "api-server")]
 // TODO: These re-exports reference missing modules
+//       Task API re-exports reference missing task_api module; need to locate or implement task API functionality and restore re-exports.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Locate or implement task_api module
+// [ ] Verify get_tasks, get_task_detail, get_task_events, cancel_task functions exist
+// [ ] Verify TaskResponse, TaskDetail, TaskEvent, TaskApiError types exist
+// [ ] Re-enable pub use task_api statement with all exports
+// [ ] Update import paths if task_api module moved
+// [ ] Verify compilation after re-enabling re-exports
+// [ ] Update dependent code that may be importing through these re-exports
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] Task API re-export statements compile successfully
+// [ ] No missing task_api module/type compilation errors
+// [ ] Dependent code can import task API functions/types
+// [ ] Task API functionality works as expected
+// [ ] API compatibility maintained for existing code
+//
+// DEPENDENCIES:
+// [ ] Task API module implementation (Required)
+// [ ] API server feature flag compatibility (Required)
+//
+// ESTIMATED EFFORT: 2-3 days
+// PRIORITY: Medium
+// BLOCKING: Yes - breaks task API access when api-server feature enabled
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=8, max_loc=400
+// - Reviewer Requirements: Code review by API team
 // Re-export API functions
 // pub use task_api::{
 //     get_tasks, get_task_detail, get_task_events, cancel_task,
@@ -794,6 +973,47 @@ pub use types::{DiffStats, MultimodalProcessingResult, MultimodalTask, Orchestra
 // };
 #[cfg(feature = "api-server")]
 // TODO: These re-exports reference missing modules
+//       CQRS router re-exports reference missing cqrs_router module; need to locate or implement CQRS routing functionality and restore re-exports.
+//       <One-sentence context & why this exists>
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Locate or implement cqrs_router module
+// [ ] Verify create_cqrs_router, create_legacy_router, create_combined_router functions exist
+// [ ] Re-enable pub use cqrs_router statement with all exports
+// [ ] Update import paths if cqrs_router module moved
+// [ ] Verify compilation after re-enabling re-exports
+// [ ] Update dependent code that may be importing CQRS router functions
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// [ ] CQRS router re-export statements compile successfully
+// [ ] No missing cqrs_router module/function compilation errors
+// [ ] Dependent code can import CQRS router functions
+// [ ] CQRS routing functionality works as expected
+// [ ] API compatibility maintained for existing code
+//
+// DEPENDENCIES:
+// [ ] CQRS router module implementation (Required)
+// [ ] API server feature flag compatibility (Required)
+//
+// ESTIMATED EFFORT: 1-2 days
+// PRIORITY: Medium
+// BLOCKING: Yes - breaks CQRS routing when api-server feature enabled
+//
+// GOVERNANCE:
+// - CAWS Tier: 2 (features, APIs, data writes)
+// - Change Budget: max_files=6, max_loc=300
+// - Reviewer Requirements: Code review by API team
 // Re-export CQRS router functions
 // pub use cqrs_router::{
 //     create_cqrs_router, create_legacy_router, create_combined_router,
@@ -819,26 +1039,54 @@ impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
         // TODO: Make council components configurable:
-        // 1. Judge configuration: Configure available judges
-        //    - Load judge configurations from config
-        //    - Initialize judge instances based on configuration
-        //    - Support dynamic judge registration
-        // 2. Component configuration: Make components configurable
-        //    - Allow custom verdict aggregators
-        //    - Support configurable decision engines
-        //    - Enable component plugin system
-        // 3. Configuration validation: Validate component configurations
-        //    - Ensure required components are configured
-        //    - Validate component compatibility
-        //    - Handle configuration errors gracefully
+        //       Council components are currently hardcoded; should load judge configurations, component settings, and validation rules from configuration system.
+        //       <One-sentence context & why this exists>
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Load judge configurations from OrchestrationConfig
+        // [ ] Initialize judge instances based on configuration
+        // [ ] Support dynamic judge registration and discovery
+        // [ ] Allow custom verdict aggregators through configuration
+        // [ ] Support configurable decision engines via plugin system
+        // [ ] Enable component plugin system for extensibility
+        // [ ] Ensure required components are configured with validation
+        // [ ] Validate component compatibility and dependencies
+        // [ ] Handle configuration errors gracefully with proper error messages
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
         // ACCEPTANCE CRITERIA:
-        // - Council components are loaded from configuration
-        // - Judge instances are initialized based on config
-        // - Component configurations are validated
+        // [ ] Council components are loaded from OrchestrationConfig
+        // [ ] Judge instances are initialized based on configuration
+        // [ ] Component configurations are validated at startup
+        // [ ] Custom verdict aggregators work through configuration
+        // [ ] Component plugin system enables extensibility
+        // [ ] Configuration errors provide clear diagnostic messages
+        // [ ] All existing functionality continues to work with default config
+        //
         // DEPENDENCIES:
-        // - Configuration system (Required)
-        // - Component factory system (Required)
+        // [ ] Configuration system with council component settings (Required)
+        // [ ] Component factory system for dynamic instantiation (Required)
+        // [ ] Judge registration and discovery system (Required)
+        // [ ] Plugin system for custom components (Optional)
+        //
+        // ESTIMATED EFFORT: 3-4 days
         // PRIORITY: Medium
+        // BLOCKING: No - current hardcoded components work
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (features, APIs, data writes)
+        // - Change Budget: max_files=12, max_loc=600
+        // - Reviewer Requirements: Code review by orchestration team
         let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![];
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
         let decision_engine = crate::decision_making::create_decision_engine();

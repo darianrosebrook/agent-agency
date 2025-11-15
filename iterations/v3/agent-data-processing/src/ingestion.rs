@@ -2011,7 +2011,36 @@ impl FileWatcher {
 
         self.file_patterns.iter().any(|pattern| {
             // TODO: Implement proper glob pattern matching library
-            //       Currently uses basic string matching; should use a proper glob library for accurate pattern matching.
+            //       Currently uses basic string matching with trim_start_matches; should use a proper glob library (like glob crate) for comprehensive pattern matching including wildcards, character classes, and complex patterns.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Integrate glob crate or equivalent pattern matching library
+            // [ ] Support full glob syntax (*, ?, [abc], {a,b,c}, etc.)
+            // [ ] Handle case-insensitive matching where appropriate
+            // [ ] Add proper error handling for malformed patterns
+            // [ ] Add unit tests for various glob patterns
+            // [ ] Add integration tests with real file system patterns
+            // [ ] Optimize performance for large file sets
+            // [ ] Add pattern validation and compilation caching
+            //
+            // ACCEPTANCE CRITERIA:
+            // [ ] All existing patterns continue to work
+            // [ ] New glob patterns (*, **, ?, [abc]) work correctly
+            // [ ] Pattern matching is case-sensitive by default
+            // [ ] Malformed patterns return errors rather than false matches
+            // [ ] Performance acceptable for 10k+ files
+            //
+            // DEPENDENCIES:
+            // [ ] glob crate or equivalent pattern matching library
+            //
+            // ESTIMATED EFFORT: 1-2 days
+            // PRIORITY: Medium (improves file watching accuracy)
+            // BLOCKING: No
+            //
+            // CAWS TIER: T2 (features, APIs, data writes)
+            // CHANGE BUDGET: max_files=5, max_loc=200
+            // REVIEWER REQUIREMENTS: Code review by file system expert
             file_name.contains(pattern.trim_start_matches("*"))
         })
     }
