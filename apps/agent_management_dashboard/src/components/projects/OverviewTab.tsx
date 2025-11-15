@@ -16,7 +16,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { PanelRightOpen, PanelRightClose, History, RotateCcw } from "lucide-react";
 import { OverviewEditor, NotionEditor } from "../composers/editor";
 import { useProjectStore } from "../../lib/stores";
-import { useProjectContext } from "./ProjectContext";
 import { updateProjectOverview, restoreProjectOverviewVersion } from "../../lib/api/projects";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useVersionHistory } from "../../hooks/useVersionHistory";
@@ -34,8 +33,8 @@ export function OverviewTab() {
   const editorContentRef = useRef<string>("");
   const isRestoringRef = useRef<boolean>(false);
   
-  const { getCurrentProject } = useProjectStore();
-  const { currentProjectId } = useProjectContext();
+  // Use only useProjectStore (removed dual state management with ProjectContext)
+  const { getCurrentProject, currentProjectId } = useProjectStore();
   const currentProject = getCurrentProject();
 
   // Debounce content changes for autosave (2 second delay)

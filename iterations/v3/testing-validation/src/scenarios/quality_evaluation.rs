@@ -14,8 +14,8 @@ use tracing::{info, warn};
 
 use crate::harness::{LocalServiceManager, TestEnvironment};
 use crate::quality_analyzers::{
-    CouncilTransparencyScore, DecisionQualityScore, OverallQualityScore, ReasoningDepthScore,
-    VerdictReasoningQualityScore,
+    CodeQualityScore, CouncilTransparencyScore, DecisionQualityScore, OverallQualityScore,
+    ReasoningDepthScore, VerdictReasoningQualityScore, WritingQualityScore,
 };
 #[cfg(feature = "full")]
 use agent_constitutional_council::verdict_writer::VerdictRecord;

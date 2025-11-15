@@ -6,6 +6,7 @@
 #[cfg(feature = "full")]
 use agent_orchestration::coreml::{CoreMLManager, CoreMLModelType};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::info;
 
 /// Service for managing Mistral CoreML orchestrator

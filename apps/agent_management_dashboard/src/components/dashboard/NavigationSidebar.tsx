@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { listProjects, type ProjectListItem } from "../../lib/api/projects";
+import { useProjectStore } from "../../lib/stores";
+import type { ProjectListItem } from "../../lib/api/projects";
 import {
   Tooltip,
   TooltipContent,
@@ -66,33 +67,37 @@ export function Sidebar() {
     setIsCollapsed((prev) => !prev);
   }, []);
 
-  useEffect(() => {
-    async function fetchRecentProjects() {
-      try {
-        const response = await listProjects();
-        // Safely extract projects array
-        const projectsArray = Array.isArray(response?.projects)
-          ? response.projects
-          : [];
-        // Sort by updated_at (most recently updated first) and take top 3
-        const sorted = projectsArray
-          .sort((a, b) => {
-            const aTime = new Date(a.updated_at || a.created_at).getTime();
-            const bTime = new Date(b.updated_at || b.created_at).getTime();
-            return bTime - aTime;
-          })
-          .slice(0, 3);
-        setRecentProjects(sorted);
-      } catch (error) {
-        console.error("Failed to fetch recent projects:", error);
-        setRecentProjects([]);
-      } finally {
-        setIsLoadingProjects(false);
-      }
-    }
+  // Use shared project store instead of independent fetch
+  const { projects, isLoading: isLoadingProjectsFromStore } = useProjectStore();
 
-    fetchRecentProjects();
-  }, []);
+  useEffect(() => {
+    // Use projects from shared store instead of independent fetch
+    if (projects.length > 0) {
+      // Transform store projects to NavigationSidebar format
+      const projectsArray = projects
+        .map((p) => ({
+          project_id: p.id,
+          name: p.name,
+          state: (p as any).status || (p as any).state || 'active',
+          updated_at: p.lastAccessed?.toISOString() || p.createdAt?.toISOString() || new Date().toISOString(),
+          created_at: p.createdAt?.toISOString() || new Date().toISOString(),
+        }))
+        .sort((a, b) => {
+          const aTime = new Date(a.updated_at).getTime();
+          const bTime = new Date(b.updated_at).getTime();
+          return bTime - aTime;
+        })
+        .slice(0, 3);
+      setRecentProjects(projectsArray);
+      setIsLoadingProjects(false);
+    } else if (!isLoadingProjectsFromStore) {
+      // Only set loading to false if store is also not loading
+      setIsLoadingProjects(false);
+    } else {
+      // Keep loading state while store is loading
+      setIsLoadingProjects(true);
+    }
+  }, [projects, isLoadingProjectsFromStore]);
 
   useEffect(() => {
     // Update unread count
