@@ -2029,7 +2029,7 @@ impl PlanExecutor {
         // Build a map of batch completion times by milestone IDs
         let mut milestone_completion_times: std::collections::HashMap<String, DateTime<Utc>> =
             std::collections::HashMap::new();
-        for (_, start, end, milestone_ids) in &batches_with_timestamps {
+        for (_, _start, end, milestone_ids) in &batches_with_timestamps {
             for milestone_id in *milestone_ids {
                 milestone_completion_times.insert(milestone_id.clone(), *end);
             }

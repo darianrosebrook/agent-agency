@@ -1301,7 +1301,7 @@ impl VerdictAggregator {
         &self,
         contributions: &[WeightedContribution],
         risk_levels: &[RiskLevel],
-        total_weight: f64,
+        _total_weight: f64,
     ) -> RiskLevel {
         if risk_levels.is_empty() {
             return RiskLevel::Medium;

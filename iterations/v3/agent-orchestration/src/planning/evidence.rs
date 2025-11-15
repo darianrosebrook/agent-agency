@@ -308,7 +308,7 @@ impl EvidenceCollector {
         milestone: &Milestone,
     ) -> Result<crate::planning::evidence::ProcessingContext> {
         use uuid::Uuid;
-        let context_json = serde_json::json!({
+        let _context_json = serde_json::json!({
             "milestone_id": milestone.id,
             "objective": milestone.objective,
             "scope": milestone.scope,

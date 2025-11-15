@@ -114,7 +114,7 @@ pub fn calculate_critical_path(
 fn find_longest_path(
     graph: &Graph<String, f64>,
     source: NodeIndex,
-    node_indices: &HashMap<String, NodeIndex>,
+    _node_indices: &HashMap<String, NodeIndex>,
 ) -> Vec<String> {
     // Use topological sort to ensure we process nodes in dependency order
     let topo = match algo::toposort(graph, None) {

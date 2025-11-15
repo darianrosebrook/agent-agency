@@ -185,7 +185,7 @@ impl Judge for QualityAssuranceJudge {
     }
 
     async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
 
         // Simulate review time
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -245,9 +245,9 @@ impl Judge for QualityAssuranceJudge {
     async fn evaluate(
         &self,
         spec_id: uuid::Uuid,
-        title: &str,
+        _title: &str,
         description: &str,
-        acceptance_criteria: &[String],
+        _acceptance_criteria: &[String],
     ) -> CouncilResult<JudgeVerdict> {
         let context = ReviewContext {
             session_id: spec_id.to_string(),

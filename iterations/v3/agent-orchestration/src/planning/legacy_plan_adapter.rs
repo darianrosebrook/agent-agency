@@ -103,7 +103,7 @@ impl LegacyPlanAdapter {
     /// Convert milestone to legacy subtask
     fn milestone_to_subtask(
         &self,
-        index: usize,
+        _index: usize,
         milestone: &ContractMilestone,
     ) -> Result<LegacySubTask> {
         Ok(LegacySubTask {

@@ -307,7 +307,7 @@ impl StreamingTaskExecutor {
             }
 
             // Execute chunk
-            let chunk = &execution.chunks[next_chunk_index];
+            let _chunk = &execution.chunks[next_chunk_index];
             debug!(
                 "Executing chunk {}/{} for task {}",
                 next_chunk_index + 1,

@@ -81,7 +81,7 @@ impl CouncilIntegrationImpl {
 impl CouncilIntegration for CouncilIntegrationImpl {
     async fn review_plan(
         &self,
-        execution_plan: &ExecutionPlan,
+        _execution_plan: &ExecutionPlan,
         working_spec: &WorkingSpec,
         spec_id: Option<&str>,
         project_root: Option<&std::path::Path>,
@@ -186,7 +186,7 @@ impl CouncilIntegration for CouncilIntegrationImpl {
         }
 
         // Use primary artifact to create working spec
-        let primary_artifact = &artifacts[0];
+        let _primary_artifact = &artifacts[0];
 
         // Create working spec from artifact metadata
         let working_spec = WorkingSpec {
@@ -354,7 +354,7 @@ impl CouncilIntegration for CouncilIntegrationImpl {
     async fn get_verdict(
         &self,
         artifacts: &ExecutionArtifacts,
-        working_spec: &WorkingSpec,
+        _working_spec: &WorkingSpec,
     ) -> Result<FinalVerdictContract> {
         // Present work to get verdict
         // ArtifactMetadata doesn't support arbitrary key-value storage, so use working_spec_id as fallback

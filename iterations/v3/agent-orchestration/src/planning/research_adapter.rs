@@ -110,7 +110,7 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
 
     async fn validate_evidence(&self, evidence: &Evidence) -> ResearchResult<ValidationResult> {
         // Convert contracts Evidence to agent-research AtomicClaim for validation
-        let atomic_claim = agent_research::extraction_types::AtomicClaim {
+        let _atomic_claim = agent_research::extraction_types::AtomicClaim {
             id: Uuid::parse_str(&evidence.id).unwrap_or_else(|_| Uuid::new_v4()),
             claim_text: evidence.content.clone(),
             claim_type: self.map_evidence_type_to_claim_type(evidence.evidence_type.clone()),
@@ -184,7 +184,7 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
         Ok(validation_result)
     }
 
-    async fn search_evidence(&self, criteria: serde_json::Value) -> ResearchResult<Vec<Evidence>> {
+    async fn search_evidence(&self, _criteria: serde_json::Value) -> ResearchResult<Vec<Evidence>> {
         // TODO: Implement comprehensive evidence search from research database
         //       Currently returns empty results; should implement comprehensive search that queries the research evidence database using criteria for accurate evidence retrieval.
         //

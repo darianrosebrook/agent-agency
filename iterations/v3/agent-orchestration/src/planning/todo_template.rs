@@ -842,7 +842,7 @@ impl QualityGateEnforcer {
     }
 
     /// Check if step can be started (quality gates satisfied)
-    pub fn can_start_step(&self, instance: &TodoInstance, step_id: &str) -> Result<bool> {
+    pub fn can_start_step(&self, instance: &TodoInstance, _step_id: &str) -> Result<bool> {
         // Check if step has required quality prerequisites
         if let Some(verification) = instance.quality_verifications.get("test_coverage") {
             if !verification.completed || verification.result != Some(true) {

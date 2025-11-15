@@ -877,7 +877,7 @@ impl AlgorithmicDecisionEngine {
 
     fn find_similar_historical_cases(
         &self,
-        aggregation_result: &AggregationResult,
+        _aggregation_result: &AggregationResult,
         context: &DecisionContext,
     ) -> Vec<HistoricalDecision> {
         // TODO: Implement database querying for historical decisions with the following requirements:

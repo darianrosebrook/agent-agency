@@ -227,7 +227,7 @@ impl AdvancedCreditAssigner {
         &self,
         value_function: &ValueFunction,
         trajectory: &[TurnProgress],
-        final_outcome: &TaskOutcome,
+        _final_outcome: &TaskOutcome,
     ) -> Vec<CreditAssignment> {
         let num_turns = trajectory.len();
         let mut assignments = Vec::new();
@@ -302,7 +302,7 @@ impl AdvancedCreditAssigner {
     pub fn assign_credit_advantage_weighted(
         &self,
         trajectory: &[TurnProgress],
-        final_outcome: &TaskOutcome,
+        _final_outcome: &TaskOutcome,
     ) -> Vec<CreditAssignment> {
         if trajectory.is_empty() {
             return Vec::new();

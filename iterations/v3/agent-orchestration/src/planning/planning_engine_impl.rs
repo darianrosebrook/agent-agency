@@ -253,7 +253,7 @@ impl PlanningEngineImpl {
     fn convert_to_contract_plan(
         &self,
         local_plan: ExecutionPlan,
-        ctx: &ExecutionContext,
+        _ctx: &ExecutionContext,
     ) -> Result<ContractExecutionPlan, PlanningError> {
         use agent_agency_contracts::planning_io::PlanMetadata;
         use tracing::debug;

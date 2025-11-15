@@ -872,7 +872,7 @@ impl ParallelCoordinator {
     }
 
     /// Calculate parallel efficiency
-    fn calculate_parallel_efficiency(&self, plan: &ExecutionPlan, total_time: u64) -> f64 {
+    fn calculate_parallel_efficiency(&self, plan: &ExecutionPlan, _total_time: u64) -> f64 {
         // Simple efficiency calculation based on milestone count
         let total_milestones = plan.contract_plan.milestones.len() as f64;
 

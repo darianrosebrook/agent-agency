@@ -33,6 +33,7 @@ use crate::planning::plan_types::{
     ExecutionPlan,
     PlanGenerationContext, PlanGenerationStrategy, ResourceInventory,
     TaskDescriptorProvider, WorkingSpecProvider,
+    HistoricalPlan, HistoricalPlanningData, FailurePattern,
 };
 use crate::planning::refinement_loop::{
     ArtifactValidator, CouncilReviewer, OrchestrationExecutor, ProgressTracker,

@@ -295,7 +295,7 @@ VERIFICATION:
             if line.starts_with("- ") {
                 let change_spec = &line[2..];
                 if let Some((change_type_str, rest)) = change_spec.split_once(' ') {
-                    if let Some((path, description)) = rest.split_once(": ") {
+                    if let Some((path, _description)) = rest.split_once(": ") {
                         let change_type = match change_type_str {
                             "CREATE" => ChangeType::Create,
                             "REPLACE" => ChangeType::Replace,

@@ -986,7 +986,7 @@ impl DependencyAnalysis {
 
         // Check if other criteria depend on this criterion
         // A criterion blocks others if it appears as a dependency for other criteria
-        for (dependent_id, deps) in &self.dependencies {
+        for (_dependent_id, deps) in &self.dependencies {
             if deps.contains(&criterion_id.to_string()) {
                 // This criterion is a dependency for another criterion, so it blocks that one
                 return true;

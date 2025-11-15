@@ -259,7 +259,7 @@ impl Judge for EthicsJudge {
     }
 
     async fn review_spec(&self, context: &ReviewContext) -> CouncilResult<JudgeVerdict> {
-        let start_time = std::time::Instant::now();
+        let _start_time = std::time::Instant::now();
 
         // Check cache first
         let cache_key = format!("{}-{}", context.session_id, context.working_spec.len()); // Use length as simple ID
@@ -365,7 +365,7 @@ impl Judge for EthicsJudge {
                     .into_iter()
                     .enumerate()
                     .map(
-                        |(i, mitigation)| crate::judge_backup::verdicts::RequiredChange {
+                        |(_i, mitigation)| crate::judge_backup::verdicts::RequiredChange {
                             category: crate::judge_backup::verdicts::ChangeCategory::Requirements,
                             description: mitigation,
                             impact: crate::judge_backup::verdicts::ChangeImpact::Moderate,

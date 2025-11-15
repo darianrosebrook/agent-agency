@@ -372,7 +372,7 @@ impl PlanningSystemFactory {
                 // Also update in-memory stats via AuditTrailManager for council decisions
                 match event.event_type {
                     crate::planning::plan_executor::AuditEventType::CouncilDecision => {
-                        if let Some(milestone_id) = &event.milestone_id {
+                        if let Some(_milestone_id) = &event.milestone_id {
                             self.audit_manager
                                 .council_auditor()
                                 .record_council_consensus(

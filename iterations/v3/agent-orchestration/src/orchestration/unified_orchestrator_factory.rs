@@ -24,13 +24,16 @@ use crate::orchestration::task_state_persistence::{
     DatabaseTaskStatePersistence, TaskStatePersistence,
 };
 use crate::orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig};
+use crate::workers::execution_bridge::WorkerExecutionBridge;
 use crate::planning::{
     caws_adjudication_cycle::CawsAdjudicationCycle,
     caws_debate_scorer::CawsDebateScorer,
     council_integration::{CouncilIntegration, CouncilIntegrationImpl},
+    factory::PlanningSystemFactory,
     plan_executor::{
-        WorkerHealth, WorkerInfo, WorkerPool, WorkerStatus,
+        ExecutionConfig, PlanExecutor, WorkerHealth, WorkerInfo, WorkerPool, WorkerStatus,
     },
+    plan_types::ExecutionPlan,
     reflexive_learner::{LearningConfig, ReflexiveLearner},
     worker_assignment::WorkerAssignmentStrategy,
     worker_evolution::{EvolutionConfig, WorkerEvolutionEngine},
@@ -41,7 +44,7 @@ use crate::planning::DatabaseOperations;
 use crate::verdict_aggregation::{
     AggregationConfig, DissentHandling, RiskAggregationStrategy, VerdictAggregator,
 };
-use agent_workers::TaskExecutor;
+use agent_workers::{TaskExecutor, MCPWorkerPool, WorkerPoolConfig};
 use async_trait::async_trait;
 
 /// Factory for creating UnifiedOrchestrator instances
@@ -55,6 +58,7 @@ impl UnifiedOrchestratorFactory {
     ///
     /// # Returns
     /// * `Arc<UnifiedOrchestrator>` - Fully configured orchestrator instance
+    #[allow(unused_variables)] // Variables are used when memory feature is enabled
     pub async fn create(
         db_ops: Option<Arc<dyn DatabaseOperations>>,
     ) -> Result<Arc<UnifiedOrchestrator>> {
@@ -111,7 +115,7 @@ impl UnifiedOrchestratorFactory {
         }));
 
         let decision_engine = Box::new(AlgorithmicDecisionEngine::new(ConsensusStrategy::Majority));
-        let _council = Arc::new(Council::new(
+        let council = Arc::new(Council::new(
             council_config.clone(),
             judges,
             verdict_aggregator,
@@ -143,7 +147,7 @@ impl UnifiedOrchestratorFactory {
 
         // Create database operations adapter if not provided
         // Use real DatabaseOperationsAdapter implementation (inline to avoid circular dependency)
-        let _db_ops = if let Some(db_ops) = db_ops {
+        let db_ops = if let Some(db_ops) = db_ops {
             db_ops
         } else {
             // Verify database schema before creating adapter
@@ -183,7 +187,7 @@ impl UnifiedOrchestratorFactory {
         // Create planning components using PlanningSystemFactory
         // Research is in default features, so it's always available
         #[cfg(feature = "research")]
-        let _research_collector = {
+        let research_collector = {
             use agent_research::evidence::collector::EvidenceCollector;
             Arc::new(EvidenceCollector::new())
         };
@@ -384,14 +388,14 @@ impl UnifiedOrchestratorFactory {
             CouncilIntegrationImpl::new(council.clone(), council_config.clone()),
         );
         let debate_scorer = Arc::new(CawsDebateScorer::new(council.clone()));
-        let _adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
+        let adjudication_cycle = Arc::new(CawsAdjudicationCycle::new(
             council.clone(),
             council_integration.clone(),
             debate_scorer,
         ));
 
         // Create worker lifecycle manager
-        let _worker_lifecycle_manager =
+        let worker_lifecycle_manager =
             Arc::new(WorkerLifecycleManager::new(council_integration.clone()));
 
         // Create PerformanceTracker if research feature is enabled
@@ -427,7 +431,7 @@ impl UnifiedOrchestratorFactory {
             Arc::new(WorkerEvolutionEngine::new(db_ops.clone(), evolution_config));
 
         // Create reflexive learner with evolution engine
-        let _reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
+        let reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
             worker_assignment_strategy.clone(),
             evolution_engine,
             LearningConfig::default(),

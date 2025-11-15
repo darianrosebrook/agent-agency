@@ -477,7 +477,7 @@ impl SequentialTaskExecutor {
     fn task_result_to_execution_result(
         &self,
         task_result: &TaskResult,
-        task_spec: &TaskSpec,
+        _task_spec: &TaskSpec,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> TaskExecutionResult {
         let completed_at =
@@ -798,7 +798,7 @@ impl TaskExecutor for SequentialTaskExecutor {
             info!("Cancellation signal sent for task {}", task_id);
 
             // Record cancellation in audit trail
-            if let Some(audit) = &self.audit_manager {
+            if let Some(_audit) = &self.audit_manager {
                 use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
@@ -1090,7 +1090,7 @@ impl ParallelTaskExecutor {
     fn task_result_to_execution_result(
         &self,
         task_result: &TaskResult,
-        task_spec: &TaskSpec,
+        _task_spec: &TaskSpec,
         started_at: chrono::DateTime<chrono::Utc>,
     ) -> TaskExecutionResult {
         let completed_at =
@@ -1443,7 +1443,7 @@ impl TaskExecutor for ParallelTaskExecutor {
             info!("Cancellation signal sent for task {}", task_id);
 
             // Record cancellation in audit trail
-            if let Some(audit) = &self.audit_manager {
+            if let Some(_audit) = &self.audit_manager {
                 use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
@@ -2057,7 +2057,7 @@ impl TaskExecutor for HybridTaskExecutor {
             info!("Cancellation signal sent for task {}", task_id);
 
             // Record cancellation in audit trail
-            if let Some(audit) = &self.audit_manager {
+            if let Some(_audit) = &self.audit_manager {
                 use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;
@@ -2688,7 +2688,7 @@ impl TaskExecutor for AdaptiveTaskExecutor {
             info!("Cancellation signal sent for task {}", task_id);
 
             // Record cancellation in audit trail
-            if let Some(audit) = &self.audit_manager {
+            if let Some(_audit) = &self.audit_manager {
                 use crate::audit_trail::{AuditCategory, AuditEvent, AuditResult, AuditSeverity};
                 use chrono::Utc;
                 use std::collections::HashMap;

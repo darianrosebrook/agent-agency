@@ -949,7 +949,7 @@ impl crate::planning::plan_executor::AuditTrail for AuditTrailAdapter {
         match event.event_type {
             crate::planning::plan_executor::AuditEventType::CouncilDecision => {
                 // Use council auditor for council decisions
-                if let Some(milestone_id) = &event.milestone_id {
+                if let Some(_milestone_id) = &event.milestone_id {
                     self.audit_manager
                         .council_auditor()
                         .record_council_consensus(
@@ -1348,7 +1348,7 @@ impl crate::planning::plan_executor::WorkerPool for MockWorkerPool {
 
     async fn worker_status(
         &self,
-        worker_id: Uuid,
+        _worker_id: Uuid,
     ) -> Result<crate::planning::plan_executor::WorkerStatus> {
         Ok(crate::planning::plan_executor::WorkerStatus {
             current_assignment: None,
