@@ -39,18 +39,17 @@ impl SecurityValidator {
     pub async fn verify_proof(&self, proof: &ZeroKnowledgeProof) -> Result<bool> {
         debug!("Verifying zero-knowledge proof of type: {}", proof.proof_type);
 
-        // TODO: Implement real zero-knowledge proof verification
-        // - [ ] Integrate ZKP library (e.g., zk-SNARKs, zk-STARKs, Bulletproofs)
-        // - [ ] Verify proof using cryptographic verification algorithm
-        // - [ ] Validate proof structure and public inputs
-        // - [ ] Handle verification errors and invalid proofs
-        // - [ ] Add unit tests with real ZKP verification
-        // - [ ] Add integration tests with proof generation/verification
         // TODO: Implement actual zero-knowledge proof verification
-        //       Currently returns placeholder; should implement actual zero-knowledge proof verification using cryptographic proof verification.
+        //       Replace placeholder verification with real cryptographic zero-knowledge proof verification using ZKP libraries for secure federated learning.
         //
         // COMPLETION CHECKLIST:
         // [ ] Primary functionality implemented
+        // [ ] Integrate ZKP library (zk-SNARKs, zk-STARKs, or Bulletproofs)
+        // [ ] Verify proof using cryptographic verification algorithm
+        // [ ] Validate proof structure and public inputs against schema
+        // [ ] Handle verification errors and invalid proofs gracefully
+        // [ ] Implement proof caching for performance optimization
+        // [ ] Add support for multiple ZKP schemes (configurable)
         // [ ] API/data structures defined & stable
         // [ ] Error handling + validation aligned with error taxonomy
         // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
@@ -63,43 +62,45 @@ impl SecurityValidator {
         // [ ] Failure-mode cards documented (degradation paths)
         //
         // ACCEPTANCE CRITERIA:
-        // - Cryptographic proof is verified correctly
-        // - Verification uses proper ZKP algorithms
-        // - Security properties are maintained
-        // - Performance is acceptable
+        // - Zero-knowledge proofs are cryptographically verified with high confidence
+        // - Verification performance meets SLA (<100ms for typical proofs)
+        // - Invalid proofs are correctly rejected with clear error messages
+        // - Multiple ZKP schemes are supported and configurable
+        // - Integration tests validate end-to-end proof verification workflows
         //
         // DEPENDENCIES:
-        // - ZKP verification library (Required)
-        // - Cryptographic proof infrastructure (Required)
-        // - Verification key management (Required)
+        // - ZKP library (bellman, arkworks, or similar) (Required)
+        // - Cryptographic proof verification algorithms (Required)
+        // - Proof schema validation framework (Required)
+        // - Performance benchmarking framework (Required)
+        // - Test vectors with valid and invalid proofs (Required)
         //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // ESTIMATED EFFORT: 16-20 hours (high confidence)
         // PRIORITY: High
-        // BLOCKING: No
+        // BLOCKING: Yes (security-critical functionality)
         //
         // GOVERNANCE:
-        // - CAWS Tier: 1 (security-critical feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Cryptography and ZKP expertise
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~500 LOC
+        // - Reviewer Requirements: Cryptography and zero-knowledge proof expertise
         Ok(true) // Temporary: placeholder until ZKP verification implementation
     }
 
     /// Generate a zero-knowledge proof for a model update
     pub async fn generate_proof(&self, data: &[u8], secret_key: &[u8]) -> Result<ZeroKnowledgeProof> {
-        // TODO: Implement real zero-knowledge proof generation
-        // - [ ] Integrate ZKP library (e.g., zk-SNARKs, zk-STARKs, Bulletproofs)
-        // - [ ] Generate proof using cryptographic proof generation algorithm
-        // - [ ] Create proof structure with public inputs and witness
-        // - [ ] Generate proof for model update computation
-        // - [ ] Include proper public inputs and verification key
-        // - [ ] Handle proof generation errors and invalid inputs
-        // - [ ] Add unit tests with real ZKP generation
-        // - [ ] Add integration tests with proof generation/verification
         // TODO: Generate actual zero-knowledge proof
-        //       Currently returns placeholder; should generate actual zero-knowledge proof using cryptographic proof generation algorithms.
+        //       Replace placeholder proof generation with real cryptographic zero-knowledge proof generation using ZKP libraries for secure federated learning.
         //
         // COMPLETION CHECKLIST:
         // [ ] Primary functionality implemented
+        // [ ] Integrate ZKP library (zk-SNARKs, zk-STARKs, or Bulletproofs)
+        // [ ] Generate proof using cryptographic proof generation algorithm
+        // [ ] Create proof structure with public inputs, witness, and verification key
+        // [ ] Generate proof for model update computation with proper witness
+        // [ ] Include proper public inputs and verification key in proof structure
+        // [ ] Handle proof generation errors and invalid inputs gracefully
+        // [ ] Implement proof optimization for reduced proof size
+        // [ ] Add support for multiple ZKP schemes (configurable)
         // [ ] API/data structures defined & stable
         // [ ] Error handling + validation aligned with error taxonomy
         // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
@@ -112,24 +113,28 @@ impl SecurityValidator {
         // [ ] Failure-mode cards documented (degradation paths)
         //
         // ACCEPTANCE CRITERIA:
-        // - Zero-knowledge proof is generated correctly
-        // - Proof uses proper ZKP algorithms
-        // - Security properties are maintained
-        // - Performance is acceptable
+        // - Zero-knowledge proofs are cryptographically generated with high confidence
+        // - Proof generation performance meets SLA (<5 seconds for typical data)
+        // - Generated proofs can be verified by corresponding verification algorithms
+        // - Proofs contain correct public inputs and verification keys
+        // - Multiple ZKP schemes are supported and configurable
+        // - Integration tests validate end-to-end proof generation and verification workflows
         //
         // DEPENDENCIES:
-        // - ZKP generation library (Required)
-        // - Cryptographic proof infrastructure (Required)
-        // - Secret key management (Required)
+        // - ZKP library (bellman, arkworks, or similar) (Required)
+        // - Cryptographic proof generation algorithms (Required)
+        // - Proof structure serialization framework (Required)
+        // - Secret key management and witness generation (Required)
+        // - Test vectors with known proof generation inputs (Required)
         //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // ESTIMATED EFFORT: 16-20 hours (high confidence)
         // PRIORITY: High
-        // BLOCKING: No
+        // BLOCKING: Yes (security-critical functionality)
         //
         // GOVERNANCE:
-        // - CAWS Tier: 1 (security-critical feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Cryptography and ZKP expertise
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~500 LOC
+        // - Reviewer Requirements: Cryptography and zero-knowledge proof expertise
         Ok(ZeroKnowledgeProof {
             proof_data: vec![1, 2, 3, 4], // Temporary: placeholder until ZKP generation
             public_inputs: data.to_vec(),
