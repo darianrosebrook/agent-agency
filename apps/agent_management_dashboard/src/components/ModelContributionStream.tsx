@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useState, useEffect } from "react";
-import { getModelContributions, type ModelContribution } from "../lib/api/agents";
+import { getModelContributions, type ModelContributionsResponse } from "../lib/api/observability";
 import styles from "./ModelContributionStream.module.scss";
 
 interface StreamDataPoint {
@@ -40,16 +40,14 @@ export function ModelContributionStream({
       setError(null);
 
       try {
-        const modelContributionsResponse = await getModelContributions();
+        // Request monthly breakdown from the API
+        const modelContributionsResponse = await getModelContributions({
+          group_by: 'month',
+        }) as ModelContributionsResponse;
 
-        // Safely extract modelContributions array
-        const modelContributions = Array.isArray(modelContributionsResponse?.contributions)
-          ? modelContributionsResponse.contributions
-          : Array.isArray(modelContributionsResponse)
-          ? modelContributionsResponse
-          : [];
+        // The API returns monthly breakdown directly
+        const monthlyContributions = modelContributionsResponse.monthly_contributions || [];
 
-        // Transform API response to stream chart format
         // Map model names to chart keys (normalize to lowercase, handle variations)
         const modelMap: Record<string, string> = {
           'gemma3n': 'gemma3n',
@@ -59,30 +57,33 @@ export function ModelContributionStream({
           'mistral': 'mistral',
         };
 
-        // Group by month (simplified - API might need to return monthly data)
-        // For now, we'll create monthly data from the contributions
-        const months = ["Jan", "Feb", "Mar", "Apr"];
-        const monthlyData: StreamDataPoint[] = months.map((month) => ({
-          month,
-          gemma3n: 0,
-          qwen: 0,
-          instruct: 0,
-          mistral: 0,
-        }));
+        // Transform API response to stream chart format
+        const chartData: StreamDataPoint[] = monthlyContributions
+          .slice(0, 12) // Limit to last 12 months
+          .reverse() // API returns newest first, we want oldest first for charts
+          .map((monthData: any) => {
+            const dataPoint: StreamDataPoint = {
+              month: monthData.month,
+              gemma3n: 0,
+              qwen: 0,
+              instruct: 0,
+              mistral: 0,
+            };
 
-        // Distribute contributions across months
-        modelContributions.forEach((contrib: ModelContribution) => {
-          const modelKey = modelMap[contrib.model_name.toLowerCase()] || contrib.model_name.toLowerCase();
-          if (modelKey in monthlyData[0]) {
-            // Distribute task_count (as proxy for lines of code) across months
-            const avgPerMonth = contrib.task_count / months.length;
-            monthlyData.forEach((monthData) => {
-              (monthData as any)[modelKey] += Math.round(avgPerMonth);
+            // Map API model names to chart keys
+            Object.entries(monthData).forEach(([key, value]) => {
+              if (key !== 'month' && typeof value === 'number') {
+                const chartKey = modelMap[key.toLowerCase()] || key.toLowerCase();
+                if (chartKey in dataPoint) {
+                  (dataPoint as any)[chartKey] = value;
+                }
+              }
             });
-          }
-        });
 
-        setData(monthlyData.length > 0 ? monthlyData : generateFallbackData());
+            return dataPoint;
+          });
+
+        setData(chartData.length > 0 ? chartData : generateFallbackData());
       } catch (err) {
         console.error("Failed to fetch model contribution data:", err);
         setError(err instanceof Error ? err : new Error("Failed to load model contribution data"));

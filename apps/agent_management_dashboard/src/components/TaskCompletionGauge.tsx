@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
-import { getTasksStats, type TasksStats } from "../lib/api/tasks";
+import { getTasksStats, getTasksStatsHistory, type TasksStats, type TaskStatsHistoryPoint } from "../lib/api/tasks";
 import styles from "./TaskCompletionGauge.module.scss";
 
 interface TaskCompletionGaugeProps {
@@ -15,6 +15,7 @@ export function TaskCompletionGauge({
   subtitle = "Completion vs Creation Rate",
 }: TaskCompletionGaugeProps) {
   const [taskStats, setTaskStats] = useState<TasksStats | null>(null);
+  const [historyStats, setHistoryStats] = useState<TaskStatsHistoryPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
