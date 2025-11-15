@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight, MessageSquare, Plus } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useChatStore } from "../../lib/stores";
 import { ChatListSkeleton } from "../compounds";
 import { cn } from "../primitives/utils";
@@ -122,7 +122,9 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
     () => new Set(groupIds.filter((id) => id !== "older")),
     [groupIds]
   );
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(initialExpandedGroups);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    initialExpandedGroups
+  );
 
   // Update expanded groups when groups change (preserve user's expansion state for existing groups)
   useEffect(() => {
@@ -188,8 +190,10 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
           <div className={styles.groupsList}>
             {groups.map((group) => {
               const isExpanded = expandedGroups.has(group.id);
-              const groupChats = chats.filter((c) => group.chatIds.includes(c.id));
-              
+              const groupChats = chats.filter((c) =>
+                group.chatIds.includes(c.id)
+              );
+
               return (
                 <div key={group.id}>
                   {/* Group Header */}
