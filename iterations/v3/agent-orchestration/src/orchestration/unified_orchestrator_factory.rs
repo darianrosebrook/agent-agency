@@ -24,16 +24,13 @@ use crate::orchestration::task_state_persistence::{
     DatabaseTaskStatePersistence, TaskStatePersistence,
 };
 use crate::orchestration::unified_orchestrator::{UnifiedOrchestrator, UnifiedOrchestratorConfig};
-use crate::workers::execution_bridge::WorkerExecutionBridge;
 use crate::planning::{
     caws_adjudication_cycle::CawsAdjudicationCycle,
     caws_debate_scorer::CawsDebateScorer,
     council_integration::{CouncilIntegration, CouncilIntegrationImpl},
-    factory::PlanningSystemFactory,
     plan_executor::{
-        ExecutionConfig, PlanExecutor, WorkerHealth, WorkerInfo, WorkerPool, WorkerStatus,
+        WorkerHealth, WorkerInfo, WorkerPool, WorkerStatus,
     },
-    plan_types::ExecutionPlan,
     reflexive_learner::{LearningConfig, ReflexiveLearner},
     worker_assignment::WorkerAssignmentStrategy,
     worker_evolution::{EvolutionConfig, WorkerEvolutionEngine},
@@ -44,7 +41,7 @@ use crate::planning::DatabaseOperations;
 use crate::verdict_aggregation::{
     AggregationConfig, DissentHandling, RiskAggregationStrategy, VerdictAggregator,
 };
-use agent_workers::{TaskExecutor, MCPWorkerPool, WorkerPoolConfig};
+use agent_workers::TaskExecutor;
 use async_trait::async_trait;
 
 /// Factory for creating UnifiedOrchestrator instances

@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+import { BACKEND_TASK_STATUSES } from '../utils/taskStatus';
 
 /**
  * Milestone schema
@@ -20,14 +21,23 @@ export const MilestoneSchema = z.object({
 
 /**
  * Task schema for project tasks
+ * 
+ * Status enum matches backend: ['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed']
  */
 export const ProjectTaskSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().optional(),
-  status: z.enum(['backlog', 'todo', 'in-progress', 'done']),
-  priority: z.string().optional(),
-  assignee: z.string().optional(),
+  status: z.enum([
+    'pending',
+    'in_progress',
+    'paused',
+    'completed',
+    'cancelled',
+    'failed',
+  ] as [string, ...string[]]),
+  priority: z.number().int().min(0).max(10).nullable().optional(),
+  assigned_worker_id: z.string().uuid().nullable().optional(),
   createdAt: z.date().or(z.string().transform((str) => new Date(str))),
 });
 
@@ -64,9 +74,16 @@ export const ProjectResponseSchema = z.object({
     id: z.string(),
     title: z.string(),
     description: z.string().nullable().optional(),
-    status: z.enum(['backlog', 'todo', 'in-progress', 'done']),
-    priority: z.string().nullable().optional(),
-    assignee: z.string().nullable().optional(),
+    status: z.enum([
+      'pending',
+      'in_progress',
+      'paused',
+      'completed',
+      'cancelled',
+      'failed',
+    ] as [string, ...string[]]),
+    priority: z.number().int().min(0).max(10).nullable().optional(),
+    assigned_worker_id: z.string().uuid().nullable().optional(),
     created_at: z.string().transform((str) => new Date(str)),
   })).default([]),
 });
@@ -98,20 +115,49 @@ export const UpdateProjectRequestSchema = z.object({
 export const CreateTaskRequestSchema = z.object({
   title: z.string().min(1, 'Task title is required'),
   description: z.string().optional(),
-  status: z.enum(['backlog', 'todo', 'in-progress', 'done']).default('todo'),
-  priority: z.string().optional(),
-  assignee: z.string().optional(),
+  status: z
+    .enum([
+      'pending',
+      'in_progress',
+      'paused',
+      'completed',
+      'cancelled',
+      'failed',
+    ] as [string, ...string[]])
+    .default('pending'),
+  priority: z.number().int().min(0).max(10).nullable().optional(),
+  assigned_worker_id: z.string().uuid().nullable().optional(),
 });
 
 /**
  * Update task request schema
+ * 
+ * Supports updating all backend task fields.
  */
 export const UpdateTaskRequestSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
-  status: z.enum(['backlog', 'todo', 'in-progress', 'done']).optional(),
-  priority: z.string().optional(),
-  assignee: z.string().optional(),
+  status: z
+    .enum([
+      'pending',
+      'in_progress',
+      'paused',
+      'completed',
+      'cancelled',
+      'failed',
+    ] as [string, ...string[]])
+    .optional(),
+  priority: z.number().int().min(0).max(10).nullable().optional(),
+  assigned_worker_id: z.string().uuid().nullable().optional(),
+  risk_tier: z.enum(['1', '2', '3']).optional(),
+  scope: z.record(z.string(), z.unknown()).optional(),
+  acceptance_criteria: z.array(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
+  caws_spec: z.record(z.string(), z.unknown()).nullable().optional(),
+  deadline: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  completed_at: z.string().datetime().nullable().optional(),
+  project_id: z.string().uuid().nullable().optional(),
 });
 
 // Type exports derived from schemas

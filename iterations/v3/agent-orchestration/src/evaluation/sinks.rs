@@ -6,15 +6,11 @@
 //! - Parquet sink (for analysis)
 //! - Redaction layer for PII removal
 
-use crate::audit_trail::AuditEvent;
-use crate::chain_of_thought::{CoordinationEvent, DecisionPoint};
 use crate::evaluation::trace::{EventEnvelope, Trace};
-use chrono::{DateTime, Utc};
 use std::fs::{File, OpenOptions};
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::sync::Arc;
-use uuid::Uuid;
 
 /// Trait for storage sinks
 pub trait TraceSink: Send + Sync {

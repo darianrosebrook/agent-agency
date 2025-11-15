@@ -513,7 +513,7 @@ pub fn calculate_solution_generalization(
 
     // Calculate reuse rate
     let total_patterns = canonical_patterns.len();
-    let unique_patterns = pattern_counts.len();
+    let _unique_patterns = pattern_counts.len();
 
     // Higher reuse (fewer unique patterns relative to total) indicates better generalization
     // But we also want some diversity, so balance is key
@@ -609,11 +609,11 @@ pub fn calculate_self_optimization(
 
     for decision in decisions {
         // Check metadata for optimization-related changes
-        if let Some(ref metadata) = decision.metadata.get("optimization") {
+        if let Some(ref _metadata) = decision.metadata.get("optimization") {
             optimization_indicators += 1;
         }
 
-        if let Some(ref metadata) = decision.metadata.get("cache_update") {
+        if let Some(ref _metadata) = decision.metadata.get("cache_update") {
             optimization_indicators += 1;
         }
 

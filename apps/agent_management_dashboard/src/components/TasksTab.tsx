@@ -44,15 +44,18 @@ function mapTaskToUI(task: ProjectTask): {
   description?: string;
   status: KanbanStatus;
   priority?: "low" | "medium" | "high";
-  assignee?: string;
+  assignee?: string; // UI display field (shows assigned_worker_id UUID for now)
 } {
+  // Use id field (fallback to task_id for backward compatibility)
+  const taskId = task.id || task.task_id || '';
+  
   return {
-    id: task.task_id,
+    id: taskId,
     title: task.title,
     description: task.description ?? undefined,
     status: task.status as KanbanStatus,
     priority: mapPriorityToUI(task.priority),
-    assignee: task.assigned_worker_id ?? undefined,
+    assignee: task.assigned_worker_id ?? undefined, // Display assigned_worker_id UUID
   };
 }
 

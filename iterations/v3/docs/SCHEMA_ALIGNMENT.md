@@ -864,24 +864,24 @@ If tasks belong to milestones, link task assignments to milestone assignments:
 ---
 
 **Last Updated**: 2025-01-28  
-**Status**: 🚨 **CRITICAL ISSUES IDENTIFIED** - Status workflow mismatch blocks agent workflow  
+**Status**: 🚨 **CRITICAL ISSUES IDENTIFIED** - Status workflow mismatch blocks agent workflow
 
 ## Schema Coverage Summary
 
 This document focuses on **Task and Project** schema alignment. For complete system-wide alignment documentation, see:
 
 - `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field-by-field comparison (Tasks, Workers, Chat)
-- `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat schema alignment  
+- `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat schema alignment
 - `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan (all schemas)
 
 ### System-Wide Divergence Overview
 
-| Schema | Backend Fields | Frontend Coverage | Critical Issues | Total Issues |
-|--------|---------------|-------------------|-----------------|--------------|
-| **Task** | 17 | 53-65% | 🚨 Status enum mismatch | 17+ |
-| **Worker/Agent** | 11 | 82% | ⚠️ Capabilities type | 5 |
-| **Chat Session** | 12/13 | 100% (Rust) | None (minor) | 1 |
-| **Chat Message** | 9/10 | 100% (Rust) | None (minor) | 1 |
-| **TOTAL** | **49/51** | **~75%** | **1 CRITICAL** | **24+** |
+| Schema           | Backend Fields | Frontend Coverage | Critical Issues         | Total Issues |
+| ---------------- | -------------- | ----------------- | ----------------------- | ------------ |
+| **Task**         | 17             | 53-65%            | 🚨 Status enum mismatch | 17+          |
+| **Worker/Agent** | 11             | 82%               | ⚠️ Capabilities type    | 5            |
+| **Chat Session** | 12/13          | 100% (Rust)       | None (minor)            | 1            |
+| **Chat Message** | 9/10           | 100% (Rust)       | None (minor)            | 1            |
+| **TOTAL**        | **49/51**      | **~75%**          | **1 CRITICAL**          | **24+**      |
 
 **Next Review**: After Phase 1 critical fixes completed

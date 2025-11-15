@@ -35,7 +35,7 @@ impl ServiceContainer {
                     .expect("Failed to create orchestration service"),
             ),
             worker_service: Arc::new(WorkerServiceAdapter::new()),
-            progress_service: Arc::new(ProgressTrackingServiceAdapter::new()),
+            progress_service: Arc::new(ProgressTrackingServiceAdapter::new_with_db_client(None)),
             memory_service: None, // Memory service requires database connection
         }
     }

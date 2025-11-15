@@ -26,13 +26,17 @@ export interface Milestone {
   completed: boolean;
 }
 
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: "backlog" | "todo" | "in-progress" | "done";
-  priority?: string;
-  assignee?: string;
+import type { TaskWithOptionalDescription } from '../../../lib/types/task';
+
+/**
+ * Task interface for ProjectContext (UI-specific)
+ * 
+ * Simplified version of canonical Task for UI display.
+ * Uses Date object for createdAt instead of RFC3339 string.
+ * Only includes fields actually used in the UI.
+ */
+export interface Task extends Pick<TaskWithOptionalDescription, 'id' | 'title' | 'description' | 'status' | 'priority' | 'assigned_worker_id'> {
+  // UI-specific: createdAt as Date object for easier manipulation
   createdAt: Date;
 }
 
@@ -97,15 +101,28 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }));
 
     // Transform tasks
-    const tasks = (apiProject.tasks ?? []).map((t) => ({
-      id: t.id ?? t.task_id ?? "",
-      title: t.title,
-      description: t.description ?? undefined,
-      status: t.status as Task["status"],
-      priority: t.priority?.toString() ?? undefined,
-      assignee: t.assignee ?? t.assigned_worker_id ?? undefined,
-      createdAt: new Date(t.created_at),
-    }));
+    const tasks = (apiProject.tasks ?? []).map((t) => {
+      // Normalize task ID
+      const taskId = t.id ?? t.task_id ?? "";
+      // Normalize status to backend enum (handle legacy values)
+      const normalizedStatus = t.status === "backlog" || t.status === "todo" 
+        ? "pending" 
+        : t.status === "in-progress" 
+        ? "in_progress" 
+        : t.status === "done" 
+        ? "completed" 
+        : t.status as Task["status"];
+      
+      return {
+        id: taskId,
+        title: t.title,
+        description: t.description ?? undefined,
+        status: normalizedStatus,
+        priority: t.priority ?? undefined, // Keep as number
+        assigned_worker_id: t.assigned_worker_id ?? null, // Use assigned_worker_id (UUID)
+        createdAt: new Date(t.created_at),
+      };
+    });
 
     return {
       id: projectId,
@@ -333,30 +350,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             title: task.title,
             description: task.description,
             status: task.status,
-            priority: task.priority ? parseInt(task.priority) : undefined,
+            priority: task.priority ?? undefined,
+            assigned_worker_id: task.assigned_worker_id ?? undefined,
           }),
         { maxAttempts: 3, initialDelay: 1000 }
       );
 
-      // If assignee was provided, update the task to assign it
-      if (task.assignee) {
-        await retryWithBackoff(
-          () =>
-            updateProjectTask(projectId, apiTask.task_id, {
-              assigned_worker_id: task.assignee ?? undefined,
-            }),
-          { maxAttempts: 2, initialDelay: 500 }
-        );
-      }
-
       // Transform API response to Task format
+      const taskId = apiTask.id || apiTask.task_id || '';
       const newTask: Task = {
-        id: apiTask.task_id,
+        id: taskId, // Use id field (fallback to task_id for backward compatibility)
         title: apiTask.title,
         description: apiTask.description ?? undefined,
         status: apiTask.status as Task["status"],
-        priority: apiTask.priority?.toString() ?? undefined,
-        assignee: apiTask.assigned_worker_id ?? undefined,
+        priority: apiTask.priority ?? undefined, // Keep as number
+        assigned_worker_id: apiTask.assigned_worker_id ?? null,
         createdAt: new Date(apiTask.created_at),
       };
 
@@ -406,8 +414,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             title: updates.title,
             description: updates.description,
             status: updates.status,
-            priority: updates.priority ? parseInt(updates.priority) : undefined,
-            assigned_worker_id: updates.assignee ?? undefined,
+            priority: updates.priority ?? undefined, // Keep as number
+            assigned_worker_id: updates.assigned_worker_id ?? undefined,
           }),
         { maxAttempts: 3, initialDelay: 1000 }
       );

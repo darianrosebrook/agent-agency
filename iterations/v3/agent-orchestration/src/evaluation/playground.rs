@@ -11,7 +11,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use uuid::Uuid;
 
 /// Scenario state tracking information
 #[derive(Debug, Clone)]

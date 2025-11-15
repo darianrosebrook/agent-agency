@@ -90,11 +90,11 @@ pub struct ProcessQualityMetrics {
 impl ProcessQualityMetrics {
     /// Calculate overall quality score
     pub fn overall_quality(&self) -> f64 {
-        (self.reasoning_depth * 0.25
+        self.reasoning_depth * 0.25
             + self.decision_quality * 0.25
             + self.risk_assessment * 0.2
             + self.coordination_quality * 0.15
-            + self.iterative_improvement * 0.15)
+            + self.iterative_improvement * 0.15
     }
 }
 
@@ -130,11 +130,11 @@ pub struct AdaptabilityMetrics {
 impl AdaptabilityMetrics {
     /// Calculate overall adaptability score
     pub fn overall_score(&self) -> f64 {
-        (self.uncertainty_management * 0.25
+        self.uncertainty_management * 0.25
             + self.failure_recovery * 0.25
             + self.resource_adaptation * 0.2
             + self.strategy_flexibility * 0.15
-            + self.learning_velocity * 0.15)
+            + self.learning_velocity * 0.15
     }
 }
 
@@ -170,11 +170,11 @@ pub struct SafetyAssessment {
 impl SafetyAssessment {
     /// Calculate overall safety score
     pub fn overall_safety(&self) -> f64 {
-        (self.risk_avoidance * 0.25
+        self.risk_avoidance * 0.25
             + self.error_handling * 0.25
             + self.boundary_compliance * 0.2
             + self.recovery_safety * 0.15
-            + self.audit_completeness * 0.15)
+            + self.audit_completeness * 0.15
     }
 }
 
@@ -394,11 +394,11 @@ impl EvaluationEngine {
         };
 
         // Calculate overall score (weighted average)
-        let overall_score = (dimensions.functional_correctness * 0.3
+        let overall_score = dimensions.functional_correctness * 0.3
             + dimensions.process_quality * 0.25
             + dimensions.adaptability * 0.2
             + dimensions.efficiency * 0.15
-            + dimensions.safety * 0.1);
+            + dimensions.safety * 0.1;
 
         AgentEvaluation {
             evaluation_id: Uuid::new_v4(),

@@ -241,7 +241,7 @@ impl ScenarioRunner {
         &self,
         scenario: &EvaluationScenario,
         decisions: &[DecisionPoint],
-        events: &[CoordinationEvent],
+        _events: &[CoordinationEvent],
     ) -> bool {
         // Check if scenario has expected behaviors
         let critical_behaviors: Vec<_> = scenario

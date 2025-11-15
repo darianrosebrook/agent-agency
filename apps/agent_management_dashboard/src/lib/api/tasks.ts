@@ -7,6 +7,7 @@
  */
 
 import { apiGet } from '../utils/api';
+import type { Task } from '../types/task';
 
 /**
  * Task statistics response
@@ -26,22 +27,11 @@ export interface TasksStats {
 const API_BASE = '/api/proxy/api/v1';
 
 /**
- * Task list item
+ * Task interface - uses canonical Task from lib/types/task.ts
+ * 
+ * Re-exported for convenience and backward compatibility
  */
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  priority?: string;
-  type?: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  started_at?: string;
-  completed_at?: string | null;
-  worker_id?: string | null;
-  metadata?: Record<string, unknown>;
-}
+export type { Task };
 
 /**
  * Tasks list response
@@ -107,8 +97,19 @@ export async function getTasksStatsHistory(params?: {
 
 /**
  * List all tasks
+ * 
+ * Validates task responses using runtime schema validation
  */
 export async function listTasks(): Promise<TasksListResponse> {
-  return apiGet<TasksListResponse>(`${API_BASE}/tasks`);
+  const response = await apiGet<TasksListResponse>(`${API_BASE}/tasks`);
+  
+  // Validate each task in the response
+  if (response.tasks && Array.isArray(response.tasks)) {
+    // Import validation utilities (dynamic import to avoid circular dependencies)
+    const { safeValidateTaskArray } = await import('../utils/taskValidation');
+    response.tasks = safeValidateTaskArray(response.tasks);
+  }
+  
+  return response;
 }
 

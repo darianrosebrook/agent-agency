@@ -169,7 +169,7 @@ export function HexagonHeatmap({
       // Get task for this hexagon (or use empty if we run out of tasks)
       const task = safeTasks[idx] ?? null;
       const completion = task ? getTaskCompletion(task) : 0;
-      const agentId = task?.worker_id || null;
+      const agentId = task?.assigned_worker_id || null;
       const agent = agentId ? agentMap.get(agentId) : null;
 
       return {

@@ -74,27 +74,45 @@ export async function getEfficiencyMetrics(agentId?: string): Promise<Efficiency
 
 /**
  * Get system metrics
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns null if endpoint is unavailable.
  */
-export async function getSystemMetrics(): Promise<SystemMetrics> {
-  return apiGet<SystemMetrics>(`${API_BASE}/observability/system-metrics`);
+export async function getSystemMetrics(): Promise<SystemMetrics | null> {
+  try {
+    return await apiGet<SystemMetrics>(`${API_BASE}/observability/system-metrics`);
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn('System metrics endpoint unavailable:', error);
+    return null;
+  }
 }
 
 /**
  * Get active alerts
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns empty array if endpoint is unavailable.
  */
 export async function getAlerts(params?: {
   severity?: 'critical' | 'warning' | 'info';
   acknowledged?: boolean;
   resolved?: boolean;
 }): Promise<Alert[]> {
-  const queryParams = new URLSearchParams();
-  if (params?.severity) queryParams.append('severity', params.severity);
-  if (params?.acknowledged !== undefined) queryParams.append('acknowledged', params.acknowledged.toString());
-  if (params?.resolved !== undefined) queryParams.append('resolved', params.resolved.toString());
-  
-  const queryString = queryParams.toString();
-  const url = `${API_BASE}/observability/alerts${queryString ? `?${queryString}` : ''}`;
-  return apiGet<Alert[]>(url);
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.severity) queryParams.append('severity', params.severity);
+    if (params?.acknowledged !== undefined) queryParams.append('acknowledged', params.acknowledged.toString());
+    if (params?.resolved !== undefined) queryParams.append('resolved', params.resolved.toString());
+    
+    const queryString = queryParams.toString();
+    const url = `${API_BASE}/observability/alerts${queryString ? `?${queryString}` : ''}`;
+    return await apiGet<Alert[]>(url);
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn('Alerts endpoint unavailable:', error);
+    return [];
+  }
 }
 
 /**

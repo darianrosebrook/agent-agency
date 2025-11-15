@@ -24,8 +24,8 @@ import {
   type AgentLog,
 } from "../../lib/api/agents";
 import { getAlerts, getSystemMetrics, type Alert, type SystemMetrics } from "../../lib/api/observability";
+import { getSystemHealth } from "../../lib/api/system";
 import { ErrorDisplay } from "../../components/ErrorDisplay";
-import { apiGet } from "../../lib/utils/api";
 
 function getStatusColor(status: AgentHealth['status']): string {
   switch (status) {
@@ -78,9 +78,9 @@ export default function AgentHealthPage() {
       try {
         const [agentsData, alertsData, systemMetricsData, systemHealthData] = await Promise.all([
           getAgents(),
-          getAlerts({ resolved: false }),
-          getSystemMetrics().catch(() => null),
-          apiGet<{ status: string; database?: { status: string; error?: string }; timestamp?: string }>('/api/proxy/api/v1/system/health').catch(() => null),
+          getAlerts({ resolved: false }), // Already has graceful degradation
+          getSystemMetrics(), // Now returns null on error
+          getSystemHealth(), // Use the API client function instead of direct apiGet
         ]);
 
         // Ensure agents is an array

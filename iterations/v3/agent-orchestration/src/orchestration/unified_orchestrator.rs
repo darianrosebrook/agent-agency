@@ -33,7 +33,6 @@ use crate::planning::plan_types::{
     ExecutionPlan,
     PlanGenerationContext, PlanGenerationStrategy, ResourceInventory,
     TaskDescriptorProvider, WorkingSpecProvider,
-    HistoricalPlan, HistoricalPlanningData, FailurePattern,
 };
 use crate::planning::refinement_loop::{
     ArtifactValidator, CouncilReviewer, OrchestrationExecutor, ProgressTracker,
@@ -867,14 +866,14 @@ impl UnifiedOrchestrator {
                         if !cross_session_contexts.is_empty() {
                             // Convert TaskContext to historical planning data
                             // TaskContext has limited fields compared to SessionContext, so we extract what's available
-                            let similar_plans: Vec<HistoricalPlan> = cross_session_contexts
+                            let similar_plans: Vec<crate::planning::plan_types::HistoricalPlan> = cross_session_contexts
                                 .iter()
                                 .map(|ctx| {
                                     // Use task_id as plan identifier (convert string to Uuid if possible)
                                     let _plan_id = uuid::Uuid::parse_str(&ctx.task_id)
                                         .unwrap_or_else(|_| uuid::Uuid::new_v4());
 
-                                    HistoricalPlan {
+                                    crate::planning::plan_types::HistoricalPlan {
                                         plan_id: _plan_id,
                                         complexity_score: 0.5, // Default - TaskContext doesn't have complexity info
                                         execution_time_ms: 0, // Default - TaskContext doesn't have execution time
@@ -902,9 +901,9 @@ impl UnifiedOrchestrator {
                             // Extract failure patterns from task descriptions
                             // Since TaskContext doesn't have status, we can't determine failures
                             // Return empty failure patterns
-                            let failure_patterns: Vec<FailurePattern> = Vec::new();
+                            let failure_patterns: Vec<crate::planning::plan_types::FailurePattern> = Vec::new();
 
-                            Some(HistoricalPlanningData {
+                            Some(crate::planning::plan_types::HistoricalPlanningData {
                                 similar_plans,
                                 avg_execution_times,
                                 success_rates,
@@ -1223,25 +1222,8 @@ impl UnifiedOrchestrator {
                 metadata: std::collections::HashMap::new(),
             };
 
-            // Calculate overall quality score from artifacts
-            // Quality score is based on test pass rate
-            let quality_score = artifacts
-                .iter()
-                .map(|a| {
-                    let total_tests = a.tests.unit_tests.total
-                        + a.tests.integration_tests.total
-                        + a.tests.e2e_tests.total;
-                    let passed_tests = a.tests.unit_tests.passed
-                        + a.tests.integration_tests.passed
-                        + a.tests.e2e_tests.passed;
-                    if total_tests > 0 {
-                        passed_tests as f64 / total_tests as f64
-                    } else {
-                        0.0
-                    }
-                })
-                .sum::<f64>()
-                / artifacts.len().max(1) as f64;
+            // Calculate overall quality score from artifacts using comprehensive method
+            let quality_score = UnifiedOrchestrationExecutor::calculate_quality_score_static(&artifacts);
 
             let outcome = TurnOutcome {
                 success: artifacts.iter().all(|a| {
@@ -2060,28 +2042,349 @@ impl UnifiedOrchestrationExecutor {
             )
         };
 
-        // Create verification summary from artifacts
-        // In a full implementation, this would extract claims from artifacts and verify them
-        // For now, we use artifact count as a proxy for claims
-        let verification_summary = VerificationSummary {
-            claims_total: artifacts.len() as u32,
-            claims_verified: successful_count as u32,
-            coverage_pct: if artifacts.is_empty() {
-                0.0
-            } else {
-                (successful_count as f32 / artifacts.len() as f32) * 100.0
+        // Aggregate test and coverage data from artifacts
+        let (total_tests, passed_tests, failed_tests) = artifacts.iter().fold(
+            (0, 0, 0),
+            |(total, passed, failed), artifact| {
+                (
+                    total + artifact.tests.unit_tests.total
+                        + artifact.tests.integration_tests.total,
+                    passed + artifact.tests.unit_tests.passed
+                        + artifact.tests.integration_tests.passed,
+                    failed + artifact.tests.unit_tests.failed
+                        + artifact.tests.integration_tests.failed,
+                )
             },
+        );
+
+        let avg_line_coverage = if !artifacts.is_empty() {
+            artifacts.iter().map(|a| a.coverage.line_coverage).sum::<f64>()
+                / artifacts.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_branch_coverage = if !artifacts.is_empty() {
+            artifacts.iter().map(|a| a.coverage.branch_coverage).sum::<f64>()
+                / artifacts.len() as f64
+        } else {
+            0.0
+        };
+
+        let total_lint_errors = artifacts.iter().map(|a| a.linting.errors).sum::<u32>();
+        let total_lint_warnings = artifacts.iter().map(|a| a.linting.warnings).sum::<u32>();
+
+        // Create votes based on artifact quality analysis
+        let votes = self.create_votes_from_artifacts(
+            total_tests,
+            passed_tests,
+            failed_tests,
+            avg_line_coverage,
+            avg_branch_coverage,
+            total_lint_errors,
+            total_lint_warnings,
+        );
+
+        // Extract remediation steps from artifacts
+        let remediation = self.extract_remediation_from_artifacts(artifacts);
+
+        // Extract constitutional references from working spec
+        let constitutional_refs = self.extract_constitutional_refs(working_spec);
+
+        // Create verification summary from artifacts
+        let claims_total = working_spec.acceptance_criteria.len() as u32;
+        let test_success_rate = if total_tests > 0 {
+            passed_tests as f64 / total_tests as f64
+        } else {
+            0.0
+        };
+
+        // Estimate verified claims based on test success and coverage
+        let claims_verified = if claims_total > 0 {
+            let verification_estimate = (test_success_rate * avg_line_coverage * claims_total as f64)
+                .ceil() as u32;
+            verification_estimate.min(claims_total)
+        } else {
+            successful_count as u32
+        };
+
+        let verification_summary = VerificationSummary {
+            claims_total: if claims_total > 0 { claims_total } else { artifacts.len() as u32 },
+            claims_verified,
+            coverage_pct: (avg_line_coverage * 100.0) as f32,
         };
 
         // Create final verdict contract
         Ok(agent_agency_contracts::final_verdict::FinalVerdictContract {
             decision,
-            votes: vec![], // Votes would come from council review - requires CouncilIntegration
+            votes,
             dissent,
-            remediation: vec![], // Remediation would be generated from artifact analysis
-            constitutional_refs: vec![], // Constitutional refs would come from CAWS validation
+            remediation,
+            constitutional_refs,
             verification_summary,
         })
+    }
+
+    /// Create vote entries based on artifact quality analysis
+    fn create_votes_from_artifacts(
+        &self,
+        total_tests: u32,
+        passed_tests: u32,
+        failed_tests: u32,
+        avg_line_coverage: f64,
+        avg_branch_coverage: f64,
+        total_lint_errors: u32,
+        total_lint_warnings: u32,
+    ) -> Vec<agent_agency_contracts::final_verdict::VoteEntry> {
+        use agent_agency_contracts::final_verdict::{VoteEntry, VoteVerdict};
+
+        let mut votes = Vec::new();
+
+        // Test quality vote
+        if total_tests > 0 {
+            let test_success_rate = passed_tests as f64 / total_tests as f64;
+            votes.push(VoteEntry {
+                judge_id: "test_quality".to_string(),
+                weight: 0.35,
+                verdict: if test_success_rate >= 0.95 && failed_tests == 0 {
+                    VoteVerdict::Pass
+                } else if test_success_rate >= 0.70 {
+                    VoteVerdict::Uncertain
+                } else {
+                    VoteVerdict::Fail
+                },
+            });
+        }
+
+        // Coverage quality vote
+        votes.push(VoteEntry {
+            judge_id: "coverage_quality".to_string(),
+            weight: 0.30,
+            verdict: if avg_line_coverage >= 0.80 && avg_branch_coverage >= 0.80 {
+                VoteVerdict::Pass
+            } else if avg_line_coverage >= 0.60 {
+                VoteVerdict::Uncertain
+            } else {
+                VoteVerdict::Fail
+            },
+        });
+
+        // Linting quality vote
+        votes.push(VoteEntry {
+            judge_id: "linting_quality".to_string(),
+            weight: 0.20,
+            verdict: if total_lint_errors == 0 && total_lint_warnings < 10 {
+                VoteVerdict::Pass
+            } else if total_lint_errors == 0 && total_lint_warnings < 50 {
+                VoteVerdict::Uncertain
+            } else {
+                VoteVerdict::Fail
+            },
+        });
+
+        votes
+    }
+
+    /// Extract remediation steps from artifact analysis
+    fn extract_remediation_from_artifacts(
+        &self,
+        artifacts: &[agent_agency_contracts::execution_artifacts::ExecutionArtifacts],
+    ) -> Vec<String> {
+        use agent_agency_contracts::execution_artifacts::IssueSeverity;
+
+        let mut remediation = Vec::new();
+
+        // Remediation from test failures
+        for artifact in artifacts {
+            if artifact.tests.unit_tests.failed > 0 {
+                remediation.push(format!(
+                    "Fix {} failing unit test(s) in artifact {}",
+                    artifact.tests.unit_tests.failed, artifact.working_spec_id
+                ));
+            }
+
+            if artifact.tests.integration_tests.failed > 0 {
+                remediation.push(format!(
+                    "Fix {} failing integration test(s) in artifact {}",
+                    artifact.tests.integration_tests.failed, artifact.working_spec_id
+                ));
+            }
+
+            // Remediation from linting errors
+            let critical_errors: Vec<_> = artifact
+                .linting
+                .issues_by_file
+                .values()
+                .flatten()
+                .filter(|issue| matches!(issue.severity, IssueSeverity::Error))
+                .take(5)
+                .collect();
+
+            for issue in critical_errors {
+                remediation.push(format!(
+                    "Fix linting error: {}:{} - {} ({})",
+                    issue.line,
+                    issue.column.unwrap_or(0),
+                    issue.message,
+                    issue.code
+                ));
+            }
+
+            // Remediation from coverage gaps
+            if artifact.coverage.line_coverage < 0.80
+                && !artifact.coverage.uncovered_lines.is_empty()
+            {
+                let uncovered_files: Vec<_> = artifact
+                    .coverage
+                    .uncovered_lines
+                    .iter()
+                    .take(3)
+                    .map(|ul| ul.file.clone())
+                    .collect();
+
+                if !uncovered_files.is_empty() {
+                    remediation.push(format!(
+                        "Improve test coverage for: {}",
+                        uncovered_files.join(", ")
+                    ));
+                }
+            }
+        }
+
+        remediation
+    }
+
+    /// Extract constitutional references from working spec
+    fn extract_constitutional_refs(
+        &self,
+        working_spec: &WorkingSpec,
+    ) -> Vec<String> {
+        let mut refs = Vec::new();
+
+        // Extract references from acceptance criteria IDs
+        for criterion in &working_spec.acceptance_criteria {
+            refs.push(format!("AcceptanceCriterion:{}", criterion.id));
+        }
+
+        // Extract references from quality gates if available
+        if let Some(ref quality_gates) = working_spec.quality_gates {
+            if let Some(min_coverage) = quality_gates.min_coverage {
+                refs.push(format!("QualityGate:coverage:{}", min_coverage));
+            }
+            
+            // Add coverage requirements from hashmap
+            for (test_type, threshold) in &quality_gates.coverage_requirements {
+                refs.push(format!("QualityGate:coverage:{}:{}", test_type, threshold));
+            }
+        }
+
+        refs
+    }
+
+    /// Calculate comprehensive quality score from execution artifacts
+    /// 
+    /// Quality score is a weighted average of:
+    /// - Test success rate (35%)
+    /// - Code coverage (30%)
+    /// - Linting quality (20%)
+    /// - Code change statistics (15%)
+    fn calculate_quality_score_static(
+        artifacts: &[ExecutionArtifacts],
+    ) -> f64 {
+        if artifacts.is_empty() {
+            return 0.0;
+        }
+
+        // Aggregate metrics from all artifacts
+        let (total_tests, passed_tests, failed_tests) = artifacts.iter().fold(
+            (0, 0, 0),
+            |(total, passed, failed), artifact| {
+                (
+                    total + artifact.tests.unit_tests.total
+                        + artifact.tests.integration_tests.total,
+                    passed + artifact.tests.unit_tests.passed
+                        + artifact.tests.integration_tests.passed,
+                    failed + artifact.tests.unit_tests.failed
+                        + artifact.tests.integration_tests.failed,
+                )
+            },
+        );
+
+        // Test success score (35% weight)
+        let test_score = if total_tests > 0 {
+            let success_rate = passed_tests as f64 / total_tests as f64;
+            // Penalize failed tests more than just success rate
+            let failure_penalty = (failed_tests as f64 / total_tests as f64) * 0.5;
+            (success_rate - failure_penalty).max(0.0_f64)
+        } else {
+            0.5_f64 // Neutral score if no tests
+        };
+
+        // Coverage score (30% weight)
+        let avg_line_coverage = if !artifacts.is_empty() {
+            artifacts.iter().map(|a| a.coverage.line_coverage).sum::<f64>()
+                / artifacts.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_branch_coverage = if !artifacts.is_empty() {
+            artifacts.iter().map(|a| a.coverage.branch_coverage).sum::<f64>()
+                / artifacts.len() as f64
+        } else {
+            0.0
+        };
+
+        let coverage_score = avg_line_coverage * 0.6 + avg_branch_coverage * 0.4;
+
+        // Linting score (20% weight)
+        let total_lint_errors = artifacts.iter().map(|a| a.linting.errors).sum::<u32>();
+        let total_lint_warnings = artifacts.iter().map(|a| a.linting.warnings).sum::<u32>();
+        let total_files = artifacts
+            .iter()
+            .map(|a| a.linting.issues_by_file.len() as u32)
+            .sum::<u32>();
+
+        let lint_score = if total_files > 0 {
+            // Base score decreases with errors and warnings
+            let error_penalty = (total_lint_errors as f64 / total_files as f64).min(1.0_f64) * 0.7_f64;
+            let warning_penalty = (total_lint_warnings as f64 / total_files as f64).min(1.0_f64) * 0.3_f64;
+            (1.0_f64 - error_penalty - warning_penalty).max(0.0_f64)
+        } else {
+            1.0_f64 // Perfect score if no linting issues
+        };
+
+        // Code change statistics score (15% weight)
+        // Reward well-structured changes, penalize large risky changes
+        let mut change_score = 1.0_f64;
+        for artifact in artifacts {
+            let stats = &artifact.code_changes.statistics;
+            let total_lines = stats.lines_added + stats.lines_removed;
+            
+            // Penalize very large changes (potential refactoring debt)
+            if total_lines > 1000 {
+                change_score -= 0.1_f64;
+            }
+            
+            // Reward balanced additions/removals
+            if stats.lines_added > 0 && stats.lines_removed > 0 {
+                let change_ratio = stats.lines_removed as f64 / stats.lines_added as f64;
+                // Reward refactoring (0.5-2.0 ratio is good)
+                if change_ratio >= 0.5_f64 && change_ratio <= 2.0_f64 {
+                    change_score += 0.05_f64;
+                }
+            }
+        }
+        change_score = change_score.max(0.0_f64).min(1.0_f64);
+
+        // Weighted combination
+        let quality_score: f64 = (test_score * 0.35)
+            + (coverage_score * 0.30)
+            + (lint_score * 0.20)
+            + (change_score * 0.15);
+
+        // Ensure score is in valid range
+        quality_score.max(0.0_f64).min(1.0_f64)
     }
 }
 

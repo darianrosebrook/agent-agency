@@ -34,17 +34,21 @@ export interface AgentDetailStats {
 
 /**
  * Agent information
+ * 
+ * Matches backend Worker model from iterations/v3/data-infrastructure/src/models.rs
  */
 export interface Agent {
   id: string;
   name: string;
   worker_type: string;
   specialty: string | null;
-  model_name: string | null;
-  endpoint: string | null;
-  capabilities: string[] | null;
-  performance_history: unknown;
+  model_name: string; // Required (backend: NOT NULL)
+  endpoint: string; // Required (backend: NOT NULL)
+  capabilities: Record<string, unknown> | null; // JSONB (structured object, not string array)
+  performance_history: Record<string, unknown>; // JSONB
   is_active: boolean;
+  created_at: string; // RFC3339, required
+  updated_at: string; // RFC3339, required
 }
 
 /**
@@ -376,20 +380,41 @@ export interface AgentLog {
 
 /**
  * Get agent health status
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns default health status if endpoint is unavailable.
  */
-export async function getAgentHealth(agentId: string): Promise<AgentHealth> {
-  return apiGet<AgentHealth>(`${API_BASE}/agents/${agentId}/health`);
+export async function getAgentHealth(agentId: string): Promise<AgentHealth | null> {
+  try {
+    return await apiGet<AgentHealth>(`${API_BASE}/agents/${agentId}/health`);
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn(`Agent health endpoint unavailable for ${agentId}:`, error);
+    return null;
+  }
 }
 
 /**
  * Get agent metrics
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns null if endpoint is unavailable.
  */
-export async function getAgentMetrics(agentId: string): Promise<AgentMetrics> {
-  return apiGet<AgentMetrics>(`${API_BASE}/agents/${agentId}/metrics`);
+export async function getAgentMetrics(agentId: string): Promise<AgentMetrics | null> {
+  try {
+    return await apiGet<AgentMetrics>(`${API_BASE}/agents/${agentId}/metrics`);
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn(`Agent metrics endpoint unavailable for ${agentId}:`, error);
+    return null;
+  }
 }
 
 /**
  * Get agent logs
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns empty array if endpoint is unavailable.
  */
 export async function getAgentLogs(
   agentId: string,
@@ -399,16 +424,22 @@ export async function getAgentLogs(
     offset?: number;
   }
 ): Promise<AgentLog[]> {
-  const queryParams = new URLSearchParams();
-  if (params?.level) queryParams.append("level", params.level);
-  if (params?.limit) queryParams.append("limit", params.limit.toString());
-  if (params?.offset) queryParams.append("offset", params.offset.toString());
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.level) queryParams.append("level", params.level);
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.offset) queryParams.append("offset", params.offset.toString());
 
-  const queryString = queryParams.toString();
-  const url = `${API_BASE}/agents/${agentId}/logs${
-    queryString ? `?${queryString}` : ""
-  }`;
-  return apiGet<AgentLog[]>(url);
+    const queryString = queryParams.toString();
+    const url = `${API_BASE}/agents/${agentId}/logs${
+      queryString ? `?${queryString}` : ""
+    }`;
+    return await apiGet<AgentLog[]>(url);
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn(`Agent logs endpoint unavailable for ${agentId}:`, error);
+    return [];
+  }
 }
 
 /**
@@ -435,12 +466,21 @@ export async function stopAgent(
 
 /**
  * Update agent
+ * 
+ * Supports updating all backend Worker fields except id, created_at, updated_at
  */
 export async function updateAgent(
   agentId: string,
-  updates: Partial<
-    Pick<Agent, "name" | "is_active" | "specialty" | "capabilities">
-  >
+  updates: Partial<{
+    name?: string;
+    worker_type?: string;
+    specialty?: string | null;
+    model_name?: string;
+    endpoint?: string;
+    capabilities?: Record<string, unknown> | null;
+    performance_history?: Record<string, unknown>;
+    is_active?: boolean;
+  }>
 ): Promise<Agent> {
   return apiPatch<Agent>(`${API_BASE}/agents/${agentId}`, updates);
 }

@@ -119,10 +119,10 @@ export function TimelineTab() {
         const timelineTasks: TimelineTask[] = tasksResponse.tasks
           .filter((task) => {
             // Only include tasks with assigned workers and valid dates
-            return task.worker_id && task.created_at;
+            return task.assigned_worker_id && task.created_at;
           })
           .map((task) => {
-            const workerId = task.worker_id || "";
+            const workerId = task.assigned_worker_id || "";
             const workerName = workerMap.get(workerId) || "Unassigned";
             const startDate = task.created_at
               ? new Date(task.created_at)

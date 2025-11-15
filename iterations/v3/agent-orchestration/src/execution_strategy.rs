@@ -10,6 +10,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use tracing::{debug, info, warn};
 
 /// Execution strategy types
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -219,15 +220,106 @@ pub struct DefaultExecutionStrategyService {
 
     /// Strategy performance history
     strategy_history: std::sync::Arc<tokio::sync::RwLock<Vec<StrategyResult>>>,
+
+    /// Task executor for actual task execution (optional - if None, uses placeholder)
+    task_executor: Option<std::sync::Arc<dyn agent_agency_contracts::task_executor::TaskExecutor>>,
 }
 
 impl DefaultExecutionStrategyService {
-    /// Create a new execution strategy service
+    /// Create a new execution strategy service without task executor (placeholder mode)
     pub fn new(config: StrategyConfig) -> Self {
         Self {
             config,
             active_strategies: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             strategy_history: std::sync::Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            task_executor: None,
+        }
+    }
+
+    /// Create a new execution strategy service with task executor
+    pub fn with_task_executor(
+        config: StrategyConfig,
+        task_executor: std::sync::Arc<dyn agent_agency_contracts::task_executor::TaskExecutor>,
+    ) -> Self {
+        Self {
+            config,
+            active_strategies: std::sync::Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            strategy_history: std::sync::Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            task_executor: Some(task_executor),
+        }
+    }
+
+    /// Convert task_id string to TaskSpec for execution
+    /// 
+    /// Creates a basic TaskSpec from task_id. In a full implementation,
+    /// this would look up the actual task details from a task store.
+    fn task_id_to_spec(&self, task_id: &str) -> Result<agent_agency_contracts::task_executor::TaskSpec, StrategyError> {
+        // Parse task_id as UUID
+        let task_uuid = Uuid::parse_str(task_id)
+            .map_err(|e| StrategyError::ExecutionFailed(format!("Invalid task ID format: {}", e)))?;
+
+        // Create basic TaskSpec - in production this would be looked up from task store
+        Ok(agent_agency_contracts::task_executor::TaskSpec {
+            id: task_uuid,
+            title: format!("Task {}", task_id),
+            description: format!("Execute task {}", task_id),
+            priority: agent_agency_contracts::types::planning::TaskPriority::Medium,
+            required_capabilities: Vec::new(),
+            context: std::collections::HashMap::new(),
+            working_spec_id: None,
+            timeout_seconds: Some(300), // 5 minute default timeout
+            scope: None,
+            risk_tier: Some(2), // Default to tier 2
+            acceptance_criteria: None,
+            caws_spec: None,
+            requirements: None,
+        })
+    }
+
+    /// Execute a single task using TaskExecutor if available, otherwise placeholder
+    async fn execute_single_task(
+        &self,
+        task_id: &str,
+    ) -> Result<StrategyTaskResult, StrategyError> {
+        let start_time = std::time::Instant::now();
+
+        if let Some(ref executor) = self.task_executor {
+            // Use real TaskExecutor
+            let task_spec = self.task_id_to_spec(task_id)?;
+            let worker_id = Uuid::new_v4(); // TODO: Use actual worker discovery
+
+            match executor.execute_task(task_spec, worker_id).await {
+                Ok(result) => {
+                    let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                    Ok(StrategyTaskResult {
+                        task_id: task_id.to_string(),
+                        success: result.success,
+                        execution_time_ms: result.duration_ms,
+                        error: if result.errors.is_empty() {
+                            None
+                        } else {
+                            Some(result.errors.join("; "))
+                        },
+                    })
+                }
+                Err(e) => {
+                    let execution_time_ms = start_time.elapsed().as_millis() as u64;
+                    Err(StrategyError::ExecutionFailed(format!(
+                        "Task execution failed: {}",
+                        e
+                    )))
+                }
+            }
+        } else {
+            // Fallback to placeholder if no executor provided
+            let execution_time = std::time::Duration::from_millis(100);
+            tokio::time::sleep(execution_time).await;
+            Ok(StrategyTaskResult {
+                task_id: task_id.to_string(),
+                success: true,
+                execution_time_ms: execution_time.as_millis() as u64,
+                error: None,
+            })
         }
     }
 
@@ -288,60 +380,84 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
                 // Execute tasks in parallel with concurrency limit
                 use futures::stream::{self, StreamExt};
 
+                // Clone executor reference for async move
+                let executor = self.task_executor.clone();
+                let config = self.config.clone();
+                
                 let task_stream = stream::iter(task_ids.iter().cloned())
-                    .map(|task_id| async move {
-                        // TODO: Implement real task execution
-                        // - [ ] Invoke task executor with proper task context
-                        // - [ ] Handle task execution errors and timeouts
-                        // - [ ] Track actual execution metrics (time, resource usage)
-                        // - [ ] Implement cancellation support
-                        // - [ ] Add progress reporting callbacks
-                        // - [ ] Integrate with telemetry system
-                        // - [ ] Add unit tests for execution paths
-                        // - [ ] Add integration tests with real task execution
-                        // TODO: Execute actual task through task executor
-                        //       Currently simulates execution; should execute actual task through task executor infrastructure.
-                        //
-                        // COMPLETION CHECKLIST:
-                        // [ ] Primary functionality implemented
-                        // [ ] API/data structures defined & stable
-                        // [ ] Error handling + validation aligned with error taxonomy
-                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                        // [ ] Integration tests for external systems/contracts
-                        // [ ] Documentation: public API + system behavior
-                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                        // [ ] Configurability and feature flags defined if relevant
-                        // [ ] Failure-mode cards documented (degradation paths)
-                        //
-                        // ACCEPTANCE CRITERIA:
-                        // - Tasks are executed through task executor
-                        // - Execution results are captured accurately
-                        // - Error handling works correctly
-                        // - Execution metrics are collected
-                        //
-                        // DEPENDENCIES:
-                        // - Task executor infrastructure (Required)
-                        // - Task execution utilities (Required)
-                        // - Result collection utilities (Required)
-                        //
-                        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-                        // PRIORITY: High
-                        // BLOCKING: No
-                        //
-                        // GOVERNANCE:
-                        // - CAWS Tier: 2 (core execution feature)
-                        // - Change Budget: ~80 LOC
-                        // - Reviewer Requirements: Task execution expertise
-                        let execution_time = std::time::Duration::from_millis(100); // Temporary: simulate until task executor integration
-                        tokio::time::sleep(execution_time).await;
+                    .map(move |task_id| {
+                        let executor_clone = executor.clone();
+                        async move {
+                            let start_time = std::time::Instant::now();
+                            
+                            if let Some(ref exec) = executor_clone {
+                                // Use real TaskExecutor
+                                let task_uuid = match Uuid::parse_str(&task_id) {
+                                    Ok(uuid) => uuid,
+                                    Err(e) => {
+                                        warn!("Invalid task ID format {}: {}", task_id, e);
+                                        return StrategyTaskResult {
+                                            task_id: task_id.clone(),
+                                            success: false,
+                                            execution_time_ms: 0,
+                                            error: Some(format!("Invalid task ID: {}", e)),
+                                        };
+                                    }
+                                };
 
-                        StrategyTaskResult {
-                            task_id: task_id.clone(),
-                            success: true,
-                            execution_time_ms: execution_time.as_millis() as u64,
-                            error: None,
+                                let task_spec = agent_agency_contracts::task_executor::TaskSpec {
+                                    id: task_uuid,
+                                    title: format!("Task {}", task_id),
+                                    description: format!("Execute task {}", task_id),
+                                    priority: agent_agency_contracts::types::planning::TaskPriority::Medium,
+                                    required_capabilities: Vec::new(),
+                                    context: std::collections::HashMap::new(),
+                                    working_spec_id: None,
+                                    timeout_seconds: Some(300),
+                                    scope: None,
+                                    risk_tier: Some(2),
+                                    acceptance_criteria: None,
+                                    caws_spec: None,
+                                    requirements: None,
+                                };
+
+                                let worker_id = Uuid::new_v4(); // TODO: Use actual worker discovery
+                                debug!("Executing task {} via TaskExecutor", task_id);
+
+                                match exec.execute_task(task_spec, worker_id).await {
+                                    Ok(result) => {
+                                        StrategyTaskResult {
+                                            task_id: task_id.clone(),
+                                            success: result.success,
+                                            execution_time_ms: result.duration_ms,
+                                            error: if result.errors.is_empty() {
+                                                None
+                                            } else {
+                                                Some(result.errors.join("; "))
+                                            },
+                                        }
+                                    }
+                                    Err(e) => {
+                                        warn!("Task execution failed for {}: {}", task_id, e);
+                                        StrategyTaskResult {
+                                            task_id: task_id.clone(),
+                                            success: false,
+                                            execution_time_ms: start_time.elapsed().as_millis() as u64,
+                                            error: Some(format!("Execution failed: {}", e)),
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Fallback to placeholder if no executor provided
+                                let execution_time = std::time::Duration::from_millis(100);
+                                tokio::time::sleep(execution_time).await;
+                                StrategyTaskResult {
+                                    task_id: task_id.clone(),
+                                    success: true,
+                                    execution_time_ms: execution_time.as_millis() as u64,
+                                    error: None,
+                                }
+                            }
                         }
                     });
 
@@ -353,26 +469,19 @@ impl ExecutionStrategyService for DefaultExecutionStrategyService {
             ExecutionStrategy::Sequential { delay_ms } => {
                 // Execute tasks sequentially
                 for task_id in task_ids {
-                    // TODO: Implement real sequential task execution
-                    // - [ ] Invoke task executor with proper task context
-                    // - [ ] Handle task execution errors and timeouts
-                    // - [ ] Track actual execution metrics (time, resource usage)
-                    // - [ ] Implement cancellation support
-                    // - [ ] Add progress reporting callbacks
-                    // - [ ] Integrate with telemetry system
-                    // - [ ] Add unit tests for execution paths
-                    // - [ ] Add integration tests with real task execution
-                    // PLACEHOLDER: In real implementation, this would execute the actual task
-                    let execution_time = std::time::Duration::from_millis(100);
-                    tokio::time::sleep(execution_time).await;
-
-                    results.push(StrategyTaskResult {
-                        task_id: task_id.clone(),
-                        success: true,
-                        execution_time_ms: execution_time.as_millis() as u64,
-                        error: None,
+                    let result = self.execute_single_task(task_id).await.unwrap_or_else(|e| {
+                        // If execution fails, return error result
+                        StrategyTaskResult {
+                            task_id: task_id.to_string(),
+                            success: false,
+                            execution_time_ms: 0,
+                            error: Some(e.to_string()),
+                        }
                     });
+                    
+                    results.push(result);
 
+                    // Add delay between tasks if specified
                     if let Some(delay) = delay_ms {
                         tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
                     }

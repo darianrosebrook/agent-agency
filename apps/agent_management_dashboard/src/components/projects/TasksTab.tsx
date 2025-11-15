@@ -23,9 +23,15 @@ import {
   createProjectTask,
   updateProjectTask,
   deleteProjectTask,
+  type ProjectTask,
 } from "../../lib/api/projects";
 import { getTaskComments } from "../../lib/api/comments";
 import { getAgents, type Agent } from "../../lib/api/agents";
+import {
+  getStatusLabel,
+  type BackendTaskStatus,
+  mapLegacyStatusToBackend,
+} from "../../lib/utils/taskStatus";
 import type {
   KanbanColumnConfig,
   KanbanStatusTag,
@@ -46,9 +52,13 @@ const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
   medium: { bg: "#1f2d3a", text: "#54a0ff" },
 };
 
-// Map Kanban status to API status
-const mapKanbanStatusToApi = (status: KanbanStatus): string => {
-  const statusMap: Record<KanbanStatus, string> = {
+/**
+ * Map Kanban status (UI) to backend API status
+ * 
+ * Kanban uses simplified statuses for UI, maps to backend enum values
+ */
+const mapKanbanStatusToApi = (status: KanbanStatus): BackendTaskStatus => {
+  const statusMap: Record<KanbanStatus, BackendTaskStatus> = {
     backlog: "pending",
     todo: "pending",
     "in-progress": "in_progress",
@@ -57,13 +67,32 @@ const mapKanbanStatusToApi = (status: KanbanStatus): string => {
   return statusMap[status];
 };
 
-// Map API status to Kanban status
+/**
+ * Map backend API status to Kanban status (UI)
+ * 
+ * Handles all backend status values: pending, in_progress, paused, completed, cancelled, failed
+ */
 const mapApiStatusToKanban = (apiStatus: string): KanbanStatus => {
-  if (apiStatus === "completed") return "done";
-  if (apiStatus === "in_progress" || apiStatus === "running")
-    return "in-progress";
-  if (apiStatus === "pending") return "todo";
-  return "backlog";
+  // Normalize to backend status first
+  const backendStatus = mapLegacyStatusToBackend(apiStatus);
+  
+  // Map backend statuses to Kanban statuses
+  switch (backendStatus) {
+    case "completed":
+      return "done";
+    case "in_progress":
+    case "paused": // Paused tasks show as in-progress in Kanban
+      return "in-progress";
+    case "pending":
+      return "todo";
+    case "cancelled":
+    case "failed":
+      // Failed/cancelled tasks show as done (completed column) for now
+      // Could add a separate column later if needed
+      return "done";
+    default:
+      return "todo";
+  }
 };
 
 // Map priority string to number
@@ -128,7 +157,9 @@ export function TasksTab() {
       const tasksWithComments = await Promise.all(
         tasksResponse.tasks.map(async (task) => {
           try {
-            const commentsResponse = await getTaskComments(task.task_id);
+            // Use id field (fallback to task_id for backward compatibility)
+            const taskId = task.id || task.task_id || '';
+            const commentsResponse = await getTaskComments(taskId);
             return {
               ...task,
               commentCount: commentsResponse.comments.length,
@@ -143,9 +174,10 @@ export function TasksTab() {
       const transformedTasks: Task[] = tasksWithComments.map((task) => {
         const status = mapApiStatusToKanban(task.status);
         const priority = mapPriorityToString(task.priority);
+        const taskId = task.id || task.task_id || '';
 
         return {
-          id: task.task_id,
+          id: taskId, // Use normalized id field
           title: task.title,
           description: task.description ?? undefined,
           status,

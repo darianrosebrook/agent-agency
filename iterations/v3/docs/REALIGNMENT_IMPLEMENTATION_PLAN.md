@@ -13,12 +13,14 @@ This document provides a prioritized, step-by-step implementation plan for reali
 ## Executive Summary
 
 **Current State**:
+
 - **Task Schema**: Frontend has 7+ different Task interface definitions, supports updating only 5/14 backend fields (36%), status enum mismatch prevents proper workflow transitions
 - **Worker/Agent Schema**: Missing timestamps, capabilities type mismatch (JSONB vs string[]), nullability mismatches
 - **Chat Schemas**: Mostly aligned (100% of Rust model), but database fields `archived_at` and `parent_message_id` not exposed
 - Missing critical fields: context, acceptance_criteria, deadline (Tasks), created_at/updated_at (Workers)
 
 **Target State**:
+
 - **Task Schema**: Single canonical Task interface matching backend, supports updating all 14 backend fields, status enum aligned with backend (6 values)
 - **Worker/Agent Schema**: All 11 fields present, structured capabilities interface, timestamps displayed
 - **Chat Schemas**: All database fields exposed in Rust models and frontend
@@ -39,44 +41,55 @@ These fixes are required before agents can properly track their work through the
 **Impact**: Agents cannot properly transition tasks through workflow states
 
 **Current State**:
+
 - Backend: `['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed']`
 - Frontend: `['backlog', 'todo', 'in-progress', 'done']`
 
 **Changes Required**:
 
 1. **Update Zod Schema** (`apps/agent_management_dashboard/src/lib/schemas/project.ts`):
+
    ```typescript
    // Before
-   status: z.enum(['backlog', 'todo', 'in-progress', 'done'])
-   
+   status: z.enum(["backlog", "todo", "in-progress", "done"]);
+
    // After
-   status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed'])
+   status: z.enum([
+     "pending",
+     "in_progress",
+     "paused",
+     "completed",
+     "cancelled",
+     "failed",
+   ]);
    ```
 
 2. **Update Component Type Definitions**:
+
    - `apps/agent_management_dashboard/src/components/projects/ProjectContext.tsx`
    - `apps/agent_management_dashboard/src/components/projects/TasksTab.tsx`
    - `apps/agent_management_dashboard/src/components/composers/TimelineTab.tsx`
 
 3. **Create Status Mapping Utilities** (`apps/agent_management_dashboard/src/lib/utils/taskStatus.ts`):
+
    ```typescript
-   export type BackendTaskStatus = 
-     | 'pending' 
-     | 'in_progress' 
-     | 'paused' 
-     | 'completed' 
-     | 'cancelled' 
-     | 'failed';
-   
+   export type BackendTaskStatus =
+     | "pending"
+     | "in_progress"
+     | "paused"
+     | "completed"
+     | "cancelled"
+     | "failed";
+
    export const statusLabels: Record<BackendTaskStatus, string> = {
-     pending: 'To Do',
-     in_progress: 'In Progress',
-     paused: 'Paused',
-     completed: 'Done',
-     cancelled: 'Cancelled',
-     failed: 'Failed'
+     pending: "To Do",
+     in_progress: "In Progress",
+     paused: "Paused",
+     completed: "Done",
+     cancelled: "Cancelled",
+     failed: "Failed",
    };
-   
+
    export function getStatusLabel(status: BackendTaskStatus): string {
      return statusLabels[status];
    }
@@ -89,6 +102,7 @@ These fixes are required before agents can properly track their work through the
    - Update status dropdowns/selects
 
 **Testing**:
+
 - [ ] Unit tests for status mapping utilities
 - [ ] Integration tests for status transitions
 - [ ] E2E test: Create task → Update status → Verify persistence
@@ -108,6 +122,7 @@ These fixes are required before agents can properly track their work through the
 **Changes Required**:
 
 1. **Update ProjectTask Interface** (`apps/agent_management_dashboard/src/lib/api/projects.ts`):
+
    ```typescript
    export interface ProjectTask {
      // ... existing fields ...
@@ -116,6 +131,7 @@ These fixes are required before agents can properly track their work through the
    ```
 
 2. **Expand updateProjectTask Function**:
+
    ```typescript
    updates: Partial<
      Pick<
@@ -127,7 +143,7 @@ These fixes are required before agents can properly track their work through the
        | "assigned_worker_id"
        | "context" // ADD THIS
      >
-   >
+   >;
    ```
 
 3. **Update Zod Schema** (`apps/agent_management_dashboard/src/lib/schemas/project.ts`):
@@ -139,6 +155,7 @@ These fixes are required before agents can properly track their work through the
    ```
 
 **Testing**:
+
 - [ ] Integration test: Update task context via API
 - [ ] E2E test: Agent updates context → Verify persistence
 - [ ] Verify context updates appear in PhaseManager context chips
@@ -155,11 +172,13 @@ These fixes are required before agents can properly track their work through the
 **Changes Required**:
 
 1. **Update ProjectTask Interface**:
+
    ```typescript
    acceptance_criteria?: unknown[] | null;
    ```
 
 2. **Expand updateProjectTask Function**:
+
    ```typescript
    updates: Partial<
      Pick<
@@ -172,7 +191,7 @@ These fixes are required before agents can properly track their work through the
        | "context"
        | "acceptance_criteria" // ADD THIS
      >
-   >
+   >;
    ```
 
 3. **Update Zod Schema**:
@@ -181,6 +200,7 @@ These fixes are required before agents can properly track their work through the
    ```
 
 **Testing**:
+
 - [ ] Integration test: Update acceptance criteria via API
 - [ ] E2E test: Refine acceptance criteria → Verify persistence
 - [ ] Verify acceptance criteria display in UI
@@ -195,6 +215,7 @@ These fixes are required before agents can properly track their work through the
 **Impact**: Frontend cannot receive or display backend fields that exist in API responses
 
 **Fields to Add**:
+
 - `context` (already added in 1.2)
 - `acceptance_criteria` (already added in 1.3)
 - `scope`
@@ -204,6 +225,7 @@ These fixes are required before agents can properly track their work through the
 **Changes Required**:
 
 1. **Update Global Task Interface** (`apps/agent_management_dashboard/src/lib/api/tasks.ts`):
+
    ```typescript
    export interface Task {
      // ... existing fields ...
@@ -230,6 +252,7 @@ These fixes are required before agents can properly track their work through the
    ```
 
 **Testing**:
+
 - [ ] Verify API responses include these fields
 - [ ] Verify fields are accessible in components
 - [ ] Verify fields can be displayed in UI (even if read-only initially)
@@ -252,6 +275,7 @@ These fixes complete the feature set and standardize types.
 **Changes Required**:
 
 1. **Expand updateProjectTask Function**:
+
    ```typescript
    updates: Partial<{
      title?: string;
@@ -276,12 +300,21 @@ These fixes complete the feature set and standardize types.
    export const UpdateTaskRequestSchema = z.object({
      title: z.string().optional(),
      description: z.string().optional(),
-     risk_tier: z.enum(['1', '2', '3']).optional(),
+     risk_tier: z.enum(["1", "2", "3"]).optional(),
      scope: z.record(z.string(), z.unknown()).optional(),
      acceptance_criteria: z.array(z.unknown()).optional(),
      context: z.record(z.string(), z.unknown()).optional(),
      caws_spec: z.record(z.string(), z.unknown()).nullable().optional(),
-     status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed']).optional(),
+     status: z
+       .enum([
+         "pending",
+         "in_progress",
+         "paused",
+         "completed",
+         "cancelled",
+         "failed",
+       ])
+       .optional(),
      assigned_worker_id: z.string().uuid().nullable().optional(),
      project_id: z.string().uuid().nullable().optional(),
      priority: z.number().int().min(0).max(10).nullable().optional(),
@@ -292,6 +325,7 @@ These fixes complete the feature set and standardize types.
    ```
 
 **Testing**:
+
 - [ ] Integration tests for each new field
 - [ ] E2E test: Update all fields → Verify persistence
 - [ ] Verify validation errors for invalid values
@@ -308,11 +342,13 @@ These fixes complete the feature set and standardize types.
 **Changes Required**:
 
 1. **Standardize `id` vs `task_id`**:
+
    - Update `ProjectTask` interface: `task_id` → `id`
    - Update API response mapping in `getProjectTasks`
    - Update all components using `task_id`
 
 2. **Standardize `assigned_worker_id` vs `worker_id` vs `assignee`**:
+
    - Update Global Task interface: `worker_id` → `assigned_worker_id`
    - Update Zod schemas: `assignee` → `assigned_worker_id`
    - Update all components
@@ -322,6 +358,7 @@ These fixes complete the feature set and standardize types.
    - Update Zod schemas
 
 **Testing**:
+
 - [ ] Verify no broken references after renaming
 - [ ] Integration tests verify field names in API calls
 - [ ] E2E tests verify UI still works
@@ -338,6 +375,7 @@ These fixes complete the feature set and standardize types.
 **Changes Required**:
 
 1. **Fix `priority` Type**:
+
    - Update Global Task interface: `priority?: string` → `priority?: number`
    - Update TasksTab priority mapping to convert number to display label
    - Update all components using priority
@@ -349,6 +387,7 @@ These fixes complete the feature set and standardize types.
    - OR: Update frontend to require description
 
 **Testing**:
+
 - [ ] TypeScript compilation with strict types
 - [ ] Integration tests verify priority as number
 - [ ] Verify UI displays priority correctly
@@ -365,11 +404,13 @@ These fixes complete the feature set and standardize types.
 **Changes Required**:
 
 1. **Remove `type` Field**:
+
    - Remove from Global Task interface
    - Remove from API response mapping
    - Update components that use `task.type` (extract from metadata instead)
 
 2. **Remove `started_at` Field**:
+
    - Remove from Global Task interface
    - Update components that use `started_at` (may not be needed, or use `created_at`)
 
@@ -379,6 +420,7 @@ These fixes complete the feature set and standardize types.
    - Update UI components to fetch worker name when displaying assignee
 
 **Testing**:
+
 - [ ] Verify no references to removed fields
 - [ ] E2E test: Verify UI still works without these fields
 - [ ] Verify worker name lookup works
@@ -401,15 +443,16 @@ These are cleanup tasks to improve maintainability.
 **Changes Required**:
 
 1. **Create New File** (`apps/agent_management_dashboard/src/lib/types/task.ts`):
+
    ```typescript
-   export type BackendTaskStatus = 
-     | 'pending' 
-     | 'in_progress' 
-     | 'paused' 
-     | 'completed' 
-     | 'cancelled' 
-     | 'failed';
-   
+   export type BackendTaskStatus =
+     | "pending"
+     | "in_progress"
+     | "paused"
+     | "completed"
+     | "cancelled"
+     | "failed";
+
    export interface Task {
      id: string;
      title: string;
@@ -432,12 +475,13 @@ These are cleanup tasks to improve maintainability.
    ```
 
 2. **Update API Interfaces** to extend canonical Task:
+
    ```typescript
    // Global Task - extends canonical
    export interface GlobalTask extends Task {
      // No additional fields needed
    }
-   
+
    // ProjectTask - extends canonical
    export interface ProjectTask extends Task {
      // No additional fields needed
@@ -445,6 +489,7 @@ These are cleanup tasks to improve maintainability.
    ```
 
 **Testing**:
+
 - [ ] Verify canonical interface matches backend exactly
 - [ ] Verify TypeScript compilation
 
@@ -460,18 +505,20 @@ These are cleanup tasks to improve maintainability.
 **Changes Required**:
 
 1. **Migrate Components to Canonical Task**:
+
    - Update ProjectContext Task → use canonical Task
    - Update TasksTab Task → use canonical Task
    - Update PhaseManager Task → use canonical Task with derived fields
    - Update TimelineTask → use canonical Task with display transforms
 
 2. **Create UI-Specific Transformation Types** (only where needed):
+
    ```typescript
    // For Kanban board
    export interface KanbanTask extends Task {
      commentCount?: number; // Derived from separate query
    }
-   
+
    // For Timeline
    export interface TimelineTaskDisplay {
      task: Task;
@@ -483,6 +530,7 @@ These are cleanup tasks to improve maintainability.
    ```
 
 **Testing**:
+
 - [ ] Verify all components compile
 - [ ] E2E tests verify UI still works
 - [ ] Visual regression: No UI changes
@@ -499,11 +547,13 @@ These are cleanup tasks to improve maintainability.
 **Changes Required**:
 
 1. **Create Status Mapping Utilities** (`apps/agent_management_dashboard/src/lib/utils/taskStatus.ts`):
+
    - Status enum definitions
    - Status label mapping
    - Status transition validation
 
 2. **Create Worker Utilities** (`apps/agent_management_dashboard/src/lib/utils/worker.ts`):
+
    - Worker ID → name lookup
    - Worker name caching
 
@@ -512,6 +562,7 @@ These are cleanup tasks to improve maintainability.
    - Priority label → number conversion
 
 **Testing**:
+
 - [ ] Unit tests for all utilities
 - [ ] Edge case testing
 - [ ] Performance testing for worker lookup
@@ -528,16 +579,18 @@ These are cleanup tasks to improve maintainability.
 **Changes Required**:
 
 1. **Create Runtime Validation** (`apps/agent_management_dashboard/src/lib/api/validation.ts`):
+
    ```typescript
-   import { z } from 'zod';
-   import { TaskSchema } from '../types/task'; // Zod schema matching Task interface
-   
+   import { z } from "zod";
+   import { TaskSchema } from "../types/task"; // Zod schema matching Task interface
+
    export function validateTaskResponse(data: unknown): Task {
      return TaskSchema.parse(data);
    }
    ```
 
 2. **Add Validation to API Client Functions**:
+
    ```typescript
    export async function listTasks(): Promise<TasksListResponse> {
      const response = await apiGet<TasksListResponse>(`${API_BASE}/tasks`);
@@ -553,6 +606,7 @@ These are cleanup tasks to improve maintainability.
    - Report to error tracking service
 
 **Testing**:
+
 - [ ] Unit tests for validation
 - [ ] Integration tests with invalid API responses
 - [ ] Verify error handling works correctly
@@ -581,6 +635,7 @@ These are cleanup tasks to improve maintainability.
 ### E2E Tests
 
 **Jira-like Workflow Test**:
+
 1. Create task → Verify `pending` status
 2. Assign to worker → Verify assignment persists
 3. Update status to `in_progress` → Verify transition
@@ -603,7 +658,8 @@ These are cleanup tasks to improve maintainability.
 Each phase should be implemented in separate PRs with feature flags:
 
 ```typescript
-const ENABLE_EXPANDED_TASK_UPDATES = process.env.ENABLE_EXPANDED_TASK_UPDATES === 'true';
+const ENABLE_EXPANDED_TASK_UPDATES =
+  process.env.ENABLE_EXPANDED_TASK_UPDATES === "true";
 
 if (ENABLE_EXPANDED_TASK_UPDATES) {
   // New code with all 14 fields
@@ -613,12 +669,14 @@ if (ENABLE_EXPANDED_TASK_UPDATES) {
 ```
 
 **Rollback Triggers**:
+
 - Integration test failures
 - E2E test failures
 - Production errors
 - Performance degradation
 
 **Rollback Steps**:
+
 1. Disable feature flag
 2. Revert PR
 3. Deploy hotfix
@@ -630,17 +688,20 @@ if (ENABLE_EXPANDED_TASK_UPDATES) {
 ## Success Metrics
 
 **Coverage Metrics**:
+
 - [ ] Frontend Task interface: 17/17 fields (100%)
 - [ ] Frontend update capabilities: 14/14 fields (100%)
 - [ ] Status enum alignment: 6/6 values (100%)
 
 **Functional Metrics**:
+
 - [ ] All E2E tests passing
 - [ ] No type errors in TypeScript compilation
 - [ ] Zero validation errors in production logs
 - [ ] Agent workflow fully functional
 
 **Code Quality Metrics**:
+
 - [ ] Single canonical Task interface
 - [ ] No invented fields
 - [ ] Consistent field naming
@@ -661,6 +722,7 @@ These fixes ensure agents can properly track themselves and communicate through 
 **Changes Required**:
 
 1. **Update Agent Interface** (`apps/agent_management_dashboard/src/lib/api/agents.ts`):
+
    ```typescript
    export interface Agent {
      // ... existing fields ...
@@ -670,6 +732,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    ```
 
 2. **Update API Response Mapping**:
+
    - Ensure `getAgents()` returns `created_at` and `updated_at`
    - Update any API response transformations
 
@@ -678,6 +741,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    - Display last updated in agent details
 
 **Testing**:
+
 - [ ] Verify API responses include timestamps
 - [ ] E2E test: Display agent creation date
 - [ ] Verify timestamps display correctly in UI
@@ -694,6 +758,7 @@ These fixes ensure agents can properly track themselves and communicate through 
 **Changes Required**:
 
 1. **Create Capabilities Interface** (`apps/agent_management_dashboard/src/lib/types/worker.ts`):
+
    ```typescript
    export interface WorkerCapabilities {
      supported_models?: string[];
@@ -708,6 +773,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    ```
 
 2. **Update Agent Interface**:
+
    ```typescript
    export interface Agent {
      // ... existing fields ...
@@ -720,6 +786,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    - Create capabilities display component
 
 **Testing**:
+
 - [ ] Verify capabilities JSONB parses correctly
 - [ ] E2E test: Display structured capabilities
 - [ ] Verify UI handles both structured and legacy formats
@@ -736,6 +803,7 @@ These fixes ensure agents can properly track themselves and communicate through 
 **Changes Required**:
 
 1. **Update Agent Interface**:
+
    ```typescript
    export interface Agent {
      // ... existing fields ...
@@ -749,6 +817,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    - Add validation to reject null values
 
 **Testing**:
+
 - [ ] TypeScript compilation with strict types
 - [ ] Integration tests verify required fields
 - [ ] Verify UI handles required fields
@@ -765,6 +834,7 @@ These fixes ensure agents can properly track themselves and communicate through 
 **Changes Required**:
 
 1. **Add `archived_at` to ChatSession** (`iterations/v3/data-infrastructure/src/chat_service.rs`):
+
    ```rust
    pub struct ChatSession {
        // ... existing fields ...
@@ -773,6 +843,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    ```
 
 2. **Add `parent_message_id` to ChatMessage** (`iterations/v3/data-infrastructure/src/chat_service.rs`):
+
    ```rust
    pub struct ChatMessage {
        // ... existing fields ...
@@ -781,10 +852,12 @@ These fixes ensure agents can properly track themselves and communicate through 
    ```
 
 3. **Update Database Queries**:
+
    - Include `archived_at` in `get_session` queries
    - Include `parent_message_id` in message queries
 
 4. **Update Frontend Interfaces**:
+
    - Add `archived_at?: string` to `ChatSessionResponse`
    - Add `parent_message_id?: string` to `ChatMessageResponse`
 
@@ -793,6 +866,7 @@ These fixes ensure agents can properly track themselves and communicate through 
    - Display reply relationships
 
 **Testing**:
+
 - [ ] Verify `archived_at` returned in API responses
 - [ ] Verify `parent_message_id` returned in API responses
 - [ ] E2E test: Archive chat → Verify `archived_at` set
@@ -805,6 +879,7 @@ These fixes ensure agents can properly track themselves and communicate through 
 
 **Last Updated**: 2025-01-28  
 **Reference Documents**:
+
 - `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field comparison (Tasks, Workers, Chat)
 - `SCHEMA_ALIGNMENT.md` - Task and Project alignment analysis
 - `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat alignment analysis

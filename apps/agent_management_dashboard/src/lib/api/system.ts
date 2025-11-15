@@ -63,28 +63,55 @@ export type SystemMetricsResponse = z.infer<typeof SystemMetricsResponseSchema>;
 
 /**
  * Get system health
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns null if endpoint is unavailable.
  */
-export async function getSystemHealth(): Promise<SystemHealthResponse> {
-  return apiGet<SystemHealthResponse>('/api/v1/system/health', {
-    responseSchema: SystemHealthResponseSchema,
-  });
+export async function getSystemHealth(): Promise<SystemHealthResponse | null> {
+  try {
+    return await apiGet<SystemHealthResponse>('/api/v1/system/health', {
+      responseSchema: SystemHealthResponseSchema,
+    });
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn('System health endpoint unavailable:', error);
+    return null;
+  }
 }
 
 /**
  * Get system resources
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns null if endpoint is unavailable.
  */
-export async function getSystemResources(): Promise<SystemResourcesResponse> {
-  return apiGet<SystemResourcesResponse>('/api/v1/system/resources', {
-    responseSchema: SystemResourcesResponseSchema,
-  });
+export async function getSystemResources(): Promise<SystemResourcesResponse | null> {
+  try {
+    return await apiGet<SystemResourcesResponse>('/api/v1/system/resources', {
+      responseSchema: SystemResourcesResponseSchema,
+    });
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn('System resources endpoint unavailable:', error);
+    return null;
+  }
 }
 
 /**
  * Get system metrics
+ * 
+ * Note: Endpoint may return NOT_IMPLEMENTED (501) if not yet implemented.
+ * Returns null if endpoint is unavailable.
  */
-export async function getSystemMetrics(): Promise<SystemMetricsResponse> {
-  return apiGet<SystemMetricsResponse>('/api/v1/system/metrics', {
-    responseSchema: SystemMetricsResponseSchema,
-  });
+export async function getSystemMetrics(): Promise<SystemMetricsResponse | null> {
+  try {
+    return await apiGet<SystemMetricsResponse>('/api/v1/system/metrics', {
+      responseSchema: SystemMetricsResponseSchema,
+    });
+  } catch (error) {
+    // Endpoint may not be implemented yet (501) or may not exist (404)
+    console.warn('System metrics endpoint unavailable:', error);
+    return null;
+  }
 }
 

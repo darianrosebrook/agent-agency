@@ -104,9 +104,10 @@ export function TimelineTab({ projectId }: TimelineTabProps = {}) {
 
     return tasks.map((task): TimelineTask => {
       const agent = task.worker_id ? agentMap.get(task.worker_id) : null;
-      const startDate = task.started_at
-        ? new Date(task.started_at)
-        : new Date(task.created_at);
+      // Use created_at as start date (started_at doesn't exist in backend)
+      const startDate = task.created_at
+        ? new Date(task.created_at)
+        : new Date();
 
       // Calculate end date: use completed_at if available, otherwise estimate
       let endDate: Date;

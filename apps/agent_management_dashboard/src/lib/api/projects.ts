@@ -7,6 +7,7 @@
  */
 
 import { apiGet, apiPost, apiPatch, apiDelete } from "../utils/api";
+import type { TaskWithOptionalDescription } from '../types/task';
 
 /**
  * Project API response
@@ -266,18 +267,13 @@ export async function updateProjectMilestone(
 
 /**
  * Project task from API
+ * 
+ * Extends canonical Task interface with backward compatibility fields
+ * Matches backend Task model from iterations/v3/data-infrastructure/src/models.rs
  */
-export interface ProjectTask {
-  task_id: string;
-  title: string;
-  description?: string | null;
-  status: string;
-  risk_tier?: string | null;
-  priority?: number | null;
-  assigned_worker_id?: string | null;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string | null;
+export interface ProjectTask extends TaskWithOptionalDescription {
+  // Backward compatibility: some APIs may return task_id instead of id
+  task_id?: string; // Keep for backward compatibility, prefer id
 }
 
 /**
@@ -289,13 +285,33 @@ export interface ProjectTasksResponse {
 
 /**
  * Get project tasks
+ * 
+ * Validates task responses using runtime schema validation.
+ * Maps API response to ensure id field is present (handles both id and task_id from API)
  */
 export async function getProjectTasks(
   projectId: string
 ): Promise<ProjectTasksResponse> {
-  return apiGet<ProjectTasksResponse>(
+  const response = await apiGet<ProjectTasksResponse>(
     `${API_BASE}/projects/${projectId}/tasks`
   );
+  
+  // Validate and normalize tasks
+  if (response.tasks && Array.isArray(response.tasks)) {
+    const { safeValidateTaskArray } = await import('../utils/taskValidation');
+    const { normalizeTaskId } = await import('../utils/taskTransform');
+    
+    // Validate each task
+    response.tasks = safeValidateTaskArray(response.tasks);
+    
+    // Normalize task IDs (some APIs return task_id instead of id)
+    response.tasks = response.tasks.map((task) => ({
+      ...task,
+      id: normalizeTaskId(task),
+    }));
+  }
+  
+  return response;
 }
 
 /**
@@ -321,16 +337,28 @@ export async function createProjectTask(
 
 /**
  * Update project task
+ * 
+ * Supports updating all 14 backend task fields.
  */
 export async function updateProjectTask(
   projectId: string,
   taskId: string,
-  updates: Partial<
-    Pick<
-      ProjectTask,
-      "title" | "description" | "status" | "priority" | "assigned_worker_id"
-    >
-  >
+  updates: Partial<{
+    title?: string;
+    description?: string;
+    risk_tier?: string;
+    scope?: Record<string, unknown>;
+    acceptance_criteria?: unknown[];
+    context?: Record<string, unknown>;
+    caws_spec?: Record<string, unknown> | null;
+    status?: 'pending' | 'in_progress' | 'paused' | 'completed' | 'cancelled' | 'failed';
+    assigned_worker_id?: string | null;
+    project_id?: string | null;
+    priority?: number | null;
+    deadline?: string | null;
+    metadata?: Record<string, unknown> | null;
+    completed_at?: string | null;
+  }>
 ): Promise<ProjectTask> {
   return apiPatch<ProjectTask>(
     `${API_BASE}/projects/${projectId}/tasks/${taskId}`,

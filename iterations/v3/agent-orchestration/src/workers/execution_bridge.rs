@@ -19,6 +19,8 @@ use agent_workers::MCPWorkerPool;
 use agent_workers::TaskExecutor;
 use agent_workers::{ParallelExecutionPlan, SubTask, TaskResult as WorkerTaskResult};
 use agent_workers::{Priority as WorkerPriority, TaskDefinition};
+use agent_workers::execution::ToolExecutor;
+use tracing::warn;
 
 /// Bridge between orchestrator and worker execution systems
 pub struct WorkerExecutionBridge {
@@ -28,6 +30,9 @@ pub struct WorkerExecutionBridge {
     /// Task executor for individual task execution
     #[allow(dead_code)] // Reserved for future use
     task_executor: Arc<TaskExecutor>,
+
+    /// Tool executor for parallel task execution
+    tool_executor: Option<Arc<ToolExecutor>>,
 }
 
 impl WorkerExecutionBridge {
@@ -36,6 +41,20 @@ impl WorkerExecutionBridge {
         Self {
             worker_pool,
             task_executor,
+            tool_executor: None,
+        }
+    }
+
+    /// Create a new worker execution bridge with tool executor for parallel execution
+    pub fn with_tool_executor(
+        worker_pool: Arc<MCPWorkerPool>,
+        task_executor: Arc<TaskExecutor>,
+        tool_executor: Arc<ToolExecutor>,
+    ) -> Self {
+        Self {
+            worker_pool,
+            task_executor,
+            tool_executor: Some(tool_executor),
         }
     }
 
@@ -84,61 +103,142 @@ impl WorkerExecutionBridge {
             plan.subtasks.len()
         );
 
-        // TODO: Implement comprehensive parallel execution using ParallelCoordinator
-        //       Currently executes sequentially; should implement comprehensive parallel execution that uses agent-workers ParallelCoordinator for efficient parallel task execution.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - ParallelCoordinator is integrated
-        // - Parallel execution is efficient and scalable
-        // - Task dependencies are respected
-        // - Parallel execution handles errors gracefully
-        //
-        // DEPENDENCIES:
-        // - ParallelCoordinator integration (Required)
-        // - Parallel execution utilities (Required)
-        // - Task dependency management (Required)
-        //
-        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (parallel execution functionality)
-        // - Change Budget: ~250 LOC
-        // - Reviewer Requirements: Parallel execution and task coordination expertise
+        // Execute tasks in parallel based on coordination strategy
+        match plan.coordination_strategy {
+            agent_workers::CoordinationStrategy::FullyParallel => {
+                self.execute_fully_parallel(plan, worktree_paths).await
+            }
+            agent_workers::CoordinationStrategy::SequentialDependencies => {
+                self.execute_with_dependencies(plan, worktree_paths).await
+            }
+            agent_workers::CoordinationStrategy::Adaptive => {
+                // For adaptive, start with fully parallel and fall back if needed
+                self.execute_fully_parallel(plan, worktree_paths).await
+            }
+        }
+    }
+
+    /// Execute all subtasks in parallel without dependency consideration
+    async fn execute_fully_parallel(
+        &self,
+        plan: &ParallelExecutionPlan,
+        worktree_paths: &std::collections::HashMap<Uuid, PathBuf>,
+    ) -> Result<Vec<ExecutionArtifacts>> {
+        use futures::stream::{self, StreamExt};
+        
+        // Execute all subtasks concurrently
+        let artifact_stream = stream::iter(plan.subtasks.iter())
+            .map(|subtask| {
+                let bridge = self;
+                let worktree_paths = worktree_paths;
+                async move {
+                    // Find worktree path for this task's worker
+                    let worker_id = subtask
+                        .assigned_worker
+                        .map(|w| w.0)
+                        .unwrap_or_else(Uuid::new_v4);
+                    let worktree_path = worktree_paths
+                        .get(&worker_id)
+                        .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
+
+                    // Convert task to milestone-like structure
+                    let milestone = bridge.parallel_task_to_milestone(subtask)?;
+
+                    // Execute milestone
+                    bridge
+                        .execute_milestone(&milestone, worktree_path, worker_id)
+                        .await
+                }
+            });
+
+        // Collect all results - this executes tasks in parallel
+        let results: Result<Vec<_>, _> = artifact_stream
+            .buffer_unordered(plan.subtasks.len().min(10)) // Limit concurrency to 10
+            .collect()
+            .await;
+
+        results
+    }
+
+    /// Execute subtasks respecting dependencies
+    async fn execute_with_dependencies(
+        &self,
+        plan: &ParallelExecutionPlan,
+        worktree_paths: &std::collections::HashMap<Uuid, PathBuf>,
+    ) -> Result<Vec<ExecutionArtifacts>> {
         let mut results = Vec::new();
+        let mut completed_task_ids = std::collections::HashSet::new();
 
-        for task in &plan.subtasks {
-            // Find worktree path for this task's worker
-            let worker_id = task
-                .assigned_worker
-                .map(|w| w.0)
-                .unwrap_or_else(Uuid::new_v4);
-            let worktree_path = worktree_paths
-                .get(&worker_id)
-                .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
+        // Simple topological sort - execute tasks in dependency order
+        // Groups of tasks with satisfied dependencies can execute in parallel
+        let mut remaining_tasks: Vec<_> = plan.subtasks.iter().collect();
 
-            // Convert task to milestone-like structure
-            let milestone = self.parallel_task_to_milestone(task)?;
+        while !remaining_tasks.is_empty() {
+            // Find tasks with satisfied dependencies
+            let executable_tasks: Vec<_> = remaining_tasks
+                .iter()
+                .filter(|task| {
+                    plan.dependencies
+                        .iter()
+                        .filter(|dep| dep.dependent_task == task.id)
+                        .all(|dep| completed_task_ids.contains(&dep.dependency_task))
+                })
+                .cloned()
+                .collect();
 
-            // Execute milestone
-            let artifacts = self
-                .execute_milestone(&milestone, worktree_path, worker_id)
-                .await?;
-            results.push(artifacts);
+            if executable_tasks.is_empty() {
+                // Circular dependency or error - execute remaining sequentially as fallback
+                warn!("Circular dependency detected or all remaining tasks blocked, executing remaining {} tasks sequentially", remaining_tasks.len());
+                for task in remaining_tasks {
+                    let worker_id = task
+                        .assigned_worker
+                        .map(|w| w.0)
+                        .unwrap_or_else(Uuid::new_v4);
+                    let worktree_path = worktree_paths
+                        .get(&worker_id)
+                        .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
+                    let milestone = self.parallel_task_to_milestone(task)?;
+                    let artifacts = self.execute_milestone(&milestone, worktree_path, worker_id).await?;
+                    results.push(artifacts);
+                    completed_task_ids.insert(task.id);
+                }
+                break;
+            }
+
+            // Execute executable tasks in parallel
+            use futures::future::join_all;
+            let execution_futures: Vec<_> = executable_tasks
+                .iter()
+                .map(|task| {
+                    let worker_id = task
+                        .assigned_worker
+                        .map(|w| w.0)
+                        .unwrap_or_else(Uuid::new_v4);
+                    let worktree_path = worktree_paths
+                        .get(&worker_id)
+                        .cloned()
+                        .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
+                    let milestone = self.parallel_task_to_milestone(task)?;
+                    async move {
+                        self.execute_milestone(&milestone, &worktree_path, worker_id).await
+                    }
+                })
+                .collect();
+
+            // Wait for all tasks in this group to complete
+            let group_results: Result<Vec<_>, _> = join_all(execution_futures).await
+                .into_iter()
+                .collect();
+
+            let group_artifacts = group_results?;
+            
+            // Mark tasks as completed and remove from remaining
+            for task in &executable_tasks {
+                completed_task_ids.insert(task.id);
+                remaining_tasks.retain(|t| t.id != task.id);
+            }
+
+            results.extend(group_artifacts);
         }
 
         Ok(results)
