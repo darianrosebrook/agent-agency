@@ -31,12 +31,49 @@ pub struct PlaceholderHomomorphicEncryption;
 impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
     async fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         // TODO: Implement real homomorphic encryption
-        // - [ ] Integrate HE library (e.g., Paillier, CKKS, BGV)
-        // - [ ] Generate encryption keys
-        // - [ ] Encrypt data using chosen HE scheme
-        // - [ ] Handle encryption errors and edge cases
-        // - [ ] Add unit tests with real encryption
-        // - [ ] Add integration tests with encrypted computations
+        //       Replace no-op encryption with actual homomorphic encryption using HE libraries for secure federated learning computations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Integrate HE library (Paillier, CKKS, BGV, or TFHE)
+        // [ ] Generate public/private key pairs for chosen HE scheme
+        // [ ] Implement data encryption using HE cryptographic algorithms
+        // [ ] Handle encryption errors, invalid inputs, and edge cases
+        // [ ] Add support for multiple HE schemes (configurable)
+        // [ ] Implement key management and rotation
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Data is properly encrypted using homomorphic encryption algorithms
+        // - Encrypted data maintains mathematical properties for computation
+        // - Encryption/decryption performance meets SLA (<1 second for typical data)
+        // - Multiple HE schemes are supported and configurable
+        // - Integration tests validate encrypted computation workflows
+        //
+        // DEPENDENCIES:
+        // - Homomorphic encryption library (rust-paillier, concrete, or similar) (Required)
+        // - Cryptographic key management system (Required)
+        // - HE scheme parameter configuration (Required)
+        // - Performance benchmarking framework (Required)
+        // - Test data with known encryption/decryption results (Required)
+        //
+        // ESTIMATED EFFORT: 20-25 hours (high confidence)
+        // PRIORITY: High
+        // BLOCKING: Yes (security-critical functionality)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~600 LOC
+        // - Reviewer Requirements: Cryptography and homomorphic encryption expertise
         // In practice, this would use a real HE scheme like Paillier or CKKS
         debug!("Encrypting {} bytes of data", data.len());
         Ok(data.to_vec()) // No-op for placeholder
@@ -44,22 +81,98 @@ impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
 
     async fn decrypt(&self, encrypted_data: &[u8]) -> Result<Vec<u8>> {
         // TODO: Implement real homomorphic decryption
-        // - [ ] Use decryption key from HE scheme
-        // - [ ] Decrypt data using matching HE scheme
-        // - [ ] Handle decryption errors and invalid data
-        // - [ ] Add unit tests with real decryption
-        // - [ ] Add integration tests with encrypted data
+        //       Replace no-op decryption with actual homomorphic decryption using HE libraries for secure federated learning computations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Use private decryption key from HE scheme key pair
+        // [ ] Implement data decryption using HE cryptographic algorithms
+        // [ ] Handle decryption errors, invalid ciphertexts, and key mismatches
+        // [ ] Validate decrypted data integrity and correctness
+        // [ ] Add support for multiple HE schemes (configurable)
+        // [ ] Implement decryption result caching for performance
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Encrypted data is properly decrypted back to original plaintext
+        // - Decryption works with all supported HE schemes
+        // - Invalid ciphertexts are rejected with clear error messages
+        // - Decryption performance meets SLA (<500ms for typical data)
+        // - Integration tests validate round-trip encryption/decryption
+        //
+        // DEPENDENCIES:
+        // - Homomorphic encryption library (rust-paillier, concrete, or similar) (Required)
+        // - Private key management and access control (Required)
+        // - Ciphertext validation framework (Required)
+        // - Performance benchmarking framework (Required)
+        // - Test vectors with known plaintext/ciphertext pairs (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: Yes (security-critical functionality)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Cryptography and homomorphic encryption expertise
         debug!("Decrypting {} bytes of data", encrypted_data.len());
         Ok(encrypted_data.to_vec()) // No-op for placeholder
     }
 
     async fn homomorphic_add(&self, a: &[u8], b: &[u8]) -> Result<Vec<u8>> {
         // TODO: Implement real homomorphic addition
-        // - [ ] Perform addition on encrypted values without decryption
-        // - [ ] Use HE scheme's addition operation
-        // - [ ] Handle addition errors and overflow
-        // - [ ] Add unit tests with real homomorphic operations
-        // - [ ] Add integration tests with encrypted computations
+        //       Replace no-op addition with actual homomorphic addition operations on encrypted data for secure federated learning computations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Perform addition on encrypted values without decryption using HE algorithms
+        // [ ] Use HE scheme's mathematical addition operation (ciphertext + ciphertext)
+        // [ ] Handle addition errors, overflow, and scheme-specific limitations
+        // [ ] Validate input ciphertexts are compatible for addition
+        // [ ] Implement result encryption and proper ciphertext format
+        // [ ] Add support for batch addition operations
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Encrypted values can be added without decryption
+        // - Addition results are mathematically correct when decrypted
+        // - Operation handles all supported data types and ranges
+        // - Performance meets SLA (<100ms for typical operations)
+        // - Integration tests validate homomorphic computation pipelines
+        //
+        // DEPENDENCIES:
+        // - Homomorphic encryption library with addition operations (Required)
+        // - Ciphertext compatibility validation (Required)
+        // - Mathematical operation correctness testing (Required)
+        // - Performance benchmarking framework (Required)
+        // - Test data with known addition results (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: Yes (core homomorphic functionality)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~350 LOC
+        // - Reviewer Requirements: Cryptography and homomorphic encryption expertise
         // Placeholder: Real implementation would add encrypted values
         debug!("Homomorphic addition of {} and {} bytes", a.len(), b.len());
         Ok(a.to_vec()) // No-op for placeholder
@@ -67,11 +180,49 @@ impl HomomorphicEncryption for PlaceholderHomomorphicEncryption {
 
     async fn homomorphic_multiply_scalar(&self, data: &[u8], scalar: f32) -> Result<Vec<u8>> {
         // TODO: Implement real homomorphic scalar multiplication
-        // - [ ] Perform scalar multiplication on encrypted value
-        // - [ ] Use HE scheme's scalar multiplication operation
-        // - [ ] Handle multiplication errors and precision
-        // - [ ] Add unit tests with real homomorphic operations
-        // - [ ] Add integration tests with encrypted computations
+        //       Replace no-op multiplication with actual homomorphic scalar multiplication operations on encrypted data for secure federated learning computations.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Perform scalar multiplication on encrypted values without decryption using HE algorithms
+        // [ ] Use HE scheme's mathematical scalar multiplication operation (ciphertext * scalar)
+        // [ ] Handle multiplication errors, precision limits, and overflow conditions
+        // [ ] Validate scalar values are within supported ranges for HE scheme
+        // [ ] Implement proper ciphertext result formatting and encryption
+        // [ ] Add support for different scalar types (integer, float, fixed-point)
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Encrypted values can be multiplied by scalars without decryption
+        // - Multiplication results are mathematically correct when decrypted
+        // - Operation handles all supported scalar types and ranges
+        // - Precision and overflow conditions are properly managed
+        // - Integration tests validate homomorphic computation pipelines
+        //
+        // DEPENDENCIES:
+        // - Homomorphic encryption library with scalar multiplication (Required)
+        // - Scalar value validation and range checking (Required)
+        // - Precision and overflow handling framework (Required)
+        // - Mathematical operation correctness testing (Required)
+        // - Test data with known scalar multiplication results (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: Yes (core homomorphic functionality)
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (security-critical cryptographic functionality)
+        // - Change Budget: ~350 LOC
+        // - Reviewer Requirements: Cryptography and homomorphic encryption expertise
         debug!("Homomorphic scalar multiplication by {}", scalar);
         Ok(data.to_vec()) // No-op for placeholder
     }
