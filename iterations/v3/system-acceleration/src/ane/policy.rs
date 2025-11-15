@@ -171,7 +171,7 @@ impl PerformancePolicy {
                 // Prefer ANE by default when available, regardless of sequence length
                 // This sets us up for future quantization improvements and maintains
                 // consistency. Performance is acceptable (0.95-1.01x) even if flat.
-                BackendPolicy::ANE
+                    BackendPolicy::ANE
             }
             policy => policy,
         }

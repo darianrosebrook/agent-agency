@@ -10,7 +10,7 @@
 #[cfg(feature = "full")]
 use futures::future::join_all;
 use regex::Regex;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 // ML/NLP imports for advanced assertion generation
 #[cfg(feature = "full")]

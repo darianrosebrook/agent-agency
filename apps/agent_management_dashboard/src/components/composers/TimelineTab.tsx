@@ -4,6 +4,7 @@ import { Calendar, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getAgents, type Agent } from "../../lib/api/agents";
 import { listTasks, type Task } from "../../lib/api/tasks";
+import { getProjectTasks } from "../../lib/api/projects";
 import { Button } from "../primitives/button";
 import {
   Select,
@@ -29,7 +30,11 @@ export interface TimelineTask {
   description?: string;
 }
 
-export function TimelineTab() {
+interface TimelineTabProps {
+  projectId?: string; // Optional project ID to filter tasks by project
+}
+
+export function TimelineTab({ projectId }: TimelineTabProps = {}) {
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("week");
   const [selectedWorker, setSelectedWorker] = useState<string>("all");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -42,12 +47,31 @@ export function TimelineTab() {
       setIsLoading(true);
       setError(null);
       try {
+        // Use project-specific tasks if projectId provided, otherwise fetch all tasks
         const [tasksData, agentsData] = await Promise.all([
-          listTasks(),
+          projectId
+            ? getProjectTasks(projectId).then((res) => ({
+                tasks: res.tasks.map((t) => ({
+                  id: t.task_id || t.id || '',
+                  title: t.title,
+                  description: t.description || undefined,
+                  status: t.status,
+                  worker_id: t.assigned_worker_id || undefined,
+                  created_at: t.created_at,
+                  updated_at: t.updated_at,
+                  started_at: undefined, // Not in ProjectTask
+                  completed_at: t.completed_at || undefined,
+                  priority: t.priority || undefined,
+                  type: undefined,
+                  metadata: undefined,
+                })) as Task[],
+              }))
+            : listTasks(),
           getAgents(),
         ]);
-        setTasks(tasksData.tasks);
-        setAgents(agentsData);
+        setTasks(tasksData.tasks || []);
+        // Handle agents array/object response
+        setAgents(Array.isArray(agentsData) ? agentsData : (agentsData?.agents || []));
       } catch (err) {
         console.error("Failed to fetch tasks and agents:", err);
         setError(
@@ -64,7 +88,7 @@ export function TimelineTab() {
     // Refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [projectId]);
 
   // Transform tasks to TimelineTask format
   const timelineTasks = useMemo(() => {

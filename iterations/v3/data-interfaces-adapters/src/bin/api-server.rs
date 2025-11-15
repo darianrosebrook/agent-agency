@@ -5560,77 +5560,13 @@ async fn scaffold_project_handler(
                 }
             }
         } else {
-            // Fallback: Create project directly without orchestration
-            create_project_directly(state, payload).await
+            Err(StatusCode::SERVICE_UNAVAILABLE)
         }
     }
 
     #[cfg(not(feature = "orchestration"))]
     {
-        create_project_directly(state, payload).await
-    }
-}
-
-// Helper function to create project directly without orchestration
-async fn create_project_directly(
-    state: AppState,
-    payload: JsonValue,
-) -> Result<Json<JsonValue>, StatusCode> {
-    let db = state
-        .db_client
-        .as_ref()
-        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-
-    let project_name = payload
-        .get("name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("new-project");
-    let description = payload
-        .get("description")
-        .or_else(|| payload.get("summary"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-
-    // Generate IDs for direct creation (required by execution_plans table)
-    let project_id = Uuid::new_v4();
-    let session_id = Uuid::new_v4();
-    let working_spec_id = format!("manual-{}", project_id);
-
-    // Create execution plan directly
-    let create_plan = data_infrastructure::database_operations::CreateExecutionPlan {
-        id: project_id,
-        session_id,
-        working_spec_id,
-        title: project_name.to_string(),
-        overview: if description.is_empty() {
-            None
-        } else {
-            Some(description.to_string())
-        },
-        state: Some("draft".to_string()),
-        milestones: None,
-        dependency_graph: None,
-        change_budget: None,
-        quality_gates: None,
-        evidence_requirements: None,
-        active_waivers: None,
-        metadata: None,
-    };
-
-    match db.create_execution_plan(create_plan).await {
-        Ok(plan) => Ok(Json(serde_json::json!({
-            "project_id": plan.id.to_string(),
-            "name": plan.title,
-            "overview": plan.overview,
-            "state": plan.state,
-            "working_spec_id": plan.working_spec_id,
-            "created_at": plan.created_at.to_rfc3339(),
-            "updated_at": plan.updated_at.to_rfc3339(),
-        }))),
-        Err(e) => {
-            error!("Failed to create project: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
+        Err(StatusCode::NOT_IMPLEMENTED)
     }
 }
 

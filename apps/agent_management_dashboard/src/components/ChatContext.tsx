@@ -16,6 +16,7 @@ import {
   type ChatMessageResponse,
   type ChatSessionResponse,
 } from "../lib/api/chat";
+import { getCurrentUser } from "../lib/api/users";
 import type { Message } from "../lib/schemas/chat";
 
 interface ChatData {
@@ -96,9 +97,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       setError(null);
 
+      // Get workspace_id from current user (if available)
+      // Note: Current user API may not include workspace_id yet - backend will extract from auth token if undefined
+      let workspaceId: string | undefined;
+      try {
+        const currentUser = await getCurrentUser();
+        // Try to extract workspace_id from user preferences or metadata
+        workspaceId = (currentUser.preferences?.workspace_id as string) || undefined;
+      } catch (err) {
+        // If getCurrentUser fails, proceed with undefined (backend will extract from auth token)
+        console.warn("Failed to fetch current user for workspace_id:", err);
+      }
+
       // Fetch chat sessions from API
-      // TODO: Get workspace_id from authenticated user context
-      const sessions = await getChatSessions(undefined, {
+      // Backend will extract workspace_id from auth token if not provided
+      const sessions = await getChatSessions(workspaceId, {
         archived: false,
         limit: 100,
         offset: 0,
@@ -188,10 +201,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     try {
       const title = generateChatTitle();
 
+      // Get workspace_id from current user (if available)
+      // Note: Current user API may not include workspace_id yet - backend will extract from auth token if undefined
+      let workspaceId: string | undefined;
+      try {
+        const currentUser = await getCurrentUser();
+        // Try to extract workspace_id from user preferences or metadata
+        workspaceId = (currentUser.preferences?.workspace_id as string) || undefined;
+      } catch (err) {
+        // If getCurrentUser fails, proceed with undefined (backend will extract from auth token)
+        console.warn("Failed to fetch current user for workspace_id:", err);
+      }
+
       // Create chat session in database via API
+      // Backend will extract workspace_id from auth token if not provided
       const session = await createChatSession(
         { title },
-        undefined // TODO: Get workspace_id from authenticated user context
+        workspaceId
       );
 
       // Create local ChatData from API response

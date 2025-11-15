@@ -10,7 +10,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Instant;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use crate::harness::{LocalServiceManager, TestEnvironment};
 use crate::quality_analyzers::{

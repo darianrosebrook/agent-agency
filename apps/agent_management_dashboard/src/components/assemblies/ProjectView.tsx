@@ -15,6 +15,7 @@ import { WorkspaceTab } from "../composers/WorkspaceTab";
 import { TasksTab } from "../composers/TasksTab";
 import { TimelineTab } from "../composers/TimelineTab";
 import { ManageTab } from "../composers/SettingsTab";
+import { useProjectStore } from "../../lib/stores";
 import svgPaths from "../../imports/svg-ustevohwso";
 import { cn } from "../primitives/utils";
 import styles from "./ProjectView.module.scss";
@@ -31,6 +32,8 @@ export function ProjectView({
   onBackToProjects,
 }: ProjectViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  // Get current project ID from store to pass to TimelineTab
+  const { currentProjectId } = useProjectStore();
 
   const tabs = [
     { id: "overview" as TabType, label: "Overview" },
@@ -284,7 +287,9 @@ export function ProjectView({
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "workspace" && <WorkspaceTab />}
         {activeTab === "tasks" && <TasksTab />}
-        {activeTab === "timeline" && <TimelineTab />}
+        {activeTab === "timeline" && (
+          <TimelineTab projectId={currentProjectId || undefined} />
+        )}
         {activeTab === "manage" && <ManageTab />}
       </div>
     </div>

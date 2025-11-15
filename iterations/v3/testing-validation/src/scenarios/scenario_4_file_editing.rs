@@ -15,7 +15,7 @@ use std::time::Instant;
 use tempfile::TempDir;
 use tokio::fs;
 use tokio::process::Command;
-use tracing::error;
+use tracing::{error, info};
 
 #[cfg(feature = "full")]
 use agent_orchestration::{

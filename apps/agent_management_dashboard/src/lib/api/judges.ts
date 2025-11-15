@@ -6,7 +6,7 @@
  * @author @darianrosebrook
  */
 
-import { apiGet } from './base';
+import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
 import { z } from 'zod';
 
 /**
@@ -45,40 +45,35 @@ export const JudgeEvaluationSchema = z.object({
 
 export type JudgeEvaluation = z.infer<typeof JudgeEvaluationSchema>;
 
+const API_BASE = '/api/proxy/api/v1';
+
 /**
  * List all judges
  */
 export async function listJudges(): Promise<JudgeResponse[]> {
-  return apiGet<JudgeResponse[]>('/api/v1/judges', {
-    responseSchema: z.array(JudgeResponseSchema),
-  });
+  const response = await apiGet<{ judges?: JudgeResponse[] } | JudgeResponse[]>(`${API_BASE}/judges`);
+  return Array.isArray(response) ? response : (response.judges || []);
 }
 
 /**
  * Get judge details
  */
 export async function getJudge(id: string): Promise<JudgeResponse> {
-  return apiGet<JudgeResponse>(`/api/v1/judges/${id}`, {
-    responseSchema: JudgeResponseSchema,
-  });
+  return apiGet<JudgeResponse>(`${API_BASE}/judges/${id}`);
 }
 
 /**
  * Get judge statistics
  */
 export async function getJudgesStats(): Promise<JudgeStats> {
-  return apiGet<JudgeStats>('/api/v1/judges/stats', {
-    responseSchema: JudgeStatsSchema,
-  });
+  return apiGet<JudgeStats>(`${API_BASE}/judges/stats`);
 }
 
 /**
  * Get judge-specific statistics
  */
 export async function getJudgeStats(id: string): Promise<JudgeStats> {
-  return apiGet<JudgeStats>(`/api/v1/judges/${id}/stats`, {
-    responseSchema: JudgeStatsSchema,
-  });
+  return apiGet<JudgeStats>(`${API_BASE}/judges/${id}/stats`);
 }
 
 /**
@@ -94,8 +89,9 @@ export async function getJudgeEvaluations(
   
   const query = params.toString() ? `?${params.toString()}` : '';
   
-  return apiGet<JudgeEvaluation[]>(`/api/v1/judges/${id}/evaluations${query}`, {
-    responseSchema: z.array(JudgeEvaluationSchema),
-  });
+  const response = await apiGet<{ evaluations?: JudgeEvaluation[] } | JudgeEvaluation[]>(
+    `${API_BASE}/judges/${id}/evaluations${query}`
+  );
+  return Array.isArray(response) ? response : (response.evaluations || []);
 }
 

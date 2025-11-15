@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight, MessageSquare, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useChatStore } from "../../lib/stores";
 import { ChatListSkeleton } from "../compounds";
 import { cn } from "../primitives/utils";
@@ -27,39 +27,129 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
   const switchToChat = useChatStore((state) => state.switchToChat);
   const isLoading = useChatStore((state) => state.isLoading);
 
-  // TODO: Replace hardcoded chat groups with dynamic groups from v3 database with the following requirements:
+  // Dynamic chat grouping by date ranges
+  // TODO: Add API support for persistent groups and custom categories
   // 1. Chat group fetching: Load chat groups and organization from database
   //    - Data source: GET /api/chat/groups endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
   //    - Database table: PostgreSQL `chat_groups` table (if exists) or derive from `chat_sessions` table
-  //    - Group chats by project, date, or custom categories
-  // 2. Dynamic group creation: Create groups based on chat metadata
-  //    - Group by project_id if chats are project-specific
-  //    - Group by date ranges (Today, This Week, This Month, Older)
-  //    - Support custom user-defined groups
-  // 3. Group membership: Track which chats belong to which groups
-  //    - Update group chatIds array based on chat metadata
-  //    - Calculate group counts dynamically from chat membership
-  // 4. Group persistence: Save group organization preferences
-  //    - Data source: POST /api/chat/groups endpoint to save group preferences
-  //    - Store user's preferred grouping method and custom groups
-  const [groups, setGroups] = useState<ChatGroup[]>([
-    {
-      id: "recent",
-      name: "Recent Chats",
-      count: 0,
-      chatIds: [],
-      isExpanded: true,
-    },
-  ]);
+  // 2. Support custom user-defined groups and project-based grouping
+  // 3. Group persistence: Save group organization preferences via POST /api/chat/groups
+  const groups = useMemo<ChatGroup[]>(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisWeek = new Date(today);
+    thisWeek.setDate(thisWeek.getDate() - 7);
+    const thisMonth = new Date(today);
+    thisMonth.setMonth(thisMonth.getMonth() - 1);
+
+    const todayChats: string[] = [];
+    const thisWeekChats: string[] = [];
+    const thisMonthChats: string[] = [];
+    const olderChats: string[] = [];
+
+    chats.forEach((chat) => {
+      const chatDate = chat.createdAt || new Date(0);
+      if (chatDate >= today) {
+        todayChats.push(chat.id);
+      } else if (chatDate >= thisWeek) {
+        thisWeekChats.push(chat.id);
+      } else if (chatDate >= thisMonth) {
+        thisMonthChats.push(chat.id);
+      } else {
+        olderChats.push(chat.id);
+      }
+    });
+
+    const groupsList: ChatGroup[] = [];
+
+    if (todayChats.length > 0) {
+      groupsList.push({
+        id: "today",
+        name: "Today",
+        count: todayChats.length,
+        chatIds: todayChats,
+        isExpanded: true,
+      });
+    }
+
+    if (thisWeekChats.length > 0) {
+      groupsList.push({
+        id: "this-week",
+        name: "This Week",
+        count: thisWeekChats.length,
+        chatIds: thisWeekChats,
+        isExpanded: true,
+      });
+    }
+
+    if (thisMonthChats.length > 0) {
+      groupsList.push({
+        id: "this-month",
+        name: "This Month",
+        count: thisMonthChats.length,
+        chatIds: thisMonthChats,
+        isExpanded: true,
+      });
+    }
+
+    if (olderChats.length > 0) {
+      groupsList.push({
+        id: "older",
+        name: "Older",
+        count: olderChats.length,
+        chatIds: olderChats,
+        isExpanded: false,
+      });
+    }
+
+    // Fallback: If no groups, show all chats in "Recent Chats"
+    if (groupsList.length === 0 && chats.length > 0) {
+      groupsList.push({
+        id: "recent",
+        name: "Recent Chats",
+        count: chats.length,
+        chatIds: chats.map((c) => c.id),
+        isExpanded: true,
+      });
+    }
+
+    return groupsList;
+  }, [chats]);
+
+  // Track which groups are expanded
+  const groupIds = useMemo(() => groups.map((g) => g.id), [groups]);
+  const initialExpandedGroups = useMemo(
+    () => new Set(groupIds.filter((id) => id !== "older")),
+    [groupIds]
+  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(initialExpandedGroups);
+
+  // Update expanded groups when groups change (preserve user's expansion state for existing groups)
+  useEffect(() => {
+    const newExpanded = new Set<string>();
+    groups.forEach((group) => {
+      if (expandedGroups.has(group.id)) {
+        // Preserve existing expansion state
+        newExpanded.add(group.id);
+      } else if (group.id !== "older") {
+        // Auto-expand new groups except "Older"
+        newExpanded.add(group.id);
+      }
+    });
+    setExpandedGroups(newExpanded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIds.join(",")]); // Re-run when group IDs change (ignoring expandedGroups to avoid infinite loop)
 
   const toggleGroup = (groupId: string) => {
-    setGroups(
-      groups.map((group) =>
-        group.id === groupId
-          ? { ...group, isExpanded: !group.isExpanded }
-          : group
-      )
-    );
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
   };
 
   const handleNewChat = () => {
@@ -96,46 +186,51 @@ export function ChatSidebar({ onSelect }: ChatSidebarProps = {}) {
           </div>
         ) : (
           <div className={styles.groupsList}>
-            {groups.map((group) => (
-              <div key={group.id}>
-                {/* Group Header */}
-                <button
-                  onClick={() => toggleGroup(group.id)}
-                  className={styles.groupHeader}
-                >
-                  {group.isExpanded ? (
-                    <ChevronDown className={styles.icon} />
-                  ) : (
-                    <ChevronRight className={styles.icon} />
-                  )}
-                  <span className={styles.groupHeaderText}>{group.name}</span>
-                  <span className={styles.groupCount}>{chats.length}</span>
-                </button>
+            {groups.map((group) => {
+              const isExpanded = expandedGroups.has(group.id);
+              const groupChats = chats.filter((c) => group.chatIds.includes(c.id));
+              
+              return (
+                <div key={group.id}>
+                  {/* Group Header */}
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className={styles.groupHeader}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className={styles.icon} />
+                    ) : (
+                      <ChevronRight className={styles.icon} />
+                    )}
+                    <span className={styles.groupHeaderText}>{group.name}</span>
+                    <span className={styles.groupCount}>{group.count}</span>
+                  </button>
 
-                {/* Chats in Group */}
-                {group.isExpanded && (
-                  <div className={styles.chatsList}>
-                    {chats.map((chat) => (
-                      <button
-                        key={chat.id}
-                        onClick={() => handleChatClick(chat.id)}
-                        className={cn(
-                          styles.chatItem,
-                          currentChatId === chat.id
-                            ? styles.chatItemActive
-                            : styles.chatItemInactive
-                        )}
-                      >
-                        <MessageSquare className={styles.iconSmall} />
-                        <span className={styles.chatItemText}>
-                          {chat.title}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+                  {/* Chats in Group */}
+                  {isExpanded && (
+                    <div className={styles.chatsList}>
+                      {groupChats.map((chat) => (
+                        <button
+                          key={chat.id}
+                          onClick={() => handleChatClick(chat.id)}
+                          className={cn(
+                            styles.chatItem,
+                            currentChatId === chat.id
+                              ? styles.chatItemActive
+                              : styles.chatItemInactive
+                          )}
+                        >
+                          <MessageSquare className={styles.iconSmall} />
+                          <span className={styles.chatItemText}>
+                            {chat.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
