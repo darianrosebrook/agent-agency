@@ -136,6 +136,84 @@ export interface ProjectTask {
 | `priority` | `Option<i32>` | `string` (Global Task) / `number` (ProjectTask) | **Inconsistent types** |
 | `description` | `String` (required) | `string | null` (optional) | **Nullability mismatch** |
 
+#### 4. **🚨 CRITICAL: Status Workflow Mismatch**
+
+**Backend Task Status** (database constraint):
+```sql
+status VARCHAR(50) CHECK (status IN ('pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed'))
+```
+
+**Frontend Task Status** (Zod enum):
+```typescript
+status: z.enum(['backlog', 'todo', 'in-progress', 'done'])
+```
+
+**Impact**: **Status values don't match!** This will break the Jira-like workflow where agents update task status.
+
+**Backend supports**:
+- `pending` - Task is waiting to be assigned/started
+- `in_progress` - Task is actively being worked on
+- `paused` - Task is paused (can be resumed)
+- `completed` - Task is finished successfully
+- `cancelled` - Task was cancelled
+- `failed` - Task failed during execution
+
+**Frontend expects**:
+- `backlog` - Task is in backlog (not in backend!)
+- `todo` - Task is to do (not in backend!)
+- `in-progress` - Matches backend `in_progress` (with hyphen vs underscore)
+- `done` - Should map to backend `completed`
+
+**Status Transition Flow** (Jira-like):
+1. Create task → `pending` (backend) / `todo` (frontend) ❌ **MISMATCH**
+2. Assign to worker → `pending` → `in_progress` (backend) / `todo` → `in-progress` (frontend) ⚠️ **INCONSISTENT**
+3. Pause task → `paused` (backend) / ❌ **NOT SUPPORTED** (frontend)
+4. Complete task → `completed` (backend) / `done` (frontend) ❌ **MISMATCH**
+5. Fail task → `failed` (backend) / ❌ **NOT SUPPORTED** (frontend)
+6. Cancel task → `cancelled` (backend) / ❌ **NOT SUPPORTED** (frontend)
+
+#### 5. **🚨 CRITICAL: Update Task API Limitations**
+
+**Backend UpdateTask** supports:
+```rust
+pub struct UpdateTask {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub risk_tier: Option<String>,
+    pub scope: Option<serde_json::Value>,
+    pub acceptance_criteria: Option<serde_json::Value>,
+    pub context: Option<serde_json::Value>,
+    pub caws_spec: Option<serde_json::Value>,
+    pub status: Option<String>,
+    pub assigned_worker_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub priority: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub metadata: Option<serde_json::Value>,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+```
+
+**Frontend updateProjectTask** only allows:
+```typescript
+updates: Partial<
+  Pick<
+    ProjectTask,
+    "title" | "description" | "status" | "priority" | "assigned_worker_id"
+  >
+>
+```
+
+**Missing update capabilities**:
+- ❌ `risk_tier` - Cannot update risk tier
+- ❌ `scope` - Cannot update scope
+- ❌ `acceptance_criteria` - Cannot update acceptance criteria
+- ❌ `context` - Cannot update context (critical for agent workflow!)
+- ❌ `caws_spec` - Cannot update CAWS spec
+- ❌ `deadline` - Cannot update deadline
+- ❌ `metadata` - Cannot update metadata
+- ❌ `completed_at` - Cannot mark as completed with timestamp
+
 ---
 
 ## Project Schema Alignment
@@ -199,22 +277,98 @@ export interface ProjectApiResponse {
 
 ---
 
+## Workflow Capabilities (Jira-like)
+
+### ✅ Supported Workflows
+
+1. **Task Assignment**:
+   - ✅ Backend: `assigned_worker_id` field exists
+   - ✅ Frontend: `updateProjectTask` supports `assigned_worker_id`
+   - ⚠️ Frontend Global Task uses `worker_id` instead (inconsistent)
+
+2. **Task Comments**:
+   - ✅ Backend: Task comments API exists (`/api/v1/tasks/:task_id/comments`)
+   - ✅ Frontend: Comments API client exists (`apps/agent_management_dashboard/src/lib/api/comments.ts`)
+   - ✅ Schema alignment: Frontend `comment_id` matches backend `id` (returned as `comment_id`)
+   - ✅ CRUD operations: GET, POST, PATCH, DELETE all supported
+
+3. **Task Status Updates**:
+   - ✅ Backend: `PATCH /api/v1/tasks/:task_id` supports `status` field
+   - ✅ Frontend: `updateProjectTask` supports `status` field
+   - 🚨 **CRITICAL**: Status values don't match (see Status Workflow Mismatch above)
+
+4. **Task Priority Updates**:
+   - ✅ Backend: `priority` field exists (`Option<i32>`)
+   - ✅ Frontend ProjectTask: `priority` field exists (`number`)
+   - ⚠️ Frontend Global Task: `priority` is `string` (type mismatch)
+
+### ❌ Missing Workflow Capabilities
+
+1. **Context Updates**:
+   - ❌ Frontend cannot update `context` field (not in `updateProjectTask`)
+   - **Impact**: Agents cannot update task context as they work
+
+2. **Acceptance Criteria Updates**:
+   - ❌ Frontend cannot update `acceptance_criteria` field
+   - **Impact**: Cannot refine acceptance criteria during execution
+
+3. **Scope Updates**:
+   - ❌ Frontend cannot update `scope` field
+   - **Impact**: Cannot adjust scope as task evolves
+
+4. **Deadline Management**:
+   - ❌ Frontend cannot set/update `deadline` field
+   - **Impact**: Cannot track deadlines for tasks
+
+5. **Status Workflow**:
+   - ❌ Frontend status enum doesn't match backend
+   - ❌ Missing: `paused`, `failed`, `cancelled` statuses in frontend
+   - ❌ Frontend uses `backlog`, `todo`, `done` which don't exist in backend
+   - **Impact**: Agents cannot properly track task status through workflow
+
+6. **Task Completion Tracking**:
+   - ❌ Frontend cannot set `completed_at` timestamp
+   - **Impact**: Cannot track when tasks were actually completed
+
 ## Recommendations
 
-### Immediate Actions
+### 🚨 Critical Immediate Actions
 
-1. **Standardize Task Field Names**:
+1. **Fix Status Workflow Mismatch** (BLOCKING):
+   - **Option A**: Update frontend status enum to match backend:
+     ```typescript
+     status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed'])
+     ```
+   - **Option B**: Update backend to support frontend statuses (not recommended - breaks existing data)
+   - **Recommended**: Option A - Frontend should match backend database constraints
+   - Add status mapping functions if needed for UI display
+
+2. **Expand updateProjectTask Capabilities** (BLOCKING):
+   - Add all missing fields to `updateProjectTask`:
+     ```typescript
+     updates: Partial<Pick<
+       ProjectTask,
+       "title" | "description" | "status" | "priority" | "assigned_worker_id" |
+       "risk_tier" | "scope" | "acceptance_criteria" | "context" | "caws_spec" |
+       "deadline" | "metadata" | "completed_at"
+     >>
+     ```
+   - **Impact**: Enables full Jira-like workflow for agents
+
+3. **Standardize Task Field Names**:
    - Use `assigned_worker_id` consistently (not `worker_id`)
    - Use `id` consistently (not `task_id`)
    - Align `priority` type (use `number` everywhere, match backend `i32`)
 
-2. **Add Missing Fields to Frontend**:
+4. **Add Missing Fields to Frontend**:
    - Add `risk_tier` to global Task interface
    - Add `project_id` to global Task interface
    - Add `scope`, `acceptance_criteria`, `context`, `caws_spec` to ProjectTask interface
    - Add `deadline` to both Task interfaces
+   - Remove `started_at` from frontend (not in backend)
+   - Remove `type` from frontend (not in backend)
 
-3. **Fix Type Mismatches**:
+5. **Fix Type Mismatches**:
    - Change `priority` from `string` to `number` in global Task interface
    - Make `description` required in backend or optional in both (currently mismatched)
 
