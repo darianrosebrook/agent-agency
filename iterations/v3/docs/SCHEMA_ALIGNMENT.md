@@ -13,16 +13,19 @@ This document tracks the alignment between backend Rust data models and frontend
 ### ✅ Schemas Defined
 
 **Backend (Rust)**:
+
 - Location: `iterations/v3/data-infrastructure/src/models.rs`
 - Uses: `serde`, `schemars::JsonSchema`, `sqlx::FromRow`
 - Format: Snake case field names (matching database)
 
 **Frontend (TypeScript)**:
+
 - Location: `apps/agent_management_dashboard/src/lib/schemas/`
 - Uses: Zod schemas for validation
 - Format: Mixed (API responses use snake_case, internal types use camelCase)
 
 **Contract Schemas**:
+
 - Location: `iterations/v3/docs/contracts/*.schema.json`
 - JSON Schema definitions for contracts (WorkingSpec, WorkerOutput, etc.)
 
@@ -62,36 +65,38 @@ pub struct Task {
 ### Frontend TypeScript Task Types
 
 **Global Task Interface** (`apps/agent_management_dashboard/src/lib/api/tasks.ts`):
+
 ```typescript
 export interface Task {
-  id: string;                    // ✅ Matches
-  title: string;                 // ✅ Matches
-  description?: string;          // ✅ Matches (optional in frontend, required in backend)
-  priority?: string;             // ⚠️ Type mismatch (string vs i32)
-  type?: string;                 // ❌ Not in backend
-  status: string;                // ✅ Matches
-  created_at: string;            // ✅ Matches (snake_case for API)
-  updated_at: string;            // ✅ Matches (snake_case for API)
-  started_at?: string;           // ❌ Not in backend
-  completed_at?: string | null;  // ✅ Matches
-  worker_id?: string | null;     // ⚠️ Named differently (assigned_worker_id in backend)
-  metadata?: Record<string, unknown>;  // ✅ Matches
+  id: string; // ✅ Matches
+  title: string; // ✅ Matches
+  description?: string; // ✅ Matches (optional in frontend, required in backend)
+  priority?: string; // ⚠️ Type mismatch (string vs i32)
+  type?: string; // ❌ Not in backend
+  status: string; // ✅ Matches
+  created_at: string; // ✅ Matches (snake_case for API)
+  updated_at: string; // ✅ Matches (snake_case for API)
+  started_at?: string; // ❌ Not in backend
+  completed_at?: string | null; // ✅ Matches
+  worker_id?: string | null; // ⚠️ Named differently (assigned_worker_id in backend)
+  metadata?: Record<string, unknown>; // ✅ Matches
 }
 ```
 
 **Project Task Interface** (`apps/agent_management_dashboard/src/lib/api/projects.ts`):
+
 ```typescript
 export interface ProjectTask {
-  task_id: string;               // ⚠️ Named differently (id in backend)
-  title: string;                 // ✅ Matches
-  description?: string | null;   // ✅ Matches
-  status: string;                // ✅ Matches
-  risk_tier?: string | null;     // ✅ Matches (present!)
-  priority?: number | null;      // ✅ Matches type (number vs i32)
-  assigned_worker_id?: string | null;  // ✅ Matches name!
-  created_at: string;            // ✅ Matches
-  updated_at: string;            // ✅ Matches
-  completed_at?: string | null;  // ✅ Matches
+  task_id: string; // ⚠️ Named differently (id in backend)
+  title: string; // ✅ Matches
+  description?: string | null; // ✅ Matches
+  status: string; // ✅ Matches
+  risk_tier?: string | null; // ✅ Matches (present!)
+  priority?: number | null; // ✅ Matches type (number vs i32)
+  assigned_worker_id?: string | null; // ✅ Matches name!
+  created_at: string; // ✅ Matches
+  updated_at: string; // ✅ Matches
+  completed_at?: string | null; // ✅ Matches
   // ❌ Missing: project_id (but makes sense - already in URL path)
   // ❌ Missing: scope, acceptance_criteria, context, caws_spec
   // ❌ Missing: deadline
@@ -102,15 +107,16 @@ export interface ProjectTask {
 
 #### 1. **Field Name Inconsistencies**
 
-| Backend Field | Frontend Global Task | Frontend ProjectTask | Status |
-|---------------|---------------------|---------------------|---------|
-| `id` | ✅ `id` | ⚠️ `task_id` | **Inconsistent** |
-| `assigned_worker_id` | ⚠️ `worker_id` | ✅ `assigned_worker_id` | **Inconsistent** |
-| `priority` | ⚠️ `string` | ✅ `number` | **Type mismatch** |
+| Backend Field        | Frontend Global Task | Frontend ProjectTask    | Status            |
+| -------------------- | -------------------- | ----------------------- | ----------------- |
+| `id`                 | ✅ `id`              | ⚠️ `task_id`            | **Inconsistent**  |
+| `assigned_worker_id` | ⚠️ `worker_id`       | ✅ `assigned_worker_id` | **Inconsistent**  |
+| `priority`           | ⚠️ `string`          | ✅ `number`             | **Type mismatch** |
 
 #### 2. **Missing Fields in Frontend**
 
 **Global Task Interface** missing:
+
 - `risk_tier` - Risk tier information
 - `project_id` - Project association
 - `assigned_worker_id` - Worker assignment (has `worker_id` instead)
@@ -122,6 +128,7 @@ export interface ProjectTask {
 - `started_at` - Present in frontend but not backend
 
 **Project Task Interface** missing:
+
 - `scope` - Task scope definition
 - `acceptance_criteria` - Acceptance criteria
 - `context` - Task context
@@ -131,26 +138,29 @@ export interface ProjectTask {
 
 #### 3. **Type Mismatches**
 
-| Field | Backend Type | Frontend Type | Issue |
-|-------|-------------|---------------|-------|
-| `priority` | `Option<i32>` | `string` (Global Task) / `number` (ProjectTask) | **Inconsistent types** |
-| `description` | `String` (required) | `string | null` (optional) | **Nullability mismatch** |
+| Field         | Backend Type        | Frontend Type                                   | Issue                  |
+| ------------- | ------------------- | ----------------------------------------------- | ---------------------- | ------------------------ |
+| `priority`    | `Option<i32>`       | `string` (Global Task) / `number` (ProjectTask) | **Inconsistent types** |
+| `description` | `String` (required) | `string                                         | null` (optional)       | **Nullability mismatch** |
 
 #### 4. **🚨 CRITICAL: Status Workflow Mismatch**
 
 **Backend Task Status** (database constraint):
+
 ```sql
 status VARCHAR(50) CHECK (status IN ('pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed'))
 ```
 
 **Frontend Task Status** (Zod enum):
+
 ```typescript
-status: z.enum(['backlog', 'todo', 'in-progress', 'done'])
+status: z.enum(["backlog", "todo", "in-progress", "done"]);
 ```
 
 **Impact**: **Status values don't match!** This will break the Jira-like workflow where agents update task status.
 
 **Backend supports**:
+
 - `pending` - Task is waiting to be assigned/started
 - `in_progress` - Task is actively being worked on
 - `paused` - Task is paused (can be resumed)
@@ -159,12 +169,14 @@ status: z.enum(['backlog', 'todo', 'in-progress', 'done'])
 - `failed` - Task failed during execution
 
 **Frontend expects**:
+
 - `backlog` - Task is in backlog (not in backend!)
 - `todo` - Task is to do (not in backend!)
 - `in-progress` - Matches backend `in_progress` (with hyphen vs underscore)
 - `done` - Should map to backend `completed`
 
 **Status Transition Flow** (Jira-like):
+
 1. Create task → `pending` (backend) / `todo` (frontend) ❌ **MISMATCH**
 2. Assign to worker → `pending` → `in_progress` (backend) / `todo` → `in-progress` (frontend) ⚠️ **INCONSISTENT**
 3. Pause task → `paused` (backend) / ❌ **NOT SUPPORTED** (frontend)
@@ -175,6 +187,7 @@ status: z.enum(['backlog', 'todo', 'in-progress', 'done'])
 #### 5. **🚨 CRITICAL: Update Task API Limitations**
 
 **Backend UpdateTask** supports:
+
 ```rust
 pub struct UpdateTask {
     pub title: Option<String>,
@@ -195,16 +208,18 @@ pub struct UpdateTask {
 ```
 
 **Frontend updateProjectTask** only allows:
+
 ```typescript
 updates: Partial<
   Pick<
     ProjectTask,
     "title" | "description" | "status" | "priority" | "assigned_worker_id"
   >
->
+>;
 ```
 
 **Missing update capabilities**:
+
 - ❌ `risk_tier` - Cannot update risk tier
 - ❌ `scope` - Cannot update scope
 - ❌ `acceptance_criteria` - Cannot update acceptance criteria
@@ -245,14 +260,14 @@ pub struct ExecutionPlan {
 // apps/agent_management_dashboard/src/lib/api/projects.ts
 export interface ProjectApiResponse {
   id: string;
-  name: string;                     // Maps from backend "title"
-  summary?: string | null;          // Maps from backend "overview"
-  description?: string | null;      // Also maps from backend "overview"?
-  state?: string | null;            // Maps from backend "state"
+  name: string; // Maps from backend "title"
+  summary?: string | null; // Maps from backend "overview"
+  description?: string | null; // Also maps from backend "overview"?
+  state?: string | null; // Maps from backend "state"
   created_at: string;
   updated_at?: string | null;
-  last_accessed?: string | null;    // ❌ Not in backend
-  milestones?: ProjectMilestone[];  // ✅ Extracted from JSON
+  last_accessed?: string | null; // ❌ Not in backend
+  milestones?: ProjectMilestone[]; // ✅ Extracted from JSON
   // ❌ Missing: dependency_graph, change_budget, quality_gates, evidence_requirements, active_waivers, metadata
 }
 ```
@@ -260,11 +275,13 @@ export interface ProjectApiResponse {
 ### Issues Identified
 
 1. **Field Name Mapping**:
+
    - Backend `title` → Frontend `name` ✅ (handled in API layer)
    - Backend `overview` → Frontend `summary` or `description` ⚠️ (unclear which)
    - Backend `state` → Frontend `state` ✅ (present)
 
 2. **Missing Fields**:
+
    - `dependency_graph` - Project dependency information
    - `change_budget` - Change budget constraints
    - `quality_gates` - Quality gate definitions
@@ -282,17 +299,20 @@ export interface ProjectApiResponse {
 ### ✅ Supported Workflows
 
 1. **Task Assignment**:
+
    - ✅ Backend: `assigned_worker_id` field exists
    - ✅ Frontend: `updateProjectTask` supports `assigned_worker_id`
    - ⚠️ Frontend Global Task uses `worker_id` instead (inconsistent)
 
 2. **Task Comments**:
+
    - ✅ Backend: Task comments API exists (`/api/v1/tasks/:task_id/comments`)
    - ✅ Frontend: Comments API client exists (`apps/agent_management_dashboard/src/lib/api/comments.ts`)
    - ✅ Schema alignment: Frontend `comment_id` matches backend `id` (returned as `comment_id`)
    - ✅ CRUD operations: GET, POST, PATCH, DELETE all supported
 
 3. **Task Status Updates**:
+
    - ✅ Backend: `PATCH /api/v1/tasks/:task_id` supports `status` field
    - ✅ Frontend: `updateProjectTask` supports `status` field
    - 🚨 **CRITICAL**: Status values don't match (see Status Workflow Mismatch above)
@@ -305,22 +325,27 @@ export interface ProjectApiResponse {
 ### ❌ Missing Workflow Capabilities
 
 1. **Context Updates**:
+
    - ❌ Frontend cannot update `context` field (not in `updateProjectTask`)
    - **Impact**: Agents cannot update task context as they work
 
 2. **Acceptance Criteria Updates**:
+
    - ❌ Frontend cannot update `acceptance_criteria` field
    - **Impact**: Cannot refine acceptance criteria during execution
 
 3. **Scope Updates**:
+
    - ❌ Frontend cannot update `scope` field
    - **Impact**: Cannot adjust scope as task evolves
 
 4. **Deadline Management**:
+
    - ❌ Frontend cannot set/update `deadline` field
    - **Impact**: Cannot track deadlines for tasks
 
 5. **Status Workflow**:
+
    - ❌ Frontend status enum doesn't match backend
    - ❌ Missing: `paused`, `failed`, `cancelled` statuses in frontend
    - ❌ Frontend uses `backlog`, `todo`, `done` which don't exist in backend
@@ -335,32 +360,55 @@ export interface ProjectApiResponse {
 ### 🚨 Critical Immediate Actions
 
 1. **Fix Status Workflow Mismatch** (BLOCKING):
+
    - **Option A**: Update frontend status enum to match backend:
      ```typescript
-     status: z.enum(['pending', 'in_progress', 'paused', 'completed', 'cancelled', 'failed'])
+     status: z.enum([
+       "pending",
+       "in_progress",
+       "paused",
+       "completed",
+       "cancelled",
+       "failed",
+     ]);
      ```
    - **Option B**: Update backend to support frontend statuses (not recommended - breaks existing data)
    - **Recommended**: Option A - Frontend should match backend database constraints
    - Add status mapping functions if needed for UI display
 
 2. **Expand updateProjectTask Capabilities** (BLOCKING):
+
    - Add all missing fields to `updateProjectTask`:
      ```typescript
-     updates: Partial<Pick<
-       ProjectTask,
-       "title" | "description" | "status" | "priority" | "assigned_worker_id" |
-       "risk_tier" | "scope" | "acceptance_criteria" | "context" | "caws_spec" |
-       "deadline" | "metadata" | "completed_at"
-     >>
+     updates: Partial<
+       Pick<
+         ProjectTask,
+         | "title"
+         | "description"
+         | "status"
+         | "priority"
+         | "assigned_worker_id"
+         | "risk_tier"
+         | "scope"
+         | "acceptance_criteria"
+         | "context"
+         | "caws_spec"
+         | "deadline"
+         | "metadata"
+         | "completed_at"
+       >
+     >;
      ```
    - **Impact**: Enables full Jira-like workflow for agents
 
 3. **Standardize Task Field Names**:
+
    - Use `assigned_worker_id` consistently (not `worker_id`)
    - Use `id` consistently (not `task_id`)
    - Align `priority` type (use `number` everywhere, match backend `i32`)
 
 4. **Add Missing Fields to Frontend**:
+
    - Add `risk_tier` to global Task interface
    - Add `project_id` to global Task interface
    - Add `scope`, `acceptance_criteria`, `context`, `caws_spec` to ProjectTask interface
@@ -375,6 +423,7 @@ export interface ProjectApiResponse {
 ### Documentation Actions
 
 4. **Create Field Mapping Document**:
+
    - Document all field name conversions (snake_case ↔ camelCase)
    - Document API response transformations
    - Document missing fields and why
@@ -390,37 +439,37 @@ export interface ProjectApiResponse {
 
 ### Task Fields
 
-| Backend (Rust) | JSON API | Frontend (TypeScript) | Notes |
-|----------------|----------|----------------------|-------|
-| `id: Uuid` | `"id": "uuid-string"` | `id: string` | ✅ Matches |
-| `title: String` | `"title": "string"` | `title: string` | ✅ Matches |
-| `description: String` | `"description": "string"` | `description?: string \| null` | ⚠️ Nullability mismatch |
-| `risk_tier: String` | `"risk_tier": "string"` | `risk_tier?: string` (ProjectTask only) | ⚠️ Missing in Global Task |
-| `status: String` | `"status": "string"` | `status: string` | ✅ Matches |
-| `assigned_worker_id: Option<Uuid>` | `"assigned_worker_id": "uuid-string" \| null` | `assigned_worker_id?: string` (ProjectTask) / `worker_id?: string` (Global Task) | ⚠️ Name inconsistency |
-| `project_id: Option<Uuid>` | `"project_id": "uuid-string" \| null` | Missing in Global Task | ❌ Missing |
-| `priority: Option<i32>` | `"priority": 1 \| null` | `priority?: string` (Global Task) / `priority?: number` (ProjectTask) | ⚠️ Type mismatch |
-| `scope: serde_json::Value` | `"scope": {...}` | Missing | ❌ Missing |
-| `acceptance_criteria: serde_json::Value` | `"acceptance_criteria": {...}` | Missing | ❌ Missing |
-| `context: serde_json::Value` | `"context": {...}` | Missing | ❌ Missing |
-| `caws_spec: Option<serde_json::Value>` | `"caws_spec": {...} \| null` | Missing | ❌ Missing |
-| `deadline: Option<DateTime<Utc>>` | `"deadline": "2025-12-31T00:00:00Z" \| null` | Missing | ❌ Missing |
-| `created_at: DateTime<Utc>` | `"created_at": "2025-01-01T00:00:00Z"` | `created_at: string` | ✅ Matches |
-| `updated_at: DateTime<Utc>` | `"updated_at": "2025-01-01T00:00:00Z"` | `updated_at: string` | ✅ Matches |
-| `completed_at: Option<DateTime<Utc>>` | `"completed_at": "2025-01-01T00:00:00Z" \| null` | `completed_at?: string \| null` | ✅ Matches |
-| `metadata: Option<serde_json::Value>` | `"metadata": {...} \| null` | `metadata?: Record<string, unknown>` | ✅ Matches |
+| Backend (Rust)                           | JSON API                                         | Frontend (TypeScript)                                                            | Notes                     |
+| ---------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------- |
+| `id: Uuid`                               | `"id": "uuid-string"`                            | `id: string`                                                                     | ✅ Matches                |
+| `title: String`                          | `"title": "string"`                              | `title: string`                                                                  | ✅ Matches                |
+| `description: String`                    | `"description": "string"`                        | `description?: string \| null`                                                   | ⚠️ Nullability mismatch   |
+| `risk_tier: String`                      | `"risk_tier": "string"`                          | `risk_tier?: string` (ProjectTask only)                                          | ⚠️ Missing in Global Task |
+| `status: String`                         | `"status": "string"`                             | `status: string`                                                                 | ✅ Matches                |
+| `assigned_worker_id: Option<Uuid>`       | `"assigned_worker_id": "uuid-string" \| null`    | `assigned_worker_id?: string` (ProjectTask) / `worker_id?: string` (Global Task) | ⚠️ Name inconsistency     |
+| `project_id: Option<Uuid>`               | `"project_id": "uuid-string" \| null`            | Missing in Global Task                                                           | ❌ Missing                |
+| `priority: Option<i32>`                  | `"priority": 1 \| null`                          | `priority?: string` (Global Task) / `priority?: number` (ProjectTask)            | ⚠️ Type mismatch          |
+| `scope: serde_json::Value`               | `"scope": {...}`                                 | Missing                                                                          | ❌ Missing                |
+| `acceptance_criteria: serde_json::Value` | `"acceptance_criteria": {...}`                   | Missing                                                                          | ❌ Missing                |
+| `context: serde_json::Value`             | `"context": {...}`                               | Missing                                                                          | ❌ Missing                |
+| `caws_spec: Option<serde_json::Value>`   | `"caws_spec": {...} \| null`                     | Missing                                                                          | ❌ Missing                |
+| `deadline: Option<DateTime<Utc>>`        | `"deadline": "2025-12-31T00:00:00Z" \| null`     | Missing                                                                          | ❌ Missing                |
+| `created_at: DateTime<Utc>`              | `"created_at": "2025-01-01T00:00:00Z"`           | `created_at: string`                                                             | ✅ Matches                |
+| `updated_at: DateTime<Utc>`              | `"updated_at": "2025-01-01T00:00:00Z"`           | `updated_at: string`                                                             | ✅ Matches                |
+| `completed_at: Option<DateTime<Utc>>`    | `"completed_at": "2025-01-01T00:00:00Z" \| null` | `completed_at?: string \| null`                                                  | ✅ Matches                |
+| `metadata: Option<serde_json::Value>`    | `"metadata": {...} \| null`                      | `metadata?: Record<string, unknown>`                                             | ✅ Matches                |
 
 ### Project Fields
 
-| Backend (Rust) | JSON API | Frontend (TypeScript) | Notes |
-|----------------|----------|----------------------|-------|
-| `id: Uuid` | `"id": "uuid-string"` | `id: string` | ✅ Matches |
-| `title: String` | `"title": "string"` | `name: string` | ⚠️ Name mapped in API |
-| `overview: Option<String>` | `"overview": "string" \| null` | `summary?: string \| null` / `description?: string \| null` | ⚠️ Unclear mapping |
-| `state: Option<String>` | `"state": "string" \| null` | `state?: string \| null` | ✅ Matches |
-| `milestones: Option<serde_json::Value>` | `"milestones": [...]` | `milestones?: ProjectMilestone[]` | ✅ Extracted |
-| `created_at: DateTime<Utc>` | `"created_at": "2025-01-01T00:00:00Z"` | `created_at: string` | ✅ Matches |
-| `updated_at: DateTime<Utc>` | `"updated_at": "2025-01-01T00:00:00Z"` | `updated_at?: string \| null` | ✅ Matches |
+| Backend (Rust)                          | JSON API                               | Frontend (TypeScript)                                       | Notes                 |
+| --------------------------------------- | -------------------------------------- | ----------------------------------------------------------- | --------------------- |
+| `id: Uuid`                              | `"id": "uuid-string"`                  | `id: string`                                                | ✅ Matches            |
+| `title: String`                         | `"title": "string"`                    | `name: string`                                              | ⚠️ Name mapped in API |
+| `overview: Option<String>`              | `"overview": "string" \| null`         | `summary?: string \| null` / `description?: string \| null` | ⚠️ Unclear mapping    |
+| `state: Option<String>`                 | `"state": "string" \| null`            | `state?: string \| null`                                    | ✅ Matches            |
+| `milestones: Option<serde_json::Value>` | `"milestones": [...]`                  | `milestones?: ProjectMilestone[]`                           | ✅ Extracted          |
+| `created_at: DateTime<Utc>`             | `"created_at": "2025-01-01T00:00:00Z"` | `created_at: string`                                        | ✅ Matches            |
+| `updated_at: DateTime<Utc>`             | `"updated_at": "2025-01-01T00:00:00Z"` | `updated_at?: string \| null`                               | ✅ Matches            |
 
 ---
 
@@ -457,6 +506,7 @@ Task:
 ```
 
 Generate from YAML:
+
 - Rust: Use `schemars` or `openapi-generator`
 - TypeScript: Use `json-schema-to-typescript` or `quicktype`
 
@@ -487,7 +537,7 @@ let schema = TaskResponse::json_schema(&gen);
 
 ```typescript
 // Use Zod schemas to validate API responses
-import { z } from 'zod';
+import { z } from "zod";
 
 export const TaskResponseSchema = z.object({
   id: z.string().uuid(),
@@ -502,6 +552,7 @@ const task = TaskResponseSchema.parse(apiResponse);
 ### Integration Testing
 
 1. **Test API Response Format**:
+
    - Send request from frontend
    - Verify response matches backend schema
    - Verify response matches frontend schema
@@ -525,6 +576,211 @@ const task = TaskResponseSchema.parse(apiResponse);
 
 ---
 
-**Last Updated**: 2025-11-15  
-**Next Review**: After schema alignment fixes completed
+---
 
+## Assignment Tracking Analysis
+
+### How Assignees Are Tracked
+
+The backend has **two levels of assignment tracking** with different granularity:
+
+#### 1. **Task-Level Assignment** (Simple)
+
+**Backend** (`tasks` table):
+
+```sql
+assigned_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL
+```
+
+- **Simple field** on tasks table
+- Just tracks **current assigned worker** (UUID reference)
+- **No history tracking** at task level
+- Updated via `UpdateTask.assigned_worker_id`
+
+**Frontend**:
+
+- Uses `assigned_worker_id?: string` (ProjectTask) ✅
+- Uses `worker_id?: string` (Global Task) ⚠️ **Inconsistent**
+- Also uses `assignee?: string` (ProjectTaskSchema) ⚠️ **Inconsistent** - stores worker name, not ID
+- **No assignment history** in frontend
+
+**Limitations**:
+
+- No timestamp of when task was assigned
+- No tracking of who assigned the task
+- No history of reassignments
+- No assignment status (just assigned or not)
+
+#### 2. **Milestone-Level Assignment** (Rich)
+
+**Backend** (`worker_assignments` table):
+
+```sql
+CREATE TABLE worker_assignments (
+    id UUID PRIMARY KEY,
+    worker_id UUID NOT NULL,
+    milestone_id VARCHAR(255) NOT NULL,
+    plan_id UUID,
+    assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status VARCHAR(50) CHECK (status IN ('Assigned', 'Active', 'Completed', 'Failed', 'Cancelled', 'Reassigned')),
+    priority VARCHAR(50) CHECK (priority IN ('Low', 'Normal', 'High', 'Critical')),
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    failed_at TIMESTAMPTZ,
+    failure_reason TEXT,
+    cpu_cores INTEGER,
+    memory_mb INTEGER,
+    disk_mb INTEGER,
+    network_mbps FLOAT,
+    time_limit_ms BIGINT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+);
+```
+
+**Assignment History** (`assignment_history` table):
+
+```sql
+CREATE TABLE assignment_history (
+    id UUID PRIMARY KEY,
+    assignment_id UUID REFERENCES worker_assignments(id),
+    worker_id UUID NOT NULL,
+    milestone_id VARCHAR(255) NOT NULL,
+    event_type VARCHAR(50) CHECK (event_type IN ('assigned', 'started', 'completed', 'failed', 'cancelled', 'reassigned', 'status_changed')),
+    old_status VARCHAR(50),
+    new_status VARCHAR(50),
+    event_description TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ
+);
+```
+
+**Features**:
+
+- ✅ **Full history tracking** via `assignment_history` table
+- ✅ **Timestamp tracking**: `assigned_at`, `started_at`, `completed_at`, `failed_at`
+- ✅ **Status tracking**: Assignment has its own status separate from task status
+- ✅ **Resource requirements**: CPU, memory, disk, network allocation
+- ✅ **Event tracking**: Every status change logged with old/new status
+- ✅ **Helper functions**: `update_assignment_status()` automatically creates history entries
+- ✅ **Statistics view**: `assignment_statistics` view for worker performance
+
+**Frontend**:
+
+- ❌ **No API integration** for `worker_assignments` table
+- ❌ **No milestone assignment tracking** in frontend
+- ❌ **No assignment history** in frontend
+
+**Note**: `worker_assignments` is for **milestone** assignments (plan-level), not **task** assignments!
+
+### Assignment Tracking Mismatch
+
+| Aspect                | Task Assignment                                   | Milestone Assignment                              |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| **Backend Table**     | `tasks.assigned_worker_id`                        | `worker_assignments`                              |
+| **History Tracking**  | ❌ None                                           | ✅ Full history (`assignment_history`)            |
+| **Timestamps**        | ❌ None (only `updated_at`)                       | ✅ `assigned_at`, `started_at`, `completed_at`, `failed_at` |
+| **Status Tracking**   | Uses task status                                  | Has own assignment status                         |
+| **Frontend Support**  | ⚠️ Partial (inconsistent field names)             | ❌ None                                           |
+| **API Endpoints**     | ✅ Update via `PATCH /api/v1/tasks/:id`           | ❌ Not exposed                                    |
+| **Use Case**          | Simple task-to-worker assignment                  | Complex milestone resource allocation             |
+
+### Issues Identified
+
+1. **Task Assignment Limitations**:
+
+   - No history of who assigned the task
+   - No timestamp of when task was assigned
+   - No reassignment tracking
+   - Cannot see assignment timeline
+
+2. **Milestone Assignment Not Exposed**:
+
+   - Rich assignment tracking exists but no API endpoints
+   - Frontend cannot access assignment history
+   - Frontend cannot track milestone-level assignments
+
+3. **Frontend Inconsistencies**:
+
+   - `assigned_worker_id` (UUID) vs `worker_id` (UUID) vs `assignee` (name string)
+   - No clear pattern for which to use
+
+### Recommendations
+
+#### Option A: Enhance Task Assignment (Recommended)
+
+Add assignment history to task level (similar to milestone level):
+
+1. **Add `task_assignment_history` table**:
+
+   ```sql
+   CREATE TABLE task_assignment_history (
+       id UUID PRIMARY KEY,
+       task_id UUID REFERENCES tasks(id),
+       worker_id UUID,
+       assigned_by UUID,  -- Who made the assignment
+       assigned_at TIMESTAMPTZ,
+       unassigned_at TIMESTAMPTZ,
+       event_type VARCHAR(50),
+       metadata JSONB
+   );
+   ```
+
+2. **Add assignment timestamps to tasks**:
+
+   ```sql
+   ALTER TABLE tasks ADD COLUMN assigned_at TIMESTAMPTZ;
+   ALTER TABLE tasks ADD COLUMN assigned_by UUID;
+   ```
+
+3. **Create API endpoints**:
+
+   - `GET /api/v1/tasks/:task_id/assignment-history` - Get assignment history
+   - `POST /api/v1/tasks/:task_id/assign` - Assign with history tracking
+
+#### Option B: Expose Milestone Assignments
+
+Add API endpoints for milestone-level assignments:
+
+1. **Create API endpoints**:
+
+   - `GET /api/v1/projects/:project_id/milestones/:milestone_id/assignments`
+   - `GET /api/v1/projects/:project_id/milestones/:milestone_id/assignment-history`
+   - `POST /api/v1/projects/:project_id/milestones/:milestone_id/assign`
+
+#### Option C: Link Tasks to Milestone Assignments
+
+If tasks belong to milestones, link task assignments to milestone assignments:
+
+1. **Add `milestone_id` to tasks** (if not already present via project hierarchy)
+2. **Query milestone assignment** when fetching task
+3. **Inherit assignment context** from milestone
+
+### Current Assignment Tracking Summary
+
+**For Tasks** (Simple):
+
+- Backend: `tasks.assigned_worker_id` (current assignment only)
+- Frontend: `assigned_worker_id` or `worker_id` (inconsistent)
+- **Missing**: History, timestamps, who assigned
+
+**For Milestones** (Rich):
+
+- Backend: `worker_assignments` table with full history
+- Frontend: ❌ Not exposed
+- **Missing**: API endpoints, frontend integration
+
+**Impact on Jira-like Workflow**:
+
+- Agents can see **current assignment** ✅
+- Agents **cannot see** assignment history ❌
+- Agents **cannot see** when task was assigned ❌
+- Agents **cannot see** who assigned the task ❌
+- Agents **cannot see** reassignment timeline ❌
+
+---
+
+**Last Updated**: 2025-11-15  
+**Status**: 🚨 **CRITICAL ISSUES IDENTIFIED** - Status workflow mismatch blocks agent workflow  
+**Next Review**: After Phase 1 critical fixes completed
