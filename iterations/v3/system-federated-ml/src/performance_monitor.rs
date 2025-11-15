@@ -260,46 +260,51 @@ impl PerformanceMonitor {
 
     /// Collect current system metrics
     async fn collect_metrics() -> Result<PerformanceMetrics> {
-        // TODO: Collect actual system metrics
-        // - [ ] Integrate system monitoring library (e.g., sysinfo, prometheus)
-        // - [ ] Collect CPU usage from system
-        // - [ ] Collect memory usage from system
-        // - [ ] Collect network throughput metrics
         // TODO: Implement actual system metrics collection
-        //       Currently simulates metrics; should collect actual system metrics from monitoring infrastructure.
+        //       Replace simulated metrics with real-time collection from system monitoring infrastructure for accurate performance tracking.
         //
         // COMPLETION CHECKLIST:
-        // [ ] Integrate with system monitoring infrastructure
-        // [ ] Collect CPU usage from system APIs
-        // [ ] Collect memory usage from system APIs
-        // [ ] Collect latency metrics from application
-        // [ ] Collect error rates from logs or metrics
-        // [ ] Aggregate metrics over time windows
-        // [ ] Add unit tests with mock system metrics
-        // [ ] Add integration tests with real system monitoring
-        // [ ] Performance: Collection should complete in <10ms
-        // [ ] Documentation: Document metrics collection methodology
+        // [ ] Primary functionality implemented
+        // [ ] Integrate system monitoring library (sysinfo, prometheus, or similar)
+        // [ ] Collect CPU usage from system APIs with proper sampling
+        // [ ] Collect memory usage from system APIs with breakdown by type
+        // [ ] Collect network throughput metrics from system interfaces
+        // [ ] Collect latency metrics from application instrumentation
+        // [ ] Collect error rates from logs or metrics collection
+        // [ ] Aggregate metrics over configurable time windows
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
         //
         // ACCEPTANCE CRITERIA:
-        // - System metrics are collected from actual sources
-        // - CPU and memory usage are accurate
-        // - Latency metrics reflect actual application performance
-        // - Error rates are calculated from real data
-        // - Metrics collection is performant
+        // - System metrics accurately reflect actual resource usage
+        // - CPU, memory, and network metrics collected at appropriate sampling rates
+        // - Application latency and error rates properly instrumented
+        // - Metrics collection overhead is minimal (<2% of system resources)
+        // - Integration tests validate metrics accuracy against known workloads
         //
         // DEPENDENCIES:
-        // - System monitoring APIs (Required)
+        // - System monitoring library (sysinfo or prometheus client) (Required)
         // - Metrics collection infrastructure (Required)
-        // - Log aggregation system (Required)
+        // - Application instrumentation framework (Required)
+        // - Time-series aggregation utilities (Required)
+        // - Test environments with known performance characteristics (Required)
         //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
         // PRIORITY: Medium
         // BLOCKING: No
         //
         // GOVERNANCE:
-        // - CAWS Tier: 2 (monitoring feature)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: System monitoring expertise
+        // - CAWS Tier: 2 (monitoring and observability functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: System monitoring and performance analysis expertise
         // TODO: Query actual performance metrics from system monitoring
         //       Currently simulates values; should query actual performance metrics from system monitoring libraries for accurate measurements.
         //

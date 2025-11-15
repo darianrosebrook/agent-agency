@@ -71,7 +71,47 @@ impl ParallelToolCoordinator {
         _cancel_token: tokio_util::sync::CancellationToken,
     ) -> Result<ExecutionResult, ParallelExecutionError> {
         // TODO: Implement actual parallel execution with real workers
-        //       Currently uses placeholder implementation; should execute tool chain with actual parallel workers and proper task distribution.
+        //       Replace placeholder simulation with real distributed execution using worker pool, task scheduling, and coordination across multiple agents.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Integrate with worker management system for task distribution
+        // [ ] Implement proper task scheduling based on DAG dependencies
+        // [ ] Add parallel execution coordination and result aggregation
+        // [ ] Handle worker failures and task retries
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tool chains execute in parallel across multiple workers
+        // - Task dependencies are properly respected in execution order
+        // - Worker failures are handled with automatic retry and failover
+        // - Performance scales with worker pool size and task complexity
+        // - Integration tests validate end-to-end parallel execution workflows
+        //
+        // DEPENDENCIES:
+        // - Worker management system (Required)
+        // - Task scheduling and coordination framework (Required)
+        // - Distributed execution state management (Required)
+        // - Communication hub for inter-worker coordination (Required)
+        // - Test worker pool with multiple agent instances (Required)
+        //
+        // ESTIMATED EFFORT: 16-20 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (distributed execution core functionality)
+        // - Change Budget: ~500 LOC
+        // - Reviewer Requirements: Distributed systems and parallel processing expertise
         info!("Placeholder: Executing tool chain with simulated parallel workers");
 
         // Create mock execution results
@@ -584,7 +624,47 @@ impl ParallelToolCoordinator {
 
         // Find independent subgraphs
         // TODO: Implement proper independent subgraph detection
-        //       Currently uses placeholder implementation; should detect truly independent subgraphs using graph algorithms.
+        //       Replace placeholder with actual graph algorithms to identify truly independent subgraphs for optimal parallel execution.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement graph traversal algorithms (DFS/BFS) for connectivity analysis
+        // [ ] Identify weakly connected components in DAG structure
+        // [ ] Calculate optimal execution parallelism based on subgraph independence
+        // [ ] Handle cyclic dependencies and complex graph structures
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Independent subgraphs are correctly identified using graph algorithms
+        // - Parallel execution potential is accurately calculated
+        // - Complex DAG structures with multiple dependency levels are handled
+        // - Algorithm performance scales with graph size (acceptable for 1000+ nodes)
+        // - Integration tests validate subgraph detection against known DAG structures
+        //
+        // DEPENDENCIES:
+        // - Graph algorithm library (petgraph or similar) (Required)
+        // - DAG analysis utilities (Required)
+        // - Connectivity analysis functions (Required)
+        // - Test DAG structures with known subgraph patterns (Required)
+        // - Performance benchmarking framework (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (parallel execution optimization)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Graph algorithms and parallel processing expertise
         sections.push("independent_subgraphs".to_string());
 
         sections

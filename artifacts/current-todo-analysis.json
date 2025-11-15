@@ -1,8 +1,8 @@
 {
   "summary": {
-    "total_files": 299465,
+    "total_files": 299467,
     "non_ignored_files": 2231,
-    "ignored_files": 297234,
+    "ignored_files": 297236,
     "language_counts": {
       "rust": 946,
       "javascript": 99,
@@ -43516,9 +43516,9 @@
     "iterations/v3/agent-memory/src/long_term_management/retrieval.rs": {
       "file_path": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
       "language": "rust",
-      "total_comments": 181,
-      "total_lines": 529,
-      "comment_lines": 181,
+      "total_comments": 248,
+      "total_lines": 606,
+      "comment_lines": 248,
       "hidden_todos": {
         "117": {
           "comment": "TODO: Query archival storage system for archived memories",
@@ -43588,7 +43588,7 @@
             "confidence": 0.7
           }
         },
-        "215": {
+        "253": {
           "comment": "In practice, this would consider:",
           "matches": {
             "future_improvements": [
@@ -43604,7 +43604,7 @@
           ],
           "context_score": 0.0
         },
-        "260": {
+        "298": {
           "comment": "TODO: Implement real final relevance calculation",
           "matches": {
             "explicit_todos": [
@@ -43638,7 +43638,7 @@
             "confidence": 0.7
           }
         },
-        "288": {
+        "365": {
           "comment": "TODO: Modify relevance score based on boosting criteria",
           "matches": {
             "explicit_todos": [
@@ -43672,7 +43672,7 @@
             "confidence": 0.6
           }
         },
-        "323": {
+        "400": {
           "comment": "Temporary: mark boosting until relevance score modification is implemented",
           "matches": {
             "explicit_todos": [
@@ -43688,7 +43688,7 @@
           ],
           "context_score": 0.0
         },
-        "353": {
+        "430": {
           "comment": "TODO: Implement thread-safe cache statistics tracking",
           "matches": {
             "explicit_todos": [
@@ -43722,7 +43722,7 @@
             "confidence": 0.7
           }
         },
-        "388": {
+        "465": {
           "comment": "Temporary: basic implementation until thread-safe tracking is implemented",
           "matches": {
             "explicit_todos": [
@@ -43738,7 +43738,7 @@
           ],
           "context_score": 0.0
         },
-        "393": {
+        "470": {
           "comment": "TODO: Implement real cache hit rate calculation",
           "matches": {
             "explicit_todos": [
@@ -43772,7 +43772,7 @@
             "confidence": 0.7
           }
         },
-        "394": {
+        "471": {
           "comment": "Currently returns hardcoded value; should calculate from actual cache statistics.",
           "matches": {
             "hardcoded_values": [
@@ -44028,490 +44028,758 @@
         },
         {
           "line": 208,
-          "comment": "- [ ] Consider memory age and apply decay factors"
-        },
-        {
-          "line": 209,
-          "comment": "- [ ] Analyze historical access patterns"
+          "comment": "Currently returns placeholder relevance score; should implement comprehensive relevance calculation considering memory age, access patterns, and contextual factors."
         },
         {
           "line": 210,
-          "comment": "- [ ] Calculate contextual relevance to query"
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
           "line": 211,
-          "comment": "- [ ] Factor in importance trends over time"
+          "comment": "[ ] Primary functionality implemented"
         },
         {
           "line": 212,
-          "comment": "- [ ] Combine multiple signals into composite score"
+          "comment": "[ ] Consider memory age and apply decay factors (recency bias)"
         },
         {
           "line": 213,
-          "comment": "- [ ] Add unit tests with various memory and query types"
+          "comment": "[ ] Analyze historical access patterns and frequency"
         },
         {
           "line": 214,
-          "comment": "- [ ] Add integration tests with real relevance data"
+          "comment": "[ ] Calculate contextual relevance to current query"
         },
         {
           "line": 215,
-          "comment": "In practice, this would consider:"
+          "comment": "[ ] Factor in importance trends over time"
         },
         {
           "line": 216,
-          "comment": "- Memory age and decay"
+          "comment": "[ ] Combine multiple signals into composite relevance score"
         },
         {
           "line": 217,
-          "comment": "- Historical access patterns"
+          "comment": "[ ] Handle edge cases (new memories, rarely accessed memories)"
         },
         {
           "line": 218,
-          "comment": "- Contextual relevance"
+          "comment": "[ ] Add performance optimization for large memory sets"
         },
         {
           "line": 219,
-          "comment": "- Importance trends"
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 220,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 221,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 222,
+          "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
           "line": 223,
-          "comment": "/ Combine and rerank active and archival results"
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 224,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 225,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 226,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 227,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 228,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 230,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 231,
+          "comment": "- Relevance scores reflect actual memory utility over time"
+        },
+        {
+          "line": 232,
+          "comment": "- Recent memories are appropriately prioritized over old ones"
+        },
+        {
+          "line": 233,
+          "comment": "- Frequently accessed memories maintain higher relevance"
         },
         {
           "line": 234,
-          "comment": "Remove duplicates based on memory ID"
+          "comment": "- Contextual matching improves retrieval accuracy"
         },
         {
-          "line": 238,
-          "comment": "Apply final ranking"
+          "line": 235,
+          "comment": "- Performance meets SLA for real-time relevance calculation"
+        },
+        {
+          "line": 236,
+          "comment": "- Edge cases are handled gracefully with reasonable defaults"
+        },
+        {
+          "line": 237,
+          "comment": "- Integration tests validate relevance against user feedback"
+        },
+        {
+          "line": 239,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 240,
+          "comment": "- Historical access pattern data (Required)"
+        },
+        {
+          "line": 241,
+          "comment": "- Memory importance tracking (Required)"
+        },
+        {
+          "line": 242,
+          "comment": "- Contextual similarity algorithms (Required)"
+        },
+        {
+          "line": 243,
+          "comment": "- Time-based decay functions (Optional)"
+        },
+        {
+          "line": 245,
+          "comment": "ESTIMATED EFFORT: 8-12 hours (medium confidence)"
+        },
+        {
+          "line": 246,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 247,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 249,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 250,
+          "comment": "- CAWS Tier: 2 (memory retrieval optimization)"
+        },
+        {
+          "line": 251,
+          "comment": "- Change Budget: ~200 LOC"
+        },
+        {
+          "line": 252,
+          "comment": "- Reviewer Requirements: Machine learning and relevance algorithms expertise"
+        },
+        {
+          "line": 253,
+          "comment": "In practice, this would consider:"
         },
         {
           "line": 254,
-          "comment": "/ Calculate final relevance score combining multiple factors"
+          "comment": "- Memory age and decay"
         },
         {
-          "line": 260,
-          "comment": "TODO: Implement real final relevance calculation"
+          "line": 255,
+          "comment": "- Historical access patterns"
+        },
+        {
+          "line": 256,
+          "comment": "- Contextual relevance"
+        },
+        {
+          "line": 257,
+          "comment": "- Importance trends"
         },
         {
           "line": 261,
-          "comment": "- [ ] Combine recency score (weighted by time decay)"
-        },
-        {
-          "line": 262,
-          "comment": "- [ ] Factor in importance score from memory metadata"
-        },
-        {
-          "line": 263,
-          "comment": "- [ ] Calculate contextual relevance to query"
-        },
-        {
-          "line": 264,
-          "comment": "- [ ] Apply weighted combination of all factors"
-        },
-        {
-          "line": 265,
-          "comment": "- [ ] Normalize final score to [0.0, 1.0] range"
-        },
-        {
-          "line": 266,
-          "comment": "- [ ] Add unit tests with various memory and query combinations"
-        },
-        {
-          "line": 267,
-          "comment": "- [ ] Add integration tests with real relevance calculations"
-        },
-        {
-          "line": 268,
-          "comment": "Placeholder: combine recency, importance, and contextual relevance"
+          "comment": "/ Combine and rerank active and archival results"
         },
         {
           "line": 272,
-          "comment": "/ Apply retrieval boost based on usage patterns"
+          "comment": "Remove duplicates based on memory ID"
         },
         {
-          "line": 281,
-          "comment": "Apply boost factor based on query context"
-        },
-        {
-          "line": 288,
-          "comment": "TODO: Modify relevance score based on boosting criteria"
-        },
-        {
-          "line": 289,
-          "comment": "Currently only marks boosting; should modify actual relevance scores based on boosting criteria and weights."
-        },
-        {
-          "line": 291,
-          "comment": "COMPLETION CHECKLIST:"
+          "line": 276,
+          "comment": "Apply final ranking"
         },
         {
           "line": 292,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 293,
-          "comment": "[ ] API/data structures defined & stable"
-        },
-        {
-          "line": 294,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
-        },
-        {
-          "line": 295,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
-        },
-        {
-          "line": 296,
-          "comment": "[ ] Integration tests for external systems/contracts"
-        },
-        {
-          "line": 297,
-          "comment": "[ ] Documentation: public API + system behavior"
+          "comment": "/ Calculate final relevance score combining multiple factors"
         },
         {
           "line": 298,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+          "comment": "TODO: Implement real final relevance calculation"
         },
         {
           "line": 299,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
-        },
-        {
-          "line": 300,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+          "comment": "Currently returns hardcoded relevance score; should implement comprehensive final relevance combining recency, importance, and contextual factors."
         },
         {
           "line": 301,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
           "line": 302,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 304,
-          "comment": "ACCEPTANCE CRITERIA:"
-        },
-        {
-          "line": 305,
-          "comment": "- Relevance scores are modified based on boosting criteria"
-        },
-        {
-          "line": 306,
-          "comment": "- Boosting weights are applied correctly"
-        },
-        {
-          "line": 307,
-          "comment": "- Score modifications improve retrieval quality"
-        },
-        {
-          "line": 308,
-          "comment": "- Boosting is configurable and tunable"
-        },
-        {
-          "line": 310,
-          "comment": "DEPENDENCIES:"
-        },
-        {
-          "line": 311,
-          "comment": "- Relevance scoring infrastructure (Required)"
-        },
-        {
-          "line": 312,
-          "comment": "- Boosting algorithm utilities (Required)"
-        },
-        {
-          "line": 313,
-          "comment": "- Score modification utilities (Required)"
-        },
-        {
-          "line": 315,
-          "comment": "ESTIMATED EFFORT: 3-4 hours (medium confidence)"
-        },
-        {
-          "line": 316,
-          "comment": "PRIORITY: Medium"
-        },
-        {
-          "line": 317,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 319,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 320,
-          "comment": "- CAWS Tier: 2 (relevance scoring feature)"
-        },
-        {
-          "line": 321,
-          "comment": "- Change Budget: ~80 LOC"
-        },
-        {
-          "line": 322,
-          "comment": "- Reviewer Requirements: Relevance scoring expertise"
-        },
-        {
-          "line": 323,
-          "comment": "Temporary: mark boosting until relevance score modification is implemented"
-        },
-        {
-          "line": 329,
-          "comment": "/ Check retrieval cache"
-        },
-        {
-          "line": 341,
-          "comment": "/ Cache retrieval results"
-        },
-        {
-          "line": 353,
-          "comment": "TODO: Implement thread-safe cache statistics tracking"
-        },
-        {
-          "line": 354,
-          "comment": "Currently uses basic implementation; should implement thread-safe cache statistics tracking using proper synchronization primitives."
-        },
-        {
-          "line": 356,
-          "comment": "COMPLETION CHECKLIST:"
-        },
-        {
-          "line": 357,
           "comment": "[ ] Primary functionality implemented"
         },
         {
-          "line": 358,
+          "line": 303,
+          "comment": "[ ] Combine recency score (weighted by time decay functions)"
+        },
+        {
+          "line": 304,
+          "comment": "[ ] Factor in importance score from memory metadata and access patterns"
+        },
+        {
+          "line": 305,
+          "comment": "[ ] Calculate contextual relevance to current query using similarity metrics"
+        },
+        {
+          "line": 306,
+          "comment": "[ ] Apply weighted combination of all relevance factors"
+        },
+        {
+          "line": 307,
+          "comment": "[ ] Normalize final score to [0.0, 1.0] range with proper scaling"
+        },
+        {
+          "line": 308,
+          "comment": "[ ] Add configurable weights for different relevance components"
+        },
+        {
+          "line": 309,
+          "comment": "[ ] Implement relevance score caching for performance"
+        },
+        {
+          "line": 310,
           "comment": "[ ] API/data structures defined & stable"
         },
         {
-          "line": 359,
+          "line": 311,
           "comment": "[ ] Error handling + validation aligned with error taxonomy"
         },
         {
-          "line": 360,
+          "line": 312,
           "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
         },
         {
-          "line": 361,
+          "line": 313,
           "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
-          "line": 362,
+          "line": 314,
           "comment": "[ ] Documentation: public API + system behavior"
         },
         {
-          "line": 363,
+          "line": 315,
           "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
         },
         {
-          "line": 364,
+          "line": 316,
           "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
-          "line": 365,
+          "line": 317,
           "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
-          "line": 366,
+          "line": 318,
           "comment": "[ ] Configurability and feature flags defined if relevant"
         },
         {
-          "line": 367,
+          "line": 319,
           "comment": "[ ] Failure-mode cards documented (degradation paths)"
         },
         {
-          "line": 369,
+          "line": 321,
           "comment": "ACCEPTANCE CRITERIA:"
         },
         {
-          "line": 370,
-          "comment": "- Cache statistics are tracked thread-safely"
+          "line": 322,
+          "comment": "- Final relevance scores accurately combine multiple factors"
         },
         {
-          "line": 371,
-          "comment": "- Concurrent access is handled correctly"
+          "line": 323,
+          "comment": "- Recency weighting properly decays over time"
         },
         {
-          "line": 372,
-          "comment": "- Statistics are accurate under concurrent operations"
+          "line": 324,
+          "comment": "- Importance scores influence relevance appropriately"
         },
         {
-          "line": 373,
-          "comment": "- Performance impact is minimal"
+          "line": 325,
+          "comment": "- Contextual matching improves retrieval quality"
         },
         {
-          "line": 375,
+          "line": 326,
+          "comment": "- Scores are normalized to expected range"
+        },
+        {
+          "line": 327,
+          "comment": "- Performance meets SLA for real-time calculation"
+        },
+        {
+          "line": 328,
+          "comment": "- Edge cases (missing metadata, new queries) handled gracefully"
+        },
+        {
+          "line": 329,
+          "comment": "- Integration tests validate relevance against ground truth"
+        },
+        {
+          "line": 331,
           "comment": "DEPENDENCIES:"
         },
         {
-          "line": 376,
-          "comment": "- Thread-safe data structures (Mutex, RwLock, Atomic) (Required)"
+          "line": 332,
+          "comment": "- Memory metadata and importance tracking (Required)"
         },
         {
-          "line": 377,
-          "comment": "- Cache statistics infrastructure (Required)"
+          "line": 333,
+          "comment": "- Time decay function implementation (Required)"
         },
         {
-          "line": 378,
-          "comment": "- Synchronization utilities (Required)"
+          "line": 334,
+          "comment": "- Contextual similarity algorithms (Required)"
         },
         {
-          "line": 380,
-          "comment": "ESTIMATED EFFORT: 2-3 hours (medium confidence)"
+          "line": 335,
+          "comment": "- Score normalization utilities (Optional)"
         },
         {
-          "line": 381,
+          "line": 337,
+          "comment": "ESTIMATED EFFORT: 6-10 hours (medium confidence)"
+        },
+        {
+          "line": 338,
           "comment": "PRIORITY: Medium"
         },
         {
-          "line": 382,
+          "line": 339,
           "comment": "BLOCKING: No"
         },
         {
-          "line": 384,
+          "line": 341,
           "comment": "GOVERNANCE:"
         },
         {
-          "line": 385,
-          "comment": "- CAWS Tier: 2 (concurrency feature)"
+          "line": 342,
+          "comment": "- CAWS Tier: 2 (memory retrieval optimization)"
         },
         {
-          "line": 386,
-          "comment": "- Change Budget: ~60 LOC"
+          "line": 343,
+          "comment": "- Change Budget: ~150 LOC"
         },
         {
-          "line": 387,
-          "comment": "- Reviewer Requirements: Rust concurrency expertise"
+          "line": 344,
+          "comment": "- Reviewer Requirements: Machine learning and ranking algorithms expertise"
         },
         {
-          "line": 388,
-          "comment": "Temporary: basic implementation until thread-safe tracking is implemented"
+          "line": 345,
+          "comment": "Placeholder: combine recency, importance, and contextual relevance"
         },
         {
-          "line": 391,
-          "comment": "/ Calculate cache hit rate"
+          "line": 349,
+          "comment": "/ Apply retrieval boost based on usage patterns"
         },
         {
-          "line": 393,
-          "comment": "TODO: Implement real cache hit rate calculation"
+          "line": 358,
+          "comment": "Apply boost factor based on query context"
         },
         {
-          "line": 394,
-          "comment": "Currently returns hardcoded value; should calculate from actual cache statistics."
+          "line": 365,
+          "comment": "TODO: Modify relevance score based on boosting criteria"
         },
         {
-          "line": 396,
+          "line": 366,
+          "comment": "Currently only marks boosting; should modify actual relevance scores based on boosting criteria and weights."
+        },
+        {
+          "line": 368,
           "comment": "COMPLETION CHECKLIST:"
         },
         {
-          "line": 397,
-          "comment": "[ ] Track cache hits and misses in cache statistics"
+          "line": 369,
+          "comment": "[ ] Primary functionality implemented"
         },
         {
-          "line": 398,
-          "comment": "[ ] Calculate hit rate as hits / (hits + misses)"
+          "line": 370,
+          "comment": "[ ] API/data structures defined & stable"
         },
         {
-          "line": 399,
-          "comment": "[ ] Handle edge cases (no accesses, division by zero)"
+          "line": 371,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
         },
         {
-          "line": 400,
-          "comment": "[ ] Add unit tests with various cache scenarios"
+          "line": 372,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
         },
         {
-          "line": 401,
-          "comment": "[ ] Add integration tests with real cache usage"
+          "line": 373,
+          "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
-          "line": 403,
+          "line": 374,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 375,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 376,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 377,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 378,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 379,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 381,
           "comment": "ACCEPTANCE CRITERIA:"
         },
         {
-          "line": 404,
-          "comment": "- Hit rate reflects actual cache performance"
+          "line": 382,
+          "comment": "- Relevance scores are modified based on boosting criteria"
         },
         {
-          "line": 405,
-          "comment": "- Returns 0.0 when no cache accesses"
+          "line": 383,
+          "comment": "- Boosting weights are applied correctly"
         },
         {
-          "line": 406,
-          "comment": "- Handles division by zero gracefully"
+          "line": 384,
+          "comment": "- Score modifications improve retrieval quality"
         },
         {
-          "line": 408,
+          "line": 385,
+          "comment": "- Boosting is configurable and tunable"
+        },
+        {
+          "line": 387,
           "comment": "DEPENDENCIES:"
         },
         {
-          "line": 409,
-          "comment": "- Cache statistics tracking (Required)"
+          "line": 388,
+          "comment": "- Relevance scoring infrastructure (Required)"
         },
         {
-          "line": 411,
-          "comment": "ESTIMATED EFFORT: 2-3 hours"
+          "line": 389,
+          "comment": "- Boosting algorithm utilities (Required)"
         },
         {
-          "line": 412,
-          "comment": "PRIORITY: Low"
+          "line": 390,
+          "comment": "- Score modification utilities (Required)"
         },
         {
-          "line": 413,
+          "line": 392,
+          "comment": "ESTIMATED EFFORT: 3-4 hours (medium confidence)"
+        },
+        {
+          "line": 393,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 394,
           "comment": "BLOCKING: No"
         },
         {
-          "line": 415,
+          "line": 396,
           "comment": "GOVERNANCE:"
         },
         {
-          "line": 416,
-          "comment": "- CAWS Tier: 3 (monitoring/metrics)"
+          "line": 397,
+          "comment": "- CAWS Tier: 2 (relevance scoring feature)"
         },
         {
-          "line": 417,
-          "comment": "- Change Budget: ~40 LOC"
+          "line": 398,
+          "comment": "- Change Budget: ~80 LOC"
         },
         {
-          "line": 422,
-          "comment": "/ Long-term retrieval query"
+          "line": 399,
+          "comment": "- Reviewer Requirements: Relevance scoring expertise"
+        },
+        {
+          "line": 400,
+          "comment": "Temporary: mark boosting until relevance score modification is implemented"
+        },
+        {
+          "line": 406,
+          "comment": "/ Check retrieval cache"
+        },
+        {
+          "line": 418,
+          "comment": "/ Cache retrieval results"
+        },
+        {
+          "line": 430,
+          "comment": "TODO: Implement thread-safe cache statistics tracking"
+        },
+        {
+          "line": 431,
+          "comment": "Currently uses basic implementation; should implement thread-safe cache statistics tracking using proper synchronization primitives."
+        },
+        {
+          "line": 433,
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
           "line": 434,
-          "comment": "/ Long-term retrieval result"
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 435,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 436,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 437,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 438,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 439,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 440,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 441,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
           "line": 442,
-          "comment": "/ Retrieval statistics"
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 443,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 444,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 446,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 447,
+          "comment": "- Cache statistics are tracked thread-safely"
+        },
+        {
+          "line": 448,
+          "comment": "- Concurrent access is handled correctly"
+        },
+        {
+          "line": 449,
+          "comment": "- Statistics are accurate under concurrent operations"
+        },
+        {
+          "line": 450,
+          "comment": "- Performance impact is minimal"
         },
         {
           "line": 452,
-          "comment": "/ Retrieval cache entry"
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 453,
+          "comment": "- Thread-safe data structures (Mutex, RwLock, Atomic) (Required)"
+        },
+        {
+          "line": 454,
+          "comment": "- Cache statistics infrastructure (Required)"
+        },
+        {
+          "line": 455,
+          "comment": "- Synchronization utilities (Required)"
+        },
+        {
+          "line": 457,
+          "comment": "ESTIMATED EFFORT: 2-3 hours (medium confidence)"
+        },
+        {
+          "line": 458,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 459,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 461,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 462,
+          "comment": "- CAWS Tier: 2 (concurrency feature)"
+        },
+        {
+          "line": 463,
+          "comment": "- Change Budget: ~60 LOC"
+        },
+        {
+          "line": 464,
+          "comment": "- Reviewer Requirements: Rust concurrency expertise"
+        },
+        {
+          "line": 465,
+          "comment": "Temporary: basic implementation until thread-safe tracking is implemented"
         },
         {
           "line": 468,
-          "comment": "/ Retrieval optimization engine"
+          "comment": "/ Calculate cache hit rate"
+        },
+        {
+          "line": 470,
+          "comment": "TODO: Implement real cache hit rate calculation"
+        },
+        {
+          "line": 471,
+          "comment": "Currently returns hardcoded value; should calculate from actual cache statistics."
+        },
+        {
+          "line": 473,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 474,
+          "comment": "[ ] Track cache hits and misses in cache statistics"
+        },
+        {
+          "line": 475,
+          "comment": "[ ] Calculate hit rate as hits / (hits + misses)"
+        },
+        {
+          "line": 476,
+          "comment": "[ ] Handle edge cases (no accesses, division by zero)"
+        },
+        {
+          "line": 477,
+          "comment": "[ ] Add unit tests with various cache scenarios"
+        },
+        {
+          "line": 478,
+          "comment": "[ ] Add integration tests with real cache usage"
         },
         {
           "line": 480,
-          "comment": "/ Optimize retrieval strategy based on performance history"
+          "comment": "ACCEPTANCE CRITERIA:"
         },
         {
-          "line": 487,
-          "comment": "Keep only recent history"
+          "line": 481,
+          "comment": "- Hit rate reflects actual cache performance"
+        },
+        {
+          "line": 482,
+          "comment": "- Returns 0.0 when no cache accesses"
+        },
+        {
+          "line": 483,
+          "comment": "- Handles division by zero gracefully"
+        },
+        {
+          "line": 485,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 486,
+          "comment": "- Cache statistics tracking (Required)"
+        },
+        {
+          "line": 488,
+          "comment": "ESTIMATED EFFORT: 2-3 hours"
+        },
+        {
+          "line": 489,
+          "comment": "PRIORITY: Low"
+        },
+        {
+          "line": 490,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 492,
+          "comment": "GOVERNANCE:"
         },
         {
           "line": 493,
+          "comment": "- CAWS Tier: 3 (monitoring/metrics)"
+        },
+        {
+          "line": 494,
+          "comment": "- Change Budget: ~40 LOC"
+        },
+        {
+          "line": 499,
+          "comment": "/ Long-term retrieval query"
+        },
+        {
+          "line": 511,
+          "comment": "/ Long-term retrieval result"
+        },
+        {
+          "line": 519,
+          "comment": "/ Retrieval statistics"
+        },
+        {
+          "line": 529,
+          "comment": "/ Retrieval cache entry"
+        },
+        {
+          "line": 545,
+          "comment": "/ Retrieval optimization engine"
+        },
+        {
+          "line": 557,
+          "comment": "/ Optimize retrieval strategy based on performance history"
+        },
+        {
+          "line": 564,
+          "comment": "Keep only recent history"
+        },
+        {
+          "line": 570,
           "comment": "Analyze patterns and suggest optimizations"
         },
         {
-          "line": 513,
+          "line": 590,
           "comment": "/ Retrieval performance metrics"
         },
         {
-          "line": 522,
+          "line": 599,
           "comment": "/ Retrieval optimization suggestion"
         }
       ]
@@ -45713,9 +45981,9 @@
     "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs": {
       "file_path": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
       "language": "rust",
-      "total_comments": 77,
-      "total_lines": 573,
-      "comment_lines": 77,
+      "total_comments": 181,
+      "total_lines": 692,
+      "comment_lines": 181,
       "hidden_todos": {
         "86": {
           "comment": "In practice, this would update the cluster in storage",
@@ -45767,7 +46035,7 @@
             "confidence": 0.6
           }
         },
-        "403": {
+        "438": {
           "comment": "so we can't call get_stats(). This will be available when the trait is implemented.",
           "matches": {
             "future_improvements": [
@@ -45783,7 +46051,7 @@
           ],
           "context_score": 0.0
         },
-        "404": {
+        "439": {
           "comment": "For now, deduplication_savings is tracked during consolidation runs via ConsolidationResult.",
           "matches": {
             "explicit_todos": [
@@ -45799,7 +46067,7 @@
           ],
           "context_score": 0.0
         },
-        "409": {
+        "444": {
           "comment": "For now, we'll use 0 for active_clusters and total_summaries since they require cluster storage",
           "matches": {
             "explicit_todos": [
@@ -45815,7 +46083,7 @@
           ],
           "context_score": 0.0
         },
-        "410": {
+        "445": {
           "comment": "This is a limitation that will be addressed when cluster persistence is implemented",
           "matches": {
             "future_improvements": [
@@ -45831,7 +46099,7 @@
           ],
           "context_score": -0.2
         },
-        "444": {
+        "479": {
           "comment": "TODO: Implement cluster rebuilding when cluster storage is available",
           "matches": {
             "explicit_todos": [
@@ -45865,7 +46133,7 @@
             "confidence": 0.7
           }
         },
-        "462": {
+        "539": {
           "comment": "TODO: Implement cluster retrieval when cluster storage is available",
           "matches": {
             "explicit_todos": [
@@ -46055,158 +46323,574 @@
         },
         {
           "line": 252,
-          "comment": "- [ ] Calculate clustering health based on actual cluster quality metrics"
-        },
-        {
-          "line": 253,
-          "comment": "- [ ] Calculate summarization health based on summary quality scores"
+          "comment": "Replace mock health scores with actual calculations based on consolidation performance and quality metrics."
         },
         {
           "line": 254,
-          "comment": "- [ ] Calculate deduplication health based on duplicate detection rates"
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
           "line": 255,
-          "comment": "- [ ] Aggregate overall health from component metrics"
+          "comment": "[ ] Primary functionality implemented"
         },
         {
           "line": 256,
-          "comment": "- [ ] Track historical health trends"
+          "comment": "[ ] Calculate clustering health based on cluster quality metrics (silhouette scores, separation)"
         },
         {
           "line": 257,
-          "comment": "- [ ] Add unit tests for health calculation"
+          "comment": "[ ] Calculate summarization health based on summary quality scores (compression ratio, information retention)"
         },
         {
           "line": 258,
-          "comment": "- [ ] Add integration tests with real consolidation data"
+          "comment": "[ ] Calculate deduplication health based on duplicate detection accuracy and false positive rates"
         },
         {
           "line": 259,
-          "comment": "Return mock health metrics"
+          "comment": "[ ] Implement overall health aggregation using weighted component metrics"
+        },
+        {
+          "line": 260,
+          "comment": "[ ] Add historical health trend tracking and alerting"
+        },
+        {
+          "line": 261,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 262,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 263,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 264,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 265,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 266,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 267,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 268,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 269,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 270,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 272,
+          "comment": "ACCEPTANCE CRITERIA:"
         },
         {
           "line": 273,
-          "comment": "Implemented: Fetch memories with embeddings from MemoryManager"
+          "comment": "- Health metrics reflect actual consolidation performance and quality"
+        },
+        {
+          "line": 274,
+          "comment": "- Component health scores are calculated from real operational data"
+        },
+        {
+          "line": 275,
+          "comment": "- Overall health aggregation provides meaningful system health indicator"
+        },
+        {
+          "line": 276,
+          "comment": "- Historical trends enable proactive maintenance and optimization"
         },
         {
           "line": 277,
+          "comment": "- Integration tests validate health metrics against known consolidation scenarios"
+        },
+        {
+          "line": 279,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 280,
+          "comment": "- Clustering quality metrics system (Required)"
+        },
+        {
+          "line": 281,
+          "comment": "- Summarization evaluation framework (Required)"
+        },
+        {
+          "line": 282,
+          "comment": "- Deduplication accuracy measurement (Required)"
+        },
+        {
+          "line": 283,
+          "comment": "- Historical metrics storage (Required)"
+        },
+        {
+          "line": 284,
+          "comment": "- Test datasets with known health characteristics (Required)"
+        },
+        {
+          "line": 286,
+          "comment": "ESTIMATED EFFORT: 8-12 hours (medium confidence)"
+        },
+        {
+          "line": 287,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 288,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 290,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 291,
+          "comment": "- CAWS Tier: 2 (memory management observability)"
+        },
+        {
+          "line": 292,
+          "comment": "- Change Budget: ~300 LOC"
+        },
+        {
+          "line": 293,
+          "comment": "- Reviewer Requirements: Memory systems and metrics expertise"
+        },
+        {
+          "line": 294,
+          "comment": "Return mock health metrics"
+        },
+        {
+          "line": 308,
+          "comment": "Implemented: Fetch memories with embeddings from MemoryManager"
+        },
+        {
+          "line": 312,
           "comment": "Fetch all memories and their embeddings"
         },
         {
-          "line": 297,
+          "line": 332,
           "comment": "Use the internal consolidate_with_embeddings method"
         },
         {
-          "line": 313,
+          "line": 348,
           "comment": "If no memory manager, return error"
         },
         {
-          "line": 328,
+          "line": 363,
           "comment": "Implemented: Fetch embeddings for specific memory IDs from MemoryManager"
         },
         {
-          "line": 332,
+          "line": 367,
           "comment": "Fetch embeddings for the specified memory IDs"
         },
         {
-          "line": 356,
+          "line": 391,
           "comment": "Use the internal consolidate_with_embeddings method"
         },
         {
-          "line": 383,
+          "line": 418,
           "comment": "Implemented: Real stats tracking using MemoryManager stats API and consolidation component stats"
         },
         {
-          "line": 385,
+          "line": 420,
           "comment": "Get total memories processed from MemoryManager"
         },
         {
-          "line": 401,
+          "line": 436,
           "comment": "Get deduplication stats"
         },
         {
-          "line": 402,
+          "line": 437,
           "comment": "Note: MemoryDeduplicator doesn't implement DeduplicationEngine trait yet,"
         },
         {
-          "line": 403,
+          "line": 438,
           "comment": "so we can't call get_stats(). This will be available when the trait is implemented."
         },
         {
-          "line": 404,
+          "line": 439,
           "comment": "For now, deduplication_savings is tracked during consolidation runs via ConsolidationResult."
         },
         {
-          "line": 407,
+          "line": 442,
           "comment": "Get cluster stats by attempting to retrieve clusters"
         },
         {
-          "line": 408,
+          "line": 443,
           "comment": "Note: Clusters are not persisted, so we can't get exact counts without running consolidation"
         },
         {
-          "line": 409,
+          "line": 444,
           "comment": "For now, we'll use 0 for active_clusters and total_summaries since they require cluster storage"
         },
         {
-          "line": 410,
+          "line": 445,
           "comment": "This is a limitation that will be addressed when cluster persistence is implemented"
         },
         {
-          "line": 414,
+          "line": 449,
           "comment": "Calculate average cluster size (0.0 if no clusters)"
         },
         {
-          "line": 421,
+          "line": 456,
           "comment": "Last consolidation timestamp is not tracked yet - would require consolidation history storage"
         },
         {
-          "line": 435,
+          "line": 470,
           "comment": "Cluster rebuilding requires memory access and cluster storage"
         },
         {
-          "line": 444,
+          "line": 479,
           "comment": "TODO: Implement cluster rebuilding when cluster storage is available"
         },
         {
-          "line": 453,
-          "comment": "Cluster retrieval requires cluster storage"
+          "line": 480,
+          "comment": "Replace error return with actual cluster rebuilding logic that reconstructs clusters from persisted memory data."
         },
         {
-          "line": 462,
-          "comment": "TODO: Implement cluster retrieval when cluster storage is available"
+          "line": 482,
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
-          "line": 471,
-          "comment": "/ Maintenance consolidation result"
+          "line": 483,
+          "comment": "[ ] Primary functionality implemented"
         },
         {
-          "line": 481,
-          "comment": "/ Consolidation health metrics"
+          "line": 484,
+          "comment": "[ ] Load persisted memory data from cluster storage"
+        },
+        {
+          "line": 485,
+          "comment": "[ ] Reconstruct cluster structures from serialized data"
+        },
+        {
+          "line": 486,
+          "comment": "[ ] Validate cluster integrity and consistency"
+        },
+        {
+          "line": 487,
+          "comment": "[ ] Rebuild cluster indexes and metadata"
+        },
+        {
+          "line": 488,
+          "comment": "[ ] Handle partial cluster reconstruction failures"
+        },
+        {
+          "line": 489,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 490,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
         },
         {
           "line": 491,
-          "comment": "/ Progressive consolidation for large memory stores"
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 492,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 493,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 494,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 495,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 496,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 497,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 498,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 500,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 501,
+          "comment": "- Cluster rebuilding successfully reconstructs clusters from persisted data"
+        },
+        {
+          "line": 502,
+          "comment": "- Rebuilt clusters maintain data integrity and relationships"
+        },
+        {
+          "line": 503,
+          "comment": "- Partial reconstruction failures are handled gracefully"
+        },
+        {
+          "line": 504,
+          "comment": "- Performance meets SLA for large cluster reconstruction operations"
+        },
+        {
+          "line": 505,
+          "comment": "- Integration tests validate rebuilding against known cluster datasets"
+        },
+        {
+          "line": 507,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 508,
+          "comment": "- Cluster storage persistence layer (Required)"
+        },
+        {
+          "line": 509,
+          "comment": "- Cluster serialization/deserialization (Required)"
+        },
+        {
+          "line": 510,
+          "comment": "- Memory data access layer (Required)"
         },
         {
           "line": 511,
-          "comment": "/ Consolidate memories in progressive batches"
+          "comment": "- Cluster validation framework (Required)"
         },
         {
-          "line": 531,
-          "comment": "Consolidate this batch"
+          "line": 512,
+          "comment": "- Test datasets with persisted clusters (Required)"
+        },
+        {
+          "line": 514,
+          "comment": "ESTIMATED EFFORT: 10-14 hours (medium confidence)"
+        },
+        {
+          "line": 515,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 516,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 518,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 519,
+          "comment": "- CAWS Tier: 2 (memory persistence functionality)"
+        },
+        {
+          "line": 520,
+          "comment": "- Change Budget: ~350 LOC"
+        },
+        {
+          "line": 521,
+          "comment": "- Reviewer Requirements: Memory systems and data persistence expertise"
+        },
+        {
+          "line": 530,
+          "comment": "Cluster retrieval requires cluster storage"
         },
         {
           "line": 539,
-          "comment": "Create checkpoint"
+          "comment": "TODO: Implement cluster retrieval when cluster storage is available"
+        },
+        {
+          "line": 540,
+          "comment": "Replace error return with actual cluster retrieval logic that loads persisted clusters from storage."
+        },
+        {
+          "line": 542,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 543,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 544,
+          "comment": "[ ] Query cluster storage for persisted clusters"
+        },
+        {
+          "line": 545,
+          "comment": "[ ] Deserialize cluster data from storage format"
+        },
+        {
+          "line": 546,
+          "comment": "[ ] Validate cluster data integrity and consistency"
+        },
+        {
+          "line": 547,
+          "comment": "[ ] Return clusters sorted by relevance/timestamp"
+        },
+        {
+          "line": 548,
+          "comment": "[ ] Handle partial or corrupted cluster data"
+        },
+        {
+          "line": 549,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 550,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 551,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 552,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 553,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 554,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 555,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 556,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 557,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
         },
         {
           "line": 558,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 560,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 561,
+          "comment": "- Cluster retrieval successfully loads persisted clusters from storage"
+        },
+        {
+          "line": 562,
+          "comment": "- Retrieved clusters maintain data integrity and relationships"
+        },
+        {
+          "line": 563,
+          "comment": "- Corrupted or partial cluster data is handled gracefully"
+        },
+        {
+          "line": 564,
+          "comment": "- Query performance meets SLA for cluster retrieval operations"
+        },
+        {
+          "line": 565,
+          "comment": "- Integration tests validate retrieval against known stored clusters"
+        },
+        {
+          "line": 567,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 568,
+          "comment": "- Cluster storage persistence layer (Required)"
+        },
+        {
+          "line": 569,
+          "comment": "- Cluster serialization/deserialization (Required)"
+        },
+        {
+          "line": 570,
+          "comment": "- Cluster query and indexing system (Required)"
+        },
+        {
+          "line": 571,
+          "comment": "- Data integrity validation framework (Required)"
+        },
+        {
+          "line": 572,
+          "comment": "- Test datasets with stored clusters (Required)"
+        },
+        {
+          "line": 574,
+          "comment": "ESTIMATED EFFORT: 8-12 hours (medium confidence)"
+        },
+        {
+          "line": 575,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 576,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 578,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 579,
+          "comment": "- CAWS Tier: 2 (memory persistence functionality)"
+        },
+        {
+          "line": 580,
+          "comment": "- Change Budget: ~300 LOC"
+        },
+        {
+          "line": 581,
+          "comment": "- Reviewer Requirements: Memory systems and data retrieval expertise"
+        },
+        {
+          "line": 590,
+          "comment": "/ Maintenance consolidation result"
+        },
+        {
+          "line": 600,
+          "comment": "/ Consolidation health metrics"
+        },
+        {
+          "line": 610,
+          "comment": "/ Progressive consolidation for large memory stores"
+        },
+        {
+          "line": 630,
+          "comment": "/ Consolidate memories in progressive batches"
+        },
+        {
+          "line": 650,
+          "comment": "Consolidate this batch"
+        },
+        {
+          "line": 658,
+          "comment": "Create checkpoint"
+        },
+        {
+          "line": 677,
           "comment": "/ Progressive consolidation result"
         },
         {
-          "line": 566,
+          "line": 685,
           "comment": "/ Consolidation checkpoint for resumable operation"
         }
       ]
@@ -59845,11 +60529,11 @@
     "iterations/v3/system-resilience/src/gc/collector.rs": {
       "file_path": "iterations/v3/system-resilience/src/gc/collector.rs",
       "language": "rust",
-      "total_comments": 215,
-      "total_lines": 804,
-      "comment_lines": 215,
+      "total_comments": 321,
+      "total_lines": 925,
+      "comment_lines": 321,
       "hidden_todos": {
-        "232": {
+        "273": {
           "comment": "TODO: Implement object reference retrieval from object store",
           "matches": {
             "explicit_todos": [
@@ -59883,7 +60567,7 @@
             "confidence": 0.9
           }
         },
-        "251": {
+        "332": {
           "comment": "TODO: Implement object enumeration from object store",
           "matches": {
             "explicit_todos": [
@@ -59917,7 +60601,7 @@
             "confidence": 0.9
           }
         },
-        "313": {
+        "434": {
           "comment": "/ Get object references (to be implemented based on your object store)",
           "matches": {
             "incomplete_implementation": [
@@ -59933,7 +60617,7 @@
           ],
           "context_score": 0.0
         },
-        "397": {
+        "518": {
           "comment": "TODO: Parse internal blob references for complete reference tracking",
           "matches": {
             "explicit_todos": [
@@ -59967,7 +60651,7 @@
             "confidence": 0.7
           }
         },
-        "486": {
+        "607": {
           "comment": "TODO: Extract referenced objects from diff headers",
           "matches": {
             "explicit_todos": [
@@ -60001,7 +60685,7 @@
             "confidence": 0.6
           }
         },
-        "587": {
+        "708": {
           "comment": "TODO: Implement based on your object store",
           "matches": {
             "explicit_todos": [
@@ -60035,7 +60719,7 @@
             "confidence": 0.9
           }
         },
-        "594": {
+        "715": {
           "comment": "TODO: Implement packing logic",
           "matches": {
             "explicit_todos": [
@@ -60236,699 +60920,1123 @@
           "comment": "Update statistics"
         },
         {
+          "line": 210,
+          "comment": "Replace hardcoded 0 with actual calculation of bytes freed during garbage collection sweep phase."
+        },
+        {
+          "line": 212,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 213,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 214,
+          "comment": "[ ] Track sizes of objects being removed during sweep phase"
+        },
+        {
           "line": 215,
-          "comment": "/ Mark reachable objects from protected references"
+          "comment": "[ ] Accumulate total bytes freed from unreachable objects"
+        },
+        {
+          "line": 216,
+          "comment": "[ ] Include packed object size reductions in calculation"
+        },
+        {
+          "line": 217,
+          "comment": "[ ] Handle metadata and index size reductions"
+        },
+        {
+          "line": 218,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 219,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
         },
         {
           "line": 220,
-          "comment": "Start with protected references"
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 221,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 222,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 223,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 224,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 225,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
           "line": 226,
-          "comment": "Process objects in BFS order"
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 227,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 229,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 230,
+          "comment": "- Bytes freed calculation accurately reflects actual memory/disk space recovered"
+        },
+        {
+          "line": 231,
+          "comment": "- Calculation includes all object types and metadata"
         },
         {
           "line": 232,
-          "comment": "TODO: Implement object reference retrieval from object store"
+          "comment": "- Packed objects show size reductions appropriately"
         },
         {
           "line": 233,
-          "comment": "Currently uses placeholder; should query actual object store for object references based on digest."
+          "comment": "- Performance overhead is minimal (<5% of total GC time)"
+        },
+        {
+          "line": 234,
+          "comment": "- Integration tests validate byte calculations against known object sizes"
+        },
+        {
+          "line": 236,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 237,
+          "comment": "- Object size tracking system (Required)"
+        },
+        {
+          "line": 238,
+          "comment": "- Object store metadata access (Required)"
+        },
+        {
+          "line": 239,
+          "comment": "- Size calculation utilities (Required)"
+        },
+        {
+          "line": 240,
+          "comment": "- Test objects with known sizes (Required)"
+        },
+        {
+          "line": 241,
+          "comment": "- Performance measurement framework (Required)"
+        },
+        {
+          "line": 243,
+          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
+        },
+        {
+          "line": 244,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 245,
+          "comment": "BLOCKING: No"
         },
         {
           "line": 247,
-          "comment": "/ Sweep unreachable objects"
+          "comment": "GOVERNANCE:"
         },
         {
-          "line": 251,
-          "comment": "TODO: Implement object enumeration from object store"
+          "line": 248,
+          "comment": "- CAWS Tier: 2 (garbage collection observability)"
         },
         {
-          "line": 252,
-          "comment": "Currently uses placeholder; should query actual object store to enumerate all objects in the system."
+          "line": 249,
+          "comment": "- Change Budget: ~150 LOC"
         },
         {
-          "line": 264,
-          "comment": "/ Apply grace period to unreachable objects"
+          "line": 250,
+          "comment": "- Reviewer Requirements: Garbage collection and metrics expertise"
         },
         {
-          "line": 271,
-          "comment": "Object is already in grace period"
+          "line": 256,
+          "comment": "/ Mark reachable objects from protected references"
+        },
+        {
+          "line": 261,
+          "comment": "Start with protected references"
+        },
+        {
+          "line": 267,
+          "comment": "Process objects in BFS order"
         },
         {
           "line": 273,
-          "comment": "Grace period expired, object can be deleted"
+          "comment": "TODO: Implement object reference retrieval from object store"
+        },
+        {
+          "line": 274,
+          "comment": "Replace placeholder with actual object store query to retrieve references for mark phase of garbage collection."
         },
         {
           "line": 276,
-          "comment": "Still in grace period"
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 277,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 278,
+          "comment": "[ ] Query object store for blob data by digest"
+        },
+        {
+          "line": 279,
+          "comment": "[ ] Parse blob headers to extract referenced objects"
         },
         {
           "line": 280,
-          "comment": "New object entering grace period"
+          "comment": "[ ] Handle different blob types (commits, trees, files, diffs)"
+        },
+        {
+          "line": 281,
+          "comment": "[ ] Return all referenced digests for mark phase"
+        },
+        {
+          "line": 282,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 283,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 284,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 285,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 286,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 287,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 288,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
           "line": 289,
-          "comment": "/ Pack cold objects"
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 290,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 291,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 293,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 294,
+          "comment": "- Object reference retrieval works for all supported blob types"
+        },
+        {
+          "line": 295,
+          "comment": "- Referenced objects are correctly identified and returned"
+        },
+        {
+          "line": 296,
+          "comment": "- Performance meets SLA for large object graphs (<50ms per object)"
+        },
+        {
+          "line": 297,
+          "comment": "- Error handling prevents GC from crashing on malformed objects"
+        },
+        {
+          "line": 298,
+          "comment": "- Integration tests validate reference extraction against known blob structures"
+        },
+        {
+          "line": 300,
+          "comment": "DEPENDENCIES:"
         },
         {
           "line": 301,
-          "comment": "Object is cold, pack it"
+          "comment": "- Object store query interface (Required)"
+        },
+        {
+          "line": 302,
+          "comment": "- Blob parsing and header extraction (Required)"
+        },
+        {
+          "line": 303,
+          "comment": "- Digest validation utilities (Required)"
+        },
+        {
+          "line": 304,
+          "comment": "- Test blobs with known reference structures (Required)"
+        },
+        {
+          "line": 305,
+          "comment": "- Performance benchmarking framework (Required)"
+        },
+        {
+          "line": 307,
+          "comment": "ESTIMATED EFFORT: 8-12 hours (medium confidence)"
+        },
+        {
+          "line": 308,
+          "comment": "PRIORITY: High"
+        },
+        {
+          "line": 309,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 311,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 312,
+          "comment": "- CAWS Tier: 1 (garbage collection core functionality)"
         },
         {
           "line": 313,
-          "comment": "/ Get object references (to be implemented based on your object store)"
+          "comment": "- Change Budget: ~300 LOC"
         },
         {
-          "line": 318,
-          "comment": "Create a blob store instance to read objects"
-        },
-        {
-          "line": 319,
-          "comment": "TODO: Implement dependency injection for blob store"
-        },
-        {
-          "line": 320,
-          "comment": "Currently creates blob store directly; should be injected or accessed from collector for better testability and configuration."
-        },
-        {
-          "line": 322,
-          "comment": "COMPLETION CHECKLIST:"
-        },
-        {
-          "line": 323,
-          "comment": "[ ] Add blob store as constructor parameter"
-        },
-        {
-          "line": 324,
-          "comment": "[ ] Access blob store from collector instance"
-        },
-        {
-          "line": 325,
-          "comment": "[ ] Support configuration-based blob store creation"
-        },
-        {
-          "line": 326,
-          "comment": "[ ] Handle missing blob store gracefully"
-        },
-        {
-          "line": 327,
-          "comment": "[ ] Add unit tests with mock blob store"
+          "line": 314,
+          "comment": "- Reviewer Requirements: Garbage collection and data structure expertise"
         },
         {
           "line": 328,
-          "comment": "[ ] Add integration tests with real blob store"
-        },
-        {
-          "line": 329,
-          "comment": "[ ] Performance: No performance impact (construction-time only)"
-        },
-        {
-          "line": 330,
-          "comment": "[ ] Documentation: Document injection pattern"
+          "comment": "/ Sweep unreachable objects"
         },
         {
           "line": 332,
-          "comment": "ACCEPTANCE CRITERIA:"
+          "comment": "TODO: Implement object enumeration from object store"
         },
         {
           "line": 333,
-          "comment": "- Blob store can be injected via constructor"
-        },
-        {
-          "line": 334,
-          "comment": "- Blob store is accessible from collector"
+          "comment": "Replace placeholder with actual object store enumeration to identify all objects for sweep phase of garbage collection."
         },
         {
           "line": 335,
-          "comment": "- Configuration-based creation is supported"
+          "comment": "COMPLETION CHECKLIST:"
         },
         {
           "line": 336,
-          "comment": "- Missing blob store is handled gracefully"
+          "comment": "[ ] Primary functionality implemented"
         },
         {
           "line": 337,
-          "comment": "- Injection pattern is testable"
+          "comment": "[ ] Query object store for complete object inventory"
+        },
+        {
+          "line": 338,
+          "comment": "[ ] Handle pagination for large object stores"
         },
         {
           "line": 339,
-          "comment": "DEPENDENCIES:"
+          "comment": "[ ] Filter objects by age, type, or other criteria if needed"
         },
         {
           "line": 340,
-          "comment": "- Dependency injection framework (Optional)"
+          "comment": "[ ] Return digest set for comparison with reachable objects"
         },
         {
           "line": 341,
-          "comment": "- Blob store interface (Required)"
+          "comment": "[ ] API/data structures defined & stable"
         },
         {
           "line": 342,
-          "comment": "- Configuration management (Required)"
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 343,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
         },
         {
           "line": 344,
-          "comment": "ESTIMATED EFFORT: 3-4 hours (high confidence)"
+          "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
           "line": 345,
-          "comment": "PRIORITY: Low"
+          "comment": "[ ] Documentation: public API + system behavior"
         },
         {
           "line": 346,
-          "comment": "BLOCKING: No"
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 347,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
           "line": 348,
-          "comment": "GOVERNANCE:"
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
           "line": 349,
-          "comment": "- CAWS Tier: 3 (code quality improvement)"
+          "comment": "[ ] Configurability and feature flags defined if relevant"
         },
         {
           "line": 350,
-          "comment": "- Change Budget: ~100 LOC"
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
         },
         {
-          "line": 351,
-          "comment": "- Reviewer Requirements: Dependency injection expertise"
+          "line": 352,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 353,
+          "comment": "- Object enumeration returns complete and accurate object inventory"
+        },
+        {
+          "line": 354,
+          "comment": "- Pagination handles large object stores without memory issues"
         },
         {
           "line": 355,
-          "comment": "Try to read the object as a blob first"
+          "comment": "- Performance scales with object store size (acceptable for 100k+ objects)"
+        },
+        {
+          "line": 356,
+          "comment": "- Error handling prevents enumeration failures from crashing GC"
         },
         {
           "line": 357,
-          "comment": "Parse blob content based on payload kind to find references"
+          "comment": "- Integration tests validate enumeration against known object stores"
+        },
+        {
+          "line": 359,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 360,
+          "comment": "- Object store enumeration interface (Required)"
         },
         {
           "line": 361,
-          "comment": "Try to read as a commit object (stored as JSON in blob store)"
+          "comment": "- Pagination and batching utilities (Required)"
+        },
+        {
+          "line": 362,
+          "comment": "- Object filtering and selection criteria (Optional)"
+        },
+        {
+          "line": 363,
+          "comment": "- Test object stores with known inventories (Required)"
+        },
+        {
+          "line": 364,
+          "comment": "- Performance measurement framework (Required)"
+        },
+        {
+          "line": 366,
+          "comment": "ESTIMATED EFFORT: 6-10 hours (medium confidence)"
+        },
+        {
+          "line": 367,
+          "comment": "PRIORITY: High"
+        },
+        {
+          "line": 368,
+          "comment": "BLOCKING: No"
         },
         {
           "line": 370,
-          "comment": "Try to read as a tree object (stored as JSON in blob store)"
+          "comment": "GOVERNANCE:"
         },
         {
-          "line": 379,
-          "comment": "Object not found or unrecognized type"
+          "line": 371,
+          "comment": "- CAWS Tier: 1 (garbage collection core functionality)"
         },
         {
-          "line": 389,
-          "comment": "/ Parse references from a blob object"
+          "line": 372,
+          "comment": "- Change Budget: ~250 LOC"
+        },
+        {
+          "line": 373,
+          "comment": "- Reviewer Requirements: Garbage collection and data store expertise"
+        },
+        {
+          "line": 385,
+          "comment": "/ Apply grace period to unreachable objects"
+        },
+        {
+          "line": 392,
+          "comment": "Object is already in grace period"
+        },
+        {
+          "line": 394,
+          "comment": "Grace period expired, object can be deleted"
         },
         {
           "line": 397,
-          "comment": "TODO: Parse internal blob references for complete reference tracking"
-        },
-        {
-          "line": 398,
-          "comment": "Currently skips parsing to avoid loading large objects; should parse internal blob references (e.g., chunk references) for complete reference tracking."
-        },
-        {
-          "line": 400,
-          "comment": "COMPLETION CHECKLIST:"
+          "comment": "Still in grace period"
         },
         {
           "line": 401,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 402,
-          "comment": "[ ] API/data structures defined & stable"
-        },
-        {
-          "line": 403,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
-        },
-        {
-          "line": 404,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
-        },
-        {
-          "line": 405,
-          "comment": "[ ] Integration tests for external systems/contracts"
-        },
-        {
-          "line": 406,
-          "comment": "[ ] Documentation: public API + system behavior"
-        },
-        {
-          "line": 407,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
-        },
-        {
-          "line": 408,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
-        },
-        {
-          "line": 409,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+          "comment": "New object entering grace period"
         },
         {
           "line": 410,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
-        },
-        {
-          "line": 411,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 413,
-          "comment": "ACCEPTANCE CRITERIA:"
-        },
-        {
-          "line": 414,
-          "comment": "- Internal references are parsed correctly"
-        },
-        {
-          "line": 415,
-          "comment": "- Parsing is efficient for large objects"
-        },
-        {
-          "line": 416,
-          "comment": "- Reference tracking is complete"
-        },
-        {
-          "line": 417,
-          "comment": "- Performance is acceptable"
-        },
-        {
-          "line": 419,
-          "comment": "DEPENDENCIES:"
-        },
-        {
-          "line": 420,
-          "comment": "- Blob parsing utilities (Required)"
-        },
-        {
-          "line": 421,
-          "comment": "- Reference extraction algorithms (Required)"
+          "comment": "/ Pack cold objects"
         },
         {
           "line": 422,
-          "comment": "- Digest pattern matching (Required)"
+          "comment": "Object is cold, pack it"
         },
         {
-          "line": 424,
-          "comment": "ESTIMATED EFFORT: 5-6 hours (medium confidence)"
+          "line": 434,
+          "comment": "/ Get object references (to be implemented based on your object store)"
         },
         {
-          "line": 425,
-          "comment": "PRIORITY: Low"
-        },
-        {
-          "line": 426,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 428,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 429,
-          "comment": "- CAWS Tier: 3 (GC optimization enhancement)"
-        },
-        {
-          "line": 430,
-          "comment": "- Change Budget: ~120 LOC"
-        },
-        {
-          "line": 431,
-          "comment": "- Reviewer Requirements: GC and blob parsing expertise"
-        },
-        {
-          "line": 432,
-          "comment": "Temporary: skip parsing until efficient implementation"
-        },
-        {
-          "line": 435,
-          "comment": "Diff blobs might reference the base object they're diffing against"
-        },
-        {
-          "line": 436,
-          "comment": "Parse the diff header to find referenced objects"
+          "line": 439,
+          "comment": "Create a blob store instance to read objects"
         },
         {
           "line": 440,
-          "comment": "Chunk maps reference multiple chunks"
+          "comment": "TODO: Implement dependency injection for blob store"
         },
         {
           "line": 441,
-          "comment": "Parse the chunk map to extract all chunk digests"
+          "comment": "Currently creates blob store directly; should be injected or accessed from collector for better testability and configuration."
         },
         {
-          "line": 451,
-          "comment": "/ Parse references from a commit object"
-        },
-        {
-          "line": 455,
-          "comment": "Commits always reference their tree"
-        },
-        {
-          "line": 458,
-          "comment": "Commits may reference a parent commit"
-        },
-        {
-          "line": 466,
-          "comment": "/ Parse references from a tree object"
-        },
-        {
-          "line": 470,
-          "comment": "Trees reference all their entries (files, directories, symlinks)"
-        },
-        {
-          "line": 474,
-          "comment": "If this is a directory (tree), it will be handled when we process that tree object"
-        },
-        {
-          "line": 475,
-          "comment": "The graph traversal will find it naturally"
-        },
-        {
-          "line": 478,
-          "comment": "Trees also reference their parent if they have one (for directory hierarchies)"
-        },
-        {
-          "line": 479,
-          "comment": "This is implicit in the Merkle tree structure"
-        },
-        {
-          "line": 484,
-          "comment": "/ Parse references from a unified diff"
-        },
-        {
-          "line": 486,
-          "comment": "TODO: Extract referenced objects from diff headers"
-        },
-        {
-          "line": 487,
-          "comment": "Currently returns empty; should extract referenced objects from diff headers for complete reference tracking."
-        },
-        {
-          "line": 489,
+          "line": 443,
           "comment": "COMPLETION CHECKLIST:"
         },
         {
-          "line": 490,
-          "comment": "[ ] Primary functionality implemented"
+          "line": 444,
+          "comment": "[ ] Add blob store as constructor parameter"
         },
         {
-          "line": 491,
-          "comment": "[ ] API/data structures defined & stable"
+          "line": 445,
+          "comment": "[ ] Access blob store from collector instance"
         },
         {
-          "line": 492,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+          "line": 446,
+          "comment": "[ ] Support configuration-based blob store creation"
         },
         {
-          "line": 493,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+          "line": 447,
+          "comment": "[ ] Handle missing blob store gracefully"
         },
         {
-          "line": 494,
-          "comment": "[ ] Integration tests for external systems/contracts"
+          "line": 448,
+          "comment": "[ ] Add unit tests with mock blob store"
         },
         {
-          "line": 495,
-          "comment": "[ ] Documentation: public API + system behavior"
+          "line": 449,
+          "comment": "[ ] Add integration tests with real blob store"
         },
         {
-          "line": 496,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+          "line": 450,
+          "comment": "[ ] Performance: No performance impact (construction-time only)"
         },
         {
-          "line": 497,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+          "line": 451,
+          "comment": "[ ] Documentation: Document injection pattern"
         },
         {
-          "line": 498,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
-        },
-        {
-          "line": 499,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
-        },
-        {
-          "line": 500,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 502,
+          "line": 453,
           "comment": "ACCEPTANCE CRITERIA:"
         },
         {
-          "line": 503,
-          "comment": "- References are extracted from diff headers correctly"
+          "line": 454,
+          "comment": "- Blob store can be injected via constructor"
         },
         {
-          "line": 504,
-          "comment": "- Parsing handles various diff formats"
+          "line": 455,
+          "comment": "- Blob store is accessible from collector"
         },
         {
-          "line": 505,
-          "comment": "- Reference tracking is complete"
+          "line": 456,
+          "comment": "- Configuration-based creation is supported"
         },
         {
-          "line": 506,
-          "comment": "- Performance is acceptable"
+          "line": 457,
+          "comment": "- Missing blob store is handled gracefully"
         },
         {
-          "line": 508,
+          "line": 458,
+          "comment": "- Injection pattern is testable"
+        },
+        {
+          "line": 460,
           "comment": "DEPENDENCIES:"
         },
         {
-          "line": 509,
-          "comment": "- Diff parsing utilities (Required)"
+          "line": 461,
+          "comment": "- Dependency injection framework (Optional)"
         },
         {
-          "line": 510,
-          "comment": "- Header extraction algorithms (Required)"
+          "line": 462,
+          "comment": "- Blob store interface (Required)"
         },
         {
-          "line": 511,
-          "comment": "- Reference tracking infrastructure (Required)"
+          "line": 463,
+          "comment": "- Configuration management (Required)"
         },
         {
-          "line": 513,
-          "comment": "ESTIMATED EFFORT: 4-5 hours (medium confidence)"
+          "line": 465,
+          "comment": "ESTIMATED EFFORT: 3-4 hours (high confidence)"
         },
         {
-          "line": 514,
+          "line": 466,
           "comment": "PRIORITY: Low"
         },
         {
-          "line": 515,
+          "line": 467,
           "comment": "BLOCKING: No"
         },
         {
-          "line": 517,
+          "line": 469,
           "comment": "GOVERNANCE:"
         },
         {
-          "line": 518,
-          "comment": "- CAWS Tier: 3 (GC enhancement)"
+          "line": 470,
+          "comment": "- CAWS Tier: 3 (code quality improvement)"
         },
         {
-          "line": 519,
+          "line": 471,
           "comment": "- Change Budget: ~100 LOC"
         },
         {
-          "line": 520,
-          "comment": "- Reviewer Requirements: Diff parsing expertise"
+          "line": 472,
+          "comment": "- Reviewer Requirements: Dependency injection expertise"
+        },
+        {
+          "line": 476,
+          "comment": "Try to read the object as a blob first"
+        },
+        {
+          "line": 478,
+          "comment": "Parse blob content based on payload kind to find references"
+        },
+        {
+          "line": 482,
+          "comment": "Try to read as a commit object (stored as JSON in blob store)"
+        },
+        {
+          "line": 491,
+          "comment": "Try to read as a tree object (stored as JSON in blob store)"
+        },
+        {
+          "line": 500,
+          "comment": "Object not found or unrecognized type"
+        },
+        {
+          "line": 510,
+          "comment": "/ Parse references from a blob object"
+        },
+        {
+          "line": 518,
+          "comment": "TODO: Parse internal blob references for complete reference tracking"
+        },
+        {
+          "line": 519,
+          "comment": "Currently skips parsing to avoid loading large objects; should parse internal blob references (e.g., chunk references) for complete reference tracking."
+        },
+        {
+          "line": 521,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 522,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 523,
+          "comment": "[ ] API/data structures defined & stable"
         },
         {
           "line": 524,
-          "comment": "/ Parse chunk references from a chunk map"
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 525,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 526,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 527,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 528,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 529,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
           "line": 530,
-          "comment": "Try to deserialize the blob data as chunk references"
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
           "line": 531,
-          "comment": "The exact format depends on how chunk maps are serialized"
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 532,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 534,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 535,
+          "comment": "- Internal references are parsed correctly"
+        },
+        {
+          "line": 536,
+          "comment": "- Parsing is efficient for large objects"
+        },
+        {
+          "line": 537,
+          "comment": "- Reference tracking is complete"
+        },
+        {
+          "line": 538,
+          "comment": "- Performance is acceptable"
+        },
+        {
+          "line": 540,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 541,
+          "comment": "- Blob parsing utilities (Required)"
+        },
+        {
+          "line": 542,
+          "comment": "- Reference extraction algorithms (Required)"
+        },
+        {
+          "line": 543,
+          "comment": "- Digest pattern matching (Required)"
         },
         {
           "line": 545,
-          "comment": "/ Get all objects in the system"
+          "comment": "ESTIMATED EFFORT: 5-6 hours (medium confidence)"
+        },
+        {
+          "line": 546,
+          "comment": "PRIORITY: Low"
+        },
+        {
+          "line": 547,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 549,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 550,
+          "comment": "- CAWS Tier: 3 (GC optimization enhancement)"
+        },
+        {
+          "line": 551,
+          "comment": "- Change Budget: ~120 LOC"
         },
         {
           "line": 552,
-          "comment": "Create a blob store instance to scan the objects directory"
+          "comment": "- Reviewer Requirements: GC and blob parsing expertise"
+        },
+        {
+          "line": 553,
+          "comment": "Temporary: skip parsing until efficient implementation"
         },
         {
           "line": 556,
-          "comment": "Walk the objects directory to find all stored objects"
+          "comment": "Diff blobs might reference the base object they're diffing against"
         },
         {
           "line": 557,
-          "comment": "Objects are stored in a sharded directory structure: xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          "comment": "Parse the diff header to find referenced objects"
         },
         {
-          "line": 564,
-          "comment": "Extract digest from file path"
+          "line": 561,
+          "comment": "Chunk maps reference multiple chunks"
         },
         {
-          "line": 565,
-          "comment": "Expected path format: .recovery/objects/xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          "line": 562,
+          "comment": "Parse the chunk map to extract all chunk digests"
         },
         {
-          "line": 568,
-          "comment": "BLAKE3 hex is 64 characters"
+          "line": 572,
+          "comment": "/ Parse references from a commit object"
         },
         {
-          "line": 585,
-          "comment": "/ Get object age in seconds"
+          "line": 576,
+          "comment": "Commits always reference their tree"
+        },
+        {
+          "line": 579,
+          "comment": "Commits may reference a parent commit"
         },
         {
           "line": 587,
-          "comment": "TODO: Implement based on your object store"
+          "comment": "/ Parse references from a tree object"
         },
         {
-          "line": 588,
-          "comment": "This would return the age of the object in seconds"
-        },
-        {
-          "line": 592,
-          "comment": "/ Pack an object"
-        },
-        {
-          "line": 594,
-          "comment": "TODO: Implement packing logic"
+          "line": 591,
+          "comment": "Trees reference all their entries (files, directories, symlinks)"
         },
         {
           "line": 595,
-          "comment": "This would move the object to a pack file"
+          "comment": "If this is a directory (tree), it will be handled when we process that tree object"
+        },
+        {
+          "line": 596,
+          "comment": "The graph traversal will find it naturally"
         },
         {
           "line": 599,
-          "comment": "/ Update GC statistics"
+          "comment": "Trees also reference their parent if they have one (for directory hierarchies)"
+        },
+        {
+          "line": 600,
+          "comment": "This is implicit in the Merkle tree structure"
+        },
+        {
+          "line": 605,
+          "comment": "/ Parse references from a unified diff"
+        },
+        {
+          "line": 607,
+          "comment": "TODO: Extract referenced objects from diff headers"
+        },
+        {
+          "line": 608,
+          "comment": "Currently returns empty; should extract referenced objects from diff headers for complete reference tracking."
+        },
+        {
+          "line": 610,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 611,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 612,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 613,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 614,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 615,
+          "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
           "line": 616,
-          "comment": "/ Get current timestamp"
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 617,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 618,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 619,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 620,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 621,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 623,
+          "comment": "ACCEPTANCE CRITERIA:"
         },
         {
           "line": 624,
-          "comment": "/ Get GC statistics"
+          "comment": "- References are extracted from diff headers correctly"
+        },
+        {
+          "line": 625,
+          "comment": "- Parsing handles various diff formats"
+        },
+        {
+          "line": 626,
+          "comment": "- Reference tracking is complete"
+        },
+        {
+          "line": 627,
+          "comment": "- Performance is acceptable"
         },
         {
           "line": 629,
-          "comment": "/ Get reachability information"
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 630,
+          "comment": "- Diff parsing utilities (Required)"
+        },
+        {
+          "line": 631,
+          "comment": "- Header extraction algorithms (Required)"
+        },
+        {
+          "line": 632,
+          "comment": "- Reference tracking infrastructure (Required)"
         },
         {
           "line": 634,
-          "comment": "/ Get grace period information"
+          "comment": "ESTIMATED EFFORT: 4-5 hours (medium confidence)"
+        },
+        {
+          "line": 635,
+          "comment": "PRIORITY: Low"
+        },
+        {
+          "line": 636,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 638,
+          "comment": "GOVERNANCE:"
         },
         {
           "line": 639,
-          "comment": "/ Get configuration"
+          "comment": "- CAWS Tier: 3 (GC enhancement)"
         },
         {
-          "line": 644,
-          "comment": "/ Update configuration"
+          "line": 640,
+          "comment": "- Change Budget: ~100 LOC"
         },
         {
-          "line": 649,
-          "comment": "/ Reset statistics"
+          "line": 641,
+          "comment": "- Reviewer Requirements: Diff parsing expertise"
         },
         {
-          "line": 665,
-          "comment": "/ Result of a GC cycle"
+          "line": 645,
+          "comment": "/ Parse chunk references from a chunk map"
         },
         {
-          "line": 668,
-          "comment": "/ Number of reachable objects"
+          "line": 651,
+          "comment": "Try to deserialize the blob data as chunk references"
         },
         {
-          "line": 670,
-          "comment": "/ Number of unreachable objects"
+          "line": 652,
+          "comment": "The exact format depends on how chunk maps are serialized"
         },
         {
-          "line": 672,
-          "comment": "/ Number of objects in grace period"
+          "line": 666,
+          "comment": "/ Get all objects in the system"
         },
         {
-          "line": 674,
-          "comment": "/ Number of objects packed"
+          "line": 673,
+          "comment": "Create a blob store instance to scan the objects directory"
         },
         {
-          "line": 676,
-          "comment": "/ Bytes freed"
+          "line": 677,
+          "comment": "Walk the objects directory to find all stored objects"
         },
         {
           "line": 678,
-          "comment": "/ Duration in seconds"
+          "comment": "Objects are stored in a sharded directory structure: xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         },
         {
-          "line": 680,
-          "comment": "/ Whether this was a dry run"
-        },
-        {
-          "line": 684,
-          "comment": "/ GC scheduler for automatic GC"
+          "line": 685,
+          "comment": "Extract digest from file path"
         },
         {
           "line": 686,
-          "comment": "/ GC collector"
+          "comment": "Expected path format: .recovery/objects/xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         },
         {
-          "line": 688,
-          "comment": "/ Last GC time"
+          "line": 689,
+          "comment": "BLAKE3 hex is 64 characters"
         },
         {
-          "line": 690,
-          "comment": "/ GC interval"
+          "line": 706,
+          "comment": "/ Get object age in seconds"
         },
         {
-          "line": 695,
-          "comment": "/ Create a new GC scheduler"
+          "line": 708,
+          "comment": "TODO: Implement based on your object store"
         },
         {
-          "line": 704,
-          "comment": "/ Check if GC should run"
+          "line": 709,
+          "comment": "This would return the age of the object in seconds"
         },
         {
-          "line": 711,
-          "comment": "If last_gc is 0 (never run), don't run immediately"
+          "line": 713,
+          "comment": "/ Pack an object"
         },
         {
-          "line": 718,
-          "comment": "/ Run GC if needed"
+          "line": 715,
+          "comment": "TODO: Implement packing logic"
         },
         {
-          "line": 729,
-          "comment": "/ Force GC run"
+          "line": 716,
+          "comment": "This would move the object to a pack file"
         },
         {
-          "line": 736,
+          "line": 720,
+          "comment": "/ Update GC statistics"
+        },
+        {
+          "line": 737,
           "comment": "/ Get current timestamp"
         },
         {
-          "line": 764,
-          "comment": "reachable_objects and unreachable_objects are usize, always >= 0"
+          "line": 745,
+          "comment": "/ Get GC statistics"
         },
         {
-          "line": 772,
-          "comment": "Should not run GC immediately"
+          "line": 750,
+          "comment": "/ Get reachability information"
         },
         {
-          "line": 775,
-          "comment": "Force GC"
+          "line": 755,
+          "comment": "/ Get grace period information"
         },
         {
-          "line": 781,
-          "comment": "reachable_objects is usize, always >= 0"
+          "line": 760,
+          "comment": "/ Get configuration"
+        },
+        {
+          "line": 765,
+          "comment": "/ Update configuration"
+        },
+        {
+          "line": 770,
+          "comment": "/ Reset statistics"
+        },
+        {
+          "line": 786,
+          "comment": "/ Result of a GC cycle"
         },
         {
           "line": 789,
+          "comment": "/ Number of reachable objects"
+        },
+        {
+          "line": 791,
+          "comment": "/ Number of unreachable objects"
+        },
+        {
+          "line": 793,
+          "comment": "/ Number of objects in grace period"
+        },
+        {
+          "line": 795,
+          "comment": "/ Number of objects packed"
+        },
+        {
+          "line": 797,
+          "comment": "/ Bytes freed"
+        },
+        {
+          "line": 799,
+          "comment": "/ Duration in seconds"
+        },
+        {
+          "line": 801,
+          "comment": "/ Whether this was a dry run"
+        },
+        {
+          "line": 805,
+          "comment": "/ GC scheduler for automatic GC"
+        },
+        {
+          "line": 807,
+          "comment": "/ GC collector"
+        },
+        {
+          "line": 809,
+          "comment": "/ Last GC time"
+        },
+        {
+          "line": 811,
+          "comment": "/ GC interval"
+        },
+        {
+          "line": 816,
+          "comment": "/ Create a new GC scheduler"
+        },
+        {
+          "line": 825,
+          "comment": "/ Check if GC should run"
+        },
+        {
+          "line": 832,
+          "comment": "If last_gc is 0 (never run), don't run immediately"
+        },
+        {
+          "line": 839,
+          "comment": "/ Run GC if needed"
+        },
+        {
+          "line": 850,
+          "comment": "/ Force GC run"
+        },
+        {
+          "line": 857,
+          "comment": "/ Get current timestamp"
+        },
+        {
+          "line": 885,
+          "comment": "reachable_objects and unreachable_objects are usize, always >= 0"
+        },
+        {
+          "line": 893,
+          "comment": "Should not run GC immediately"
+        },
+        {
+          "line": 896,
+          "comment": "Force GC"
+        },
+        {
+          "line": 902,
+          "comment": "reachable_objects is usize, always >= 0"
+        },
+        {
+          "line": 910,
           "comment": "Add object to grace period"
         },
         {
-          "line": 792,
+          "line": 913,
           "comment": "Check grace period"
         }
       ]
@@ -125381,9 +126489,9 @@
     "iterations/v3/data-infrastructure/src/rto_rpo_monitor.rs": {
       "file_path": "iterations/v3/data-infrastructure/src/rto_rpo_monitor.rs",
       "language": "rust",
-      "total_comments": 389,
-      "total_lines": 1328,
-      "comment_lines": 389,
+      "total_comments": 468,
+      "total_lines": 1417,
+      "comment_lines": 468,
       "hidden_todos": {
         "188": {
           "comment": "TODO: Implement robust service type parsing from service ID and metadata",
@@ -125571,7 +126679,7 @@
             "confidence": 0.7
           }
         },
-        "750": {
+        "795": {
           "comment": "TODO: Calculate actual uptime percentage",
           "matches": {
             "explicit_todos": [
@@ -125605,7 +126713,7 @@
             "confidence": 0.6
           }
         },
-        "876": {
+        "921": {
           "comment": "TODO: Implement actual recovery metrics collection",
           "matches": {
             "explicit_todos": [
@@ -125639,7 +126747,7 @@
             "confidence": 0.7
           }
         },
-        "1089": {
+        "1178": {
           "comment": "TODO: Map actual measured and objective values from violations",
           "matches": {
             "explicit_todos": [
@@ -126449,786 +127557,1102 @@
         },
         {
           "line": 734,
-          "comment": "Currently uses basic calculation; should implement comprehensive compliance scoring with proper weighting."
+          "comment": "Currently uses basic linear penalty; should implement comprehensive compliance scoring considering violation severity, frequency, and service criticality."
+        },
+        {
+          "line": 736,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 737,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 738,
+          "comment": "[ ] Implement violation severity weighting (critical > high > medium > low)"
+        },
+        {
+          "line": 739,
+          "comment": "[ ] Add violation frequency analysis (recent vs historical)"
+        },
+        {
+          "line": 740,
+          "comment": "[ ] Factor in service criticality and impact assessment"
+        },
+        {
+          "line": 741,
+          "comment": "[ ] Implement time-decay for older violations"
+        },
+        {
+          "line": 742,
+          "comment": "[ ] Add compliance trend analysis (improving vs degrading)"
+        },
+        {
+          "line": 743,
+          "comment": "[ ] Support configurable scoring parameters"
+        },
+        {
+          "line": 744,
+          "comment": "[ ] Add compliance score normalization and bounds checking"
+        },
+        {
+          "line": 745,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 746,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 747,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 748,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 749,
+          "comment": "[ ] Documentation: public API + system behavior"
         },
         {
           "line": 750,
-          "comment": "TODO: Calculate actual uptime percentage"
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
         },
         {
           "line": 751,
-          "comment": "Replace placeholder 99.9% with actual uptime calculation from historical service status data."
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 752,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
           "line": 753,
-          "comment": "COMPLETION CHECKLIST:"
+          "comment": "[ ] Configurability and feature flags defined if relevant"
         },
         {
           "line": 754,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 755,
-          "comment": "[ ] Query historical service status data from monitoring system"
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
         },
         {
           "line": 756,
-          "comment": "[ ] Calculate uptime percentage from availability records"
+          "comment": "ACCEPTANCE CRITERIA:"
         },
         {
           "line": 757,
-          "comment": "[ ] Handle missing data with appropriate statistical fallbacks"
+          "comment": "- Compliance scores reflect actual violation impact and severity"
         },
         {
           "line": 758,
-          "comment": "[ ] Implement time-window based uptime calculations"
+          "comment": "- Critical violations have higher penalty than minor ones"
         },
         {
           "line": 759,
-          "comment": "[ ] Add data validation and error handling"
+          "comment": "- Recent violations are weighted more than historical ones"
         },
         {
           "line": 760,
-          "comment": "[ ] API/data structures defined & stable"
+          "comment": "- Service criticality influences scoring appropriately"
         },
         {
           "line": 761,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+          "comment": "- Scores are normalized to expected range (0-100)"
         },
         {
           "line": 762,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+          "comment": "- Performance meets SLA for real-time calculation"
         },
         {
           "line": 763,
-          "comment": "[ ] Integration tests for external systems/contracts"
+          "comment": "- Edge cases (no violations, all violations) handled correctly"
         },
         {
           "line": 764,
-          "comment": "[ ] Documentation: public API + system behavior"
-        },
-        {
-          "line": 765,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+          "comment": "- Integration tests validate scoring against business rules"
         },
         {
           "line": 766,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+          "comment": "DEPENDENCIES:"
         },
         {
           "line": 767,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+          "comment": "- Violation severity classification (Required)"
         },
         {
           "line": 768,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
+          "comment": "- Service criticality metadata (Required)"
         },
         {
           "line": 769,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+          "comment": "- Time-based weighting functions (Optional)"
         },
         {
-          "line": 771,
-          "comment": "ACCEPTANCE CRITERIA:"
+          "line": 770,
+          "comment": "- Statistical analysis utilities (Optional)"
         },
         {
           "line": 772,
-          "comment": "- Uptime percentage reflects actual service availability"
+          "comment": "ESTIMATED EFFORT: 8-12 hours (medium confidence)"
         },
         {
           "line": 773,
-          "comment": "- Missing data scenarios use reasonable statistical defaults"
+          "comment": "PRIORITY: Medium"
         },
         {
           "line": 774,
-          "comment": "- Calculation performance meets monitoring SLA (<50ms per service)"
+          "comment": "BLOCKING: No"
         },
         {
-          "line": 775,
-          "comment": "- Integration tests validate end-to-end monitoring system communication"
+          "line": 776,
+          "comment": "GOVERNANCE:"
         },
         {
           "line": 777,
-          "comment": "DEPENDENCIES:"
+          "comment": "- CAWS Tier: 2 (compliance monitoring enhancement)"
         },
         {
           "line": 778,
-          "comment": "- Service monitoring system integration (Required)"
+          "comment": "- Change Budget: ~200 LOC"
         },
         {
           "line": 779,
-          "comment": "- Historical availability data storage (Required)"
+          "comment": "- Reviewer Requirements: Compliance and risk assessment expertise"
         },
         {
-          "line": 780,
-          "comment": "- Statistical calculation utilities (Required)"
+          "line": 795,
+          "comment": "TODO: Calculate actual uptime percentage"
         },
         {
-          "line": 781,
-          "comment": "- Error handling framework (Required)"
+          "line": 796,
+          "comment": "Replace placeholder 99.9% with actual uptime calculation from historical service status data."
         },
         {
-          "line": 782,
-          "comment": "- Test infrastructure for mock monitoring data (Optional)"
-        },
-        {
-          "line": 784,
-          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
-        },
-        {
-          "line": 785,
-          "comment": "PRIORITY: Medium"
-        },
-        {
-          "line": 786,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 788,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 789,
-          "comment": "- CAWS Tier: 2 (monitoring metrics accuracy)"
-        },
-        {
-          "line": 790,
-          "comment": "- Change Budget: ~150 LOC"
-        },
-        {
-          "line": 791,
-          "comment": "- Reviewer Requirements: Service monitoring and uptime calculation expertise"
-        },
-        {
-          "line": 857,
-          "comment": "/ Compliance report for monitoring dashboards"
-        },
-        {
-          "line": 874,
-          "comment": "/ Internal method to get recovery metrics"
-        },
-        {
-          "line": 876,
-          "comment": "TODO: Implement actual recovery metrics collection"
-        },
-        {
-          "line": 877,
-          "comment": "Currently returns default metrics; should collect actual recovery metrics from system state."
-        },
-        {
-          "line": 893,
-          "comment": "/ Generate compliance report for monitoring"
-        },
-        {
-          "line": 906,
-          "comment": "Replace binary 100%/95% calculation with actual compliance percentage based on violation severity and frequency."
-        },
-        {
-          "line": 908,
+          "line": 798,
           "comment": "COMPLETION CHECKLIST:"
         },
         {
-          "line": 909,
+          "line": 799,
           "comment": "[ ] Primary functionality implemented"
         },
         {
-          "line": 910,
-          "comment": "[ ] Implement compliance percentage calculation based on violation metrics"
+          "line": 800,
+          "comment": "[ ] Query historical service status data from monitoring system"
         },
         {
-          "line": 911,
-          "comment": "[ ] Weight compliance by violation severity (critical vs warning)"
+          "line": 801,
+          "comment": "[ ] Calculate uptime percentage from availability records"
         },
         {
-          "line": 912,
-          "comment": "[ ] Consider violation frequency and recency in calculation"
+          "line": 802,
+          "comment": "[ ] Handle missing data with appropriate statistical fallbacks"
         },
         {
-          "line": 913,
-          "comment": "[ ] Handle edge cases (no violations, all violations)"
+          "line": 803,
+          "comment": "[ ] Implement time-window based uptime calculations"
         },
         {
-          "line": 914,
-          "comment": "[ ] Add statistical validation of compliance percentages"
-        },
-        {
-          "line": 915,
-          "comment": "[ ] API/data structures defined & stable"
-        },
-        {
-          "line": 916,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
-        },
-        {
-          "line": 917,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
-        },
-        {
-          "line": 918,
-          "comment": "[ ] Integration tests for external systems/contracts"
-        },
-        {
-          "line": 919,
-          "comment": "[ ] Documentation: public API + system behavior"
-        },
-        {
-          "line": 920,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
-        },
-        {
-          "line": 921,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
-        },
-        {
-          "line": 922,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
-        },
-        {
-          "line": 923,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
-        },
-        {
-          "line": 924,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 926,
-          "comment": "ACCEPTANCE CRITERIA:"
-        },
-        {
-          "line": 927,
-          "comment": "- Compliance percentage reflects actual system reliability"
-        },
-        {
-          "line": 928,
-          "comment": "- Violation severity properly weights the calculation"
-        },
-        {
-          "line": 929,
-          "comment": "- Recent violations have higher impact than old ones"
-        },
-        {
-          "line": 930,
-          "comment": "- Calculation performance is acceptable (<10ms per status)"
-        },
-        {
-          "line": 931,
-          "comment": "- Integration tests validate against known compliance scenarios"
-        },
-        {
-          "line": 933,
-          "comment": "DEPENDENCIES:"
-        },
-        {
-          "line": 934,
-          "comment": "- Violation severity classification system (Required)"
-        },
-        {
-          "line": 935,
-          "comment": "- Time-weighted calculation utilities (Required)"
-        },
-        {
-          "line": 936,
-          "comment": "- Statistical aggregation functions (Required)"
-        },
-        {
-          "line": 937,
-          "comment": "- Test data with various violation patterns (Required)"
-        },
-        {
-          "line": 939,
-          "comment": "ESTIMATED EFFORT: 3-5 hours (medium confidence)"
-        },
-        {
-          "line": 940,
-          "comment": "PRIORITY: Medium"
-        },
-        {
-          "line": 941,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 943,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 944,
-          "comment": "- CAWS Tier: 2 (compliance metrics accuracy)"
-        },
-        {
-          "line": 945,
-          "comment": "- Change Budget: ~100 LOC"
-        },
-        {
-          "line": 946,
-          "comment": "- Reviewer Requirements: Statistical analysis and compliance metrics expertise"
-        },
-        {
-          "line": 956,
-          "comment": "Replace placeholder calculation with actual maximum recovery time from historical incident data."
-        },
-        {
-          "line": 958,
-          "comment": "COMPLETION CHECKLIST:"
-        },
-        {
-          "line": 959,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 960,
-          "comment": "[ ] Query historical incident data for recovery times"
-        },
-        {
-          "line": 961,
-          "comment": "[ ] Calculate true maximum recovery time across all incidents"
-        },
-        {
-          "line": 962,
-          "comment": "[ ] Handle missing or incomplete incident data"
-        },
-        {
-          "line": 963,
-          "comment": "[ ] Implement statistical outlier detection for anomalous recovery times"
-        },
-        {
-          "line": 964,
-          "comment": "[ ] Add time-window filtering for relevant incident data"
-        },
-        {
-          "line": 965,
-          "comment": "[ ] API/data structures defined & stable"
-        },
-        {
-          "line": 966,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
-        },
-        {
-          "line": 967,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
-        },
-        {
-          "line": 968,
-          "comment": "[ ] Integration tests for external systems/contracts"
-        },
-        {
-          "line": 969,
-          "comment": "[ ] Documentation: public API + system behavior"
-        },
-        {
-          "line": 970,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
-        },
-        {
-          "line": 971,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
-        },
-        {
-          "line": 972,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
-        },
-        {
-          "line": 973,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
-        },
-        {
-          "line": 974,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 976,
-          "comment": "ACCEPTANCE CRITERIA:"
-        },
-        {
-          "line": 977,
-          "comment": "- Maximum recovery time reflects actual worst-case incidents"
-        },
-        {
-          "line": 978,
-          "comment": "- Outlier detection prevents anomalous data from skewing metrics"
-        },
-        {
-          "line": 979,
-          "comment": "- Time-window filtering ensures relevance of historical data"
-        },
-        {
-          "line": 980,
-          "comment": "- Missing data scenarios handled with statistical fallbacks"
-        },
-        {
-          "line": 981,
-          "comment": "- Integration tests validate against known incident recovery times"
-        },
-        {
-          "line": 983,
-          "comment": "DEPENDENCIES:"
-        },
-        {
-          "line": 984,
-          "comment": "- Incident tracking system integration (Required)"
-        },
-        {
-          "line": 985,
-          "comment": "- Recovery time logging system (Required)"
-        },
-        {
-          "line": 986,
-          "comment": "- Statistical outlier detection utilities (Required)"
-        },
-        {
-          "line": 987,
-          "comment": "- Time-series filtering functions (Required)"
-        },
-        {
-          "line": 988,
-          "comment": "- Test data with various incident scenarios (Required)"
-        },
-        {
-          "line": 990,
-          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
-        },
-        {
-          "line": 991,
-          "comment": "PRIORITY: Medium"
-        },
-        {
-          "line": 992,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 994,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 995,
-          "comment": "- CAWS Tier: 2 (recovery metrics accuracy)"
-        },
-        {
-          "line": 996,
-          "comment": "- Change Budget: ~150 LOC"
-        },
-        {
-          "line": 997,
-          "comment": "- Reviewer Requirements: Incident management and statistical analysis expertise"
-        },
-        {
-          "line": 1000,
-          "comment": "Replace hardcoded 99.9% with actual service availability calculation from uptime and incident data."
-        },
-        {
-          "line": 1002,
-          "comment": "COMPLETION CHECKLIST:"
-        },
-        {
-          "line": 1003,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 1004,
-          "comment": "[ ] Query service uptime data from monitoring system"
-        },
-        {
-          "line": 1005,
-          "comment": "[ ] Calculate availability percentage from incident and uptime records"
-        },
-        {
-          "line": 1006,
-          "comment": "[ ] Handle scheduled maintenance windows appropriately"
-        },
-        {
-          "line": 1007,
-          "comment": "[ ] Implement time-weighted availability calculations"
-        },
-        {
-          "line": 1008,
-          "comment": "[ ] Add statistical confidence intervals for availability metrics"
-        },
-        {
-          "line": 1009,
-          "comment": "[ ] API/data structures defined & stable"
-        },
-        {
-          "line": 1010,
-          "comment": "[ ] Error handling + validation aligned with error taxonomy"
-        },
-        {
-          "line": 1011,
-          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
-        },
-        {
-          "line": 1012,
-          "comment": "[ ] Integration tests for external systems/contracts"
-        },
-        {
-          "line": 1013,
-          "comment": "[ ] Documentation: public API + system behavior"
-        },
-        {
-          "line": 1014,
-          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
-        },
-        {
-          "line": 1015,
-          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
-        },
-        {
-          "line": 1016,
-          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
-        },
-        {
-          "line": 1017,
-          "comment": "[ ] Configurability and feature flags defined if relevant"
-        },
-        {
-          "line": 1018,
-          "comment": "[ ] Failure-mode cards documented (degradation paths)"
-        },
-        {
-          "line": 1020,
-          "comment": "ACCEPTANCE CRITERIA:"
-        },
-        {
-          "line": 1021,
-          "comment": "- Availability percentage reflects actual service reliability"
-        },
-        {
-          "line": 1022,
-          "comment": "- Scheduled maintenance is properly accounted for"
-        },
-        {
-          "line": 1023,
-          "comment": "- Time-weighted calculations prioritize recent availability"
-        },
-        {
-          "line": 1024,
-          "comment": "- Statistical confidence provides uncertainty quantification"
-        },
-        {
-          "line": 1025,
-          "comment": "- Integration tests validate against known availability scenarios"
-        },
-        {
-          "line": 1027,
-          "comment": "DEPENDENCIES:"
-        },
-        {
-          "line": 1028,
-          "comment": "- Service monitoring system integration (Required)"
-        },
-        {
-          "line": 1029,
-          "comment": "- Incident tracking system (Required)"
-        },
-        {
-          "line": 1030,
-          "comment": "- Scheduled maintenance tracking (Required)"
-        },
-        {
-          "line": 1031,
-          "comment": "- Time-weighted statistical utilities (Required)"
-        },
-        {
-          "line": 1032,
-          "comment": "- Test data with various availability scenarios (Required)"
-        },
-        {
-          "line": 1034,
-          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
-        },
-        {
-          "line": 1035,
-          "comment": "PRIORITY: Medium"
-        },
-        {
-          "line": 1036,
-          "comment": "BLOCKING: No"
-        },
-        {
-          "line": 1038,
-          "comment": "GOVERNANCE:"
-        },
-        {
-          "line": 1039,
-          "comment": "- CAWS Tier: 2 (availability metrics accuracy)"
-        },
-        {
-          "line": 1040,
-          "comment": "- Change Budget: ~150 LOC"
-        },
-        {
-          "line": 1041,
-          "comment": "- Reviewer Requirements: Service monitoring and availability calculation expertise"
-        },
-        {
-          "line": 1089,
-          "comment": "TODO: Map actual measured and objective values from violations"
-        },
-        {
-          "line": 1090,
-          "comment": "Replace placeholder 0.0 values with actual measured and objective values extracted from violation data."
-        },
-        {
-          "line": 1092,
-          "comment": "COMPLETION CHECKLIST:"
-        },
-        {
-          "line": 1093,
-          "comment": "[ ] Primary functionality implemented"
-        },
-        {
-          "line": 1094,
-          "comment": "[ ] Extract measured value from violation data structure"
-        },
-        {
-          "line": 1095,
-          "comment": "[ ] Extract objective value from service objectives configuration"
-        },
-        {
-          "line": 1096,
-          "comment": "[ ] Handle missing or incomplete violation data gracefully"
-        },
-        {
-          "line": 1097,
-          "comment": "[ ] Implement proper type conversion for measured/objective values"
-        },
-        {
-          "line": 1098,
+          "line": 804,
           "comment": "[ ] Add data validation and error handling"
         },
         {
-          "line": 1099,
+          "line": 805,
           "comment": "[ ] API/data structures defined & stable"
         },
         {
-          "line": 1100,
+          "line": 806,
           "comment": "[ ] Error handling + validation aligned with error taxonomy"
         },
         {
-          "line": 1101,
+          "line": 807,
           "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
         },
         {
-          "line": 1102,
+          "line": 808,
           "comment": "[ ] Integration tests for external systems/contracts"
         },
         {
-          "line": 1103,
+          "line": 809,
           "comment": "[ ] Documentation: public API + system behavior"
         },
         {
-          "line": 1104,
+          "line": 810,
           "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
         },
         {
-          "line": 1105,
+          "line": 811,
           "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
         },
         {
-          "line": 1106,
+          "line": 812,
           "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
         },
         {
-          "line": 1107,
+          "line": 813,
           "comment": "[ ] Configurability and feature flags defined if relevant"
         },
         {
-          "line": 1108,
+          "line": 814,
           "comment": "[ ] Failure-mode cards documented (degradation paths)"
         },
         {
-          "line": 1110,
+          "line": 816,
           "comment": "ACCEPTANCE CRITERIA:"
         },
         {
-          "line": 1111,
-          "comment": "- Measured and objective values accurately reflect violation data"
+          "line": 817,
+          "comment": "- Uptime percentage reflects actual service availability"
         },
         {
-          "line": 1112,
-          "comment": "- Missing data scenarios handled with appropriate fallbacks"
+          "line": 818,
+          "comment": "- Missing data scenarios use reasonable statistical defaults"
         },
         {
-          "line": 1113,
-          "comment": "- Type conversions preserve data integrity"
+          "line": 819,
+          "comment": "- Calculation performance meets monitoring SLA (<50ms per service)"
         },
         {
-          "line": 1114,
-          "comment": "- Performance overhead is minimal (<5ms per violation)"
+          "line": 820,
+          "comment": "- Integration tests validate end-to-end monitoring system communication"
         },
         {
-          "line": 1115,
-          "comment": "- Integration tests validate end-to-end data mapping"
-        },
-        {
-          "line": 1117,
+          "line": 822,
           "comment": "DEPENDENCIES:"
         },
         {
-          "line": 1118,
-          "comment": "- Violation data structure access (Required)"
+          "line": 823,
+          "comment": "- Service monitoring system integration (Required)"
         },
         {
-          "line": 1119,
-          "comment": "- Service objectives configuration (Required)"
+          "line": 824,
+          "comment": "- Historical availability data storage (Required)"
         },
         {
-          "line": 1120,
-          "comment": "- Type conversion utilities (Required)"
+          "line": 825,
+          "comment": "- Statistical calculation utilities (Required)"
         },
         {
-          "line": 1121,
+          "line": 826,
           "comment": "- Error handling framework (Required)"
         },
         {
-          "line": 1122,
-          "comment": "- Test data with various violation scenarios (Required)"
+          "line": 827,
+          "comment": "- Test infrastructure for mock monitoring data (Optional)"
         },
         {
-          "line": 1124,
-          "comment": "ESTIMATED EFFORT: 3-5 hours (medium confidence)"
+          "line": 829,
+          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
         },
         {
-          "line": 1125,
+          "line": 830,
           "comment": "PRIORITY: Medium"
         },
         {
-          "line": 1126,
+          "line": 831,
           "comment": "BLOCKING: No"
         },
         {
-          "line": 1128,
+          "line": 833,
           "comment": "GOVERNANCE:"
         },
         {
-          "line": 1129,
-          "comment": "- CAWS Tier: 2 (violation data accuracy)"
+          "line": 834,
+          "comment": "- CAWS Tier: 2 (monitoring metrics accuracy)"
         },
         {
-          "line": 1130,
+          "line": 835,
+          "comment": "- Change Budget: ~150 LOC"
+        },
+        {
+          "line": 836,
+          "comment": "- Reviewer Requirements: Service monitoring and uptime calculation expertise"
+        },
+        {
+          "line": 902,
+          "comment": "/ Compliance report for monitoring dashboards"
+        },
+        {
+          "line": 919,
+          "comment": "/ Internal method to get recovery metrics"
+        },
+        {
+          "line": 921,
+          "comment": "TODO: Implement actual recovery metrics collection"
+        },
+        {
+          "line": 922,
+          "comment": "Currently returns hardcoded default values; should collect actual recovery metrics from system monitoring, incident tracking, and compliance data."
+        },
+        {
+          "line": 924,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 925,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 926,
+          "comment": "[ ] Query incident tracking system for recovery events"
+        },
+        {
+          "line": 927,
+          "comment": "[ ] Collect RTO/RPO measurements from actual recovery operations"
+        },
+        {
+          "line": 928,
+          "comment": "[ ] Calculate compliance rates from historical data"
+        },
+        {
+          "line": 929,
+          "comment": "[ ] Aggregate metrics across different time periods"
+        },
+        {
+          "line": 930,
+          "comment": "[ ] Handle missing data with appropriate statistical fallbacks"
+        },
+        {
+          "line": 931,
+          "comment": "[ ] Implement data validation and error handling"
+        },
+        {
+          "line": 932,
+          "comment": "[ ] Add performance monitoring for metrics collection"
+        },
+        {
+          "line": 933,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 934,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 935,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 936,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 937,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 938,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 939,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 940,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 941,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 942,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 944,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 945,
+          "comment": "- Recovery metrics reflect actual system performance data"
+        },
+        {
+          "line": 946,
+          "comment": "- RTO/RPO measurements are based on real recovery operations"
+        },
+        {
+          "line": 947,
+          "comment": "- Compliance rates are calculated from historical incident data"
+        },
+        {
+          "line": 948,
+          "comment": "- Time period aggregations provide accurate trending information"
+        },
+        {
+          "line": 949,
+          "comment": "- Missing data scenarios are handled with reasonable defaults"
+        },
+        {
+          "line": 950,
+          "comment": "- Performance meets SLA for metrics collection and calculation"
+        },
+        {
+          "line": 951,
+          "comment": "- Integration tests validate metrics against operational data"
+        },
+        {
+          "line": 953,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 954,
+          "comment": "- Incident tracking system integration (Required)"
+        },
+        {
+          "line": 955,
+          "comment": "- Recovery operation monitoring (Required)"
+        },
+        {
+          "line": 956,
+          "comment": "- Historical metrics storage (Required)"
+        },
+        {
+          "line": 957,
+          "comment": "- Statistical calculation utilities (Optional)"
+        },
+        {
+          "line": 959,
+          "comment": "ESTIMATED EFFORT: 10-14 hours (medium confidence)"
+        },
+        {
+          "line": 960,
+          "comment": "PRIORITY: High"
+        },
+        {
+          "line": 961,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 963,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 964,
+          "comment": "- CAWS Tier: 1 (core reliability monitoring)"
+        },
+        {
+          "line": 965,
+          "comment": "- Change Budget: ~250 LOC"
+        },
+        {
+          "line": 966,
+          "comment": "- Reviewer Requirements: Reliability engineering and incident response expertise"
+        },
+        {
+          "line": 982,
+          "comment": "/ Generate compliance report for monitoring"
+        },
+        {
+          "line": 995,
+          "comment": "Replace binary 100%/95% calculation with actual compliance percentage based on violation severity and frequency."
+        },
+        {
+          "line": 997,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 998,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 999,
+          "comment": "[ ] Implement compliance percentage calculation based on violation metrics"
+        },
+        {
+          "line": 1000,
+          "comment": "[ ] Weight compliance by violation severity (critical vs warning)"
+        },
+        {
+          "line": 1001,
+          "comment": "[ ] Consider violation frequency and recency in calculation"
+        },
+        {
+          "line": 1002,
+          "comment": "[ ] Handle edge cases (no violations, all violations)"
+        },
+        {
+          "line": 1003,
+          "comment": "[ ] Add statistical validation of compliance percentages"
+        },
+        {
+          "line": 1004,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 1005,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 1006,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 1007,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 1008,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 1009,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 1010,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 1011,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 1012,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 1013,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 1015,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 1016,
+          "comment": "- Compliance percentage reflects actual system reliability"
+        },
+        {
+          "line": 1017,
+          "comment": "- Violation severity properly weights the calculation"
+        },
+        {
+          "line": 1018,
+          "comment": "- Recent violations have higher impact than old ones"
+        },
+        {
+          "line": 1019,
+          "comment": "- Calculation performance is acceptable (<10ms per status)"
+        },
+        {
+          "line": 1020,
+          "comment": "- Integration tests validate against known compliance scenarios"
+        },
+        {
+          "line": 1022,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 1023,
+          "comment": "- Violation severity classification system (Required)"
+        },
+        {
+          "line": 1024,
+          "comment": "- Time-weighted calculation utilities (Required)"
+        },
+        {
+          "line": 1025,
+          "comment": "- Statistical aggregation functions (Required)"
+        },
+        {
+          "line": 1026,
+          "comment": "- Test data with various violation patterns (Required)"
+        },
+        {
+          "line": 1028,
+          "comment": "ESTIMATED EFFORT: 3-5 hours (medium confidence)"
+        },
+        {
+          "line": 1029,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 1030,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 1032,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 1033,
+          "comment": "- CAWS Tier: 2 (compliance metrics accuracy)"
+        },
+        {
+          "line": 1034,
           "comment": "- Change Budget: ~100 LOC"
         },
         {
-          "line": 1131,
-          "comment": "- Reviewer Requirements: Data mapping and type conversion expertise"
+          "line": 1035,
+          "comment": "- Reviewer Requirements: Statistical analysis and compliance metrics expertise"
+        },
+        {
+          "line": 1045,
+          "comment": "Replace placeholder calculation with actual maximum recovery time from historical incident data."
+        },
+        {
+          "line": 1047,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 1048,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 1049,
+          "comment": "[ ] Query historical incident data for recovery times"
+        },
+        {
+          "line": 1050,
+          "comment": "[ ] Calculate true maximum recovery time across all incidents"
+        },
+        {
+          "line": 1051,
+          "comment": "[ ] Handle missing or incomplete incident data"
+        },
+        {
+          "line": 1052,
+          "comment": "[ ] Implement statistical outlier detection for anomalous recovery times"
+        },
+        {
+          "line": 1053,
+          "comment": "[ ] Add time-window filtering for relevant incident data"
+        },
+        {
+          "line": 1054,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 1055,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 1056,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 1057,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 1058,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 1059,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 1060,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 1061,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 1062,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 1063,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 1065,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 1066,
+          "comment": "- Maximum recovery time reflects actual worst-case incidents"
+        },
+        {
+          "line": 1067,
+          "comment": "- Outlier detection prevents anomalous data from skewing metrics"
+        },
+        {
+          "line": 1068,
+          "comment": "- Time-window filtering ensures relevance of historical data"
+        },
+        {
+          "line": 1069,
+          "comment": "- Missing data scenarios handled with statistical fallbacks"
+        },
+        {
+          "line": 1070,
+          "comment": "- Integration tests validate against known incident recovery times"
+        },
+        {
+          "line": 1072,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 1073,
+          "comment": "- Incident tracking system integration (Required)"
+        },
+        {
+          "line": 1074,
+          "comment": "- Recovery time logging system (Required)"
+        },
+        {
+          "line": 1075,
+          "comment": "- Statistical outlier detection utilities (Required)"
+        },
+        {
+          "line": 1076,
+          "comment": "- Time-series filtering functions (Required)"
+        },
+        {
+          "line": 1077,
+          "comment": "- Test data with various incident scenarios (Required)"
+        },
+        {
+          "line": 1079,
+          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
+        },
+        {
+          "line": 1080,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 1081,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 1083,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 1084,
+          "comment": "- CAWS Tier: 2 (recovery metrics accuracy)"
+        },
+        {
+          "line": 1085,
+          "comment": "- Change Budget: ~150 LOC"
+        },
+        {
+          "line": 1086,
+          "comment": "- Reviewer Requirements: Incident management and statistical analysis expertise"
+        },
+        {
+          "line": 1089,
+          "comment": "Replace hardcoded 99.9% with actual service availability calculation from uptime and incident data."
+        },
+        {
+          "line": 1091,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 1092,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 1093,
+          "comment": "[ ] Query service uptime data from monitoring system"
+        },
+        {
+          "line": 1094,
+          "comment": "[ ] Calculate availability percentage from incident and uptime records"
+        },
+        {
+          "line": 1095,
+          "comment": "[ ] Handle scheduled maintenance windows appropriately"
+        },
+        {
+          "line": 1096,
+          "comment": "[ ] Implement time-weighted availability calculations"
+        },
+        {
+          "line": 1097,
+          "comment": "[ ] Add statistical confidence intervals for availability metrics"
+        },
+        {
+          "line": 1098,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 1099,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 1100,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 1101,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 1102,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 1103,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 1104,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 1105,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 1106,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 1107,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 1109,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 1110,
+          "comment": "- Availability percentage reflects actual service reliability"
+        },
+        {
+          "line": 1111,
+          "comment": "- Scheduled maintenance is properly accounted for"
+        },
+        {
+          "line": 1112,
+          "comment": "- Time-weighted calculations prioritize recent availability"
+        },
+        {
+          "line": 1113,
+          "comment": "- Statistical confidence provides uncertainty quantification"
+        },
+        {
+          "line": 1114,
+          "comment": "- Integration tests validate against known availability scenarios"
+        },
+        {
+          "line": 1116,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 1117,
+          "comment": "- Service monitoring system integration (Required)"
+        },
+        {
+          "line": 1118,
+          "comment": "- Incident tracking system (Required)"
+        },
+        {
+          "line": 1119,
+          "comment": "- Scheduled maintenance tracking (Required)"
+        },
+        {
+          "line": 1120,
+          "comment": "- Time-weighted statistical utilities (Required)"
+        },
+        {
+          "line": 1121,
+          "comment": "- Test data with various availability scenarios (Required)"
+        },
+        {
+          "line": 1123,
+          "comment": "ESTIMATED EFFORT: 4-6 hours (medium confidence)"
+        },
+        {
+          "line": 1124,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 1125,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 1127,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 1128,
+          "comment": "- CAWS Tier: 2 (availability metrics accuracy)"
+        },
+        {
+          "line": 1129,
+          "comment": "- Change Budget: ~150 LOC"
+        },
+        {
+          "line": 1130,
+          "comment": "- Reviewer Requirements: Service monitoring and availability calculation expertise"
+        },
+        {
+          "line": 1178,
+          "comment": "TODO: Map actual measured and objective values from violations"
         },
         {
           "line": 1179,
+          "comment": "Replace placeholder 0.0 values with actual measured and objective values extracted from violation data."
+        },
+        {
+          "line": 1181,
+          "comment": "COMPLETION CHECKLIST:"
+        },
+        {
+          "line": 1182,
+          "comment": "[ ] Primary functionality implemented"
+        },
+        {
+          "line": 1183,
+          "comment": "[ ] Extract measured value from violation data structure"
+        },
+        {
+          "line": 1184,
+          "comment": "[ ] Extract objective value from service objectives configuration"
+        },
+        {
+          "line": 1185,
+          "comment": "[ ] Handle missing or incomplete violation data gracefully"
+        },
+        {
+          "line": 1186,
+          "comment": "[ ] Implement proper type conversion for measured/objective values"
+        },
+        {
+          "line": 1187,
+          "comment": "[ ] Add data validation and error handling"
+        },
+        {
+          "line": 1188,
+          "comment": "[ ] API/data structures defined & stable"
+        },
+        {
+          "line": 1189,
+          "comment": "[ ] Error handling + validation aligned with error taxonomy"
+        },
+        {
+          "line": 1190,
+          "comment": "[ ] Tests: Unit \u226580% branch coverage (\u226550% mutation if enabled)"
+        },
+        {
+          "line": 1191,
+          "comment": "[ ] Integration tests for external systems/contracts"
+        },
+        {
+          "line": 1192,
+          "comment": "[ ] Documentation: public API + system behavior"
+        },
+        {
+          "line": 1193,
+          "comment": "[ ] Performance/profiled against SLA (CPU/mem/latency throughput)"
+        },
+        {
+          "line": 1194,
+          "comment": "[ ] Security posture reviewed (inputs, authz, sandboxing)"
+        },
+        {
+          "line": 1195,
+          "comment": "[ ] Observability: logs (debug), metrics (SLO-aligned), tracing"
+        },
+        {
+          "line": 1196,
+          "comment": "[ ] Configurability and feature flags defined if relevant"
+        },
+        {
+          "line": 1197,
+          "comment": "[ ] Failure-mode cards documented (degradation paths)"
+        },
+        {
+          "line": 1199,
+          "comment": "ACCEPTANCE CRITERIA:"
+        },
+        {
+          "line": 1200,
+          "comment": "- Measured and objective values accurately reflect violation data"
+        },
+        {
+          "line": 1201,
+          "comment": "- Missing data scenarios handled with appropriate fallbacks"
+        },
+        {
+          "line": 1202,
+          "comment": "- Type conversions preserve data integrity"
+        },
+        {
+          "line": 1203,
+          "comment": "- Performance overhead is minimal (<5ms per violation)"
+        },
+        {
+          "line": 1204,
+          "comment": "- Integration tests validate end-to-end data mapping"
+        },
+        {
+          "line": 1206,
+          "comment": "DEPENDENCIES:"
+        },
+        {
+          "line": 1207,
+          "comment": "- Violation data structure access (Required)"
+        },
+        {
+          "line": 1208,
+          "comment": "- Service objectives configuration (Required)"
+        },
+        {
+          "line": 1209,
+          "comment": "- Type conversion utilities (Required)"
+        },
+        {
+          "line": 1210,
+          "comment": "- Error handling framework (Required)"
+        },
+        {
+          "line": 1211,
+          "comment": "- Test data with various violation scenarios (Required)"
+        },
+        {
+          "line": 1213,
+          "comment": "ESTIMATED EFFORT: 3-5 hours (medium confidence)"
+        },
+        {
+          "line": 1214,
+          "comment": "PRIORITY: Medium"
+        },
+        {
+          "line": 1215,
+          "comment": "BLOCKING: No"
+        },
+        {
+          "line": 1217,
+          "comment": "GOVERNANCE:"
+        },
+        {
+          "line": 1218,
+          "comment": "- CAWS Tier: 2 (violation data accuracy)"
+        },
+        {
+          "line": 1219,
+          "comment": "- Change Budget: ~100 LOC"
+        },
+        {
+          "line": 1220,
+          "comment": "- Reviewer Requirements: Data mapping and type conversion expertise"
+        },
+        {
+          "line": 1268,
           "comment": "Generate alerts based on compliance status"
         },
         {
-          "line": 1265,
+          "line": 1354,
           "comment": "/ Check RPO compliance by querying WAL log records for last recovery point"
         },
         {
-          "line": 1276,
+          "line": 1365,
           "comment": "/ Get time since last backup by querying WAL log records"
         },
         {
-          "line": 1285,
+          "line": 1374,
           "comment": "Query WAL log records for the most recent recorded_at timestamp"
         },
         {
-          "line": 1286,
+          "line": 1375,
           "comment": "This represents the last point-in-time we can recover to"
         }
       ]
@@ -222618,7 +224042,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 260,
+        "line": 298,
         "comment": "TODO: Implement real final relevance calculation",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -222630,7 +224054,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 288,
+        "line": 365,
         "comment": "TODO: Modify relevance score based on boosting criteria",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -222642,7 +224066,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 323,
+        "line": 400,
         "comment": "Temporary: mark boosting until relevance score modification is implemented",
         "patterns": [
           "\\bTEMPORARY\\b.*?:.*?(implement|fix|replace|complete|add)"
@@ -222653,7 +224077,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 353,
+        "line": 430,
         "comment": "TODO: Implement thread-safe cache statistics tracking",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -222665,7 +224089,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 388,
+        "line": 465,
         "comment": "Temporary: basic implementation until thread-safe tracking is implemented",
         "patterns": [
           "\\bTEMPORARY\\b.*?:.*?(implement|fix|replace|complete|add)"
@@ -222676,7 +224100,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 393,
+        "line": 470,
         "comment": "TODO: Implement real cache hit rate calculation",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -222760,7 +224184,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 404,
+        "line": 439,
         "comment": "For now, deduplication_savings is tracked during consolidation runs via ConsolidationResult.",
         "patterns": [
           "\\bfor\\s+now\\b(?!(_|\\.|anal|\\sanal|s))"
@@ -222771,7 +224195,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 409,
+        "line": 444,
         "comment": "For now, we'll use 0 for active_clusters and total_summaries since they require cluster storage",
         "patterns": [
           "\\bfor\\s+now\\b(?!(_|\\.|anal|\\sanal|s))"
@@ -222782,7 +224206,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 444,
+        "line": 479,
         "comment": "TODO: Implement cluster rebuilding when cluster storage is available",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -222794,7 +224218,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 462,
+        "line": 539,
         "comment": "TODO: Implement cluster retrieval when cluster storage is available",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223607,7 +225031,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 232,
+        "line": 273,
         "comment": "TODO: Implement object reference retrieval from object store",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223619,7 +225043,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 251,
+        "line": 332,
         "comment": "TODO: Implement object enumeration from object store",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223631,7 +225055,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 397,
+        "line": 518,
         "comment": "TODO: Parse internal blob references for complete reference tracking",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223643,7 +225067,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 486,
+        "line": 607,
         "comment": "TODO: Extract referenced objects from diff headers",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223655,7 +225079,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 587,
+        "line": 708,
         "comment": "TODO: Implement based on your object store",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -223667,7 +225091,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 594,
+        "line": 715,
         "comment": "TODO: Implement packing logic",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -226893,7 +228317,7 @@
       {
         "file": "iterations/v3/data-infrastructure/src/rto_rpo_monitor.rs",
         "language": "rust",
-        "line": 750,
+        "line": 795,
         "comment": "TODO: Calculate actual uptime percentage",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -226905,7 +228329,7 @@
       {
         "file": "iterations/v3/data-infrastructure/src/rto_rpo_monitor.rs",
         "language": "rust",
-        "line": 876,
+        "line": 921,
         "comment": "TODO: Implement actual recovery metrics collection",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -226917,7 +228341,7 @@
       {
         "file": "iterations/v3/data-infrastructure/src/rto_rpo_monitor.rs",
         "language": "rust",
-        "line": 1089,
+        "line": 1178,
         "comment": "TODO: Map actual measured and objective values from violations",
         "patterns": [
           "\\bTODO\\b.*?:",
@@ -234146,7 +235570,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 215,
+        "line": 253,
         "comment": "In practice, this would consider:",
         "patterns": [
           "\\bin\\s+practice\\b.*?(this\\s+would|this\\s+should|this\\s+will)"
@@ -234179,7 +235603,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 403,
+        "line": 438,
         "comment": "so we can't call get_stats(). This will be available when the trait is implemented.",
         "patterns": [
           "\\bwill\\s+be\\b.*?(implemented|added|fixed)"
@@ -234190,7 +235614,7 @@
       {
         "file": "iterations/v3/agent-memory/src/consolidation/consolidation_engine.rs",
         "language": "rust",
-        "line": 410,
+        "line": 445,
         "comment": "This is a limitation that will be addressed when cluster persistence is implemented",
         "patterns": [
           "\\bwill\\s+be\\b.*?(implemented|added|fixed)"
@@ -235479,7 +236903,7 @@
       {
         "file": "iterations/v3/system-resilience/src/gc/collector.rs",
         "language": "rust",
-        "line": 313,
+        "line": 434,
         "comment": "/ Get object references (to be implemented based on your object store)",
         "patterns": [
           "\\bto\\s+be\\s+implemented\\b"
@@ -236246,7 +237670,7 @@
       {
         "file": "iterations/v3/agent-memory/src/long_term_management/retrieval.rs",
         "language": "rust",
-        "line": 394,
+        "line": 471,
         "comment": "Currently returns hardcoded value; should calculate from actual cache statistics.",
         "patterns": [
           "\\bhardcoded\\s+value\\b"

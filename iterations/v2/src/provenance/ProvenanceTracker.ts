@@ -258,14 +258,57 @@ export class ProvenanceTracker extends EventEmitter {
       .slice(0, 5);
 
     // TODO: Implement sophisticated temporal trend analysis for provenance
-    // - Implement proper date bucketing with timezone handling and daylight saving
-    // - Support multiple time granularities (hourly, daily, weekly, monthly, yearly)
-    // - Add trend calculation with statistical significance testing
-    // - Implement seasonal decomposition and pattern recognition
-    // - Support trend forecasting and anomaly detection
-    // - Add trend comparison across different provenance sources
-    // - Implement trend visualization and reporting capabilities
-    // - Support trend-based alerting and automated insights
+    //       Currently returns basic trend data; should implement comprehensive temporal analysis with statistical significance, forecasting, and anomaly detection for provenance tracking.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Implement proper date bucketing with timezone and daylight saving handling
+    // [ ] Support multiple time granularities (hourly, daily, weekly, monthly, yearly)
+    // [ ] Add trend calculation with statistical significance testing
+    // [ ] Implement seasonal decomposition and pattern recognition algorithms
+    // [ ] Support trend forecasting using time series analysis
+    // [ ] Add anomaly detection for unusual provenance patterns
+    // [ ] Add trend comparison across different provenance sources
+    // [ ] Implement trend visualization and reporting capabilities
+    // [ ] Support trend-based alerting and automated insights generation
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Temporal trends are calculated with proper statistical significance
+    // - Multiple time granularities work correctly with timezone handling
+    // - Seasonal decomposition identifies recurring patterns in provenance data
+    // - Trend forecasting provides accurate predictions within confidence intervals
+    // - Anomaly detection identifies unusual provenance activity patterns
+    // - Trend comparison works across different provenance sources
+    // - Visualization data is properly formatted for dashboard consumption
+    // - Alerting triggers on significant trend changes
+    // - Performance meets SLA for real-time trend analysis
+    // - Integration tests validate end-to-end temporal analysis
+    //
+    // DEPENDENCIES:
+    // - Time series analysis library (Required)
+    // - Statistical analysis utilities (Required)
+    // - Date/time handling with timezone support (Required)
+    // - Forecasting algorithms (Optional)
+    // - Anomaly detection algorithms (Optional)
+    //
+    // ESTIMATED EFFORT: 16-20 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (provenance analytics enhancement)
+    // - Change Budget: ~300 LOC
+    // - Reviewer Requirements: Time series analysis and statistical modeling expertise
     const trends = {
       daily: [] as Array<{ date: string; count: number }>,
       weekly: [] as Array<{ week: string; count: number }>,
@@ -281,14 +324,55 @@ export class ProvenanceTracker extends EventEmitter {
       ) / attributions.length;
 
     // TODO: Implement comprehensive code coverage analysis for provenance
-    // - Integrate with actual code coverage tools (Istanbul, JaCoCo, coverage.py)
-    // - Calculate line, branch, and function coverage metrics
-    // - Support differential coverage analysis (what changed vs what was tested)
-    // - Implement coverage quality assessment and risk analysis
-    // - Add coverage trend analysis and regression detection
-    // - Support coverage gap identification and prioritization
-    // - Implement coverage-based test effectiveness scoring
-    // - Add coverage visualization and reporting capabilities
+    //       Currently uses basic line counting; should integrate with code coverage tools to provide comprehensive coverage analysis, risk assessment, and testing effectiveness metrics.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Integrate with code coverage tools (Istanbul, JaCoCo, coverage.py, etc.)
+    // [ ] Calculate line, branch, and function coverage metrics accurately
+    // [ ] Support differential coverage analysis (changed code vs tested code)
+    // [ ] Implement coverage quality assessment and risk analysis algorithms
+    // [ ] Add coverage trend analysis and regression detection
+    // [ ] Support coverage gap identification and test prioritization
+    // [ ] Implement coverage-based test effectiveness scoring
+    // [ ] Add coverage visualization and reporting capabilities
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Code coverage metrics accurately reflect test coverage levels
+    // - Differential coverage identifies untested changes in CI/CD
+    // - Coverage quality assessment provides actionable risk insights
+    // - Trend analysis detects coverage regressions over time
+    // - Coverage gaps are prioritized for testing efforts
+    // - Test effectiveness scoring correlates with bug detection rates
+    // - Visualization provides clear coverage status dashboards
+    // - Performance meets SLA for coverage analysis in CI pipelines
+    // - Integration tests validate coverage tool integrations
+    //
+    // DEPENDENCIES:
+    // - Code coverage tool integrations (Required)
+    // - Coverage data parsing and analysis (Required)
+    // - Statistical analysis for trends and scoring (Required)
+    // - CI/CD integration for differential analysis (Required)
+    // - Visualization libraries for reporting (Optional)
+    //
+    // ESTIMATED EFFORT: 14-18 hours (medium confidence)
+    // PRIORITY: High
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (testing quality and coverage analysis)
+    // - Change Budget: ~250 LOC
+    // - Reviewer Requirements: Testing frameworks and code coverage expertise
     const attributedLines = attributions.reduce(
       (sum, attr) => sum + (attr.codeRegions?.length || 0),
       0
