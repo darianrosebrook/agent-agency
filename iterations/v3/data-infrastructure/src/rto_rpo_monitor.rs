@@ -731,7 +731,52 @@ fn calculate_compliance_percentage(
         100.0
     } else {
         // TODO: Implement sophisticated compliance score calculation
-        //       Currently uses basic calculation; should implement comprehensive compliance scoring with proper weighting.
+        //       Currently uses basic linear penalty; should implement comprehensive compliance scoring considering violation severity, frequency, and service criticality.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement violation severity weighting (critical > high > medium > low)
+        // [ ] Add violation frequency analysis (recent vs historical)
+        // [ ] Factor in service criticality and impact assessment
+        // [ ] Implement time-decay for older violations
+        // [ ] Add compliance trend analysis (improving vs degrading)
+        // [ ] Support configurable scoring parameters
+        // [ ] Add compliance score normalization and bounds checking
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Compliance scores reflect actual violation impact and severity
+        // - Critical violations have higher penalty than minor ones
+        // - Recent violations are weighted more than historical ones
+        // - Service criticality influences scoring appropriately
+        // - Scores are normalized to expected range (0-100)
+        // - Performance meets SLA for real-time calculation
+        // - Edge cases (no violations, all violations) handled correctly
+        // - Integration tests validate scoring against business rules
+        //
+        // DEPENDENCIES:
+        // - Violation severity classification (Required)
+        // - Service criticality metadata (Required)
+        // - Time-based weighting functions (Optional)
+        // - Statistical analysis utilities (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (compliance monitoring enhancement)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Compliance and risk assessment expertise
         (100.0 - (relevant_violations as f64 * 10.0)).max(0.0)
     }
 }
@@ -874,7 +919,51 @@ impl RtoRpoMonitor {
     /// Internal method to get recovery metrics
     async fn internal_get_recovery_metrics(&self) -> RecoveryMetrics {
         // TODO: Implement actual recovery metrics collection
-        //       Currently returns default metrics; should collect actual recovery metrics from system state.
+        //       Currently returns hardcoded default values; should collect actual recovery metrics from system monitoring, incident tracking, and compliance data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Query incident tracking system for recovery events
+        // [ ] Collect RTO/RPO measurements from actual recovery operations
+        // [ ] Calculate compliance rates from historical data
+        // [ ] Aggregate metrics across different time periods
+        // [ ] Handle missing data with appropriate statistical fallbacks
+        // [ ] Implement data validation and error handling
+        // [ ] Add performance monitoring for metrics collection
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Recovery metrics reflect actual system performance data
+        // - RTO/RPO measurements are based on real recovery operations
+        // - Compliance rates are calculated from historical incident data
+        // - Time period aggregations provide accurate trending information
+        // - Missing data scenarios are handled with reasonable defaults
+        // - Performance meets SLA for metrics collection and calculation
+        // - Integration tests validate metrics against operational data
+        //
+        // DEPENDENCIES:
+        // - Incident tracking system integration (Required)
+        // - Recovery operation monitoring (Required)
+        // - Historical metrics storage (Required)
+        // - Statistical calculation utilities (Optional)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (core reliability monitoring)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Reliability engineering and incident response expertise
         RecoveryMetrics {
             total_incidents: 0,
             average_rto_seconds: 0,

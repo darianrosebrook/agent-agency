@@ -207,6 +207,47 @@ impl GarbageCollector {
             grace_period_objects: grace_period.len(),
             packed_objects: packed.len(),
             bytes_freed: 0, // TODO: Calculate actual bytes freed
+            //       Replace hardcoded 0 with actual calculation of bytes freed during garbage collection sweep phase.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Track sizes of objects being removed during sweep phase
+            // [ ] Accumulate total bytes freed from unreachable objects
+            // [ ] Include packed object size reductions in calculation
+            // [ ] Handle metadata and index size reductions
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Bytes freed calculation accurately reflects actual memory/disk space recovered
+            // - Calculation includes all object types and metadata
+            // - Packed objects show size reductions appropriately
+            // - Performance overhead is minimal (<5% of total GC time)
+            // - Integration tests validate byte calculations against known object sizes
+            //
+            // DEPENDENCIES:
+            // - Object size tracking system (Required)
+            // - Object store metadata access (Required)
+            // - Size calculation utilities (Required)
+            // - Test objects with known sizes (Required)
+            // - Performance measurement framework (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (garbage collection observability)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Garbage collection and metrics expertise
             duration_seconds: duration,
             dry_run: self.config.dry_run,
         })
@@ -230,7 +271,47 @@ impl GarbageCollector {
             }
 
             // TODO: Implement object reference retrieval from object store
-            //       Currently uses placeholder; should query actual object store for object references based on digest.
+            //       Replace placeholder with actual object store query to retrieve references for mark phase of garbage collection.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Query object store for blob data by digest
+            // [ ] Parse blob headers to extract referenced objects
+            // [ ] Handle different blob types (commits, trees, files, diffs)
+            // [ ] Return all referenced digests for mark phase
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Object reference retrieval works for all supported blob types
+            // - Referenced objects are correctly identified and returned
+            // - Performance meets SLA for large object graphs (<50ms per object)
+            // - Error handling prevents GC from crashing on malformed objects
+            // - Integration tests validate reference extraction against known blob structures
+            //
+            // DEPENDENCIES:
+            // - Object store query interface (Required)
+            // - Blob parsing and header extraction (Required)
+            // - Digest validation utilities (Required)
+            // - Test blobs with known reference structures (Required)
+            // - Performance benchmarking framework (Required)
+            //
+            // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+            // PRIORITY: High
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (garbage collection core functionality)
+            // - Change Budget: ~300 LOC
+            // - Reviewer Requirements: Garbage collection and data structure expertise
             let references = self.get_object_references(&digest)?;
 
             for reference in references {
@@ -249,7 +330,47 @@ impl GarbageCollector {
         let mut unreachable = HashSet::new();
 
         // TODO: Implement object enumeration from object store
-        //       Currently uses placeholder; should query actual object store to enumerate all objects in the system.
+        //       Replace placeholder with actual object store enumeration to identify all objects for sweep phase of garbage collection.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Query object store for complete object inventory
+        // [ ] Handle pagination for large object stores
+        // [ ] Filter objects by age, type, or other criteria if needed
+        // [ ] Return digest set for comparison with reachable objects
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Object enumeration returns complete and accurate object inventory
+        // - Pagination handles large object stores without memory issues
+        // - Performance scales with object store size (acceptable for 100k+ objects)
+        // - Error handling prevents enumeration failures from crashing GC
+        // - Integration tests validate enumeration against known object stores
+        //
+        // DEPENDENCIES:
+        // - Object store enumeration interface (Required)
+        // - Pagination and batching utilities (Required)
+        // - Object filtering and selection criteria (Optional)
+        // - Test object stores with known inventories (Required)
+        // - Performance measurement framework (Required)
+        //
+        // ESTIMATED EFFORT: 6-10 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (garbage collection core functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Garbage collection and data store expertise
         let all_objects = self.get_all_objects()?;
 
         for object in all_objects {

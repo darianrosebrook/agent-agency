@@ -249,13 +249,48 @@ impl MemoryConsolidationEngine {
     /// Get consolidation health metrics
     pub async fn get_health_metrics(&self) -> MemoryResult<ConsolidationHealth> {
         // TODO: Calculate real consolidation health metrics
-        // - [ ] Calculate clustering health based on actual cluster quality metrics
-        // - [ ] Calculate summarization health based on summary quality scores
-        // - [ ] Calculate deduplication health based on duplicate detection rates
-        // - [ ] Aggregate overall health from component metrics
-        // - [ ] Track historical health trends
-        // - [ ] Add unit tests for health calculation
-        // - [ ] Add integration tests with real consolidation data
+        //       Replace mock health scores with actual calculations based on consolidation performance and quality metrics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Calculate clustering health based on cluster quality metrics (silhouette scores, separation)
+        // [ ] Calculate summarization health based on summary quality scores (compression ratio, information retention)
+        // [ ] Calculate deduplication health based on duplicate detection accuracy and false positive rates
+        // [ ] Implement overall health aggregation using weighted component metrics
+        // [ ] Add historical health trend tracking and alerting
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Health metrics reflect actual consolidation performance and quality
+        // - Component health scores are calculated from real operational data
+        // - Overall health aggregation provides meaningful system health indicator
+        // - Historical trends enable proactive maintenance and optimization
+        // - Integration tests validate health metrics against known consolidation scenarios
+        //
+        // DEPENDENCIES:
+        // - Clustering quality metrics system (Required)
+        // - Summarization evaluation framework (Required)
+        // - Deduplication accuracy measurement (Required)
+        // - Historical metrics storage (Required)
+        // - Test datasets with known health characteristics (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory management observability)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Memory systems and metrics expertise
         // Return mock health metrics
         Ok(ConsolidationHealth {
             clustering_health: 0.95,
@@ -442,6 +477,48 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         }
 
         // TODO: Implement cluster rebuilding when cluster storage is available
+        //       Replace error return with actual cluster rebuilding logic that reconstructs clusters from persisted memory data.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Load persisted memory data from cluster storage
+        // [ ] Reconstruct cluster structures from serialized data
+        // [ ] Validate cluster integrity and consistency
+        // [ ] Rebuild cluster indexes and metadata
+        // [ ] Handle partial cluster reconstruction failures
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cluster rebuilding successfully reconstructs clusters from persisted data
+        // - Rebuilt clusters maintain data integrity and relationships
+        // - Partial reconstruction failures are handled gracefully
+        // - Performance meets SLA for large cluster reconstruction operations
+        // - Integration tests validate rebuilding against known cluster datasets
+        //
+        // DEPENDENCIES:
+        // - Cluster storage persistence layer (Required)
+        // - Cluster serialization/deserialization (Required)
+        // - Memory data access layer (Required)
+        // - Cluster validation framework (Required)
+        // - Test datasets with persisted clusters (Required)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory persistence functionality)
+        // - Change Budget: ~350 LOC
+        // - Reviewer Requirements: Memory systems and data persistence expertise
         Err(crate::MemoryError::Other(
             "ConsolidationEngine::rebuild_clusters requires cluster storage integration. \
             This feature needs cluster persistence layer implementation."
@@ -460,6 +537,48 @@ impl ConsolidationEngine for MemoryConsolidationEngine {
         }
 
         // TODO: Implement cluster retrieval when cluster storage is available
+        //       Replace error return with actual cluster retrieval logic that loads persisted clusters from storage.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Query cluster storage for persisted clusters
+        // [ ] Deserialize cluster data from storage format
+        // [ ] Validate cluster data integrity and consistency
+        // [ ] Return clusters sorted by relevance/timestamp
+        // [ ] Handle partial or corrupted cluster data
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Cluster retrieval successfully loads persisted clusters from storage
+        // - Retrieved clusters maintain data integrity and relationships
+        // - Corrupted or partial cluster data is handled gracefully
+        // - Query performance meets SLA for cluster retrieval operations
+        // - Integration tests validate retrieval against known stored clusters
+        //
+        // DEPENDENCIES:
+        // - Cluster storage persistence layer (Required)
+        // - Cluster serialization/deserialization (Required)
+        // - Cluster query and indexing system (Required)
+        // - Data integrity validation framework (Required)
+        // - Test datasets with stored clusters (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory persistence functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Memory systems and data retrieval expertise
         Err(crate::MemoryError::Other(
             "ConsolidationEngine::get_clusters requires cluster storage integration. \
             This feature needs cluster persistence layer implementation."

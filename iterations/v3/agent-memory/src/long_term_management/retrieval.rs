@@ -205,13 +205,51 @@ impl LongTermRetrievalEngine {
         _query: &LongTermRetrievalQuery,
     ) -> crate::MemoryResult<f32> {
         // TODO: Implement real long-term relevance calculation
-        // - [ ] Consider memory age and apply decay factors
-        // - [ ] Analyze historical access patterns
-        // - [ ] Calculate contextual relevance to query
-        // - [ ] Factor in importance trends over time
-        // - [ ] Combine multiple signals into composite score
-        // - [ ] Add unit tests with various memory and query types
-        // - [ ] Add integration tests with real relevance data
+        //       Currently returns placeholder relevance score; should implement comprehensive relevance calculation considering memory age, access patterns, and contextual factors.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Consider memory age and apply decay factors (recency bias)
+        // [ ] Analyze historical access patterns and frequency
+        // [ ] Calculate contextual relevance to current query
+        // [ ] Factor in importance trends over time
+        // [ ] Combine multiple signals into composite relevance score
+        // [ ] Handle edge cases (new memories, rarely accessed memories)
+        // [ ] Add performance optimization for large memory sets
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Relevance scores reflect actual memory utility over time
+        // - Recent memories are appropriately prioritized over old ones
+        // - Frequently accessed memories maintain higher relevance
+        // - Contextual matching improves retrieval accuracy
+        // - Performance meets SLA for real-time relevance calculation
+        // - Edge cases are handled gracefully with reasonable defaults
+        // - Integration tests validate relevance against user feedback
+        //
+        // DEPENDENCIES:
+        // - Historical access pattern data (Required)
+        // - Memory importance tracking (Required)
+        // - Contextual similarity algorithms (Required)
+        // - Time-based decay functions (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory retrieval optimization)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Machine learning and relevance algorithms expertise
         // In practice, this would consider:
         // - Memory age and decay
         // - Historical access patterns
@@ -258,13 +296,52 @@ impl LongTermRetrievalEngine {
         _query: &LongTermRetrievalQuery,
     ) -> f32 {
         // TODO: Implement real final relevance calculation
-        // - [ ] Combine recency score (weighted by time decay)
-        // - [ ] Factor in importance score from memory metadata
-        // - [ ] Calculate contextual relevance to query
-        // - [ ] Apply weighted combination of all factors
-        // - [ ] Normalize final score to [0.0, 1.0] range
-        // - [ ] Add unit tests with various memory and query combinations
-        // - [ ] Add integration tests with real relevance calculations
+        //       Currently returns hardcoded relevance score; should implement comprehensive final relevance combining recency, importance, and contextual factors.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Combine recency score (weighted by time decay functions)
+        // [ ] Factor in importance score from memory metadata and access patterns
+        // [ ] Calculate contextual relevance to current query using similarity metrics
+        // [ ] Apply weighted combination of all relevance factors
+        // [ ] Normalize final score to [0.0, 1.0] range with proper scaling
+        // [ ] Add configurable weights for different relevance components
+        // [ ] Implement relevance score caching for performance
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Final relevance scores accurately combine multiple factors
+        // - Recency weighting properly decays over time
+        // - Importance scores influence relevance appropriately
+        // - Contextual matching improves retrieval quality
+        // - Scores are normalized to expected range
+        // - Performance meets SLA for real-time calculation
+        // - Edge cases (missing metadata, new queries) handled gracefully
+        // - Integration tests validate relevance against ground truth
+        //
+        // DEPENDENCIES:
+        // - Memory metadata and importance tracking (Required)
+        // - Time decay function implementation (Required)
+        // - Contextual similarity algorithms (Required)
+        // - Score normalization utilities (Optional)
+        //
+        // ESTIMATED EFFORT: 6-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory retrieval optimization)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: Machine learning and ranking algorithms expertise
         // Placeholder: combine recency, importance, and contextual relevance
         0.75
     }
