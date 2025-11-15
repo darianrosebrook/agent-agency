@@ -190,7 +190,9 @@ export function TimelineTab({ projectId }: TimelineTabProps = {}) {
         <div className={styles.controlsContent}>
           <div className={styles.controlsLeft}>
             <Calendar className={styles.iconMedium} />
-            <h2 className={styles.controlsTitle}>Project Timeline</h2>
+            <h2 className={styles.controlsTitle}>
+              {projectId ? "Project Timeline" : "All Projects Timeline"}
+            </h2>
           </div>
 
           <div className={styles.controlsRight}>
