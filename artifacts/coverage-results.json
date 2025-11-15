@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-11-15T18:34:56Z",
+  "thresholds": {
+    "line": 0.80#80%linecoverageminimum,
+    "branch": 0.90#90%branchcoverageminimum
+  },
+  "overall": {
+    "line_coverage": 0.0,
+    "branch_coverage": 0.0,
+    "lines_covered": 0,
+    "lines_total": 0,
+    "branches_covered": 0,
+    "branches_total": 0
+  },
+  "crates": {},
+  "below_threshold": [],
+  "high_value_areas": []
+}

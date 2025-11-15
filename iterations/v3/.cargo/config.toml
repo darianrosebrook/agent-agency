@@ -10,6 +10,14 @@ rustflags = [
   "-C", "incremental=true",
 ]
 
+# C++17 support for torch-sys and CoreML compilation
+# These environment variables are passed to build scripts
+# Note: torch-sys build script reads CXXFLAGS directly from environment
+[env]
+CXXFLAGS = "-std=c++17 -stdlib=libc++"
+CXX = "clang++"
+CC = "clang"
+
 # Optional: speed up linker on dev (keeps symbol info)
 [profile.dev]
 opt-level = 1

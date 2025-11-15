@@ -11,14 +11,42 @@ The V3 Readiness Assessment Framework provides a comprehensive, repeatable asses
 3. **TODO Analysis** - Identifies blocking TODOs in critical paths (training/conversion/inference)
 4. **Dashboard Readiness** - Dashboard build status, API connectivity, and schema alignment
 
+## Prerequisites
+
+### M1 Max Build Environment
+
+**IMPORTANT**: Before running assessments, ensure the M1 Max build environment is configured:
+
+```bash
+# One-time setup
+bash scripts/v3/setup/setup-m1-build-env.sh
+
+# Source environment (every shell session)
+source .env.build
+
+# Verify setup
+bash scripts/v3/setup/verify-build-env.sh
+```
+
+This ensures:
+- ✅ torch-sys compiles with C++17
+- ✅ CoreML links correctly
+- ✅ ARM64 Python is used
+- ✅ libtorch-cpu is configured
+
+See `docs/m1-max-build-setup.md` for detailed setup instructions.
+
 ## Quick Start
 
 ```bash
-# From iterations/v3 directory
+# From project root
 cd iterations/v3
 
+# Ensure build environment is configured
+source ../../.env.build
+
 # Run full assessment
-./scripts/v3/assess/readiness-assessment.sh
+bash ../../scripts/v3/assess/readiness-assessment.sh
 
 # View results
 cat ../../artifacts/readiness-assessment-*.md
@@ -31,7 +59,7 @@ cat ../../artifacts/readiness-assessment-*.md
 Run all assessment modules and generate unified report:
 
 ```bash
-./scripts/v3/assess/readiness-assessment.sh
+bash scripts/v3/assess/readiness-assessment.sh
 ```
 
 ### Focused Assessments
@@ -40,13 +68,13 @@ Run specific assessment modules only:
 
 ```bash
 # Tests only
-./scripts/v3/assess/readiness-assessment.sh --tests-only
+bash scripts/v3/assess/readiness-assessment.sh --tests-only
 
 # Coverage only
-./scripts/v3/assess/readiness-assessment.sh --coverage-only
+bash scripts/v3/assess/readiness-assessment.sh --coverage-only
 
 # TODOs only
-./scripts/v3/assess/readiness-assessment.sh --todos-only
+bash scripts/v3/assess/readiness-assessment.sh --todos-only
 ```
 
 ### Baseline Comparison
@@ -55,10 +83,10 @@ Compare current assessment against previous baseline:
 
 ```bash
 # Run assessment and compare
-./scripts/v3/assess/readiness-assessment.sh --compare-baseline
+bash scripts/v3/assess/readiness-assessment.sh --compare-baseline
 
 # Save current assessment as baseline
-./scripts/v3/assess/readiness-assessment.sh --save-baseline
+bash scripts/v3/assess/readiness-assessment.sh --save-baseline
 ```
 
 ## Output Files
@@ -92,6 +120,8 @@ Edit `config.yaml` to customize:
 - Identifies failing tests with error messages
 - Runs mutation tests if enabled
 - Generates test summary
+
+**Note**: Requires M1 Max build environment for torch-sys/CoreML crates.
 
 ### Coverage Assessment (`coverage-assessment.sh`)
 
@@ -180,10 +210,15 @@ The framework tracks progress over time by comparing against previous baselines:
 
 ```yaml
 # Example GitHub Actions workflow
+- name: Setup M1 Max Build Environment
+  run: |
+    bash scripts/v3/setup/setup-m1-build-env.sh
+    source .env.build
+
 - name: Run Readiness Assessment
   run: |
     cd iterations/v3
-    ./scripts/v3/assess/readiness-assessment.sh
+    bash ../../scripts/v3/assess/readiness-assessment.sh
   continue-on-error: true
 
 - name: Upload Assessment Reports
@@ -213,18 +248,21 @@ if (score < 60) {
 - Ensure you're in `iterations/v3` directory
 - Check that `cargo test` works manually
 - Verify Rust toolchain is installed
+- **Verify M1 Max build environment is configured** (see Prerequisites)
 
 ### Coverage Generation Fails
 
 - Install `grcov`: `cargo install grcov`
 - Ensure `llvm-tools-preview` component is installed
 - Check that coverage directory is writable
+- Ensure tests can run (see above)
 
 ### TODO Analyzer Fails
 
 - Verify Python 3 is installed
 - Check that `scripts/v3/analysis/todo_analyzer.py` exists
 - Ensure required Python dependencies are installed
+- Verify ARM64 Python is being used
 
 ### Dashboard Check Fails
 
@@ -232,45 +270,66 @@ if (score < 60) {
 - Ensure `npm install` has been run in dashboard directory
 - Check that TypeScript is configured correctly
 
+### torch-sys/CoreML Compilation Errors
+
+**Symptom**: C++17 errors or linker failures
+
+**Fix**: Ensure M1 Max build environment is configured:
+```bash
+bash scripts/v3/setup/setup-m1-build-env.sh
+source .env.build
+bash scripts/v3/setup/verify-build-env.sh
+```
+
+See `docs/m1-max-build-setup.md` for detailed troubleshooting.
+
 ## Requirements
 
 - Rust toolchain (cargo, rustc)
-- Python 3 (for TODO analyzer)
+- Python 3 (ARM64, for TODO analyzer)
 - Node.js (for report generation)
 - `grcov` (for coverage reports)
 - `jq` (for JSON parsing in scripts)
 - `bc` (for calculations)
+- **M1 Max build environment** (see Prerequisites)
 
 ## Examples
 
 ### First Assessment
 
 ```bash
+# Setup environment (one-time)
+bash scripts/v3/setup/setup-m1-build-env.sh
+source .env.build
+
 # Run full assessment
-./scripts/v3/assess/readiness-assessment.sh
+bash scripts/v3/assess/readiness-assessment.sh
 
 # Save as baseline
-./scripts/v3/assess/readiness-assessment.sh --save-baseline
+bash scripts/v3/assess/readiness-assessment.sh --save-baseline
 ```
 
 ### Subsequent Assessments
 
 ```bash
+# Ensure environment is sourced
+source .env.build
+
 # Run and compare
-./scripts/v3/assess/readiness-assessment.sh --compare-baseline
+bash scripts/v3/assess/readiness-assessment.sh --compare-baseline
 
 # Update baseline after improvements
-./scripts/v3/assess/readiness-assessment.sh --save-baseline
+bash scripts/v3/assess/readiness-assessment.sh --save-baseline
 ```
 
 ### Focused Improvement
 
 ```bash
 # Check coverage only
-./scripts/v3/assess/readiness-assessment.sh --coverage-only
+bash scripts/v3/assess/readiness-assessment.sh --coverage-only
 
 # Fix coverage issues, then check again
-./scripts/v3/assess/readiness-assessment.sh --coverage-only
+bash scripts/v3/assess/readiness-assessment.sh --coverage-only
 ```
 
 ## Support
@@ -278,7 +337,8 @@ if (score < 60) {
 For issues or questions:
 
 1. Check the troubleshooting section above
-2. Review individual module logs in `artifacts/`
-3. Verify configuration in `config.yaml`
-4. Check that all dependencies are installed
-
+2. Verify M1 Max build environment: `bash scripts/v3/setup/verify-build-env.sh`
+3. Review individual module logs in `artifacts/`
+4. Verify configuration in `config.yaml`
+5. Check that all dependencies are installed
+6. See `docs/m1-max-build-setup.md` for build environment issues

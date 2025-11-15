@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
-import { getContributions, type ContributionStats } from "../lib/api/agents";
+import { getContributions, type ContributionsResponse, type DailyContribution } from "../lib/api/observability";
 import styles from "./CodeContributionChart.module.scss";
 
 interface DataPoint {
@@ -36,70 +36,28 @@ export function CodeContributionChart({
   useEffect(() => {
     async function fetchData() {
       try {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        const startDateStr = startDate.toISOString().split("T")[0];
-
+        // Request daily breakdown from the API
         const contributionsResponse = await getContributions({
-          start_date: startDateStr,
-        });
+          days,
+          group_by: 'day',
+        }) as ContributionsResponse;
 
-        // Safely extract contributions array
-        const contributions = Array.isArray(contributionsResponse?.contributions)
-          ? contributionsResponse.contributions
-          : Array.isArray(contributionsResponse)
-          ? contributionsResponse
-          : [];
+        // The API returns daily breakdown directly
+        const dailyContributions = contributionsResponse.daily_contributions || [];
 
         // Transform API response to chart data format
-        // Group by day and aggregate contributions
-        const dailyData: Record<string, { contribution: number; baseline: number }> = {};
-        const today = new Date();
-
-        // Initialize all days with zero values
-        for (let i = days - 1; i >= 0; i--) {
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          const dayKey = date.toISOString().split("T")[0];
-          dailyData[dayKey] = { contribution: 0, baseline: 0 };
-        }
-
-        // Aggregate contributions by day
-        contributions.forEach((contrib: ContributionStats) => {
-          // For now, we'll use lines_added as contribution and estimate baseline
-          // The API might need to be enhanced to return daily breakdowns
-          const linesAdded = contrib.lines_added || 0;
-          const linesModified = contrib.lines_modified || 0;
-          const linesDeleted = contrib.lines_deleted || 0;
-          
-          // Estimate: contribution is lines_added, baseline includes modified/deleted
-          const contribution = linesAdded;
-          const baseline = linesAdded + linesModified + linesDeleted;
-
-          // Distribute across days (simplified - API should ideally return daily data)
-          const daysSinceStart = Math.floor(
-            (new Date().getTime() - new Date(startDateStr).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          const avgPerDay = contribution / Math.max(daysSinceStart, 1);
-
-          Object.keys(dailyData).forEach((dayKey) => {
-            dailyData[dayKey].contribution += avgPerDay;
-            dailyData[dayKey].baseline += (baseline / Math.max(daysSinceStart, 1));
-          });
-        });
-
-        // Convert to DataPoint array
-        const chartData: DataPoint[] = Object.entries(dailyData)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([dayKey, values]) => {
-            const date = new Date(dayKey);
+        const chartData: DataPoint[] = dailyContributions
+          .slice(0, days) // Limit to requested number of days
+          .reverse() // API returns newest first, we want oldest first for charts
+          .map((daily: DailyContribution) => {
+            const date = new Date(daily.day);
             return {
               day: date.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               }),
-              baseline: Math.round(values.baseline),
-              contribution: Math.round(values.contribution),
+              baseline: daily.count, // Use total count as baseline
+              contribution: daily.count, // Use total count as contribution for now
             };
           });
 

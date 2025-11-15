@@ -288,7 +288,22 @@ cargo check --workspace --exclude agent-model-management --quiet
 **One-liner setup** (add to your shell profile or build script):
 
 ```bash
-export LIBTORCH="$(pwd)/libtorch-cpu" LIBTORCH_CXX11_ABI=0 CMAKE_PREFIX_PATH="$(pwd)/libtorch-cpu" DYLD_LIBRARY_PATH="$(pwd)/libtorch-cpu/lib:$DYLD_LIBRARY_PATH"
+# LibTorch configuration
+export LIBTORCH="$(pwd)/libtorch-cpu"
+export LIBTORCH_CXX11_ABI=0
+export CMAKE_PREFIX_PATH="$(pwd)/libtorch-cpu"
+export DYLD_LIBRARY_PATH="$(pwd)/libtorch-cpu/lib:$DYLD_LIBRARY_PATH"
+
+# C++17 flags (required for torch-sys)
+export CXXFLAGS="-std=c++17 -stdlib=libc++"
+export CXX="clang++"
+export CC="clang"
+```
+
+**Or use the automated setup script**:
+```bash
+bash scripts/v3/setup/setup-m1-build-env.sh
+source .env.build
 ```
 
 **Test command**:

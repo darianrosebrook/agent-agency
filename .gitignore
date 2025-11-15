@@ -626,3 +626,4 @@ caws-debug.log*
 # Local development overrides (developer-specific)
 caws.local.*
 .caws/local.*
+.env.build

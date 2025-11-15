@@ -102,6 +102,19 @@ export interface ProjectSettings {
   [key: string]: unknown;
 }
 
+/**
+ * Task-specific settings for projects
+ */
+export interface ProjectTaskSettings {
+  project_id: string;
+  default_status: string;
+  auto_archive: boolean;
+  auto_archive_days: number;
+  max_concurrent_tasks?: number;
+  priority_inheritance?: boolean;
+  assignee_required?: boolean;
+}
+
 const API_BASE = "/api/proxy/api/v1";
 
 /**
@@ -508,8 +521,8 @@ export async function updateProjectSettings(
  */
 export async function getProjectTaskSettings(
   projectId: string
-): Promise<ProjectSettings> {
-  return apiGet<ProjectSettings>(
+): Promise<ProjectTaskSettings> {
+  return apiGet<ProjectTaskSettings>(
     `${API_BASE}/projects/${projectId}/task-settings`
   );
 }
@@ -519,9 +532,9 @@ export async function getProjectTaskSettings(
  */
 export async function updateProjectTaskSettings(
   projectId: string,
-  settings: Partial<Record<string, unknown>>
-): Promise<ProjectSettings> {
-  return apiPatch<ProjectSettings>(
+  settings: Partial<ProjectTaskSettings>
+): Promise<ProjectTaskSettings> {
+  return apiPatch<ProjectTaskSettings>(
     `${API_BASE}/projects/${projectId}/task-settings`,
     settings
   );
