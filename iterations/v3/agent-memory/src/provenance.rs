@@ -24,7 +24,7 @@ pub struct ProvenanceRecord {
 }
 
 /// Types of provenance operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum ProvenanceOperation {
     Created,
     Retrieved,
@@ -35,7 +35,7 @@ pub enum ProvenanceOperation {
 }
 
 /// Context information for provenance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, Default)]
 pub struct ProvenanceContext {
     pub task_id: Option<String>,
     pub decision_reasoning: Option<String>,

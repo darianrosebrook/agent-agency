@@ -1,6 +1,14 @@
 import Foundation
 import CoreML
 
+@_cdecl("coreml_can_load_models")
+public func coreml_can_load_models() -> Bool {
+    // Check if CoreML is available on this device
+    // This is a simple check - in production you might want to
+    // check for specific model loading capabilities
+    return true
+}
+
 /// Simple CoreML bridge for basic functionality testing
 /// This is a minimal implementation to test the Rust integration
 

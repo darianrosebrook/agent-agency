@@ -828,11 +828,93 @@ impl VectorIndexer {
 
         // TODO: Implement proper graph-based search algorithm
         //       Currently uses basic graph search; should implement efficient graph traversal for vector similarity search.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement HNSW search algorithm with greedy traversal
+        // [ ] Implement layered graph navigation (entry point selection)
+        // [ ] Add ef parameter for result set size during search
+        // [ ] Implement proper candidate set management
+        // [ ] Add search path optimization and early termination
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Search algorithm finds nearest neighbors with high accuracy
+        // - Search performance scales logarithmically with dataset size
+        // - Memory usage remains bounded during search operations
+        // - Search results are deterministic for same inputs
+        // - Performance meets latency requirements (<100ms for 100k vectors)
+        // - Algorithm handles edge cases (empty graphs, single vectors)
+        //
+        // DEPENDENCIES:
+        // - HNSW graph structure (Required)
+        // - Distance/similarity calculation functions (Required)
+        // - Graph navigation utilities (Required)
+        // - Result set management (Required)
+        //
+        // ESTIMATED EFFORT: 8-10 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (core search algorithm implementation)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Vector search algorithms and graph data structures expertise
         let mut visited = std::collections::HashSet::new();
         let mut candidates = Vec::new();
 
         // TODO: Implement proper entry point selection
         //       Currently uses random entry point; should select optimal entry point based on graph structure and query characteristics.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement entry point selection algorithm (centroid, random sample, learned)
+        // [ ] Add entry point caching for repeated queries
+        // [ ] Implement entry point validation and fallbacks
+        // [ ] Add entry point performance monitoring
+        // [ ] Support multiple entry point strategies
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Entry point selection improves search performance by >20%
+        // - Entry point selection is deterministic and reproducible
+        // - Multiple entry point strategies are supported and configurable
+        // - Entry point caching reduces selection overhead
+        // - Fallback mechanisms work when primary selection fails
+        // - Performance impact is minimal (<1ms per query)
+        //
+        // DEPENDENCIES:
+        // - Graph structure with node metadata (Required)
+        // - Distance calculation functions (Required)
+        // - Configuration system for strategy selection (Optional)
+        // - Performance monitoring infrastructure (Optional)
+        //
+        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (search optimization feature)
+        // - Change Budget: ~120 LOC
+        // - Reviewer Requirements: Vector search optimization expertise
         if let Some(entry_point) = vectors.keys().next() {
             let score = self.cosine_similarity(query_vector, query_norm, &vectors[entry_point]);
             candidates.push((score, entry_point.clone()));
@@ -921,6 +1003,49 @@ impl VectorIndexer {
 
         // TODO: Implement full HNSW graph structure (see TODO above)
         //       Currently uses temporary top-5 connections; should implement full HNSW graph structure for efficient similarity search.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement multi-layer HNSW graph with entry layers
+        // [ ] Add dynamic connection count based on layer and vector density
+        // [ ] Implement graph pruning and maintenance algorithms
+        // [ ] Add graph persistence and loading capabilities
+        // [ ] Implement graph construction heuristics (max neighbors, level assignment)
+        // [ ] Add graph integrity validation and repair
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Graph construction completes successfully for large datasets (100k+ vectors)
+        // - Search performance improves significantly over linear search
+        // - Graph maintains connectivity and search quality
+        // - Memory usage scales appropriately with dataset size
+        // - Graph construction time is acceptable (<1 hour for 100k vectors)
+        // - Graph can be persisted and reloaded correctly
+        //
+        // DEPENDENCIES:
+        // - Multi-layer graph data structure (Required)
+        // - Graph construction algorithms (Required)
+        // - Vector distance functions (Required)
+        // - Persistence infrastructure (Optional)
+        // - Graph validation utilities (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (advanced indexing infrastructure)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Graph algorithms and vector database expertise
         for (_, other_id) in similarities.iter().take(5) {
             connections.push(other_id.clone());
         }
@@ -1664,17 +1789,97 @@ impl HnswIndexer {
             .into_iter()
             .map(|(_id, similarity)| VectorSearchResult {
                 // TODO: Map similarity results back to original block IDs
-                // - [ ] Store original ID mapping during indexing
-                // - [ ] Retrieve original block_id from similarity result
-                // - [ ] Handle ID mapping for different search backends
-                // - [ ] Add unit tests for ID mapping accuracy
+                //       Currently generates random UUIDs; should maintain proper ID mapping from indexing to search results.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] Implement ID mapping storage during vector indexing
+                // [ ] Create bidirectional mapping between internal IDs and block IDs
+                // [ ] Add ID mapping persistence and retrieval
+                // [ ] Handle ID mapping for different vector backends (HNSW, FAISS, etc.)
+                // [ ] Implement ID mapping validation and error handling
+                // [ ] Add unit tests for ID mapping accuracy and consistency
+                // [ ] Add integration tests for end-to-end ID preservation
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - All indexed block IDs are preserved in search results
+                // - ID mapping is bidirectional and consistent
+                // - ID mapping works across different vector backends
+                // - ID mapping performance overhead is minimal (<1ms per query)
+                // - ID mapping handles edge cases (duplicate IDs, missing mappings)
+                // - Error handling covers ID mapping failures gracefully
+                //
+                // DEPENDENCIES:
+                // - Block ID storage during indexing (Required)
+                // - ID mapping data structure (Required)
+                // - Backend-specific ID mapping logic (Required)
+                // - Error handling infrastructure (Required)
+                //
+                // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+                // PRIORITY: High
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (search result accuracy)
+                // - Change Budget: ~150 LOC
+                // - Reviewer Requirements: Data consistency and ID mapping expertise
                 block_id: Uuid::new_v4(), // In practice, this would map back to the original ID
                 similarity,
                 // TODO: Extract actual modality from indexed content
-                // - [ ] Store modality metadata during indexing
-                // - [ ] Retrieve modality from block metadata
-                // - [ ] Support multiple modalities (text, image, audio, video)
-                // - [ ] Add unit tests for modality extraction
+                //       Currently uses hardcoded "vector" modality; should extract actual content modality from indexed metadata.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] Store modality metadata during content indexing
+                // [ ] Implement modality extraction from content analysis
+                // [ ] Add support for multiple modalities (text, image, audio, video, multimodal)
+                // [ ] Implement modality validation and normalization
+                // [ ] Add modality inheritance for composite content
+                // [ ] Add unit tests for modality extraction accuracy
+                // [ ] Add integration tests for multimodal content handling
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Modality is correctly extracted from all indexed content types
+                // - Multimodal content is properly categorized
+                // - Modality information is preserved in search results
+                // - Modality extraction handles edge cases (unknown types, mixed content)
+                // - Performance overhead is minimal (<0.1ms per result)
+                // - Error handling covers modality extraction failures
+                //
+                // DEPENDENCIES:
+                // - Content type detection system (Required)
+                // - Modality metadata storage (Required)
+                // - Multimodal content analysis (Optional)
+                // - Content type validation (Required)
+                //
+                // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (search result metadata accuracy)
+                // - Change Budget: ~100 LOC
+                // - Reviewer Requirements: Content analysis and metadata expertise
                 modality: "vector".to_string(), // TODO: Extract actual modality from content analysis
             })
             .collect();
@@ -1720,14 +1925,100 @@ impl DatabasePool {
     /// Get number of idle connections
     pub fn num_idle(&self) -> usize {
         // TODO: Implement actual idle connection count based on pool type
-        //       Currently returns placeholder; should query actual pool type for accurate idle connection count.
+        //       Currently returns placeholder 0; should query sqlx pool for accurate idle connection count.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Add sqlx pool idle connection count retrieval
+        // [ ] Implement pool type detection and appropriate querying
+        // [ ] Add connection state monitoring and metrics
+        // [ ] Handle different pool implementations (PgPool, MySqlPool, etc.)
+        // [ ] Add connection pool health monitoring
+        // [ ] Add unit tests for connection count accuracy
+        // [ ] Add integration tests with real database pools
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Idle connection count matches actual pool state
+        // - Count retrieval works for all supported database types
+        // - Performance overhead is minimal (<0.1ms per call)
+        // - Error handling covers pool access failures
+        // - Metrics are accurate and up-to-date
+        // - Monitoring works in production environments
+        //
+        // DEPENDENCIES:
+        // - sqlx pool access methods (Required)
+        // - Pool type detection logic (Required)
+        // - Metrics collection infrastructure (Optional)
+        // - Error handling utilities (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Database connection pooling expertise
         0
     }
 
     /// Get pool size
     pub fn size(&self) -> usize {
         // TODO: Implement actual pool size based on pool type
-        //       Currently returns placeholder; should query actual pool type for accurate pool size.
+        //       Currently returns placeholder 0; should query sqlx pool for accurate total pool size.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Add sqlx pool size retrieval for total connections
+        // [ ] Implement pool capacity and current size distinction
+        // [ ] Add pool size monitoring and alerting thresholds
+        // [ ] Handle different pool implementations consistently
+        // [ ] Add pool size validation and bounds checking
+        // [ ] Add unit tests for pool size accuracy
+        // [ ] Add integration tests with connection pool lifecycle
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Pool size reflects actual configured capacity
+        // - Size reporting works for all supported database types
+        // - Size information is accurate and current
+        // - Performance overhead is minimal (<0.1ms per call)
+        // - Error handling covers pool access failures
+        // - Monitoring alerts work based on pool size thresholds
+        //
+        // DEPENDENCIES:
+        // - sqlx pool configuration access (Required)
+        // - Pool type detection logic (Required)
+        // - Monitoring and alerting infrastructure (Optional)
+        // - Configuration validation (Required)
+        //
+        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
+        // PRIORITY: Low
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 3 (monitoring enhancement)
+        // - Change Budget: ~50 LOC
+        // - Reviewer Requirements: Database connection pooling expertise
         0
     }
 }
@@ -1996,15 +2287,98 @@ impl UnifiedIndexer {
             };
 
             // TODO: Generate real embeddings instead of placeholder vector
-            // - [ ] Integrate with embedding service (agent-model-management or CoreML)
-            // - [ ] Generate embeddings for text content using appropriate model
-            // - [ ] Handle dimension consistency (match model output to index requirements)
-            // - [ ] Add caching for repeated content
-            // - [ ] Add batch processing for multiple blocks
-            // - [ ] Add unit tests with mock embedding service
-            // - [ ] Add integration tests with real embedding generation
-            // TODO: Generate real embeddings from embedding service
-            //       Currently uses placeholder vector; should generate actual embeddings from embedding service (agent-model-management or CoreML).
+            //       Currently uses hardcoded [0.1; 384] vector; should integrate with embedding service for actual vector generation.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Integrate with embedding service (agent-model-management or CoreML)
+            // [ ] Generate embeddings for text content using appropriate model
+            // [ ] Handle dimension consistency (match model output to index requirements)
+            // [ ] Add caching for repeated content to avoid redundant computations
+            // [ ] Implement batch processing for multiple blocks efficiency
+            // [ ] Add async embedding generation with proper error handling
+            // [ ] Add embedding quality validation and confidence scoring
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Embeddings are generated by actual ML models, not hardcoded values
+            // - Embedding dimension matches index requirements (384-dim default)
+            // - Batch processing improves throughput by >3x vs individual processing
+            // - Caching reduces redundant embedding computations by >80%
+            // - Error handling covers embedding service failures gracefully
+            // - Embedding quality meets semantic search accuracy requirements
+            //
+            // DEPENDENCIES:
+            // - Embedding service integration (Required)
+            // - Model management system (Required)
+            // - Caching infrastructure (Optional)
+            // - Batch processing utilities (Required)
+            //
+            // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+            // PRIORITY: High
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 1 (core ML integration for semantic search)
+            // - Change Budget: ~250 LOC
+            // - Reviewer Requirements: ML model integration and vector processing expertise
+            let vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
+
+            // TODO: Use actual model name from embedding service
+            //       Currently uses hardcoded "placeholder_model"; should retrieve actual model name from embedding service configuration.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Retrieve model name from embedding service configuration
+            // [ ] Store model metadata with indexed content for traceability
+            // [ ] Handle model versioning for compatibility and updates
+            // [ ] Add model validation and capability checking
+            // [ ] Implement model fallback strategies for unavailable models
+            // [ ] Add model performance monitoring and metrics
+            // [ ] Add unit tests for model name retrieval and validation
+            // [ ] Add integration tests with embedding service model registry
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Model name reflects actual model used for embedding generation
+            // - Model metadata is stored and retrievable for all indexed content
+            // - Model versioning enables compatibility checking and updates
+            // - Fallback strategies work when primary models are unavailable
+            // - Model performance is monitored and tracked
+            // - Error handling covers model registry access failures
+            //
+            // DEPENDENCIES:
+            // - Embedding service model registry (Required)
+            // - Model metadata storage (Required)
+            // - Configuration management system (Required)
+            // - Model validation utilities (Optional)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (metadata accuracy and model traceability)
+            // - Change Budget: ~120 LOC
+            // - Reviewer Requirements: Model management and metadata expertise
             let vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
 
             // Index the content
@@ -2093,7 +2467,52 @@ impl UnifiedIndexer {
             .await?;
 
         // TODO: Implement proper result fusion algorithm
-        //       Currently uses basic combination; should implement proper fusion algorithm for combining search results from multiple sources.
+        //       Currently uses basic score averaging; should implement sophisticated fusion algorithm for combining text and vector search results.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement reciprocal rank fusion (RRF) algorithm
+        // [ ] Add configurable fusion weights for different modalities
+        // [ ] Implement score normalization across different result types
+        // [ ] Add fusion algorithm selection (RRF, linear combination, learning-to-rank)
+        // [ ] Implement result deduplication with score aggregation
+        // [ ] Add fusion performance monitoring and A/B testing
+        // [ ] Add unit tests for fusion accuracy and ranking quality
+        // [ ] Add integration tests with real search result combinations
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Hybrid search results are more accurate than individual search types
+        // - RRF improves ranking quality over simple averaging
+        // - Fusion algorithm is configurable and adaptable
+        // - Score normalization prevents bias toward high-scoring modalities
+        // - Performance overhead is acceptable (<2x individual search time)
+        // - A/B testing shows measurable improvement in search quality
+        //
+        // DEPENDENCIES:
+        // - Text search result processing (Required)
+        // - Vector search result processing (Required)
+        // - Score normalization utilities (Required)
+        // - Ranking algorithm implementations (Required)
+        // - A/B testing infrastructure (Optional)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (search quality and ranking optimization)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Information retrieval and ranking algorithm expertise
         let mut hybrid_results = Vec::new();
 
         for text_result in text_results {

@@ -218,13 +218,13 @@ impl DataProcessingSystem {
         #[cfg(feature = "memory-integration")]
         {
             // Convert AgentExperience to ContextualMemory once
-            let contextual_memories: Vec<agent_memory::ContextualMemory> = context_memories
+            let contextual_memories: Vec<ContextualMemory> = context_memories
                 .into_iter()
                 .map(|exp| {
-                    agent_memory::ContextualMemory {
+                    ContextualMemory {
                         memory: exp,
                         relevance_score: 0.8, // Default relevance
-                        context_match: agent_memory::ContextMatch::Semantic,
+                        context_match: ContextMatch::Semantic,
                         reasoning_path: vec!["data_processing_context".to_string()],
                     }
                 })

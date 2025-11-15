@@ -6,8 +6,8 @@
  * @author @darianrosebrook
  */
 
-import { apiGet, apiPost, apiPatch, apiDelete } from "../utils/api";
-import type { TaskWithOptionalDescription } from '../types/task';
+import type { TaskWithOptionalDescription } from "../types/task";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../utils/api";
 
 /**
  * Project API response
@@ -242,7 +242,7 @@ export async function getProjectMilestones(
     `${API_BASE}/projects/${projectId}/milestones`
   );
   // Extract milestones array from response
-  return Array.isArray(response) ? response : (response.milestones || []);
+  return Array.isArray(response) ? response : response.milestones || [];
 }
 
 /**
@@ -280,7 +280,7 @@ export async function updateProjectMilestone(
 
 /**
  * Project task from API
- * 
+ *
  * Extends canonical Task interface with backward compatibility fields
  * Matches backend Task model from iterations/v3/data-infrastructure/src/models.rs
  */
@@ -298,7 +298,7 @@ export interface ProjectTasksResponse {
 
 /**
  * Get project tasks
- * 
+ *
  * Validates task responses using runtime schema validation.
  * Maps API response to ensure id field is present (handles both id and task_id from API)
  */
@@ -308,22 +308,22 @@ export async function getProjectTasks(
   const response = await apiGet<ProjectTasksResponse>(
     `${API_BASE}/projects/${projectId}/tasks`
   );
-  
+
   // Validate and normalize tasks
   if (response.tasks && Array.isArray(response.tasks)) {
-    const { safeValidateTaskArray } = await import('../utils/taskValidation');
-    const { normalizeTaskId } = await import('../utils/taskTransform');
-    
+    const { safeValidateTaskArray } = await import("../utils/taskValidation");
+    const { normalizeTaskId } = await import("../utils/taskTransform");
+
     // Validate each task
     response.tasks = safeValidateTaskArray(response.tasks);
-    
+
     // Normalize task IDs (some APIs return task_id instead of id)
     response.tasks = response.tasks.map((task) => ({
       ...task,
       id: normalizeTaskId(task),
     }));
   }
-  
+
   return response;
 }
 
@@ -350,7 +350,7 @@ export async function createProjectTask(
 
 /**
  * Update project task
- * 
+ *
  * Supports updating all 14 backend task fields.
  */
 export async function updateProjectTask(
@@ -364,7 +364,13 @@ export async function updateProjectTask(
     acceptance_criteria?: unknown[];
     context?: Record<string, unknown>;
     caws_spec?: Record<string, unknown> | null;
-    status?: 'pending' | 'in_progress' | 'paused' | 'completed' | 'cancelled' | 'failed';
+    status?:
+      | "pending"
+      | "in_progress"
+      | "paused"
+      | "completed"
+      | "cancelled"
+      | "failed";
     assigned_worker_id?: string | null;
     project_id?: string | null;
     priority?: number | null;
@@ -409,10 +415,12 @@ export async function getProjectOverviewVersions(
   limit?: number
 ): Promise<ProjectOverviewVersionsResponse> {
   const queryParams = new URLSearchParams();
-  if (limit) queryParams.append('limit', limit.toString());
-  
+  if (limit) queryParams.append("limit", limit.toString());
+
   const queryString = queryParams.toString();
-  const url = `${API_BASE}/projects/${projectId}/overview-versions${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_BASE}/projects/${projectId}/overview-versions${
+    queryString ? `?${queryString}` : ""
+  }`;
   return apiGet<ProjectOverviewVersionsResponse>(url);
 }
 
@@ -484,8 +492,10 @@ export async function getProjectWorkHistory(
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
-    
-    const url = `${API_BASE}/projects/${projectId}/work-history${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+
+    const url = `${API_BASE}/projects/${projectId}/work-history${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
     const response = await apiGet<WorkHistoryResponse>(url);
     return response.entries || [];
   } catch (err) {

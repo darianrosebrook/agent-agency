@@ -7,6 +7,7 @@
 ## Problem Statement
 
 CoreML and torch-sys compilation issues repeatedly occur because:
+
 1. Environment variables aren't set permanently
 2. C++17 flags aren't configured for torch-sys
 3. LIBTORCH points to wrong location
@@ -73,6 +74,7 @@ cargo test --workspace --all-features
 ### Cargo Configuration
 
 `.cargo/config.toml` is updated with:
+
 - C++17 environment variables for build scripts
 - Target architecture: `aarch64-apple-darwin`
 - Optimized build flags
@@ -86,6 +88,7 @@ bash scripts/v3/setup/verify-build-env.sh
 ```
 
 Expected output:
+
 ```
 ✅ LIBTORCH=/path/to/libtorch-cpu
 ✅ LIBTORCH_CXX11_ABI=0
@@ -94,33 +97,58 @@ Expected output:
 ✅ libtorch.dylib found
 ```
 
-## Why This Fixes torch-sys
+## PyTorch Integration (Updated)
 
-### The C++17 Problem
+### Current Status: LibTorch Removed
 
-torch-sys requires C++17 but doesn't always detect it correctly. The fix:
+**torch-sys and libtorch have been removed** from the project. The C++17 configuration is still useful for other C++ dependencies (like CoreML Swift bridge), but PyTorch is now accessed via Python.
 
-1. **Set CXXFLAGS explicitly**: `-std=c++17 -stdlib=libc++`
-2. **Configure in .cargo/config.toml**: Ensures build scripts see the flags
-3. **Set CXX compiler**: Explicitly use `clang++`
+### If PyTorch Functionality is Needed
 
-### The libtorch Problem
+Use **PyO3** to call Python's PyTorch instead of libtorch:
 
-- **libtorch** (symlink) → Points to libtorch-cpu ✅
-- **libtorch-cpu** → CPU-only version, no CUDA dependencies ✅
+1. **Install PyTorch in Python** (if not already installed):
 
-Using `libtorch-cpu` avoids CUDA compilation issues on macOS.
+   ```bash
+   pip3 install torch
+   ```
+
+2. **Add PyO3 to Cargo.toml**:
+
+   ```toml
+   pyo3 = { version = "0.20", features = ["auto-initialize"] }
+   ```
+
+3. **Call PyTorch from Rust**:
+
+   ```rust
+   use pyo3::prelude::*;
+
+   Python::with_gil(|py| {
+       let torch = py.import("torch")?;
+       // Use PyTorch...
+   });
+   ```
+
+### Benefits of Python PyTorch
+
+- ✅ **ARM64 Optimized**: Uses Apple Silicon optimized PyTorch
+- ✅ **No C++ Compilation**: Avoids libtorch build issues
+- ✅ **Standard Installation**: Standard Python package management
+- ✅ **Better Compatibility**: Works seamlessly with ARM64 Python
 
 ## Why This Fixes CoreML
 
 ### Swift Bridge Requirements
 
 CoreML requires:
+
 - Swift runtime libraries linked correctly
 - Proper rpath configuration for macOS
 - ARM64 architecture matching
 
 The `system-acceleration/build.rs` script handles this automatically when:
+
 - `LIBTORCH` is set correctly
 - C++ compiler is configured
 - Xcode Command Line Tools are installed
@@ -130,12 +158,14 @@ The `system-acceleration/build.rs` script handles this automatically when:
 ### torch-sys Still Fails
 
 1. **Check CXXFLAGS is set**:
+
    ```bash
    echo $CXXFLAGS
    # Should show: -std=c++17 -stdlib=libc++
    ```
 
 2. **Verify C++ compiler**:
+
    ```bash
    $CXX --version
    # Should show: Apple clang version 17+
@@ -149,6 +179,7 @@ The `system-acceleration/build.rs` script handles this automatically when:
 ### CoreML Linker Errors
 
 1. **Check Swift bridge is built**:
+
    ```bash
    ls -la models/languages/swift/coreml-bridge/.build/*/release/libCoreMLBridge.a
    ```
@@ -162,12 +193,14 @@ The `system-acceleration/build.rs` script handles this automatically when:
 ### Python Architecture Mismatch
 
 **Check**:
+
 ```bash
 python3 -c "import platform; print(platform.machine())"
 # Should output: arm64
 ```
 
 **Fix**: Install ARM64 Python:
+
 ```bash
 brew install python@3.13
 # Verify it's ARM64
@@ -202,21 +235,25 @@ env:
 ## Quick Reference
 
 **Setup** (one-time):
+
 ```bash
 bash scripts/v3/setup/setup-m1-build-env.sh
 ```
 
 **Verify** (before building):
+
 ```bash
 bash scripts/v3/setup/verify-build-env.sh
 ```
 
 **Build** (use wrapper):
+
 ```bash
 bash scripts/v3/build-with-env.sh test --workspace --all-features
 ```
 
 **Or manually**:
+
 ```bash
 source .env.build
 cd iterations/v3
@@ -237,4 +274,3 @@ To prevent these issues from recurring:
 - `docs/libtorch-integration.md` - Detailed libtorch setup
 - `iterations/v3/README-BUILD.md` - Build instructions
 - `scripts/v3/setup/setup-m1-build-env.sh` - Setup script source
-

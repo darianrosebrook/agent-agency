@@ -19,6 +19,12 @@ use uuid::Uuid;
 // Import OrchestrationError from lib.rs
 use crate::OrchestrationError;
 
+#[cfg(feature = "data-processing")]
+use agent_data_processing::{
+    UnifiedIngestor, FileWatcher, UnifiedEnrichmentStage, UnifiedIndexer, JobScheduler,
+    EnrichmentCircuitBreakerConfig,
+};
+
 // Local type definitions used instead of agent_data_processing
 use crate::audit_trail::{AuditResult, AuditSeverity, AuditTrailManager};
 use crate::error_handling::CircuitBreaker;
@@ -406,14 +412,19 @@ use std::path::{Path, PathBuf};
 #[derive(Clone)]
 pub struct MultimodalOrchestrator {
     /// Unified ingestor for all content types
+    #[cfg(feature = "data-processing")]
     unified_ingestor: UnifiedIngestor,
     /// File watcher for monitoring directories
+    #[cfg(feature = "data-processing")]
     file_watcher: FileWatcher,
     /// Enrichers for content enhancement
+    #[cfg(feature = "data-processing")]
     unified_enricher: UnifiedEnrichmentStage,
     /// Unified indexer for search capabilities
+    #[cfg(feature = "data-processing")]
     unified_indexer: UnifiedIndexer,
     /// Job scheduler for coordination
+    #[cfg(feature = "data-processing")]
     job_scheduler: JobScheduler,
     /// Circuit breaker for resilience
     circuit_breaker: CircuitBreaker,

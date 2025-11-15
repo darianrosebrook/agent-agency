@@ -11,8 +11,8 @@ members = [
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
     "agent-evaluation",  # NEW: Evaluation framework for iteration limits and quality detection
-    "engine-coreml",  # CoreML inference engine implementation
-    "system-acceleration",  # Core ML and ANE acceleration
+    # "engine-coreml",  # CoreML inference engine implementation - temporarily disabled due to torch-sys version conflict
+    # "system-acceleration",  # Core ML and ANE acceleration - temporarily disabled due to torch-sys version conflict
     "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager + memory)
     "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)
@@ -122,8 +122,10 @@ indicatif = "0.17"
 console = { version = "0.15", features = ["std"] }
 
 # PyTorch/ML integration (removed - not currently used)
-# tch = { version = "0.13", default-features = false }
-# torch-sys = { version = "0.13", default-features = false }
+# If PyTorch functionality is needed, use PyO3 to call Python's PyTorch instead
+# This avoids libtorch compilation issues and leverages ARM64 Python PyTorch
+# torch-sys removed - was causing version conflicts with libtorch
+# tch removed - was pulling in incompatible torch-sys
 
 # CAWS integration (using Node.js tools, not Rust crate)
 # caws-core = { path = "../../apps/tools/caws" }

@@ -6,11 +6,13 @@
 ## Quick Start
 
 1. **Run the setup script** (one-time setup):
+
    ```bash
    bash scripts/v3/setup/setup-m1-build-env.sh
    ```
 
 2. **Source the environment** (every shell session):
+
    ```bash
    source .env.build
    ```
@@ -67,6 +69,7 @@ CoreML and torch integrations require ARM64 Python to match the M1 architecture.
 **Symptom**: `error: C++17 or later compatible compiler is required`
 
 **Fix**: Ensure `CXXFLAGS` is set:
+
 ```bash
 export CXXFLAGS="-std=c++17 -stdlib=libc++"
 export CXX="clang++"
@@ -77,6 +80,7 @@ export CXX="clang++"
 **Symptom**: `ld: library not found for -lCoreMLBridge`
 
 **Fix**: Ensure Swift bridge is built:
+
 ```bash
 cd models/languages/swift/coreml-bridge
 swift build -c release
@@ -87,12 +91,14 @@ swift build -c release
 **Symptom**: Linking errors or architecture mismatches
 
 **Check**:
+
 ```bash
 python3 -c "import platform; print(platform.machine())"
 # Should output: arm64
 ```
 
 **Fix**: Install ARM64 Python via Homebrew:
+
 ```bash
 brew install python@3.13
 ```
@@ -136,4 +142,3 @@ cargo check --workspace --all-features
 - `docs/libtorch-integration.md` - Detailed libtorch setup guide
 - `scripts/v3/setup/setup-m1-build-env.sh` - Automated setup script
 - `scripts/v3/build-with-env.sh` - Build wrapper with environment
-

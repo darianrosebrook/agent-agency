@@ -9,8 +9,6 @@
 
 use crate::data_processing_types::*;
 use crate::{DataProcessingError, DataProcessingResult};
-#[cfg(feature = "memory-integration")]
-use agent_memory::graph_engine::RelationshipType;
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use std::collections::HashMap;

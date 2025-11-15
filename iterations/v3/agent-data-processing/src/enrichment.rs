@@ -283,7 +283,7 @@ impl AsrEnricher {
             if let Ok(result) = self.transcribe_with_whisper(audio_data, content_type, model_path).await {
                 return Ok(result);
             } else {
-                warn!("Whisper transcription failed, falling back to simulated transcription");
+                tracing::warn!("Whisper transcription failed, falling back to simulated transcription");
             }
         }
 

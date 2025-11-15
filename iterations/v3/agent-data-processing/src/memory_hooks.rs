@@ -4,10 +4,12 @@
 //! contextual memories to enhance data processing.
 
 use crate::data_processing_types::*;
-use crate::{DataProcessingError, DataProcessingResult};
+#[cfg(feature = "memory-integration")]
 use agent_memory::{
-    memory_manager::MemoryQuery, AgentExperience, MemoryManager, MemoryStats, TaskContext,
+    ContextualMemory, ExperienceOutcome, MemoryConfig, MemoryStats, MemoryType, TaskPriority,
+    TemporalContext, ContextMatch, memory_manager::MemoryQuery, AgentExperience, MemoryManager, TaskContext,
 };
+use crate::{DataProcessingError, DataProcessingResult};
 use schemars::JsonSchema;
 use std::sync::Arc;
 
@@ -40,7 +42,7 @@ pub struct MemoryIntegrationHooks {
 impl MemoryIntegrationHooks {
     /// Create new memory integration hooks
     pub async fn new(config: &MemoryConfig) -> DataProcessingResult<Self> {
-        let memory_config = agent_memory::MemoryConfig::default();
+        let memory_config = MemoryConfig::default();
         let memory_manager = Arc::new(MemoryManager::new(memory_config).await.map_err(|e| {
             DataProcessingError::Other(format!("Memory manager init failed: {:?}", e))
         })?);
@@ -87,7 +89,7 @@ impl MemoryIntegrationHooks {
         let memory_query = MemoryQuery {
             agent_id: query.context.user_id.clone(),
             task_type: Some("data_processing".to_string()),
-            memory_type: Some(agent_memory::MemoryType::Procedural),
+            memory_type: Some(MemoryType::Procedural),
             time_range: None, // Could be derived from query context
             limit: Some(self.config.max_context_memories),
         };
@@ -114,8 +116,8 @@ impl MemoryIntegrationHooks {
         // Extract query text from context for similarity calculation
         let query_text = format!(
             "{} {}",
-            query.context.description.clone(),
-            query.context.keywords.join(" ")
+            // query.context.description.clone(), // TODO: Add description field to ProcessingContext
+            // query.context.keywords.join(" ") // TODO: Add keywords field to ProcessingContext
         )
         .to_lowercase();
 
@@ -255,7 +257,7 @@ impl MemoryIntegrationHooks {
 
         let success = output.processing_stats.errors_encountered.is_empty();
 
-        let outcome = agent_memory::ExperienceOutcome {
+        let outcome = ExperienceOutcome {
             success,
             performance_score: if success { Some(0.8) } else { Some(0.2) },
             learned_capabilities: if success {
@@ -292,7 +294,7 @@ impl MemoryIntegrationHooks {
             output: serde_json::to_value(&output.processed_content)
                 .unwrap_or(serde_json::Value::Null),
             outcome,
-            memory_type: agent_memory::MemoryType::Procedural,
+            memory_type: MemoryType::Procedural,
             timestamp: output.created_at,
             metadata: {
                 let mut metadata = std::collections::HashMap::new();
@@ -322,10 +324,10 @@ impl MemoryIntegrationHooks {
             domain: vec!["data_processing".to_string()],
             entities: input.metadata.keys().cloned().collect(),
             temporal_context: input.processing_context.deadline.map(|dt| {
-                agent_memory::TemporalContext {
+                TemporalContext {
                     start_time: chrono::Utc::now(),
                     deadline: Some(dt),
-                    priority: agent_memory::TaskPriority::Medium,
+                    priority: TaskPriority::Medium,
                     recurrence_pattern: None,
                 }
             }),

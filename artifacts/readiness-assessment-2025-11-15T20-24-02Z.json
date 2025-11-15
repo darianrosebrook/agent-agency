@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-11-15T20-24-02Z",
+  "readiness_score": {
+    "score": 0,
+    "maxScore": 55,
+    "percentage": 0
+  },
+  "summary": {
+    "tests": {
+      "unit": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      "integration": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0
+      },
+      "mutation": {
+        "enabled": false,
+        "score": null,
+        "mutants_killed": null,
+        "mutants_survived": null,
+        "duration_seconds": 0
+      }
+    },
+    "coverage": {
+      "below_threshold_count": 0,
+      "high_value_areas_count": 0
+    },
+    "todos": {
+      "total": 0,
+      "blocking": 0,
+      "in_critical_paths": 0
+    },
+    "dashboard": {}
+  },
+  "details": {
+    "tests": {
+      "timestamp": "2025-11-15T20:20:37Z",
+      "unit_tests": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "duration_seconds": 7,
+        "failures": [
+          ""
+        ]
+      },
+      "integration_tests": {
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "duration_seconds": 30,
+        "failures": [
+          ""
+        ]
+      },
+      "mutation_tests": {
+        "enabled": false,
+        "score": null,
+        "mutants_killed": null,
+        "mutants_survived": null,
+        "duration_seconds": 0
+      },
+      "crates": {}
+    },
+    "coverage": {},
+    "todos": {},
+    "dashboard": {}
+  },
+  "recommendations": []
+}

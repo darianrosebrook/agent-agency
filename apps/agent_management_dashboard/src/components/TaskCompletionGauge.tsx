@@ -24,8 +24,13 @@ export function TaskCompletionGauge({
       setIsLoading(true);
       setError(null);
       try {
-        const stats = await getTasksStats();
+        // Fetch current stats and historical data in parallel
+        const [stats, historyResponse] = await Promise.all([
+          getTasksStats(),
+          getTasksStatsHistory({ period: "30d" }),
+        ]);
         setTaskStats(stats);
+        setHistoryStats(historyResponse.history || []);
       } catch (err) {
         console.error("Failed to fetch task stats:", err);
         setError(err instanceof Error ? err : new Error("Failed to load task statistics"));
@@ -48,10 +53,54 @@ export function TaskCompletionGauge({
   };
 
   // Calculate completion rate from available stats (completed / total * 100)
-  // TODO: Implement month-over-month comparison when historical data endpoint is available
   const completionRate = taskStats && taskStats.total > 0
     ? Math.round((taskStats.completed / taskStats.total) * 100)
     : 0;
+
+  // Calculate month-over-month change using historical data
+  const calculateMonthOverMonthChange = () => {
+    if (historyStats.length < 7) return null; // Need at least a week of data
+
+    // Get current week (last 7 days) and previous week
+    const now = new Date();
+    const currentWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const previousWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Calculate completion rates for each period
+    const currentWeekStats = historyStats.filter(stat => {
+      const statDate = new Date(stat.date);
+      return statDate >= currentWeekStart && statDate <= now;
+    });
+
+    const previousWeekStats = historyStats.filter(stat => {
+      const statDate = new Date(stat.date);
+      return statDate >= previousWeekStart && statDate < currentWeekStart;
+    });
+
+    const currentWeekRate = currentWeekStats.length > 0
+      ? currentWeekStats.reduce((acc, stat) => acc + stat.completion_rate, 0) / currentWeekStats.length
+      : 0;
+
+    const previousWeekRate = previousWeekStats.length > 0
+      ? previousWeekStats.reduce((acc, stat) => acc + stat.completion_rate, 0) / previousWeekStats.length
+      : 0;
+
+    if (previousWeekRate === 0) return null;
+
+    return {
+      current: Math.round(currentWeekRate),
+      previous: Math.round(previousWeekRate),
+      change: Math.round(currentWeekRate - previousWeekRate),
+      changePercent: Math.round(((currentWeekRate - previousWeekRate) / previousWeekRate) * 100),
+    };
+  };
+
+  const monthOverMonth = calculateMonthOverMonthChange();
+
+  // Dynamic subtitle based on month-over-month data
+  const dynamicSubtitle = monthOverMonth
+    ? `Completion vs Creation Rate (${monthOverMonth.changePercent > 0 ? '+' : ''}${monthOverMonth.changePercent}% vs last week)`
+    : subtitle;
 
   // Task distribution from API stats
   const created = taskStats?.pending ?? 0;
@@ -182,7 +231,7 @@ export function TaskCompletionGauge({
           {/* Header */}
           <div className={styles.header}>
             <h3 className={styles.title}>{title}</h3>
-            <p className={styles.subtitle}>{subtitle}</p>
+            <p className={styles.subtitle}>{dynamicSubtitle}</p>
           </div>
 
           {/* Gauge */}

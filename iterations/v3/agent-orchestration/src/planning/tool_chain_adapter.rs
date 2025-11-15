@@ -472,7 +472,7 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // Reorder tool sequence to maximize parallel execution
         // Flatten parallel groups while preserving dependency order
         let mut optimized_sequence = Vec::new();
-        let mut seen = HashSet::new();
+        let mut seen = std::collections::HashSet::new();
 
         for group in &parallel_groups {
             // Add all tools in this parallel group

@@ -86,41 +86,375 @@ export interface SecurityAuditEvent {
 
 /**
  * TODO: Define comprehensive configuration interfaces for Arbiter Orchestrator
- * - Create TaskQueueConfig interface with queue sizing, persistence, and retry policies
- * - Define TaskAssignmentConfig for routing algorithms, load balancing, and assignment rules
- * - Implement AgentRegistryConfig for agent discovery, registration, and health checking
- * - Build HealthMonitorConfig for monitoring thresholds, alerting, and health checks
- * - Design RecoveryManagerConfig for failure recovery, circuit breakers, and resilience
- * - Create KnowledgeSeekerConfig for knowledge sources, search strategies, and caching
- * - Define WorkspaceStateConfig for workspace management, persistence, and synchronization
- * - Add configuration validation, defaults, and environment variable support
- * - Implement configuration hot-reloading and validation
- * - Add configuration documentation and examples
+ *       Replace placeholder 'any' types with proper configuration interfaces for all arbiter components.
+ *
+ * COMPLETION CHECKLIST:
+ * [ ] Primary functionality implemented
+ * [ ] Create TaskQueueConfig interface with queue sizing, persistence, and retry policies
+ * [ ] Define TaskAssignmentConfig for routing algorithms, load balancing, and assignment rules
+ * [ ] Implement AgentRegistryConfig for agent discovery, registration, and health checking
+ * [ ] Build HealthMonitorConfig for monitoring thresholds, alerting, and health checks
+ * [ ] Design RecoveryManagerConfig for failure recovery, circuit breakers, and resilience
+ * [ ] Create KnowledgeSeekerConfig for knowledge sources, search strategies, and caching
+ * [ ] Define WorkspaceStateConfig for workspace management, persistence, and synchronization
+ * [ ] Add configuration validation, defaults, and environment variable support
+ * [ ] Implement configuration hot-reloading and validation
+ * [ ] Add configuration documentation and examples
+ * [ ] API/data structures defined & stable
+ * [ ] Error handling + validation aligned with error taxonomy
+ * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+ * [ ] Integration tests for external systems/contracts
+ * [ ] Documentation: public API + system behavior
+ * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+ * [ ] Security posture reviewed (inputs, authz, sandboxing)
+ * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+ * [ ] Configurability and feature flags defined if relevant
+ * [ ] Failure-mode cards documented (degradation paths)
+ *
+ * ACCEPTANCE CRITERIA:
+ * - All 'any' types in ArbiterOrchestratorConfig are replaced with proper interfaces
+ * - Each configuration interface supports validation and defaults
+ * - Configuration supports environment variable overrides
+ * - Hot-reloading works without service interruption
+ * - Configuration documentation provides clear examples for all options
+ * - TypeScript compilation passes without type errors
+ * - Configuration validation catches invalid values at startup
+ * - Integration tests validate configuration loading and validation
+ *
+ * DEPENDENCIES:
+ * - TypeScript interface definitions (Required)
+ * - Configuration validation library (Optional)
+ * - Environment variable parsing (Required)
+ * - Configuration schema definitions (Required)
+ * - Hot-reload infrastructure (Optional)
+ *
+ * ESTIMATED EFFORT: 10-14 hours (medium confidence)
+ * PRIORITY: High
+ * BLOCKING: No
+ *
+ * GOVERNANCE:
+ * - CAWS Tier: 2 (configuration and type safety)
+ * - Change Budget: ~200 LOC
+ * - Reviewer Requirements: TypeScript interfaces and configuration management expertise
  */
 export interface ArbiterOrchestratorConfig {
   /** Task queue configuration */
-  taskQueue: any; // TODO: Replace with TaskQueueConfig
+  // TODO: Replace with TaskQueueConfig
+  //       Replace 'any' type with proper TaskQueueConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define TaskQueueConfig interface with queue sizing, persistence, and retry policies
+  // [ ] Implement configuration validation for queue parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - TaskQueueConfig interface replaces 'any' type
+  // - Configuration validation catches invalid values
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - TaskQueueConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  taskQueue: any;
 
   /** Task assignment configuration */
-  taskAssignment: any; // TODO: Replace with TaskAssignmentConfig
+  // TODO: Replace with TaskAssignmentConfig
+  //       Replace 'any' type with proper TaskAssignmentConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define TaskAssignmentConfig interface with routing algorithms, load balancing, and assignment rules
+  // [ ] Implement configuration validation for assignment parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - TaskAssignmentConfig interface replaces 'any' type
+  // - Configuration validation catches invalid assignment parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - TaskAssignmentConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  taskAssignment: any;
 
   /** Agent registry configuration */
-  agentRegistry: any; // TODO: Replace with AgentRegistryConfig
+  // TODO: Replace with AgentRegistryConfig
+  //       Replace 'any' type with proper AgentRegistryConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define AgentRegistryConfig interface with agent discovery, registration, and health checking
+  // [ ] Implement configuration validation for registry parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - AgentRegistryConfig interface replaces 'any' type
+  // - Configuration validation catches invalid registry parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - AgentRegistryConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  agentRegistry: any;
 
   /** Security configuration */
   // Removed duplicate security property
 
   /** Health monitoring configuration */
-  healthMonitor: any; // TODO: Replace with HealthMonitorConfig
+  // TODO: Replace with HealthMonitorConfig
+  //       Replace 'any' type with proper HealthMonitorConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define HealthMonitorConfig interface with monitoring thresholds, alerting, and health checks
+  // [ ] Implement configuration validation for health parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - HealthMonitorConfig interface replaces 'any' type
+  // - Configuration validation catches invalid health parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - HealthMonitorConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  healthMonitor: any;
 
   /** Recovery management configuration */
-  recoveryManager: any; // TODO: Replace with RecoveryManagerConfig
+  // TODO: Replace with RecoveryManagerConfig
+  //       Replace 'any' type with proper RecoveryManagerConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define RecoveryManagerConfig interface with failure recovery, circuit breakers, and resilience
+  // [ ] Implement configuration validation for recovery parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - RecoveryManagerConfig interface replaces 'any' type
+  // - Configuration validation catches invalid recovery parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - RecoveryManagerConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  recoveryManager: any;
 
   /** Knowledge seeker configuration */
-  knowledgeSeeker: any; // TODO: Replace with KnowledgeSeekerConfig
+  // TODO: Replace with KnowledgeSeekerConfig
+  //       Replace 'any' type with proper KnowledgeSeekerConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define KnowledgeSeekerConfig interface with knowledge sources, search strategies, and caching
+  // [ ] Implement configuration validation for knowledge parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - KnowledgeSeekerConfig interface replaces 'any' type
+  // - Configuration validation catches invalid knowledge parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - KnowledgeSeekerConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  knowledgeSeeker: any;
 
   /** Workspace state manager configuration */
-  workspaceManager?: any; // TODO: Replace with WorkspaceStateConfig
+  // TODO: Replace with WorkspaceStateConfig
+  //       Replace 'any' type with proper WorkspaceStateConfig interface for type safety and configuration validation.
+  //
+  // COMPLETION CHECKLIST:
+  // [ ] Primary functionality implemented
+  // [ ] Define WorkspaceStateConfig interface with workspace management, persistence, and synchronization
+  // [ ] Implement configuration validation for workspace parameters
+  // [ ] Add support for environment variable overrides
+  // [ ] Include default values for all configuration options
+  // [ ] Add configuration documentation and examples
+  // [ ] API/data structures defined & stable
+  // [ ] Error handling + validation aligned with error taxonomy
+  // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+  // [ ] Integration tests for external systems/contracts
+  // [ ] Documentation: public API + system behavior
+  // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+  // [ ] Security posture reviewed (inputs, authz, sandboxing)
+  // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+  // [ ] Configurability and feature flags defined if relevant
+  // [ ] Failure-mode cards documented (degradation paths)
+  //
+  // ACCEPTANCE CRITERIA:
+  // - WorkspaceStateConfig interface replaces 'any' type
+  // - Configuration validation catches invalid workspace parameters
+  // - Environment variables properly override defaults
+  // - TypeScript compilation passes without errors
+  // - Configuration supports hot-reloading
+  // - Documentation provides clear usage examples
+  //
+  // DEPENDENCIES:
+  // - WorkspaceStateConfig interface definition (Required)
+  // - Configuration validation utilities (Optional)
+  // - Environment variable parsing (Required)
+  //
+  // ESTIMATED EFFORT: 2-4 hours (high confidence)
+  // PRIORITY: Medium
+  // BLOCKING: No
+  //
+  // GOVERNANCE:
+  // - CAWS Tier: 3 (type safety improvement)
+  // - Change Budget: ~30 LOC
+  // - Reviewer Requirements: TypeScript interfaces expertise
+  workspaceManager?: any;
 
   /** Database configuration (optional - graceful degradation if not provided) */
   database?: {
@@ -453,14 +787,56 @@ export class ArbiterOrchestrator {
       console.log("Initializing Arbiter Orchestrator...");
 
       // TODO: Implement comprehensive component initialization and lifecycle management
-      // - Add component dependency resolution and initialization ordering
-      // - Implement component health checks and startup validation
-      // - Add component configuration validation and schema checking
-      // - Support component hot-swapping and dynamic reconfiguration
-      // - Implement component graceful shutdown and cleanup procedures
-      // - Add component monitoring and performance tracking
-      // - Support component versioning and compatibility management
-      // - Implement component failure recovery and restart capabilities
+      //       Currently initializes components with empty objects; should implement proper dependency resolution, health checks, and lifecycle management.
+      //
+      // COMPLETION CHECKLIST:
+      // [ ] Primary functionality implemented
+      // [ ] Add component dependency resolution and initialization ordering
+      // [ ] Implement component health checks and startup validation
+      // [ ] Add component configuration validation and schema checking
+      // [ ] Support component hot-swapping and dynamic reconfiguration
+      // [ ] Implement component graceful shutdown and cleanup procedures
+      // [ ] Add component monitoring and performance tracking
+      // [ ] Support component versioning and compatibility management
+      // [ ] Implement component failure recovery and restart capabilities
+      // [ ] API/data structures defined & stable
+      // [ ] Error handling + validation aligned with error taxonomy
+      // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+      // [ ] Integration tests for external systems/contracts
+      // [ ] Documentation: public API + system behavior
+      // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+      // [ ] Security posture reviewed (inputs, authz, sandboxing)
+      // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+      // [ ] Configurability and feature flags defined if relevant
+      // [ ] Failure-mode cards documented (degradation paths)
+      //
+      // ACCEPTANCE CRITERIA:
+      // - All components properly initialize with real implementations
+      // - Component dependencies are resolved and ordered correctly
+      // - Health checks pass before marking components as ready
+      // - Configuration validation catches invalid configurations
+      // - Hot-swapping works without service interruption
+      // - Graceful shutdown completes within SLA (<30 seconds)
+      // - Component monitoring provides real-time health metrics
+      // - Version compatibility is maintained across upgrades
+      // - Failure recovery automatically restarts failed components
+      // - Integration tests validate end-to-end component initialization
+      //
+      // DEPENDENCIES:
+      // - Component interfaces and implementations (Required)
+      // - Dependency injection framework (Required)
+      // - Health check framework (Required)
+      // - Configuration validation (Required)
+      // - Lifecycle management utilities (Optional)
+      //
+      // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+      // PRIORITY: High
+      // BLOCKING: No
+      //
+      // GOVERNANCE:
+      // - CAWS Tier: 1 (core system initialization)
+      // - Change Budget: ~300 LOC
+      // - Reviewer Requirements: System architecture and component lifecycle expertise
       this.components.taskQueue = {}; // Would initialize actual TaskQueue
       this.components.taskAssignment = {}; // Would initialize actual TaskAssignmentManager
       this.components.agentRegistry = {}; // Would initialize actual AgentRegistryManager
@@ -994,14 +1370,56 @@ export class ArbiterOrchestrator {
 
   /**
    * TODO: Implement comprehensive task status tracking and reporting
-   * - Query actual task status from orchestrator database
-   * - Support real-time task progress and state transitions
-   * - Implement task execution metrics and performance tracking
-   * - Add task failure analysis and error reporting
-   * - Support task dependency status and blocking conditions
-   * - Implement task status change notifications and subscriptions
-   * - Add task archival and historical status tracking
-   * - Support task status aggregation and dashboard reporting
+   *       Currently returns hardcoded status object; should query actual task status from orchestrator database with real-time tracking and metrics.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Query actual task status from orchestrator database
+   * [ ] Support real-time task progress and state transitions
+   * [ ] Implement task execution metrics and performance tracking
+   * [ ] Add task failure analysis and error reporting
+   * [ ] Support task dependency status and blocking conditions
+   * [ ] Implement task status change notifications and subscriptions
+   * [ ] Add task archival and historical status tracking
+   * [ ] Support task status aggregation and dashboard reporting
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Task status reflects actual database state, not hardcoded values
+   * - Real-time updates work with sub-second latency
+   * - State transitions are properly tracked and validated
+   * - Performance metrics are accurate and comprehensive
+   * - Failure analysis provides actionable error information
+   * - Dependency status correctly identifies blocking conditions
+   * - Notifications work for all subscribed clients
+   * - Historical tracking maintains data for required retention period
+   * - Dashboard aggregation provides accurate summary statistics
+   * - Integration tests validate end-to-end status tracking
+   *
+   * DEPENDENCIES:
+   * - Orchestrator database integration (Required)
+   * - Real-time notification system (Required)
+   * - Task execution tracking framework (Required)
+   * - Performance metrics collection (Required)
+   * - Historical data storage (Required)
+   *
+   * ESTIMATED EFFORT: 14-18 hours (medium confidence)
+   * PRIORITY: High
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 1 (core task orchestration)
+   * - Change Budget: ~350 LOC
+   * - Reviewer Requirements: Database integration and real-time systems expertise
    */
   async getTaskStatus(taskId: string): Promise<any> {
     return {
@@ -1014,14 +1432,56 @@ export class ArbiterOrchestrator {
 
   /**
    * TODO: Implement comprehensive knowledge query processing and orchestration
-   * - Parse and validate knowledge queries with proper schema
-   * - Route queries to appropriate knowledge sources and providers
-   * - Implement query optimization and execution planning
-   * - Support complex query operations (joins, aggregations, filtering)
-   * - Add query result ranking and relevance scoring
-   * - Implement query caching and result deduplication
-   * - Support query federation across multiple knowledge systems
-   * - Add query performance monitoring and optimization
+   *       Currently returns hardcoded query response; should parse, validate, and route knowledge queries with optimization and federation capabilities.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Parse and validate knowledge queries with proper schema
+   * [ ] Route queries to appropriate knowledge sources and providers
+   * [ ] Implement query optimization and execution planning
+   * [ ] Support complex query operations (joins, aggregations, filtering)
+   * [ ] Add query result ranking and relevance scoring
+   * [ ] Implement query caching and result deduplication
+   * [ ] Support query federation across multiple knowledge systems
+   * [ ] Add query performance monitoring and optimization
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Knowledge queries are properly parsed and validated
+   * - Query routing works correctly to appropriate knowledge sources
+   * - Query optimization improves performance by at least 20%
+   * - Complex operations (joins, aggregations) work correctly
+   * - Result ranking provides relevant results in top positions
+   * - Query caching reduces duplicate processing by 80%
+   * - Query federation works across multiple knowledge systems
+   * - Performance monitoring identifies slow queries
+   * - Integration tests validate end-to-end query processing
+   *
+   * DEPENDENCIES:
+   * - Knowledge query schema and validation (Required)
+   * - Knowledge source routing system (Required)
+   * - Query optimization engine (Required)
+   * - Result ranking and scoring algorithms (Required)
+   * - Query caching infrastructure (Required)
+   * - Federation protocol implementation (Required)
+   *
+   * ESTIMATED EFFORT: 16-20 hours (medium confidence)
+   * PRIORITY: High
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 1 (core knowledge processing)
+   * - Change Budget: ~400 LOC
+   * - Reviewer Requirements: Knowledge systems and query processing expertise
    */
   async processKnowledgeQuery(_query: any): Promise<any> {
     return {
@@ -1034,14 +1494,56 @@ export class ArbiterOrchestrator {
 
   /**
    * TODO: Implement comprehensive knowledge system status and health monitoring
-   * - Query actual knowledge system metrics from database
-   * - Monitor knowledge source availability and performance
-   * - Track query success rates and error patterns
-   * - Implement knowledge system capacity and load monitoring
-   * - Add knowledge freshness and update status tracking
-   * - Support knowledge system alerting and incident detection
-   * - Implement knowledge system performance analytics
-   * - Add knowledge system configuration and tuning insights
+   *       Currently returns hardcoded status metrics; should query actual knowledge system metrics from database with real-time monitoring and alerting.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Query actual knowledge system metrics from database
+   * [ ] Monitor knowledge source availability and performance
+   * [ ] Track query success rates and error patterns
+   * [ ] Implement knowledge system capacity and load monitoring
+   * [ ] Add knowledge freshness and update status tracking
+   * [ ] Support knowledge system alerting and incident detection
+   * [ ] Implement knowledge system performance analytics
+   * [ ] Add knowledge system configuration and tuning insights
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Knowledge system status reflects actual database metrics
+   * - Source availability monitoring detects offline systems
+   * - Query success rates are tracked with historical trends
+   * - Error pattern analysis identifies common failure modes
+   * - Capacity monitoring prevents system overload
+   * - Knowledge freshness tracking identifies stale data
+   * - Alerting system notifies on critical incidents
+   * - Performance analytics provide optimization insights
+   * - Configuration tuning provides actionable recommendations
+   * - Integration tests validate end-to-end health monitoring
+   *
+   * DEPENDENCIES:
+   * - Knowledge system database integration (Required)
+   * - Real-time monitoring infrastructure (Required)
+   * - Alerting and notification system (Required)
+   * - Performance analytics framework (Required)
+   * - Configuration optimization engine (Optional)
+   *
+   * ESTIMATED EFFORT: 12-16 hours (medium confidence)
+   * PRIORITY: High
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 1 (core knowledge system observability)
+   * - Change Budget: ~300 LOC
+   * - Reviewer Requirements: Knowledge systems and monitoring expertise
    */
   async getKnowledgeStatus(): Promise<any> {
     return {
@@ -1055,14 +1557,56 @@ export class ArbiterOrchestrator {
 
   /**
    * TODO: Implement comprehensive information verification and validation system
-   * - Integrate with fact-checking APIs and knowledge bases
-   * - Implement multi-source verification and consensus algorithms
-   * - Support temporal verification for time-sensitive claims
-   * - Add source credibility assessment and weighting
-   * - Implement verification result caching and optimization
-   * - Support verification workflow orchestration and delegation
-   * - Add verification quality metrics and confidence calibration
-   * - Implement verification audit trails and explainability
+   *       Currently returns hardcoded verification response; should integrate with fact-checking APIs and implement multi-source verification with consensus algorithms.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Integrate with fact-checking APIs and knowledge bases
+   * [ ] Implement multi-source verification and consensus algorithms
+   * [ ] Support temporal verification for time-sensitive claims
+   * [ ] Add source credibility assessment and weighting
+   * [ ] Implement verification result caching and optimization
+   * [ ] Support verification workflow orchestration and delegation
+   * [ ] Add verification quality metrics and confidence calibration
+   * [ ] Implement verification audit trails and explainability
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Information verification uses actual fact-checking APIs
+   * - Multi-source verification reaches consensus on conflicting claims
+   * - Temporal verification handles time-sensitive information correctly
+   * - Source credibility assessment provides accurate reliability scores
+   * - Verification result caching reduces redundant API calls by 90%
+   * - Workflow orchestration properly delegates complex verifications
+   * - Quality metrics provide confidence calibration for verification results
+   * - Audit trails maintain complete verification history
+   * - Explainability provides clear reasoning for verification decisions
+   * - Integration tests validate end-to-end verification workflows
+   *
+   * DEPENDENCIES:
+   * - Fact-checking API integrations (Required)
+   * - Consensus algorithm implementation (Required)
+   * - Source credibility assessment system (Required)
+   * - Verification result caching infrastructure (Required)
+   * - Workflow orchestration engine (Required)
+   *
+   * ESTIMATED EFFORT: 18-24 hours (medium confidence)
+   * PRIORITY: High
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 1 (core information integrity)
+   * - Change Budget: ~450 LOC
+   * - Reviewer Requirements: Information verification and consensus systems expertise
    */
   async verifyInformation(_request: any): Promise<any> {
     return {
@@ -1076,14 +1620,56 @@ export class ArbiterOrchestrator {
 
   /**
    * TODO: Implement comprehensive verification method analytics
-   * - Query actual verification method performance from database
-   * - Calculate real success rates and response times across methods
-   * - Support method comparison and effectiveness analysis
-   * - Add verification method usage patterns and trends
-   * - Implement method-specific error analysis and diagnostics
-   * - Support verification method load balancing insights
-   * - Add method performance forecasting and optimization
-   * - Implement method reliability scoring and recommendations
+   *       Currently returns hardcoded method statistics; should query actual verification method performance from database with real-time analytics and optimization.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Query actual verification method performance from database
+   * [ ] Calculate real success rates and response times across methods
+   * [ ] Support method comparison and effectiveness analysis
+   * [ ] Add verification method usage patterns and trends
+   * [ ] Implement method-specific error analysis and diagnostics
+   * [ ] Support verification method load balancing insights
+   * [ ] Add method performance forecasting and optimization
+   * [ ] Implement method reliability scoring and recommendations
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Verification method statistics reflect actual database metrics
+   * - Success rates and response times are calculated from real data
+   * - Method comparison provides actionable effectiveness insights
+   * - Usage patterns identify optimal method selection strategies
+   * - Error analysis provides method-specific diagnostic information
+   * - Load balancing insights optimize resource utilization
+   * - Performance forecasting predicts method behavior changes
+   * - Reliability scoring guides method selection decisions
+   * - Recommendations improve overall verification performance
+   * - Integration tests validate end-to-end analytics processing
+   *
+   * DEPENDENCIES:
+   * - Verification method database integration (Required)
+   * - Performance analytics framework (Required)
+   * - Method comparison and ranking algorithms (Required)
+   * - Statistical analysis and forecasting tools (Required)
+   * - Load balancing optimization engine (Optional)
+   *
+   * ESTIMATED EFFORT: 14-18 hours (medium confidence)
+   * PRIORITY: High
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 1 (core verification analytics)
+   * - Change Budget: ~350 LOC
+   * - Reviewer Requirements: Verification systems and analytics expertise
    */
   async getVerificationMethodStats(): Promise<any> {
     return {

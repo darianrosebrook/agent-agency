@@ -626,12 +626,49 @@ impl DataConsistencyManager {
     ) -> Result<Vec<Inconsistency>, String> {
         // Query row IDs from both databases (limited to 1000 for performance)
         // TODO: Implement comprehensive data consistency checking
-        // - Implement checksum-based validation for large tables
-        // - Add support for comparing specific columns or computed values
-        // - Handle different data types and serialization formats
-        // - Add configurable tolerance for floating-point comparisons
-        // - Implement sampling strategies for very large tables
-        // - Add detailed inconsistency reporting with row-level details
+        //       Replace basic row ID comparison with full data consistency validation including checksums, column comparisons, and detailed reporting.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement checksum-based validation for large tables (MD5, SHA256)
+        // [ ] Add support for comparing specific columns or computed values
+        // [ ] Handle different data types and serialization formats properly
+        // [ ] Add configurable tolerance for floating-point and temporal comparisons
+        // [ ] Implement sampling strategies for very large tables (statistical sampling)
+        // [ ] Add detailed inconsistency reporting with row-level details and differences
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Data consistency checking works for tables of various sizes (1k to 100M+ rows)
+        // - Different data types are properly compared with appropriate tolerances
+        // - Detailed reporting shows exactly what data differs between databases
+        // - Performance scales appropriately with sampling strategies for large tables
+        // - Integration tests validate consistency checking across real database instances
+        //
+        // DEPENDENCIES:
+        // - Checksum calculation libraries (MD5, SHA256) (Required)
+        // - Statistical sampling utilities (Required)
+        // - Data type comparison framework (Required)
+        // - Detailed reporting and diff generation (Required)
+        // - Test databases with known consistency scenarios (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data integrity functionality)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Database engineering and data consistency expertise
 
         let query = format!("SELECT id FROM {} ORDER BY id LIMIT 1000", table_name);
 
@@ -1103,40 +1140,49 @@ impl DataConsistencyManager {
             .await
             .map_err(|e| format!("Failed to connect to participant database: {}", e))?;
 
-        // TODO: Implement transaction rollback with the following requirements:
-        // 1. Prepared transaction rollback: Rollback the prepared transaction
-        //    - Identify the prepared transaction by transaction ID
-        //    - Execute ROLLBACK PREPARED statement
-        //    - Handle rollback errors and connection failures
-        // 2. State cleanup: Clean up transaction state
-        //    - Remove transaction from active transaction tracking
-        //    - Release any held locks or resources
-        //    - Update transaction status appropriately
-        // 3. Error handling: Handle rollback failures gracefully
-        //    - Log rollback failures for investigation
-        //    - Attempt retry with exponential backoff
-        //    - Ensure system remains in consistent state
-        // TODO: Implement actual transaction rollback:
-        // 1. Transaction rollback: Execute actual rollback operations
-        //    - Rollback prepared transactions in participant databases
-        //    - Execute ROLLBACK commands for each participant
-        //    - Verify rollback completion and status
-        // 2. Rollback verification: Verify rollback success
-        //    - Confirm transactions are rolled back
-        //    - Verify data consistency after rollback
-        //    - Handle partial rollback failures
-        // 3. State management: Manage transaction state
-        //    - Update transaction status to aborted
-        //    - Clean up transaction resources
-        //    - Notify participants of rollback completion
+        // TODO: Implement transaction rollback with proper error handling
+        //       Replace placeholder connection with complete distributed transaction rollback that handles prepared transactions and ensures data consistency.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Identify prepared transactions by transaction ID across all participants
+        // [ ] Execute ROLLBACK PREPARED statements on all participant databases
+        // [ ] Handle rollback errors and connection failures with retry logic
+        // [ ] Clean up transaction state and release held resources
+        // [ ] Update transaction status and remove from active tracking
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
         // ACCEPTANCE CRITERIA:
-        // - Prepared transactions are rolled back in participant databases
-        // - Rollback operations complete successfully
-        // - Transaction state is properly updated after rollback
+        // - Distributed transaction rollback works across all participants
+        // - Prepared transactions are properly rolled back using ROLLBACK PREPARED
+        // - Transaction state is cleaned up and resources are released
+        // - Error handling prevents partial rollback states
+        // - Integration tests validate rollback across multiple database instances
+        //
         // DEPENDENCIES:
-        // - Database transaction management (Required)
-        // - Participant database connections (Required)
+        // - PostgreSQL two-phase commit support (Required)
+        // - Distributed transaction state management (Required)
+        // - Connection pooling for participant databases (Required)
+        // - Retry logic with exponential backoff (Required)
+        // - Test databases with two-phase commit enabled (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
         // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (data consistency critical functionality)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Distributed systems and database transaction expertise
 
         info!(
             "Successfully aborted operations for participant {} in transaction {}",

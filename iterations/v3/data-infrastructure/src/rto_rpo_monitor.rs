@@ -378,10 +378,45 @@ impl RtoRpoMonitor {
                     current_rto_seconds: avg_rto.unwrap_or(0),
                     current_rpo_seconds: service_objectives.rpo_seconds,
                     // TODO: Get actual last recovery time
-                    // - [ ] Query recovery system for last recovery timestamp
-                    // - [ ] Handle missing recovery data
-                    // - [ ] Add unit tests with mock recovery system
-                    // - [ ] Add integration tests with real recovery system
+                    //       Replace placeholder timestamp with actual recovery system query to track real recovery events and timing.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] Query recovery system for last recovery timestamp by service
+                    // [ ] Handle missing recovery data with appropriate fallbacks
+                    // [ ] Implement caching for recovery timestamps to avoid repeated queries
+                    // [ ] Add error handling for recovery system unavailability
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Last recovery time reflects actual system recovery events
+                    // - Missing data scenarios handled with sensible defaults
+                    // - Query performance is acceptable (<100ms per service status)
+                    // - Integration tests validate end-to-end recovery system communication
+                    //
+                    // DEPENDENCIES:
+                    // - Recovery system integration (Required)
+                    // - Recovery event logging system (Required)
+                    // - Error handling framework (Required)
+                    // - Test infrastructure for mock recovery system (Optional)
+                    //
+                    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (monitoring functionality enhancement)
+                    // - Change Budget: ~150 LOC
+                    // - Reviewer Requirements: Recovery systems and monitoring expertise
                     last_recovery_time: Some(Utc::now() - chrono::Duration::hours(1)), // Placeholder
                     // TODO: Calculate actual compliance percentage based on RTO/RPO metrics
                     //       Currently uses basic binary calculation; should calculate percentage based on actual metrics and objectives.
@@ -473,6 +508,45 @@ impl RtoRpoMonitor {
                     recent_violations.len()
                 ),
                 affected_services: vec![], // TODO: Convert string service_type back to ServiceType enum
+                //       Replace empty vector with proper service type conversion to identify which services are affected by violations.
+                //
+                // COMPLETION CHECKLIST:
+                // [ ] Primary functionality implemented
+                // [ ] Implement string to ServiceType enum conversion
+                // [ ] Extract unique service types from violations
+                // [ ] Handle unknown service type strings gracefully
+                // [ ] Add validation for service type conversion
+                // [ ] API/data structures defined & stable
+                // [ ] Error handling + validation aligned with error taxonomy
+                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                // [ ] Integration tests for external systems/contracts
+                // [ ] Documentation: public API + system behavior
+                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                // [ ] Configurability and feature flags defined if relevant
+                // [ ] Failure-mode cards documented (degradation paths)
+                //
+                // ACCEPTANCE CRITERIA:
+                // - Affected services list accurately reflects violation data
+                // - Unknown service types are handled without crashes
+                // - Conversion performance is acceptable (<10ms for typical violation sets)
+                // - Integration tests validate end-to-end service type handling
+                //
+                // DEPENDENCIES:
+                // - ServiceType enum definition (Required)
+                // - String parsing utilities (Required)
+                // - Error handling framework (Required)
+                // - Test data with various service types (Required)
+                //
+                // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+                // PRIORITY: Medium
+                // BLOCKING: No
+                //
+                // GOVERNANCE:
+                // - CAWS Tier: 2 (monitoring data accuracy)
+                // - Change Budget: ~100 LOC
+                // - Reviewer Requirements: Data type conversion and enum handling expertise
                 recommended_actions: vec![
                     "Review system health dashboard".to_string(),
                     "Check recent failover events".to_string(),
@@ -674,11 +748,47 @@ fn generate_service_breakdown(
                 ServiceComplianceSummary {
                     service_type: service_type.clone(),
                     // TODO: Calculate actual uptime percentage
-                    // - [ ] Query historical service status data
-                    // - [ ] Calculate uptime from service availability records
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock service data
-                    // - [ ] Add integration tests with real service data
+                    //       Replace placeholder 99.9% with actual uptime calculation from historical service status data.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] Query historical service status data from monitoring system
+                    // [ ] Calculate uptime percentage from availability records
+                    // [ ] Handle missing data with appropriate statistical fallbacks
+                    // [ ] Implement time-window based uptime calculations
+                    // [ ] Add data validation and error handling
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Uptime percentage reflects actual service availability
+                    // - Missing data scenarios use reasonable statistical defaults
+                    // - Calculation performance meets monitoring SLA (<50ms per service)
+                    // - Integration tests validate end-to-end monitoring system communication
+                    //
+                    // DEPENDENCIES:
+                    // - Service monitoring system integration (Required)
+                    // - Historical availability data storage (Required)
+                    // - Statistical calculation utilities (Required)
+                    // - Error handling framework (Required)
+                    // - Test infrastructure for mock monitoring data (Optional)
+                    //
+                    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (monitoring metrics accuracy)
+                    // - Change Budget: ~150 LOC
+                    // - Reviewer Requirements: Service monitoring and uptime calculation expertise
                     uptime_percentage: 99.9, // Placeholder - would calculate from actual data
                     violations_count: 0,     // Not available in current struct
                     average_rto_seconds: Some(status.current_rto_seconds as f64),
@@ -793,6 +903,47 @@ impl RtoRpoMonitor {
             } else {
                 95.0
             }, // TODO: Calculate actual compliance percentage
+            //       Replace binary 100%/95% calculation with actual compliance percentage based on violation severity and frequency.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Implement compliance percentage calculation based on violation metrics
+            // [ ] Weight compliance by violation severity (critical vs warning)
+            // [ ] Consider violation frequency and recency in calculation
+            // [ ] Handle edge cases (no violations, all violations)
+            // [ ] Add statistical validation of compliance percentages
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Compliance percentage reflects actual system reliability
+            // - Violation severity properly weights the calculation
+            // - Recent violations have higher impact than old ones
+            // - Calculation performance is acceptable (<10ms per status)
+            // - Integration tests validate against known compliance scenarios
+            //
+            // DEPENDENCIES:
+            // - Violation severity classification system (Required)
+            // - Time-weighted calculation utilities (Required)
+            // - Statistical aggregation functions (Required)
+            // - Test data with various violation patterns (Required)
+            //
+            // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (compliance metrics accuracy)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Statistical analysis and compliance metrics expertise
             rto_compliance_percentage: if status.rto_compliant { 100.0 } else { 90.0 },
             rpo_compliance_percentage: if status.rpo_compliant { 100.0 } else { 85.0 },
             total_violations: violations.len(),
@@ -802,8 +953,92 @@ impl RtoRpoMonitor {
                 .count(),
             average_recovery_time_seconds: metrics.average_rto_seconds as f64,
             max_recovery_time_seconds: metrics.average_rto_seconds as f64 * 2.0, // TODO: Calculate actual max recovery time
+            //       Replace placeholder calculation with actual maximum recovery time from historical incident data.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Query historical incident data for recovery times
+            // [ ] Calculate true maximum recovery time across all incidents
+            // [ ] Handle missing or incomplete incident data
+            // [ ] Implement statistical outlier detection for anomalous recovery times
+            // [ ] Add time-window filtering for relevant incident data
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Maximum recovery time reflects actual worst-case incidents
+            // - Outlier detection prevents anomalous data from skewing metrics
+            // - Time-window filtering ensures relevance of historical data
+            // - Missing data scenarios handled with statistical fallbacks
+            // - Integration tests validate against known incident recovery times
+            //
+            // DEPENDENCIES:
+            // - Incident tracking system integration (Required)
+            // - Recovery time logging system (Required)
+            // - Statistical outlier detection utilities (Required)
+            // - Time-series filtering functions (Required)
+            // - Test data with various incident scenarios (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (recovery metrics accuracy)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Incident management and statistical analysis expertise
             data_loss_incidents: metrics.total_incidents as usize,
             service_availability_percentage: 99.9, // TODO: Calculate actual service availability from metrics
+            //       Replace hardcoded 99.9% with actual service availability calculation from uptime and incident data.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Query service uptime data from monitoring system
+            // [ ] Calculate availability percentage from incident and uptime records
+            // [ ] Handle scheduled maintenance windows appropriately
+            // [ ] Implement time-weighted availability calculations
+            // [ ] Add statistical confidence intervals for availability metrics
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Availability percentage reflects actual service reliability
+            // - Scheduled maintenance is properly accounted for
+            // - Time-weighted calculations prioritize recent availability
+            // - Statistical confidence provides uncertainty quantification
+            // - Integration tests validate against known availability scenarios
+            //
+            // DEPENDENCIES:
+            // - Service monitoring system integration (Required)
+            // - Incident tracking system (Required)
+            // - Scheduled maintenance tracking (Required)
+            // - Time-weighted statistical utilities (Required)
+            // - Test data with various availability scenarios (Required)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Medium
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 2 (availability metrics accuracy)
+            // - Change Budget: ~150 LOC
+            // - Reviewer Requirements: Service monitoring and availability calculation expertise
         }
     }
 }
@@ -852,11 +1087,48 @@ impl ReliabilityMonitor for RtoRpoMonitor {
                     description: v.description,
                     service_type: v.service_type,
                     // TODO: Map actual measured and objective values from violations
-                    // - [ ] Extract measured value from violation data structure
-                    // - [ ] Extract objective value from service objectives
-                    // - [ ] Handle missing data gracefully
-                    // - [ ] Add unit tests with mock violation data
-                    // - [ ] Add integration tests with real violation data
+                    //       Replace placeholder 0.0 values with actual measured and objective values extracted from violation data.
+                    //
+                    // COMPLETION CHECKLIST:
+                    // [ ] Primary functionality implemented
+                    // [ ] Extract measured value from violation data structure
+                    // [ ] Extract objective value from service objectives configuration
+                    // [ ] Handle missing or incomplete violation data gracefully
+                    // [ ] Implement proper type conversion for measured/objective values
+                    // [ ] Add data validation and error handling
+                    // [ ] API/data structures defined & stable
+                    // [ ] Error handling + validation aligned with error taxonomy
+                    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+                    // [ ] Integration tests for external systems/contracts
+                    // [ ] Documentation: public API + system behavior
+                    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+                    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+                    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+                    // [ ] Configurability and feature flags defined if relevant
+                    // [ ] Failure-mode cards documented (degradation paths)
+                    //
+                    // ACCEPTANCE CRITERIA:
+                    // - Measured and objective values accurately reflect violation data
+                    // - Missing data scenarios handled with appropriate fallbacks
+                    // - Type conversions preserve data integrity
+                    // - Performance overhead is minimal (<5ms per violation)
+                    // - Integration tests validate end-to-end data mapping
+                    //
+                    // DEPENDENCIES:
+                    // - Violation data structure access (Required)
+                    // - Service objectives configuration (Required)
+                    // - Type conversion utilities (Required)
+                    // - Error handling framework (Required)
+                    // - Test data with various violation scenarios (Required)
+                    //
+                    // ESTIMATED EFFORT: 3-5 hours (medium confidence)
+                    // PRIORITY: Medium
+                    // BLOCKING: No
+                    //
+                    // GOVERNANCE:
+                    // - CAWS Tier: 2 (violation data accuracy)
+                    // - Change Budget: ~100 LOC
+                    // - Reviewer Requirements: Data mapping and type conversion expertise
                     measured_value: 0.0, // Placeholder - would need to map from internal violation
                     objective_value: 0.0, // Placeholder - would need to map from internal violation
                     resolved: v.resolved,

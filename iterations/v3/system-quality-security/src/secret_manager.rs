@@ -331,7 +331,47 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
 
     async fn needs_rotation(&self, key: &str) -> SecretResult<bool> {
         // TODO: Implement provider-specific rotation logic
-        //       Currently returns false for simplicity; should implement provider-specific rotation logic (e.g., check Vault metadata for rotation requirements).
+        //       Replace hardcoded false with actual provider-specific rotation logic to determine if secrets need rotation based on age, usage, or security policies.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Query provider metadata for secret age and rotation requirements
+        // [ ] Implement rotation policies (time-based, usage-based, security-based)
+        // [ ] Handle provider-specific rotation triggers (Vault metadata, AWS rotation config)
+        // [ ] Add rotation policy configuration and validation
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Rotation logic correctly identifies secrets needing rotation
+        // - Provider-specific policies are properly implemented
+        // - Rotation triggers work for different secret types and providers
+        // - Performance overhead is acceptable (<100ms per secret check)
+        // - Integration tests validate end-to-end rotation logic
+        //
+        // DEPENDENCIES:
+        // - Provider SDK integration (Required)
+        // - Rotation policy configuration system (Required)
+        // - Secret metadata access (Required)
+        // - Time-based scheduling utilities (Required)
+        // - Test secrets with various rotation scenarios (Required)
+        //
+        // ESTIMATED EFFORT: 6-10 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (security infrastructure functionality)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Security engineering and secret management expertise
         Ok(false)
     }
 
@@ -706,22 +746,49 @@ impl LocalFileProvider {
     /// Create a new authenticated Azure Key Vault provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_azure_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // TODO: Implement Azure Key Vault provider with the following requirements:
-        // 1. Azure credential loading: Load Azure credentials from multiple sources
-        //    - Support managed identity authentication
-        //    - Support service principal authentication
-        //    - Support other Azure authentication methods
-        // 2. KeyVault client creation: Create authenticated KeyVault client
-        //    - Initialize Azure Key Vault client with credentials
-        //    - Configure client with appropriate settings
-        //    - Handle client initialization errors
-        // 3. Connection testing: Test and validate connection
-        //    - Test connection to Azure Key Vault
-        //    - Validate authentication and permissions
-        //    - Return authenticated provider on success
-
         // TODO: Implement Azure Key Vault authentication
-        //       Currently uses placeholder fallback; should implement real Azure Key Vault authentication with proper SDK integration.
+        //       Replace placeholder fallback with real Azure Key Vault authentication and provider creation using Azure SDK with proper credential management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Load Azure credentials from multiple sources (managed identity, service principal, etc.)
+        // [ ] Create authenticated Azure Key Vault client with proper SDK integration
+        // [ ] Configure client with appropriate settings and error handling
+        // [ ] Test and validate connection to Azure Key Vault
+        // [ ] Validate authentication and required permissions
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Azure Key Vault client is created with proper authentication
+        // - Multiple authentication methods (managed identity, service principal) are supported
+        // - Connection to Azure Key Vault is tested and validated
+        // - Authentication errors are handled gracefully with clear error messages
+        // - Integration tests validate end-to-end Azure Key Vault operations
+        //
+        // DEPENDENCIES:
+        // - Azure SDK (azure-identity, azure-security-keyvault-secrets) (Required)
+        // - Azure credential configuration system (Required)
+        // - Azure authentication utilities (Required)
+        // - Test Azure Key Vault instance (Required)
+        // - Azure credentials for testing (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (cloud provider integration functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Azure cloud engineering and security expertise
         warn!("Real Azure authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new(
             "authenticated_azure_fallback".to_string(),
@@ -731,22 +798,49 @@ impl LocalFileProvider {
     /// Create a new authenticated GCP Secret Manager provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_gcp_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // TODO: Implement GCP Secret Manager provider with the following requirements:
-        // 1. GCP credential loading: Load GCP credentials from multiple sources
-        //    - Support service account authentication
-        //    - Support Application Default Credentials (ADC)
-        //    - Support other GCP authentication methods
-        // 2. SecretManager client creation: Create authenticated SecretManager client
-        //    - Initialize GCP Secret Manager client with credentials
-        //    - Configure client with appropriate settings
-        //    - Handle client initialization errors
-        // 3. Connection testing: Test and validate connection
-        //    - Test connection to GCP Secret Manager
-        //    - Validate authentication and permissions
-        //    - Return authenticated provider on success
-
         // TODO: Implement GCP Secret Manager authentication
-        //       Currently uses placeholder fallback; should implement real GCP Secret Manager authentication with proper SDK integration.
+        //       Replace placeholder fallback with real GCP Secret Manager authentication and provider creation using Google Cloud SDK with proper credential management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Load GCP credentials from multiple sources (service account, ADC, etc.)
+        // [ ] Create authenticated GCP Secret Manager client with proper SDK integration
+        // [ ] Configure client with appropriate settings and error handling
+        // [ ] Test and validate connection to GCP Secret Manager
+        // [ ] Validate authentication and required permissions
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - GCP Secret Manager client is created with proper authentication
+        // - Multiple authentication methods (service account, ADC) are supported
+        // - Connection to GCP Secret Manager is tested and validated
+        // - Authentication errors are handled gracefully with clear error messages
+        // - Integration tests validate end-to-end GCP Secret Manager operations
+        //
+        // DEPENDENCIES:
+        // - Google Cloud SDK (gcp-secretmanager) (Required)
+        // - GCP credential configuration system (Required)
+        // - GCP authentication utilities (Required)
+        // - Test GCP Secret Manager instance (Required)
+        // - GCP credentials for testing (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (cloud provider integration functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: GCP cloud engineering and security expertise
         warn!("Real GCP authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new(
             "authenticated_gcp_fallback".to_string(),
@@ -757,7 +851,49 @@ impl LocalFileProvider {
 // Note: Full provider implementations removed due to SDK API complexity.
 // The create_*_provider methods above demonstrate the authenticated connection patterns.
 // TODO: Implement full provider implementations with proper SDK integration
-//       Currently demonstrates authenticated connection patterns; should fully implement providers with production SDK integration.
+//       Replace authentication pattern demonstrations with complete production-ready provider implementations using full cloud provider SDKs.
+//
+// COMPLETION CHECKLIST:
+// [ ] Primary functionality implemented
+// [ ] Complete HashiCorp Vault provider with full secret operations (get, set, list, delete, rotate)
+// [ ] Complete AWS Secrets Manager provider with full secret operations
+// [ ] Complete Azure Key Vault provider with full secret operations
+// [ ] Complete GCP Secret Manager provider with full secret operations
+// [ ] Implement provider-specific error handling and retry logic
+// [ ] Add comprehensive logging and metrics for all providers
+// [ ] API/data structures defined & stable
+// [ ] Error handling + validation aligned with error taxonomy
+// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+// [ ] Integration tests for external systems/contracts
+// [ ] Documentation: public API + system behavior
+// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+// [ ] Security posture reviewed (inputs, authz, sandboxing)
+// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+// [ ] Configurability and feature flags defined if relevant
+// [ ] Failure-mode cards documented (degradation paths)
+//
+// ACCEPTANCE CRITERIA:
+// - All cloud providers (AWS, Azure, GCP, Vault) have complete SDK implementations
+// - All secret operations (CRUD + rotation) work across all providers
+// - Provider-specific features and error handling are properly implemented
+// - Performance and reliability meet production SLA requirements
+// - Integration tests validate end-to-end operations with real cloud services
+//
+// DEPENDENCIES:
+// - Complete cloud provider SDKs (AWS, Azure, GCP, HashiCorp) (Required)
+// - Cloud infrastructure for testing (Required)
+// - Comprehensive credential management system (Required)
+// - Multi-cloud testing environment (Required)
+// - Production cloud accounts and permissions (Required)
+//
+// ESTIMATED EFFORT: 40-60 hours (high confidence)
+// PRIORITY: High
+// BLOCKING: No
+//
+// GOVERNANCE:
+// - CAWS Tier: 1 (critical security infrastructure)
+// - Change Budget: ~1500 LOC
+// - Reviewer Requirements: Multi-cloud engineering, security, and SDK expertise
 
 #[async_trait]
 impl SecretProviderTrait for LocalFileProvider {

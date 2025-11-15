@@ -14,6 +14,7 @@ use sha2::{Digest, Sha256};
 use tracing::{error, warn};
 use uuid::Uuid;
 
+#[cfg(feature = "orchestration")]
 use crate::api::ApiState;
 use crate::models::User;
 
@@ -130,6 +131,7 @@ pub async fn validate_token_and_get_user_id(
 #[derive(Debug, Clone)]
 pub struct VerifiedUser(pub User);
 
+#[cfg(feature = "orchestration")]
 #[axum::async_trait]
 impl axum::extract::FromRequestParts<ApiState> for VerifiedUser {
     type Rejection = StatusCode;
@@ -221,6 +223,7 @@ impl axum::extract::FromRequestParts<ApiState> for VerifiedUser {
 #[derive(Debug, Clone)]
 pub struct AdminUser(pub User);
 
+#[cfg(feature = "orchestration")]
 #[axum::async_trait]
 impl axum::extract::FromRequestParts<ApiState> for AdminUser {
     type Rejection = StatusCode;
@@ -294,6 +297,7 @@ pub fn has_all_roles(user: &User, roles: &[&str]) -> bool {
 #[derive(Debug, Clone)]
 pub struct ViewerUser(pub User);
 
+#[cfg(feature = "orchestration")]
 #[axum::async_trait]
 impl axum::extract::FromRequestParts<ApiState> for ViewerUser {
     type Rejection = StatusCode;

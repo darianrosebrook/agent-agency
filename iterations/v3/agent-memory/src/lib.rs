@@ -127,11 +127,14 @@ pub enum MemoryError {
     #[error("Validation error: {0}")]
     Validation(String),
 
+    #[error("Persistence error: {0}")]
+    Persistence(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     #[error("Unknown memory error: {0}")]
     Other(String),
@@ -152,6 +155,12 @@ impl From<regex::Error> for MemoryError {
 impl From<std::string::FromUtf8Error> for MemoryError {
     fn from(err: std::string::FromUtf8Error) -> Self {
         MemoryError::Other(format!("UTF-8 decoding error: {}", err))
+    }
+}
+
+impl From<serde_json::Error> for MemoryError {
+    fn from(err: serde_json::Error) -> Self {
+        MemoryError::Serialization(err.to_string())
     }
 }
 

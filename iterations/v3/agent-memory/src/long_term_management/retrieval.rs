@@ -114,19 +114,17 @@ impl LongTermRetrievalEngine {
         &self,
         _query: &LongTermRetrievalQuery,
     ) -> crate::MemoryResult<Vec<crate::memory_types::Memory>> {
-        // TODO: Implement archival storage retrieval
-        // - [ ] Query archival storage system (cold storage, S3, etc.)
-        // - [ ] Apply query filters (time range, relevance, importance)
-        // - [ ] Decompress archived memories if needed
-        // - [ ] Handle retrieval errors and timeouts
-        // - [ ] Add pagination for large result sets
-        // - [ ] Add unit tests with mock archival storage
-        // - [ ] Add integration tests with real archival retrieval
         // TODO: Query archival storage system for archived memories
-        //       Currently returns empty results; should query archival storage system to retrieve archived memories matching criteria.
+        //       Replace empty result placeholder with actual archival storage retrieval to access long-term memory archives.
         //
         // COMPLETION CHECKLIST:
         // [ ] Primary functionality implemented
+        // [ ] Query archival storage system (cold storage, S3, etc.)
+        // [ ] Apply query filters (time range, relevance, importance)
+        // [ ] Decompress archived memories if needed
+        // [ ] Handle retrieval errors and timeouts gracefully
+        // [ ] Implement pagination for large result sets
+        // [ ] Add error recovery for partial retrieval failures
         // [ ] API/data structures defined & stable
         // [ ] Error handling + validation aligned with error taxonomy
         // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
@@ -139,24 +137,27 @@ impl LongTermRetrievalEngine {
         // [ ] Failure-mode cards documented (degradation paths)
         //
         // ACCEPTANCE CRITERIA:
-        // - Archived memories are retrieved from storage system
-        // - Query criteria are applied correctly
-        // - Retrieval performance is acceptable
-        // - Error handling works for storage failures
+        // - Archival queries return relevant memories from cold storage
+        // - Query filters work correctly (time range, relevance, importance)
+        // - Decompression handles various archive formats correctly
+        // - Error handling provides clear feedback on retrieval failures
+        // - Pagination works efficiently for large result sets
+        // - Performance meets latency requirements for archival retrieval
         //
         // DEPENDENCIES:
-        // - Archival storage system API (Required)
-        // - Storage query utilities (Required)
-        // - Memory retrieval utilities (Required)
+        // - Archival storage system integration (Required)
+        // - Compression/decompression library (Required)
+        // - Error handling framework (Required)
+        // - Test infrastructure for mock archival storage (Optional)
         //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
         // PRIORITY: Medium
         // BLOCKING: No
         //
         // GOVERNANCE:
-        // - CAWS Tier: 2 (storage integration feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Storage system expertise
+        // - CAWS Tier: 2 (long-term memory retrieval functionality)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Storage systems and archival retrieval expertise
         Ok(Vec::new()) // Temporary: empty results until archival storage query is implemented
     }
 

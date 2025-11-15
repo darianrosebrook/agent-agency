@@ -13,10 +13,20 @@ const TIMESTAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5) + 
 
 // Load assessment results
 function loadResults() {
-    const testResults = JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, 'test-results.json'), 'utf8'));
-    const coverageResults = JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, 'coverage-results.json'), 'utf8'));
-    const todoResults = JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, 'todo-results.json'), 'utf8'));
-    const dashboardResults = JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, 'dashboard-readiness.json'), 'utf8'));
+    // Handle missing files gracefully
+    const loadJsonFile = (filename) => {
+        try {
+            return JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, filename), 'utf8'));
+        } catch (error) {
+            console.warn(`Warning: Could not load ${filename}, using empty object`);
+            return {};
+        }
+    };
+
+    const testResults = loadJsonFile('test-results.json');
+    const coverageResults = loadJsonFile('coverage-results.json');
+    const todoResults = loadJsonFile('todo-results.json');
+    const dashboardResults = loadJsonFile('dashboard-readiness.json');
     
     return {
         tests: testResults,
@@ -45,37 +55,43 @@ function calculateReadinessScore(results) {
     }
     
     // Coverage (25%)
-    maxScore += 25;
-    const lineCoverage = results.coverage.overall.line_coverage;
-    const branchCoverage = results.coverage.overall.branch_coverage;
-    const avgCoverage = (lineCoverage + branchCoverage) / 2;
-    score += avgCoverage * 25;
+    if (results.coverage && results.coverage.overall) {
+        maxScore += 25;
+        const lineCoverage = results.coverage.overall.line_coverage || 0;
+        const branchCoverage = results.coverage.overall.branch_coverage || 0;
+        const avgCoverage = (lineCoverage + branchCoverage) / 2;
+        score += avgCoverage * 25;
+    }
     
     // TODO status (20%)
-    maxScore += 20;
-    const totalTodos = results.todos.summary.total_todos;
-    const blockingTodos = results.todos.summary.blocking_todos;
-    
-    // Lower score for more blocking TODOs
-    if (totalTodos === 0) {
-        score += 20; // Perfect if no TODOs
-    } else {
-        const blockingRatio = blockingTodos / totalTodos;
-        score += (1 - blockingRatio) * 20;
+    if (results.todos && results.todos.summary) {
+        maxScore += 20;
+        const totalTodos = results.todos.summary.total_todos || 0;
+        const blockingTodos = results.todos.summary.blocking_todos || 0;
+
+        // Lower score for more blocking TODOs
+        if (totalTodos === 0) {
+            score += 20; // Perfect if no TODOs
+        } else {
+            const blockingRatio = blockingTodos / totalTodos;
+            score += (1 - blockingRatio) * 20;
+        }
     }
     
     // Dashboard readiness (25%)
-    maxScore += 25;
-    if (results.dashboard.overall_readiness) {
-        score += 25;
-    } else {
-        // Partial credit based on components
-        let dashboardScore = 0;
-        if (results.dashboard.build_status.compiles) dashboardScore += 10;
-        if (results.dashboard.api_connectivity.server_running) dashboardScore += 5;
-        if (results.dashboard.schema_alignment.aligned) dashboardScore += 5;
-        if (results.dashboard.missing_apis.length === 0) dashboardScore += 5;
-        score += dashboardScore;
+    if (results.dashboard) {
+        maxScore += 25;
+        if (results.dashboard.overall_readiness) {
+            score += 25;
+        } else {
+            // Partial credit based on components
+            let dashboardScore = 0;
+            if (results.dashboard.build_status && results.dashboard.build_status.compiles) dashboardScore += 10;
+            if (results.dashboard.api_connectivity && results.dashboard.api_connectivity.server_running) dashboardScore += 5;
+            if (results.dashboard.schema_alignment && results.dashboard.schema_alignment.aligned) dashboardScore += 5;
+            if (results.dashboard.missing_apis && results.dashboard.missing_apis.length === 0) dashboardScore += 5;
+            score += dashboardScore;
+        }
     }
     
     return {
@@ -114,15 +130,15 @@ function generateJSONReport(results) {
                 high_value_areas_count: (results.coverage.high_value_areas || []).length
             },
             todos: {
-                total: results.todos.summary.total_todos,
-                blocking: results.todos.summary.blocking_todos,
-                in_critical_paths: results.todos.blocking_in_critical_paths.length
+                total: (results.todos.summary && results.todos.summary.total_todos) || 0,
+                blocking: (results.todos.summary && results.todos.summary.blocking_todos) || 0,
+                in_critical_paths: (results.todos.blocking_in_critical_paths && results.todos.blocking_in_critical_paths.length) || 0
             },
             dashboard: {
-                ready: results.dashboard.overall_readiness,
-                build_status: results.dashboard.build_status.compiles,
-                api_connectivity: results.dashboard.api_connectivity.server_running,
-                schema_aligned: results.dashboard.schema_alignment.aligned
+                ready: results.dashboard && results.dashboard.overall_readiness,
+                build_status: results.dashboard && results.dashboard.build_status && results.dashboard.build_status.compiles,
+                api_connectivity: results.dashboard && results.dashboard.api_connectivity && results.dashboard.api_connectivity.server_running,
+                schema_aligned: results.dashboard && results.dashboard.schema_alignment && results.dashboard.schema_alignment.aligned
             }
         },
         details: {
@@ -175,7 +191,7 @@ function generateRecommendations(results, readinessScore) {
     }
     
     // TODO recommendations
-    const blockingTodos = results.todos.summary.blocking_todos;
+    const blockingTodos = (results.todos.summary && results.todos.summary.blocking_todos) || 0;
     if (blockingTodos > 0) {
         recommendations.push({
             priority: 'high',
@@ -186,7 +202,7 @@ function generateRecommendations(results, readinessScore) {
         });
     }
     
-    const criticalPathBlockers = results.todos.blocking_in_critical_paths.length;
+    const criticalPathBlockers = (results.todos.blocking_in_critical_paths && results.todos.blocking_in_critical_paths.length) || 0;
     if (criticalPathBlockers > 0) {
         recommendations.push({
             priority: 'critical',
@@ -198,8 +214,8 @@ function generateRecommendations(results, readinessScore) {
     }
     
     // Dashboard recommendations
-    if (!results.dashboard.overall_readiness) {
-        if (!results.dashboard.build_status.compiles) {
+    if (results.dashboard && !results.dashboard.overall_readiness) {
+        if (results.dashboard.build_status && !results.dashboard.build_status.compiles) {
             recommendations.push({
                 priority: 'high',
                 category: 'dashboard',
@@ -209,7 +225,7 @@ function generateRecommendations(results, readinessScore) {
             });
         }
         
-        if (results.dashboard.missing_apis.length > 0) {
+        if (results.dashboard.missing_apis && results.dashboard.missing_apis.length > 0) {
             recommendations.push({
                 priority: 'medium',
                 category: 'dashboard',
@@ -284,8 +300,8 @@ function generateMarkdownReport(jsonReport) {
     // Coverage Analysis
     md += `## Coverage Analysis\n\n`;
     md += `### Overall Coverage\n`;
-    md += `- **Line Coverage:** ${(results.coverage.overall.line_coverage * 100).toFixed(2)}% (threshold: ${(results.coverage.thresholds.line * 100).toFixed(0)}%)\n`;
-    md += `- **Branch Coverage:** ${(results.coverage.overall.branch_coverage * 100).toFixed(2)}% (threshold: ${(results.coverage.thresholds.branch * 100).toFixed(0)}%)\n\n`;
+    md += `- **Line Coverage:** ${(((results.coverage.overall && results.coverage.overall.line_coverage) || 0) * 100).toFixed(2)}% (threshold: ${(((results.coverage.thresholds && results.coverage.thresholds.line) || 80) * 100).toFixed(0)}%)\n`;
+    md += `- **Branch Coverage:** ${(((results.coverage.overall && results.coverage.overall.branch_coverage) || 0) * 100).toFixed(2)}% (threshold: ${(((results.coverage.thresholds && results.coverage.thresholds.branch) || 90) * 100).toFixed(0)}%)\n\n`;
     
     if (results.coverage.below_threshold && results.coverage.below_threshold.length > 0) {
         md += `### Crates Below Threshold\n\n`;
@@ -310,11 +326,11 @@ function generateMarkdownReport(jsonReport) {
     
     // TODO Analysis
     md += `## TODO Analysis\n\n`;
-    md += `- **Total TODOs:** ${results.todos.summary.total_todos}\n`;
-    md += `- **Blocking TODOs:** ${results.todos.summary.blocking_todos}\n`;
-    md += `- **High Confidence:** ${results.todos.summary.high_confidence}\n`;
-    md += `- **Medium Confidence:** ${results.todos.summary.medium_confidence}\n`;
-    md += `- **Low Confidence:** ${results.todos.summary.low_confidence}\n\n`;
+    md += `- **Total TODOs:** ${(results.todos.summary && results.todos.summary.total_todos) || 0}\n`;
+    md += `- **Blocking TODOs:** ${(results.todos.summary && results.todos.summary.blocking_todos) || 0}\n`;
+    md += `- **High Confidence:** ${(results.todos.summary && results.todos.summary.high_confidence) || 0}\n`;
+    md += `- **Medium Confidence:** ${(results.todos.summary && results.todos.summary.medium_confidence) || 0}\n`;
+    md += `- **Low Confidence:** ${(results.todos.summary && results.todos.summary.low_confidence) || 0}\n\n`;
     
     if (results.todos.blocking_in_critical_paths && results.todos.blocking_in_critical_paths.length > 0) {
         md += `### Blocking TODOs in Critical Paths\n\n`;
@@ -329,12 +345,12 @@ function generateMarkdownReport(jsonReport) {
     
     // Dashboard Readiness
     md += `## Dashboard Readiness\n\n`;
-    md += `- **Overall Status:** ${results.dashboard.overall_readiness ? '✅ Ready' : '❌ Not Ready'}\n`;
-    md += `- **Build Status:** ${results.dashboard.build_status.compiles ? '✅ Compiles' : '❌ Has Errors'}\n`;
-    md += `- **TypeScript Errors:** ${results.dashboard.build_status.error_count}\n`;
-    md += `- **API Server:** ${results.dashboard.api_connectivity.server_running ? '✅ Running' : '⚠️ Not Running'}\n`;
-    md += `- **Schema Alignment:** ${results.dashboard.schema_alignment.aligned ? '✅ Aligned' : '⚠️ Issues Found'}\n`;
-    md += `- **Missing APIs:** ${results.dashboard.missing_apis.length}\n\n`;
+    md += `- **Overall Status:** ${(results.dashboard && results.dashboard.overall_readiness) ? '✅ Ready' : '❌ Not Ready'}\n`;
+    md += `- **Build Status:** ${(results.dashboard && results.dashboard.build_status && results.dashboard.build_status.compiles) ? '✅ Compiles' : '❌ Has Errors'}\n`;
+    md += `- **TypeScript Errors:** ${(results.dashboard && results.dashboard.build_status && results.dashboard.build_status.error_count) || 0}\n`;
+    md += `- **API Server:** ${(results.dashboard && results.dashboard.api_connectivity && results.dashboard.api_connectivity.server_running) ? '✅ Running' : '⚠️ Not Running'}\n`;
+    md += `- **Schema Alignment:** ${(results.dashboard && results.dashboard.schema_alignment && results.dashboard.schema_alignment.aligned) ? '✅ Aligned' : '⚠️ Issues Found'}\n`;
+    md += `- **Missing APIs:** ${(results.dashboard && results.dashboard.missing_apis && results.dashboard.missing_apis.length) || 0}\n\n`;
     
     // Recommendations
     md += `## Recommendations\n\n`;

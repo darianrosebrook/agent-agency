@@ -60,7 +60,8 @@ linfa-linear = "0.7"
 statrs = "0.16"
 lru = "0.12"
 strsim = "0.11"
-rust-bert = { version = "0.21", optional = true }
+# rust-bert removed - not used, and it pulls in torch-sys which conflicts with libtorch
+# If PyTorch functionality is needed, use PyO3 to call Python's PyTorch instead
 tokenizers = "0.19"
 lingua = "1.6"
 whatlang = "0.18"
@@ -112,8 +113,8 @@ default = ["research", "coreml", "evaluation"]  # Research (claim extraction) is
 coreml = ["system-acceleration/coreml", "data-infrastructure/coreml", "agent-memory/embeddings-coreml"]  # CoreML/ANE acceleration for production
 system-acceleration = ["coreml"]  # Enable system acceleration features (alias for coreml)
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
-full = ["dep:rust-bert", "development-tools"]
-with_bert = ["dep:rust-bert"]
+full = ["development-tools"]
+# with_bert removed - rust-bert dependency removed
 development = ["development-tools"]
 memory = ["agent-memory/database", "agent-memory/embeddings", "agent-memory/contracts"]  # Gate memory functionality behind feature flag - no coreml
 research = ["agent-research"]  # Research functionality (claim extraction) - now in default features

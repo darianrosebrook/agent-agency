@@ -83,8 +83,8 @@ backoff = { version = "0.4", features = ["tokio"] }
 # rusqlite = { version = "0.31.0", features = ["bundled"] }
 # deadpool-sqlite = "0.9"
 
-# Integration with agent-memory (removed to avoid circular dependencies)
-# agent-memory = { path = "../agent-memory", optional = true, features = ["database"] }
+# Integration with agent-memory (disabled due to circular dependency)
+# agent-memory = { path = "../agent-memory", optional = true, default-features = false, features = ["database", "embeddings", "contracts"] }
 
 # Integration with system-resilience
 system-resilience = { path = "../system-resilience", optional = true }
@@ -107,8 +107,8 @@ parking_lot = "0.12"
 futures = "0.3"
 
 [features]
-default = ["workspace-integration"]
-memory-integration = []  # Feature flag for memory integration (currently disabled)
+default = ["workspace-integration"]  # memory-integration disabled by default
+# memory-integration = ["agent-memory"]  # Feature flag for memory integration (disabled)
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
 coreml = ["system-acceleration"] # CoreML model integration for audio transcription and object detection

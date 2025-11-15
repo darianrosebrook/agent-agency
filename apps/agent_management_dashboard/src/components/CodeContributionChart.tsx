@@ -1,17 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
-import { useState, useEffect } from "react";
 import { useAnimatedValue } from "../hooks/useAnimatedValue";
-import { getContributions, type ContributionsResponse, type DailyContribution } from "../lib/api/observability";
+import {
+  getContributions,
+  type ContributionsResponse,
+  type DailyContribution,
+} from "../lib/api/observability";
 import styles from "./CodeContributionChart.module.scss";
 
 interface DataPoint {
@@ -37,13 +41,14 @@ export function CodeContributionChart({
     async function fetchData() {
       try {
         // Request daily breakdown from the API
-        const contributionsResponse = await getContributions({
+        const contributionsResponse = (await getContributions({
           days,
-          group_by: 'day',
-        }) as ContributionsResponse;
+          group_by: "day",
+        })) as ContributionsResponse;
 
         // The API returns daily breakdown directly
-        const dailyContributions = contributionsResponse.daily_contributions || [];
+        const dailyContributions =
+          contributionsResponse.daily_contributions || [];
 
         // Transform API response to chart data format
         const chartData: DataPoint[] = dailyContributions

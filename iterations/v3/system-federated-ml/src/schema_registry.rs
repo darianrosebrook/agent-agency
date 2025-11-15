@@ -175,30 +175,96 @@ impl SchemaRegistry for JsonSchemaRegistry {
 
     fn convert(&self, _from: &str, _to: &str, value: Value) -> Result<Value, SchemaError> {
         // TODO: Implement real schema conversion
-        // - [ ] Make conversion async for complex transformations
-        // - [ ] Load source and target schemas from registry
-        // - [ ] Perform type conversion based on schema definitions
-        // - [ ] Handle conversion errors and incompatible types
-        // - [ ] Add unit tests with various schema types
-        // - [ ] Add integration tests with real schema conversions
+        //       Replace synchronous placeholder with comprehensive schema conversion engine that handles type transformations between different schema formats.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Make conversion async for complex transformations and external calls
+        // [ ] Load source and target schemas from registry with proper versioning
+        // [ ] Implement type conversion based on schema definitions and mappings
+        // [ ] Handle conversion errors, incompatible types, and data loss scenarios
+        // [ ] Add support for complex nested structure transformations
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Schema conversion works between supported schema formats (JSON Schema, Avro, etc.)
+        // - Complex nested structures are properly transformed
+        // - Type incompatibilities are detected and reported with clear error messages
+        // - Performance meets SLA for typical schema conversion operations
+        // - Integration tests validate end-to-end schema transformations
+        //
+        // DEPENDENCIES:
+        // - Schema registry storage system (Required)
+        // - Type conversion libraries (JSON Schema transformers, etc.) (Required)
+        // - Schema validation utilities (Required)
+        // - Test schemas with various complexity levels (Required)
+        // - Schema transformation test data (Required)
+        //
+        // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data transformation functionality)
+        // - Change Budget: ~400 LOC
+        // - Reviewer Requirements: Data transformation and schema engineering expertise
         // This is a synchronous wrapper - real implementation would be async
         Ok(value)
     }
 
     fn register_schema(&mut self, key: String, _schema: Value) -> Result<(), SchemaError> {
-        // TODO: Convert to async implementation with the following requirements:
-        // 1. Async operation: Make schema registration async
-        //    - Change function signature to async fn
-        //    - Use async database operations for schema storage
-        //    - Handle async error propagation
-        // 2. Database persistence: Persist schema to database
-        //    - Store schema in database with proper serialization
-        //    - Handle database connection and transaction management
-        //    - Ensure schema versioning and conflict resolution
-        // 3. Error handling: Improve error handling for async operations
-        //    - Handle database connection failures
-        //    - Handle schema validation errors
-        //    - Return appropriate error types
+        // TODO: Convert to async implementation with database persistence
+        //       Replace synchronous placeholder with async schema registration that persists schemas to database with proper versioning and error handling.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Convert function signature to async fn for database operations
+        // [ ] Implement database persistence with proper schema serialization
+        // [ ] Add schema versioning and conflict resolution for updates
+        // [ ] Handle database connection failures and transaction management
+        // [ ] Add schema validation before persistence
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Schema registration is fully async with database persistence
+        // - Schema versioning prevents conflicts and supports evolution
+        // - Database transactions ensure consistency during registration
+        // - Validation occurs before persistence with clear error messages
+        // - Integration tests validate end-to-end schema registration workflow
+        //
+        // DEPENDENCIES:
+        // - Database connection and transaction management (Required)
+        // - Schema serialization/deserialization utilities (Required)
+        // - Schema validation framework (Required)
+        // - Versioning and conflict resolution system (Required)
+        // - Test database with schema storage capabilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data persistence functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Database engineering and async programming expertise
         info!("Registered schema: {}", key);
         Ok(())
     }
@@ -208,19 +274,49 @@ impl SchemaRegistry for JsonSchemaRegistry {
         key: String,
         _converter: Box<dyn Converter>,
     ) -> Result<(), SchemaError> {
-        // TODO: Convert to async implementation with the following requirements:
-        // 1. Async operation: Make converter registration async
-        //    - Change function signature to async fn
-        //    - Use async database operations for converter storage
-        //    - Handle async error propagation
-        // 2. Database persistence: Persist converter to database
-        //    - Store converter metadata in database
-        //    - Handle database connection and transaction management
-        //    - Ensure converter versioning and conflict resolution
-        // 3. Error handling: Improve error handling for async operations
-        //    - Handle database connection failures
-        //    - Handle converter validation errors
-        //    - Return appropriate error types
+        // TODO: Convert to async implementation with database persistence
+        //       Replace synchronous placeholder with async converter registration that persists converter metadata to database with versioning support.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Convert function signature to async fn for database operations
+        // [ ] Implement database persistence for converter metadata and configuration
+        // [ ] Add converter versioning and conflict resolution for updates
+        // [ ] Handle database connection failures and transaction management
+        // [ ] Add converter validation before persistence
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Converter registration is fully async with database persistence
+        // - Converter versioning prevents conflicts and supports evolution
+        // - Database transactions ensure consistency during registration
+        // - Validation occurs before persistence with clear error messages
+        // - Integration tests validate end-to-end converter registration workflow
+        //
+        // DEPENDENCIES:
+        // - Database connection and transaction management (Required)
+        // - Converter serialization/deserialization utilities (Required)
+        // - Converter validation framework (Required)
+        // - Versioning and conflict resolution system (Required)
+        // - Test database with converter storage capabilities (Required)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (data persistence functionality)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Database engineering and async programming expertise
         info!("Registered converter: {}", key);
         Ok(())
     }

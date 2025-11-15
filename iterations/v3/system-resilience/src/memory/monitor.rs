@@ -642,7 +642,52 @@ impl MemoryMonitor {
             internal_fragmentation,
             largest_free_block,
             total_free_memory: total_free_bytes,
-            free_blocks_count: 0, // TODO: calculate this
+            // TODO: Implement free blocks count calculation
+            //       Currently returns 0; should analyze memory layout to count actual free memory blocks for accurate fragmentation metrics.
+            //
+            // COMPLETION CHECKLIST:
+            // [ ] Primary functionality implemented
+            // [ ] Analyze memory allocator layout to identify free blocks
+            // [ ] Implement block counting algorithm for different allocator types
+            // [ ] Handle various block sizes and allocation patterns
+            // [ ] Add block counting to fragmentation analysis
+            // [ ] Validate block count accuracy against known memory states
+            // [ ] Add unit tests for block counting accuracy
+            // [ ] Add integration tests with memory allocation patterns
+            // [ ] API/data structures defined & stable
+            // [ ] Error handling + validation aligned with error taxonomy
+            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+            // [ ] Integration tests for external systems/contracts
+            // [ ] Documentation: public API + system behavior
+            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+            // [ ] Security posture reviewed (inputs, authz, sandboxing)
+            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+            // [ ] Configurability and feature flags defined if relevant
+            // [ ] Failure-mode cards documented (degradation paths)
+            //
+            // ACCEPTANCE CRITERIA:
+            // - Free blocks count accurately reflects memory allocator state
+            // - Count includes all free blocks regardless of size
+            // - Performance overhead is minimal (<1ms per calculation)
+            // - Results are consistent across different memory states
+            // - Error handling covers edge cases (no free blocks, corrupted memory)
+            // - Integration tests validate against known memory layouts
+            //
+            // DEPENDENCIES:
+            // - Memory allocator introspection capabilities (Required)
+            // - Block metadata access (Required)
+            // - Memory layout analysis utilities (Optional)
+            // - Performance profiling tools (Optional)
+            //
+            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
+            // PRIORITY: Low
+            // BLOCKING: No
+            //
+            // GOVERNANCE:
+            // - CAWS Tier: 3 (monitoring enhancement)
+            // - Change Budget: ~100 LOC
+            // - Reviewer Requirements: Memory management and allocator expertise
+            free_blocks_count: 0,
         }
     }
 
@@ -1154,27 +1199,51 @@ impl MemoryMonitor {
     /// Emergency handle cleanup (clear all tracked handles without cleanup)
     pub async fn emergency_handle_cleanup(&self) {
         let registry = self.handle_registry.write().await;
-        // TODO: Implement proper emergency cleanup:
-        // 1. Handle cleanup: Attempt to clean up handles properly
-        //    - Try to release resources for each handle
-        //    - Handle cleanup errors gracefully
-        //    - Support partial cleanup on failures
-        // 2. Cleanup strategies: Implement cleanup strategies
-        //    - Prioritize critical resource cleanup
-        //    - Support graceful vs forceful cleanup
-        //    - Handle cleanup timeouts appropriately
-        // 3. Registry management: Enhance registry management
-        //    - Add clear method to HandleRegistry if needed
-        //    - Support selective handle cleanup
-        //    - Track cleanup success and failures
+        // TODO: Implement proper emergency cleanup
+        //       Currently clears handle registry without cleanup; should attempt proper resource release with error handling and timeout management.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement handle cleanup loop with individual resource release
+        // [ ] Add error handling for failed cleanup attempts
+        // [ ] Implement partial cleanup support when some handles fail
+        // [ ] Add cleanup timeout handling with configurable limits
+        // [ ] Implement cleanup priority system for critical resources
+        // [ ] Add cleanup strategy selection (graceful vs forceful)
+        // [ ] Track cleanup success/failure statistics
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
         // ACCEPTANCE CRITERIA:
-        // - Emergency cleanup attempts proper resource release
-        // - Cleanup handles errors and timeouts gracefully
-        // - Registry supports proper cleanup operations
+        // - Emergency cleanup attempts proper resource release for all handles
+        // - Cleanup handles errors and timeouts gracefully with partial success
+        // - Critical resources are prioritized in cleanup order
+        // - Cleanup performance meets emergency SLA (<5 seconds total)
+        // - Registry state is consistent after cleanup operations
+        // - Error handling covers all resource types and failure modes
+        //
         // DEPENDENCIES:
-        // - Handle cleanup API (Required)
-        // - Resource release mechanisms (Required)
+        // - Handle cleanup API with timeout support (Required)
+        // - Resource release mechanisms for different handle types (Required)
+        // - Cleanup priority system (Optional)
+        // - Error aggregation and reporting (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
         // PRIORITY: High
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 1 (emergency resource management)
+        // - Change Budget: ~200 LOC
+        // - Reviewer Requirements: Resource management and cleanup strategy expertise
         warn!("Emergency handle cleanup completed - all handle tracking cleared");
     }
 
@@ -1588,7 +1657,50 @@ impl MemoryMonitor {
         }
 
         // TODO: Implement comprehensive memory access pattern analysis
-        //       Currently uses basic analysis; should implement comprehensive analysis with temporal and spatial locality detection.
+        //       Currently returns empty patterns; should analyze actual memory access patterns with temporal/spatial locality detection and access frequency analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement memory access tracing and instrumentation
+        // [ ] Analyze temporal locality patterns (access frequency over time)
+        // [ ] Detect spatial locality patterns (adjacent memory access)
+        // [ ] Calculate access frequency distributions and hotspots
+        // [ ] Implement pattern recognition algorithms for common access patterns
+        // [ ] Add memory access profiling with performance impact analysis
+        // [ ] Support configurable analysis depth and sampling rates
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory access patterns are accurately detected and classified
+        // - Temporal and spatial locality metrics are calculated correctly
+        // - Analysis performance meets SLA (<100ms for typical workloads)
+        // - Access pattern insights inform optimization recommendations
+        // - Pattern detection works across different memory allocation types
+        // - Error handling covers instrumentation failures and edge cases
+        //
+        // DEPENDENCIES:
+        // - Memory access instrumentation framework (Required)
+        // - Pattern recognition algorithms (Optional - can implement)
+        // - Statistical analysis utilities (Required)
+        // - Performance profiling tools (Optional)
+        //
+        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory performance analysis)
+        // - Change Budget: ~250 LOC
+        // - Reviewer Requirements: Memory management and performance analysis expertise
         analysis.access_patterns = self.analyze_memory_access_patterns().await?;
 
         // Analyze allocation sites (placeholder - would need instrumentation)
@@ -1764,7 +1876,50 @@ impl MemoryMonitor {
 
         // Analyze temporal and spatial locality from allocation patterns
         // TODO: Implement comprehensive memory access tracing
-        //       Currently uses basic analysis; should trace actual memory access patterns for accurate locality analysis.
+        //       Currently creates synthetic access patterns; should implement actual memory access tracing with instrumentation and locality analysis.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Implement memory access instrumentation framework
+        // [ ] Add memory read/write tracing capabilities
+        // [ ] Track temporal locality patterns (time-based access patterns)
+        // [ ] Analyze spatial locality patterns (adjacent memory access)
+        // [ ] Implement access frequency analysis and hotspots detection
+        // [ ] Add configurable tracing depth and sampling rates
+        // [ ] Support different tracing modes (full vs sampled)
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Memory access tracing captures accurate temporal and spatial patterns
+        // - Tracing performance overhead is acceptable (<10% for typical workloads)
+        // - Locality analysis provides actionable optimization insights
+        // - Tracing works across different memory allocation types and sizes
+        // - Error handling covers instrumentation failures and edge cases
+        // - Configurable tracing supports different analysis requirements
+        //
+        // DEPENDENCIES:
+        // - Memory access instrumentation framework (Required)
+        // - Performance profiling and sampling utilities (Required)
+        // - Statistical analysis for locality patterns (Required)
+        // - Tracing configuration and control API (Optional)
+        //
+        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (memory performance optimization)
+        // - Change Budget: ~300 LOC
+        // - Reviewer Requirements: Memory management and performance profiling expertise
         let mut access_ranges = Vec::new();
 
         // Create synthetic access patterns based on allocation clustering

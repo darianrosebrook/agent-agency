@@ -4,7 +4,7 @@
 //! the data contracts between ingestion, enrichment, indexing, knowledge, and operations.
 
 #[cfg(feature = "memory-integration")]
-use agent_memory::graph_engine::{Relationship, RelationshipType};
+use crate::indexing::Relationship;
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -438,6 +438,7 @@ pub struct RetrievedData {
 impl RetrievedData {
     /// Enhance retrieved data with contextual information
     #[cfg(feature = "memory-integration")]
+    #[cfg(feature = "memory-integration")]
     pub fn enhance_with_context(&mut self, _context_memories: &[agent_memory::ContextualMemory]) {
         #[cfg(feature = "memory-integration")]
         {
@@ -475,6 +476,7 @@ pub struct ProcessingStats {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SystemStats {
     pub pipeline: PipelineStats,
+    #[cfg(feature = "memory-integration")]
     #[cfg(feature = "memory-integration")]
     pub memory: agent_memory::MemoryStats,
     #[cfg(feature = "workspace-integration")]

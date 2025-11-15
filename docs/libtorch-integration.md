@@ -1,31 +1,54 @@
-# LibTorch Integration Guide
+# PyTorch Integration Guide
 
-**Document Version**: 1.0.0
-**Last Updated**: October 27, 2025
-**Problem Solved**: `torch-sys` C++ compilation errors blocking Rust builds
+**Document Version**: 2.0.0
+**Last Updated**: November 15, 2025
+**Status**: LibTorch removed - Use PyTorch via Python instead
 
 ---
 
-## Problem Statement
+## Current Status
 
-When building Rust crates that depend on PyTorch (via `torch-sys`), you may encounter C++ compilation errors like:
+**LibTorch and torch-sys have been removed** from the project to eliminate compilation issues.
 
+### Why LibTorch Was Removed
+
+1. **Version Conflicts**: `torch-sys` version incompatibilities with libtorch headers
+2. **Unused Dependency**: `rust-bert` (which pulled in torch-sys) was optional and not used
+3. **Better Alternative**: PyTorch via Python provides better ARM64 support and avoids C++ compilation issues
+
+## Recommended Approach: PyTorch via Python
+
+If PyTorch functionality is needed, use **PyO3** to call Python's PyTorch from Rust:
+
+### Benefits
+
+- ✅ **ARM64 Native**: Uses ARM64 Python PyTorch (already installed via Homebrew)
+- ✅ **No C++ Compilation**: Avoids libtorch C++ build issues
+- ✅ **Better Performance**: Python PyTorch optimized for Apple Silicon
+- ✅ **Easier Maintenance**: Standard Python package management
+
+### Implementation Pattern
+
+```rust
+use pyo3::prelude::*;
+use pyo3::types::PyDict;
+
+fn call_pytorch() -> PyResult<()> {
+    Python::with_gil(|py| {
+        // Import PyTorch
+        let torch = py.import("torch")?;
+
+        // Call PyTorch functions
+        let tensor = torch.call_method1("tensor", (vec![1.0, 2.0, 3.0],))?;
+
+        Ok(())
+    })
+}
 ```
-cargo:warning=   19 |     x \
-cargo:warning=      |     ^
-cargo:warning=/Users/.../libtorch/include/ATen/ops/_scaled_dot_product_efficient_attention.h:26:216: note: passing argument to parameter 'attn_bias' here
-cargo:warning=ToolExecError: Command env -u IPHONEOS_DEPLOYMENT_TARGET "c++" ... with args c++ did not execute successfully (status code exit status: 1)
-```
 
-These errors prevent the entire Rust workspace from compiling.
+## Historical Context (Deprecated)
 
-## Root Cause
-
-The default `libtorch` installation includes CUDA components and uses C++11 ABI, which conflicts with Rust's expectations and macOS development environment.
-
-## Solution Overview
-
-Use the CPU-only libtorch distribution with proper environment variable configuration.
+The following sections document the previous libtorch integration approach, which is no longer used.
 
 ### Required Components
 
@@ -72,6 +95,7 @@ echo "DYLD_LIBRARY_PATH: $DYLD_LIBRARY_PATH"
 ```
 
 Expected output:
+
 ```
 LIBTORCH: /Users/darianrosebrook/Desktop/Projects/agent-agency/libtorch-cpu
 LIBTORCH_CXX11_ABI: 0
@@ -88,6 +112,7 @@ cargo check -p agent-model-management --lib
 ```
 
 Success indicators:
+
 - No C++ compilation errors
 - Clean Rust compilation
 - Warnings about "the following packages contain code that will be rejected by a future version of Rust" are OK
@@ -169,12 +194,12 @@ Add to your CI pipeline:
 
 ### Environment Variable Explanations
 
-| Variable | Purpose | Value | Required |
-|----------|---------|-------|----------|
-| `LIBTORCH` | Root directory of libtorch installation | `/path/to/libtorch-cpu` | Yes |
-| `LIBTORCH_CXX11_ABI` | C++ ABI version compatibility | `0` | Yes |
-| `CMAKE_PREFIX_PATH` | CMake find_package() search path | Same as LIBTORCH | Yes |
-| `DYLD_LIBRARY_PATH` | macOS dynamic library search path | `$LIBTORCH/lib` | Yes |
+| Variable             | Purpose                                 | Value                   | Required |
+| -------------------- | --------------------------------------- | ----------------------- | -------- |
+| `LIBTORCH`           | Root directory of libtorch installation | `/path/to/libtorch-cpu` | Yes      |
+| `LIBTORCH_CXX11_ABI` | C++ ABI version compatibility           | `0`                     | Yes      |
+| `CMAKE_PREFIX_PATH`  | CMake find_package() search path        | Same as LIBTORCH        | Yes      |
+| `DYLD_LIBRARY_PATH`  | macOS dynamic library search path       | `$LIBTORCH/lib`         | Yes      |
 
 ### File Structure Verification
 
@@ -301,21 +326,24 @@ export CC="clang"
 ```
 
 **Or use the automated setup script**:
+
 ```bash
 bash scripts/v3/setup/setup-m1-build-env.sh
 source .env.build
 ```
 
 **Test command**:
+
 ```bash
 cargo check -p agent-model-management --lib
 ```
 
 **Success indicators**:
+
 - ✅ No C++ compilation errors
 - ✅ Rust code compiles cleanly
 - ✅ No "ToolExecError" messages
 
 ---
 
-*This documentation was created to prevent future agents from encountering the same libtorch integration issues. Always verify your environment variables are correctly set before building torch-dependent crates.*
+_This documentation was created to prevent future agents from encountering the same libtorch integration issues. Always verify your environment variables are correctly set before building torch-dependent crates._

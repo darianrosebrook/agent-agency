@@ -606,6 +606,48 @@ impl WhisperInferenceExecutor {
         // Try to decode using tokenizers if available
         // For now, use a simple character-based fallback
         // TODO: Load actual Whisper tokenizer from model directory or HuggingFace
+        //       Currently uses basic ASCII character fallback; should load real Whisper GPT-2 BPE tokenizer from model directory or download from HuggingFace for proper token-to-text decoding.
+        //
+        // COMPLETION CHECKLIST:
+        // [ ] Primary functionality implemented
+        // [ ] Load Whisper tokenizer from model directory (models/whisper/tokenizer.json)
+        // [ ] Fallback to downloading tokenizer from HuggingFace (openai/whisper-base)
+        // [ ] Cache downloaded tokenizer locally to avoid repeated downloads
+        // [ ] Handle tokenizer loading errors gracefully with proper fallback
+        // [ ] Validate tokenizer works with Whisper token IDs (50258+ range)
+        // [ ] API/data structures defined & stable
+        // [ ] Error handling + validation aligned with error taxonomy
+        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+        // [ ] Integration tests for external systems/contracts
+        // [ ] Documentation: public API + system behavior
+        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+        // [ ] Security posture reviewed (inputs, authz, sandboxing)
+        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+        // [ ] Configurability and feature flags defined if relevant
+        // [ ] Failure-mode cards documented (degradation paths)
+        //
+        // ACCEPTANCE CRITERIA:
+        // - Tokenizer loads successfully from model directory or HuggingFace
+        // - Token decoding produces correct text output for Whisper tokens
+        // - Fallback mechanisms work when primary loading fails
+        // - Performance overhead is minimal (<10ms per decode)
+        // - Memory usage is reasonable for tokenizer model size
+        // - Error handling covers all loading and decoding failure modes
+        //
+        // DEPENDENCIES:
+        // - Whisper tokenizer file in model directory (Optional - fallback available)
+        // - HuggingFace tokenizers crate (Required)
+        // - Network access for HuggingFace downloads (Optional - offline fallback)
+        // - File system access for tokenizer caching (Required)
+        //
+        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
+        // PRIORITY: Medium
+        // BLOCKING: No
+        //
+        // GOVERNANCE:
+        // - CAWS Tier: 2 (token decoding accuracy improvement)
+        // - Change Budget: ~150 LOC
+        // - Reviewer Requirements: ML tokenization and HuggingFace integration expertise
         match decode_with_tokenizer(&token_ids) {
             Ok(text) => Ok(text),
             Err(_) => {

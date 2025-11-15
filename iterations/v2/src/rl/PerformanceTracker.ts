@@ -1212,25 +1212,108 @@ export class PerformanceTracker {
       const memoryUsage = this.getMemoryUsage();
 
       // TODO: Implement comprehensive network I/O monitoring
-      // - Integrate with system monitoring tools (netstat, iproute2, or platform-specific APIs)
-      // - Use network interface statistics from /proc/net/dev or GetIfTable
-      // - Support both incoming and outgoing traffic monitoring
-      // - Add network latency and packet loss measurement
-      // - Implement network utilization thresholds and alerting
-      // - Support per-interface and aggregate network monitoring
-      // - Add network I/O historical trending and anomaly detection
-      // - Implement network performance profiling and bottleneck identification
+      //       Currently returns basic network stats; should integrate with system monitoring tools for comprehensive network performance tracking.
+      //
+      // COMPLETION CHECKLIST:
+      // [ ] Primary functionality implemented
+      // [ ] Integrate with system monitoring tools (netstat, iproute2, GetIfTable)
+      // [ ] Use network interface statistics from /proc/net/dev or platform APIs
+      // [ ] Support both incoming and outgoing traffic monitoring
+      // [ ] Add network latency and packet loss measurement
+      // [ ] Implement network utilization thresholds and alerting
+      // [ ] Support per-interface and aggregate network monitoring
+      // [ ] Add network I/O historical trending and anomaly detection
+      // [ ] Implement network performance profiling and bottleneck identification
+      // [ ] API/data structures defined & stable
+      // [ ] Error handling + validation aligned with error taxonomy
+      // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+      // [ ] Integration tests for external systems/contracts
+      // [ ] Documentation: public API + system behavior
+      // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+      // [ ] Security posture reviewed (inputs, authz, sandboxing)
+      // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+      // [ ] Configurability and feature flags defined if relevant
+      // [ ] Failure-mode cards documented (degradation paths)
+      //
+      // ACCEPTANCE CRITERIA:
+      // - Network I/O monitoring provides accurate traffic statistics
+      // - Both incoming and outgoing traffic are tracked separately
+      // - Network latency measurements are within 1ms accuracy
+      // - Packet loss detection works across different network conditions
+      // - Threshold-based alerting triggers correctly
+      // - Per-interface monitoring scales to multiple network interfaces
+      // - Historical trending identifies network usage patterns
+      // - Anomaly detection flags unusual network behavior
+      // - Performance profiling identifies network bottlenecks
+      // - Integration tests validate end-to-end network monitoring
+      //
+      // DEPENDENCIES:
+      // - System monitoring API integration (Required)
+      // - Network interface access permissions (Required)
+      // - Platform-specific network APIs (Required)
+      // - Statistical analysis for trending (Optional)
+      // - Anomaly detection algorithms (Optional)
+      //
+      // ESTIMATED EFFORT: 12-16 hours (medium confidence)
+      // PRIORITY: Medium
+      // BLOCKING: No
+      //
+      // GOVERNANCE:
+      // - CAWS Tier: 2 (performance monitoring enhancement)
+      // - Change Budget: ~300 LOC
+      // - Reviewer Requirements: Network monitoring and systems expertise
       const networkIo = await this.getNetworkIo();
 
       // TODO: Implement comprehensive disk I/O monitoring
-      // - Use system monitoring tools (iostat, iotop, or platform-specific APIs)
-      // - Monitor disk read/write operations and throughput
-      // - Track disk latency and queue depth metrics
-      // - Support per-disk and aggregate I/O monitoring
-      // - Add disk utilization thresholds and performance alerts
-      // - Implement disk I/O historical analysis and trending
-      // - Support SSD vs HDD specific monitoring and optimization
-      // - Add disk health monitoring and failure prediction
+      //       Currently returns basic disk stats; should integrate with system monitoring tools for comprehensive disk performance tracking.
+      //
+      // COMPLETION CHECKLIST:
+      // [ ] Primary functionality implemented
+      // [ ] Integrate with system monitoring tools (iostat, iotop, platform APIs)
+      // [ ] Monitor disk read/write operations and throughput
+      // [ ] Track disk latency and queue depth metrics
+      // [ ] Support per-disk and aggregate I/O monitoring
+      // [ ] Add disk utilization thresholds and performance alerts
+      // [ ] Implement disk I/O historical analysis and trending
+      // [ ] Support SSD vs HDD specific monitoring and optimization
+      // [ ] Add disk health monitoring and failure prediction
+      // [ ] API/data structures defined & stable
+      // [ ] Error handling + validation aligned with error taxonomy
+      // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+      // [ ] Integration tests for external systems/contracts
+      // [ ] Documentation: public API + system behavior
+      // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+      // [ ] Security posture reviewed (inputs, authz, sandboxing)
+      // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+      // [ ] Configurability and feature flags defined if relevant
+      // [ ] Failure-mode cards documented (degradation paths)
+      //
+      // ACCEPTANCE CRITERIA:
+      // - Disk I/O monitoring provides accurate read/write statistics
+      // - Disk latency measurements are within 1ms accuracy
+      // - Queue depth metrics reflect actual disk load
+      // - Per-disk monitoring scales to multiple storage devices
+      // - Disk utilization thresholds trigger appropriate alerts
+      // - Historical analysis identifies I/O usage patterns
+      // - SSD vs HDD optimizations improve performance accordingly
+      // - Disk health monitoring predicts potential failures
+      // - Integration tests validate end-to-end disk monitoring
+      //
+      // DEPENDENCIES:
+      // - System monitoring API integration (Required)
+      // - Disk access permissions (Required)
+      // - Platform-specific disk APIs (Required)
+      // - Statistical analysis for trending (Optional)
+      // - Disk health prediction algorithms (Optional)
+      //
+      // ESTIMATED EFFORT: 10-14 hours (medium confidence)
+      // PRIORITY: Medium
+      // BLOCKING: No
+      //
+      // GOVERNANCE:
+      // - CAWS Tier: 2 (performance monitoring enhancement)
+      // - Change Budget: ~250 LOC
+      // - Reviewer Requirements: Storage systems and I/O performance expertise
       const diskIo = await this.getDiskIo();
 
       return {
@@ -1310,14 +1393,56 @@ export class PerformanceTracker {
           interfaces.forEach((iface) => {
             if (!iface.internal) {
               // TODO: Implement accurate network interface monitoring
-              // - Query actual network interface statistics from OS APIs
-              // - Calculate real network throughput based on packet counters
-              // - Support per-interface network utilization tracking
-              // - Implement network interface health monitoring
-              // - Add network latency and error rate tracking
-              // - Support network protocol-specific monitoring (TCP, UDP)
-              // - Implement network usage attribution by process
-              // - Add network performance benchmarking and optimization
+              //       Currently uses random estimation; should query actual network interface statistics from OS APIs for accurate throughput calculation.
+              //
+              // COMPLETION CHECKLIST:
+              // [ ] Primary functionality implemented
+              // [ ] Query actual network interface statistics from OS APIs
+              // [ ] Calculate real network throughput based on packet counters
+              // [ ] Support per-interface network utilization tracking
+              // [ ] Implement network interface health monitoring
+              // [ ] Add network latency and error rate tracking
+              // [ ] Support network protocol-specific monitoring (TCP, UDP)
+              // [ ] Implement network usage attribution by process
+              // [ ] Add network performance benchmarking and optimization
+              // [ ] API/data structures defined & stable
+              // [ ] Error handling + validation aligned with error taxonomy
+              // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+              // [ ] Integration tests for external systems/contracts
+              // [ ] Documentation: public API + system behavior
+              // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+              // [ ] Security posture reviewed (inputs, authz, sandboxing)
+              // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+              // [ ] Configurability and feature flags defined if relevant
+              // [ ] Failure-mode cards documented (degradation paths)
+              //
+              // ACCEPTANCE CRITERIA:
+              // - Network interface statistics reflect actual OS data
+              // - Throughput calculations match network monitoring tools
+              // - Per-interface tracking scales to multiple network devices
+              // - Interface health monitoring detects connectivity issues
+              // - Network latency measurements are within 1ms accuracy
+              // - Error rate tracking identifies packet loss and retransmissions
+              // - Protocol-specific monitoring distinguishes TCP vs UDP traffic
+              // - Process attribution identifies network usage by application
+              // - Performance benchmarking provides optimization recommendations
+              // - Integration tests validate against system network tools
+              //
+              // DEPENDENCIES:
+              // - OS network API integration (Required)
+              // - Network interface access permissions (Required)
+              // - Packet counter access (Required)
+              // - Process network attribution capabilities (Optional)
+              // - Network performance benchmarking tools (Optional)
+              //
+              // ESTIMATED EFFORT: 8-12 hours (medium confidence)
+              // PRIORITY: Medium
+              // BLOCKING: No
+              //
+              // GOVERNANCE:
+              // - CAWS Tier: 2 (network monitoring enhancement)
+              // - Change Budget: ~200 LOC
+              // - Reviewer Requirements: Network systems and OS API expertise
               totalBytes += Math.random() * 1024 * 10; // Random estimation
             }
           });
@@ -1332,19 +1457,61 @@ export class PerformanceTracker {
 
   /**
    * Get disk I/O in KB/s (simplified estimation).
+   *
+   * TODO: Implement comprehensive disk I/O monitoring
+   *       Currently returns random estimation; should integrate with system monitoring tools for accurate disk performance metrics.
+   *
+   * COMPLETION CHECKLIST:
+   * [ ] Primary functionality implemented
+   * [ ] Integrate with system monitoring tools (iostat, iotop, platform APIs)
+   * [ ] Monitor disk read/write operations and throughput
+   * [ ] Track disk latency and queue depth metrics
+   * [ ] Support per-disk and aggregate I/O monitoring
+   * [ ] Add disk utilization thresholds and performance alerts
+   * [ ] Implement disk I/O historical analysis and trending
+   * [ ] Support SSD vs HDD specific monitoring and optimization
+   * [ ] Add disk health monitoring and failure prediction
+   * [ ] API/data structures defined & stable
+   * [ ] Error handling + validation aligned with error taxonomy
+   * [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+   * [ ] Integration tests for external systems/contracts
+   * [ ] Documentation: public API + system behavior
+   * [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+   * [ ] Security posture reviewed (inputs, authz, sandboxing)
+   * [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+   * [ ] Configurability and feature flags defined if relevant
+   * [ ] Failure-mode cards documented (degradation paths)
+   *
+   * ACCEPTANCE CRITERIA:
+   * - Disk I/O measurements match system monitoring tools
+   * - Read/write operation counts are accurate
+   * - Disk latency measurements are within 1ms accuracy
+   * - Queue depth metrics reflect actual disk load
+   * - Per-disk monitoring scales to multiple storage devices
+   * - Disk utilization alerts trigger at appropriate thresholds
+   * - Historical analysis identifies I/O usage patterns
+   * - SSD vs HDD optimizations improve performance accordingly
+   * - Disk health monitoring provides early failure warnings
+   * - Integration tests validate against system disk tools
+   *
+   * DEPENDENCIES:
+   * - System disk monitoring API integration (Required)
+   * - Disk access permissions (Required)
+   * - Platform-specific disk APIs (Required)
+   * - Statistical analysis for trending (Optional)
+   * - Disk health prediction algorithms (Optional)
+   *
+   * ESTIMATED EFFORT: 10-14 hours (medium confidence)
+   * PRIORITY: Medium
+   * BLOCKING: No
+   *
+   * GOVERNANCE:
+   * - CAWS Tier: 2 (disk performance monitoring)
+   * - Change Budget: ~250 LOC
+   * - Reviewer Requirements: Storage systems and disk performance expertise
    */
   private async getDiskIo(): Promise<number> {
     try {
-      // TODO: Implement comprehensive disk I/O monitoring
-      // - Use system monitoring tools (iostat, iotop, or platform-specific APIs)
-      // - Monitor disk read/write operations and throughput
-      // - Track disk latency and queue depth metrics
-      // - Support per-disk and aggregate I/O monitoring
-      // - Add disk utilization thresholds and performance alerts
-      // - Implement disk I/O historical analysis and trending
-      // - Support SSD vs HDD specific monitoring and optimization
-      // - Add disk health monitoring and failure prediction
-
       // Simplified estimation for now
       return Math.random() * 100; // Random estimation in KB/s
     } catch (error) {
@@ -1435,14 +1602,58 @@ export class PerformanceTracker {
     };
 
     // TODO: Implement comprehensive cost modeling and optimization
-    // - Integrate with cloud provider cost APIs (AWS Cost Explorer, GCP Billing)
-    // - Implement resource usage tracking and cost allocation
-    // - Add cost forecasting and budget management
-    // - Support multi-cloud cost optimization and arbitrage
-    // - Implement cost-benefit analysis for performance improvements
-    // - Add cost anomaly detection and alerting
-    // - Support cost allocation by project, team, and service
-    // - Implement cost optimization recommendations and automation
+    //       Currently uses simple duration proxy; should integrate with cloud provider cost APIs for accurate resource usage tracking and cost optimization.
+    //
+    // COMPLETION CHECKLIST:
+    // [ ] Primary functionality implemented
+    // [ ] Integrate with cloud provider cost APIs (AWS Cost Explorer, GCP Billing, Azure Cost Management)
+    // [ ] Implement resource usage tracking and cost allocation by service/component
+    // [ ] Add cost forecasting and budget management with alerts
+    // [ ] Support multi-cloud cost optimization and arbitrage recommendations
+    // [ ] Implement cost-benefit analysis for performance improvements vs cost trade-offs
+    // [ ] Add cost anomaly detection and alerting for unexpected spending
+    // [ ] Support cost allocation by project, team, and service with tagging
+    // [ ] Implement cost optimization recommendations and automated scaling
+    // [ ] API/data structures defined & stable
+    // [ ] Error handling + validation aligned with error taxonomy
+    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
+    // [ ] Integration tests for external systems/contracts
+    // [ ] Documentation: public API + system behavior
+    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
+    // [ ] Security posture reviewed (inputs, authz, sandboxing)
+    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
+    // [ ] Configurability and feature flags defined if relevant
+    // [ ] Failure-mode cards documented (degradation paths)
+    //
+    // ACCEPTANCE CRITERIA:
+    // - Cost metrics reflect actual cloud provider billing data
+    // - Resource usage tracking is accurate within 5% of provider metrics
+    // - Cost allocation supports organizational hierarchy (project/team/service)
+    // - Cost forecasting accuracy is within 10% of actual spend
+    // - Budget alerts trigger before exceeding thresholds
+    // - Multi-cloud optimization identifies cost-saving opportunities
+    // - Cost-benefit analysis provides quantitative improvement recommendations
+    // - Anomaly detection flags unusual spending patterns
+    // - Cost allocation reports match organizational requirements
+    // - Optimization recommendations result in measurable cost savings
+    // - Integration tests validate against cloud provider APIs
+    //
+    // DEPENDENCIES:
+    // - Cloud provider cost API integrations (Required)
+    // - Cost allocation and tagging infrastructure (Required)
+    // - Budget management and alerting system (Required)
+    // - Multi-cloud cost comparison capabilities (Optional)
+    // - Cost forecasting and prediction models (Optional)
+    // - Anomaly detection algorithms (Optional)
+    //
+    // ESTIMATED EFFORT: 16-20 hours (medium confidence)
+    // PRIORITY: Medium
+    // BLOCKING: No
+    //
+    // GOVERNANCE:
+    // - CAWS Tier: 2 (cost management and optimization)
+    // - Change Budget: ~350 LOC
+    // - Reviewer Requirements: Cloud cost management and financial analysis expertise
     const costMetrics: Partial<CostMetrics> = {
       costPerTask: durationMs / 1000, // Rough proxy: longer tasks cost more
       efficiencyScore: qualityScore,
