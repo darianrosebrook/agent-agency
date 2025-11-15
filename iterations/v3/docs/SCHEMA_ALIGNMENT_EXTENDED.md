@@ -404,9 +404,50 @@ pub struct UpdateWorker {
 
 ---
 
+## System-Wide Schema Alignment Summary
+
+### Complete Coverage Statistics
+
+| Schema | Backend Fields | Frontend Coverage | Missing Fields | Type Issues | Total Issues |
+|--------|---------------|-------------------|----------------|-------------|--------------|
+| **Task** | 17 | 53-65% | 6-8 fields | 3 | 17+ |
+| **Worker/Agent** | 11 | 82% | 2 fields | 3 | 5 |
+| **Chat Session** | 12/13 | 100% (Rust) | 0 (1 DB field) | 0 | 1 |
+| **Chat Message** | 9/10 | 100% (Rust) | 0 (1 DB field) | 0 | 1 |
+| **TOTAL** | **49/51** | **~75%** | **8-10** | **6** | **24+** |
+
+### Critical Issues Breakdown
+
+**🚨 CRITICAL (Blocking Agent Workflow)**:
+1. Task status enum mismatch (backend 6 values vs frontend 4)
+2. Task context updates not supported
+3. Task acceptance criteria updates not supported
+
+**⚠️ HIGH (Feature Completeness)**:
+4. Worker capabilities type mismatch (JSONB vs string[])
+5. Worker timestamps missing (created_at, updated_at)
+6. Task missing 6-8 fields (scope, acceptance_criteria, context, deadline, etc.)
+7. Task update capabilities only 36% of backend
+8. Chat `archived_at` not exposed
+9. Chat `parent_message_id` not exposed (blocks threading)
+
+**📋 MEDIUM (Cleanup)**:
+10. Worker nullability mismatches
+11. Task field name inconsistencies
+12. Task invented fields (type, started_at)
+
+### Alignment Status by Schema
+
+- **Task Schema**: 🚨 **CRITICAL ISSUES** - Status enum mismatch blocks workflow
+- **Worker/Agent Schema**: ⚠️ **HIGH PRIORITY** - Missing timestamps, capabilities type mismatch
+- **Chat Session Schema**: ✅ **MOSTLY ALIGNED** - Minor database field missing
+- **Chat Message Schema**: ✅ **MOSTLY ALIGNED** - Minor database field missing
+
+---
+
 **Last Updated**: 2025-01-28  
 **Reference Documents**:
-- `SCHEMA_ALIGNMENT.md` - Task and Project schema alignment
-- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete Task divergence catalog
-- `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan  
-**Next Review**: After Worker/Agent and Chat alignment fixes completed
+- `SCHEMA_ALIGNMENT.md` - Task and Project schema alignment (detailed)
+- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field-by-field comparison (all schemas)
+- `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan (4 weeks, 16 phases)  
+**Next Review**: After Phase 1 critical fixes completed

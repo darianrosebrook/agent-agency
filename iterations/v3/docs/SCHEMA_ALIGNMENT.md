@@ -138,34 +138,38 @@ export interface ProjectTask {
 
 #### 3. **Type Mismatches**
 
-| Field | Backend Type | Frontend Types | Issue |
-|-------|--------------|----------------|-------|
-| `priority` | `Option<i32>` (0-10) | `string` (Global Task) / `number` (ProjectTask) / `"low"\|"medium"\|"high"` (TasksTab) | **Three different types** |
-| `description` | `String` (required) | `string?` / `string \| null` (optional) | **Nullability mismatch** |
-| `assigned_worker_id` | `Option<Uuid>` | `string \| null` (UUID strings) | ✅ **Type conversion OK** |
-| `id` | `Uuid` | `string` (UUID strings) | ✅ **Type conversion OK** |
-| `created_at` / `updated_at` | `DateTime<Utc>` | `string` (RFC3339) / `Date` (Zod) | ✅ **Type conversion OK** |
-| `completed_at` / `deadline` | `Option<DateTime<Utc>>` | `string \| null` (RFC3339) | ✅ **Type conversion OK** |
+| Field                       | Backend Type            | Frontend Types                                                                         | Issue                     |
+| --------------------------- | ----------------------- | -------------------------------------------------------------------------------------- | ------------------------- |
+| `priority`                  | `Option<i32>` (0-10)    | `string` (Global Task) / `number` (ProjectTask) / `"low"\|"medium"\|"high"` (TasksTab) | **Three different types** |
+| `description`               | `String` (required)     | `string?` / `string \| null` (optional)                                                | **Nullability mismatch**  |
+| `assigned_worker_id`        | `Option<Uuid>`          | `string \| null` (UUID strings)                                                        | ✅ **Type conversion OK** |
+| `id`                        | `Uuid`                  | `string` (UUID strings)                                                                | ✅ **Type conversion OK** |
+| `created_at` / `updated_at` | `DateTime<Utc>`         | `string` (RFC3339) / `Date` (Zod)                                                      | ✅ **Type conversion OK** |
+| `completed_at` / `deadline` | `Option<DateTime<Utc>>` | `string \| null` (RFC3339)                                                             | ✅ **Type conversion OK** |
 
 ### Type Conversion Rules
 
 **UUID Types**:
+
 - Backend: `Uuid` → Frontend: `string` (UUID string representation)
 - Conversion: `.to_string()` (Rust) → `string` (TypeScript)
 - Validation: Use Zod `.uuid()` or manual UUID validation
 
 **DateTime Types**:
+
 - Backend: `DateTime<Utc>` → Frontend: `string` (RFC3339 format)
 - Conversion: `.to_rfc3339()` (Rust) → `new Date(string)` (TypeScript)
 - Format: `"2025-01-01T00:00:00Z"`
 
 **Priority Type**:
+
 - Backend: `Option<i32>` with constraint `CHECK (>= 0 AND <= 10)`
 - Frontend Current: `string` (Global Task) / `number` (ProjectTask) / `"low"\|"medium"\|"high"` (TasksTab)
 - **Recommended**: `number | null` matching backend `i32` (0-10)
 - **UI Display**: Map number to string labels for display (0-3: "low", 4-6: "medium", 7-10: "high")
 
 **JSONB Types**:
+
 - Backend: `serde_json::Value` → Frontend: `Record<string, unknown>` or typed interface
 - Conversion: Serialize/deserialize JSON
 - Validation: Use Zod schemas for runtime validation of JSONB content
@@ -189,35 +193,35 @@ status VARCHAR(50) CHECK (status IN ('pending', 'in_progress', 'paused', 'comple
 
 **Backend Status Values** (6 values):
 
-| Backend Value | Description | Frontend Equivalent | Mapping Issue |
-|---------------|-------------|---------------------|---------------|
-| `pending` | Task is waiting to be assigned/started | `backlog` or `todo` | ❌ No direct mapping |
-| `in_progress` | Task is actively being worked on | `in-progress` | ⚠️ Underscore vs hyphen |
-| `paused` | Task is paused (can be resumed) | None | ❌ **Not supported in frontend** |
-| `completed` | Task is finished successfully | `done` | ❌ Different name |
-| `cancelled` | Task was cancelled | None | ❌ **Not supported in frontend** |
-| `failed` | Task failed during execution | None | ❌ **Not supported in frontend** |
+| Backend Value | Description                            | Frontend Equivalent | Mapping Issue                    |
+| ------------- | -------------------------------------- | ------------------- | -------------------------------- |
+| `pending`     | Task is waiting to be assigned/started | `backlog` or `todo` | ❌ No direct mapping             |
+| `in_progress` | Task is actively being worked on       | `in-progress`       | ⚠️ Underscore vs hyphen          |
+| `paused`      | Task is paused (can be resumed)        | None                | ❌ **Not supported in frontend** |
+| `completed`   | Task is finished successfully          | `done`              | ❌ Different name                |
+| `cancelled`   | Task was cancelled                     | None                | ❌ **Not supported in frontend** |
+| `failed`      | Task failed during execution           | None                | ❌ **Not supported in frontend** |
 
 **Frontend Status Values** (4 values):
 
-| Frontend Value | Intended Meaning | Backend Equivalent | Mapping Issue |
-|----------------|------------------|-------------------|---------------|
-| `backlog` | Task in backlog | `pending` | ⚠️ Semantic difference |
-| `todo` | Task to do | `pending` | ⚠️ Semantic difference |
-| `in-progress` | Task in progress | `in_progress` | ⚠️ Hyphen vs underscore |
-| `done` | Task completed | `completed` | ❌ Different name |
+| Frontend Value | Intended Meaning | Backend Equivalent | Mapping Issue           |
+| -------------- | ---------------- | ------------------ | ----------------------- |
+| `backlog`      | Task in backlog  | `pending`          | ⚠️ Semantic difference  |
+| `todo`         | Task to do       | `pending`          | ⚠️ Semantic difference  |
+| `in-progress`  | Task in progress | `in_progress`      | ⚠️ Hyphen vs underscore |
+| `done`         | Task completed   | `completed`        | ❌ Different name       |
 
 ### Status Enum Mapping Table
 
-| Backend → Frontend | Frontend → Backend | Transition Rules |
-|-------------------|-------------------|------------------|
-| `pending` → `todo` | `backlog` → `pending` | Both frontend values map to `pending` |
-| `pending` → `backlog` | `todo` → `pending` | Use `todo` for newly created tasks |
-| `in_progress` → `in-progress` | `in-progress` → `in_progress` | Replace hyphen with underscore |
-| `paused` → ❌ No mapping | ❌ None → `paused` | Frontend cannot set paused |
-| `completed` → `done` | `done` → `completed` | Map `done` to `completed` |
-| `cancelled` → ❌ No mapping | ❌ None → `cancelled` | Frontend cannot set cancelled |
-| `failed` → ❌ No mapping | ❌ None → `failed` | Frontend cannot set failed |
+| Backend → Frontend            | Frontend → Backend            | Transition Rules                      |
+| ----------------------------- | ----------------------------- | ------------------------------------- |
+| `pending` → `todo`            | `backlog` → `pending`         | Both frontend values map to `pending` |
+| `pending` → `backlog`         | `todo` → `pending`            | Use `todo` for newly created tasks    |
+| `in_progress` → `in-progress` | `in-progress` → `in_progress` | Replace hyphen with underscore        |
+| `paused` → ❌ No mapping      | ❌ None → `paused`            | Frontend cannot set paused            |
+| `completed` → `done`          | `done` → `completed`          | Map `done` to `completed`             |
+| `cancelled` → ❌ No mapping   | ❌ None → `cancelled`         | Frontend cannot set cancelled         |
+| `failed` → ❌ No mapping      | ❌ None → `failed`            | Frontend cannot set failed            |
 
 **Status Transition Flow** (Jira-like):
 
@@ -423,10 +427,16 @@ export interface ProjectApiResponse {
 2. **Expand updateProjectTask Capabilities** (BLOCKING):
 
    - Add all missing fields to `updateProjectTask`:
+
      ```typescript
      // Current: 5 fields
-     updates: Partial<Pick<ProjectTask, "title" | "description" | "status" | "priority" | "assigned_worker_id">>
-     
+     updates: Partial<
+       Pick<
+         ProjectTask,
+         "title" | "description" | "status" | "priority" | "assigned_worker_id"
+       >
+     >;
+
      // Recommended: All 14 backend updateable fields
      updates: Partial<{
        title?: string;
@@ -436,7 +446,13 @@ export interface ProjectApiResponse {
        acceptance_criteria?: unknown[];
        context?: Record<string, unknown>;
        caws_spec?: Record<string, unknown> | null;
-       status?: "pending" | "in_progress" | "paused" | "completed" | "cancelled" | "failed";
+       status?:
+         | "pending"
+         | "in_progress"
+         | "paused"
+         | "completed"
+         | "cancelled"
+         | "failed";
        assigned_worker_id?: string | null;
        project_id?: string | null;
        priority?: number | null; // 0-10
@@ -445,6 +461,7 @@ export interface ProjectApiResponse {
        completed_at?: string | null; // RFC3339
      }>;
      ```
+
    - **Impact**: Enables full Jira-like workflow for agents
    - **Update Zod Schema**: Expand `UpdateTaskRequestSchema` to validate all fields
 
@@ -486,27 +503,28 @@ export interface ProjectApiResponse {
 
 ### Task Fields - Complete Backend to Frontend Mapping
 
-| Backend (Rust)                           | JSON API                                         | Global Task Interface | ProjectTask Interface | Zod Schema | Status |
-| ---------------------------------------- | ------------------------------------------------ | -------------------- | -------------------- | ---------- | ------ |
-| `id: Uuid`                               | `"id": "uuid-string"`                            | ✅ `id: string`      | ⚠️ `task_id: string` | ✅ `id: string` | ⚠️ Inconsistent |
-| `title: String`                          | `"title": "string"`                              | ✅ `title: string`   | ✅ `title: string`   | ✅ `title: string` | ✅ Matches |
-| `description: String`                    | `"description": "string"`                        | ⚠️ `description?: string` | ⚠️ `description?: string \| null` | ⚠️ `description?: string` | ⚠️ Nullability mismatch |
-| `risk_tier: String`                      | `"risk_tier": "string"`                          | ❌ Missing           | ✅ `risk_tier?: string \| null` | ❌ Missing | ⚠️ Partially missing |
-| `scope: serde_json::Value`               | `"scope": {...}`                                 | ❌ Missing           | ❌ Missing           | ❌ Missing | ❌ Missing everywhere |
-| `acceptance_criteria: serde_json::Value` | `"acceptance_criteria": {...}`                   | ❌ Missing           | ❌ Missing           | ❌ Missing | ❌ Missing everywhere |
-| `context: serde_json::Value`             | `"context": {...}`                               | ❌ Missing           | ❌ Missing           | ❌ Missing | ❌ Missing everywhere (CRITICAL) |
-| `caws_spec: Option<serde_json::Value>`   | `"caws_spec": {...} \| null`                     | ❌ Missing           | ❌ Missing           | ❌ Missing | ❌ Missing everywhere |
-| `status: String`                         | `"status": "string"`                             | ⚠️ `status: string` (enum mismatch) | ⚠️ `status: string` (enum mismatch) | 🚨 `status: enum(['backlog'...])` | 🚨 CRITICAL: Enum mismatch |
-| `assigned_worker_id: Option<Uuid>`       | `"assigned_worker_id": "uuid-string" \| null`    | ⚠️ `worker_id?: string` | ✅ `assigned_worker_id?: string` | ⚠️ `assignee?: string` | ⚠️ Three different names |
-| `project_id: Option<Uuid>`               | `"project_id": "uuid-string" \| null`            | ❌ Missing           | ✅ (inferred from URL) | ❌ Missing | ⚠️ Missing in global |
-| `priority: Option<i32>`                  | `"priority": 1 \| null`                          | ⚠️ `priority?: string` | ✅ `priority?: number` | ⚠️ `priority?: string` | ⚠️ Type mismatch |
-| `deadline: Option<DateTime<Utc>>`        | `"deadline": "2025-12-31T00:00:00Z" \| null`     | ❌ Missing           | ❌ Missing           | ❌ Missing | ❌ Missing everywhere |
-| `created_at: DateTime<Utc>`              | `"created_at": "2025-01-01T00:00:00Z"`           | ✅ `created_at: string` | ✅ `created_at: string` | ⚠️ `createdAt: Date` | ⚠️ Case inconsistency |
-| `updated_at: DateTime<Utc>`              | `"updated_at": "2025-01-01T00:00:00Z"`           | ✅ `updated_at: string` | ✅ `updated_at: string` | ❌ Missing | ⚠️ Missing in Zod |
-| `completed_at: Option<DateTime<Utc>>`    | `"completed_at": "2025-01-01T00:00:00Z" \| null` | ✅ `completed_at?: string \| null` | ✅ `completed_at?: string \| null` | ❌ Missing | ✅ Matches (missing in Zod) |
-| `metadata: Option<serde_json::Value>`    | `"metadata": {...} \| null`                      | ✅ `metadata?: Record<string, unknown>` | ❌ Missing | ❌ Missing | ⚠️ Missing in ProjectTask |
+| Backend (Rust)                           | JSON API                                         | Global Task Interface                   | ProjectTask Interface               | Zod Schema                        | Status                           |
+| ---------------------------------------- | ------------------------------------------------ | --------------------------------------- | ----------------------------------- | --------------------------------- | -------------------------------- |
+| `id: Uuid`                               | `"id": "uuid-string"`                            | ✅ `id: string`                         | ⚠️ `task_id: string`                | ✅ `id: string`                   | ⚠️ Inconsistent                  |
+| `title: String`                          | `"title": "string"`                              | ✅ `title: string`                      | ✅ `title: string`                  | ✅ `title: string`                | ✅ Matches                       |
+| `description: String`                    | `"description": "string"`                        | ⚠️ `description?: string`               | ⚠️ `description?: string \| null`   | ⚠️ `description?: string`         | ⚠️ Nullability mismatch          |
+| `risk_tier: String`                      | `"risk_tier": "string"`                          | ❌ Missing                              | ✅ `risk_tier?: string \| null`     | ❌ Missing                        | ⚠️ Partially missing             |
+| `scope: serde_json::Value`               | `"scope": {...}`                                 | ❌ Missing                              | ❌ Missing                          | ❌ Missing                        | ❌ Missing everywhere            |
+| `acceptance_criteria: serde_json::Value` | `"acceptance_criteria": {...}`                   | ❌ Missing                              | ❌ Missing                          | ❌ Missing                        | ❌ Missing everywhere            |
+| `context: serde_json::Value`             | `"context": {...}`                               | ❌ Missing                              | ❌ Missing                          | ❌ Missing                        | ❌ Missing everywhere (CRITICAL) |
+| `caws_spec: Option<serde_json::Value>`   | `"caws_spec": {...} \| null`                     | ❌ Missing                              | ❌ Missing                          | ❌ Missing                        | ❌ Missing everywhere            |
+| `status: String`                         | `"status": "string"`                             | ⚠️ `status: string` (enum mismatch)     | ⚠️ `status: string` (enum mismatch) | 🚨 `status: enum(['backlog'...])` | 🚨 CRITICAL: Enum mismatch       |
+| `assigned_worker_id: Option<Uuid>`       | `"assigned_worker_id": "uuid-string" \| null`    | ⚠️ `worker_id?: string`                 | ✅ `assigned_worker_id?: string`    | ⚠️ `assignee?: string`            | ⚠️ Three different names         |
+| `project_id: Option<Uuid>`               | `"project_id": "uuid-string" \| null`            | ❌ Missing                              | ✅ (inferred from URL)              | ❌ Missing                        | ⚠️ Missing in global             |
+| `priority: Option<i32>`                  | `"priority": 1 \| null`                          | ⚠️ `priority?: string`                  | ✅ `priority?: number`              | ⚠️ `priority?: string`            | ⚠️ Type mismatch                 |
+| `deadline: Option<DateTime<Utc>>`        | `"deadline": "2025-12-31T00:00:00Z" \| null`     | ❌ Missing                              | ❌ Missing                          | ❌ Missing                        | ❌ Missing everywhere            |
+| `created_at: DateTime<Utc>`              | `"created_at": "2025-01-01T00:00:00Z"`           | ✅ `created_at: string`                 | ✅ `created_at: string`             | ⚠️ `createdAt: Date`              | ⚠️ Case inconsistency            |
+| `updated_at: DateTime<Utc>`              | `"updated_at": "2025-01-01T00:00:00Z"`           | ✅ `updated_at: string`                 | ✅ `updated_at: string`             | ❌ Missing                        | ⚠️ Missing in Zod                |
+| `completed_at: Option<DateTime<Utc>>`    | `"completed_at": "2025-01-01T00:00:00Z" \| null` | ✅ `completed_at?: string \| null`      | ✅ `completed_at?: string \| null`  | ❌ Missing                        | ✅ Matches (missing in Zod)      |
+| `metadata: Option<serde_json::Value>`    | `"metadata": {...} \| null`                      | ✅ `metadata?: Record<string, unknown>` | ❌ Missing                          | ❌ Missing                        | ⚠️ Missing in ProjectTask        |
 
 **Field Coverage**:
+
 - Backend Total: **17 fields**
 - Global Task: **11/17** (65%) - Missing 6 fields
 - ProjectTask: **9/17** (53%) - Missing 8 fields
@@ -514,14 +532,14 @@ export interface ProjectApiResponse {
 
 ### Frontend Invented Fields (Not in Backend)
 
-| Frontend Field | Location | Notes |
-|----------------|----------|-------|
-| `type?: string` | Global Task interface | ❌ **Should be removed** |
-| `started_at?: string` | Global Task interface | ❌ **Should be removed** |
-| `assignee?: string` | Multiple (name string) | ⚠️ **Should derive from `assigned_worker_id` via worker lookup** |
-| `commentCount?: number` | TasksTab interface | ✅ Valid (separate table, not Task field) |
-| `subtasks: Subtask[]` | PhaseManager Task | ⚠️ Derived from `metadata`, should extract from metadata |
-| `contextChips: ContextChip[]` | PhaseManager Task | ⚠️ Derived from `context` JSONB, should extract from context |
+| Frontend Field                | Location               | Notes                                                            |
+| ----------------------------- | ---------------------- | ---------------------------------------------------------------- |
+| `type?: string`               | Global Task interface  | ❌ **Should be removed**                                         |
+| `started_at?: string`         | Global Task interface  | ❌ **Should be removed**                                         |
+| `assignee?: string`           | Multiple (name string) | ⚠️ **Should derive from `assigned_worker_id` via worker lookup** |
+| `commentCount?: number`       | TasksTab interface     | ✅ Valid (separate table, not Task field)                        |
+| `subtasks: Subtask[]`         | PhaseManager Task      | ⚠️ Derived from `metadata`, should extract from metadata         |
+| `contextChips: ContextChip[]` | PhaseManager Task      | ⚠️ Derived from `context` JSONB, should extract from context     |
 
 ### Project Fields
 
@@ -847,7 +865,23 @@ If tasks belong to milestones, link task assignments to milestone assignments:
 
 **Last Updated**: 2025-01-28  
 **Status**: 🚨 **CRITICAL ISSUES IDENTIFIED** - Status workflow mismatch blocks agent workflow  
-**Reference Documents**:
-- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field-by-field comparison
-- `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan  
+
+## Schema Coverage Summary
+
+This document focuses on **Task and Project** schema alignment. For complete system-wide alignment documentation, see:
+
+- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field-by-field comparison (Tasks, Workers, Chat)
+- `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat schema alignment  
+- `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan (all schemas)
+
+### System-Wide Divergence Overview
+
+| Schema | Backend Fields | Frontend Coverage | Critical Issues | Total Issues |
+|--------|---------------|-------------------|-----------------|--------------|
+| **Task** | 17 | 53-65% | 🚨 Status enum mismatch | 17+ |
+| **Worker/Agent** | 11 | 82% | ⚠️ Capabilities type | 5 |
+| **Chat Session** | 12/13 | 100% (Rust) | None (minor) | 1 |
+| **Chat Message** | 9/10 | 100% (Rust) | None (minor) | 1 |
+| **TOTAL** | **49/51** | **~75%** | **1 CRITICAL** | **24+** |
+
 **Next Review**: After Phase 1 critical fixes completed

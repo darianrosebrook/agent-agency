@@ -13,18 +13,18 @@ This document provides a prioritized, step-by-step implementation plan for reali
 ## Executive Summary
 
 **Current State**:
-- Frontend has 7+ different Task interface definitions
-- Frontend supports updating only 5/14 backend fields (36%)
-- Status enum mismatch prevents proper workflow transitions
-- Missing critical fields: context, acceptance_criteria, deadline
+- **Task Schema**: Frontend has 7+ different Task interface definitions, supports updating only 5/14 backend fields (36%), status enum mismatch prevents proper workflow transitions
+- **Worker/Agent Schema**: Missing timestamps, capabilities type mismatch (JSONB vs string[]), nullability mismatches
+- **Chat Schemas**: Mostly aligned (100% of Rust model), but database fields `archived_at` and `parent_message_id` not exposed
+- Missing critical fields: context, acceptance_criteria, deadline (Tasks), created_at/updated_at (Workers)
 
 **Target State**:
-- Single canonical Task interface matching backend
-- Frontend supports updating all 14 backend fields
-- Status enum aligned with backend (6 values)
-- All backend fields available in frontend
+- **Task Schema**: Single canonical Task interface matching backend, supports updating all 14 backend fields, status enum aligned with backend (6 values)
+- **Worker/Agent Schema**: All 11 fields present, structured capabilities interface, timestamps displayed
+- **Chat Schemas**: All database fields exposed in Rust models and frontend
+- All backend fields available in frontend across all schemas
 
-**Implementation Timeline**: 3 weeks (12 phases)
+**Implementation Timeline**: 4 weeks (16 phases)
 
 ---
 
@@ -648,8 +648,173 @@ if (ENABLE_EXPANDED_TASK_UPDATES) {
 
 ---
 
+## Phase 4: Worker/Agent and Chat Schema Fixes (Week 4)
+
+### Priority: HIGH - Agent Self-Tracking and Communication
+
+These fixes ensure agents can properly track themselves and communicate through chat.
+
+#### 4.13 Add Missing Worker Timestamps
+
+**Impact**: Cannot display when agents were created or last updated
+
+**Changes Required**:
+
+1. **Update Agent Interface** (`apps/agent_management_dashboard/src/lib/api/agents.ts`):
+   ```typescript
+   export interface Agent {
+     // ... existing fields ...
+     created_at: string; // ADD (RFC3339)
+     updated_at: string; // ADD (RFC3339)
+   }
+   ```
+
+2. **Update API Response Mapping**:
+   - Ensure `getAgents()` returns `created_at` and `updated_at`
+   - Update any API response transformations
+
+3. **Update UI Components**:
+   - Display creation date in agent cards
+   - Display last updated in agent details
+
+**Testing**:
+- [ ] Verify API responses include timestamps
+- [ ] E2E test: Display agent creation date
+- [ ] Verify timestamps display correctly in UI
+
+**Risk**: Low - Adding fields  
+**Rollback**: Remove fields from interface
+
+---
+
+#### 4.14 Fix Worker Capabilities Type
+
+**Impact**: Cannot access structured capability information (rate limits, context lengths, supported models)
+
+**Changes Required**:
+
+1. **Create Capabilities Interface** (`apps/agent_management_dashboard/src/lib/types/worker.ts`):
+   ```typescript
+   export interface WorkerCapabilities {
+     supported_models?: string[];
+     max_context_length?: number;
+     features?: string[];
+     rate_limits?: {
+       requests_per_minute?: number;
+       tokens_per_minute?: number;
+     };
+     // ... other structured fields
+   }
+   ```
+
+2. **Update Agent Interface**:
+   ```typescript
+   export interface Agent {
+     // ... existing fields ...
+     capabilities: WorkerCapabilities | null; // Changed from string[] | null
+   }
+   ```
+
+3. **Update UI Components**:
+   - Display structured capabilities (models, context length, rate limits)
+   - Create capabilities display component
+
+**Testing**:
+- [ ] Verify capabilities JSONB parses correctly
+- [ ] E2E test: Display structured capabilities
+- [ ] Verify UI handles both structured and legacy formats
+
+**Risk**: Medium - Type change may break existing code  
+**Rollback**: Revert to `string[] | null` with transformation layer
+
+---
+
+#### 4.15 Fix Worker Nullability
+
+**Impact**: Type safety mismatch
+
+**Changes Required**:
+
+1. **Update Agent Interface**:
+   ```typescript
+   export interface Agent {
+     // ... existing fields ...
+     model_name: string; // Changed from string | null (backend: required)
+     endpoint: string; // Changed from string | null (backend: required)
+   }
+   ```
+
+2. **Update API Response Handling**:
+   - Ensure API always returns these fields
+   - Add validation to reject null values
+
+**Testing**:
+- [ ] TypeScript compilation with strict types
+- [ ] Integration tests verify required fields
+- [ ] Verify UI handles required fields
+
+**Risk**: Low - Making fields required (backend already requires them)  
+**Rollback**: Revert to nullable with validation
+
+---
+
+#### 4.16 Add Missing Database Fields to Rust Models
+
+**Impact**: Database fields exist but aren't exposed via API
+
+**Changes Required**:
+
+1. **Add `archived_at` to ChatSession** (`iterations/v3/data-infrastructure/src/chat_service.rs`):
+   ```rust
+   pub struct ChatSession {
+       // ... existing fields ...
+       pub archived_at: Option<DateTime<Utc>>, // ADD
+   }
+   ```
+
+2. **Add `parent_message_id` to ChatMessage** (`iterations/v3/data-infrastructure/src/chat_service.rs`):
+   ```rust
+   pub struct ChatMessage {
+       // ... existing fields ...
+       pub parent_message_id: Option<Uuid>, // ADD
+   }
+   ```
+
+3. **Update Database Queries**:
+   - Include `archived_at` in `get_session` queries
+   - Include `parent_message_id` in message queries
+
+4. **Update Frontend Interfaces**:
+   - Add `archived_at?: string` to `ChatSessionResponse`
+   - Add `parent_message_id?: string` to `ChatMessageResponse`
+
+5. **Enable Message Threading**:
+   - Build UI for threaded conversations
+   - Display reply relationships
+
+**Testing**:
+- [ ] Verify `archived_at` returned in API responses
+- [ ] Verify `parent_message_id` returned in API responses
+- [ ] E2E test: Archive chat → Verify `archived_at` set
+- [ ] E2E test: Reply to message → Verify `parent_message_id` set
+
+**Risk**: Low - Adding optional fields  
+**Rollback**: Remove fields from Rust models and frontend
+
+---
+
 **Last Updated**: 2025-01-28  
 **Reference Documents**:
-- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field comparison
-- `SCHEMA_ALIGNMENT.md` - Detailed alignment analysis
+- `SCHEMA_DIVERGENCE_CATALOG.md` - Complete field comparison (Tasks, Workers, Chat)
+- `SCHEMA_ALIGNMENT.md` - Task and Project alignment analysis
+- `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat alignment analysis
 - `REALIGNMENT_IMPLEMENTATION_PLAN.md` - This document
+
+## Updated Implementation Timeline
+
+**Week 1**: Phase 1 - Critical Task fixes (Status enum, context, acceptance criteria)  
+**Week 2**: Phase 2 - High priority Task fixes (Field expansion, standardization)  
+**Week 3**: Phase 3 - Medium priority Task fixes (Consolidation, utilities)  
+**Week 4**: Phase 4 - Worker/Agent and Chat fixes (Timestamps, capabilities, database fields)
+
+**Total**: 16 phases across 4 weeks

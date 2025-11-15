@@ -415,5 +415,274 @@ export const UpdateTaskRequestSchema = z.object({
 
 ---
 
+## Part 7: Worker/Agent Schema Catalog
+
+### Backend Worker Model
+
+**Location**: `iterations/v3/data-infrastructure/src/models.rs`  
+**Rust Struct**: `Worker`  
+**Database Table**: `workers`
+
+#### Field Catalog (11 Fields)
+
+| Field Name | Rust Type | Database Type | Nullable | Constraints | Notes |
+|------------|-----------|---------------|----------|-------------|-------|
+| `id` | `Uuid` | `UUID` | No | PRIMARY KEY | ✅ Matches frontend (as string) |
+| `name` | `String` | `VARCHAR(255)` | No | NOT NULL | ✅ Matches frontend |
+| `worker_type` | `String` | `VARCHAR(100)` | No | NOT NULL | ✅ Matches frontend |
+| `specialty` | `Option<String>` | `VARCHAR(255)` | Yes | NULL allowed | ✅ Matches frontend |
+| `model_name` | `String` | `VARCHAR(255)` | No | NOT NULL | ⚠️ Nullable in frontend |
+| `endpoint` | `String` | `VARCHAR(500)` | No | NOT NULL | ⚠️ Nullable in frontend |
+| `capabilities` | `serde_json::Value` | `JSONB` | No | NOT NULL, DEFAULT '{}' | ⚠️ Type mismatch (JSONB vs string[]) |
+| `performance_history` | `serde_json::Value` | `JSONB` | No | NOT NULL, DEFAULT '{}' | ✅ Matches frontend (as unknown) |
+| `is_active` | `bool` | `BOOLEAN` | No | NOT NULL, DEFAULT TRUE | ✅ Matches frontend |
+| `created_at` | `DateTime<Utc>` | `TIMESTAMP WITH TIME ZONE` | No | NOT NULL, DEFAULT NOW() | ❌ Missing in frontend |
+| `updated_at` | `DateTime<Utc>` | `TIMESTAMP WITH TIME ZONE` | No | NOT NULL, DEFAULT NOW() | ❌ Missing in frontend |
+
+### Frontend Agent Interface
+
+**Location**: `apps/agent_management_dashboard/src/lib/api/agents.ts`  
+**Type**: `Agent`
+
+```typescript
+export interface Agent {
+  id: string;                    // ✅ Matches backend
+  name: string;                 // ✅ Matches backend
+  worker_type: string;          // ✅ Matches backend
+  specialty: string | null;     // ✅ Matches backend
+  model_name: string | null;    // ⚠️ Nullable (backend: required)
+  endpoint: string | null;      // ⚠️ Nullable (backend: required)
+  capabilities: string[] | null; // ⚠️ Type mismatch (backend: JSONB)
+  performance_history: unknown;  // ✅ Matches backend (as unknown)
+  is_active: boolean;            // ✅ Matches backend
+}
+```
+
+**Fields**: 9 fields  
+**Missing Backend Fields**: `created_at`, `updated_at`  
+**Type Mismatches**: `capabilities` (JSONB vs string[]), `model_name` nullability, `endpoint` nullability
+
+### Worker/Agent Divergence Analysis
+
+#### Fields Backend Has, Frontend Missing
+
+| Backend Field | Frontend Status | Impact |
+|---------------|-----------------|--------|
+| `created_at` | ❌ Missing | Cannot display when agent was created |
+| `updated_at` | ❌ Missing | Cannot display when agent was last updated |
+
+#### Type Mismatches
+
+| Field | Backend Type | Frontend Type | Issue |
+|-------|--------------|---------------|-------|
+| `capabilities` | `serde_json::Value` (JSONB) | `string[] | null` | **Type mismatch** - Backend stores structured JSON, frontend expects array of strings |
+| `model_name` | `String` (required) | `string | null` | **Nullability mismatch** |
+| `endpoint` | `String` (required) | `string | null` | **Nullability mismatch** |
+
+#### Capabilities Field Structure Mismatch
+
+**Backend stores structured JSONB**:
+```json
+{
+  "supported_models": ["gpt-4", "claude-3"],
+  "max_context_length": 128000,
+  "features": ["code_generation", "analysis"],
+  "rate_limits": {
+    "requests_per_minute": 100
+  }
+}
+```
+
+**Frontend expects simple string array**:
+```typescript
+capabilities: ["code_generation", "analysis"]
+```
+
+**Impact**: Frontend cannot access structured capability information (rate limits, context lengths, supported models, etc.)
+
+---
+
+## Part 8: Chat Session Schema Catalog
+
+### Backend ChatSession Model
+
+**Location**: `iterations/v3/data-infrastructure/src/chat_service.rs`  
+**Rust Struct**: `ChatSession`  
+**Database Table**: `chat_sessions`
+
+#### Field Catalog (12 Fields + 1 Missing)
+
+| Field Name | Rust Type | Database Type | Nullable | Notes |
+|------------|-----------|---------------|----------|-------|
+| `id` | `Uuid` | `UUID` | No | PRIMARY KEY |
+| `workspace_id` | `Option<Uuid>` | `UUID` | Yes | NULL allowed |
+| `tenant_id` | `Option<Uuid>` | `UUID` | Yes | NULL allowed |
+| `title` | `Option<String>` | `VARCHAR(500)` | Yes | NULL allowed |
+| `created_at` | `DateTime<Utc>` | `TIMESTAMP WITH TIME ZONE` | No | NOT NULL, DEFAULT NOW() |
+| `updated_at` | `DateTime<Utc>` | `TIMESTAMP WITH TIME ZONE` | No | NOT NULL, DEFAULT NOW() |
+| `last_message_at` | `Option<DateTime<Utc>>` | `TIMESTAMP WITH TIME ZONE` | Yes | NULL allowed |
+| `message_count` | `i32` | `INTEGER` | No | DEFAULT 0 |
+| `metadata` | `serde_json::Value` | `JSONB` | No | DEFAULT '{}' |
+| `archived` | `bool` | `BOOLEAN` | No | DEFAULT FALSE |
+| `pinned` | `bool` | `BOOLEAN` | No | DEFAULT FALSE |
+| `folder_id` | `Option<Uuid>` | `UUID` | Yes | NULL allowed |
+| `archived_at` | ❌ Missing | `TIMESTAMP WITH TIME ZONE` | Yes | **Database field not in Rust model** |
+
+### Frontend ChatSessionResponse Interface
+
+**Location**: `apps/agent_management_dashboard/src/lib/api/chat.ts`
+
+```typescript
+export interface ChatSessionResponse {
+  id: string;                    // ✅ Matches backend
+  workspace_id?: string;         // ✅ Matches backend
+  tenant_id?: string;            // ✅ Matches backend
+  title?: string;                // ✅ Matches backend
+  created_at: string;            // ✅ Matches backend (as RFC3339)
+  updated_at: string;            // ✅ Matches backend (as RFC3339)
+  last_message_at?: string;      // ✅ Matches backend (as RFC3339)
+  message_count: number;         // ✅ Matches backend (as number)
+  metadata: Record<string, unknown>; // ✅ Matches backend (JSONB)
+  archived: boolean;             // ✅ Matches backend
+  pinned: boolean;               // ✅ Matches backend
+  folder_id?: string;            // ✅ Matches backend
+}
+```
+
+**Fields**: 12 fields  
+**Missing Backend Fields**: None (all Rust model fields present!)  
+**Database Field Not in Rust Model**: `archived_at` (exists in database but not in Rust `ChatSession`)
+
+### ChatSession Divergence Analysis
+
+**Status**: ✅ **Mostly Aligned** - Frontend matches Rust model exactly
+
+**Issues**:
+1. **Database vs Rust Mismatch**: `archived_at` exists in database but not in Rust model
+2. **Frontend ChatData Simplification**: Internal UI state simplified (acceptable for UI)
+
+---
+
+## Part 9: Chat Message Schema Catalog
+
+### Backend ChatMessage Model
+
+**Location**: `iterations/v3/data-infrastructure/src/chat_service.rs`  
+**Rust Struct**: `ChatMessage`  
+**Database Table**: `chat_messages`
+
+#### Field Catalog (9 Fields + 1 Missing)
+
+| Field Name | Rust Type | Database Type | Nullable | Notes |
+|------------|-----------|---------------|----------|-------|
+| `id` | `Uuid` | `UUID` | No | PRIMARY KEY |
+| `session_id` | `Uuid` | `UUID` | No | NOT NULL, REFERENCES chat_sessions(id) |
+| `role` | `String` | `VARCHAR(50)` | No | NOT NULL, CHECK ('user', 'assistant', 'system') |
+| `content` | `String` | `TEXT` | No | NOT NULL |
+| `metadata` | `serde_json::Value` | `JSONB` | No | DEFAULT '{}' |
+| `created_at` | `DateTime<Utc>` | `TIMESTAMP WITH TIME ZONE` | No | NOT NULL, DEFAULT NOW() |
+| `edited_at` | `Option<DateTime<Utc>>` | `TIMESTAMP WITH TIME ZONE` | Yes | NULL allowed |
+| `token_count` | `Option<i32>` | `INTEGER` | Yes | NULL allowed |
+| `model_used` | `Option<String>` | `VARCHAR(255)` | Yes | NULL allowed |
+| `sequence_number` | `i32` | `INTEGER` | No | NOT NULL, DEFAULT 0 |
+| `parent_message_id` | ❌ Missing | `UUID` | Yes | **Database field not in Rust model** |
+
+### Frontend ChatMessageResponse Interface
+
+**Location**: `apps/agent_management_dashboard/src/lib/api/chat.ts`
+
+```typescript
+export interface ChatMessageResponse {
+  id: string;                    // ✅ Matches backend
+  session_id: string;            // ✅ Matches backend
+  role: string;                  // ✅ Matches backend
+  content: string;               // ✅ Matches backend
+  metadata: Record<string, unknown>; // ✅ Matches backend (JSONB)
+  created_at: string;            // ✅ Matches backend (as RFC3339)
+  edited_at?: string;            // ✅ Matches backend (as RFC3339)
+  token_count?: number;          // ✅ Matches backend
+  model_used?: string;           // ✅ Matches backend
+  sequence_number: number;       // ✅ Matches backend
+}
+```
+
+**Fields**: 9 fields  
+**Missing Backend Fields**: None (all Rust model fields present!)  
+**Database Field Not in Rust Model**: `parent_message_id` (exists in database but not in Rust `ChatMessage`)
+
+### ChatMessage Divergence Analysis
+
+**Status**: ✅ **Mostly Aligned** - Frontend matches Rust model exactly
+
+**Issues**:
+1. **Database vs Rust Mismatch**: `parent_message_id` exists in database but not in Rust model
+   - **Impact**: Cannot implement message threading/replies
+
+---
+
+## Part 10: Complete System-Wide Divergence Summary
+
+### Summary Statistics Across All Schemas
+
+#### Task Schema
+- **Backend Fields**: 17
+- **Frontend Coverage**: 9-11/17 (53-65%)
+- **Update Capability**: 5/14 (36%)
+- **Status Issues**: 🚨 **CRITICAL** - Enum mismatch blocks workflow
+- **Total Issues**: 17+
+
+#### Worker/Agent Schema
+- **Backend Fields**: 11
+- **Frontend Coverage**: 9/11 (82%)
+- **Missing Fields**: `created_at`, `updated_at`
+- **Type Issues**: 3 (capabilities, model_name, endpoint nullability)
+- **Total Issues**: 5
+
+#### Chat Session Schema
+- **Backend Fields**: 12 (Rust) / 13 (Database)
+- **Frontend Coverage**: 12/12 (100% of Rust model)
+- **Database vs Rust**: 1 field mismatch (`archived_at`)
+- **Total Issues**: 1
+
+#### Chat Message Schema
+- **Backend Fields**: 9 (Rust) / 10 (Database)
+- **Frontend Coverage**: 9/9 (100% of Rust model)
+- **Database vs Rust**: 1 field mismatch (`parent_message_id`)
+- **Total Issues**: 1
+
+### Overall System Divergence
+
+| Schema | Backend Fields | Frontend Coverage | Critical Issues | Total Issues |
+|--------|---------------|-------------------|-----------------|--------------|
+| **Task** | 17 | 53-65% | 🚨 **Status enum mismatch** | 17+ |
+| **Worker/Agent** | 11 | 82% | ⚠️ Capabilities type mismatch | 5 |
+| **Chat Session** | 12/13 | 100% (Rust) | None (minor DB vs Rust) | 1 |
+| **Chat Message** | 9/10 | 100% (Rust) | None (minor DB vs Rust) | 1 |
+| **TOTAL** | **49/51** | **~75%** | **1 CRITICAL** | **24+** |
+
+### Critical Issues by Priority
+
+#### 🚨 CRITICAL (Blocking Agent Workflow)
+1. **Task Status Enum Mismatch** - Agents cannot properly transition tasks
+2. **Task Context Updates** - Agents cannot update task context as they work
+3. **Task Acceptance Criteria Updates** - Cannot refine acceptance criteria
+
+#### ⚠️ HIGH (Feature Completeness)
+4. **Worker Capabilities Type** - Cannot access structured capability info
+5. **Worker Timestamps** - Cannot display agent creation/update times
+6. **Task Missing Fields** - 6-8 fields missing in frontend
+7. **Task Update Capabilities** - Only 36% of backend fields updateable
+
+#### 📋 MEDIUM (Cleanup & Quality)
+8. **Chat `archived_at`** - Database field not exposed
+9. **Chat `parent_message_id`** - Database field not exposed (blocks threading)
+10. **Worker Nullability** - Type safety mismatches
+
+---
+
 **Last Updated**: 2025-01-28  
-**Next Steps**: See SCHEMA_ALIGNMENT.md for prioritized realignment plan
+**Reference Documents**:
+- `SCHEMA_ALIGNMENT.md` - Task and Project schema alignment
+- `SCHEMA_ALIGNMENT_EXTENDED.md` - Worker/Agent and Chat schema alignment  
+- `REALIGNMENT_IMPLEMENTATION_PLAN.md` - Prioritized implementation plan  
+**Next Steps**: See REALIGNMENT_IMPLEMENTATION_PLAN.md for prioritized fixes
