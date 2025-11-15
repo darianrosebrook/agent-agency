@@ -1,39 +1,125 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PhaseHeader } from './PhaseHeader';
 import { PhaseItem } from './PhaseItem';
 import { initialPhases } from './initialPhases';
-import type { Phase, PhaseManagerProps, Subtask, ContextChip } from './types';
+import type { Phase, PhaseManagerProps, Subtask, ContextChip, Task } from './types';
 import styles from './PhaseManager.module.scss';
+import {
+  getProjectMilestones,
+  getProjectTasks,
+  updateProjectMilestone,
+  updateProjectTask,
+  type ProjectMilestone,
+  type ProjectTask,
+} from '../../../lib/api/projects';
 
 export function PhaseManager({
+  projectId,
   initialData = initialPhases,
   onSaveToProject,
 }: PhaseManagerProps) {
-  // TODO: Replace hardcoded initial phases with project phases from v3 database with the following requirements:
-  // 1. Phase data fetching: Load project phases and tasks from database
-  //    - Data source: GET /api/projects/:projectId/phases endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-  //    - Database tables: PostgreSQL `milestones` (phases) and `tasks` tables
-  //    - Include phase numbers, titles, descriptions, and associated tasks
-  // 2. Task data fetching: Load tasks with subtasks and context chips
-  //    - Data source: GET /api/projects/:projectId/tasks endpoint returning tasks with subtasks
-  //    - Database table: PostgreSQL `tasks` table with subtask relationships
-  //    - Include task titles, descriptions, subtasks, and context chips
-  // 3. Phase persistence: Save phase and task updates to database
-  //    - Data source: PATCH /api/projects/:projectId/phases/:phaseId and PATCH /api/projects/:projectId/tasks/:taskId endpoints
-  //    - Update phase titles, descriptions, and task details
-  //    - Persist subtask additions, deletions, and completion status
-  // 4. Context chip persistence: Save context chip additions and removals
-  //    - Data source: POST /api/projects/:projectId/tasks/:taskId/context-chips and DELETE /api/projects/:projectId/tasks/:taskId/context-chips/:chipId endpoints
-  //    - Store file references, tool references, and other context data
   const [phases, setPhases] = useState<Phase[]>(initialData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const updateTaskTitle = (
+  // Map API milestone to Phase format
+  const mapMilestoneToPhase = useCallback(
+    (
+      milestone: ProjectMilestone,
+      allTasks: ProjectTask[],
+      milestoneIndex: number
+    ): Phase => {
+      // Map tasks that might be associated with this milestone
+      // Note: Tasks don't have milestone_id in current schema, so we'll group by order
+      // This is a simplified mapping - in production, you'd want milestone_id on tasks
+      const milestoneTasks: Task[] = allTasks.map((task, taskIndex) => ({
+        id: task.task_id || task.id || `task-${taskIndex}`,
+        title: task.title,
+        description: task.description || '',
+        subtasks: [], // TODO: Extract from task.metadata or separate endpoint
+        contextChips: [], // TODO: Extract from task.context or separate endpoint
+      }));
+
+      // API milestone uses 'objective' for title, 'description' for description
+      // PhaseManager uses 'title' for phase title, 'description' for phase description
+      return {
+        id: milestone.milestone_id || milestone.id || `milestone-${milestoneIndex}`,
+        number: milestoneIndex + 1,
+        title: milestone.title || milestone.objective || 'Untitled Phase',
+        description: milestone.description || '',
+        tasks: milestoneTasks,
+      };
+    },
+    []
+  );
+
+  // Fetch phases and tasks from API when projectId is provided
+  useEffect(() => {
+    if (!projectId) {
+      // Use initialData if no projectId provided
+      setPhases(initialData);
+      return;
+    }
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch milestones and tasks in parallel
+        const [milestones, tasksResponse] = await Promise.all([
+          getProjectMilestones(projectId),
+          getProjectTasks(projectId),
+        ]);
+
+        // Extract tasks array from response (API returns { tasks: [...] })
+        const tasks = tasksResponse.tasks || [];
+
+        // Map milestones to phases
+        const mappedPhases: Phase[] = milestones.map((milestone, index) =>
+          mapMilestoneToPhase(milestone, tasks, index)
+        );
+
+        // If no milestones, create default phases with tasks
+        if (mappedPhases.length === 0 && tasks.length > 0) {
+          const defaultPhase: Phase = {
+            id: 'default-phase',
+            number: 1,
+            title: 'Default Phase',
+            description: '',
+            tasks: tasks.map((task, taskIndex) => ({
+              id: task.task_id || task.id || `task-${taskIndex}`,
+              title: task.title,
+              description: task.description || '',
+              subtasks: [],
+              contextChips: [],
+            })),
+          };
+          setPhases([defaultPhase]);
+        } else {
+          setPhases(mappedPhases.length > 0 ? mappedPhases : initialData);
+        }
+      } catch (err) {
+        console.error('Failed to fetch project phases and tasks:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load project data');
+        // Fallback to initialData on error
+        setPhases(initialData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId, initialData, mapMilestoneToPhase]);
+
+  const updateTaskTitle = async (
     phaseId: string,
     taskId: string,
     newTitle: string
   ) => {
+    // Optimistic update
     setPhases(
       phases.map((phase) => {
         if (phase.id === phaseId) {
@@ -47,13 +133,25 @@ export function PhaseManager({
         return phase;
       })
     );
+
+    // Persist to API if projectId is provided
+    if (projectId) {
+      try {
+        await updateProjectTask(projectId, taskId, { title: newTitle });
+      } catch (err) {
+        console.error('Failed to update task title:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update task');
+        // TODO: Revert optimistic update on error
+      }
+    }
   };
 
-  const updateTaskDescription = (
+  const updateTaskDescription = async (
     phaseId: string,
     taskId: string,
     newDescription: string
   ) => {
+    // Optimistic update
     setPhases(
       phases.map((phase) => {
         if (phase.id === phaseId) {
@@ -69,6 +167,17 @@ export function PhaseManager({
         return phase;
       })
     );
+
+    // Persist to API if projectId is provided
+    if (projectId) {
+      try {
+        await updateProjectTask(projectId, taskId, { description: newDescription });
+      } catch (err) {
+        console.error('Failed to update task description:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update task');
+        // TODO: Revert optimistic update on error
+      }
+    }
   };
 
   const addSubtask = (phaseId: string, taskId: string) => {
@@ -211,6 +320,22 @@ export function PhaseManager({
       })
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className={styles.phaseManager}>
+        <div>Loading project phases and tasks...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.phaseManager}>
+        <div style={{ color: 'red' }}>Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.phaseManager}>

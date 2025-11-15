@@ -61,12 +61,22 @@ export interface ProjectApiResponse {
  * Project milestone
  */
 export interface ProjectMilestone {
-  milestone_id: string;
-  project_id: string;
-  title: string;
+  id?: string; // API returns 'id' not 'milestone_id' in some cases
+  milestone_id?: string;
+  project_id?: string;
+  plan_id?: string; // API returns 'plan_id' in some cases
+  title?: string; // API may return 'objective' instead
+  objective?: string; // API returns 'objective' for milestone title
   description?: string | null;
   due_date?: string | null;
-  completed: boolean;
+  completed?: boolean;
+  state?: string; // API returns 'state' (pending, in_progress, completed)
+  priority?: string;
+  risk_tier?: number;
+  is_blocking?: boolean;
+  estimated_effort?: number;
+  started_at?: string | null;
+  completed_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -201,14 +211,24 @@ export async function getProjectMembers(
 }
 
 /**
+ * Project milestones response
+ */
+export interface ProjectMilestonesResponse {
+  milestones: ProjectMilestone[];
+}
+
+/**
  * Get project milestones
  */
 export async function getProjectMilestones(
   projectId: string
 ): Promise<ProjectMilestone[]> {
-  return apiGet<ProjectMilestone[]>(
+  // API returns { milestones: [...] }
+  const response = await apiGet<ProjectMilestonesResponse>(
     `${API_BASE}/projects/${projectId}/milestones`
   );
+  // Extract milestones array from response
+  return Array.isArray(response) ? response : (response.milestones || []);
 }
 
 /**

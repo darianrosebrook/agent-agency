@@ -48,7 +48,7 @@ clap = { version = "4", features = ["derive"] }
 schemars = { version = "0.8", features = ["derive"] }
 
 [features]
-default = []
+default = ["full"]  # Enable full feature by default for M1 Max development
 full = ["agent-research", "system-federated-ml", "agent-orchestration/evaluation", "agent-constitutional-council", "data-interfaces-adapters"]
 e2e = []
 

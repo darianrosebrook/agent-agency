@@ -28,6 +28,7 @@ export interface Phase {
 }
 
 export interface PhaseManagerProps {
+  projectId?: string; // Optional project ID to fetch data from API
   initialData?: Phase[];
   onSaveToProject?: () => void;
 }
