@@ -152,12 +152,15 @@ impl WorkerExecutionBridge {
             });
 
         // Collect all results - this executes tasks in parallel
-        let results: Result<Vec<_>, _> = artifact_stream
-            .buffer_unordered(plan.subtasks.len().min(10)) // Limit concurrency to 10
-            .collect()
-            .await;
+        // Use try_collect to handle Result types properly
+        let mut results = Vec::new();
+        let mut stream = artifact_stream.buffer_unordered(plan.subtasks.len().min(10)); // Limit concurrency to 10
+        
+        while let Some(result) = stream.next().await {
+            results.push(result?);
+        }
 
-        results
+        Ok(results)
     }
 
     /// Execute subtasks respecting dependencies
@@ -207,18 +210,26 @@ impl WorkerExecutionBridge {
 
             // Execute executable tasks in parallel
             use futures::future::join_all;
-            let execution_futures: Vec<_> = executable_tasks
-                .iter()
-                .map(|task| {
-                    let worker_id = task
-                        .assigned_worker
-                        .map(|w| w.0)
-                        .unwrap_or_else(Uuid::new_v4);
-                    let worktree_path = worktree_paths
-                        .get(&worker_id)
-                        .cloned()
-                        .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
-                    let milestone = self.parallel_task_to_milestone(task)?;
+            
+            // Pre-convert milestones and collect worktree paths before async
+            let mut execution_setup = Vec::new();
+            for task in &executable_tasks {
+                let worker_id = task
+                    .assigned_worker
+                    .map(|w| w.0)
+                    .unwrap_or_else(Uuid::new_v4);
+                let worktree_path = worktree_paths
+                    .get(&worker_id)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
+                let milestone = self.parallel_task_to_milestone(task)?;
+                execution_setup.push((milestone, worktree_path, worker_id));
+            }
+            
+            // Create execution futures
+            let execution_futures: Vec<_> = execution_setup
+                .into_iter()
+                .map(|(milestone, worktree_path, worker_id)| {
                     async move {
                         self.execute_milestone(&milestone, &worktree_path, worker_id).await
                     }

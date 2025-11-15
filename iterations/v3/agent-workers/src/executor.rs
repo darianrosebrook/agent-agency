@@ -151,6 +151,8 @@ pub struct TaskExecutor {
     db_client: Arc<data_infrastructure::DatabaseClient>,
     // Execution statistics tracking
     execution_stats: Arc<tokio::sync::RwLock<ExecutionStats>>,
+    // Active task tracking for health monitoring
+    task_tracker: ActiveTaskTracker,
 }
 
 impl std::fmt::Debug for TaskExecutor {
@@ -176,6 +178,15 @@ struct ExecutionStats {
     failed_executions: u64,
     execution_times: Vec<u64>, // milliseconds
     last_execution_time: Option<DateTime<Utc>>,
+}
+
+/// Active task tracking for health monitoring
+#[derive(Debug, Default)]
+struct ActiveTaskTracker {
+    /// Currently executing tasks (set when task starts, removed when task completes)
+    active_task_ids: Arc<tokio::sync::RwLock<std::collections::HashSet<Uuid>>>,
+    /// Queued tasks waiting for execution (optional - can be provided by orchestrator)
+    queued_task_count: Arc<tokio::sync::RwLock<usize>>,
 }
 
 impl TaskExecutor {
@@ -212,6 +223,7 @@ impl TaskExecutor {
             id_gen: Box::new(UuidGenerator),
             db_client,
             execution_stats: Arc::new(tokio::sync::RwLock::new(ExecutionStats::default())),
+            task_tracker: ActiveTaskTracker::default(),
         }
     }
 
@@ -225,13 +237,47 @@ impl TaskExecutor {
         let task_id = task_spec.id;
         let started_at = self.clock.now();
 
+        // Track active task
+        {
+            let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+            active_tasks.insert(task_id);
+            info!("Task {} marked as active (active tasks: {})", task_id, active_tasks.len());
+        }
+
         info!("Executing task {} with worker {}", task_id, worker_id);
 
         // Real worker discovery and capability matching
-        let worker_info = self.discover_worker_capabilities(worker_id).await?;
-        let capability_match = self.match_worker_capabilities(&task_spec, &worker_info)?;
+        let worker_info = match self.discover_worker_capabilities(worker_id).await {
+            Ok(info) => info,
+            Err(e) => {
+                // Cleanup: remove from active tasks
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(e);
+            }
+        };
+        
+        let capability_match = match self.match_worker_capabilities(&task_spec, &worker_info) {
+            Ok(match_result) => match_result,
+            Err(e) => {
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(e);
+            }
+        };
 
         if !capability_match.is_suitable {
+            {
+                let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                active_tasks.remove(&task_id);
+                info!("Task {} removed from active tasks due to capability mismatch (active tasks: {})", task_id, active_tasks.len());
+            }
             return Err(anyhow::anyhow!(
                 "Worker {} lacks required capabilities for task {}: {:?}",
                 worker_id,
@@ -241,13 +287,40 @@ impl TaskExecutor {
         }
 
         // Real load balancing and performance optimization
-        let execution_strategy = self
+        let execution_strategy = match self
             .determine_execution_strategy(&task_spec, &worker_info)
-            .await?;
+            .await
+        {
+            Ok(strategy) => strategy,
+            Err(e) => {
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(e);
+            }
+        };
 
         // Real distributed worker coordination and health monitoring
-        let health_status = self.check_worker_health(worker_id).await?;
+        let health_status = match self.check_worker_health(worker_id).await {
+            Ok(status) => status,
+            Err(e) => {
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(e);
+            }
+        };
+        
         if !health_status.is_healthy {
+            {
+                let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                active_tasks.remove(&task_id);
+                info!("Task {} removed from active tasks due to unhealthy worker (active tasks: {})", task_id, active_tasks.len());
+            }
             return Err(anyhow::anyhow!(
                 "Worker {} is not healthy: {}",
                 worker_id,
@@ -256,8 +329,24 @@ impl TaskExecutor {
         }
 
         // Real worker authentication and authorization
-        let auth_result = self.authenticate_worker(worker_id, &task_spec).await?;
+        let auth_result = match self.authenticate_worker(worker_id, &task_spec).await {
+            Ok(result) => result,
+            Err(e) => {
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(e);
+            }
+        };
+        
         if !auth_result.is_authorized {
+            {
+                let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                active_tasks.remove(&task_id);
+                info!("Task {} removed from active tasks due to authorization failure (active tasks: {})", task_id, active_tasks.len());
+            }
             return Err(anyhow::anyhow!(
                 "Worker {} not authorized for task {}: {}",
                 worker_id,
@@ -266,31 +355,84 @@ impl TaskExecutor {
             ));
         }
 
-        // Real worker lifecycle management
-        self.update_worker_status(worker_id, "executing", Some(task_id))
-            .await?;
+        // Real worker lifecycle management - set status to executing
+        // If this fails, we haven't started execution yet, so cleanup and return
+        match self.update_worker_status(worker_id, "executing", Some(task_id)).await {
+            Ok(()) => {}
+            Err(e) => {
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(anyhow::anyhow!("Failed to update worker status to executing: {}", e));
+            }
+        }
 
         // Prepare execution input
-        let execution_input = self.prepare_execution_input(&task_spec)?;
+        let execution_input = match self.prepare_execution_input(&task_spec) {
+            Ok(input) => input,
+            Err(e) => {
+                // Cleanup: reset worker status and remove from active tasks
+                let _ = self.update_worker_status(worker_id, "available", None).await;
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to error (active tasks: {})", task_id, active_tasks.len());
+                }
+                return Err(anyhow::anyhow!("Failed to prepare execution input: {}", e));
+            }
+        };
 
         // Real worker execution with circuit breaker and retry logic
-        let execution_result = if let Some(cb) = circuit_breaker {
+        let execution_result = match if let Some(cb) = circuit_breaker {
             self.execute_with_circuit_breaker_and_retry(
                 worker_id,
                 &execution_input,
                 &execution_strategy,
                 cb,
             )
-            .await?
+            .await
         } else {
             self.execute_with_worker_direct(worker_id, &execution_input, &execution_strategy)
-                .await?
+                .await
+        } {
+            Ok(result) => result,
+            Err(e) => {
+                // Cleanup on execution failure: reset worker status and remove from active tasks
+                let _ = self.update_worker_status(worker_id, "available", None).await;
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to execution failure (active tasks: {})", task_id, active_tasks.len());
+                }
+                
+                // Update task status to failed
+                let _ = self.update_task_status(task_id, "failed", self.clock.now()).await;
+                return Err(anyhow::anyhow!("Task execution failed: {}", e));
+            }
         };
 
         // Process and validate result
-        let result = self
+        let result = match self
             .process_execution_result(task_id, worker_id, execution_result, started_at)
-            .await?;
+            .await
+        {
+            Ok(result) => result,
+            Err(e) => {
+                // Cleanup on processing failure: reset worker status and remove from active tasks
+                let _ = self.update_worker_status(worker_id, "available", None).await;
+                {
+                    let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+                    active_tasks.remove(&task_id);
+                    info!("Task {} removed from active tasks due to processing failure (active tasks: {})", task_id, active_tasks.len());
+                }
+                
+                // Update task status to failed
+                let _ = self.update_task_status(task_id, "failed", self.clock.now()).await;
+                return Err(anyhow::anyhow!("Failed to process execution result: {}", e));
+            }
+        };
 
         // Track execution statistics
         let completed_at = self.clock.now();
@@ -312,6 +454,50 @@ impl TaskExecutor {
             if stats.execution_times.len() > 1000 {
                 stats.execution_times.remove(0);
             }
+        }
+
+        // Persist execution result to database for history and learning
+        if let Err(e) = self.persist_execution_result(&result, worker_id, started_at, completed_at).await {
+            warn!("Failed to persist execution result for task {} to database: {}, continuing without persistence", task_id, e);
+            // Continue execution even if persistence fails - non-critical
+        }
+
+        // Update worker status back to available after task completion
+        let worker_status = if result.success {
+            "available"
+        } else {
+            "available" // Set to available even on failure - worker can still process other tasks
+        };
+        
+        if let Err(e) = self.update_worker_status(worker_id, worker_status, None).await {
+            warn!("Failed to update worker {} status after task {} completion: {}, continuing", worker_id, task_id, e);
+            // Continue even if worker status update fails - non-critical but should be monitored
+        }
+
+        // Update worker performance metrics after task completion
+        if let Err(e) = self.update_worker_performance_metrics(worker_id, &result, duration_ms).await {
+            warn!("Failed to update worker {} performance metrics after task {} completion: {}, continuing", worker_id, task_id, e);
+            // Continue even if metrics update fails - non-critical but should be monitored
+        }
+
+        // Update task status in database
+        // Note: tasks table uses 'completed' and 'failed' status values
+        let task_status = if result.success {
+            "completed"
+        } else {
+            "failed"
+        };
+        
+        if let Err(e) = self.update_task_status(task_id, task_status, completed_at).await {
+            warn!("Failed to update task {} status to {} in database: {}, continuing", task_id, task_status, e);
+            // Continue even if task status update fails - non-critical but should be monitored
+        }
+
+        // Remove from active tasks
+        {
+            let mut active_tasks = self.task_tracker.active_task_ids.write().await;
+            active_tasks.remove(&task_id);
+            info!("Task {} removed from active tasks (active tasks: {})", task_id, active_tasks.len());
         }
 
         info!(
@@ -1508,11 +1694,52 @@ impl TaskExecutorTrait for TaskExecutor {
             agent_agency_contracts::task_executor::HealthStatus::Unhealthy
         };
 
+        // Get active task count from tracker
+        let active_tasks = {
+            let active_task_ids = self.task_tracker.active_task_ids.read().await;
+            active_task_ids.len() as u32
+        };
+
+        // Get queued task count from database (tasks with status = 'pending')
+        // Note: This queries task_executions table for pending tasks executed by this executor
+        let queued_tasks = {
+            let query = r#"
+                SELECT COUNT(*)::bigint as queued_count
+                FROM task_executions
+                WHERE status = 'pending'
+                    AND started_at > NOW() - INTERVAL '1 hour'
+            "#;
+            
+            match self.db_client.query_one(query, &[]).await {
+                Ok(Some(row)) => {
+                    // COUNT returns BIGINT, extract as i64
+                    match row.try_get::<i64, _>("queued_count") {
+                        Ok(count) => count.min(u32::MAX as i64) as u32, // Convert to u32, clamp to prevent overflow
+                        Err(e) => {
+                            // Try by index as fallback
+                            match row.try_get::<i64, _>(0) {
+                                Ok(count) => count.min(u32::MAX as i64) as u32,
+                                Err(_) => {
+                                    warn!("Failed to extract queued task count: {}, defaulting to 0", e);
+                                    0
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(None) => 0,
+                Err(e) => {
+                    warn!("Failed to query queued tasks from database: {}, defaulting to 0", e);
+                    0
+                }
+            }
+        };
+
         Ok(agent_agency_contracts::task_executor::TaskExecutorHealth {
             status,
             last_execution_time: stats.last_execution_time,
-            active_tasks: 0, // TODO: Track active tasks separately when task queue is implemented
-            queued_tasks: 0, // TODO: Track queued tasks separately when task queue is implemented
+            active_tasks,
+            queued_tasks,
             total_executions: stats.total_executions,
             success_rate,
         })
@@ -1675,44 +1902,41 @@ impl TaskExecutor {
             return Ok(endpoint);
         }
 
-        // TODO: Implement database query for worker endpoints
-        //       Currently skips database query and uses default pattern; should implement comprehensive database query for worker endpoints with proper error handling and endpoint validation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Worker endpoints are queried from database
-        // - Database query handles missing endpoints gracefully
-        // - Endpoint validation ensures reachability and correctness
-        // - Fallback to default pattern when database query fails
-        //
-        // DEPENDENCIES:
-        // - Database connection and query system (Required)
-        // - Worker endpoint storage schema (Required)
-        // - Endpoint validation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (worker endpoint management)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Database integration and endpoint management expertise
-
-        // Default pattern: http://worker-{id}.local:8080
-        let worker_endpoint = format!("http://worker-{}.local:8080", worker_id);
+        // Query database for worker endpoint
+        let query = "SELECT endpoint FROM workers WHERE id = $1 AND is_active = true";
+        
+        let worker_endpoint = match self.db_client.query_one(query, &[&worker_id]).await {
+            Ok(Some(row)) => {
+                match row.try_get::<String, _>("endpoint") {
+                    Ok(endpoint) => {
+                        // Validate endpoint format (basic validation)
+                        if endpoint.is_empty() {
+                            warn!("Worker {} has empty endpoint in database, using default pattern", worker_id);
+                            format!("http://worker-{}.local:8080", worker_id)
+                        } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
+                            info!("Found worker endpoint from database for worker {}: {}", worker_id, endpoint);
+                            endpoint
+                        } else {
+                            warn!("Worker {} has invalid endpoint format '{}' in database, using default pattern", worker_id, endpoint);
+                            format!("http://worker-{}.local:8080", worker_id)
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to extract endpoint from database row for worker {}: {}, using default pattern", worker_id, e);
+                        format!("http://worker-{}.local:8080", worker_id)
+                    }
+                }
+            }
+            Ok(None) => {
+                warn!("Worker {} not found in database or not active, using default pattern", worker_id);
+                format!("http://worker-{}.local:8080", worker_id)
+            }
+            Err(e) => {
+                warn!("Database query failed for worker {} endpoint: {}, using default pattern", worker_id, e);
+                // Fallback to default pattern on database error
+                format!("http://worker-{}.local:8080", worker_id)
+            }
+        };
 
         // Validate endpoint is reachable (basic health check)
         // Note: Health check is optional - if it fails, we still return the endpoint
@@ -2511,6 +2735,240 @@ impl TaskExecutor {
 
                     tokio::time::sleep(std::time::Duration::from_millis(actual_delay)).await;
                 }
+            }
+        }
+    }
+
+    /// Update worker performance metrics in database after task execution
+    async fn update_worker_performance_metrics(
+        &self,
+        worker_id: Uuid,
+        result: &TaskExecutionResult,
+        duration_ms: u64,
+    ) -> Result<()> {
+        // Get current metrics for the worker to calculate running averages
+        let query = r#"
+            SELECT 
+                COALESCE(SUM(tasks_completed), 0) as total_completed,
+                COALESCE(SUM(tasks_failed), 0) as total_failed,
+                COALESCE(AVG(avg_execution_time_ms), 0.0) as current_avg_time
+            FROM worker_performance_metrics
+            WHERE worker_id = $1
+            AND measurement_time > NOW() - INTERVAL '24 hours'
+        "#;
+
+        let (total_completed, total_failed, current_avg_time) = match self.db_client.query(query, &[&worker_id]).await {
+            Ok(rows) => {
+                if let Some(row) = rows.first() {
+                    let total_completed: i64 = row.get(0);
+                    let total_failed: i64 = row.get(1);
+                    let current_avg_time: f64 = row.get(2);
+                    (total_completed, total_failed, current_avg_time)
+                } else {
+                    (0, 0, 0.0)
+                }
+            }
+            Err(_) => {
+                // If query fails, assume no previous metrics
+                (0, 0, 0.0)
+            }
+        };
+
+        // Calculate new metrics
+        let new_completed = if result.success { total_completed + 1 } else { total_completed };
+        let new_failed = if !result.success { total_failed + 1 } else { total_failed };
+        let total_tasks = new_completed + new_failed;
+        
+        // Calculate new average execution time using exponential moving average
+        // Weight recent execution more heavily (70% new, 30% old average)
+        let new_avg_time = if total_tasks > 0 {
+            if current_avg_time > 0.0 {
+                (current_avg_time * 0.3) + (duration_ms as f64 * 0.7)
+            } else {
+                duration_ms as f64
+            }
+        } else {
+            duration_ms as f64
+        };
+
+        // Calculate success rate
+        let success_rate = if total_tasks > 0 {
+            new_completed as f64 / total_tasks as f64
+        } else {
+            if result.success { 1.0 } else { 0.0 }
+        };
+
+        // Insert new performance metrics record
+        let insert_query = r#"
+            INSERT INTO worker_performance_metrics (
+                worker_id,
+                measurement_time,
+                tasks_completed,
+                tasks_failed,
+                avg_execution_time_ms,
+                success_rate,
+                performance_score,
+                metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "#;
+
+        // Calculate performance score (weighted: 60% success rate, 40% speed factor)
+        // Speed factor: normalize execution time (faster = better, capped at reasonable limits)
+        let speed_factor = if duration_ms > 0 {
+            (1000.0 / duration_ms as f64).min(1.0) // Faster tasks score higher, cap at 1.0
+        } else {
+            1.0
+        };
+        let performance_score = (success_rate * 0.6) + (speed_factor * 0.4);
+
+        let metadata = serde_json::json!({
+            "last_task_id": result.task_id,
+            "last_task_success": result.success,
+            "last_execution_time_ms": duration_ms
+        });
+
+        match self
+            .db_client
+            .execute(
+                insert_query,
+                &[
+                    &worker_id,
+                    &result.completed_at,
+                    &new_completed,
+                    &new_failed,
+                    &new_avg_time,
+                    &success_rate,
+                    &performance_score,
+                    &metadata,
+                ],
+            )
+            .await
+        {
+            Ok(_) => {
+                info!("Updated worker {} performance metrics: completed={}, failed={}, avg_time={:.2}ms, success_rate={:.2}%", 
+                    worker_id, new_completed, new_failed, new_avg_time, success_rate * 100.0);
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to update worker {} performance metrics: {}", worker_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
+            }
+        }
+    }
+
+    /// Update task status in database
+    async fn update_task_status(
+        &self,
+        task_id: Uuid,
+        status: &str,
+        completed_at: DateTime<Utc>,
+    ) -> Result<()> {
+        let query = r#"
+            UPDATE tasks
+            SET
+                status = $1,
+                completed_at = $2,
+                updated_at = NOW()
+            WHERE id = $3
+        "#;
+
+        match self
+            .db_client
+            .execute(query, &[&status, &completed_at, &task_id])
+            .await
+        {
+            Ok(_) => {
+                info!("Updated task {} status to {}", task_id, status);
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to update task {} status: {}", task_id, e);
+                Err(anyhow::anyhow!("Database error: {}", e))
+            }
+        }
+    }
+
+    /// Persist task execution result to database for history and learning
+    async fn persist_execution_result(
+        &self,
+        result: &TaskExecutionResult,
+        worker_id: Uuid,
+        started_at: DateTime<Utc>,
+        completed_at: DateTime<Utc>,
+    ) -> Result<()> {
+        let status = if result.success {
+            "completed"
+        } else {
+            "failed"
+        };
+
+        let execution_time_ms = result.duration_ms as i32;
+        let error_message = if result.errors.is_empty() {
+            None
+        } else {
+            Some(result.errors.join("; "))
+        };
+
+        let worker_output_json = serde_json::to_value(&result.output).unwrap_or_else(|_| serde_json::json!({}));
+        let metadata_json = serde_json::to_value(&result.metadata).unwrap_or_else(|_| serde_json::json!({}));
+        
+        // Extract result data from metadata if available
+        let result_data = result.metadata.get("result_data").cloned();
+
+        // Extract tokens used from metadata if available
+        let tokens_used = result.metadata
+            .get("tokens_used")
+            .and_then(|v| v.as_u64())
+            .map(|t| t as i32);
+
+        let query = r#"
+            INSERT INTO task_executions (
+                id, task_id, worker_id, execution_started_at, execution_completed_at,
+                execution_time_ms, status, worker_output, self_assessment, metadata,
+                error_message, tokens_used, result_data, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ON CONFLICT (id) DO UPDATE SET
+                execution_completed_at = EXCLUDED.execution_completed_at,
+                execution_time_ms = EXCLUDED.execution_time_ms,
+                status = EXCLUDED.status,
+                worker_output = EXCLUDED.worker_output,
+                self_assessment = EXCLUDED.self_assessment,
+                metadata = EXCLUDED.metadata,
+                error_message = EXCLUDED.error_message,
+                tokens_used = EXCLUDED.tokens_used,
+                result_data = EXCLUDED.result_data,
+                updated_at = EXCLUDED.updated_at
+        "#;
+
+        let now = Utc::now();
+        
+        match self.db_client.execute(
+            query,
+            &[
+                &result.execution_id,
+                &result.task_id,
+                &worker_id,
+                &started_at,
+                &completed_at,
+                &execution_time_ms,
+                &status,
+                &worker_output_json,
+                &metadata_json, // Use metadata as self_assessment for now
+                &metadata_json,
+                &error_message,
+                &tokens_used,
+                &result_data,
+                &now,
+                &now,
+            ],
+        ).await {
+            Ok(_) => {
+                info!("Persisted execution result for task {} to database", result.task_id);
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to persist execution result for task {} to database: {}", result.task_id, e);
+                Err(anyhow::anyhow!("Failed to persist execution result: {}", e))
             }
         }
     }

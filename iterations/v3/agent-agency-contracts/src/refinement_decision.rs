@@ -461,3 +461,38 @@ pub fn validate_refinement_decision_value(
             ContractError::validation(ContractKind::RefinementDecision, issues)
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::contract_errors::ContractKind;
+
+    #[test]
+    fn refinement_decision_validation_invalid_empty_object() {
+        let invalid = serde_json::json!({});
+        let err = validate_refinement_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RefinementDecision);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn refinement_decision_validation_invalid_wrong_type() {
+        let invalid = serde_json::json!({
+            "decision": 123  // Should be string
+        });
+        let err = validate_refinement_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RefinementDecision);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn refinement_decision_validation_invalid_missing_required_fields() {
+        let invalid = serde_json::json!({
+            "decision": "accept"
+            // Missing other required fields
+        });
+        let err = validate_refinement_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RefinementDecision);
+        assert!(!err.issues().is_empty());
+    }
+}

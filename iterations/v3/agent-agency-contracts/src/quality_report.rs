@@ -380,3 +380,41 @@ pub fn validate_quality_report_value(
         ContractError::validation(ContractKind::QualityReport, issues)
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::contract_errors::ContractKind;
+
+    #[test]
+    fn quality_report_validation_invalid_empty_object() {
+        let invalid = serde_json::json!({});
+        let err = validate_quality_report_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::QualityReport);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn quality_report_validation_invalid_wrong_type() {
+        let invalid = serde_json::json!({
+            "gates": "not_an_array",
+            "metadata": {
+                "generated_at": "2024-01-01T00:00:00Z"
+            }
+        });
+        let err = validate_quality_report_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::QualityReport);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn quality_report_validation_invalid_missing_required_fields() {
+        let invalid = serde_json::json!({
+            "gates": []
+            // Missing metadata
+        });
+        let err = validate_quality_report_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::QualityReport);
+        assert!(!err.issues().is_empty());
+    }
+}

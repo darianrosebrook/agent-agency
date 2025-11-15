@@ -41,7 +41,11 @@ use crate::planning::DatabaseOperations;
 use crate::verdict_aggregation::{
     AggregationConfig, DissentHandling, RiskAggregationStrategy, VerdictAggregator,
 };
-use agent_workers::TaskExecutor;
+use agent_workers::{MCPWorkerPool, TaskExecutor, WorkerPoolConfig};
+use crate::workers::execution_bridge::WorkerExecutionBridge;
+use crate::planning::plan_executor::{ExecutionConfig, PlanExecutor};
+use crate::planning::plan_types::ExecutionPlan;
+use crate::planning::factory::PlanningSystemFactory;
 use async_trait::async_trait;
 
 /// Factory for creating UnifiedOrchestrator instances

@@ -1,0 +1,88 @@
+# V3 Readiness Assessment Configuration
+# @author: @darianrosebrook
+
+# Coverage Thresholds (from .cursor/rules/02-testing-standards.mdc)
+coverage_thresholds:
+  line: 0.80      # 80% line coverage minimum
+  branch: 0.90    # 90% branch coverage minimum
+
+# Mutation Testing Thresholds (by CAWS Tier)
+mutation_thresholds:
+  tier_1: 0.70             # 70% mutation score for Tier 1 (critical systems)
+  tier_2: 0.50             # 50% mutation score for Tier 2 (standard features)
+  tier_3: 0.30             # 30% mutation score for Tier 3 (low risk)
+
+# TODO Analysis Configuration
+todo_config:
+  confidence_threshold: 0.7  # Minimum confidence for TODO detection
+  v3_only: true              # Only analyze v3 directory
+
+# Critical Paths to Check for Blocking TODOs
+critical_paths:
+  training:
+    - "agent-model-management"
+    - "engine-coreml"
+    - "system-acceleration"
+  conversion:
+    - "agent-data-processing"
+    - "agent-memory"
+  inference:
+    - "agent-orchestration"
+    - "agent-workers"
+    - "agent-constitutional-council"
+
+# Crate Priorities (most critical crates for coverage focus)
+crate_priorities:
+  tier_1:  # Critical systems - highest priority
+    - "agent-orchestration"
+    - "agent-constitutional-council"
+    - "data-infrastructure"
+    - "system-quality-security"
+  tier_2:  # Important features
+    - "agent-workers"
+    - "agent-model-management"
+    - "agent-memory"
+    - "system-observability"
+  tier_3:  # Supporting systems
+    - "agent-research"
+    - "agent-data-processing"
+    - "system-resilience"
+    - "system-configuration"
+
+# Dashboard Configuration
+dashboard:
+  path: "../../apps/agent_management_dashboard"
+  api_endpoints:
+    - "/api/health"
+    - "/api/agents"
+    - "/api/tasks"
+    - "/api/projects"
+  critical_workflows:
+    - "agent_creation"
+    - "task_execution"
+    - "project_management"
+
+# Report Configuration
+report:
+  output_dir: "../../artifacts"
+  json_filename: "readiness-assessment-{timestamp}.json"
+  markdown_filename: "readiness-assessment-{timestamp}.md"
+  baseline_filename: "baseline.json"
+
+# Test Configuration
+test:
+  workspace_test_command: "cargo test --workspace --all-features"
+  integration_test_pattern: "integration"
+  mutation_test_enabled: false  # Set to true when cargo-mutants is available
+  mutation_timeout: 300         # seconds
+
+# Coverage Generation Configuration
+coverage_generation:
+  instrumentation_flags: "-C instrument-coverage"
+  profile_file_pattern: "target/coverage/%p-%m.profraw"
+  grcov_output: "target/coverage/lcov.info"
+  grcov_ignore_patterns:
+    - "/*"
+    - "target/*"
+    - "tests/*"
+

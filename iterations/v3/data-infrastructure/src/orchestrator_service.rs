@@ -72,6 +72,21 @@ pub struct OrchestratorService {
 
     /// Active task tracking
     active_tasks: Arc<tokio::sync::RwLock<std::collections::HashMap<Uuid, TaskExecutionState>>>,
+
+    /// Pending task queue for when executor is unavailable
+    pending_task_queue: Arc<tokio::sync::RwLock<Vec<QueuedTask>>>,
+
+    /// Maximum queue size to prevent memory exhaustion
+    max_queue_size: usize,
+}
+
+/// Queued task waiting for executor to become available
+#[derive(Debug, Clone)]
+struct QueuedTask {
+    task_id: Uuid,
+    task_descriptor: TaskDescriptor,
+    queued_at: chrono::DateTime<Utc>,
+    priority: i32, // Higher priority = execute first
 }
 
 /// Task execution state
@@ -153,13 +168,129 @@ impl OrchestratorService {
             _db_client: db_client,
             task_executor: None,
             active_tasks: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            pending_task_queue: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            max_queue_size: 1000, // Default max queue size
         }
     }
 
     /// Initialize with task executor (when available)
+    /// This will process any queued tasks when executor becomes available
     pub fn with_task_executor(mut self, executor: Arc<dyn TaskExecutor>) -> Self {
-        self.task_executor = Some(executor);
+        self.task_executor = Some(executor.clone());
+        
+        // Process queued tasks in background
+        let service = self.clone();
+        tokio::spawn(async move {
+            if let Err(e) = service.process_queued_tasks(executor).await {
+                error!("Failed to process queued tasks: {}", e);
+            }
+        });
+        
         self
+    }
+
+    /// Process queued tasks when executor becomes available
+    async fn process_queued_tasks(
+        &self,
+        executor: Arc<dyn TaskExecutor>,
+    ) -> Result<()> {
+        info!("Processing queued tasks...");
+        
+        loop {
+            // Get next queued task
+            let queued_task = {
+                let mut queue = self.pending_task_queue.write().await;
+                queue.pop()
+            };
+            
+            if let Some(queued_task) = queued_task {
+                info!("Processing queued task {} (priority: {}, queued at: {})", 
+                    queued_task.task_id, 
+                    queued_task.priority,
+                    queued_task.queued_at
+                );
+                
+                // Update task state to executing
+                {
+                    let mut tasks = self.active_tasks.write().await;
+                    if let Some(task) = tasks.get_mut(&queued_task.task_id) {
+                        task.status = TaskStatus::Executing;
+                        task.error_message = None; // Clear error message
+                        task.updated_at = Utc::now();
+                        
+                        // Record in chain of thought
+                        task.chain_of_thought.push(ChainOfThoughtEntry {
+                            timestamp: Utc::now(),
+                            phase: "execution".to_string(),
+                            reasoning: "Task executor became available, executing queued task".to_string(),
+                            decision: "Dequeuing and executing task".to_string(),
+                            context: serde_json::json!({
+                                "queued_at": queued_task.queued_at,
+                                "wait_time_seconds": (Utc::now() - queued_task.queued_at).num_seconds(),
+                            }),
+                        });
+                    }
+                }
+                
+                // Execute task
+                match executor.execute_task(&queued_task.task_descriptor).await {
+                    Ok(artifacts) => {
+                        info!("Queued task {} completed successfully", queued_task.task_id);
+                        
+                        // Update task state with results
+                        let mut tasks = self.active_tasks.write().await;
+                        if let Some(task) = tasks.get_mut(&queued_task.task_id) {
+                            task.status = TaskStatus::Completed;
+                            task.artifacts = Some(artifacts.clone());
+                            task.completed_at = Some(Utc::now());
+                            task.updated_at = Utc::now();
+                            
+                            // Record completion in chain of thought
+                            task.chain_of_thought.push(ChainOfThoughtEntry {
+                                timestamp: Utc::now(),
+                                phase: "completion".to_string(),
+                                reasoning: "Queued task execution completed successfully".to_string(),
+                                decision: "Task marked as completed".to_string(),
+                                context: serde_json::json!({
+                                    "working_spec_id": artifacts.working_spec_id,
+                                    "iteration": artifacts.iteration,
+                                }),
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        error!("Queued task {} execution failed: {}", queued_task.task_id, e);
+                        
+                        // Update task state with error
+                        let mut tasks = self.active_tasks.write().await;
+                        if let Some(task) = tasks.get_mut(&queued_task.task_id) {
+                            task.status = TaskStatus::Failed;
+                            task.error_message = Some(format!("Execution failed: {}", e));
+                            task.completed_at = Some(Utc::now());
+                            task.updated_at = Utc::now();
+                            
+                            // Record error in chain of thought
+                            task.chain_of_thought.push(ChainOfThoughtEntry {
+                                timestamp: Utc::now(),
+                                phase: "error".to_string(),
+                                reasoning: format!("Queued task execution failed: {}", e),
+                                decision: "Task marked as failed".to_string(),
+                                context: serde_json::json!({ "error": e.to_string() }),
+                            });
+                        }
+                    }
+                }
+                
+                // Small delay to avoid overwhelming the executor
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            } else {
+                // No more queued tasks, exit
+                break;
+            }
+        }
+        
+        info!("Finished processing queued tasks");
+        Ok(())
     }
 
     /// Execute a task from description
@@ -370,43 +501,66 @@ impl OrchestratorService {
                 task_id
             );
 
-            // TODO: Implement proper task queuing system when task executor is unavailable
-            //       Currently marks task as pending; should queue task for later execution or use fallback executor.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Implement task queue data structure for pending tasks
-            // [ ] Add task to queue when executor is unavailable
-            // [ ] Process queued tasks when executor becomes available
-            // [ ] Implement fallback executor for critical tasks
-            // [ ] Add queue size limits and overflow handling
-            // [ ] Add unit tests for task queuing logic
-            // [ ] Add integration tests for queue processing
-            // [ ] Verify tasks are executed in correct order
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Tasks are queued when executor is unavailable
-            // - Queued tasks are processed when executor becomes available
-            // - Fallback executor handles critical tasks when main executor unavailable
-            // - Queue size limits prevent memory exhaustion
-            //
-            // DEPENDENCIES:
-            // - Task queue data structure (Required)
-            // - Task executor lifecycle management (Required)
-            // - Fallback executor implementation (Optional)
-            //
-            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (standard feature)
-            // - Change Budget: ~120 LOC
-            // - Reviewer Requirements: Task orchestration domain expertise
+            // Queue task for later execution when executor becomes available
+            {
+                let mut queue = self.pending_task_queue.write().await;
+                
+                // Check queue size limits
+                if queue.len() >= self.max_queue_size {
+                    warn!("Task queue is full ({} tasks), rejecting task {}", self.max_queue_size, task_id);
+                    
+                    // Update task state with error
+                    let mut tasks = self.active_tasks.write().await;
+                    if let Some(task) = tasks.get_mut(&task_id) {
+                        task.status = TaskStatus::Failed;
+                        task.error_message = Some(format!("Task queue is full (max size: {})", self.max_queue_size));
+                        task.updated_at = Utc::now();
+                        
+                        // Record in chain of thought
+                        task.chain_of_thought.push(ChainOfThoughtEntry {
+                            timestamp: Utc::now(),
+                            phase: "error".to_string(),
+                            reasoning: "Task queue is full, cannot queue task".to_string(),
+                            decision: "Task rejected due to queue overflow".to_string(),
+                            context: serde_json::json!({ 
+                                "queue_size": queue.len(),
+                                "max_queue_size": self.max_queue_size 
+                            }),
+                        });
+                    }
+                    
+                    return Err(anyhow::anyhow!("Task queue is full, cannot queue task"));
+                }
+                
+                // Determine task priority (higher number = higher priority)
+                // Default to medium priority (0), can be enhanced with risk tier or other factors
+                let priority = task_descriptor.priority as i32;
+                
+                // Add task to queue (sorted by priority, then by queued_at)
+                let queued_task = QueuedTask {
+                    task_id,
+                    task_descriptor: task_descriptor.clone(),
+                    queued_at: Utc::now(),
+                    priority,
+                };
+                
+                queue.push(queued_task);
+                
+                // Sort queue by priority (highest first), then by queued_at (oldest first)
+                queue.sort_by(|a, b| {
+                    b.priority.cmp(&a.priority) // Higher priority first
+                        .then_with(|| a.queued_at.cmp(&b.queued_at)) // Older tasks first for same priority
+                });
+                
+                info!("Task {} queued (queue size: {})", task_id, queue.len());
+            }
+            
+            // Update task state to pending
             {
                 let mut tasks = self.active_tasks.write().await;
                 if let Some(task) = tasks.get_mut(&task_id) {
                     task.status = TaskStatus::Pending;
-                    task.error_message = Some("Task executor not yet initialized. Initialize with OrchestratorService::with_task_executor()".to_string());
+                    task.error_message = Some("Task executor not yet initialized. Task queued and will be executed when executor becomes available.".to_string());
                     task.updated_at = Utc::now();
 
                     // Record in chain of thought
@@ -415,12 +569,16 @@ impl OrchestratorService {
                         phase: "pending".to_string(),
                         reasoning: "Task executor not available".to_string(),
                         decision: "Task queued until executor is available".to_string(),
-                        context: serde_json::json!({ "status": "waiting_for_executor" }),
+                        context: serde_json::json!({ 
+                            "status": "waiting_for_executor",
+                            "queued": true 
+                        }),
                     });
                 }
             }
 
-            Err(anyhow::anyhow!("Task executor not available"))
+            // Return success - task is queued and will be processed when executor is available
+            Ok(())
         }
     }
 

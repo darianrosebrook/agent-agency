@@ -651,4 +651,41 @@ pub fn validate_execution_artifacts_value(
         })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::contract_errors::ContractKind;
+
+    #[test]
+    fn execution_artifacts_validation_invalid_empty_object() {
+        let invalid = serde_json::json!({});
+        let err = validate_execution_artifacts_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::ExecutionArtifacts);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn execution_artifacts_validation_invalid_wrong_type() {
+        let invalid = serde_json::json!({
+            "artifacts": "not_an_array"
+        });
+        let err = validate_execution_artifacts_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::ExecutionArtifacts);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn execution_artifacts_validation_invalid_missing_required_fields() {
+        let invalid = serde_json::json!({
+            "artifacts": [{
+                "type": "test"
+                // Missing required fields
+            }]
+        });
+        let err = validate_execution_artifacts_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::ExecutionArtifacts);
+        assert!(!err.issues().is_empty());
+    }
+}
+
 // TODO: Add proper Default implementations after fixing struct field mismatches

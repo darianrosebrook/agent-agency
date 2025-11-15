@@ -160,12 +160,16 @@ impl ProgressTrackingServiceAdapter {
             .await
         {
             Ok(Some(row)) => {
-                let progress_percent: i16 = row.try_get("progress_percent")?;
+                let progress_percent: i16 = row.try_get("progress_percent")
+                    .map_err(|e| ServiceError::Internal(format!("Failed to get progress_percent: {}", e)))?;
                 Ok(Some(ProgressInfo {
-                    task_id: row.try_get("task_id")?,
+                    task_id: row.try_get("task_id")
+                        .map_err(|e| ServiceError::Internal(format!("Failed to get task_id: {}", e)))?,
                     progress_percent: progress_percent as u8,
-                    current_stage: row.try_get("current_stage")?,
-                    status_message: row.try_get("status_message")?,
+                    current_stage: row.try_get("current_stage")
+                        .map_err(|e| ServiceError::Internal(format!("Failed to get current_stage: {}", e)))?,
+                    status_message: row.try_get("status_message")
+                        .map_err(|e| ServiceError::Internal(format!("Failed to get status_message: {}", e)))?,
                 }))
             }
             Ok(None) => Ok(None),

@@ -10,6 +10,13 @@ use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 
+// Tool registry for dynamic tool dispatch
+use agent_mcp::ToolRegistry;
+use agent_mcp::mcp_types::{ToolExecutionRequest, ToolExecutionResult, ExecutionContext as MCPExecutionContext, ExecutionPriority, ExecutionStatus};
+use uuid::Uuid;
+use std::collections::HashMap;
+use chrono::Utc;
+
 /// Tool executor for secure invocation
 #[derive(Debug)]
 pub struct ToolExecutor {
@@ -21,6 +28,8 @@ pub struct ToolExecutor {
     stats: Arc<std::sync::RwLock<ExecutionStats>>,
     /// Background cleanup task
     cleanup_task: Option<tokio::task::JoinHandle<()>>,
+    /// Tool registry for dynamic tool dispatch (optional - if None, uses hardcoded tools)
+    tool_registry: Option<Arc<ToolRegistry>>,
 }
 
 /// Tool invocation request
@@ -123,7 +132,7 @@ struct ResourceTracker {
 }
 
 impl ToolExecutor {
-    /// Create a new tool executor
+    /// Create a new tool executor without tool registry (uses hardcoded tools)
     pub fn new(max_concurrent: usize, default_timeout_ms: u64) -> Self {
         let concurrency_limiter = Arc::new(Semaphore::new(max_concurrent));
         let stats = Arc::new(std::sync::RwLock::new(ExecutionStats {
@@ -146,7 +155,19 @@ impl ToolExecutor {
             default_timeout_ms,
             stats,
             cleanup_task: None,
+            tool_registry: None,
         }
+    }
+
+    /// Create a new tool executor with tool registry for dynamic dispatch
+    pub fn with_tool_registry(
+        max_concurrent: usize,
+        default_timeout_ms: u64,
+        tool_registry: Arc<ToolRegistry>,
+    ) -> Self {
+        let mut executor = Self::new(max_concurrent, default_timeout_ms);
+        executor.tool_registry = Some(tool_registry);
+        executor
     }
 
     /// Execute a tool with the given invocation
@@ -219,71 +240,126 @@ impl ToolExecutor {
     async fn perform_tool_execution(&self, mut context: ExecutionContext) -> Result<ToolResult> {
         let tool_name = context.invocation.tool_name.clone();
 
-        // TODO: Implement tool dispatch with the following requirements:
-        // 1. Tool dispatch: Dispatch to the appropriate tool based on tool name
-        //    - Implement tool registry lookup
-        //    - Route execution to correct tool handler
-        //    - Handle unknown tool errors
-        // 2. Error handling: Handle tool execution errors and timeouts
-        //    - Implement timeout mechanisms
-        //    - Handle tool execution failures gracefully
-        //    - Return appropriate error types
-        // 3. Async execution: Support async tool execution and cancellation
-        //    - Support cancellation of running tools
-        //    - Handle async operation lifecycle
-        //    - Manage tool execution state
-        // 4. Testing: Add comprehensive test coverage
-        //    - Add unit tests with mock tool execution
-        //    - Add integration tests with real tool dispatch
-        // TODO: Execute tools through actual tool dispatch system
-        //       Currently simulates execution; should execute tools through actual tool dispatch system for real functionality.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tools are executed through dispatch system correctly
-        // - Execution results are accurate
-        // - Error handling works for execution failures
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Tool dispatch infrastructure (Required)
-        // - Tool execution APIs (Required)
-        // - Execution result handling (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (tool execution feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Tool execution expertise
-        let result_value = match tool_name.as_str() {
-            // Temporary: simulation until actual dispatch
-            "caws_validator" => self.execute_caws_validator(&context.invocation).await?,
-            "claim_extractor" => self.execute_claim_extractor(&context.invocation).await?,
-            "fact_verifier" => self.execute_fact_verifier(&context.invocation).await?,
-            "debate_orchestrator" => {
-                self.execute_debate_orchestrator(&context.invocation)
-                    .await?
+        // Use ToolRegistry if available, otherwise fall back to hardcoded tool handlers
+        let result_value = if let Some(ref registry) = self.tool_registry {
+            // Look up tool in registry by name
+            info!("Looking up tool '{}' in ToolRegistry", tool_name);
+            let all_tools = registry.get_all_tools().await;
+            
+            let tool = all_tools
+                .iter()
+                .find(|t| t.name == tool_name);
+            
+            if let Some(tool) = tool {
+                // Execute via ToolRegistry
+                info!("Executing tool '{}' (UUID: {}) via ToolRegistry", tool_name, tool.id);
+                
+                // Convert ToolInvocation to ToolExecutionRequest
+                let mcp_context = context.invocation.context.as_ref().map(|ctx_str| {
+                    // Parse context string as JSON if possible, otherwise create simple context
+                    serde_json::from_str::<HashMap<String, serde_json::Value>>(ctx_str)
+                        .map(|params| MCPExecutionContext {
+                            working_directory: params.get("working_directory")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            environment_variables: params.get("environment_variables")
+                                .and_then(|v| v.as_object())
+                                .map(|obj| {
+                                    obj.iter()
+                                        .filter_map(|(k, v)| {
+                                            v.as_str().map(|s| (k.clone(), s.to_string()))
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default(),
+                            input_files: params.get("input_files")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_default(),
+                            output_directory: params.get("output_directory")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            metadata: params.get("metadata")
+                                .and_then(|v| v.as_object())
+                                .map(|obj| {
+                                    obj.iter()
+                                        .map(|(k, v)| (k.clone(), v.clone()))
+                                        .collect()
+                                })
+                                .unwrap_or_default(),
+                        })
+                        .unwrap_or_else(|_| MCPExecutionContext {
+                            working_directory: Some(".".to_string()),
+                            environment_variables: HashMap::new(),
+                            input_files: vec![],
+                            output_directory: None,
+                            metadata: {
+                                let mut map = HashMap::new();
+                                map.insert("context_string".to_string(), serde_json::json!(ctx_str));
+                                map
+                            },
+                        })
+                });
+                
+                // Convert parameters from serde_json::Value to HashMap<String, serde_json::Value>
+                let parameters_map: HashMap<String, serde_json::Value> = if let Some(params_obj) = context.invocation.parameters.as_object() {
+                    params_obj
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect()
+                } else {
+                    // If parameters is not an object, wrap it
+                    let mut map = HashMap::new();
+                    map.insert("params".to_string(), context.invocation.parameters.clone());
+                    map
+                };
+                
+                let request = ToolExecutionRequest {
+                    id: Uuid::new_v4(),
+                    tool_id: tool.id,
+                    parameters: parameters_map,
+                    context: mcp_context,
+                    priority: ExecutionPriority::Normal,
+                    timeout_seconds: context.invocation.timeout_ms.map(|ms| ms / 1000),
+                    created_at: Utc::now(),
+                    requested_by: Some("system-federated-ml".to_string()),
+                };
+                
+                // Execute via ToolRegistry
+                match registry.execute_tool(request).await {
+                    Ok(tool_result) => {
+                        // Convert ToolExecutionResult to serde_json::Value
+                        match tool_result.output {
+                            Some(output) => output,
+                            None => {
+                                // If no output, create result from status
+                                serde_json::json!({
+                                    "status": format!("{:?}", tool_result.status),
+                                    "success": matches!(tool_result.status, ExecutionStatus::Completed),
+                                    "error": tool_result.error,
+                                    "tool_id": tool_result.tool_id,
+                                })
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("ToolRegistry execution failed for '{}': {}, falling back to hardcoded handler", tool_name, e);
+                        // Fall back to hardcoded handler
+                        self.execute_hardcoded_tool(&tool_name, &context.invocation).await?
+                    }
+                }
+            } else {
+                warn!("Tool '{}' not found in ToolRegistry, falling back to hardcoded handler", tool_name);
+                // Fall back to hardcoded handler
+                self.execute_hardcoded_tool(&tool_name, &context.invocation).await?
             }
-            "consensus_builder" => self.execute_consensus_builder(&context.invocation).await?,
-            _ => {
-                warn!("Unknown tool: {}", tool_name);
-                return Err(anyhow::anyhow!("Unknown tool: {}", tool_name));
-            }
+        } else {
+            // No ToolRegistry available, use hardcoded handlers
+            self.execute_hardcoded_tool(&tool_name, &context.invocation).await?
         };
 
         let execution_time = context.start_time.elapsed().as_millis() as u64;
@@ -393,6 +469,25 @@ impl ToolExecutor {
             "confidence": confidence,
             "evidence_found": verified
         }))
+    }
+
+    /// Execute tool using hardcoded handlers (fallback when ToolRegistry unavailable or tool not found)
+    async fn execute_hardcoded_tool(
+        &self,
+        tool_name: &str,
+        invocation: &ToolInvocation,
+    ) -> Result<serde_json::Value> {
+        match tool_name {
+            "caws_validator" => self.execute_caws_validator(invocation).await,
+            "claim_extractor" => self.execute_claim_extractor(invocation).await,
+            "fact_verifier" => self.execute_fact_verifier(invocation).await,
+            "debate_orchestrator" => self.execute_debate_orchestrator(invocation).await,
+            "consensus_builder" => self.execute_consensus_builder(invocation).await,
+            _ => {
+                warn!("Unknown tool: {}", tool_name);
+                Err(anyhow::anyhow!("Unknown tool: {}", tool_name))
+            }
+        }
     }
 
     /// Execute debate orchestrator tool

@@ -77,4 +77,37 @@ mod tests {
         let json = serde_json::to_value(&contract).unwrap();
         assert!(validate_router_decision_value(&json).is_ok());
     }
+
+    #[test]
+    fn router_decision_validation_invalid_missing_required_fields() {
+        let invalid = serde_json::json!({
+            "task_id": "TASK-1"
+            // Missing assignments
+        });
+        let err = validate_router_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RouterDecision);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn router_decision_validation_invalid_wrong_type() {
+        let invalid = serde_json::json!({
+            "task_id": 123,  // Should be string
+            "assignments": []
+        });
+        let err = validate_router_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RouterDecision);
+        assert!(!err.issues().is_empty());
+    }
+
+    #[test]
+    fn router_decision_validation_invalid_empty_assignments() {
+        let invalid = serde_json::json!({
+            "task_id": "TASK-1",
+            "assignments": "not_an_array"
+        });
+        let err = validate_router_decision_value(&invalid).expect_err("should fail");
+        assert_eq!(err.kind(), ContractKind::RouterDecision);
+        assert!(!err.issues().is_empty());
+    }
 }
