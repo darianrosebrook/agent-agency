@@ -1232,11 +1232,138 @@ impl MemoryMonitor {
         .await // Medium-high priority for shared memory
     }
 
-    /// Emergency finalizer cleanup (clear all pending finalizers)
+    /// Emergency finalizer cleanup with proper execution
+    /// 
+    /// Attempts to execute all pending finalizers with:
+    /// - Timeout per finalizer (200ms default)
+    /// - Total timeout (2 seconds default)
+    /// - Error handling and partial success support
+    /// - Statistics tracking
+    /// 
+    /// After timeout or completion, any remaining finalizers are cleared.
     pub async fn emergency_finalizer_cleanup(&self) {
-        let mut queue = self.finalizer_queue.lock().await;
-        queue.clear();
-        warn!("Emergency finalizer cleanup completed - all pending finalizers cleared");
+        const EMERGENCY_TIMEOUT_PER_FINALIZER_MS: u64 = 200;
+        const EMERGENCY_TOTAL_TIMEOUT_SECS: u64 = 2;
+        
+        let start_time = Instant::now();
+        
+        // Get all pending finalizers
+        let finalizer_ids: Vec<u64> = {
+            let queue = self.finalizer_queue.lock().await;
+            queue.iter().map(|f| f.id).collect()
+        };
+        
+        if finalizer_ids.is_empty() {
+            debug!("Emergency finalizer cleanup: no finalizers to clean up");
+            return;
+        }
+        
+        info!("Emergency finalizer cleanup: attempting to execute {} finalizers", finalizer_ids.len());
+        
+        let mut successful = 0;
+        let mut failed = 0;
+        let mut timed_out = 0;
+        
+        let total_finalizers = finalizer_ids.len();
+        
+        // Execute each finalizer with timeout
+        for finalizer_id in finalizer_ids {
+            // Check total timeout
+            if start_time.elapsed().as_secs() >= EMERGENCY_TOTAL_TIMEOUT_SECS {
+                warn!("Emergency finalizer cleanup: total timeout ({EMERGENCY_TOTAL_TIMEOUT_SECS}s) reached, {} finalizers remaining", 
+                      total_finalizers - successful - failed - timed_out);
+                break;
+            }
+            
+            // Attempt execution with per-finalizer timeout
+            let execution_result = tokio::time::timeout(
+                Duration::from_millis(EMERGENCY_TIMEOUT_PER_FINALIZER_MS),
+                async {
+                    // Find and execute the finalizer
+                    let mut queue = self.finalizer_queue.lock().await;
+                    if let Some(pos) = queue.iter().position(|f| f.id == finalizer_id) {
+                        let finalizer = queue.remove(pos);
+                        drop(queue);
+                        
+                        // Execute in blocking task
+                        let obj_ref = finalizer.object_ref.clone();
+                        let finalizer_fn = finalizer.finalizer_fn;
+                        let execution_result = tokio::task::spawn_blocking(move || {
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                finalizer_fn();
+                            }))
+                        }).await;
+                        
+                        match execution_result {
+                            Ok(Ok(())) => {
+                                self.mark_as_finalized(&obj_ref).await;
+                                Ok(true)
+                            }
+                            Ok(Err(panic_info)) => {
+                                let error_msg = format!("Finalizer panicked: {:?}", panic_info);
+                                warn!("Emergency cleanup: finalizer {} panicked: {}", finalizer_id, error_msg);
+                                self.mark_as_finalized(&obj_ref).await;
+                                Err(error_msg)
+                            }
+                            Err(join_error) => {
+                                let error_msg = format!("Finalizer task join error: {:?}", join_error);
+                                warn!("Emergency cleanup: finalizer {} join error: {}", finalizer_id, error_msg);
+                                Err(error_msg)
+                            }
+                        }
+                    } else {
+                        Err("Finalizer not found in queue".to_string())
+                    }
+                }
+            ).await;
+            
+            match execution_result {
+                Ok(Ok(true)) => {
+                    successful += 1;
+                    debug!("Emergency cleanup: successfully executed finalizer {}", finalizer_id);
+                }
+                Ok(Ok(false)) | Ok(Err(_)) => {
+                    failed += 1;
+                    let error_msg = if let Ok(Err(msg)) = execution_result {
+                        msg
+                    } else {
+                        "Finalizer returned false".to_string()
+                    };
+                    warn!("Emergency cleanup: failed to execute finalizer {}: {}", finalizer_id, error_msg);
+                }
+                Err(_) => {
+                    timed_out += 1;
+                    warn!("Emergency cleanup: timeout executing finalizer {} (>{EMERGENCY_TIMEOUT_PER_FINALIZER_MS}ms)", finalizer_id);
+                    
+                    // Remove timed-out finalizer from queue
+                    let mut queue = self.finalizer_queue.lock().await;
+                    if let Some(pos) = queue.iter().position(|f| f.id == finalizer_id) {
+                        let finalizer = queue.remove(pos);
+                        self.mark_as_finalized(&finalizer.object_ref).await;
+                    }
+                    drop(queue);
+                }
+            }
+        }
+        
+        // Clear any remaining finalizers
+        let remaining = {
+            let mut queue = self.finalizer_queue.lock().await;
+            let count = queue.len();
+            queue.clear();
+            count
+        };
+        
+        let total_time = start_time.elapsed();
+        info!(
+            "Emergency finalizer cleanup completed: {} successful, {} failed, {} timed out, {} cleared (total: {:?})",
+            successful, failed, timed_out, remaining, total_time
+        );
+        
+        // Verify we met the SLA
+        if total_time.as_secs() >= EMERGENCY_TOTAL_TIMEOUT_SECS {
+            warn!("Emergency finalizer cleanup exceeded SLA of {} seconds", EMERGENCY_TOTAL_TIMEOUT_SECS);
+        }
     }
 
     /// Register a system handle for tracking and cleanup
