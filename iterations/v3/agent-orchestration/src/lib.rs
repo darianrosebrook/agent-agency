@@ -23,6 +23,11 @@ extern crate tracing;
 use std::sync::Arc;
 use uuid::Uuid;
 
+#[cfg(feature = "api-server")]
+use schemars::JsonSchema;
+#[cfg(feature = "api-server")]
+use serde::{Deserialize, Serialize};
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -1028,7 +1033,7 @@ pub use types::{DiffStats, MultimodalProcessingResult, MultimodalTask, Orchestra
 /// Unified service that combines orchestration execution capabilities
 /// with council decision-making and arbitration systems.
 #[cfg(feature = "api-server")]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug)]
 struct AgentOrchestrationService {
     /// Council for task review and approval
     #[cfg(feature = "api-server")]
@@ -1412,7 +1417,7 @@ impl AgentOrchestrationService {
 
 /// Configuration for the Agent Orchestration Service
 #[cfg(feature = "api-server")]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone)]
 struct OrchestrationConfig {
     pub council_config: council::CouncilConfig,
     pub orchestrator_config: crate::types::OrchestratorConfig,

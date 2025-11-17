@@ -509,47 +509,54 @@ impl GarbageCollector {
 
         match blob.header.kind {
             PayloadKind::Full => {
-                // TODO: Parse internal blob references for complete reference tracking
-                //       Currently skips parsing to avoid loading large objects; should parse internal blob references (e.g., chunk references) for complete reference tracking.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Internal references are parsed correctly
-                // - Parsing is efficient for large objects
-                // - Reference tracking is complete
-                // - Performance is acceptable
-                //
-                // DEPENDENCIES:
-                // - Blob parsing utilities (Required)
-                // - Reference extraction algorithms (Required)
-                // - Digest pattern matching (Required)
-                //
-                // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-                // PRIORITY: Low
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 3 (GC optimization enhancement)
-                // - Change Budget: ~120 LOC
-                // - Reviewer Requirements: GC and blob parsing expertise
-                // Temporary: skip parsing until efficient implementation
+                // Parse internal blob references for complete reference tracking
+                // Full blobs might contain embedded chunk references or ChangePayload structures
+                // Try to detect and parse chunk references if present
+                
+                use crate::recovery_types::{ChunkList, ChangePayload};
+                
+                // Try to parse as ChangePayload::ChunkMap (contains ChunkList)
+                if let Ok(payload_str) = std::str::from_utf8(&blob.data) {
+                    if let Ok(ChangePayload::ChunkMap(chunk_list)) = serde_json::from_str::<ChangePayload>(payload_str) {
+                        for chunk_ref in chunk_list.chunks {
+                            references.push(chunk_ref.digest);
+                        }
+                        return Ok(references);
+                    }
+                }
+                
+                // Try binary deserialization of ChunkList
+                if let Ok(chunk_list) = bincode::deserialize::<ChunkList>(&blob.data) {
+                    for chunk_ref in chunk_list.chunks {
+                        references.push(chunk_ref.digest);
+                    }
+                    return Ok(references);
+                }
+                
+                // Try parsing as direct Vec<ChunkRef> (JSON)
+                if let Ok(chunk_refs) = serde_json::from_slice::<Vec<crate::recovery_types::ChunkRef>>(&blob.data) {
+                    for chunk_ref in chunk_refs {
+                        references.push(chunk_ref.digest);
+                    }
+                    return Ok(references);
+                }
+                
+                // Try parsing as direct Vec<ChunkRef> (binary)
+                if let Ok(chunk_refs) = bincode::deserialize::<Vec<crate::recovery_types::ChunkRef>>(&blob.data) {
+                    for chunk_ref in chunk_refs {
+                        references.push(chunk_ref.digest);
+                    }
+                    return Ok(references);
+                }
+                
+                // If none of the above formats match, this is likely plain binary data
+                // with no embedded references - return empty
             }
             PayloadKind::UnifiedDiff => {
                 // Diff blobs might reference the base object they're diffing against
                 // Parse the diff header to find referenced objects
-                self.parse_diff_references(blob)?;
+                let diff_refs = self.parse_diff_references(blob)?;
+                references.extend(diff_refs);
             }
             PayloadKind::ChunkMap => {
                 // Chunk maps reference multiple chunks

@@ -92,7 +92,7 @@ impl CouncilCoordinatorAdapter {
             } => agent_agency_contracts::errors::CouncilError::Timeout {
                 session_id,
                 timeout_seconds,
-            }
+            },
             crate::council_errors::CouncilError::AggregationFailure { reason } => {
                 agent_agency_contracts::errors::CouncilError::AggregationError { reason }
             }
