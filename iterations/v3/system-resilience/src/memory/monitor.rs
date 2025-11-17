@@ -1295,55 +1295,108 @@ impl MemoryMonitor {
         registry.stats().clone()
     }
 
-    /// Emergency handle cleanup (clear all tracked handles without cleanup)
+    /// Emergency handle cleanup with proper resource release
+    /// 
+    /// Attempts to clean up all tracked handles with:
+    /// - Priority-based cleanup (critical resources first)
+    /// - Per-handle timeout (500ms default)
+    /// - Error handling and partial success support
+    /// - Statistics tracking
+    /// 
+    /// Emergency SLA: <5 seconds total cleanup time
     pub async fn emergency_handle_cleanup(&self) {
-        let registry = self.handle_registry.write().await;
-        // TODO: Implement proper emergency cleanup
-        //       Currently clears handle registry without cleanup; should attempt proper resource release with error handling and timeout management.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Implement handle cleanup loop with individual resource release
-        // [ ] Add error handling for failed cleanup attempts
-        // [ ] Implement partial cleanup support when some handles fail
-        // [ ] Add cleanup timeout handling with configurable limits
-        // [ ] Implement cleanup priority system for critical resources
-        // [ ] Add cleanup strategy selection (graceful vs forceful)
-        // [ ] Track cleanup success/failure statistics
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Emergency cleanup attempts proper resource release for all handles
-        // - Cleanup handles errors and timeouts gracefully with partial success
-        // - Critical resources are prioritized in cleanup order
-        // - Cleanup performance meets emergency SLA (<5 seconds total)
-        // - Registry state is consistent after cleanup operations
-        // - Error handling covers all resource types and failure modes
-        //
-        // DEPENDENCIES:
-        // - Handle cleanup API with timeout support (Required)
-        // - Resource release mechanisms for different handle types (Required)
-        // - Cleanup priority system (Optional)
-        // - Error aggregation and reporting (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (emergency resource management)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Resource management and cleanup strategy expertise
-        warn!("Emergency handle cleanup completed - all handle tracking cleared");
+        const EMERGENCY_TIMEOUT_PER_HANDLE_MS: u64 = 500;
+        const EMERGENCY_TOTAL_TIMEOUT_SECS: u64 = 5;
+        
+        let start_time = Instant::now();
+        let registry = self.handle_registry.read().await;
+        
+        // Collect all handles and prioritize by criticality
+        let mut handles: Vec<(u64, u64, HandleType)> = registry
+            .handles()
+            .filter(|h| !h.closed)
+            .map(|h| {
+                let priority = match h.handle_type {
+                    HandleType::File | HandleType::Socket | HandleType::SyncPrimitive => 0, // Critical
+                    HandleType::SharedMemory | HandleType::MemoryMap => 1, // High priority
+                    HandleType::Process | HandleType::Device => 2, // Medium priority
+                    HandleType::Custom(_) => 3, // Lower priority
+                };
+                (priority, h.id, h.handle_type.clone())
+            })
+            .collect();
+        
+        // Sort by priority (lower number = higher priority)
+        handles.sort_by_key(|(priority, _, _)| *priority);
+        
+        let handle_ids: Vec<u64> = handles.into_iter().map(|(_, id, _)| id).collect();
+        let total_handles = handle_ids.len();
+        
+        drop(registry);
+        
+        if total_handles == 0 {
+            info!("Emergency cleanup: no handles to clean up");
+            return;
+        }
+        
+        info!("Emergency cleanup: attempting to clean up {} handles", total_handles);
+        
+        let mut successful = 0;
+        let mut failed = 0;
+        let mut timed_out = 0;
+        
+        // Clean up each handle with timeout
+        for handle_id in handle_ids {
+            // Check total timeout
+            if start_time.elapsed().as_secs() >= EMERGENCY_TOTAL_TIMEOUT_SECS {
+                warn!("Emergency cleanup: total timeout ({EMERGENCY_TOTAL_TIMEOUT_SECS}s) reached, {} handles remaining", 
+                      total_handles - successful - failed - timed_out);
+                break;
+            }
+            
+            // Attempt cleanup with per-handle timeout
+            let cleanup_result = tokio::time::timeout(
+                Duration::from_millis(EMERGENCY_TIMEOUT_PER_HANDLE_MS),
+                async {
+                    let mut registry = self.handle_registry.write().await;
+                    registry.cleanup_handle(handle_id).await
+                }
+            ).await;
+            
+            match cleanup_result {
+                Ok(result) => {
+                    if result.success {
+                        successful += 1;
+                        debug!("Emergency cleanup: successfully cleaned up handle {} ({:?})", 
+                              result.handle_id, result.handle_type);
+                    } else {
+                        failed += 1;
+                        warn!("Emergency cleanup: failed to clean up handle {} ({:?}): {:?}", 
+                             result.handle_id, result.handle_type, result.error_message);
+                    }
+                }
+                Err(_) => {
+                    timed_out += 1;
+                    warn!("Emergency cleanup: timeout cleaning up handle {} (>{EMERGENCY_TIMEOUT_PER_HANDLE_MS}ms)", handle_id);
+                    
+                    // Mark handle as closed even on timeout to prevent retry
+                    let mut registry = self.handle_registry.write().await;
+                    registry.mark_handle_closed(handle_id);
+                    drop(registry);
+                }
+            }
+        }
+        
+        let total_time = start_time.elapsed();
+        info!(
+            "Emergency cleanup completed: {} successful, {} failed, {} timed out (total: {:?})",
+            successful, failed, timed_out, total_time
+        );
+        
+        // Verify we met the SLA
+        if total_time.as_secs() >= EMERGENCY_TOTAL_TIMEOUT_SECS {
+            warn!("Emergency cleanup exceeded SLA of {} seconds", EMERGENCY_TOTAL_TIMEOUT_SECS);
+        }
     }
 
     /// Record an allocation with site tracking
