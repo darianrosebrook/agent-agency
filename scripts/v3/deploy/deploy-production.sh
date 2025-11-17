@@ -330,8 +330,7 @@ case "${1:-deploy}" in
         main
         ;;
     "rollback")
-        log "Rollback functionality not implemented yet"
-        exit 1
+        rollback_deployment
         ;;
     "status")
         log "Checking deployment status..."
@@ -347,7 +346,7 @@ case "${1:-deploy}" in
     *)
         echo "Usage: $0 {deploy|rollback|status|logs|backup}"
         echo "  deploy  - Deploy the Agent Agency stack (default)"
-        echo "  rollback - Rollback to previous version (not implemented)"
+        echo "  rollback - Rollback to previous version from backup"
         echo "  status  - Show deployment status"
         echo "  logs    - Show logs for a service (default: api)"
         echo "  backup  - Create a backup"
