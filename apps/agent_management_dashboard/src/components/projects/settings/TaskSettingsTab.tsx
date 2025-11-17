@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useProjectContext } from "../../ProjectContext";
+import { cn } from "../../primitives/utils";
 import { Input } from "../../primitives/input";
 import { Label } from "../../primitives/label";
 import { Switch } from "../../primitives/switch";
@@ -23,7 +24,7 @@ import styles from "./TaskSettingsTab.module.scss";
 
 export function TaskSettingsTabContent() {
   const { currentProjectId } = useProjectContext();
-  const [settings, setSettings] = useState<ProjectSettings | null>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -62,17 +63,17 @@ export function TaskSettingsTabContent() {
         if (settingsData.default_status) setDefaultStatus(settingsData.default_status as string);
         if (settingsData.auto_archive !== undefined) setAutoArchive(settingsData.auto_archive as boolean);
         if (settingsData.auto_archive_days) setAutoArchiveDays(settingsData.auto_archive_days as number);
-        if (settingsData.enable_dependencies !== undefined) setEnableDependencies(settingsData.enable_dependencies as boolean);
-        if (settingsData.require_description !== undefined) setRequireDescription(settingsData.require_description as boolean);
-        if (settingsData.priority_levels) setPriorityLevels(String(settingsData.priority_levels));
-        if (settingsData.auto_assign_priority !== undefined) setAutoAssignPriority(settingsData.auto_assign_priority as boolean);
-        if (settingsData.max_tags) setMaxTags(settingsData.max_tags as number);
-        if (settingsData.enable_time_tracking !== undefined) setEnableTimeTracking(settingsData.enable_time_tracking as boolean);
-        if (settingsData.time_alert_threshold) setTimeAlertThreshold(settingsData.time_alert_threshold as number);
-        if (settingsData.work_hours) setWorkHours(String(settingsData.work_hours));
-        if (settingsData.auto_move_stale !== undefined) setAutoMoveStale(settingsData.auto_move_stale as boolean);
-        if (settingsData.smart_distribution !== undefined) setSmartDistribution(settingsData.smart_distribution as boolean);
-        if (settingsData.deadline_reminders !== undefined) setDeadlineReminders(settingsData.deadline_reminders as boolean);
+        if ((settingsData as any).enable_dependencies !== undefined) setEnableDependencies((settingsData as any).enable_dependencies as boolean);
+        if ((settingsData as any).require_description !== undefined) setRequireDescription((settingsData as any).require_description as boolean);
+        if ((settingsData as any).priority_levels) setPriorityLevels(String((settingsData as any).priority_levels));
+        if ((settingsData as any).auto_assign_priority !== undefined) setAutoAssignPriority((settingsData as any).auto_assign_priority as boolean);
+        if ((settingsData as any).max_tags) setMaxTags((settingsData as any).max_tags as number);
+        if ((settingsData as any).enable_time_tracking !== undefined) setEnableTimeTracking((settingsData as any).enable_time_tracking as boolean);
+        if ((settingsData as any).time_alert_threshold) setTimeAlertThreshold((settingsData as any).time_alert_threshold as number);
+        if ((settingsData as any).work_hours) setWorkHours(String((settingsData as any).work_hours));
+        if ((settingsData as any).auto_move_stale !== undefined) setAutoMoveStale((settingsData as any).auto_move_stale as boolean);
+        if ((settingsData as any).smart_distribution !== undefined) setSmartDistribution((settingsData as any).smart_distribution as boolean);
+        if ((settingsData as any).deadline_reminders !== undefined) setDeadlineReminders((settingsData as any).deadline_reminders as boolean);
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Failed to load task settings"));
       } finally {
@@ -96,8 +97,8 @@ export function TaskSettingsTabContent() {
         auto_archive_days: autoArchiveDays,
         enable_dependencies: enableDependencies,
         require_description: requireDescription,
-        priority_levels: parseInt(priorityLevels),
-        auto_assign_priority: autoAssignPriority,
+        priority_levels: parseInt(priorityLevels) || 5,
+        auto_assign_priority: autoAssignPriority || false,
         max_tags: maxTags,
         enable_time_tracking: enableTimeTracking,
         time_alert_threshold: timeAlertThreshold,
@@ -105,7 +106,7 @@ export function TaskSettingsTabContent() {
         auto_move_stale: autoMoveStale,
         smart_distribution: smartDistribution,
         deadline_reminders: deadlineReminders,
-      });
+      } as any);
 
       alert("Task settings saved successfully");
     } catch (err) {

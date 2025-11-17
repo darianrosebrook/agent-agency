@@ -525,7 +525,7 @@ export const useProjectStore = create<ProjectState>()(
                 title: validatedResponse.title,
                 description: validatedResponse.description ?? undefined,
                 status: validatedResponse.status,
-                priority: validatedResponse.priority ?? null,
+                priority: typeof validatedResponse.priority === 'number' ? validatedResponse.priority : null,
                 assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
                 createdAt: validatedResponse.created_at,
               };
@@ -614,7 +614,7 @@ export const useProjectStore = create<ProjectState>()(
                       }
                     : p
                 ),
-              }));
+              }) as any);
             } catch (error) {
               // Rollback optimistic update
               if (originalTask) {
@@ -1075,7 +1075,7 @@ export const useProjectStore = create<ProjectState>()(
               title: validatedResponse.title,
               description: validatedResponse.description ?? undefined,
               status: validatedResponse.status,
-              priority: validatedResponse.priority ?? undefined,
+              priority: typeof validatedResponse.priority === 'number' ? validatedResponse.priority : undefined,
               assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
               createdAt: validatedResponse.created_at,
             };
@@ -1154,7 +1154,7 @@ export const useProjectStore = create<ProjectState>()(
                               description:
                                 validatedResponse.description ?? undefined,
                               status: validatedResponse.status,
-                              priority: validatedResponse.priority ?? undefined,
+                              priority: typeof validatedResponse.priority === 'number' ? validatedResponse.priority : undefined,
                               assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
                               createdAt: validatedResponse.created_at,
                             }

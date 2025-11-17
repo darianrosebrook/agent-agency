@@ -65,7 +65,7 @@ export function WorkHistoryTabContent() {
   // Calculate metrics from work history and task stats
   const totalTasks = taskStats?.total || 0;
   const completedThisWeek = workHistory.filter((entry) => {
-    const entryDate = new Date(entry.timestamp);
+    const entryDate = new Date(entry.created_at);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return entryDate >= weekAgo && entry.action.includes('completed');
@@ -126,11 +126,11 @@ export function WorkHistoryTabContent() {
           <div className={styles.historyList}>
             <h3 className={styles.historyTitle}>Recent Activity</h3>
             {workHistory.slice(0, 20).map((entry) => (
-              <div key={entry.id} className={styles.historyItem}>
+              <div key={entry.entry_id} className={styles.historyItem}>
                 <div className={styles.historyAction}>{entry.action}</div>
                 <div className={styles.historyDescription}>{entry.description}</div>
                 <div className={styles.historyTime}>
-                  {new Date(entry.timestamp).toLocaleString()}
+                  {new Date(entry.created_at).toLocaleString()}
                 </div>
               </div>
             ))}

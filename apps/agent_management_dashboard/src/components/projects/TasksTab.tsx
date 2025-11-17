@@ -152,9 +152,9 @@ export function TasksTab() {
       ]);
 
       // Ensure agents is an array before setting
-      const agentsArray = Array.isArray(agentsData) 
-        ? agentsData 
-        : (agentsData?.agents || []);
+      const agentsArray: Agent[] = Array.isArray(agentsData)
+        ? agentsData
+        : [];
       setAgents(agentsArray);
 
       // Fetch comment counts for each task

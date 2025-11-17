@@ -24,6 +24,16 @@ function mapPriorityToUI(priority: number | null | undefined): "low" | "medium" 
   return "low";
 }
 
+function mapKanbanStatusToApi(status: KanbanStatus): "pending" | "in_progress" | "completed" {
+  const statusMap: Record<KanbanStatus, "pending" | "in_progress" | "completed"> = {
+    backlog: "pending",
+    todo: "pending",
+    "in-progress": "in_progress",
+    done: "completed",
+  };
+  return statusMap[status];
+}
+
 /**
  * Convert UI priority string to API priority number
  */
@@ -208,7 +218,7 @@ export function TasksTab() {
 
       try {
         await updateProjectTask(currentProjectId, taskId, {
-          status: newStatus,
+          status: mapKanbanStatusToApi(newStatus),
         });
         // Refresh tasks from API
         await fetchTasks();

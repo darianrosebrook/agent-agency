@@ -128,7 +128,7 @@ export function TimelineTab() {
               ? new Date(task.created_at)
               : new Date();
             const endDate = calculateEndDate(task);
-            const tags = extractTags(task.metadata);
+            const tags = extractTags(task.metadata || undefined);
 
             return {
               id: task.id,

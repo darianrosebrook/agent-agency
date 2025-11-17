@@ -317,7 +317,7 @@ export async function getProjectTasks(
     const { normalizeTaskId } = await import("../utils/taskTransform");
 
     // Validate each task
-    response.tasks = safeValidateTaskArray(response.tasks);
+    response.tasks = safeValidateTaskArray(response.tasks) as unknown as ProjectTask[];
 
     // Normalize task IDs (some APIs return task_id instead of id)
     response.tasks = response.tasks.map((task) => ({

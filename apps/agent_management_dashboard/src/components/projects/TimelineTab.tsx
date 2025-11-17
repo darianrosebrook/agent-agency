@@ -57,14 +57,14 @@ export function TimelineTab() {
         ]);
 
         // Ensure agents is an array before setting
-        const agentsArray = Array.isArray(agentsData) 
-          ? agentsData 
-          : (agentsData?.agents || []);
+        const agentsArray: Agent[] = Array.isArray(agentsData)
+          ? agentsData
+          : [];
         setAgents(agentsArray);
 
         // Create a map of agent IDs to agent names
         const agentMap = new Map<string, string>();
-        agentsArray.forEach((agent) => {
+        agentsArray.forEach((agent: Agent) => {
           agentMap.set(agent.id, agent.name);
         });
 
@@ -72,7 +72,7 @@ export function TimelineTab() {
         const timelineTasks: TimelineTask[] = tasksResponse.tasks
           .map((task) => {
             // Parse dates with validation
-            const startDate = new Date(task.created_at);
+            let startDate = new Date(task.created_at);
             let endDate: Date;
 
             if (task.completed_at) {
@@ -98,18 +98,16 @@ export function TimelineTab() {
                 updated_at: task.updated_at,
                 completed_at: task.completed_at,
               });
-              // Skip invalid dates
-              return null;
+              // Use fallback dates for invalid dates
+              startDate = new Date();
+              endDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
             }
 
             // Map status to TimelineTask status
             let status: "completed" | "in-progress" | "pending" = "pending";
             if (task.status === "completed") {
               status = "completed";
-            } else if (
-              task.status === "in_progress" ||
-              task.status === "running"
-            ) {
+            } else if (task.status === "in_progress") {
               status = "in-progress";
             }
 
@@ -131,7 +129,7 @@ export function TimelineTab() {
                 : "Orchestrator";
 
             return {
-              id: task.task_id,
+              id: task.task_id || task.id || '',
               title: task.title,
               worker: workerName,
               workerId: workerId ?? "orchestrator",
@@ -141,8 +139,7 @@ export function TimelineTab() {
               tags,
               description: task.description ?? undefined,
             };
-          })
-          .filter((task): task is TimelineTask => task !== null);
+          });
 
         setTasks(timelineTasks);
       } catch (err) {

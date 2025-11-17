@@ -70,7 +70,9 @@ export function MultiRingProgress({
         // TODO: Calculate actual progress based on tasks assigned to milestone when API supports it
         const milestoneStats: { [milestoneId: string]: number } = {};
         milestonesData.forEach((milestone) => {
-          milestoneStats[milestone.id] = milestone.completed ? 100 : 0;
+          if (milestone.id) {
+            milestoneStats[milestone.id] = milestone.completed ? 100 : 0;
+          }
         });
         setTaskStats(milestoneStats);
       } catch (err) {
@@ -107,7 +109,7 @@ export function MultiRingProgress({
     const colors = ["#e0e7ff", "#818cf8", "#6366f1"];
     return milestones.slice(0, 3).map((milestone, index) => ({
       name: milestone.title,
-      progress: taskStats[milestone.id] ?? (milestone.completed ? 100 : 0),
+      progress: milestone.id ? (taskStats[milestone.id] ?? (milestone.completed ? 100 : 0)) : (milestone.completed ? 100 : 0),
       color: colors[index % colors.length],
     }));
   }, [providedTasks, milestones, taskStats]);

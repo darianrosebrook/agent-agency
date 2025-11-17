@@ -20,8 +20,11 @@ import { Separator } from "../../primitives/separator";
 import styles from "./GeneralTab.module.scss";
 
 export function GeneralTabContent() {
-  const { currentProjectId, deleteProject, clearCurrentProject } =
-    useProjectContext();
+  const context = useProjectContext();
+  if (!context) {
+    throw new Error("ProjectContext must be used within a ProjectProvider");
+  }
+  const { currentProjectId, deleteProject, clearCurrentProject } = context as any;
   const router = useRouter();
   const [project, setProject] = useState<ProjectApiResponse | null>(null);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
@@ -42,6 +45,8 @@ export function GeneralTabContent() {
   const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | null>(
     null
   );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -68,8 +73,8 @@ export function GeneralTabContent() {
 
         if (settingsData) {
           setSettings(settingsData);
-          setDefaultAssigneeId(settingsData.default_assignee_id || null);
-          setCollaboration(settingsData.auto_assign_tasks ?? true);
+          setDefaultAssigneeId(typeof settingsData.default_assignee_id === 'string' ? settingsData.default_assignee_id : null);
+          setCollaboration(typeof settingsData.auto_assign_tasks === 'boolean' ? settingsData.auto_assign_tasks : true);
           if (settingsData.notification_preferences) {
             const prefs = settingsData.notification_preferences as Record<
               string,
@@ -85,8 +90,8 @@ export function GeneralTabContent() {
           setMembers(
             membersData.map((m) => ({
               id: m.user_id,
-              name: m.user_name,
-              email: m.user_email,
+              name: `User ${m.user_id}`, // Placeholder until user info is available
+              email: `${m.user_id}@example.com`, // Placeholder until user info is available
             }))
           );
         }
@@ -188,7 +193,7 @@ export function GeneralTabContent() {
         {/* Project Details Section */}
         <div className={styles.settingsSection}>
           <div aria-hidden="true" className={styles.settingsSectionBorder} />
-          <KanbanHeading size="lg" className={styles.sectionTitle}>
+          <KanbanHeading  className={styles.sectionTitle}>
             Project Details
           </KanbanHeading>
 
@@ -196,7 +201,7 @@ export function GeneralTabContent() {
             {/* Project Name */}
             <div className={styles.formField}>
               <label className={styles.formLabel}>
-                <KanbanText size="sm" className={styles.formLabelText}>
+                <KanbanText size="14" className={styles.formLabelText}>
                   Project Name
                 </KanbanText>
               </label>
@@ -212,7 +217,7 @@ export function GeneralTabContent() {
             {/* Description */}
             <div className={styles.formField}>
               <label className={styles.formLabel}>
-                <KanbanText size="sm" className={styles.formLabelText}>
+                <KanbanText size="14" className={styles.formLabelText}>
                   Description
                 </KanbanText>
               </label>
@@ -228,12 +233,12 @@ export function GeneralTabContent() {
             <div className={styles.formRow}>
               <div className={styles.formField}>
                 <label className={styles.formLabel}>
-                  <KanbanText size="sm" className={styles.formLabelText}>
+                  <KanbanText size="14" className={styles.formLabelText}>
                     Project ID
                   </KanbanText>
                 </label>
                 <div className={styles.readOnlyField}>
-                  <KanbanText size="sm" className={styles.readOnlyFieldText}>
+                  <KanbanText size="14" className={styles.readOnlyFieldText}>
                     {project?.id || currentProjectId || "N/A"}
                   </KanbanText>
                 </div>
@@ -241,12 +246,12 @@ export function GeneralTabContent() {
 
               <div className={styles.formField}>
                 <label className={styles.formLabel}>
-                  <KanbanText size="sm" className={styles.formLabelText}>
+                  <KanbanText size="14" className={styles.formLabelText}>
                     Created
                   </KanbanText>
                 </label>
                 <div className={styles.readOnlyField}>
-                  <KanbanText size="sm" className={styles.readOnlyFieldText}>
+                  <KanbanText size="14" className={styles.readOnlyFieldText}>
                     {formatDate(project?.created_at)}
                   </KanbanText>
                 </div>
@@ -260,7 +265,7 @@ export function GeneralTabContent() {
             disabled={isSaving || !currentProjectId}
             type="button"
           >
-            <KanbanText size="sm" className={styles.saveButtonText}>
+            <KanbanText size="14" className={styles.saveButtonText}>
               {isSaving ? "Saving..." : "Save Changes"}
             </KanbanText>
           </button>
@@ -269,19 +274,19 @@ export function GeneralTabContent() {
         {/* Team Settings Section */}
         <div className={styles.settingsSection}>
           <div aria-hidden="true" className={styles.settingsSectionBorder} />
-          <KanbanHeading size="lg" className={styles.sectionTitle}>
+          <KanbanHeading  className={styles.sectionTitle}>
             Team Settings
           </KanbanHeading>
 
           <div className={styles.sectionContent}>
             {/* Default Assignee */}
             <div className={styles.formField}>
-              <KanbanText size="sm" className={styles.formLabelText}>
+              <KanbanText size="14" className={styles.formLabelText}>
                 Default Assignee
               </KanbanText>
               <button className={styles.defaultAssigneeButton} type="button">
                 <KanbanText
-                  size="sm"
+                  size="14"
                   className={styles.defaultAssigneeButtonText}
                 >
                   Auto-assign
@@ -309,10 +314,10 @@ export function GeneralTabContent() {
             {/* Team Collaboration Toggle */}
             <div className={styles.toggleRow}>
               <div className={styles.toggleRowContent}>
-                <KanbanText size="sm" className={styles.toggleRowTitle}>
+                <KanbanText size="14" className={styles.toggleRowTitle}>
                   Allow team collaboration
                 </KanbanText>
-                <KanbanText size="xs" className={styles.toggleRowDescription}>
+                <KanbanText size="14" className={styles.toggleRowDescription}>
                   Team members can edit tasks and boards
                 </KanbanText>
               </div>
@@ -340,10 +345,10 @@ export function GeneralTabContent() {
             {/* Require Approval Toggle */}
             <div className={styles.toggleRow}>
               <div className={styles.toggleRowContent}>
-                <KanbanText size="sm" className={styles.toggleRowTitle}>
+                <KanbanText size="14" className={styles.toggleRowTitle}>
                   Require approval for done tasks
                 </KanbanText>
-                <KanbanText size="xs" className={styles.toggleRowDescription}>
+                <KanbanText size="14" className={styles.toggleRowDescription}>
                   Tasks must be reviewed before marking as done
                 </KanbanText>
               </div>
@@ -373,7 +378,7 @@ export function GeneralTabContent() {
         {/* Notifications Section */}
         <div className={styles.settingsSection}>
           <div aria-hidden="true" className={styles.settingsSectionBorder} />
-          <KanbanHeading size="lg" className={styles.sectionTitle}>
+          <KanbanHeading  className={styles.sectionTitle}>
             Notifications
           </KanbanHeading>
 
@@ -381,10 +386,10 @@ export function GeneralTabContent() {
             {/* Task Assignments */}
             <div className={styles.toggleRow}>
               <div className={styles.toggleRowContent}>
-                <KanbanText size="sm" className={styles.toggleRowTitle}>
+                <KanbanText size="14" className={styles.toggleRowTitle}>
                   Task assignments
                 </KanbanText>
-                <KanbanText size="xs" className={styles.toggleRowDescription}>
+                <KanbanText size="14" className={styles.toggleRowDescription}>
                   Get notified when assigned to a task
                 </KanbanText>
               </div>
@@ -414,10 +419,10 @@ export function GeneralTabContent() {
             {/* Task Comments */}
             <div className={styles.toggleRow}>
               <div className={styles.toggleRowContent}>
-                <KanbanText size="sm" className={styles.toggleRowTitle}>
+                <KanbanText size="14" className={styles.toggleRowTitle}>
                   Task comments
                 </KanbanText>
-                <KanbanText size="xs" className={styles.toggleRowDescription}>
+                <KanbanText size="14" className={styles.toggleRowDescription}>
                   Get notified of new comments on your tasks
                 </KanbanText>
               </div>
@@ -447,10 +452,10 @@ export function GeneralTabContent() {
             {/* Status Changes */}
             <div className={styles.toggleRow}>
               <div className={styles.toggleRowContent}>
-                <KanbanText size="sm" className={styles.toggleRowTitle}>
+                <KanbanText size="14" className={styles.toggleRowTitle}>
                   Status changes
                 </KanbanText>
-                <KanbanText size="xs" className={styles.toggleRowDescription}>
+                <KanbanText size="14" className={styles.toggleRowDescription}>
                   Get notified when task status changes
                 </KanbanText>
               </div>
@@ -511,7 +516,7 @@ export function GeneralTabContent() {
                 />
               </svg>
             </div>
-            <KanbanHeading size="lg" className={styles.dangerZoneTitleText}>
+            <KanbanHeading  className={styles.dangerZoneTitleText}>
               Danger Zone
             </KanbanHeading>
           </div>
@@ -520,18 +525,18 @@ export function GeneralTabContent() {
             {/* Archive Project */}
             <div className={styles.dangerZoneItem}>
               <div className={styles.dangerZoneItemContent}>
-                <KanbanText size="sm" className={styles.dangerZoneItemTitle}>
+                <KanbanText size="14" className={styles.dangerZoneItemTitle}>
                   Archive this project
                 </KanbanText>
                 <KanbanText
-                  size="xs"
+                  size="14"
                   className={styles.dangerZoneItemDescription}
                 >
                   Make the project read-only and hide it from your dashboard
                 </KanbanText>
               </div>
               <button className={styles.dangerZoneButtonArchive} type="button">
-                <KanbanText size="sm" className={styles.dangerZoneButtonText}>
+                <KanbanText size="14" className={styles.dangerZoneButtonText}>
                   Archive
                 </KanbanText>
               </button>
@@ -542,11 +547,11 @@ export function GeneralTabContent() {
               className={cn(styles.dangerZoneItem, styles.dangerZoneItemDelete)}
             >
               <div className={styles.dangerZoneItemContent}>
-                <KanbanText size="sm" className={styles.dangerZoneItemTitle}>
+                <KanbanText size="14" className={styles.dangerZoneItemTitle}>
                   Delete this project
                 </KanbanText>
                 <KanbanText
-                  size="xs"
+                  size="14"
                   className={styles.dangerZoneItemDescription}
                 >
                   Permanently delete this project and all of its data
@@ -554,7 +559,7 @@ export function GeneralTabContent() {
               </div>
               {showDeleteConfirm ? (
                 <div className={styles.deleteConfirmContainer}>
-                  <KanbanText size="sm" className={styles.deleteConfirmText}>
+                  <KanbanText size="14" className={styles.deleteConfirmText}>
                     Are you sure? This cannot be undone.
                   </KanbanText>
                   <div className={styles.deleteConfirmButtons}>
@@ -591,7 +596,7 @@ export function GeneralTabContent() {
                     >
                       {isDeleting ? (
                         <KanbanText
-                          size="sm"
+                          size="14"
                           className={styles.dangerZoneButtonText}
                         >
                           Deleting...
@@ -643,7 +648,7 @@ export function GeneralTabContent() {
                             </svg>
                           </div>
                           <KanbanText
-                            size="sm"
+                            size="14"
                             className={styles.dangerZoneButtonText}
                           >
                             Confirm Delete
@@ -704,7 +709,7 @@ export function GeneralTabContent() {
                       />
                     </svg>
                   </div>
-                  <KanbanText size="sm" className={styles.dangerZoneButtonText}>
+                  <KanbanText size="14" className={styles.dangerZoneButtonText}>
                     Delete
                   </KanbanText>
                 </button>

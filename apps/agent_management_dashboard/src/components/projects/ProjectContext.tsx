@@ -51,7 +51,7 @@ export interface Project {
   lastAccessed: Date;
 }
 
-interface ProjectContextType {
+export interface ProjectContextType {
   projects: Project[];
   currentProjectId: string | null;
   isLoading: boolean;
@@ -348,10 +348,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         () =>
           createProjectTask(projectId, {
             title: task.title,
-            description: task.description,
+            description: task.description ?? undefined,
             status: task.status,
-            priority: task.priority ?? undefined,
-            assigned_worker_id: task.assigned_worker_id ?? undefined,
+            priority: typeof task.priority === 'number' ? task.priority : undefined,
           }),
         { maxAttempts: 3, initialDelay: 1000 }
       );
@@ -412,9 +411,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         () =>
           updateProjectTask(projectId, taskId, {
             title: updates.title,
-            description: updates.description,
+            description: updates.description ?? undefined,
             status: updates.status,
-            priority: updates.priority ?? undefined, // Keep as number
+            priority: typeof updates.priority === 'number' ? updates.priority : undefined,
             assigned_worker_id: updates.assigned_worker_id ?? undefined,
           }),
         { maxAttempts: 3, initialDelay: 1000 }
