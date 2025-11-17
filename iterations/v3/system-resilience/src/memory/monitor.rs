@@ -299,7 +299,7 @@ impl MemoryMonitor {
         let finalized_count = self.process_finalization_queue().await;
 
         // Clean up orphaned resources
-        let resources_cleaned = self.cleanup_orphaned_resources();
+        let resources_cleaned = self.cleanup_orphaned_resources().await;
 
         debug!(
             "Finalization: {} objects finalized, {} resources cleaned up",
@@ -772,78 +772,83 @@ impl MemoryMonitor {
     }
 
     /// Clean up orphaned resources
-    fn cleanup_orphaned_resources(&self) -> usize {
-        // TODO: Implement orphaned resource cleanup (file handles, network connections, etc.)
-        //       Currently returns placeholder; should identify and clean up orphaned resources.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Identify orphaned file handles
-        // [ ] Close orphaned file handles
-        // [ ] Identify orphaned network connections
-        // [ ] Close orphaned network connections
-        // [ ] Clean up other orphaned resources (locks, timers, etc.)
-        // [ ] Track cleanup statistics
-        // [ ] Add unit tests for resource cleanup
-        // [ ] Add integration tests with orphaned resources
-        // [ ] Verify resources are properly cleaned up
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Orphaned file handles are identified and closed
-        // - Orphaned network connections are identified and closed
-        // - Other orphaned resources are cleaned up
-        // - Cleanup statistics are tracked accurately
-        //
-        // DEPENDENCIES:
-        // - Resource tracking system (Required)
-        // - File handle management (Required)
-        // - Network connection management (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (standard feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Resource management expertise
-        0 // Temporary placeholder until cleanup is implemented
+    /// 
+    /// Identifies and cleans up resources (file handles, network connections, etc.)
+    /// that are no longer associated with live objects in the GC registry.
+    /// 
+    /// Returns the number of resources cleaned up.
+    pub async fn cleanup_orphaned_resources(&self) -> usize {
+        let handle_registry = self.handle_registry.read().await;
+        let gc_registry = self.gc_registry.read().await;
+        
+        // Collect handles that are orphaned (not closed and object not in GC registry)
+        let orphaned_handle_ids: Vec<u64> = handle_registry
+            .handles()
+            .filter(|handle| {
+                // A handle is orphaned if:
+                // 1. It's not already closed
+                // 2. Its associated object is not in the GC registry's marked objects
+                !handle.closed && !gc_registry.marked_objects.contains(&handle.object_ref)
+            })
+            .map(|handle| handle.id)
+            .collect();
+        
+        drop(handle_registry);
+        drop(gc_registry);
+        
+        if orphaned_handle_ids.is_empty() {
+            return 0;
+        }
+        
+        // Clean up orphaned handles
+        let mut cleaned_count = 0;
+        for handle_id in orphaned_handle_ids {
+            let mut handle_registry = self.handle_registry.write().await;
+            let result = handle_registry.cleanup_handle(handle_id).await;
+            drop(handle_registry);
+            
+            if result.success {
+                cleaned_count += 1;
+                debug!("Cleaned up orphaned handle {} of type {:?}", result.handle_id, result.handle_type);
+            } else {
+                warn!("Failed to clean up orphaned handle {}: {:?}", result.handle_id, result.error_message);
+            }
+        }
+        
+        cleaned_count
     }
 
     /// Analyze allocation patterns for leak detection
+    /// 
+    /// This is a synchronous wrapper that uses blocking to access async allocation tracker.
+    /// For async contexts, use `analyze_allocation_leaks()` instead.
     fn analyze_allocation_patterns_for_leaks(&self) -> Vec<AllocationLeak> {
-        // TODO: Implement allocation pattern analysis for leak detection
-        //       Currently returns empty vector; should analyze allocation patterns to detect potential memory leaks.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Track allocation counts over time
-        // [ ] Identify growing allocation patterns
-        // [ ] Detect potential memory leaks
-        // [ ] Classify leak types (gradual, sudden, cyclic)
-        // [ ] Generate leak reports with recommendations
-        // [ ] Add unit tests for leak detection
-        // [ ] Add integration tests with leak scenarios
-        // [ ] Verify leak detection accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Allocation patterns are analyzed over time
-        // - Potential memory leaks are detected accurately
-        // - Leak types are classified correctly
-        // - Leak reports include actionable recommendations
-        //
-        // DEPENDENCIES:
-        // - Allocation tracking system (Required)
-        // - Pattern analysis algorithms (Required)
-        // - Leak classification utilities (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (standard feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Memory leak detection expertise
-        Vec::new() // Temporary empty vector until leak detection is implemented
+        // Use blocking to access async allocation tracker
+        // This is necessary because this method is called from synchronous contexts
+        let rt = tokio::runtime::Handle::try_current();
+        if let Ok(handle) = rt {
+            // We're in an async context, use block_in_place to avoid deadlock
+            tokio::task::block_in_place(|| {
+                handle.block_on(async {
+                    let tracker = self.allocation_tracker.read().await;
+                    tracker.analyze_leak_patterns()
+                })
+            })
+        } else {
+            // We're not in an async context, create a new runtime
+            // This is a fallback for truly synchronous contexts
+            match tokio::runtime::Runtime::new() {
+                Ok(rt) => rt.block_on(async {
+                    let tracker = self.allocation_tracker.read().await;
+                    tracker.analyze_leak_patterns()
+                }),
+                Err(_) => {
+                    // If runtime creation fails, return empty vector
+                    warn!("Failed to create runtime for leak analysis, returning empty results");
+                    Vec::new()
+                }
+            }
+        }
     }
 
     /// Get memory stats history
