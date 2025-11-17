@@ -281,6 +281,108 @@ run_performance_tests() {
     fi
 }
 
+# Rollback deployment
+rollback_deployment() {
+    log "Rolling back to previous deployment..."
+    
+    # Find most recent backup
+    if [ ! -d "$BACKUP_ROOT" ]; then
+        log_error "No backup directory found at $BACKUP_ROOT"
+        exit 1
+    fi
+    
+    local latest_backup
+    latest_backup=$(ls -td "$BACKUP_ROOT"/agent-agency-* 2>/dev/null | head -1)
+    
+    if [ -z "$latest_backup" ]; then
+        log_error "No backups found in $BACKUP_ROOT"
+        exit 1
+    fi
+    
+    log "Found backup: $(basename "$latest_backup")"
+    
+    # Stop services
+    log "Stopping services..."
+    $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" down
+    
+    # Restore database
+    if [ -f "$latest_backup/database.sql" ]; then
+        log "Restoring database from backup..."
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" up -d postgres
+        
+        # Wait for PostgreSQL to be ready
+        local attempt=1
+        while [ $attempt -le 10 ]; do
+            if $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres psql -U agent_agency -d agent_agency -c "SELECT 1" &> /dev/null; then
+                log_success "PostgreSQL is ready"
+                break
+            fi
+            if [ $attempt -eq 10 ]; then
+                log_error "PostgreSQL failed to start"
+                exit 1
+            fi
+            log "Attempt $attempt/10: Waiting for PostgreSQL..."
+            sleep 5
+            ((attempt++))
+        done
+        
+        # Drop and recreate database
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres psql -U agent_agency -c "DROP DATABASE IF EXISTS agent_agency;" || true
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres psql -U agent_agency -c "CREATE DATABASE agent_agency;" || true
+        
+        # Restore database
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres psql -U agent_agency -d agent_agency < "$latest_backup/database.sql"
+        log_success "Database restored"
+    else
+        log_warning "Database backup not found, skipping database restore"
+    fi
+    
+    # Restore volumes if backup exists
+    local postgres_volume
+    postgres_volume=$(docker volume ls --format '{{.Name}}' | grep -m1 'postgres_data$' || true)
+    if [[ -n "$postgres_volume" ]] && [ -f "$latest_backup/postgres_data.tar.gz" ]; then
+        log "Restoring PostgreSQL volume..."
+        docker run --rm -v "$postgres_volume":/data -v "$latest_backup":/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/postgres_data.tar.gz -C /data"
+        log_success "PostgreSQL volume restored"
+    fi
+    
+    local redis_volume
+    redis_volume=$(docker volume ls --format '{{.Name}}' | grep -m1 'redis_data$' || true)
+    if [[ -n "$redis_volume" ]] && [ -f "$latest_backup/redis_data.tar.gz" ]; then
+        log "Restoring Redis volume..."
+        docker run --rm -v "$redis_volume":/data -v "$latest_backup":/backup alpine sh -c "rm -rf /data/* && tar xzf /backup/redis_data.tar.gz -C /data"
+        log_success "Redis volume restored"
+    fi
+    
+    # Restore configuration files
+    if [ -d "$latest_backup/nginx" ]; then
+        log "Restoring nginx configuration..."
+        cp -r "$latest_backup/nginx"/* "$REPO_ROOT/deploy/docker/nginx/" 2>/dev/null || true
+    fi
+    
+    if [ -d "$latest_backup/monitoring" ]; then
+        log "Restoring monitoring configuration..."
+        cp -r "$latest_backup/monitoring"/* "$REPO_ROOT/deploy/docker/monitoring/" 2>/dev/null || true
+    fi
+    
+    # Start services
+    log "Starting services with previous configuration..."
+    $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" up -d
+    
+    # Wait for services to be healthy
+    log "Waiting for services to be healthy..."
+    sleep 10
+    
+    # Verify rollback
+    if run_health_checks; then
+        log_success "Rollback completed successfully"
+        log "Services restored from backup: $(basename "$latest_backup")"
+    else
+        log_error "Rollback completed but health checks failed"
+        exit 1
+    fi
+}
+
 # Cleanup old resources
 cleanup() {
     log "Cleaning up old resources..."
