@@ -23,10 +23,10 @@ export function ManageTab() {
         <div className={styles.settingsContainer}>
           {/* Header Section */}
           <div className={styles.headerSection}>
-            <KanbanHeading size="xl" className={styles.heading}>
+            <KanbanHeading className={styles.heading}>
               Project Settings
             </KanbanHeading>
-            <KanbanText size="base" className={styles.description}>
+            <KanbanText size="16" className={styles.description}>
               Manage your project configuration and team
             </KanbanText>
           </div>
@@ -44,7 +44,7 @@ export function ManageTab() {
                 type="button"
               >
                 <KanbanText
-                  size="sm"
+                  size="14"
                   className={cn(
                     styles.tabButtonText,
                     activeTab === "general" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
@@ -63,7 +63,7 @@ export function ManageTab() {
                 type="button"
               >
                 <KanbanText
-                  size="sm"
+                  size="14"
                   className={cn(
                     styles.tabButtonText,
                     activeTab === "workHistory" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
@@ -82,7 +82,7 @@ export function ManageTab() {
                 type="button"
               >
                 <KanbanText
-                  size="sm"
+                  size="14"
                   className={cn(
                     styles.tabButtonText,
                     activeTab === "aiAgents" ? styles.tabButtonTextActive : styles.tabButtonTextInactive
@@ -101,7 +101,7 @@ export function ManageTab() {
                 type="button"
               >
                 <KanbanText
-                  size="sm"
+                  size="14"
                   className={cn(
                     styles.tabButtonText,
                     activeTab === "taskSettings" ? styles.tabButtonTextActive : styles.tabButtonTextInactive

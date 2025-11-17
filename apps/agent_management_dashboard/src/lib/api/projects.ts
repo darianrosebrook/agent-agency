@@ -113,6 +113,8 @@ export interface ProjectTaskSettings {
   max_concurrent_tasks?: number;
   priority_inheritance?: boolean;
   assignee_required?: boolean;
+  enable_dependencies?: boolean;
+  require_description?: boolean;
 }
 
 const API_BASE = "/api/proxy/api/v1";

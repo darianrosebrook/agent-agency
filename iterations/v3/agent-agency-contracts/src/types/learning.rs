@@ -93,26 +93,25 @@ mod tests {
 
     #[test]
     fn learning_error_display_all_variants() {
-        assert_eq!(
-            LearningError::Algorithm("test".to_string()).to_string(),
-            "Algorithm error: test"
-        );
-        assert_eq!(
-            LearningError::TrainingData("test".to_string()).to_string(),
-            "Training data error: test"
-        );
-        assert_eq!(
-            LearningError::Model("test".to_string()).to_string(),
-            "Model error: test"
-        );
-        assert_eq!(
-            LearningError::Optimization("test".to_string()).to_string(),
-            "Optimization error: test"
-        );
-        assert_eq!(
-            LearningError::Configuration("test".to_string()).to_string(),
-            "Configuration error: test"
-        );
+        // Mutation test: Display should return actual formatted strings, not empty
+        let algorithm = LearningError::Algorithm("test".to_string()).to_string();
+        let training_data = LearningError::TrainingData("test".to_string()).to_string();
+        let model = LearningError::Model("test".to_string()).to_string();
+        let optimization = LearningError::Optimization("test".to_string()).to_string();
+        let configuration = LearningError::Configuration("test".to_string()).to_string();
+        
+        assert_eq!(algorithm, "Algorithm error: test");
+        assert_eq!(training_data, "Training data error: test");
+        assert_eq!(model, "Model error: test");
+        assert_eq!(optimization, "Optimization error: test");
+        assert_eq!(configuration, "Configuration error: test");
+        
+        // Ensure Display doesn't return empty (would happen if fmt returns Ok(Default::default()))
+        assert!(!algorithm.is_empty(), "Display should not return empty string");
+        assert!(!training_data.is_empty(), "Display should not return empty string");
+        assert!(!model.is_empty(), "Display should not return empty string");
+        assert!(!optimization.is_empty(), "Display should not return empty string");
+        assert!(!configuration.is_empty(), "Display should not return empty string");
     }
 
     #[test]

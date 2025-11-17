@@ -103,13 +103,9 @@ impl ToolChainBridge {
         let constraints = self.create_planning_constraints(working_spec)?;
 
         Ok(ExternalPlanningContext {
-            working_spec_id: working_spec.id.clone(),
-            available_tools: vec![], // TODO: Populate with available tools
-            constraints,
-            risk_tolerance,
-            task_description: Some(task_description),
-            task_type: Some(task_type),
-            complexity: Some(complexity),
+            task_description: task_description,
+            task_type: task_type,
+            complexity: complexity,
             required_capabilities,
             time_budget_ms: working_spec
                 .constraints
@@ -172,13 +168,27 @@ impl ToolChainBridge {
                 let milestone_id = format!("TC-{}", node.tool_id);
                 // Convert system_federated_ml::tool_chain_planner::ToolNode to ExternalToolNode
                 // For now, create a minimal ExternalToolNode-like structure
-                let external_node = crate::planning::tool_chain_types::ToolNode {
-                    id: node.tool_id.clone(),
-                    tool_name: node.tool_id.clone(),
-                    tool_version: "1.0.0".to_string(),
-                    inputs: HashMap::new(),
-                    output_schema: None,
-                    dependencies: Vec::new(), // Will be extracted from edges below
+                // Convert system_federated_ml::ToolNode to ExternalToolNode
+                // ExternalToolNode is a type alias that resolves to the appropriate type based on feature flags
+                let external_node: ExternalToolNode = {
+                    #[cfg(feature = "tool-chain")]
+                    {
+                        // When tool-chain feature is enabled, ExternalToolNode is system_federated_ml::ToolNode
+                        // So we can use the node directly
+                        node.clone()
+                    }
+                    #[cfg(not(feature = "tool-chain"))]
+                    {
+                        // When tool-chain feature is not enabled, ExternalToolNode is tool_chain_types::ToolNode
+                        crate::planning::tool_chain_types::ToolNode {
+                            id: node.tool_id.clone(),
+                            tool_name: node.tool_id.clone(),
+                            tool_version: "1.0.0".to_string(),
+                            inputs: HashMap::new(),
+                            output_schema: None,
+                            dependencies: Vec::new(), // Will be extracted from edges below
+                        }
+                    }
                 };
                 let milestone =
                     self.create_milestone_from_tool_node(&external_node, &milestone_id, &working_spec)?;

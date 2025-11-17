@@ -1236,7 +1236,7 @@ mod tests {
     #[test]
     fn test_semver_compliance_or_chain_boundary() {
         // Test the || chain: "breaking change" || "breaking api" || "incompatible"
-        // Catches mutations from || to &&
+        // Catches mutations from || to && at line 249 (incompatible check)
         
         // Only "breaking change" - should trigger check
         let spec1 = create_test_spec("breaking change to API without version");
@@ -1250,11 +1250,18 @@ mod tests {
         let check2 = results2.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning)).unwrap();
         assert!(!check2.passed, "breaking api without version should fail");
         
-        // Only "incompatible" - should trigger check
+        // Only "incompatible" - should trigger check (catches || -> && mutation at line 249)
+        // This is the critical test for the mutation at line 249
         let spec3 = create_test_spec("incompatible change without version");
         let results3 = run_caws_invariants(&spec3);
         let check3 = results3.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning)).unwrap();
-        assert!(!check3.passed, "incompatible without version should fail");
+        assert!(!check3.passed, "incompatible without version should fail - catches || -> && mutation at line 249");
+        
+        // "incompatible" alone must trigger - if line 249 || becomes &&, this would pass incorrectly
+        let spec3b = create_test_spec("incompatible API modification");
+        let results3b = run_caws_invariants(&spec3b);
+        let check3b = results3b.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning)).unwrap();
+        assert!(!check3b.passed, "incompatible alone must fail - tests line 249 || operator");
         
         // None of the keywords - should pass
         let spec4 = create_test_spec("add new feature");
@@ -1267,19 +1274,35 @@ mod tests {
     fn test_error_handling_or_and_chain_boundary() {
         // Test the complex chain: (network || file || database || api call || external service)
         // && !error_handling && !try/catch && !result && !option && !?
-        // Catches || -> && and && -> || mutations
+        // Catches || -> && mutations at lines 282, 283, 284
         
         // Only "network" - should fail (no error handling)
+        // Tests line 280: network ||
         let spec1 = create_test_spec("make network request");
         let results1 = run_caws_invariants(&spec1);
         let check1 = results1.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling)).unwrap();
         assert!(!check1.passed, "network without error handling should fail");
         
         // Only "file" - should fail
+        // Tests line 282: || file || (catches || -> && mutation)
         let spec2 = create_test_spec("file operations");
         let results2 = run_caws_invariants(&spec2);
         let check2 = results2.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling)).unwrap();
-        assert!(!check2.passed, "file without error handling should fail");
+        assert!(!check2.passed, "file without error handling should fail - catches || -> && mutation at line 282");
+        
+        // Only "database" - should fail
+        // Tests line 283: || database || (catches || -> && mutation)
+        let spec2b = create_test_spec("database query operation");
+        let results2b = run_caws_invariants(&spec2b);
+        let check2b = results2b.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling)).unwrap();
+        assert!(!check2b.passed, "database without error handling should fail - catches || -> && mutation at line 283");
+        
+        // Only "api call" - should fail
+        // Tests line 284: || api call || (catches || -> && mutation)
+        let spec2c = create_test_spec("make api call to external service");
+        let results2c = run_caws_invariants(&spec2c);
+        let check2c = results2c.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling)).unwrap();
+        assert!(!check2c.passed, "api call without error handling should fail - catches || -> && mutation at line 284");
         
         // "network" AND "database" - should fail (both present, no error handling)
         let spec3 = create_test_spec("network request and database query");
@@ -1303,7 +1326,7 @@ mod tests {
     #[test]
     fn test_api_backward_compat_complex_and_or_boundary() {
         // Test: (remove || delete || change signature) && (api || endpoint || function)
-        // Catches && -> || and || -> && mutations
+        // Catches && -> || and || -> && mutations at lines 314-317
         
         // "remove" AND "api" - should fail (no backward compat)
         let spec1 = create_test_spec("remove API endpoint");
@@ -1312,10 +1335,11 @@ mod tests {
         assert!(!check1.passed, "remove api without backward compat should fail");
         
         // "delete" AND "function" - should fail
+        // Tests line 314: || delete || (catches || -> && mutation)
         let spec2 = create_test_spec("delete function from API");
         let results2 = run_caws_invariants(&spec2);
         let check2 = results2.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
-        assert!(!check2.passed, "delete function without backward compat should fail");
+        assert!(!check2.passed, "delete function without backward compat should fail - catches || -> && mutation at line 314");
         
         // "change signature" AND "api" - should fail
         let spec3 = create_test_spec("change signature of API function");
@@ -1323,17 +1347,33 @@ mod tests {
         let check3 = results3.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
         assert!(!check3.passed, "change signature without backward compat should fail");
         
+        // "remove" AND "endpoint" - should fail
+        // Tests line 316: || endpoint || (catches || -> && mutation)
+        let spec3b = create_test_spec("remove endpoint from service");
+        let results3b = run_caws_invariants(&spec3b);
+        let check3b = results3b.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
+        assert!(!check3b.passed, "remove endpoint without backward compat should fail - catches || -> && mutation at line 316");
+        
+        // "remove" AND "function" - should fail
+        // Tests line 317: || function || (catches || -> && mutation)
+        let spec3c = create_test_spec("remove function from module");
+        let results3c = run_caws_invariants(&spec3c);
+        let check3c = results3c.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
+        assert!(!check3c.passed, "remove function without backward compat should fail - catches || -> && mutation at line 317");
+        
         // "remove" only (no api/endpoint/function) - should pass
+        // Tests line 315: && (api || ...) - if && becomes ||, this would fail incorrectly
         let spec4 = create_test_spec("remove old code");
         let results4 = run_caws_invariants(&spec4);
         let check4 = results4.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
-        assert!(check4.passed, "remove without api keywords should pass");
+        assert!(check4.passed, "remove without api keywords should pass - tests && operator at line 315");
         
         // "api" only (no remove/delete/change) - should pass
+        // Tests line 315: && (api || ...) - if && becomes ||, this would fail incorrectly
         let spec5 = create_test_spec("add new API endpoint");
         let results5 = run_caws_invariants(&spec5);
         let check5 = results5.checks.iter().find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat)).unwrap();
-        assert!(check5.passed, "api without remove/delete/change should pass");
+        assert!(check5.passed, "api without remove/delete/change should pass - tests && operator at line 315");
     }
 
     #[test]

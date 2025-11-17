@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getTasksStats,
+  listTasks,
+  type Task,
+  type TasksStats,
+} from "../../../lib/api/tasks";
 import { KanbanHeading } from "../../primitives/kanban/KanbanHeading";
 import { KanbanText } from "../../primitives/kanban/KanbanText";
-import { getTasksStats, type TasksStats } from "../../lib/api/tasks";
-import { listTasks, type Task } from "../../lib/api/tasks";
 import styles from "./WorkHistoryTab.module.scss";
 
 export function WorkHistoryTabContent() {
@@ -97,25 +101,23 @@ export function WorkHistoryTabContent() {
   return (
     <div className={styles.workHistoryTab}>
       <div className={styles.workHistoryCard}>
-        <KanbanHeading size="lg" className={styles.cardTitle}>
-          Work History
-        </KanbanHeading>
-        <KanbanText size="sm" className={styles.cardDescription}>
+        <KanbanHeading className={styles.cardTitle}>Work History</KanbanHeading>
+        <KanbanText size="14" className={styles.cardDescription}>
           View and analyze your team&apos;s work history, time tracking, and
           productivity metrics.
         </KanbanText>
         {error ? (
           <div className={styles.errorState}>
-            <KanbanText size="sm">Error: {error.message}</KanbanText>
+            <KanbanText size="14">Error: {error.message}</KanbanText>
           </div>
         ) : (
           <div className={styles.metricsGrid}>
             {metrics.map((metric, i) => (
               <div key={i} className={styles.metricCard}>
-                <KanbanText size="sm" className={styles.metricLabel}>
+                <KanbanText size="14" className={styles.metricLabel}>
                   {metric.label}
                 </KanbanText>
-                <KanbanText size="xl" className={styles.metricValue}>
+                <KanbanText size="16" className={styles.metricValue}>
                   {metric.isLoading
                     ? "..."
                     : typeof metric.value === "number"

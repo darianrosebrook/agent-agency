@@ -196,10 +196,13 @@ pub mod tests {
     #[test]
     fn task_executor_provider_error_display() {
         let error = TaskExecutorProviderError::FactoryAlreadySet;
+        let display_output = error.to_string();
         assert_eq!(
-            error.to_string(),
+            display_output,
             "Default factory has already been set"
         );
+        // Mutation test: Display should not return empty string (would happen if fmt returns Ok(Default::default()))
+        assert!(!display_output.is_empty(), "Display output should not be empty - catches Ok(Default::default()) mutation");
     }
 
     #[test]

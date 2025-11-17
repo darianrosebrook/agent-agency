@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import { ProjectTaskSchema, UpdateTaskRequestSchema, CreateTaskRequestSchema } from '../schemas/project';
-import type { TaskWithOptionalDescription, UpdateTaskRequest, CreateTaskRequest } from '../types/task';
+import type { TaskWithOptionalDescription, Task, UpdateTaskRequest, CreateTaskRequest } from '../types/task';
 import type { ProjectTask } from '../api/projects';
 
 /**

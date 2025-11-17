@@ -572,9 +572,19 @@ mod tests {
 
     #[test]
     fn change_type_display_all_variants() {
-        assert_eq!(ChangeType::Added.to_string(), "added");
-        assert_eq!(ChangeType::Modified.to_string(), "modified");
-        assert_eq!(ChangeType::Deleted.to_string(), "deleted");
+        // Mutation test: Display should return actual values, not empty strings
+        let added = ChangeType::Added.to_string();
+        let modified = ChangeType::Modified.to_string();
+        let deleted = ChangeType::Deleted.to_string();
+        
+        assert_eq!(added, "added");
+        assert_eq!(modified, "modified");
+        assert_eq!(deleted, "deleted");
+        
+        // Ensure Display doesn't return empty (would happen if fmt returns Ok(Default::default()))
+        assert!(!added.is_empty(), "Display should not return empty string");
+        assert!(!modified.is_empty(), "Display should not return empty string");
+        assert!(!deleted.is_empty(), "Display should not return empty string");
     }
 
     #[test]

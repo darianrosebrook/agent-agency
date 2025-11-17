@@ -573,10 +573,22 @@ mod tests {
 
     #[test]
     fn validation_category_enum_display() {
-        assert_eq!(ValidationCategoryEnum::Dependency.to_string(), "dependency");
-        assert_eq!(ValidationCategoryEnum::Scope.to_string(), "scope");
-        assert_eq!(ValidationCategoryEnum::Resource.to_string(), "resource");
-        assert_eq!(ValidationCategoryEnum::Quality.to_string(), "quality");
+        // Mutation test: Display should return actual values, not empty strings
+        let dependency = ValidationCategoryEnum::Dependency.to_string();
+        let scope = ValidationCategoryEnum::Scope.to_string();
+        let resource = ValidationCategoryEnum::Resource.to_string();
+        let quality = ValidationCategoryEnum::Quality.to_string();
+        
+        assert_eq!(dependency, "dependency");
+        assert_eq!(scope, "scope");
+        assert_eq!(resource, "resource");
+        assert_eq!(quality, "quality");
+        
+        // Ensure Display doesn't return empty (would happen if fmt returns Ok(Default::default()))
+        assert!(!dependency.is_empty(), "Display should not return empty string");
+        assert!(!scope.is_empty(), "Display should not return empty string");
+        assert!(!resource.is_empty(), "Display should not return empty string");
+        assert!(!quality.is_empty(), "Display should not return empty string");
         assert_eq!(ValidationCategoryEnum::Evidence.to_string(), "evidence");
         assert_eq!(ValidationCategoryEnum::Council.to_string(), "council");
         assert_eq!(
@@ -588,8 +600,12 @@ mod tests {
 
     #[test]
     fn validation_category_display() {
+        // Mutation test: Display should return actual values, not empty strings
         let cat_enum = ValidationCategory::Enum(ValidationCategoryEnum::Dependency);
-        assert_eq!(cat_enum.to_string(), "dependency");
+        let display_output = cat_enum.to_string();
+        assert_eq!(display_output, "dependency");
+        // Ensure Display doesn't return empty (would happen if fmt returns Ok(Default::default()))
+        assert!(!display_output.is_empty(), "Display should not return empty string");
 
         let cat_string = ValidationCategory::String("custom".to_string());
         assert_eq!(cat_string.to_string(), "custom");

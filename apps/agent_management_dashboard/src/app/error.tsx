@@ -2,13 +2,13 @@
 
 /**
  * Error Page - Global Error Boundary
- * 
+ *
  * This page is displayed when an unhandled error occurs in the application.
  */
 
+import { AlertCircle, Home, RefreshCw } from "lucide-react";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, Home, RefreshCw } from "lucide-react";
 import { env } from "../lib/utils/env";
 import styles from "./error.module.scss";
 
@@ -44,27 +44,20 @@ export default function Error({ error, reset }: ErrorProps) {
           </div>
           <h1 className={styles.errorTitle}>Something went wrong!</h1>
           <p className={styles.errorMessage}>
-            An unexpected error occurred. We&apos;ve been notified and are working on a fix.
+            An unexpected error occurred. We&apos;ve been notified and are
+            working on a fix.
           </p>
           {error.digest && (
-            <p className={styles.errorDigest}>
-              Error ID: {error.digest}
-            </p>
+            <p className={styles.errorDigest}>Error ID: {error.digest}</p>
           )}
         </div>
 
         <div className={styles.errorActions}>
-          <button
-            onClick={reset}
-            className={styles.errorButton}
-          >
+          <button onClick={reset} className={styles.errorButton}>
             <RefreshCw className={styles.errorButtonIcon} />
             Try Again
           </button>
-          <Link
-            href="/"
-            className={styles.errorLink}
-          >
+          <Link to="/" className={styles.errorLink}>
             <Home className={styles.errorLinkIcon} />
             Go to Dashboard
           </Link>
@@ -84,18 +77,3 @@ export default function Error({ error, reset }: ErrorProps) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

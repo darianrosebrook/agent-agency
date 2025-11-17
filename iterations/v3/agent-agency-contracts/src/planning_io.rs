@@ -1013,9 +1013,21 @@ mod tests {
 
     #[test]
     fn milestone_priority_display_all_variants() {
-        assert_eq!(MilestonePriority::Low.to_string(), "Low");
-        assert_eq!(MilestonePriority::Normal.to_string(), "Normal");
-        assert_eq!(MilestonePriority::High.to_string(), "High");
-        assert_eq!(MilestonePriority::Critical.to_string(), "Critical");
+        // Mutation test: Display should return actual values, not empty strings
+        let low = MilestonePriority::Low.to_string();
+        let normal = MilestonePriority::Normal.to_string();
+        let high = MilestonePriority::High.to_string();
+        let critical = MilestonePriority::Critical.to_string();
+        
+        assert_eq!(low, "Low");
+        assert_eq!(normal, "Normal");
+        assert_eq!(high, "High");
+        assert_eq!(critical, "Critical");
+        
+        // Ensure Display doesn't return empty (would happen if fmt returns Ok(Default::default()))
+        assert!(!low.is_empty(), "Display should not return empty string");
+        assert!(!normal.is_empty(), "Display should not return empty string");
+        assert!(!high.is_empty(), "Display should not return empty string");
+        assert!(!critical.is_empty(), "Display should not return empty string");
     }
 }

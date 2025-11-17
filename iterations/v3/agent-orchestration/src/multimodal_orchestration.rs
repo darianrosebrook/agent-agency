@@ -535,7 +535,8 @@ impl MultimodalOrchestrator {
 
         Ok(Self {
             unified_ingestor,
-            file_watcher: FileWatcher::new(vec![], vec![]),
+            file_watcher: FileWatcher::new(vec![], vec![])
+                .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to create file watcher: {}", e)))?,
             unified_enricher,
             unified_indexer,
             job_scheduler: JobScheduler::new(),
@@ -789,15 +790,19 @@ impl MultimodalOrchestrator {
             },
         };
 
+        // Convert local DataInput to agent_data_processing::DataInput
+        let processing_input = convert_data_input_to_processing(data_input)
+            .context("Failed to convert DataInput")?;
+        
         let ingestion_output = self
             .unified_ingestor
-            .ingest(data_input)
+            .ingest(processing_input)
             .await
-            .context("Failed to ingest document")?;
+            .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to ingest document: {}", e)))?;
 
-        // Convert ingestion output to blocks for processing
-        let blocks = convert_ingestion_output_to_blocks(ingestion_output)
-            .context("Failed to convert ingestion output to blocks")?;
+        // Convert ProcessingOutput to blocks for processing
+        let blocks = convert_processing_output_to_blocks(ingestion_output)
+            .context("Failed to convert ProcessingOutput to blocks")?;
 
         let blocks_processed = blocks.len();
         info!(
@@ -807,12 +812,87 @@ impl MultimodalOrchestrator {
         );
 
         // Stage 2: Enrich blocks with multimodal content
-        let enriched_blocks = self.enrich_blocks(&blocks).await?;
+        // Convert local blocks to agent_data_processing::Block
+        let processing_blocks: Vec<agent_data_processing::Block> = blocks
+            .iter()
+            .map(convert_block_to_processing)
+            .collect();
+        
+        let processing_enriched = self
+            .unified_enricher
+            .enrich_blocks(processing_blocks)
+            .await
+            .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to enrich blocks: {}", e)))?;
+        
+        // Convert back to local EnrichedBlock types
+        let enriched_blocks: Vec<EnrichedBlock> = processing_enriched
+            .into_iter()
+            .map(convert_enriched_block_from_processing)
+            .collect();
         let blocks_enriched = enriched_blocks.len();
         info!("Enriched {} blocks", blocks_enriched);
 
         // Stage 3: Index enriched content
-        let blocks_indexed = self.index_blocks(&enriched_blocks).await?;
+        // Convert local EnrichedBlock to agent_data_processing::EnrichedBlock
+        let processing_enriched_blocks: Vec<agent_data_processing::EnrichedBlock> = enriched_blocks
+            .iter()
+            .map(|eb| {
+                let block = convert_block_to_processing(&eb.block);
+                // Create EnrichedContent from entities and topics
+                let enriched_content = agent_data_processing::EnrichedContent {
+                    entities: eb.entities
+                        .iter()
+                        .map(|e| agent_data_processing::ExtractedEntity {
+                            id: Uuid::new_v4().to_string(),
+                            name: e.text.clone(),
+                            entity_type: e.entity_type.clone(),
+                            confidence: e.confidence as f32,
+                            positions: vec![agent_data_processing::TextPosition {
+                                start: e.start_offset,
+                                end: e.end_offset,
+                                page: None,
+                            }],
+                            metadata: HashMap::new(),
+                        })
+                        .collect(),
+                    visual_elements: vec![],
+                    audio_transcript: None,
+                    topics: eb.topics
+                        .iter()
+                        .map(|t| agent_data_processing::ExtractedTopic {
+                            name: t.topic.clone(),
+                            confidence: t.confidence as f32,
+                            keywords: t.keywords.clone(),
+                        })
+                        .collect(),
+                    embeddings: None,
+                };
+                agent_data_processing::EnrichedBlock {
+                    block,
+                    enriched_content,
+                    processing_metadata: agent_data_processing::ProcessingMetadata {
+                        source_url: None,
+                        content_hash: {
+                            use std::hash::{Hash, Hasher};
+                            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                            eb.block.content.hash(&mut hasher);
+                            format!("{:x}", hasher.finish())
+                        },
+                        ingested_at: chrono::Utc::now(),
+                        processing_version: "1.0.0".to_string(),
+                        quality_score: 0.8,
+                        confidence_scores: HashMap::new(),
+                    },
+                }
+            })
+            .collect();
+        
+        self.unified_indexer
+            .index_blocks(processing_enriched_blocks)
+            .await
+            .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to index blocks: {}", e)))?;
+        
+        let blocks_indexed = enriched_blocks.len();
         info!("Indexed {} blocks", blocks_indexed);
 
         // Record success in circuit breaker
@@ -917,49 +997,54 @@ impl MultimodalOrchestrator {
                 let result: Result<ProcessingResult, OrchestrationError> = async {
                     let path = Path::new(&file_path_str);
                     let content = tokio::fs::read_to_string(path).await?;
-                    let blocks = unified_ingestor
-                        .ingest(DataInput {
-                            id: ProcessingId::new(),
-                            source: DataSource::File(FileSource {
-                                path: PathBuf::from(&file_path_str),
-                                content_type: ContentType::Document,
-                                size_bytes: 0, // TODO: Get actual file size
-                                last_modified: chrono::Utc::now(),
-                            }),
+                    
+                    // Create local DataInput
+                    let local_input = DataInput {
+                        id: ProcessingId::new(),
+                        source: DataSource::File(FileSource {
+                            path: PathBuf::from(&file_path_str),
                             content_type: ContentType::Document,
-                            content: DataContent::Text(content),
-                            metadata: HashMap::new(),
-                            processing_context: ProcessingContext {
-                                priority: ProcessingPriority::Normal,
-                                timeout: None,
-                            },
-                        })
-                        .await?;
-                    let blocks_vec = match &blocks {
-                        BlockData::Text(content) => vec![Block {
-                            id: Uuid::new_v4().to_string(),
-                            content: content.clone(),
-                            block_type: "text".to_string(),
-                            content_type: ContentType::Text,
-                            metadata: HashMap::new(),
-                        }],
-                        BlockData::Blocks(existing_blocks) => existing_blocks.clone(),
+                            size_bytes: 0, // TODO: Get actual file size
+                            last_modified: chrono::Utc::now(),
+                        }),
+                        content_type: ContentType::Document,
+                        content: DataContent::Text(content),
+                        metadata: HashMap::new(),
+                        processing_context: ProcessingContext {
+                            priority: ProcessingPriority::Normal,
+                            timeout: None,
+                        },
                     };
-                    let enriched = unified_enricher.enrich_blocks(blocks_vec).await?;
+                    
+                    // Convert to processing DataInput
+                    let processing_input = convert_data_input_to_processing(local_input)?;
+                    
+                    // Ingest
+                    let ingestion_output = unified_ingestor
+                        .ingest(processing_input)
+                        .await
+                        .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to ingest: {}", e)))?;
+                    
+                    // Convert ProcessingOutput to blocks
+                    let blocks = convert_processing_output_to_blocks(ingestion_output)?;
+                    
+                    // Convert to processing blocks
+                    let processing_blocks: Vec<agent_data_processing::Block> = blocks
+                        .iter()
+                        .map(convert_block_to_processing)
+                        .collect();
+                    
+                    // Enrich
+                    let processing_enriched = unified_enricher
+                        .enrich_blocks(processing_blocks)
+                        .await
+                        .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to enrich: {}", e)))?;
+                    
+                    // Index
                     unified_indexer
-                        .index_blocks(
-                            enriched
-                                .into_iter()
-                                .map(|eb| Block {
-                                    id: eb.block.id,
-                                    content: eb.block.content,
-                                    block_type: eb.block.block_type,
-                                    content_type: eb.block.content_type,
-                                    metadata: eb.block.metadata,
-                                })
-                                .collect(),
-                        )
-                        .await?;
+                        .index_blocks(processing_enriched)
+                        .await
+                        .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to index: {}", e)))?;
                     Ok(ProcessingResult {
                         document_id: Uuid::new_v4(),
                         status: ProcessingStatus::Completed,
@@ -1071,35 +1156,88 @@ impl MultimodalOrchestrator {
 
     /// Enrich blocks with multimodal content
     async fn enrich_blocks(&self, blocks: &[Block]) -> Result<Vec<EnrichedBlock>> {
+        // Convert local blocks to agent_data_processing::Block
+        let processing_blocks: Vec<agent_data_processing::Block> = blocks
+            .iter()
+            .map(convert_block_to_processing)
+            .collect();
+        
         // Use unified enricher to handle enrichment
-        let enriched = self
+        let processing_enriched = self
             .unified_enricher
-            .enrich_blocks(blocks.to_vec())
+            .enrich_blocks(processing_blocks)
             .await
-            .context("Failed to enrich blocks")?;
+            .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to enrich blocks: {}", e)))?;
+
+        // Convert back to local EnrichedBlock types
+        let enriched: Vec<EnrichedBlock> = processing_enriched
+            .into_iter()
+            .map(convert_enriched_block_from_processing)
+            .collect();
 
         Ok(enriched)
     }
 
     /// Index enriched blocks
     async fn index_blocks(&self, blocks: &[EnrichedBlock]) -> Result<usize> {
-        // Use unified indexer to handle indexing
-        // UnifiedIndexer.index_blocks() takes Vec<EnrichedBlock>, not Vec<Block>
-        let raw_blocks: Vec<Block> = blocks
+        // Convert local EnrichedBlock to agent_data_processing::EnrichedBlock
+        let processing_enriched_blocks: Vec<agent_data_processing::EnrichedBlock> = blocks
             .iter()
-            .map(|eb| Block {
-                id: eb.block.id.clone(),
-                content: eb.block.content.clone(),
-                block_type: eb.block.block_type.clone(),
-                content_type: eb.block.content_type.clone(),
-                metadata: eb.block.metadata.clone(),
+            .map(|eb| {
+                let block = convert_block_to_processing(&eb.block);
+                // Create EnrichedContent from entities and topics
+                let enriched_content = agent_data_processing::EnrichedContent {
+                    entities: eb.entities
+                        .iter()
+                        .map(|e| agent_data_processing::ExtractedEntity {
+                            id: Uuid::new_v4().to_string(),
+                            name: e.text.clone(),
+                            entity_type: e.entity_type.clone(),
+                            confidence: e.confidence as f32,
+                            positions: vec![agent_data_processing::TextPosition {
+                                start: e.start_offset,
+                                end: e.end_offset,
+                                page: None,
+                            }],
+                            metadata: HashMap::new(),
+                        })
+                        .collect(),
+                    visual_elements: vec![],
+                    audio_transcript: None,
+                    topics: eb.topics
+                        .iter()
+                        .map(|t| agent_data_processing::ExtractedTopic {
+                            name: t.topic.clone(),
+                            confidence: t.confidence as f32,
+                            keywords: t.keywords.clone(),
+                        })
+                        .collect(),
+                    embeddings: None,
+                };
+                agent_data_processing::EnrichedBlock {
+                    block,
+                    enriched_content,
+                    processing_metadata: agent_data_processing::ProcessingMetadata {
+                        source_url: None,
+                        content_hash: {
+                            use std::hash::{Hash, Hasher};
+                            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                            eb.block.content.hash(&mut hasher);
+                            format!("{:x}", hasher.finish())
+                        },
+                        ingested_at: chrono::Utc::now(),
+                        processing_version: "1.0.0".to_string(),
+                        quality_score: 0.8,
+                        confidence_scores: HashMap::new(),
+                    },
+                }
             })
             .collect();
 
         self.unified_indexer
-            .index_blocks(raw_blocks)
+            .index_blocks(processing_enriched_blocks)
             .await
-            .context("Failed to index blocks")?;
+            .map_err(|e| OrchestrationError::AnyhowError(anyhow::anyhow!("Failed to index blocks: {}", e)))?;
 
         Ok(blocks.len()) // Return count of indexed items
     }
@@ -1338,27 +1476,188 @@ fn detect_content_type_from_path(path: &Path) -> ContentType {
     }
 }
 
-/// Convert ingestion output to blocks
-fn convert_ingestion_output_to_blocks(output: BlockData) -> Result<Vec<Block>> {
-    // Using local type definitions
-    use std::collections::HashMap;
+/// Convert local DataInput to agent_data_processing::DataInput
+#[cfg(feature = "data-processing")]
+fn convert_data_input_to_processing(
+    input: DataInput,
+) -> Result<agent_data_processing::DataInput, OrchestrationError> {
+    use agent_data_processing::{DataContent as ProcessingDataContent, DataSource as ProcessingDataSource, ProcessingContext as ProcessingProcessingContext, ProcessingId as ProcessingProcessingId, ProcessingPriority as ProcessingProcessingPriority, StreamSource};
+    
+    let processing_id = agent_data_processing::ProcessingId {
+        id: input.id.id,
+    };
+    
+    let processing_source = match &input.source {
+        DataSource::File(file_source) => {
+            ProcessingDataSource::File(agent_data_processing::FileSource {
+                path: file_source.path.clone(),
+                content_type: convert_content_type(&file_source.content_type),
+                size_bytes: file_source.size_bytes,
+                last_modified: file_source.last_modified,
+            })
+        }
+        DataSource::Url(url) => {
+            ProcessingDataSource::Url(agent_data_processing::UrlSource {
+                url: url.clone(),
+                headers: HashMap::new(),
+            })
+        }
+        DataSource::Stream(data) => {
+            ProcessingDataSource::Stream(StreamSource {
+                stream_id: "multimodal_orchestration".to_string(),
+                content_type: convert_content_type(&input.content_type),
+            })
+        }
+    };
+    
+    let processing_content = match &input.content {
+        DataContent::File(path) => ProcessingDataContent::File(path.clone()),
+        DataContent::Text(text) => ProcessingDataContent::Text(text.clone()),
+        DataContent::Binary(data) => ProcessingDataContent::Binary(data.clone()),
+    };
+    
+    let processing_context = ProcessingProcessingContext {
+        request_id: uuid::Uuid::new_v4().to_string(),
+        user_id: None,
+        project_scope: None,
+        priority: convert_processing_priority(&input.processing_context.priority),
+        deadline: None,
+        tags: vec![],
+    };
+    
+    Ok(agent_data_processing::DataInput {
+        id: processing_id,
+        source: processing_source,
+        content: processing_content,
+        metadata: input.metadata.clone(),
+        processing_context,
+    })
+}
 
-    match output {
-        BlockData::Text(content) => {
-            // Create a single text block
-            let block = Block {
-                id: Uuid::new_v4().to_string(),
-                content_type: ContentType::Text,
-                content,
-                block_type: "text".to_string(),
-                metadata: HashMap::new(),
-            };
-            Ok(vec![block])
-        }
-        BlockData::Blocks(existing_blocks) => {
-            // Blocks are already created, just return them
-            Ok(existing_blocks)
-        }
+/// Convert ContentType from local to agent_data_processing
+fn convert_content_type(ct: &ContentType) -> agent_data_processing::ContentType {
+    match ct {
+        ContentType::Text => agent_data_processing::ContentType::Text,
+        ContentType::Image => agent_data_processing::ContentType::Image,
+        ContentType::Video => agent_data_processing::ContentType::Video,
+        ContentType::Audio => agent_data_processing::ContentType::Audio,
+        ContentType::Document => agent_data_processing::ContentType::Document,
+        ContentType::Code => agent_data_processing::ContentType::Code,
+        ContentType::Unknown => agent_data_processing::ContentType::Unknown,
+    }
+}
+
+/// Convert ProcessingPriority from local to agent_data_processing
+fn convert_processing_priority(pp: &ProcessingPriority) -> agent_data_processing::ProcessingPriority {
+    match pp {
+        ProcessingPriority::Low => agent_data_processing::ProcessingPriority::Low,
+        ProcessingPriority::Normal => agent_data_processing::ProcessingPriority::Normal,
+        ProcessingPriority::High => agent_data_processing::ProcessingPriority::High,
+        ProcessingPriority::Critical => agent_data_processing::ProcessingPriority::Critical,
+    }
+}
+
+/// Convert ProcessingOutput to local Block types
+#[cfg(feature = "data-processing")]
+fn convert_processing_output_to_blocks(
+    output: agent_data_processing::ProcessingOutput,
+) -> Result<Vec<Block>, OrchestrationError> {
+    use std::collections::HashMap;
+    
+    // Extract text content from processed_content
+    let text_content = output.processed_content.text_content
+        .unwrap_or_else(|| {
+            // Fallback: try to extract from structured data
+            if let Some(structured) = &output.processed_content.structured_data {
+                serde_json::to_string(structured).unwrap_or_default()
+            } else {
+                String::new()
+            }
+        });
+    
+    // Create a block from the processing output
+    let block = Block {
+        id: output.id.id.to_string(),
+        content: text_content,
+        block_type: format!("{:?}", output.processed_content.content_type),
+        content_type: convert_content_type_from_processing(&output.processed_content.content_type),
+        metadata: output.extracted_metadata,
+    };
+    
+    Ok(vec![block])
+}
+
+/// Convert ContentType from agent_data_processing to local
+fn convert_content_type_from_processing(ct: &agent_data_processing::ContentType) -> ContentType {
+    match ct {
+        agent_data_processing::ContentType::Text => ContentType::Text,
+        agent_data_processing::ContentType::Image => ContentType::Image,
+        agent_data_processing::ContentType::Video => ContentType::Video,
+        agent_data_processing::ContentType::Audio => ContentType::Audio,
+        agent_data_processing::ContentType::Document => ContentType::Document,
+        agent_data_processing::ContentType::Code => ContentType::Code,
+        _ => ContentType::Unknown,
+    }
+}
+
+/// Convert local Block to agent_data_processing::Block
+#[cfg(feature = "data-processing")]
+fn convert_block_to_processing(block: &Block) -> agent_data_processing::Block {
+    agent_data_processing::Block {
+        id: agent_data_processing::ProcessingId {
+            id: Uuid::parse_str(&block.id).unwrap_or_else(|_| Uuid::new_v4()),
+        },
+        content_type: convert_content_type(&block.content_type),
+        data: agent_data_processing::BlockData::Text(block.content.clone()),
+        metadata: block.metadata.clone(),
+    }
+}
+
+/// Convert agent_data_processing::EnrichedBlock to local EnrichedBlock
+#[cfg(feature = "data-processing")]
+fn convert_enriched_block_from_processing(
+    eb: agent_data_processing::EnrichedBlock,
+) -> EnrichedBlock {
+    let block = Block {
+        id: eb.block.id.id.to_string(),
+        content: match &eb.block.data {
+            agent_data_processing::BlockData::Text(text) => text.clone(),
+            agent_data_processing::BlockData::Binary(_) => String::new(),
+            agent_data_processing::BlockData::Structured(data) => {
+                serde_json::to_string(data).unwrap_or_default()
+            }
+        },
+        block_type: format!("{:?}", eb.block.content_type),
+        content_type: convert_content_type_from_processing(&eb.block.content_type),
+        metadata: eb.block.metadata.clone(),
+    };
+    
+    // Convert entities
+    let entities = eb.enriched_content.entities
+        .into_iter()
+        .map(|e| ExtractedEntity {
+            entity_type: e.entity_type,
+            text: e.name,
+            confidence: e.confidence as f64,
+            start_offset: e.positions.first().map(|p| p.start).unwrap_or(0),
+            end_offset: e.positions.first().map(|p| p.end).unwrap_or(0),
+        })
+        .collect();
+    
+    // Convert topics
+    let topics = eb.enriched_content.topics
+        .into_iter()
+        .map(|t| ExtractedTopic {
+            topic: t.name,
+            confidence: t.confidence as f64,
+            keywords: vec![], // Topics don't have keywords in the processing version
+        })
+        .collect();
+    
+    EnrichedBlock {
+        block,
+        entities,
+        topics,
     }
 }
 

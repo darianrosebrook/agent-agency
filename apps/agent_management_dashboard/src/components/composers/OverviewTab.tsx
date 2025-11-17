@@ -1,11 +1,11 @@
 "use client";
 
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useState } from "react";
-import { PanelRightOpen, PanelRightClose } from "lucide-react";
-import { OverviewEditor } from "../editor";
 import svgPaths from "../../imports/svg-8d8l4g1ml9";
 import { useProjectStore } from "../../lib/stores";
 import styles from "./OverviewTab.module.scss";
+import { OverviewEditor } from "./editor";
 
 export function OverviewTab() {
   const [showMetadata, setShowMetadata] = useState(true);
@@ -61,10 +61,7 @@ function EditorOnly({ description }: { description?: string }) {
       <div className={styles.editorOnlyInner}>
         {/* Editor Toolbar */}
         <div className={styles.editorToolbar}>
-          <div
-            aria-hidden="true"
-            className={styles.editorToolbarBorder}
-          />
+          <div aria-hidden="true" className={styles.editorToolbarBorder} />
           <EditorToolbar />
         </div>
 
@@ -86,7 +83,7 @@ function EditorToolbar() {
       <button className={`${styles.toolbarButton} ${styles.toolbarButtonBold}`}>
         <div className={styles.toolbarDropdownIcon}>
           <svg
-                          className={styles.svgIcon}
+            className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -110,10 +107,12 @@ function EditorToolbar() {
       </button>
 
       {/* Italic Button */}
-      <button className={`${styles.toolbarButton} ${styles.toolbarButtonItalic}`}>
+      <button
+        className={`${styles.toolbarButton} ${styles.toolbarButtonItalic}`}
+      >
         <div className={styles.toolbarDropdownIcon}>
           <svg
-                          className={styles.svgIcon}
+            className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -141,12 +140,10 @@ function EditorToolbar() {
 
       {/* Text Style Dropdown */}
       <button className={styles.toolbarDropdown}>
-        <span className={styles.toolbarDropdownText}>
-          Text
-        </span>
+        <span className={styles.toolbarDropdownText}>Text</span>
         <div className={styles.toolbarDropdownIcon}>
           <svg
-                          className={styles.svgIcon}
+            className={styles.svgIcon}
             fill="none"
             preserveAspectRatio="none"
             viewBox="0 0 16 16"
@@ -164,9 +161,7 @@ function EditorToolbar() {
       </button>
 
       {/* More toolbar buttons would go here */}
-      <div className={styles.toolbarHint}>
-        Rich text editor toolbar
-      </div>
+      <div className={styles.toolbarHint}>Rich text editor toolbar</div>
     </div>
   );
 }
@@ -176,9 +171,7 @@ function MarkdownEditorPlaceholder({ description }: { description?: string }) {
     return (
       <div className={styles.editorPlaceholder}>
         <div className={styles.editorPlaceholderContent}>
-          <p className={styles.editorPlaceholderText}>
-            {description}
-          </p>
+          <p className={styles.editorPlaceholderText}>{description}</p>
         </div>
 
         {/* Edit hint */}
@@ -193,9 +186,7 @@ function MarkdownEditorPlaceholder({ description }: { description?: string }) {
     <div className={styles.editorPlaceholder}>
       {/* Heading */}
       <div className={styles.editorPlaceholderHeading}>
-        <h1 className={styles.editorPlaceholderHeadingText}>
-          Project Vision
-        </h1>
+        <h1 className={styles.editorPlaceholderHeadingText}>Project Vision</h1>
       </div>
 
       {/* Paragraph */}

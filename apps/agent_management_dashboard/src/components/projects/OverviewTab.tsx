@@ -113,7 +113,7 @@ export function OverviewTab() {
       }
 
       const newContent = overview ? `<p>${overview}</p>` : "";
-      
+
       // Only update if content is different and not currently saving
       if (newContent !== editorContentRef.current && !isSaving) {
         editorContentRef.current = newContent;
@@ -121,7 +121,7 @@ export function OverviewTab() {
         setLastSavedContent(overview ?? "");
         acknowledgeUpdates(); // Clear the update indicator after applying
       }
-    }, [isSaving, acknowledgeUpdates]),
+    }, [isSaving]),
   });
 
   // Initialize content from project

@@ -103,7 +103,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       try {
         const currentUser = await getCurrentUser();
         // Try to extract workspace_id from user preferences or metadata
-        workspaceId = (currentUser.preferences?.workspace_id as string) || undefined;
+        workspaceId =
+          (currentUser.preferences?.workspace_id as string) || undefined;
       } catch (err) {
         // If getCurrentUser fails, proceed with undefined (backend will extract from auth token)
         console.warn("Failed to fetch current user for workspace_id:", err);
@@ -207,7 +208,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       try {
         const currentUser = await getCurrentUser();
         // Try to extract workspace_id from user preferences or metadata
-        workspaceId = (currentUser.preferences?.workspace_id as string) || undefined;
+        workspaceId =
+          (currentUser.preferences?.workspace_id as string) || undefined;
       } catch (err) {
         // If getCurrentUser fails, proceed with undefined (backend will extract from auth token)
         console.warn("Failed to fetch current user for workspace_id:", err);
@@ -215,10 +217,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       // Create chat session in database via API
       // Backend will extract workspace_id from auth token if not provided
-      const session = await createChatSession(
-        { title },
-        workspaceId
-      );
+      const session = await createChatSession({ title }, workspaceId);
 
       // Create local ChatData from API response
       const newChat: ChatData = {
@@ -266,11 +265,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       try {
         // Send message to API and get response
+        // Note: Message type doesn't include metadata, but API accepts it
         const apiMessage = await sendChatMessage(
           currentChatId,
           message.content,
           message.role,
-          message.metadata as Record<string, unknown> | undefined
+          undefined // metadata not available in Message type
         );
 
         // Map API response to UI Message format

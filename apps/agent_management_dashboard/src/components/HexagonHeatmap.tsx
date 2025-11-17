@@ -112,9 +112,7 @@ export function HexagonHeatmap({
           : [];
 
         // Safely extract agents array with fallback
-        const agentsArray = Array.isArray(agentsData?.agents)
-          ? agentsData.agents
-          : Array.isArray(agentsData)
+        const agentsArray: Agent[] = Array.isArray(agentsData)
           ? agentsData
           : [];
 
@@ -158,7 +156,7 @@ export function HexagonHeatmap({
     const getTaskCompletion = (task: Task): number => {
       if (task.status === "completed") return 100;
       if (task.status === "failed" || task.status === "cancelled") return 0;
-      if (task.status === "running") return 50; // In progress
+      if (task.status === "in_progress") return 50; // In progress
       return 0; // Pending
     };
 

@@ -17,7 +17,7 @@ export function MarkdownHeading({
   className = "",
   style,
 }: MarkdownHeadingProps) {
-  const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+  const HeadingTag = `h${level}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   const headingClass = level === 1 ? styles.editorHeading : styles.editorHeading2;
   const textClass = level === 1 ? styles.editorHeadingText : styles.editorHeading2Text;
 

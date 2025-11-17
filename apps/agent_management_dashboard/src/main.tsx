@@ -192,7 +192,7 @@ function App() {
 
             {/* Error routes */}
             <Route path="/404" element={<NotFoundPage />} />
-            <Route path="/error" element={<ErrorPage />} />
+            <Route path="/error" element={<ErrorPage error={new Error("Page not found")} reset={() => window.location.href = "/"} />} />
 
             {/* Catch all */}
             <Route path="*" element={<NotFoundPage />} />

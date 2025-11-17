@@ -454,21 +454,23 @@ impl CouncilCoordinatorAdapter {
                 then: acceptance_str.clone(),
                 priority: Some(match task.priority {
                     agent_agency_contracts::types::planning::TaskPriority::Critical => {
-                        "critical".to_string()
+                        agent_agency_contracts::MoSCoWPriority::Must
                     }
                     agent_agency_contracts::types::planning::TaskPriority::Urgent => {
-                        "high".to_string()
+                        agent_agency_contracts::MoSCoWPriority::Must
                     }
                     agent_agency_contracts::types::planning::TaskPriority::High => {
-                        "high".to_string()
+                        agent_agency_contracts::MoSCoWPriority::Should
                     }
                     agent_agency_contracts::types::planning::TaskPriority::Normal => {
-                        "normal".to_string()
+                        agent_agency_contracts::MoSCoWPriority::Should
                     }
                     agent_agency_contracts::types::planning::TaskPriority::Medium => {
-                        "normal".to_string()
+                        agent_agency_contracts::MoSCoWPriority::Could
                     }
-                    agent_agency_contracts::types::planning::TaskPriority::Low => "low".to_string(),
+                    agent_agency_contracts::types::planning::TaskPriority::Low => {
+                        agent_agency_contracts::MoSCoWPriority::Could
+                    }
                 }),
             }]
         } else {
@@ -554,12 +556,12 @@ impl CouncilCoordinatorAdapter {
                 } else {
                     0.75
                 },
-                function_coverage: if risk_tier == 1 {
-                    0.9
+                mutation_score: if risk_tier == 1 {
+                    Some(0.7)
                 } else if risk_tier == 2 {
-                    0.8
+                    Some(0.5)
                 } else {
-                    0.7
+                    Some(0.3)
                 },
             }),
         };

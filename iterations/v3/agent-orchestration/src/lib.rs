@@ -1106,7 +1106,7 @@ impl AgentOrchestrationService {
 
         let orchestrator = std::sync::Arc::new(multimodal_orchestration::MultimodalOrchestrator::new()
             .await
-            .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?);
+            .map_err(|e| OrchestrationError::AnyhowError(e))?);
 
         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
 
@@ -1303,7 +1303,7 @@ impl AgentOrchestrationService {
         let execution_id = Uuid::new_v4();
         let task_execution_result = TaskExecutionResult {
             execution_id,
-            task_id: task.id.clone(),
+            task_id: Uuid::parse_str(&task.id).unwrap_or_else(|_| Uuid::new_v4()),
             success: matches!(execution_result.status, multimodal_orchestration::ProcessingStatus::Completed),
             output: format!(
                 "Multimodal processing: {} blocks processed",

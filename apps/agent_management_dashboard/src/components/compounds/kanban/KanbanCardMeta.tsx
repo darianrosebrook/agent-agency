@@ -10,7 +10,7 @@ interface KanbanCardMetaProps {
 
 export function KanbanCardMeta({ icon, text, className }: KanbanCardMetaProps) {
   const iconElement =
-    typeof icon === "object" && "path" in icon ? (
+    icon && typeof icon === "object" && "path" in icon ? (
       <KanbanIcon
         iconPath={icon.path}
         size={icon.size || 13.999}

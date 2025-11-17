@@ -54,24 +54,27 @@ export function TimelineTab({ projectId }: TimelineTabProps = {}) {
                 tasks: res.tasks.map((t) => ({
                   id: t.task_id || t.id || '',
                   title: t.title,
-                  description: t.description || undefined,
+                  description: t.description || '',
+                  risk_tier: 'tier2', // Default tier for project tasks
+                  scope: {},
+                  acceptance_criteria: [],
+                  context: {},
                   status: t.status,
-                  worker_id: t.assigned_worker_id || undefined,
+                  assigned_worker_id: t.assigned_worker_id || null,
+                  project_id: projectId || null,
+                  priority: t.priority || null,
                   created_at: t.created_at,
                   updated_at: t.updated_at,
-                  started_at: undefined, // Not in ProjectTask
-                  completed_at: t.completed_at || undefined,
-                  priority: t.priority || undefined,
-                  type: undefined,
-                  metadata: undefined,
+                  completed_at: t.completed_at || null,
                 })) as Task[],
               }))
             : listTasks(),
           getAgents(),
         ]);
         setTasks(tasksData.tasks || []);
-        // Handle agents array/object response
-        setAgents(Array.isArray(agentsData) ? agentsData : (agentsData?.agents || []));
+        // Ensure agents is an array
+        const agentsArray: Agent[] = Array.isArray(agentsData) ? agentsData : [];
+        setAgents(agentsArray);
       } catch (err) {
         console.error("Failed to fetch tasks and agents:", err);
         setError(
@@ -103,7 +106,7 @@ export function TimelineTab({ projectId }: TimelineTabProps = {}) {
     }
 
     return tasks.map((task): TimelineTask => {
-      const agent = task.worker_id ? agentMap.get(task.worker_id) : null;
+      const agent = task.assigned_worker_id ? agentMap.get(task.assigned_worker_id) : null;
       // Use created_at as start date (started_at doesn't exist in backend)
       const startDate = task.created_at
         ? new Date(task.created_at)
@@ -126,16 +129,20 @@ export function TimelineTab({ projectId }: TimelineTabProps = {}) {
       let status: "completed" | "in-progress" | "pending";
       if (task.status === "completed") {
         status = "completed";
-      } else if (task.status === "running" || task.status === "in_progress") {
+      } else if (task.status === "in_progress") {
         status = "in-progress";
       } else {
         status = "pending";
       }
 
-      // Extract tags from metadata or use defaults based on task type/priority
+      // Extract tags from metadata or use defaults based on priority
       const tags: string[] = [];
-      if (task.priority) tags.push(task.priority);
-      if (task.type) tags.push(task.type);
+      if (task.priority !== null && task.priority !== undefined) {
+        // Convert priority number to label
+        if (task.priority >= 7) tags.push("high");
+        else if (task.priority >= 4) tags.push("medium");
+        else tags.push("low");
+      }
       if (task.metadata && typeof task.metadata === "object") {
         const metadataTags = (task.metadata as any).tags;
         if (Array.isArray(metadataTags)) {

@@ -165,7 +165,7 @@ impl DataProcessingService for DataProcessingServiceAdapter {
         for context in contexts {
             match self.process_data(context.clone()).await {
                 Ok(processed_data) => results.push(Ok(processed_data)),
-                Err(e) => results.push(Err(e.to_string())),
+                Err(e) => results.push(Err(format!("{:?}", e))),
             }
         }
         Ok(results)

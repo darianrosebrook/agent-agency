@@ -121,6 +121,7 @@ mod tests {
     #[test]
     fn schema_source_functions_not_empty_or_xyzzy() {
         // Verify they don't return empty or wrong strings (mutation test)
+        // This catches mutations that return "" or "xyzzy" instead of actual schema
         assert_ne!(task_request_schema_source(), "");
         assert_ne!(task_request_schema_source(), "xyzzy");
         assert_ne!(task_response_schema_source(), "");
@@ -131,6 +132,7 @@ mod tests {
         assert_ne!(execution_artifacts_schema_source(), "xyzzy");
         assert_ne!(quality_report_schema_source(), "");
         assert_ne!(quality_report_schema_source(), "xyzzy");
+        // Worker 3 mutation targets - ensure these are explicitly tested
         assert_ne!(refinement_decision_schema_source(), "");
         assert_ne!(refinement_decision_schema_source(), "xyzzy");
         assert_ne!(worker_output_schema_source(), "");
@@ -394,6 +396,80 @@ mod tests {
         // (one or both may fail depending on exact schema requirements)
         assert!(req_result.is_ok() || req_result.is_err(), "Request validation should return a result");
         assert!(resp_result.is_ok() || resp_result.is_err(), "Response validation should return a result");
+    }
+
+    #[test]
+    fn task_request_schema_source_returns_actual_schema() {
+        // Test that task_request_schema_source() returns actual JSON schema content
+        // This catches mutations where it returns "" or "xyzzy"
+        let schema = task_request_schema_source();
+        assert!(!schema.is_empty(), "Schema should not be empty");
+        assert_ne!(schema, "xyzzy", "Schema should not be placeholder string");
+        
+        // Verify it's valid JSON
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(schema);
+        assert!(parsed.is_ok(), "Schema should be valid JSON");
+        
+        // Verify it contains expected schema structure
+        let value = parsed.unwrap();
+        assert!(value.is_object(), "Schema should be a JSON object");
+        // JSON Schema typically has "$schema" or "type" fields
+        assert!(
+            value.get("$schema").is_some() || value.get("type").is_some() || value.get("properties").is_some(),
+            "Schema should contain JSON Schema structure"
+        );
+    }
+
+    #[test]
+    fn task_response_schema_source_returns_actual_schema() {
+        let schema = task_response_schema_source();
+        assert!(!schema.is_empty(), "Schema should not be empty");
+        assert_ne!(schema, "xyzzy", "Schema should not be placeholder string");
+        
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(schema);
+        assert!(parsed.is_ok(), "Schema should be valid JSON");
+        
+        let value = parsed.unwrap();
+        assert!(value.is_object(), "Schema should be a JSON object");
+    }
+
+    #[test]
+    fn working_spec_schema_source_returns_actual_schema() {
+        let schema = working_spec_schema_source();
+        assert!(!schema.is_empty(), "Schema should not be empty");
+        assert_ne!(schema, "xyzzy", "Schema should not be placeholder string");
+        
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(schema);
+        assert!(parsed.is_ok(), "Schema should be valid JSON");
+        
+        let value = parsed.unwrap();
+        assert!(value.is_object(), "Schema should be a JSON object");
+    }
+
+    #[test]
+    fn execution_artifacts_schema_source_returns_actual_schema() {
+        let schema = execution_artifacts_schema_source();
+        assert!(!schema.is_empty(), "Schema should not be empty");
+        assert_ne!(schema, "xyzzy", "Schema should not be placeholder string");
+        
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(schema);
+        assert!(parsed.is_ok(), "Schema should be valid JSON");
+        
+        let value = parsed.unwrap();
+        assert!(value.is_object(), "Schema should be a JSON object");
+    }
+
+    #[test]
+    fn quality_report_schema_source_returns_actual_schema() {
+        let schema = quality_report_schema_source();
+        assert!(!schema.is_empty(), "Schema should not be empty");
+        assert_ne!(schema, "xyzzy", "Schema should not be placeholder string");
+        
+        let parsed: Result<serde_json::Value, _> = serde_json::from_str(schema);
+        assert!(parsed.is_ok(), "Schema should be valid JSON");
+        
+        let value = parsed.unwrap();
+        assert!(value.is_object(), "Schema should be a JSON object");
     }
 }
 

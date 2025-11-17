@@ -105,3 +105,4 @@ export async function loadCacheSettingFromApi(): Promise<void> {
     console.debug("Cache setting not found in API, using default:", error);
   }
 }
+

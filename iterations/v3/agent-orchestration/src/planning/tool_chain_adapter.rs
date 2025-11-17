@@ -59,10 +59,10 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         // - [ ] Add integration tests with real constraint-based planning
         let constraints = system_federated_ml::tool_chain_planner::PlanningConstraints {
             max_chain_length: 10,
-            max_parallel_branches: 3,
-            required_reliability: 0.8,
-            max_cost_cents: context.cost_budget_cents.unwrap_or(1000),
-            timeout_ms: context.time_budget_ms.unwrap_or(30000),
+            max_parallelism: 3,
+            max_cost_cents: context.cost_budget_cents.unwrap_or(1000) as u32,
+            max_time_ms: context.time_budget_ms.unwrap_or(30000),
+            require_fallbacks: false,
         };
 
         // Plan the tool chain using the real planner
