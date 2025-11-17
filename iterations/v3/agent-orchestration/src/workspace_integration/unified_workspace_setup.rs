@@ -12,10 +12,8 @@ use system_resilience::workspace_state::{
 
 #[cfg(feature = "memory")]
 use crate::workspace_integration::EmbeddingServiceAdapter;
-#[cfg(feature = "data-processing")]
 use crate::workspace_integration::FileWatcherBridge;
 
-#[cfg(all(feature = "data-processing", feature = "memory"))]
 use agent_data_processing::ingestion::FileWatcher as DataProcessingFileWatcher;
 #[cfg(feature = "memory")]
 use agent_memory::embedding_integration::EmbeddingIntegration;
@@ -55,7 +53,7 @@ impl Default for UnifiedWorkspaceSetupConfig {
 }
 
 /// Setup unified workspace state manager with file watcher and embedding service
-#[cfg(all(feature = "data-processing", feature = "memory"))]
+#[cfg(feature = "memory")]
 pub async fn setup_unified_workspace(
     config: UnifiedWorkspaceSetupConfig,
     embedding_integration: Arc<EmbeddingIntegration>,
@@ -143,8 +141,10 @@ pub async fn setup_unified_workspace(
 }
 
 /// Setup unified workspace state manager without file watcher (embedding only)
+/// Note: This function is deprecated since data-processing is always enabled.
+/// Use setup_unified_workspace instead.
 #[cfg(feature = "memory")]
-#[cfg(not(feature = "data-processing"))]
+#[allow(dead_code)] // Deprecated - kept for backwards compatibility
 pub async fn setup_unified_workspace_embedding_only(
     config: UnifiedWorkspaceSetupConfig,
     embedding_integration: Arc<EmbeddingIntegration>,
@@ -193,7 +193,6 @@ pub async fn setup_unified_workspace_embedding_only(
 }
 
 /// Setup unified workspace state manager without embedding service (file watcher only)
-#[cfg(feature = "data-processing")]
 #[cfg(not(feature = "memory"))]
 pub async fn setup_unified_workspace_watcher_only(
     config: UnifiedWorkspaceSetupConfig,

@@ -97,9 +97,9 @@ system-resilience = { path = "../system-resilience" }
 agent-research = { path = "../agent-research", optional = true, default-features = false }
 agent-model-management = { path = "../agent-model-management", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead
-system-federated-ml = { path = "../system-federated-ml", optional = true }
+system-federated-ml = { path = "../system-federated-ml" }  # Required for tool-chain planning
 # agent-workers = { path = "../agent-workers", optional = true }  # Circular dependency - using local type definitions instead
-agent-data-processing = { path = "../agent-data-processing", optional = true }
+agent-data-processing = { path = "../agent-data-processing" }  # Required dependency - core orchestration functionality
 agent-mcp = { path = "../agent-mcp", optional = true }
 development-tools = { path = "../development-tools", optional = true }
 
@@ -110,7 +110,7 @@ system-observability = { path = "../system-observability" }
 sysinfo = "0.30"
 
 [features]
-default = ["research", "coreml", "evaluation"]  # Research (claim extraction) is always-on per arbiter stack requirements; evaluation enabled for M1 Max development
+default = ["research", "coreml", "evaluation", "data-processing", "tool-chain"]  # Research (claim extraction) is always-on per arbiter stack requirements; evaluation enabled for M1 Max development; data-processing and tool-chain required for orchestration
 coreml = ["system-acceleration/coreml", "data-infrastructure/coreml", "agent-memory/embeddings-coreml"]  # CoreML/ANE acceleration for production
 system-acceleration = ["coreml"]  # Enable system acceleration features (alias for coreml)
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]
@@ -119,13 +119,13 @@ full = ["development-tools"]
 development = ["development-tools"]
 memory = ["agent-memory/database", "agent-memory/embeddings", "agent-memory/contracts"]  # Gate memory functionality behind feature flag - no coreml
 research = ["agent-research"]  # Research functionality (claim extraction) - now in default features
-data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
+data-processing = []  # Feature flag for data processing (agent-data-processing is now always included)
 evaluation = []  # Gate evaluation framework behind feature flag
 council = []  # Feature flag for council functionality (no direct dependency due to circular dependency)
 task-queue = []  # Enable task queue integration with data-infrastructure
-tool-chain = []  # Feature flag for tool-chain functionality
+tool-chain = []  # Feature flag for tool-chain functionality (system-federated-ml is now always included)
 mcp = ["dep:agent-mcp"]  # Feature flag for MCP functionality
-runtime-optimization = ["dep:system-federated-ml"]  # Feature flag for runtime optimization (ArbiterPipelineOptimizer)
+runtime-optimization = []  # Feature flag for runtime optimization (ArbiterPipelineOptimizer) - system-federated-ml is now always included
 model-management = ["dep:agent-model-management"]  # Feature flag for model management functionality
 
 [dev-dependencies]

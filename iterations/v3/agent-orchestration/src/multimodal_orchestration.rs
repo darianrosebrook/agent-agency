@@ -19,7 +19,6 @@ use uuid::Uuid;
 // Import OrchestrationError from lib.rs
 use crate::OrchestrationError;
 
-#[cfg(feature = "data-processing")]
 use agent_data_processing::{
     UnifiedIngestor, FileWatcher, UnifiedEnrichmentStage, UnifiedIndexer, JobScheduler,
     EnrichmentCircuitBreakerConfig, ingestion::IngestionStage,
@@ -193,142 +192,8 @@ struct ExtractedTopic {
 // When data-processing feature is enabled, these can be replaced with trait objects
 // that implement contracts-defined ports
 
-// Local type definitions for data processing (avoiding direct dependency)
-// These mirror types from agent-data-processing crate but are local to avoid circular dependencies
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[allow(dead_code)] // Reserved for future use
-struct IngestionStage;
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[allow(dead_code)] // Reserved for future use
-struct EnrichmentStage;
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[allow(dead_code)] // Reserved for future use
-struct IndexingStage;
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedIngestor;
-
-#[cfg(not(feature = "data-processing"))]
-impl UnifiedIngestor {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub async fn ingest(&self, _input: DataInput) -> Result<BlockData> {
-        // TODO: Implement real ingestion when agent-data-processing is integrated
-        // - [ ] Enable 'data-processing' feature flag
-        // - [ ] Integrate UnifiedIngestor from agent-data-processing
-        // - [ ] Handle all supported input types (file, database, API, stream)
-        // - [ ] Add error handling for ingestion failures
-        // - [ ] Add progress reporting for long-running ingestions
-        // - [ ] Add unit tests with mock ingestion service
-        // - [ ] Add integration tests with real data sources
-        // PLACEHOLDER: Real ingestion implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIngestor.ingest not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
-    }
-}
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedEnrichmentStage;
-
-#[cfg(not(feature = "data-processing"))]
-impl UnifiedEnrichmentStage {
-    pub fn new(_config: EnrichmentCircuitBreakerConfig) -> Self {
-        Self
-    }
-
-    pub async fn enrich_blocks(&self, _blocks: Vec<Block>) -> Result<Vec<EnrichedBlock>> {
-        // TODO: Implement real enrichment when agent-data-processing is integrated
-        // - [ ] Enable 'data-processing' feature flag
-        // - [ ] Integrate UnifiedEnrichmentStage from agent-data-processing
-        // - [ ] Implement entity extraction, relationship mapping, metadata enhancement
-        // - [ ] Add error handling for enrichment failures
-        // - [ ] Add batch processing optimization for multiple blocks
-        // - [ ] Add unit tests with mock enrichment service
-        // - [ ] Add integration tests with real enrichment pipeline
-        // PLACEHOLDER: Real enrichment implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedEnrichmentStage.enrich_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
-    }
-}
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct UnifiedIndexer;
-
-#[cfg(not(feature = "data-processing"))]
-impl UnifiedIndexer {
-    pub fn new(_dimensions: usize, _neighbors: usize) -> Self {
-        Self
-    }
-
-    pub async fn index_blocks(&self, _blocks: Vec<Block>) -> Result<()> {
-        // TODO: Implement real indexing when agent-data-processing is integrated
-        // - [ ] Enable 'data-processing' feature flag
-        // - [ ] Integrate UnifiedIndexer from agent-data-processing
-        // - [ ] Implement vector indexing with proper embedding generation
-        // - [ ] Add metadata indexing for searchable fields
-        // - [ ] Add error handling for indexing failures
-        // - [ ] Add batch processing optimization
-        // - [ ] Add unit tests with mock indexing service
-        // - [ ] Add integration tests with real indexing pipeline
-        // PLACEHOLDER: Real indexing implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: UnifiedIndexer.index_blocks not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
-    }
-}
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct FileWatcher;
-
-#[cfg(not(feature = "data-processing"))]
-impl FileWatcher {
-    pub fn new(_include_patterns: Vec<String>, _exclude_patterns: Vec<String>) -> Self {
-        Self
-    }
-
-    pub async fn watch(&self, _directory_path: &std::path::Path) -> Result<()> {
-        // TODO: Implement real file watching when agent-data-processing is integrated
-        // - [ ] Enable 'data-processing' feature flag
-        // - [ ] Integrate FileWatcher from agent-data-processing
-        // - [ ] Set up file system watchers using notify crate
-        // - [ ] Handle file creation, modification, and deletion events
-        // - [ ] Filter events by include/exclude patterns
-        // - [ ] Add debouncing for rapid file changes
-        // - [ ] Add error handling for permission issues
-        // - [ ] Add unit tests with mock file system events
-        // - [ ] Add integration tests with real file watching
-        // PLACEHOLDER: Real file watching implementation needed when agent-data-processing is integrated
-        Err(anyhow::anyhow!("PLACEHOLDER: FileWatcher.watch not implemented - requires agent-data-processing integration. Enable 'data-processing' feature to use real implementation."))
-    }
-}
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct JobScheduler;
-
-#[cfg(not(feature = "data-processing"))]
-impl JobScheduler {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn get_active_job_count(&self) -> usize {
-        // PLACEHOLDER: Real job scheduling implementation needed when agent-data-processing is integrated
-        0
-    }
-}
-
-#[cfg(not(feature = "data-processing"))]
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
-struct EnrichmentCircuitBreakerConfig;
+// Data processing types are now imported directly from agent-data-processing crate
+// since data-processing feature is always enabled. No stub implementations needed.
 
 // Local type definitions to avoid circular dependency with agent-workers
 // These mirror types from agent-workers crate
@@ -412,19 +277,14 @@ use std::path::{Path, PathBuf};
 #[derive(Clone)]
 pub struct MultimodalOrchestrator {
     /// Unified ingestor for all content types
-    #[cfg(feature = "data-processing")]
     unified_ingestor: UnifiedIngestor,
     /// File watcher for monitoring directories
-    #[cfg(feature = "data-processing")]
     file_watcher: FileWatcher,
     /// Enrichers for content enhancement
-    #[cfg(feature = "data-processing")]
     unified_enricher: UnifiedEnrichmentStage,
     /// Unified indexer for search capabilities
-    #[cfg(feature = "data-processing")]
     unified_indexer: UnifiedIndexer,
     /// Job scheduler for coordination
-    #[cfg(feature = "data-processing")]
     job_scheduler: JobScheduler,
     /// Circuit breaker for resilience
     circuit_breaker: CircuitBreaker,
@@ -1557,7 +1417,6 @@ fn convert_processing_priority(pp: &ProcessingPriority) -> agent_data_processing
 }
 
 /// Convert ProcessingOutput to local Block types
-#[cfg(feature = "data-processing")]
 fn convert_processing_output_to_blocks(
     output: agent_data_processing::ProcessingOutput,
 ) -> Result<Vec<Block>, OrchestrationError> {
@@ -1600,7 +1459,6 @@ fn convert_content_type_from_processing(ct: &agent_data_processing::ContentType)
 }
 
 /// Convert local Block to agent_data_processing::Block
-#[cfg(feature = "data-processing")]
 fn convert_block_to_processing(block: &Block) -> agent_data_processing::Block {
     agent_data_processing::Block {
         id: agent_data_processing::ProcessingId(
@@ -1613,7 +1471,6 @@ fn convert_block_to_processing(block: &Block) -> agent_data_processing::Block {
 }
 
 /// Convert agent_data_processing::EnrichedBlock to local EnrichedBlock
-#[cfg(feature = "data-processing")]
 fn convert_enriched_block_from_processing(
     eb: agent_data_processing::EnrichedBlock,
 ) -> EnrichedBlock {

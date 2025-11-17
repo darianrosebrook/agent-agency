@@ -3,18 +3,15 @@
 //! Connects agent-data-processing::FileWatcher to system-resilience workspace state manager
 //! @author @darianrosebrook
 
-#[cfg(feature = "data-processing")]
 use agent_data_processing::ingestion::FileWatcher as DataProcessingFileWatcher;
-#[cfg(feature = "data-processing")]
 use agent_data_processing::ingestion_runtime::IngestionCmd;
 use std::path::PathBuf;
 use std::sync::Arc;
 use system_resilience::workspace_state::FileWatcherEventHandler;
 use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 /// Bridge connecting agent-data-processing FileWatcher to workspace state manager
-#[cfg(feature = "data-processing")]
 pub struct FileWatcherBridge {
     file_watcher: Arc<DataProcessingFileWatcher>,
     event_handler: Arc<FileWatcherEventHandler>,
@@ -22,7 +19,6 @@ pub struct FileWatcherBridge {
     watch_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
-#[cfg(feature = "data-processing")]
 impl FileWatcherBridge {
     /// Create new file watcher bridge
     pub fn new(
@@ -113,30 +109,5 @@ impl FileWatcherBridge {
     }
 }
 
-/// TODO: Document placeholder implementation for disabled feature
-///       This is an intentional placeholder when data-processing feature is disabled.
-///       Methods return errors indicating feature is required. Consider improving error messages.
-///
-/// Placeholder implementation when data-processing feature is disabled
-#[cfg(not(feature = "data-processing"))]
-pub struct FileWatcherBridge {
-    _phantom: std::marker::PhantomData<()>,
-}
-
-#[cfg(not(feature = "data-processing"))]
-impl FileWatcherBridge {
-    pub fn new(
-        _file_watcher: (),
-        _event_handler: Arc<FileWatcherEventHandler>,
-    ) -> Result<Self, String> {
-        Err("File watcher bridge requires data-processing feature".to_string())
-    }
-
-    pub async fn start(&mut self) -> Result<(), String> {
-        Err("File watcher bridge requires data-processing feature".to_string())
-    }
-
-    pub async fn stop(&mut self) -> Result<(), String> {
-        Ok(())
-    }
-}
+// FileWatcherBridge is now always available since data-processing feature is always enabled.
+// The real implementation above is used in all cases.
