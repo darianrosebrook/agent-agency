@@ -1488,7 +1488,7 @@ pub enum JobStatus {
 }
 
 /// BM25 full-text search indexer
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Bm25Indexer {
     documents: Arc<RwLock<HashMap<Uuid, DocumentRecord>>>,
     inverted_index: Arc<RwLock<HashMap<String, HashMap<Uuid, u32>>>>,
@@ -1681,7 +1681,7 @@ impl Bm25Indexer {
 }
 
 /// HNSW indexer for vector search
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HnswIndexer {
     index: Arc<Mutex<SimpleHnswIndex>>,
     metadata: Arc<Mutex<HnswMetadata>>,
@@ -2029,6 +2029,16 @@ pub struct VectorStore {
     _pool: DatabasePool,
 }
 
+impl Clone for VectorStore {
+    fn clone(&self) -> Self {
+        Self {
+            _pool: DatabasePool {
+                _pool: self._pool._pool.clone(),
+            },
+        }
+    }
+}
+
 impl VectorStore {
     pub fn new(pool: DatabasePool) -> Self {
         Self { _pool: pool }
@@ -2083,7 +2093,7 @@ pub struct SearchAuditEntry {
 }
 
 /// Job scheduler for indexing operations
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JobScheduler {
     active_jobs: Arc<Mutex<HashMap<Uuid, IngestionJob>>>,
     job_queue: Arc<Mutex<Vec<IngestionJob>>>,

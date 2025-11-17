@@ -192,6 +192,18 @@ pub struct AsrEnricher {
     whisper_model_path: Option<std::path::PathBuf>,
 }
 
+impl Clone for AsrEnricher {
+    fn clone(&self) -> Self {
+        let circuit_breaker = self.circuit_breaker.lock().unwrap().clone();
+        Self {
+            _config: self._config.clone(),
+            circuit_breaker: Mutex::new(circuit_breaker),
+            #[cfg(feature = "coreml")]
+            whisper_model_path: self.whisper_model_path.clone(),
+        }
+    }
+}
+
 impl AsrEnricher {
     pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
         let circuit_breaker = CircuitBreaker::new(
@@ -656,6 +668,16 @@ pub struct VisionEnricher {
     circuit_breaker: Mutex<CircuitBreaker>,
 }
 
+impl Clone for VisionEnricher {
+    fn clone(&self) -> Self {
+        let circuit_breaker = self.circuit_breaker.lock().unwrap().clone();
+        Self {
+            _config: self._config.clone(),
+            circuit_breaker: Mutex::new(circuit_breaker),
+        }
+    }
+}
+
 impl VisionEnricher {
     pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
         let circuit_breaker = CircuitBreaker::new(
@@ -971,6 +993,16 @@ pub struct EntityEnricher {
     circuit_breaker: Mutex<CircuitBreaker>,
 }
 
+impl Clone for EntityEnricher {
+    fn clone(&self) -> Self {
+        let circuit_breaker = self.circuit_breaker.lock().unwrap().clone();
+        Self {
+            _config: self._config.clone(),
+            circuit_breaker: Mutex::new(circuit_breaker),
+        }
+    }
+}
+
 impl EntityEnricher {
     pub fn new(config: EnrichmentCircuitBreakerConfig) -> Self {
         let circuit_breaker = CircuitBreaker::new(
@@ -1275,6 +1307,16 @@ impl EntityEnricher {
 pub struct VisualCaptioningEnricher {
     _config: EnrichmentCircuitBreakerConfig,
     circuit_breaker: Mutex<CircuitBreaker>,
+}
+
+impl Clone for VisualCaptioningEnricher {
+    fn clone(&self) -> Self {
+        let circuit_breaker = self.circuit_breaker.lock().unwrap().clone();
+        Self {
+            _config: self._config.clone(),
+            circuit_breaker: Mutex::new(circuit_breaker),
+        }
+    }
 }
 
 impl VisualCaptioningEnricher {
@@ -1616,7 +1658,7 @@ impl VisualCaptioningEnricher {
 }
 
 /// Circuit breaker for enrichment reliability
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CircuitBreaker {
     failure_threshold: u64,
     recovery_timeout_secs: u64,

@@ -909,7 +909,7 @@ impl ApiIngestor {
 /// Consolidated ingestor implementations from ingestors crate
 
 /// Captions ingestor for video captions
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CaptionsIngestor;
 
 impl CaptionsIngestor {
@@ -1345,7 +1345,7 @@ impl IngestionStage for CaptionsIngestor {
 }
 
 /// Diagrams ingestor for technical diagrams
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DiagramsIngestor;
 
 impl DiagramsIngestor {
@@ -1514,7 +1514,7 @@ impl IngestionStage for DiagramsIngestor {
 }
 
 /// Video ingestor for video content
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VideoIngestor;
 
 impl VideoIngestor {
@@ -1656,7 +1656,7 @@ impl IngestionStage for VideoIngestor {
 }
 
 /// Slides ingestor for presentation slides
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlidesIngestor;
 
 impl SlidesIngestor {
@@ -1836,6 +1836,32 @@ pub struct FileWatcher {
     file_patterns: Vec<String>,
     glob_set: Option<globset::GlobSet>,
     cmd_sender: Option<tokio::sync::broadcast::Sender<crate::ingestion_runtime::IngestionCmd>>,
+}
+
+impl Clone for FileWatcher {
+    fn clone(&self) -> Self {
+        // Rebuild GlobSet from patterns since GlobSet doesn't implement Clone
+        let glob_set = if !self.file_patterns.is_empty() {
+            let mut builder = globset::GlobSetBuilder::new();
+            for pattern in &self.file_patterns {
+                if let Ok(glob) = globset::Glob::new(pattern) {
+                    let _ = builder.add(glob);
+                }
+            }
+            builder.build().ok()
+        } else {
+            None
+        };
+
+        Self {
+            watch_paths: self.watch_paths.clone(),
+            file_patterns: self.file_patterns.clone(),
+            glob_set,
+            // Sender cannot be cloned, so we set it to None
+            // The caller should rebind the sender after cloning if needed
+            cmd_sender: None,
+        }
+    }
 }
 
 impl FileWatcher {
