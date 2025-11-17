@@ -698,50 +698,46 @@ impl GarbageCollector {
     }
 
     /// Get object age in seconds
-    fn get_object_age(&self, _digest: &Digest) -> Result<Option<u64>> {
-        // TODO: Implement based on your object store
-        //       Currently returns hardcoded 0; should implement object age calculation based on object store metadata and timestamps.
-        //       <One-sentence context & why this exists>
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Query object store metadata for creation/modification timestamps
-        // [ ] Calculate age as current time minus object timestamp
-        // [ ] Handle missing timestamp metadata gracefully
-        // [ ] Support different timestamp fields (created_at, modified_at, etc.)
-        // [ ] Add caching for frequently accessed objects
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // [ ] Object age calculation returns accurate ages for existing objects
-        // [ ] Missing timestamp metadata handled gracefully (returns None)
-        // [ ] Age calculations are consistent across calls
-        // [ ] Performance impact is minimal on GC operations
-        // [ ] Works with different object store implementations
-        //
-        // DEPENDENCIES:
-        // [ ] Object store with timestamp metadata support (Required)
-        // [ ] Time source for current time calculation (Required)
-        // [ ] Metadata schema understanding (Optional)
-        //
-        // ESTIMATED EFFORT: 1-2 days
-        // PRIORITY: Low
-        // BLOCKING: No - GC works with default age 0
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (features, APIs, data writes)
-        // - Change Budget: max_files=4, max_loc=150
-        // - Reviewer Requirements: Code review by GC team
-        Ok(Some(0))
+    /// 
+    /// Calculates object age from file modification time.
+    /// Returns None if object doesn't exist or metadata is unavailable.
+    fn get_object_age(&self, digest: &Digest) -> Result<Option<u64>> {
+        // Get blob path to access file metadata
+        let blob_path = {
+            let hex_digest = digest.to_hex();
+            let dir = &hex_digest[0..2];
+            let objects_dir = std::path::PathBuf::from("./.recovery/objects");
+            objects_dir.join(dir).join(&hex_digest)
+        };
+        
+        if !blob_path.exists() {
+            return Ok(None);
+        }
+        
+        // Get file metadata for modification time
+        match std::fs::metadata(&blob_path) {
+            Ok(metadata) => {
+                // Use modification time as object creation time
+                // (in a real system, we might have explicit creation time in metadata)
+                if let Ok(modified_time) = metadata.modified() {
+                    let current_time = std::time::SystemTime::now();
+                    
+                    if let Ok(duration) = current_time.duration_since(modified_time) {
+                        Ok(Some(duration.as_secs()))
+                    } else {
+                        // File is in the future (clock skew) - return 0
+                        Ok(Some(0))
+                    }
+                } else {
+                    // Metadata doesn't support modification time
+                    Ok(None)
+                }
+            }
+            Err(_) => {
+                // File doesn't exist or can't read metadata
+                Ok(None)
+            }
+        }
     }
 
     /// Pack an object
