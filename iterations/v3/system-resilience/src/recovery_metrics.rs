@@ -15,6 +15,8 @@ pub struct RecoveryMetricsCollector {
     metrics_backend: Arc<dyn MetricsBackend>,
     session_stats: Arc<RwLock<std::collections::HashMap<String, ChangeStats>>>,
     global_metrics: Arc<RwLock<RecoveryMetrics>>,
+    /// Latency samples for percentile calculation (limited to recent samples for memory efficiency)
+    latency_samples: Arc<RwLock<Vec<f64>>>,
 }
 
 impl RecoveryMetricsCollector {
@@ -39,6 +41,37 @@ impl RecoveryMetricsCollector {
                 pack_efficiency: 0.0,
                 budget_usage_pct: 0.0,
             })),
+            latency_samples: Arc::new(RwLock::new(Vec::new())),
+        }
+    }
+    
+    /// Calculate percentile from sorted samples
+    /// 
+    /// Uses linear interpolation for non-integer indices (nearest-rank method).
+    /// Returns 0.0 if samples are empty.
+    fn calculate_percentile(samples: &[f64], percentile: f64) -> f64 {
+        if samples.is_empty() {
+            return 0.0;
+        }
+        
+        if percentile <= 0.0 {
+            return samples[0];
+        }
+        if percentile >= 100.0 {
+            return samples[samples.len() - 1];
+        }
+        
+        // Calculate index using nearest-rank method with linear interpolation
+        let index = (percentile / 100.0) * (samples.len() - 1) as f64;
+        let lower = index.floor() as usize;
+        let upper = index.ceil() as usize;
+        let fraction = index - lower as f64;
+        
+        if lower == upper {
+            samples[lower]
+        } else {
+            // Linear interpolation between lower and upper values
+            samples[lower] + (samples[upper] - samples[lower]) * fraction
         }
     }
 
@@ -160,51 +193,35 @@ impl RecoveryMetricsCollector {
             .await;
 
         if success {
-            // TODO: Implement proper percentile calculation for latency metrics
-            //       Currently uses basic calculation; should implement proper percentile calculation using statistical methods for accurate latency metrics.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Percentiles are calculated using proper statistical methods
-            // - P50 and P95 calculations are accurate
-            // - Calculation handles various data distributions
-            // - Performance is acceptable
-            //
-            // DEPENDENCIES:
-            // - Statistical analysis libraries (Required)
-            // - Percentile calculation utilities (Required)
-            // - Metrics storage infrastructure (Required)
-            //
-            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (metrics calculation feature)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Statistics expertise
+            // Store latency sample for percentile calculation
             {
-                let mut global = self.global_metrics.write().await; // Temporary: basic until proper percentile calculation
-                if global.restore_latency_p50_ms == 0
-                    || duration_ms < global.restore_latency_p50_ms as f64
-                {
-                    global.restore_latency_p50_ms = duration_ms as u64;
+                let mut samples = self.latency_samples.write().await;
+                samples.push(duration_ms);
+                
+                // Limit to most recent 1000 samples for memory efficiency
+                const MAX_SAMPLES: usize = 1000;
+                if samples.len() > MAX_SAMPLES {
+                    samples.remove(0);
                 }
-                if duration_ms > global.restore_latency_p95_ms as f64 {
-                    global.restore_latency_p95_ms = duration_ms as u64;
-                }
+            }
+            
+            // Calculate percentiles from stored samples
+            let (p50, p95) = {
+                let samples = self.latency_samples.read().await;
+                let mut sorted_samples = samples.clone();
+                sorted_samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                
+                let p50 = Self::calculate_percentile(&sorted_samples, 50.0);
+                let p95 = Self::calculate_percentile(&sorted_samples, 95.0);
+                
+                (p50, p95)
+            };
+            
+            // Update global metrics with calculated percentiles
+            {
+                let mut global = self.global_metrics.write().await;
+                global.restore_latency_p50_ms = p50 as u64;
+                global.restore_latency_p95_ms = p95 as u64;
             }
         }
 
