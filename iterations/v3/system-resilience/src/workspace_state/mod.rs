@@ -24,6 +24,7 @@ pub use context_generator::{
 };
 pub use embedding_trait::{EmbeddingServiceTrait, EmbeddingServiceWrapper};
 pub use events::{ContextType, WorkspaceStateEvent};
+pub use file_watcher_trait::FileWatcherEventHandler;
 pub use rollback::{RollbackManager, RollbackResult, ViewMetadata, WorkspaceViewManager};
 pub use state_manager::WorkspaceStateManager;
 pub use state_types::*;

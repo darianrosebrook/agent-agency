@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 use system_resilience::workspace_state::{
-    ContextGenerationConfig, MetricsConfig, UnifiedWorkspaceConfig,
+    ContextGenerationConfig, FileWatchConfig, MetricsConfig, UnifiedWorkspaceConfig,
     UnifiedWorkspaceStateManagerBuilder, WorkspaceConfig,
 };
 
@@ -74,7 +74,7 @@ pub async fn setup_unified_workspace(
             .map_err(|e| format!("Failed to create file watcher: {}", e))?;
 
     // Build unified workspace state manager
-    let watch_config = FileWatchConfig {
+    let watch_config = system_resilience::workspace_state::FileWatchConfig {
         enabled: true,
         watch_paths: config.watch_paths.clone(),
         file_patterns: config.file_patterns.clone(),
@@ -207,7 +207,7 @@ pub async fn setup_unified_workspace_watcher_only(
             .map_err(|e| format!("Failed to create file watcher: {}", e))?;
 
     // Build unified workspace state manager
-    let watch_config = FileWatchConfig {
+    let watch_config = system_resilience::workspace_state::FileWatchConfig {
         enabled: true,
         watch_paths: config.watch_paths.clone(),
         file_patterns: config.file_patterns.clone(),

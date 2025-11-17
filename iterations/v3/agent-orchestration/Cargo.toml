@@ -99,7 +99,8 @@ agent-model-management = { path = "../agent-model-management", optional = true }
 # agent-constitutional-council = { path = "../agent-constitutional-council", optional = true }  # Circular dependency - using local type definitions instead
 system-federated-ml = { path = "../system-federated-ml", optional = true }
 # agent-workers = { path = "../agent-workers", optional = true }  # Circular dependency - using local type definitions instead
-agent-data-processing = { path = "../agent-data-processing", optional = true }  
+agent-data-processing = { path = "../agent-data-processing", optional = true }
+agent-mcp = { path = "../agent-mcp", optional = true }
 development-tools = { path = "../development-tools", optional = true }
 
 # Observability dependency
@@ -120,10 +121,10 @@ memory = ["agent-memory/database", "agent-memory/embeddings", "agent-memory/cont
 research = ["agent-research"]  # Research functionality (claim extraction) - now in default features
 data-processing = ["dep:agent-data-processing"]  # Gate data processing integration behind feature flag
 evaluation = []  # Gate evaluation framework behind feature flag
-council = []  # Feature flag for council functionality
+council = []  # Feature flag for council functionality (no direct dependency due to circular dependency)
 task-queue = []  # Enable task queue integration with data-infrastructure
 tool-chain = []  # Feature flag for tool-chain functionality
-mcp = []  # Feature flag for MCP functionality
+mcp = ["dep:agent-mcp"]  # Feature flag for MCP functionality
 runtime-optimization = ["dep:system-federated-ml"]  # Feature flag for runtime optimization (ArbiterPipelineOptimizer)
 model-management = ["dep:agent-model-management"]  # Feature flag for model management functionality
 

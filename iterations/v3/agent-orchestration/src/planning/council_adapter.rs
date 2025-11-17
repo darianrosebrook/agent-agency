@@ -13,7 +13,8 @@ use std::sync::Arc;
 #[cfg(feature = "council")]
 use agent_agency_contracts::{
     errors::CouncilResult,
-    types::council::{CouncilVerdict, SessionId, SessionStatus, SessionStatusType},
+    ports::council_coordinator::{SessionId, SessionStatus, SessionStatusType},
+    types::council::CouncilVerdict,
     types::planning::TaskDescriptor,
     CouncilCoordinator,
 };
@@ -25,6 +26,16 @@ pub struct CouncilCoordinatorAdapter {
     council: Arc<crate::council::Council>,
     /// Database operations for session tracking (optional - falls back to in-memory if None)
     db_ops: Option<Arc<dyn crate::planning::DatabaseOperations>>,
+}
+
+/// Review priority levels matching agent-constitutional-council::ReviewPriority
+/// Defined locally to avoid circular dependency (agent-constitutional-council depends on agent-orchestration)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReviewPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
 }
 
 #[cfg(feature = "council")]
@@ -45,6 +56,20 @@ impl CouncilCoordinatorAdapter {
         Self {
             council,
             db_ops: Some(db_ops),
+        }
+    }
+
+    /// Map contracts TaskPriority to council ReviewPriority
+    fn map_task_priority(
+        &self,
+        priority: agent_agency_contracts::types::planning::TaskPriority,
+    ) -> ReviewPriority {
+        match priority {
+            agent_agency_contracts::types::planning::TaskPriority::Low => ReviewPriority::Low,
+            agent_agency_contracts::types::planning::TaskPriority::Normal => ReviewPriority::Normal,
+            agent_agency_contracts::types::planning::TaskPriority::High => ReviewPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Urgent => ReviewPriority::High,
+            agent_agency_contracts::types::planning::TaskPriority::Critical => ReviewPriority::Critical,
         }
     }
 }
@@ -185,16 +210,18 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
             }
         }
 
-        // Convert council FinalDecision to contracts CouncilVerdict
-        // Simplified - needs proper verdict mapping from local council
-        let verdict = CouncilVerdict {
-            quorum_achieved: true,
-            total_judges: 1,
-            votes_for_decision: 1,
-            dissenting_opinions: vec![],
-            judge_contributions: vec![],
-            final_decision: "approved".to_string(),
-            confidence_score: final_decision.score,
+        // Convert council FinalDecision to contracts CouncilVerdict enum
+        // Map verdict label to CouncilVerdict enum variant
+        let verdict = match final_decision.label {
+            agent_agency_contracts::VerdictLabel::Approved => CouncilVerdict::Approved,
+            agent_agency_contracts::VerdictLabel::ConditionalApproval => {
+                CouncilVerdict::ConditionalApproval
+            }
+            agent_agency_contracts::VerdictLabel::Rejected => CouncilVerdict::Rejected,
+            agent_agency_contracts::VerdictLabel::NeedsMoreInfo => {
+                // Treat NeedsMoreInfo as ConditionalApproval
+                CouncilVerdict::ConditionalApproval
+            }
         };
 
         Ok(verdict)
@@ -515,27 +542,4 @@ impl CouncilCoordinatorAdapter {
         }
     }
 
-    /// Map contracts TaskPriority to council ReviewPriority
-    fn map_task_priority(
-        &self,
-        priority: agent_agency_contracts::types::planning::TaskPriority,
-    ) -> agent_constitutional_council::ReviewPriority {
-        match priority {
-            agent_agency_contracts::types::planning::TaskPriority::Low => {
-                agent_constitutional_council::ReviewPriority::Low
-            }
-            agent_agency_contracts::types::planning::TaskPriority::Normal => {
-                agent_constitutional_council::ReviewPriority::Normal
-            }
-            agent_agency_contracts::types::planning::TaskPriority::High => {
-                agent_constitutional_council::ReviewPriority::High
-            }
-            agent_agency_contracts::types::planning::TaskPriority::Urgent => {
-                agent_constitutional_council::ReviewPriority::High
-            }
-            agent_agency_contracts::types::planning::TaskPriority::Critical => {
-                agent_constitutional_council::ReviewPriority::Critical
-            }
-        }
-    }
 }

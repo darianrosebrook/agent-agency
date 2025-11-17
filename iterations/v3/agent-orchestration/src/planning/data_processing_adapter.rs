@@ -13,100 +13,123 @@ use std::sync::Arc;
 #[cfg(feature = "data-processing")]
 use agent_agency_contracts::{
     errors::DataProcessingResult,
-    types::data_processing::{
+    ports::data_processing::{
         DataFormat, FileOperation, FileOperationResult, ProcessedData, ProcessingContent,
         ProcessingContext, ProcessingPriority, ProcessingStats, ValidationResult,
     },
     DataProcessingService,
 };
 
-/// Adapter that wraps agent-data-processing service to implement contracts::DataProcessingService
+/// Adapter that wraps agent-data-processing DataPipeline to implement contracts::DataProcessingService
 #[cfg(feature = "data-processing")]
 pub struct DataProcessingServiceAdapter {
-    /// The underlying data processing service implementation
-    data_processor: Arc<dyn agent_data_processing::DataProcessor>,
+    /// The underlying data processing pipeline implementation
+    pipeline: Arc<agent_data_processing::DataPipeline>,
 }
 
 #[cfg(feature = "data-processing")]
 impl DataProcessingServiceAdapter {
     /// Create a new data processing service adapter
-    pub fn new(data_processor: Arc<dyn agent_data_processing::DataProcessor>) -> Self {
-        Self { data_processor }
+    pub fn new(pipeline: Arc<agent_data_processing::DataPipeline>) -> Self {
+        Self { pipeline }
     }
 
-    /// Convert contracts ProcessingContext to agent-data-processing types
-    fn to_internal_context(
-        &self,
-        context: &ProcessingContext,
-    ) -> agent_data_processing::ProcessingContext {
-        agent_data_processing::ProcessingContext {
-            request_id: context.request_id,
-            source: context.source.clone(),
-            format: self.to_internal_format(context.format.clone()),
-            priority: self.to_internal_priority(context.priority.clone()),
+    /// Convert contracts ProcessingContext to agent-data-processing DataInput
+    fn context_to_data_input(&self, context: &ProcessingContext) -> agent_data_processing::DataInput {
+        use agent_data_processing::{ContentType, DataContent, DataSource, FileSource, ProcessingContext as InternalContext, ProcessingId, ProcessingPriority as InternalPriority};
+        use chrono::Utc;
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+
+        // Convert DataFormat to ContentType
+        let content_type = match context.format {
+            DataFormat::Text => ContentType::Text,
+            DataFormat::Pdf => ContentType::Pdf,
+            DataFormat::Image => ContentType::Image,
+            DataFormat::Video => ContentType::Video,
+            DataFormat::Audio => ContentType::Audio,
+            DataFormat::Structured => ContentType::Structured,
+            DataFormat::Binary => ContentType::Binary,
+            DataFormat::Archive => ContentType::Binary, // Archive not in ContentType, use Binary
+            DataFormat::Code => ContentType::Code,
+            DataFormat::Other(_) => ContentType::Unknown,
+        };
+
+        // Convert ProcessingPriority to internal ProcessingPriority
+        let priority = match context.priority {
+            ProcessingPriority::Low => InternalPriority::Low,
+            ProcessingPriority::Normal => InternalPriority::Normal,
+            ProcessingPriority::High => InternalPriority::High,
+            ProcessingPriority::Urgent => InternalPriority::Critical, // Urgent maps to Critical
+        };
+
+        // Create file source from context source (assuming it's a file path)
+        let file_source = FileSource {
+            path: PathBuf::from(&context.source),
+            content_type: content_type.clone(),
+            size_bytes: 0, // Will be determined when file is read
+            last_modified: Utc::now(),
+        };
+
+        use uuid::Uuid;
+        
+        agent_data_processing::DataInput {
+            id: ProcessingId(context.request_id),
+            source: DataSource::File(file_source),
+            content: DataContent::Text(String::new()), // Content will be loaded from source
             metadata: context.metadata.clone(),
+            processing_context: InternalContext {
+                request_id: context.request_id.to_string(),
+                user_id: None,
+                project_scope: None,
+                priority,
+                deadline: None,
+                tags: vec![],
+            },
         }
     }
 
-    /// Convert contracts DataFormat to agent-data-processing types
-    fn to_internal_format(&self, format: DataFormat) -> agent_data_processing::DataFormat {
-        match format {
-            DataFormat::Text => agent_data_processing::DataFormat::Text,
-            DataFormat::Pdf => agent_data_processing::DataFormat::Pdf,
-            DataFormat::Image => agent_data_processing::DataFormat::Image,
-            DataFormat::Video => agent_data_processing::DataFormat::Video,
-            DataFormat::Audio => agent_data_processing::DataFormat::Audio,
-            DataFormat::Structured => agent_data_processing::DataFormat::Structured,
-            DataFormat::Binary => agent_data_processing::DataFormat::Binary,
-            DataFormat::Archive => agent_data_processing::DataFormat::Archive,
-            DataFormat::Code => agent_data_processing::DataFormat::Code,
-            DataFormat::Other(s) => agent_data_processing::DataFormat::Other(s),
-        }
-    }
+    /// Convert agent-data-processing ProcessingOutput to contracts ProcessedData
+    fn output_to_processed_data(&self, output: &agent_data_processing::ProcessingOutput, context: &ProcessingContext) -> ProcessedData {
+        use chrono::Utc;
 
-    /// Convert contracts ProcessingPriority to agent-data-processing types
-    fn to_internal_priority(
-        &self,
-        priority: ProcessingPriority,
-    ) -> agent_data_processing::ProcessingPriority {
-        match priority {
-            ProcessingPriority::Low => agent_data_processing::ProcessingPriority::Low,
-            ProcessingPriority::Normal => agent_data_processing::ProcessingPriority::Normal,
-            ProcessingPriority::High => agent_data_processing::ProcessingPriority::High,
-            ProcessingPriority::Urgent => agent_data_processing::ProcessingPriority::Urgent,
-        }
-    }
+        // Extract text content from output
+        let text_content = output.processed_content.text_content.clone().unwrap_or_default();
 
-    /// Convert agent-data-processing ProcessedData to contracts types
-    fn from_internal_data(&self, data: agent_data_processing::ProcessedData) -> ProcessedData {
+        // Convert to ProcessingContent
+        let content = if let Some(structured) = &output.processed_content.structured_data {
+            ProcessingContent::Structured(structured.clone())
+        } else if !text_content.is_empty() {
+            ProcessingContent::Text(text_content)
+        } else {
+            ProcessingContent::Text(String::new())
+        };
+
         ProcessedData {
-            id: data.id,
-            source_id: data.source_id,
-            format: self.from_internal_format(data.format),
-            content: self.from_internal_content(data.content),
-            metadata: data.metadata,
-            processed_at: data.processed_at,
-            processing_time_ms: data.processing_time_ms,
+            id: output.id.0,
+            source_id: context.source.clone(),
+            format: context.format.clone(),
+            content,
+            metadata: output.extracted_metadata.clone(),
+            processed_at: output.created_at,
+            processing_time_ms: output.processing_stats.processing_time_ms,
         }
     }
 
-    /// Convert agent-data-processing DataFormat to contracts types
-    fn from_internal_format(&self, format: agent_data_processing::DataFormat) -> DataFormat {
+    /// Convert contracts DataFormat to agent-data-processing ContentType
+    fn format_to_content_type(&self, format: DataFormat) -> agent_data_processing::ContentType {
+        use agent_data_processing::ContentType;
         match format {
-            // DataFormat mapping - using local DataFormat since agent_data_processing doesn't export it
-            // These are just string mappings for now
-            _ => DataFormat::Text, // Default fallback
-        }
-    }
-
-    /// Convert agent-data-processing ProcessingContext to contracts types
-    fn from_internal_content(
-        &self,
-        content: agent_data_processing::ProcessingContext,
-    ) -> ProcessingContent {
-        match content {
-            // ProcessingContext mapping - simplified for now
-            _ => ProcessingContent::Text(String::new()), // Default fallback
+            DataFormat::Text => ContentType::Text,
+            DataFormat::Pdf => ContentType::Pdf,
+            DataFormat::Image => ContentType::Image,
+            DataFormat::Video => ContentType::Video,
+            DataFormat::Audio => ContentType::Audio,
+            DataFormat::Structured => ContentType::Structured,
+            DataFormat::Binary => ContentType::Binary,
+            DataFormat::Archive => ContentType::Binary,
+            DataFormat::Code => ContentType::Code,
+            DataFormat::Other(_) => ContentType::Unknown,
         }
     }
 }
@@ -118,10 +141,10 @@ impl DataProcessingService for DataProcessingServiceAdapter {
         &self,
         context: ProcessingContext,
     ) -> DataProcessingResult<ProcessedData> {
-        let internal_context = self.to_internal_context(&context);
-        let result = self
-            .data_processor
-            .process_data(internal_context)
+        let data_input = self.context_to_data_input(&context);
+        let output = self
+            .pipeline
+            .process(data_input)
             .await
             .map_err(
                 |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
@@ -130,69 +153,74 @@ impl DataProcessingService for DataProcessingServiceAdapter {
                 },
             )?;
 
-        Ok(self.from_internal_data(result))
+        Ok(self.output_to_processed_data(&output, &context))
     }
 
     async fn batch_process(
         &self,
         contexts: Vec<ProcessingContext>,
     ) -> DataProcessingResult<Vec<Result<ProcessedData, String>>> {
-        let internal_contexts: Vec<_> = contexts
-            .iter()
-            .map(|c| self.to_internal_context(c))
-            .collect();
-
-        let results = self
-            .data_processor
-            .batch_process(internal_contexts)
-            .await
-            .map_err(
-                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                    operation: "batch_process".to_string(),
-                    reason: e.to_string(),
-                },
-            )?;
-
-        Ok(results
-            .into_iter()
-            .map(|r| {
-                r.map(|d| self.from_internal_data(d))
-                    .map_err(|e| e.to_string())
-            })
-            .collect())
+        // Process each context individually through the pipeline
+        let mut results = Vec::new();
+        for context in contexts {
+            match self.process_data(context.clone()).await {
+                Ok(processed_data) => results.push(Ok(processed_data)),
+                Err(e) => results.push(Err(e.to_string())),
+            }
+        }
+        Ok(results)
     }
 
     async fn validate_data(
         &self,
         context: &ProcessingContext,
     ) -> DataProcessingResult<ValidationResult> {
-        let internal_context = self.to_internal_context(context);
-        let result = self
-            .data_processor
-            .validate_data(&internal_context)
-            .await
-            .map_err(
-                |e| agent_agency_contracts::errors::DataProcessingError::ValidationFailed {
-                    reason: e.to_string(),
-                },
-            )?;
-
-        Ok(ValidationResult {
-            is_valid: result.is_valid,
-            score: result.score,
-            issues: result.issues,
-            warnings: result.warnings,
-            recommendations: result.recommendations,
-        })
+        // Validate by attempting to process - if it succeeds, data is valid
+        let data_input = self.context_to_data_input(context);
+        
+        // Try to process to validate
+        match self.pipeline.process(data_input).await {
+            Ok(output) => {
+                // Data is valid if processing succeeded
+                let issues = if output.processing_stats.errors_encountered.is_empty() {
+                    vec![]
+                } else {
+                    output.processing_stats.errors_encountered
+                };
+                
+                Ok(ValidationResult {
+                    is_valid: issues.is_empty(),
+                    score: if issues.is_empty() { 1.0 } else { 0.5 },
+                    issues,
+                    warnings: vec![],
+                    recommendations: vec![],
+                })
+            }
+            Err(e) => {
+                Ok(ValidationResult {
+                    is_valid: false,
+                    score: 0.0,
+                    issues: vec![e.to_string()],
+                    warnings: vec![],
+                    recommendations: vec!["Check data format and source availability".to_string()],
+                })
+            }
+        }
     }
 
     async fn supported_formats(&self) -> Vec<DataFormat> {
-        self.data_processor
-            .supported_formats()
-            .await
-            .into_iter()
-            .map(|f| self.from_internal_format(f))
-            .collect()
+        // Return all supported formats based on ContentType mapping
+        vec![
+            DataFormat::Text,
+            DataFormat::Pdf,
+            DataFormat::Image,
+            DataFormat::Video,
+            DataFormat::Audio,
+            DataFormat::Structured,
+            DataFormat::Binary,
+            DataFormat::Archive,
+            DataFormat::Code,
+        ]
     }
 
     async fn file_operation(
@@ -428,8 +456,8 @@ impl DataProcessingService for DataProcessingServiceAdapter {
 
     async fn get_processing_stats(&self) -> DataProcessingResult<ProcessingStats> {
         let stats = self
-            .data_processor
-            .get_processing_stats()
+            .pipeline
+            .get_stats()
             .await
             .map_err(|e| {
                 agent_agency_contracts::errors::DataProcessingError::ServiceUnavailable {
@@ -437,38 +465,84 @@ impl DataProcessingService for DataProcessingServiceAdapter {
                 }
             })?;
 
+        // Convert PipelineStats to ProcessingStats
+        let success_rate = if stats.total_processed > 0 {
+            1.0 - stats.error_rate
+        } else {
+            1.0
+        };
+
         Ok(ProcessingStats {
             total_processed: stats.total_processed,
-            successful: stats.successful,
-            failed: stats.failed,
-            average_processing_time_ms: stats.average_processing_time_ms,
-            queue_size: stats.queue_size,
-            success_rate: stats.success_rate,
+            successful: stats.total_processed.saturating_sub((stats.total_processed as f64 * stats.error_rate) as u64),
+            failed: (stats.total_processed as f64 * stats.error_rate) as u64,
+            average_processing_time_ms: stats.avg_processing_time_ms,
+            queue_size: stats.queue_depth,
+            success_rate,
         })
     }
 
     async fn extract_text(&self, data: &[u8], format: DataFormat) -> DataProcessingResult<String> {
-        let internal_format = self.to_internal_format(format);
-        self.data_processor
-            .extract_text(data, internal_format)
-            .await
-            .map_err(
-                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                    operation: "extract_text".to_string(),
-                    reason: e.to_string(),
-                },
-            )
+        use agent_data_processing::{ContentType, DataContent, DataInput, DataSource, FileSource, ProcessingContext as InternalContext, ProcessingId, ProcessingPriority as InternalPriority};
+        use chrono::Utc;
+        use std::path::PathBuf;
+        use uuid::Uuid;
+
+        // Create a temporary DataInput from the raw data
+        let content_type = self.format_to_content_type(format);
+        
+        let data_input = DataInput {
+            id: ProcessingId(Uuid::new_v4()),
+            source: DataSource::File(FileSource {
+                path: PathBuf::from("<in-memory>"),
+                content_type,
+                size_bytes: data.len() as u64,
+                last_modified: Utc::now(),
+            }),
+            content: DataContent::Binary(data.to_vec()),
+            metadata: std::collections::HashMap::new(),
+            processing_context: InternalContext {
+                request_id: Uuid::new_v4().to_string(),
+                user_id: None,
+                project_scope: None,
+                priority: InternalPriority::Normal,
+                deadline: None,
+                tags: vec![],
+            },
+        };
+
+        // Process through pipeline to extract text
+        match self.pipeline.process(data_input).await {
+            Ok(output) => {
+                // Extract text from output
+                let text = output.processed_content.text_content
+                    .unwrap_or_else(|| {
+                        match &output.processed_content.data {
+                            agent_data_processing::ProcessedContentData::Text(t) => t.clone(),
+                            agent_data_processing::ProcessedContentData::Binary(b) => {
+                                String::from_utf8_lossy(b).to_string()
+                            }
+                            agent_data_processing::ProcessedContentData::Structured(s) => {
+                                serde_json::to_string(s).unwrap_or_default()
+                            }
+                        }
+                    });
+                Ok(text)
+            }
+            Err(e) => Err(agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+                operation: "extract_text".to_string(),
+                reason: e.to_string(),
+            }),
+        }
     }
 
     async fn generate_embedding(&self, text: &str) -> DataProcessingResult<Vec<f32>> {
-        self.data_processor
-            .generate_embedding(text)
-            .await
-            .map_err(
-                |e| agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
-                    operation: "generate_embedding".to_string(),
-                    reason: e.to_string(),
-                },
-            )
+        // PLACEHOLDER: Embedding generation not directly available in DataPipeline
+        // This requires integration with agent-memory or a separate embedding service
+        // For now, return an error indicating this feature requires additional dependencies
+        Err(agent_agency_contracts::errors::DataProcessingError::ProcessingFailed {
+            operation: "generate_embedding".to_string(),
+            reason: "Embedding generation requires agent-memory integration. Use DataProcessingSystem with memory-integration feature instead.".to_string(),
+        })
     }
 }

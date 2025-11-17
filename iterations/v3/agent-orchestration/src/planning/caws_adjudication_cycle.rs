@@ -25,6 +25,9 @@ use crate::planning::caws_quality_gates::CawsQualityGateExecutor;
 use crate::planning::council_integration::CouncilIntegration;
 use crate::planning::worktree_manager::WorktreeManager;
 
+#[cfg(feature = "mcp")]
+use crate::planning::CawsToolRegistry;
+
 /// CAWS Adjudication Cycle stages
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AdjudicationStage {

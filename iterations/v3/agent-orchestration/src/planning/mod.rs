@@ -151,6 +151,9 @@ pub use worktree_manager::*;
 // From caws_adjudication_cycle - no conflicts
 pub use caws_adjudication_cycle::*;
 
+// From caws_tool_registry - export CawsToolRegistry
+pub use caws_tool_registry::CawsToolRegistry;
+
 // From worker_lifecycle_manager - no conflicts
 pub use worker_lifecycle_manager::*;
 

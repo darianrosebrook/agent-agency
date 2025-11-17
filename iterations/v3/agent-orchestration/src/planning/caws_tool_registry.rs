@@ -14,7 +14,10 @@ use tracing::debug;
 use uuid::Uuid;
 
 #[cfg(feature = "mcp")]
-use agent_mcp::{MCPTool, ToolCapability, ToolRegistry, ToolType};
+use agent_mcp::{
+    mcp_types::{CawsComplianceStatus, MCPTool, ToolCapability, ToolType},
+    ToolRegistry,
+};
 
 /// CAWS-specific tool category for adjudication
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -62,7 +65,7 @@ pub struct CawsToolMetadata {
 }
 
 /// CAWS-specific tool capabilities
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CawsToolCapability {
     /// Can validate working specs
     WorkingSpecValidation,
@@ -121,7 +124,7 @@ impl CawsToolRegistry {
         info!("Discovering CAWS-compliant tools from MCP registry");
 
         // Get all tools from MCP registry
-        let all_tools = self.mcp_registry.list_tools().await?;
+        let all_tools = self.mcp_registry.get_all_tools().await;
 
         let mut discovered_count = 0;
 
@@ -173,8 +176,8 @@ impl CawsToolRegistry {
         // Check CAWS compliance status
         let is_compliant = matches!(
             tool.caws_compliance,
-            agent_mcp::CawsComplianceStatus::Compliant
-                | agent_mcp::CawsComplianceStatus::MinorViolations(_)
+            CawsComplianceStatus::Compliant
+                | CawsComplianceStatus::MinorViolations(_)
         );
 
         // Check tool name/description for CAWS keywords
@@ -201,7 +204,7 @@ impl CawsToolRegistry {
         // Check CAWS compliance
         let is_compliant = matches!(
             tool.caws_compliance,
-            agent_mcp::CawsComplianceStatus::Compliant
+            CawsComplianceStatus::Compliant
         );
 
         Ok(CawsToolMetadata {
@@ -416,7 +419,7 @@ impl CawsToolRegistry {
             caws_compliant: result
                 .caws_compliance_result
                 .as_ref()
-                .map(|r| matches!(r.status, agent_mcp::CawsComplianceStatus::Compliant))
+                .map(|r| r.is_compliant)
                 .unwrap_or(true), // Assume compliant if no compliance check
         })
     }

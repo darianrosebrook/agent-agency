@@ -253,6 +253,22 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             ]),
         })
     }
+}
+
+#[cfg(feature = "tool-chain")]
+impl ToolChainPlannerAdapter {
+    /// Get planning statistics and performance metrics
+    async fn get_planning_stats(&self) -> ToolChainResult<PlanningStats> {
+        // Return basic stats - in a full implementation, this would query the planner
+        Ok(PlanningStats {
+            total_plans_generated: 0,
+            average_planning_time_ms: 0.0,
+            plan_success_rate: 0.0,
+            average_optimization_improvement: 0.0,
+            cache_hit_rate: 0.0,
+            last_planning_time: None,
+        })
+    }
 
     /// Detect cycles in dependency graph using DFS
     fn detect_dependency_cycle(
@@ -413,6 +429,21 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         Ok(optimized_plan)
     }
 
+    async fn get_planning_stats(&self) -> ToolChainResult<PlanningStats> {
+        // Return basic stats - in a full implementation, this would query the planner
+        Ok(PlanningStats {
+            total_plans_generated: 0,
+            average_planning_time_ms: 0.0,
+            plan_success_rate: 0.0,
+            average_optimization_improvement: 0.0,
+            cache_hit_rate: 0.0,
+            last_planning_time: None,
+        })
+    }
+}
+
+#[cfg(feature = "tool-chain")]
+impl ToolChainPlannerAdapter {
     /// Optimize tool chain for parallelization
     async fn optimize_parallelization(
         &self,
