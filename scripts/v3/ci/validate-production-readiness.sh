@@ -85,11 +85,20 @@ fi
 
 # 1.3 TODO/Placeholder Check
 print_status "  1.3 Checking for TODOs/PLACEHOLDERs in production code..."
+TODO_ANALYZER_PATH=""
 if [ -f "scripts/v3/analysis/todo_analyzer.py" ]; then
-    if python3 scripts/v3/analysis/todo_analyzer.py --v3-only --min-confidence 0.8 --ci-mode 2>&1 | grep -q "No high-confidence hidden TODOs found"; then
+    TODO_ANALYZER_PATH="scripts/v3/analysis/todo_analyzer.py"
+elif [ -f "$PROJECT_ROOT/scripts/v3/analysis/todo_analyzer.py" ]; then
+    TODO_ANALYZER_PATH="$PROJECT_ROOT/scripts/v3/analysis/todo_analyzer.py"
+elif [ -f "$PROJECT_ROOT/scripts/analysis/todo_analyzer.py" ]; then
+    TODO_ANALYZER_PATH="$PROJECT_ROOT/scripts/analysis/todo_analyzer.py"
+fi
+
+if [ -n "$TODO_ANALYZER_PATH" ]; then
+    if python3 "$TODO_ANALYZER_PATH" --v3-only --min-confidence 0.8 --ci-mode 2>&1 | grep -q "No high-confidence hidden TODOs found"; then
         print_success "    TODO/Placeholder check: No critical TODOs found"
     else
-        TODO_COUNT=$(python3 scripts/v3/analysis/todo_analyzer.py --v3-only --min-confidence 0.8 --ci-mode 2>&1 | grep -c "high-confidence" || echo "0")
+        TODO_COUNT=$(python3 "$TODO_ANALYZER_PATH" --v3-only --min-confidence 0.8 --ci-mode 2>&1 | grep -c "high-confidence" || echo "0")
         if [ "$TODO_COUNT" -gt 0 ]; then
             print_warning "    TODO/Placeholder check: $TODO_COUNT high-confidence TODOs found (may need review)"
         else
