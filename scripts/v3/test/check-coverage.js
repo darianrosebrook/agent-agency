@@ -4,7 +4,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const lcovPath = path.join(__dirname, '..', 'target', 'coverage', 'lcov.info');
+// Support both relative paths (from scripts/v3/test) and absolute paths
+const lcovPath = process.env.LCOV_PATH || 
+  (fs.existsSync(path.join(__dirname, '..', 'target', 'coverage', 'lcov.info')) 
+    ? path.join(__dirname, '..', 'target', 'coverage', 'lcov.info')
+    : path.join(__dirname, '..', '..', 'iterations', 'v3', 'target', 'coverage', 'lcov.info'));
 const lineMin = parseFloat(process.env.LINE_COVERAGE_MIN || process.env.COVERAGE_MIN || '0.80');
 const branchMin = parseFloat(process.env.BRANCH_COVERAGE_MIN || '0.90');
 
