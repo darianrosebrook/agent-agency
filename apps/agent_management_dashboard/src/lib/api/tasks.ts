@@ -107,7 +107,7 @@ export async function listTasks(): Promise<TasksListResponse> {
   if (response.tasks && Array.isArray(response.tasks)) {
     // Import validation utilities (dynamic import to avoid circular dependencies)
     const { safeValidateTaskArray } = await import('../utils/taskValidation');
-    response.tasks = safeValidateTaskArray(response.tasks);
+    response.tasks = safeValidateTaskArray(response.tasks) as Task[];
   }
   
   return response;

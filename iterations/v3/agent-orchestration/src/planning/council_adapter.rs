@@ -421,11 +421,11 @@ impl CouncilCoordinatorAdapter {
         let constraints = WorkingSpecConstraints {
             max_duration_minutes: None, // Could be extracted from change budget or task metadata
             max_iterations: None,       // Could be configured based on risk tier
-            budget_limits: Some(agent_agency_contracts::BudgetLimits {
+            budget_limits: Some(agent_agency_contracts::working_spec::BudgetLimits {
                 max_files: Some(task.change_budget.max_files as u32),
                 max_loc: Some(task.change_budget.max_loc as u32),
             }),
-            scope_restrictions: Some(agent_agency_contracts::ScopeRestrictions {
+            scope_restrictions: Some(agent_agency_contracts::working_spec::ScopeRestrictions {
                 allowed_paths: {
                     let mut paths = task.scope_in.allowed_paths.clone();
                     // Add scope_out blocked paths if available
@@ -480,7 +480,7 @@ impl CouncilCoordinatorAdapter {
                 given: "Task is submitted".to_string(),
                 when: format!("Task {} is executed", task.task_id),
                 then: format!("Task {} completes successfully", task.task_id),
-                priority: Some("normal".to_string()),
+                priority: Some(agent_agency_contracts::MoSCoWPriority::Should),
             }]
         };
 
@@ -491,23 +491,18 @@ impl CouncilCoordinatorAdapter {
             recent_changes: vec![], // Could be populated from git history if available
             dependencies: {
                 // Build dependencies from blast radius
+                // WorkingSpecContext.dependencies expects HashMap<String, String>
                 let mut deps = HashMap::new();
                 for module in &task.blast_radius.modules {
                     deps.insert(
                         module.clone(),
-                        serde_json::json!({
-                            "type": "module",
-                            "impact": "affected"
-                        }),
+                        "module".to_string(),
                     );
                 }
                 for ext_dep in &task.blast_radius.external_deps {
                     deps.insert(
                         ext_dep.clone(),
-                        serde_json::json!({
-                            "type": "external",
-                            "impact": "affected"
-                        }),
+                        "external".to_string(),
                     );
                 }
                 deps
@@ -542,20 +537,20 @@ impl CouncilCoordinatorAdapter {
                 vec![]
             },
             coverage_targets: Some(agent_agency_contracts::CoverageTargets {
-                line_coverage: if risk_tier == 1 {
+                line_coverage: Some(if risk_tier == 1 {
                     0.9
                 } else if risk_tier == 2 {
                     0.8
                 } else {
                     0.7
-                },
-                branch_coverage: if risk_tier == 1 {
+                }),
+                branch_coverage: Some(if risk_tier == 1 {
                     0.95
                 } else if risk_tier == 2 {
                     0.85
                 } else {
                     0.75
-                },
+                }),
                 mutation_score: if risk_tier == 1 {
                     Some(0.7)
                 } else if risk_tier == 2 {
@@ -592,43 +587,41 @@ impl CouncilCoordinatorAdapter {
         };
 
         // Build metadata with comprehensive task information
-        let metadata = Some(HashMap::from([
-            (
-                "task_id".to_string(),
-                serde_json::json!(task.task_id.to_string()),
-            ),
-            (
-                "priority".to_string(),
-                serde_json::json!(format!("{:?}", task.priority)),
-            ),
-            (
-                "execution_mode".to_string(),
-                serde_json::json!(format!("{:?}", task.execution_mode)),
-            ),
-            (
-                "blast_radius_modules".to_string(),
-                serde_json::json!(task.blast_radius.modules),
-            ),
-            (
-                "data_migration".to_string(),
-                serde_json::json!(task.blast_radius.data_migration),
-            ),
-            (
-                "external_deps".to_string(),
-                serde_json::json!(task.blast_radius.external_deps),
-            ),
-        ]));
+        let metadata = Some(agent_agency_contracts::WorkingSpecMetadata {
+            created_at: chrono::Utc::now(),
+            created_by: Some("agent-orchestration".to_string()),
+            last_modified: Some(chrono::Utc::now()),
+            version: Some(1),
+            tags: vec![
+                format!("priority:{:?}", task.priority),
+                format!("execution_mode:{:?}", task.execution_mode),
+                format!("task_id:{}", task.task_id),
+            ],
+        });
 
         // Build scope from scope_in and scope_out
-        let scope = {
-            let mut scope_vec = Vec::new();
-            scope_vec.extend(task.scope_in.allowed_paths.iter().cloned());
-            if let Some(ref scope_out) = task.scope_out {
-                scope_vec.extend(scope_out.allowed_paths.iter().cloned());
-            }
-            scope_vec
-        };
+        // Convert to Vec<ScopeRestrictions> - combine scope_in and scope_out into a single ScopeRestrictions
+        let scope = vec![agent_agency_contracts::working_spec::ScopeRestrictions {
+            allowed_paths: {
+                let mut paths = task.scope_in.allowed_paths.clone();
+                if let Some(ref scope_out) = task.scope_out {
+                    // scope_out.allowed_paths should be treated as blocked in the combined scope
+                    // But we're combining into one ScopeRestrictions, so we keep allowed_paths from scope_in
+                }
+                paths
+            },
+            blocked_paths: {
+                let mut paths = task.scope_in.blocked_paths.clone();
+                if let Some(ref scope_out) = task.scope_out {
+                    paths.extend(scope_out.allowed_paths.iter().cloned());
+                }
+                paths
+            },
+        }];
 
+        // Extract coverage_targets before moving test_plan
+        let coverage_targets = test_plan.coverage_targets.clone();
+        
         WorkingSpec {
             version: "1.0".to_string(),
             id: format!("council-review-{}", task.task_id),
@@ -649,7 +642,7 @@ impl CouncilCoordinatorAdapter {
             milestones: vec![],
             change_budget: task.change_budget.clone(),
             file_changes: vec![],
-            coverage_targets: test_plan.coverage_targets.clone(),
+            coverage_targets,
             overview: task.description.clone(),
             created_at: Utc::now(),
             updated_at: Utc::now(),

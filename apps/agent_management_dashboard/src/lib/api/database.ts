@@ -51,7 +51,7 @@ export type TableSchemaResponse = z.infer<typeof TableSchemaResponseSchema>;
  */
 export const ExecuteQueryRequestSchema = z.object({
   query: z.string().min(1),
-  parameters: z.record(z.unknown()).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ExecuteQueryRequest = z.infer<typeof ExecuteQueryRequestSchema>;
@@ -60,7 +60,7 @@ export type ExecuteQueryRequest = z.infer<typeof ExecuteQueryRequestSchema>;
  * Query result schema
  */
 export const QueryResultSchema = z.object({
-  rows: z.array(z.record(z.unknown())),
+  rows: z.array(z.record(z.string(), z.unknown())),
   row_count: z.number(),
   execution_time_ms: z.number().optional(),
 });

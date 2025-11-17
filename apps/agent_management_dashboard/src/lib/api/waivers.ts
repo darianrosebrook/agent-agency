@@ -26,7 +26,7 @@ export const WaiverResponseSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   status: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type WaiverResponse = z.infer<typeof WaiverResponseSchema>;
@@ -44,7 +44,7 @@ export const WaiverRequestSchema = z.object({
   impact_level: z.enum(['low', 'medium', 'high', 'critical']),
   mitigation_plan: z.string().min(1),
   expires_at: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type WaiverRequest = z.infer<typeof WaiverRequestSchema>;

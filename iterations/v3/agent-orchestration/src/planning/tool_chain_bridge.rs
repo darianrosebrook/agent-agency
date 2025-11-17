@@ -112,6 +112,7 @@ impl ToolChainBridge {
                 .max_duration_minutes
                 .map(|mins| (mins as u64) * 60 * 1000),
             cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
+            risk_tolerance,
         })
     }
 
@@ -121,19 +122,14 @@ impl ToolChainBridge {
         working_spec: &WorkingSpec,
     ) -> Result<ExternalPlanningConstraints> {
         Ok(ExternalPlanningConstraints {
-            max_execution_time_secs: working_spec
-                .constraints
-                .max_duration_minutes
-                .map(|mins| (mins as u64) * 60),
-            max_chain_length: Some(5), // Default reasonable limit
-            required_capabilities: vec![],
-            prohibited_tools: vec![],
-            max_parallelism: Some(3),   // Allow some parallelism
-            max_cost_cents: Some(1000), // Default cost budget
+            max_chain_length: 5, // Default reasonable limit
+            max_parallelism: 3,   // Allow some parallelism
+            max_cost_cents: 1000, // Default cost budget
             max_time_ms: working_spec
                 .constraints
                 .max_duration_minutes
-                .map(|mins| (mins as u64) * 60 * 1000),
+                .map(|mins| (mins as u64) * 60 * 1000)
+                .unwrap_or(30000), // Default 30 seconds
             require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
         })
     }

@@ -14,19 +14,22 @@
 export function getEnv(key: string, defaultValue?: string): string | undefined {
   // Try VITE_ prefixed first (Vite standard)
   const viteKey = `VITE_${key}`;
-  if (import.meta.env[viteKey] !== undefined) {
-    return import.meta.env[viteKey];
+  const viteValue = (globalThis as any)?.import?.meta?.env?.[viteKey];
+  if (viteValue !== undefined) {
+    return viteValue;
   }
   
   // Try NEXT_PUBLIC_ for backward compatibility
   const nextKey = `NEXT_PUBLIC_${key}`;
-  if (import.meta.env[nextKey] !== undefined) {
-    return import.meta.env[nextKey];
+  const nextValue = (globalThis as any)?.import?.meta?.env?.[nextKey];
+  if (nextValue !== undefined) {
+    return nextValue;
   }
   
   // Try direct key
-  if (import.meta.env[key] !== undefined) {
-    return import.meta.env[key];
+  const directValue = (globalThis as any)?.import?.meta?.env?.[key];
+  if (directValue !== undefined) {
+    return directValue;
   }
   
   return defaultValue;
@@ -48,21 +51,21 @@ export function getEnvRequired(key: string, defaultValue?: string): string {
  * Check if we're in development mode
  */
 export function isDev(): boolean {
-  return import.meta.env.DEV;
+  return process.env.NODE_ENV === 'development';
 }
 
 /**
  * Check if we're in production mode
  */
 export function isProd(): boolean {
-  return import.meta.env.PROD;
+  return process.env.NODE_ENV === 'production';
 }
 
 /**
  * Get the current mode (development, production, etc.)
  */
 export function getMode(): string {
-  return import.meta.env.MODE;
+  return process.env.NODE_ENV || 'development';
 }
 
 /**
@@ -77,7 +80,7 @@ export const env = {
   KOKORO_ONNX_URL: getEnv('KOKORO_ONNX_URL', 'http://localhost:8000'),
   KOKORO_TTS_ENABLED: getEnv('KOKORO_TTS_ENABLED', 'true') !== 'false',
   KOKORO_VOICE: getEnv('KOKORO_VOICE', getEnv('KOKORO_SPEAKER_ID', 'bm_fable')),
-  KOKORO_SPEED: parseFloat(getEnv('KOKORO_SPEED', '1.2')),
+  KOKORO_SPEED: parseFloat(getEnv('KOKORO_SPEED', '1.2') || '1.2'),
   KOKORO_LANG: getEnv('KOKORO_LANG', 'en-us'),
   
   // Environment

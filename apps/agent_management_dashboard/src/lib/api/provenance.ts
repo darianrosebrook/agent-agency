@@ -16,14 +16,14 @@ export const ProvenanceResponseSchema = z.object({
   id: z.string(),
   verdict_id: z.string(),
   task_id: z.string(),
-  decision: z.record(z.unknown()),
+  decision: z.record(z.string(), z.unknown()),
   consensus_score: z.number(),
-  caws_compliance: z.record(z.unknown()),
+  caws_compliance: z.record(z.string(), z.unknown()),
   git_commit_hash: z.string().optional(),
   git_trailer: z.string(),
   signature: z.string(),
   timestamp: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ProvenanceResponse = z.infer<typeof ProvenanceResponseSchema>;

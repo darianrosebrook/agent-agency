@@ -29,7 +29,7 @@ export const QueryPerformanceMetricSchema = z.object({
   query: z.string(),
   duration_ms: z.number(),
   executed_at: z.string(),
-  parameters: z.record(z.unknown()).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type QueryPerformanceMetric = z.infer<typeof QueryPerformanceMetricSchema>;

@@ -43,11 +43,11 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
         let planning_context = system_federated_ml::tool_chain_planner::PlanningContext {
             task_description: context.task_description.clone(),
             task_type: context.task_type.clone(),
-            complexity: self.map_task_complexity(context.complexity),
+            complexity: self.map_task_complexity(context.complexity.clone()),
             required_capabilities: context.required_capabilities.clone(),
             time_budget_ms: context.time_budget_ms,
             cost_budget_cents: context.cost_budget_cents,
-            risk_tolerance: self.map_risk_level(context.risk_tolerance),
+            risk_tolerance: self.map_risk_level(context.risk_tolerance.clone()),
         };
 
         // TODO: Make planning constraints configurable

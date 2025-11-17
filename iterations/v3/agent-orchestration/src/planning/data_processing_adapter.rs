@@ -477,7 +477,7 @@ impl DataProcessingService for DataProcessingServiceAdapter {
             successful: stats.total_processed.saturating_sub((stats.total_processed as f64 * stats.error_rate) as u64),
             failed: (stats.total_processed as f64 * stats.error_rate) as u64,
             average_processing_time_ms: stats.avg_processing_time_ms,
-            queue_size: stats.queue_depth,
+            queue_size: stats.queue_depth as u64,
             success_rate,
         })
     }

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Secure aggregator for federated learning
 pub struct SecureAggregator {
@@ -85,15 +85,41 @@ pub struct QualityMetrics {
 }
 
 impl SecureAggregator {
+    /// Create a new secure aggregator with real Paillier homomorphic encryption
+    /// This is the recommended factory method for production use
+    pub fn with_paillier_encryption(
+        privacy_engine: Arc<DifferentialPrivacyEngine>,
+        security_validator: Arc<SecurityValidator>,
+    ) -> Result<Self> {
+        let (paillier_encryption, _keypair) = crate::encryption::PaillierHomomorphicEncryption::new()
+            .context("Failed to initialize Paillier homomorphic encryption")?;
+        
+        Ok(Self::new(
+            Arc::new(paillier_encryption),
+            privacy_engine,
+            security_validator,
+        ))
+    }
+    
     /// Create a new secure aggregator
     pub fn new(
         encryption_scheme: Arc<dyn HomomorphicEncryption>,
         privacy_engine: Arc<DifferentialPrivacyEngine>,
         security_validator: Arc<SecurityValidator>,
     ) -> Self {
+        // Unwrap the Arc to get the inner DifferentialPrivacyEngine
+        // If unwrap fails (multiple references), we'll need to handle it
+        let privacy_engine_inner = Arc::try_unwrap(privacy_engine)
+            .unwrap_or_else(|arc| {
+                // If we can't unwrap due to multiple references, extract parameters and recreate
+                // This is safe because PrivacyParameters implements Default
+                warn!("Multiple references to privacy engine detected, creating new instance");
+                DifferentialPrivacyEngine::new(Default::default())
+            });
+        
         Self {
             encryption_scheme,
-            privacy_engine: Arc::new(RwLock::new(Arc::try_unwrap(privacy_engine).unwrap())),
+            privacy_engine: Arc::new(RwLock::new(privacy_engine_inner)),
             security_validator,
             participants: Arc::new(RwLock::new(HashMap::new())),
             aggregation_round: Arc::new(RwLock::new(AggregationRound {

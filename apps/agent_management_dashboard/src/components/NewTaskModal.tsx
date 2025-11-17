@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { listProjects, type ProjectListItem } from "../../lib/api/projects";
+import { listProjects, type ProjectListItem } from "../../../lib/api/projects";
 import {
   X,
   ChevronDown,

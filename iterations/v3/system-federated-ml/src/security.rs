@@ -106,13 +106,9 @@ impl SecurityValidator {
                 self.verify_schnorr_proof(proof)
                     .context("Failed to verify Schnorr proof")
             }
-            "placeholder" => {
-                warn!("Verifying placeholder proof - not secure for production");
-                Ok(true)
-            }
             _ => {
-                warn!("Unknown proof type: {} - returning false", proof.proof_type);
-                Ok(false)
+                warn!("Unknown proof type: {} - only 'schnorr' and 'schnorr-pok' are supported", proof.proof_type);
+                Err(anyhow::anyhow!("Unsupported proof type: {}. Only Schnorr proofs are supported.", proof.proof_type))
             }
         }
     }
@@ -126,22 +122,31 @@ impl SecurityValidator {
         let params = Self::schnorr_params();
         
         // Deserialize proof components
-        let r = BigInt::from_bytes_be(Sign::Plus, &proof.commitment);
+        // The commitment R is already g^r mod p (computed during proof generation)
+        let r_commitment = BigInt::from_bytes_be(Sign::Plus, &proof.commitment);
         let s = BigInt::from_bytes_be(Sign::Plus, &proof.response);
         let c = BigInt::from_bytes_be(Sign::Plus, &proof.challenge);
         let y = BigInt::from_bytes_be(Sign::Plus, &proof.verification_key);
         
-        // Verify: g^s mod p = R * y^c mod p
-        // Where R = g^r mod p (the commitment)
+        // Verify Schnorr proof: g^s mod p = R * y^c mod p
+        // Where:
+        // - R = g^r mod p (the commitment, already computed)
+        // - y = g^x mod p (the public key)
+        // - s = r + c*x mod q (the response)
+        // - c = H(g, y, R, public_inputs) mod q (the challenge)
+        
+        // Compute left side: g^s mod p
         let g_s = params.g.modpow(&s, &params.p);
-        let r_mod = r % &params.p;
+        
+        // Compute right side: R * y^c mod p
         let y_c = y.modpow(&c, &params.p);
-        let rhs = (r_mod * y_c) % &params.p;
+        let rhs = (r_commitment * y_c) % &params.p;
         
-        // Check if g^s ≡ R * y^c (mod p)
+        // Normalize both sides modulo p for comparison
         let lhs_mod = g_s % &params.p;
+        let rhs_mod = rhs % &params.p;
         
-        Ok(lhs_mod == rhs)
+        Ok(lhs_mod == rhs_mod)
     }
 
     /// Generate a zero-knowledge proof for a model update
@@ -336,6 +341,90 @@ pub struct KeyPair {
     pub public_key: Vec<u8>,
     pub private_key: Vec<u8>,
     pub participant_id: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_schnorr_proof_generation_and_verification() {
+        let validator = SecurityValidator::new();
+        
+        // Generate a secret key
+        let secret_key = b"test_secret_key_for_zkp_12345";
+        let public_inputs = b"model_update_data_for_federated_learning";
+        
+        // Generate proof
+        let proof = validator.generate_proof(public_inputs, secret_key).await.unwrap();
+        
+        // Verify proof type
+        assert_eq!(proof.proof_type, "schnorr");
+        assert!(!proof.commitment.is_empty());
+        assert!(!proof.response.is_empty());
+        assert!(!proof.challenge.is_empty());
+        assert!(!proof.verification_key.is_empty());
+        assert_eq!(proof.public_inputs, public_inputs);
+        
+        // Verify the proof
+        let is_valid = validator.verify_proof(&proof).await.unwrap();
+        assert!(is_valid, "Generated proof should be valid");
+    }
+    
+    #[tokio::test]
+    async fn test_schnorr_proof_verification_rejects_invalid_proof() {
+        let validator = SecurityValidator::new();
+        
+        // Create an invalid proof with wrong response
+        let mut proof = ZeroKnowledgeProof {
+            commitment: vec![1, 2, 3, 4],
+            response: vec![99, 99, 99, 99], // Invalid response
+            challenge: vec![5, 6, 7, 8],
+            public_inputs: vec![9, 10],
+            proof_type: "schnorr".to_string(),
+            verification_key: vec![11, 12, 13, 14],
+        };
+        
+        // Verification should fail for invalid proof
+        let result = validator.verify_proof(&proof).await;
+        assert!(result.is_err() || !result.unwrap(), "Invalid proof should be rejected");
+    }
+    
+    #[tokio::test]
+    async fn test_schnorr_proof_verification_rejects_unknown_proof_type() {
+        let validator = SecurityValidator::new();
+        
+        let proof = ZeroKnowledgeProof {
+            commitment: vec![1, 2, 3],
+            response: vec![4, 5, 6],
+            challenge: vec![7, 8, 9],
+            public_inputs: vec![],
+            proof_type: "unknown_type".to_string(),
+            verification_key: vec![10, 11, 12],
+        };
+        
+        // Should return error for unknown proof type
+        let result = validator.verify_proof(&proof).await;
+        assert!(result.is_err(), "Unknown proof type should return error");
+    }
+    
+    #[tokio::test]
+    async fn test_schnorr_proof_verification_rejects_incomplete_proof() {
+        let validator = SecurityValidator::new();
+        
+        // Proof with empty commitment
+        let proof = ZeroKnowledgeProof {
+            commitment: vec![],
+            response: vec![1, 2, 3],
+            challenge: vec![4, 5, 6],
+            public_inputs: vec![],
+            proof_type: "schnorr".to_string(),
+            verification_key: vec![7, 8, 9],
+        };
+        
+        let result = validator.verify_proof(&proof).await;
+        assert!(result.is_err(), "Incomplete proof should return error");
+    }
 }
 
 

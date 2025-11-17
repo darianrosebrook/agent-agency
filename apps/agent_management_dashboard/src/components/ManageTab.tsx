@@ -123,7 +123,7 @@ function GeneralTabContent() {
       {/* Team Settings Section */}
       <div className={styles.settingsSection}>
         <div aria-hidden="true" className={styles.settingsSectionBorder} />
-        <KanbanHeading size="lg" className={styles.sectionTitle}>
+        <KanbanHeading  className={styles.sectionTitle}>
           Team Settings
         </KanbanHeading>
 
@@ -158,7 +158,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.toggleRowTitle}>
                 Allow team collaboration
               </KanbanText>
-              <KanbanText size="xs" className={styles.toggleRowDescription}>
+              <KanbanText size="14" className={styles.toggleRowDescription}>
                 Team members can edit tasks and boards
               </KanbanText>
             </div>
@@ -185,7 +185,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.toggleRowTitle}>
                 Require approval for done tasks
               </KanbanText>
-              <KanbanText size="xs" className={styles.toggleRowDescription}>
+              <KanbanText size="14" className={styles.toggleRowDescription}>
                 Tasks must be reviewed before marking as done
               </KanbanText>
             </div>
@@ -211,7 +211,7 @@ function GeneralTabContent() {
       {/* Notifications Section */}
       <div className={styles.settingsSection}>
         <div aria-hidden="true" className={styles.settingsSectionBorder} />
-        <KanbanHeading size="lg" className={styles.sectionTitle}>
+        <KanbanHeading  className={styles.sectionTitle}>
           Notifications
         </KanbanHeading>
 
@@ -222,7 +222,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.toggleRowTitle}>
                 Task assignments
               </KanbanText>
-              <KanbanText size="xs" className={styles.toggleRowDescription}>
+              <KanbanText size="14" className={styles.toggleRowDescription}>
                 Get notified when assigned to a task
               </KanbanText>
             </div>
@@ -251,7 +251,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.toggleRowTitle}>
                 Task comments
               </KanbanText>
-              <KanbanText size="xs" className={styles.toggleRowDescription}>
+              <KanbanText size="14" className={styles.toggleRowDescription}>
                 Get notified of new comments on your tasks
               </KanbanText>
             </div>
@@ -280,7 +280,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.toggleRowTitle}>
                 Status changes
               </KanbanText>
-              <KanbanText size="xs" className={styles.toggleRowDescription}>
+              <KanbanText size="14" className={styles.toggleRowDescription}>
                 Get notified when task status changes
               </KanbanText>
             </div>
@@ -332,7 +332,7 @@ function GeneralTabContent() {
               />
             </svg>
           </div>
-          <KanbanHeading size="lg" className={styles.dangerZoneTitleText}>
+          <KanbanHeading  className={styles.dangerZoneTitleText}>
             Danger Zone
           </KanbanHeading>
         </div>
@@ -344,7 +344,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.dangerZoneActionTitle}>
                 Archive this project
               </KanbanText>
-              <KanbanText size="xs" className={styles.dangerZoneActionDescription}>
+              <KanbanText size="14" className={styles.dangerZoneActionDescription}>
                 Make the project read-only and hide it from your dashboard
               </KanbanText>
             </div>
@@ -361,7 +361,7 @@ function GeneralTabContent() {
               <KanbanText size="14" className={styles.dangerZoneActionTitle}>
                 Delete this project
               </KanbanText>
-              <KanbanText size="xs" className={styles.dangerZoneActionDescription}>
+              <KanbanText size="14" className={styles.dangerZoneActionDescription}>
                 Permanently delete this project and all of its data
               </KanbanText>
             </div>
@@ -420,7 +420,7 @@ function WorkHistoryTabContent() {
   return (
     <div className={styles.workHistoryTab}>
       <div className={styles.workHistoryCard}>
-        <KanbanHeading size="lg" className={styles.workHistoryTitle}>
+        <KanbanHeading  className={styles.workHistoryTitle}>
           Work History
         </KanbanHeading>
         <KanbanText size="14" className={styles.workHistoryDescription}>
@@ -433,10 +433,10 @@ function WorkHistoryTabContent() {
             { label: "Average Completion Time", value: "2.3 days" },
           ].map((metric, i) => (
             <div key={i} className={styles.workHistoryMetricCard}>
-              <KanbanText size="xs" className={styles.workHistoryMetricLabel}>
+              <KanbanText size="14" className={styles.workHistoryMetricLabel}>
                 {metric.label}
               </KanbanText>
-              <KanbanText size="lg" className={styles.workHistoryMetricValue}>
+              <KanbanText  className={styles.workHistoryMetricValue}>
                 {metric.value}
               </KanbanText>
             </div>
@@ -451,7 +451,7 @@ function AIAgentsTabContent() {
   return (
     <div className={styles.aiAgentsTab}>
       <div className={styles.aiAgentsCard}>
-        <KanbanHeading size="lg" className={styles.aiAgentsTitle}>
+        <KanbanHeading  className={styles.aiAgentsTitle}>
           AI Agents
         </KanbanHeading>
         <KanbanText size="14" className={styles.aiAgentsDescription}>
@@ -481,7 +481,7 @@ function AIAgentsTabContent() {
                 <KanbanText size="14" className={styles.aiAgentName}>
                   {agent.name}
                 </KanbanText>
-                <KanbanText size="xs" className={styles.aiAgentDescription}>
+                <KanbanText size="14" className={styles.aiAgentDescription}>
                   {agent.description}
                 </KanbanText>
               </div>
@@ -512,7 +512,7 @@ function TaskSettingsTabContent() {
     <div className={styles.taskSettingsTab}>
       {/* Task Workflow */}
       <div className={styles.settingsCard}>
-        <KanbanHeading size="lg" className={styles.cardTitle}>Task Workflow</KanbanHeading>
+        <KanbanHeading  className={styles.cardTitle}>Task Workflow</KanbanHeading>
 
         <div className={styles.settingsGroup}>
           <div>
@@ -536,7 +536,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Auto-archive completed tasks</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Archive tasks 30 days after completion
               </KanbanText>
             </div>
@@ -550,7 +550,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Enable task dependencies</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Tasks can block other tasks from starting
               </KanbanText>
             </div>
@@ -564,7 +564,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Require task descriptions</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Force users to add descriptions to new tasks
               </KanbanText>
             </div>
@@ -575,7 +575,7 @@ function TaskSettingsTabContent() {
 
       {/* Priority Settings */}
       <div className={styles.settingsCard}>
-        <KanbanHeading size="lg" className={styles.cardTitle}>Priority & Labels</KanbanHeading>
+        <KanbanHeading  className={styles.cardTitle}>Priority & Labels</KanbanHeading>
 
         <div className={styles.settingsGroup}>
           <div>
@@ -599,7 +599,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Auto-assign priority</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 AI suggests priority based on task content
               </KanbanText>
             </div>
@@ -613,7 +613,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Limit tags per task</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Maximum number of tags allowed
               </KanbanText>
             </div>
@@ -626,7 +626,7 @@ function TaskSettingsTabContent() {
 
       {/* Time Tracking */}
       <div className={styles.settingsCard}>
-        <KanbanHeading size="lg" className={styles.cardTitle}>Time Tracking</KanbanHeading>
+        <KanbanHeading  className={styles.cardTitle}>Time Tracking</KanbanHeading>
 
         <div className={styles.settingsGroup}>
           <div className={styles.settingRow}>
@@ -634,7 +634,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Enable time tracking</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Track time spent on tasks
               </KanbanText>
             </div>
@@ -647,7 +647,7 @@ function TaskSettingsTabContent() {
             <Label className={cn(styles.label, styles.labelWithMargin)}>
               <KanbanText size="14">Estimated time alerts</KanbanText>
             </Label>
-            <KanbanText size="xs" className={styles.settingDescription}>
+            <KanbanText size="14" className={styles.settingDescription}>
               Alert when task exceeds estimated time by:
             </KanbanText>
             <div className={styles.sliderContainer}>
@@ -678,7 +678,7 @@ function TaskSettingsTabContent() {
 
       {/* Automation */}
       <div className={styles.settingsCard}>
-        <KanbanHeading size="lg" className={styles.cardTitle}>Automation</KanbanHeading>
+        <KanbanHeading  className={styles.cardTitle}>Automation</KanbanHeading>
 
         <div className={styles.settingsGroup}>
           <div className={styles.settingRow}>
@@ -686,7 +686,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Auto-move stale tasks</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Move tasks stuck in &quot;In Progress&quot; for 7+ days
               </KanbanText>
             </div>
@@ -700,7 +700,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Smart task distribution</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 AI distributes tasks based on team capacity
               </KanbanText>
             </div>
@@ -714,7 +714,7 @@ function TaskSettingsTabContent() {
               <Label className={styles.label}>
                 <KanbanText size="14">Deadline reminders</KanbanText>
               </Label>
-              <KanbanText size="xs" className={styles.settingDescription}>
+              <KanbanText size="14" className={styles.settingDescription}>
                 Send reminders 24h before deadline
               </KanbanText>
             </div>
@@ -735,7 +735,7 @@ export function ManageTab() {
         <div className={styles.manageTabContainer}>
           {/* Header Section */}
           <div className={styles.headerSection}>
-            <KanbanHeading size="xl">Project Settings</KanbanHeading>
+            <KanbanHeading >Project Settings</KanbanHeading>
             <KanbanText size="14" color="secondary">
               Manage your project configuration and team
             </KanbanText>

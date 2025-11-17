@@ -26,7 +26,7 @@ export interface Milestone {
   completed: boolean;
 }
 
-import type { TaskWithOptionalDescription } from '../../../lib/types/task';
+import type { TaskWithOptionalDescription } from '../../lib/types/task';
 
 /**
  * Task interface for ProjectContext (UI-specific)
@@ -240,8 +240,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             );
             createdMilestones.push({
               id: milestone.milestone_id ?? "",
-              title: milestone.title,
-              completed: milestone.completed,
+              title: milestone.title ?? "",
+              completed: milestone.completed ?? false,
             });
           } catch (err) {
             console.error(

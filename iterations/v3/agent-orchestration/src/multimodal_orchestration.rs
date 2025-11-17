@@ -1483,9 +1483,7 @@ fn convert_data_input_to_processing(
 ) -> Result<agent_data_processing::DataInput, OrchestrationError> {
     use agent_data_processing::{DataContent as ProcessingDataContent, DataSource as ProcessingDataSource, ProcessingContext as ProcessingProcessingContext, ProcessingId as ProcessingProcessingId, ProcessingPriority as ProcessingProcessingPriority, StreamSource};
     
-    let processing_id = agent_data_processing::ProcessingId {
-        id: input.id.id,
-    };
+    let processing_id = agent_data_processing::ProcessingId(input.id.id);
     
     let processing_source = match &input.source {
         DataSource::File(file_source) => {
@@ -1500,6 +1498,7 @@ fn convert_data_input_to_processing(
             ProcessingDataSource::Url(agent_data_processing::UrlSource {
                 url: url.clone(),
                 headers: HashMap::new(),
+                content_type: Some(convert_content_type(&input.content_type)),
             })
         }
         DataSource::Stream(data) => {
@@ -1553,7 +1552,7 @@ fn convert_processing_priority(pp: &ProcessingPriority) -> agent_data_processing
         ProcessingPriority::Low => agent_data_processing::ProcessingPriority::Low,
         ProcessingPriority::Normal => agent_data_processing::ProcessingPriority::Normal,
         ProcessingPriority::High => agent_data_processing::ProcessingPriority::High,
-        ProcessingPriority::Critical => agent_data_processing::ProcessingPriority::Critical,
+        ProcessingPriority::Urgent => agent_data_processing::ProcessingPriority::Critical,
     }
 }
 
@@ -1577,7 +1576,7 @@ fn convert_processing_output_to_blocks(
     
     // Create a block from the processing output
     let block = Block {
-        id: output.id.id.to_string(),
+        id: output.id.0.to_string(),
         content: text_content,
         block_type: format!("{:?}", output.processed_content.content_type),
         content_type: convert_content_type_from_processing(&output.processed_content.content_type),
@@ -1604,9 +1603,9 @@ fn convert_content_type_from_processing(ct: &agent_data_processing::ContentType)
 #[cfg(feature = "data-processing")]
 fn convert_block_to_processing(block: &Block) -> agent_data_processing::Block {
     agent_data_processing::Block {
-        id: agent_data_processing::ProcessingId {
-            id: Uuid::parse_str(&block.id).unwrap_or_else(|_| Uuid::new_v4()),
-        },
+        id: agent_data_processing::ProcessingId(
+            Uuid::parse_str(&block.id).unwrap_or_else(|_| Uuid::new_v4())
+        ),
         content_type: convert_content_type(&block.content_type),
         data: agent_data_processing::BlockData::Text(block.content.clone()),
         metadata: block.metadata.clone(),
@@ -1619,7 +1618,7 @@ fn convert_enriched_block_from_processing(
     eb: agent_data_processing::EnrichedBlock,
 ) -> EnrichedBlock {
     let block = Block {
-        id: eb.block.id.id.to_string(),
+        id: eb.block.id.0.to_string(),
         content: match &eb.block.data {
             agent_data_processing::BlockData::Text(text) => text.clone(),
             agent_data_processing::BlockData::Binary(_) => String::new(),

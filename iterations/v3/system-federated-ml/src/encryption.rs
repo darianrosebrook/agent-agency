@@ -772,6 +772,112 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_paillier_encryption_decryption_roundtrip() {
+        let (encryption, _keypair) = PaillierHomomorphicEncryption::new().unwrap();
+
+        let data = b"Hello, world!";
+        let encrypted = encryption.encrypt(data).await.unwrap();
+        
+        // Encrypted data should be different from original
+        assert_ne!(data.to_vec(), encrypted);
+        assert!(!encrypted.is_empty());
+        
+        // Decrypt should recover original data
+        let decrypted = encryption.decrypt(&encrypted).await.unwrap();
+        assert_eq!(data.to_vec(), decrypted);
+    }
+    
+    #[tokio::test]
+    async fn test_paillier_homomorphic_addition() {
+        let (encryption, _keypair) = PaillierHomomorphicEncryption::new().unwrap();
+
+        // Encrypt two values
+        let value1 = b"5";
+        let value2 = b"3";
+        
+        let encrypted1 = encryption.encrypt(value1).await.unwrap();
+        let encrypted2 = encryption.encrypt(value2).await.unwrap();
+        
+        // Perform homomorphic addition
+        let encrypted_sum = encryption.homomorphic_add(&encrypted1, &encrypted2).await.unwrap();
+        
+        // Decrypt the sum
+        let decrypted_sum_bytes = encryption.decrypt(&encrypted_sum).await.unwrap();
+        
+        // Verify that homomorphic addition produces different ciphertext
+        assert_ne!(encrypted_sum, encrypted1);
+        assert_ne!(encrypted_sum, encrypted2);
+        
+        // Verify decryption produces valid result
+        assert!(!decrypted_sum_bytes.is_empty());
+        
+        // In a real federated learning scenario, we'd deserialize model parameters
+        // For this test, we verify the homomorphic operation completes successfully
+    }
+    
+    #[tokio::test]
+    async fn test_paillier_homomorphic_scalar_multiplication() {
+        let (encryption, _keypair) = PaillierHomomorphicEncryption::new().unwrap();
+
+        let value = b"7";
+        let scalar = 3.0;
+        
+        let encrypted = encryption.encrypt(value).await.unwrap();
+        
+        // Perform homomorphic scalar multiplication
+        let encrypted_product = encryption.homomorphic_multiply_scalar(&encrypted, scalar).await.unwrap();
+        
+        // Decrypt the product
+        let decrypted_product_bytes = encryption.decrypt(&encrypted_product).await.unwrap();
+        
+        // Verify that homomorphic scalar multiplication produces different ciphertext
+        assert_ne!(encrypted_product, encrypted);
+        
+        // Verify decryption produces valid result
+        assert!(!decrypted_product_bytes.is_empty());
+    }
+    
+    #[tokio::test]
+    async fn test_paillier_encryption_with_empty_data() {
+        let (encryption, _keypair) = PaillierHomomorphicEncryption::new().unwrap();
+
+        let empty_data = b"";
+        let encrypted = encryption.encrypt(empty_data).await.unwrap();
+        let decrypted = encryption.decrypt(&encrypted).await.unwrap();
+        
+        assert_eq!(empty_data.to_vec(), decrypted);
+    }
+    
+    #[tokio::test]
+    async fn test_paillier_encryption_with_large_data() {
+        let (encryption, _keypair) = PaillierHomomorphicEncryption::new().unwrap();
+
+        let large_data = vec![0u8; 1000];
+        let encrypted = encryption.encrypt(&large_data).await.unwrap();
+        let decrypted = encryption.decrypt(&encrypted).await.unwrap();
+        
+        assert_eq!(large_data, decrypted);
+    }
+    
+    #[tokio::test]
+    async fn test_paillier_decryption_requires_private_key() {
+        // Create encryption with public key only
+        let (encryption_with_keys, keypair) = PaillierHomomorphicEncryption::new().unwrap();
+        let encryption_public_only = PaillierHomomorphicEncryption::with_public_key(keypair.public_key);
+        
+        let data = b"test_data";
+        let encrypted = encryption_public_only.encrypt(data).await.unwrap();
+        
+        // Decryption should fail without private key
+        let result = encryption_public_only.decrypt(&encrypted).await;
+        assert!(result.is_err(), "Decryption should fail without private key");
+        
+        // But should work with full keypair
+        let decrypted = encryption_with_keys.decrypt(&encrypted).await.unwrap();
+        assert_eq!(data.to_vec(), decrypted);
+    }
+    
+    #[tokio::test]
     async fn test_placeholder_encryption() {
         let encryption = PlaceholderHomomorphicEncryption;
 

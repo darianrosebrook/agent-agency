@@ -14,7 +14,7 @@ import { z } from 'zod';
  */
 export const SystemHealthResponseSchema = z.object({
   status: z.string(),
-  components: z.record(z.object({
+  components: z.record(z.string(), z.object({
     status: z.string(),
     message: z.string().optional(),
   })).optional(),

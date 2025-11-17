@@ -334,7 +334,7 @@ export const useProjectStore = create<ProjectState>()(
                         description: task.description ?? undefined,
                         status: task.status,
                         priority: task.priority ?? undefined,
-                        assignee: task.assignee ?? undefined,
+                        assigned_worker_id: task.assigned_worker_id ?? undefined,
                         createdAt: task.created_at,
                       })),
                       createdAt: validatedProject.created_at,
@@ -409,7 +409,7 @@ export const useProjectStore = create<ProjectState>()(
                       description: task.description ?? undefined,
                       status: task.status,
                       priority: task.priority ?? undefined,
-                      assignee: task.assignee ?? undefined,
+                      assigned_worker_id: task.assigned_worker_id ?? undefined,
                       createdAt: task.created_at,
                     }))
                   : [],
@@ -514,7 +514,7 @@ export const useProjectStore = create<ProjectState>()(
                   description: z.string().nullable().optional(),
                   status: z.enum(["backlog", "todo", "in-progress", "done"]),
                   priority: z.string().nullable().optional(),
-                  assignee: z.string().nullable().optional(),
+                  assigned_worker_id: z.string().nullable().optional(),
                   created_at: z.string().transform((str) => new Date(str)),
                 })
                 .parse(data);
@@ -525,8 +525,8 @@ export const useProjectStore = create<ProjectState>()(
                 title: validatedResponse.title,
                 description: validatedResponse.description ?? undefined,
                 status: validatedResponse.status,
-                priority: validatedResponse.priority ?? undefined,
-                assignee: validatedResponse.assignee ?? undefined,
+                priority: validatedResponse.priority ?? null,
+                assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
                 createdAt: validatedResponse.created_at,
               };
 
@@ -584,7 +584,7 @@ export const useProjectStore = create<ProjectState>()(
                   description: z.string().nullable().optional(),
                   status: z.enum(["backlog", "todo", "in-progress", "done"]),
                   priority: z.string().nullable().optional(),
-                  assignee: z.string().nullable().optional(),
+                  assigned_worker_id: z.string().nullable().optional(),
                   created_at: z.string().transform((str) => new Date(str)),
                 })
                 .parse(data);
@@ -605,8 +605,8 @@ export const useProjectStore = create<ProjectState>()(
                                 status: validatedResponse.status,
                                 priority:
                                   validatedResponse.priority ?? undefined,
-                                assignee:
-                                  validatedResponse.assignee ?? undefined,
+                                assigned_worker_id:
+                                  validatedResponse.assigned_worker_id ?? undefined,
                                 createdAt: validatedResponse.created_at,
                               }
                             : t
@@ -879,7 +879,7 @@ export const useProjectStore = create<ProjectState>()(
                       description: task.description ?? undefined,
                       status: task.status,
                       priority: task.priority ?? undefined,
-                      assignee: task.assignee ?? undefined,
+                      assigned_worker_id: task.assigned_worker_id ?? undefined,
                       createdAt: task.created_at,
                     })),
                     createdAt: validatedProject.created_at,
@@ -957,8 +957,8 @@ export const useProjectStore = create<ProjectState>()(
                 title: task.title,
                 description: task.description ?? undefined,
                 status: task.status,
-                priority: task.priority ?? undefined,
-                assignee: task.assignee ?? undefined,
+                priority: task.priority ?? null,
+                assigned_worker_id: task.assigned_worker_id ?? undefined,
                 createdAt: task.created_at,
               })),
               createdAt: validatedProject.created_at,
@@ -1064,7 +1064,7 @@ export const useProjectStore = create<ProjectState>()(
                 description: z.string().nullable().optional(),
                 status: z.enum(["backlog", "todo", "in-progress", "done"]),
                 priority: z.string().nullable().optional(),
-                assignee: z.string().nullable().optional(),
+                assigned_worker_id: z.string().nullable().optional(),
                 created_at: z.string().transform((str) => new Date(str)),
               })
               .parse(data);
@@ -1076,7 +1076,7 @@ export const useProjectStore = create<ProjectState>()(
               description: validatedResponse.description ?? undefined,
               status: validatedResponse.status,
               priority: validatedResponse.priority ?? undefined,
-              assignee: validatedResponse.assignee ?? undefined,
+              assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
               createdAt: validatedResponse.created_at,
             };
 
@@ -1135,7 +1135,7 @@ export const useProjectStore = create<ProjectState>()(
                 description: z.string().nullable().optional(),
                 status: z.enum(["backlog", "todo", "in-progress", "done"]),
                 priority: z.string().nullable().optional(),
-                assignee: z.string().nullable().optional(),
+                assigned_worker_id: z.string().nullable().optional(),
                 created_at: z.string().transform((str) => new Date(str)),
               })
               .parse(data);
@@ -1155,7 +1155,7 @@ export const useProjectStore = create<ProjectState>()(
                                 validatedResponse.description ?? undefined,
                               status: validatedResponse.status,
                               priority: validatedResponse.priority ?? undefined,
-                              assignee: validatedResponse.assignee ?? undefined,
+                              assigned_worker_id: validatedResponse.assigned_worker_id ?? undefined,
                               createdAt: validatedResponse.created_at,
                             }
                           : t

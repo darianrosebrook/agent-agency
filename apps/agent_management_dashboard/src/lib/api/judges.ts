@@ -16,7 +16,7 @@ export const JudgeResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   status: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type JudgeResponse = z.infer<typeof JudgeResponseSchema>;

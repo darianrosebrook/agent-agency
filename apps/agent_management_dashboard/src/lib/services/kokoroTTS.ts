@@ -42,7 +42,7 @@ export interface KokoroTTSResult {
 import { env } from "../utils/env";
 
 const DEFAULT_CONFIG: Required<KokoroTTSConfig> = {
-  baseUrl: env.KOKORO_ONNX_URL,
+  baseUrl: env.KOKORO_ONNX_URL || "http://localhost:8000",
   enabled: env.KOKORO_TTS_ENABLED,
   timeout: 30000, // 30 seconds
 };
