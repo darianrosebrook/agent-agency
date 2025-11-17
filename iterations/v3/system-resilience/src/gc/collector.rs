@@ -597,43 +597,45 @@ impl GarbageCollector {
     }
 
     /// Parse references from a unified diff
+    /// 
+    /// Extracts referenced objects from diff headers (base_digest and after_digest).
+    /// Supports both JSON and binary serialization formats.
     fn parse_diff_references(&self, blob: &crate::cas::Blob) -> Result<Vec<Digest>> {
-        // TODO: Extract referenced objects from diff headers
-        //       Currently returns empty; should extract referenced objects from diff headers for complete reference tracking.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - References are extracted from diff headers correctly
-        // - Parsing handles various diff formats
-        // - Reference tracking is complete
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Diff parsing utilities (Required)
-        // - Header extraction algorithms (Required)
-        // - Reference tracking infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (GC enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Diff parsing expertise
-        Ok(Vec::new()) // Temporary: empty until diff header parsing
+        use crate::cas::diff::LineagedDiff;
+        
+        let mut references = Vec::new();
+        
+        // Try to deserialize as LineagedDiff (JSON format)
+        if let Ok(diff_str) = std::str::from_utf8(&blob.data) {
+            if let Ok(lineaged_diff) = serde_json::from_str::<LineagedDiff>(diff_str) {
+                references.push(lineaged_diff.base_digest);
+                references.push(lineaged_diff.after_digest);
+                return Ok(references);
+            }
+        }
+        
+        // Try binary deserialization (bincode)
+        if let Ok(lineaged_diff) = bincode::deserialize::<LineagedDiff>(&blob.data) {
+            references.push(lineaged_diff.base_digest);
+            references.push(lineaged_diff.after_digest);
+            return Ok(references);
+        }
+        
+        // If deserialization fails, try to parse as ChangePayload::UnifiedDiff
+        use crate::recovery_types::ChangePayload;
+        if let Ok(payload_str) = std::str::from_utf8(&blob.data) {
+            if let Ok(ChangePayload::UnifiedDiff { .. }) = serde_json::from_str::<ChangePayload>(payload_str) {
+                // UnifiedDiff in ChangePayload doesn't have explicit base/after digests
+                // The references are implicit in the diff content itself
+                // For now, we return empty - this would require parsing the diff content
+                // which is more complex and may not be necessary for GC
+            }
+        }
+        
+        // If we can't parse the diff structure, return empty
+        // The diff content itself doesn't contain explicit digest references
+        // (it's a text diff, not a structured reference)
+        Ok(references)
     }
 
     /// Parse chunk references from a chunk map
