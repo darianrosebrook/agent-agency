@@ -1720,93 +1720,54 @@ impl MemoryMonitor {
             allocation_sites: HashMap::new(),
         };
 
-        // Analyze allocation history from stats
-        let history = self.stats_history.read().await;
-
-        // Build size distribution
-        for (timestamp, stats) in history.iter() {
-            // TODO: Implement detailed allocation record tracking
-            //       Currently creates synthetic patterns; should track detailed allocation records for accurate size distribution analysis.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Track detailed allocation records
-            // [ ] Store allocation sizes and timestamps
-            // [ ] Build size distribution from actual records
-            // [ ] Handle large allocation histories efficiently
-            // [ ] Add unit tests with mock allocation records
-            // [ ] Add integration tests with real allocation tracking
-            // [ ] Performance: Distribution building should complete in <10ms
-            // [ ] Documentation: Document allocation record structure
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Detailed allocation records are tracked
-            // - Size distribution reflects actual allocations
-            // - Large histories are handled efficiently
-            // - Distribution analysis is accurate
-            // - Record tracking performance is acceptable
-            //
-            // DEPENDENCIES:
-            // - Allocation record storage (Required)
-            // - Size distribution analysis (Required)
-            // - Efficient history management (Required)
-            //
-            // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (monitoring feature)
-            // - Change Budget: ~200 LOC
-            // - Reviewer Requirements: Memory monitoring expertise
-            //
-            // TODO: Implement comprehensive allocation record tracking for size distribution
-            //       Currently creates synthetic patterns based on available data; should implement comprehensive tracking that stores allocation records, analyzes size distribution from actual allocation history, and handles large histories efficiently.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Allocation records are stored and tracked
-            // - Size distribution is analyzed from actual history
-            // - Large histories are handled efficiently
-            // - Distribution analysis is accurate
-            //
-            // DEPENDENCIES:
-            // - Allocation record storage (Required)
-            // - Size distribution analysis (Required)
-            // - Efficient history management (Required)
-            //
-            // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (monitoring feature)
-            // - Change Budget: ~200 LOC
-            // - Reviewer Requirements: Memory monitoring expertise
-            let size_bucket = (stats.allocated_bytes / 1024).max(1) * 1024; // Round to nearest KB
+        // Build size distribution from actual allocation records
+        let tracker = self.allocation_tracker.read().await;
+        let records = tracker.get_allocation_records();
+        
+        // Use actual allocation records for size distribution
+        for record in records {
+            // Round to nearest KB bucket for distribution
+            let size_bucket = (record.size / 1024).max(1) * 1024;
             *analysis
                 .size_distribution
                 .entry(size_bucket.try_into().unwrap())
                 .or_insert(0) += 1;
         }
+        drop(tracker);
+        
+        // Build temporal patterns from stats history
+        let history = self.stats_history.read().await;
 
-        // Build temporal patterns
+        // Build temporal patterns from stats history
         for (timestamp, stats) in history.iter() {
             analysis
                 .temporal_patterns
                 .push((*timestamp, stats.allocation_count.try_into().unwrap()));
         }
+        drop(history);
+        
+        // Build allocation sites from actual tracker records
+        let tracker = self.allocation_tracker.read().await;
+        let records = tracker.get_allocation_records();
+        
+        // Aggregate allocation sites from actual records
+        for record in records {
+            let site_key = format!("{}:{}:{}", record.site.module, record.site.file, record.site.line);
+            let site_entry = analysis.allocation_sites.entry(site_key.clone()).or_insert_with(|| {
+                crate::memory::types::AllocationSiteStats {
+                    location: site_key.clone(),
+                    total_allocations: 0,
+                    total_bytes: 0,
+                    average_size: 0.0,
+                    frequency: 0.0,
+                }
+            });
+            
+            site_entry.total_allocations += 1;
+            site_entry.total_bytes += record.size;
+            site_entry.average_size = site_entry.total_bytes as f64 / site_entry.total_allocations as f64;
+        }
+        drop(tracker);
 
         // TODO: Implement comprehensive memory access pattern analysis
         //       Currently returns empty patterns; should analyze actual memory access patterns with temporal/spatial locality detection and access frequency analysis.
