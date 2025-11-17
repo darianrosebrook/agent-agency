@@ -31,6 +31,9 @@ pub struct MemoryMonitor {
     handle_registry: Arc<AsyncRwLock<HandleRegistry>>,
     allocation_tracker: Arc<AsyncRwLock<AllocationSiteTracker>>,
     gc_registry: Arc<AsyncRwLock<GCRegistry>>,
+    type_registry: Arc<std::sync::RwLock<HashMap<std::any::TypeId, String>>>,
+    finalized_objects: Arc<AsyncRwLock<std::collections::HashSet<ObjectRef>>>,
+    finalizer_stats: Arc<AsyncRwLock<FinalizerStats>>,
 }
 
 impl std::fmt::Debug for MemoryMonitor {
@@ -43,6 +46,11 @@ impl std::fmt::Debug for MemoryMonitor {
 
 impl MemoryMonitor {
     pub fn new(config: MemoryLimitConfig) -> Self {
+        let mut type_registry = HashMap::new();
+        
+        // Register common types for human-readable names
+        Self::register_common_types(&mut type_registry);
+        
         Self {
             config,
             stats_history: Arc::new(AsyncRwLock::new(Vec::new())),
@@ -56,7 +64,47 @@ impl MemoryMonitor {
             handle_registry: Arc::new(AsyncRwLock::new(HandleRegistry::new())),
             allocation_tracker: Arc::new(AsyncRwLock::new(AllocationSiteTracker::new())),
             gc_registry: Arc::new(AsyncRwLock::new(GCRegistry::new())),
+            type_registry: Arc::new(std::sync::RwLock::new(type_registry)),
+            finalized_objects: Arc::new(AsyncRwLock::new(std::collections::HashSet::new())),
+            finalizer_stats: Arc::new(AsyncRwLock::new(FinalizerStats::default())),
         }
+    }
+    
+    /// Register common types in the type registry for human-readable names
+    fn register_common_types(registry: &mut HashMap<std::any::TypeId, String>) {
+        use std::any::TypeId;
+        
+        // Standard library types
+        registry.insert(TypeId::of::<String>(), "String".to_string());
+        registry.insert(TypeId::of::<Vec<u8>>(), "Vec<u8>".to_string());
+        registry.insert(TypeId::of::<Vec<String>>(), "Vec<String>".to_string());
+        registry.insert(TypeId::of::<HashMap<String, String>>(), "HashMap<String, String>".to_string());
+        registry.insert(TypeId::of::<std::collections::HashSet<String>>(), "HashSet<String>".to_string());
+        
+        // Numeric types
+        registry.insert(TypeId::of::<u8>(), "u8".to_string());
+        registry.insert(TypeId::of::<u16>(), "u16".to_string());
+        registry.insert(TypeId::of::<u32>(), "u32".to_string());
+        registry.insert(TypeId::of::<u64>(), "u64".to_string());
+        registry.insert(TypeId::of::<usize>(), "usize".to_string());
+        registry.insert(TypeId::of::<i8>(), "i8".to_string());
+        registry.insert(TypeId::of::<i16>(), "i16".to_string());
+        registry.insert(TypeId::of::<i32>(), "i32".to_string());
+        registry.insert(TypeId::of::<i64>(), "i64".to_string());
+        registry.insert(TypeId::of::<isize>(), "isize".to_string());
+        registry.insert(TypeId::of::<f32>(), "f32".to_string());
+        registry.insert(TypeId::of::<f64>(), "f64".to_string());
+        
+        // Memory management types
+        registry.insert(TypeId::of::<ObjectRef>(), "ObjectRef".to_string());
+        registry.insert(TypeId::of::<ResourceHandle>(), "ResourceHandle".to_string());
+        registry.insert(TypeId::of::<MemoryStats>(), "MemoryStats".to_string());
+        
+        // Common async types
+        registry.insert(TypeId::of::<tokio::sync::Mutex<()>>(), "tokio::sync::Mutex".to_string());
+        registry.insert(TypeId::of::<tokio::sync::RwLock<()>>(), "tokio::sync::RwLock".to_string());
+        registry.insert(TypeId::of::<std::sync::Arc<()>>(), "Arc".to_string());
+        registry.insert(TypeId::of::<std::sync::Mutex<()>>(), "Mutex".to_string());
     }
 
     /// Record current memory statistics
@@ -425,44 +473,46 @@ impl MemoryMonitor {
     }
 
     /// Extract human-readable type name from Any trait object
+    /// This is a synchronous method that uses a blocking read for performance
     fn extract_type_name(
         &self,
         obj: &std::sync::Arc<dyn std::any::Any + Send + Sync>,
     ) -> Option<String> {
-        // TODO: Implement type registry system for extracting human-readable type names from Any trait objects
-        //       Currently returns generic TypeId hash; should use type registry to provide meaningful type names.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Implement type registry system for registering types
-        // [ ] Register common types at initialization
-        // [ ] Extract type names from registered types
-        // [ ] Handle unregistered types gracefully
-        // [ ] Add type name caching for performance
-        // [ ] Add unit tests for type registry
-        // [ ] Add integration tests with various types
-        // [ ] Verify type names are accurate and readable
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Type registry provides human-readable type names
-        // - Common types are registered and accessible
-        // - Unregistered types are handled gracefully
-        // - Type name extraction is performant
-        //
-        // DEPENDENCIES:
-        // - Type registry data structure (Required)
-        // - Type registration utilities (Required)
-        // - Type name caching (Optional)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (low risk enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Type system expertise
-        let type_id_hash = format!("{:?}", obj.type_id());
-        Some(format!("unknown_type_{}", &type_id_hash[..8])) // Temporary generic identifier until type registry is implemented
+        let type_id = obj.type_id();
+        
+        // Use sync RwLock for fast synchronous access (this method is called from sync contexts)
+        // In async contexts, prefer get_type_name() instead
+        let registry = self.type_registry.read().unwrap();
+        
+        // Check if type is registered
+        if let Some(type_name) = registry.get(&type_id) {
+            return Some(type_name.clone());
+        }
+        drop(registry);
+        
+        // For unregistered types, try to extract a readable name from TypeId
+        // TypeId::of::<T>() produces a stable hash, but we can't reverse it
+        // So we'll use a shortened hash for unregistered types
+        let type_id_hash = format!("{:?}", type_id);
+        Some(format!("unknown_type_{}", &type_id_hash[..8]))
+    }
+    
+    /// Register a type in the type registry for human-readable names
+    pub fn register_type<T: 'static>(&self, type_name: String) {
+        let mut registry = self.type_registry.write().unwrap();
+        registry.insert(std::any::TypeId::of::<T>(), type_name);
+    }
+    
+    /// Get type name for a TypeId (async version)
+    pub async fn get_type_name_async(&self, type_id: std::any::TypeId) -> Option<String> {
+        let registry = self.type_registry.read().unwrap();
+        registry.get(&type_id).cloned()
+    }
+    
+    /// Get type name for a TypeId (sync version)
+    pub fn get_type_name(&self, type_id: std::any::TypeId) -> Option<String> {
+        let registry = self.type_registry.read().unwrap();
+        registry.get(&type_id).cloned()
     }
 
     /// Sweep unreachable objects during garbage collection
@@ -524,39 +574,36 @@ impl MemoryMonitor {
 
     /// Check if an object needs finalization
     async fn needs_finalization(&self, obj_ref: &ObjectRef) -> bool {
-        // TODO: Implement comprehensive finalization check including finalizer registration status
-        //       Currently only checks pending finalization queue; should check finalizer registration and finalization state.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Check if object has finalizer registered
-        // [ ] Check if object is in pending finalization queue
-        // [ ] Check if object has already been finalized
-        // [ ] Handle edge cases (objects without finalizers, already finalized objects)
-        // [ ] Add unit tests for finalization checking
-        // [ ] Add integration tests with various finalization states
-        // [ ] Verify finalization check accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Finalization check considers finalizer registration status
-        // - Pending finalization queue is checked correctly
-        // - Already finalized objects are handled correctly
-        // - Finalization check is accurate and reliable
-        //
-        // DEPENDENCIES:
-        // - Finalizer registration system (Required)
-        // - Finalization state tracking (Required)
-        // - GC registry (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (low risk enhancement)
-        // - Change Budget: ~40 LOC
-        // - Reviewer Requirements: Garbage collection expertise
+        // Check if object has already been finalized
+        let finalized = self.finalized_objects.read().await;
+        if finalized.contains(obj_ref) {
+            return false; // Already finalized, no need to finalize again
+        }
+        drop(finalized);
+        
+        // Check if object has a finalizer registered in the finalizer queue
+        let finalizer_queue = self.finalizer_queue.lock().await;
+        let has_registered_finalizer = finalizer_queue.iter()
+            .any(|f| f.object_ref.ptr == obj_ref.ptr && f.object_ref.type_id == obj_ref.type_id);
+        drop(finalizer_queue);
+        
+        if has_registered_finalizer {
+            return true; // Has registered finalizer, needs finalization
+        }
+        
+        // Check if object is in pending finalization queue
         let gc_registry = self.gc_registry.read().await;
-        gc_registry.pending_finalization.contains(obj_ref) // Temporary: only checks pending queue until comprehensive check is implemented
+        let in_pending_queue = gc_registry.pending_finalization.iter()
+            .any(|pending| pending.ptr == obj_ref.ptr && pending.type_id == obj_ref.type_id);
+        drop(gc_registry);
+        
+        in_pending_queue
+    }
+    
+    /// Mark an object as finalized
+    async fn mark_as_finalized(&self, obj_ref: &ObjectRef) {
+        let mut finalized = self.finalized_objects.write().await;
+        finalized.insert(obj_ref.clone());
     }
 
     /// Deallocate an object
@@ -637,57 +684,53 @@ impl MemoryMonitor {
         let largest_free_block = total_free_bytes / 4; // Conservative estimate
         let internal_fragmentation = allocation_overhead as f64 / stats.allocated_bytes as f64;
 
+        // Calculate free blocks count based on allocation patterns
+        // Since we don't have direct access to the allocator's internal state,
+        // we estimate free blocks by analyzing allocation patterns and free memory
+        let free_blocks_count = if stats.allocation_count > 0 && total_free_bytes > 0 {
+            // Estimate average allocation size from tracked allocations
+            // Use the number of marked objects as a proxy for registered objects
+            let registered_objects_count = gc_registry.marked_objects.len().max(1);
+            let avg_allocation_size = if gc_registry.total_bytes > 0 {
+                gc_registry.total_bytes / registered_objects_count
+            } else {
+                // Fallback: estimate based on total allocated bytes
+                if stats.allocated_bytes > 0 {
+                    let allocation_count_usize = stats.allocation_count as usize;
+                    (stats.allocated_bytes as usize) / allocation_count_usize.max(1)
+                } else {
+                    1024usize // Default estimate: 1KB per allocation
+                }
+            };
+
+            // Estimate free blocks: divide free memory by average block size
+            // Add some fragmentation factor (free blocks are typically smaller than allocated blocks)
+            let estimated_free_blocks = total_free_bytes / avg_allocation_size.max(1);
+            
+            // Apply fragmentation factor: free blocks are often smaller due to fragmentation
+            // This accounts for the fact that free memory is typically fragmented into smaller blocks
+            let fragmentation_factor = if external_fragmentation > 0.1 {
+                // High fragmentation: more smaller blocks
+                2.0
+            } else if external_fragmentation > 0.05 {
+                // Medium fragmentation: moderate block count
+                1.5
+            } else {
+                // Low fragmentation: fewer larger blocks
+                1.0
+            };
+            
+            (estimated_free_blocks as f64 * fragmentation_factor) as usize
+        } else {
+            0usize
+        };
+
         FragmentationStats {
             external_fragmentation,
             internal_fragmentation,
             largest_free_block,
             total_free_memory: total_free_bytes,
-            // TODO: Implement free blocks count calculation
-            //       Currently returns 0; should analyze memory layout to count actual free memory blocks for accurate fragmentation metrics.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] Analyze memory allocator layout to identify free blocks
-            // [ ] Implement block counting algorithm for different allocator types
-            // [ ] Handle various block sizes and allocation patterns
-            // [ ] Add block counting to fragmentation analysis
-            // [ ] Validate block count accuracy against known memory states
-            // [ ] Add unit tests for block counting accuracy
-            // [ ] Add integration tests with memory allocation patterns
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Free blocks count accurately reflects memory allocator state
-            // - Count includes all free blocks regardless of size
-            // - Performance overhead is minimal (<1ms per calculation)
-            // - Results are consistent across different memory states
-            // - Error handling covers edge cases (no free blocks, corrupted memory)
-            // - Integration tests validate against known memory layouts
-            //
-            // DEPENDENCIES:
-            // - Memory allocator introspection capabilities (Required)
-            // - Block metadata access (Required)
-            // - Memory layout analysis utilities (Optional)
-            // - Performance profiling tools (Optional)
-            //
-            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (monitoring enhancement)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Memory management and allocator expertise
-            free_blocks_count: 0,
+            free_blocks_count,
         }
     }
 
@@ -913,6 +956,13 @@ impl MemoryMonitor {
         };
 
         queue.push(finalizer);
+        
+        // Update statistics
+        let mut stats = self.finalizer_stats.write().await;
+        stats.registered += 1;
+        stats.queued += 1;
+        drop(stats);
+        
         id
     }
 
@@ -923,45 +973,83 @@ impl MemoryMonitor {
 
         // Execute all finalizers in the queue
         for finalizer in queue.drain(..) {
-            // TODO: Execute finalizers and track actual success/failure with timing
-            //       Currently assumes success; should execute finalizers and track actual results with timing.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Execute finalizer function and capture result
-            // [ ] Measure execution duration
-            // [ ] Track success/failure status
-            // [ ] Capture error messages on failure
-            // [ ] Handle finalizer panics gracefully
-            // [ ] Add unit tests for finalizer execution
-            // [ ] Add integration tests with various finalizers
-            // [ ] Verify finalizer execution tracking accuracy
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Finalizers are executed and results are tracked
-            // - Execution duration is measured accurately
-            // - Success/failure status reflects actual execution
-            // - Errors are captured and reported
-            //
-            // DEPENDENCIES:
-            // - Finalizer execution infrastructure (Required)
-            // - Timing measurement utilities (Required)
-            // - Error handling utilities (Required)
-            //
-            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (standard feature)
-            // - Change Budget: ~60 LOC
-            // - Reviewer Requirements: Resource management expertise
-            let result = FinalizerResult {
-                finalizer_id: finalizer.id,
-                success: true, // Temporary: assumes success until real execution tracking is implemented
-                duration_us: 0, // Temporary: no timing until real execution is implemented
-                error_message: None,
-            };
-            results.push(result);
+            let start_time = Instant::now();
+            let finalizer_id = finalizer.id;
+            let obj_ref = finalizer.object_ref.clone();
+            
+            // Execute the finalizer function in a blocking task to handle potentially blocking operations
+            let finalizer_fn = finalizer.finalizer_fn;
+            let execution_result = tokio::task::spawn_blocking(move || {
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    finalizer_fn();
+                }))
+            }).await;
+            
+            let duration_us = start_time.elapsed().as_micros() as u64;
+            
+            match execution_result {
+                Ok(Ok(())) => {
+                    // Finalizer executed successfully
+                    let result = FinalizerResult {
+                        finalizer_id,
+                        success: true,
+                        duration_us,
+                        error_message: None,
+                    };
+                    results.push(result.clone());
+                    
+                    // Update statistics
+                    let mut stats = self.finalizer_stats.write().await;
+                    stats.executed += 1;
+                    stats.successful += 1;
+                    stats.total_execution_time_us += duration_us;
+                    drop(stats);
+                    
+                    // Mark object as finalized
+                    self.mark_as_finalized(&obj_ref).await;
+                }
+                Ok(Err(panic_info)) => {
+                    // Finalizer panicked
+                    let error_msg = format!("Finalizer panicked: {:?}", panic_info);
+                    warn!("Finalizer {} panicked: {}", finalizer_id, error_msg);
+                    let result = FinalizerResult {
+                        finalizer_id,
+                        success: false,
+                        duration_us,
+                        error_message: Some(error_msg),
+                    };
+                    results.push(result);
+                    
+                    // Update statistics
+                    let mut stats = self.finalizer_stats.write().await;
+                    stats.executed += 1;
+                    stats.failed += 1;
+                    stats.total_execution_time_us += duration_us;
+                    drop(stats);
+                    
+                    // Still mark as finalized (even if it panicked, we don't want to retry)
+                    self.mark_as_finalized(&obj_ref).await;
+                }
+                Err(join_error) => {
+                    // Task join error
+                    let error_msg = format!("Finalizer task join error: {:?}", join_error);
+                    warn!("Finalizer {} join error: {}", finalizer_id, error_msg);
+                    let result = FinalizerResult {
+                        finalizer_id,
+                        success: false,
+                        duration_us,
+                        error_message: Some(error_msg),
+                    };
+                    results.push(result);
+                    
+                    // Update statistics
+                    let mut stats = self.finalizer_stats.write().await;
+                    stats.executed += 1;
+                    stats.failed += 1;
+                    stats.total_execution_time_us += duration_us;
+                    drop(stats);
+                }
+            }
         }
 
         results
@@ -970,14 +1058,20 @@ impl MemoryMonitor {
     /// Get finalizer queue statistics
     pub async fn get_finalizer_stats(&self) -> FinalizerStats {
         let queue = self.finalizer_queue.lock().await;
-        FinalizerStats {
-            registered: queue.len() as u64,
-            executed: 0, // Not tracked yet
-            successful: 0,
-            failed: 0, // Not tracked yet
-            total_execution_time_us: 0,
-            queued: queue.len() as u64,
-        }
+        let queued_count = queue.len() as u64;
+        drop(queue);
+        
+        // Get tracked statistics
+        let stats = self.finalizer_stats.read().await;
+        let mut result = stats.clone();
+        drop(stats);
+        
+        // Update queued count (current queue size)
+        result.queued = queued_count;
+        // Update registered count (queued + executed)
+        result.registered = queued_count + result.executed;
+        
+        result
     }
 
     /// Process finalization during GC sweep phase
