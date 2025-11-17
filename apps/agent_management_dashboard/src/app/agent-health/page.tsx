@@ -84,9 +84,9 @@ export default function AgentHealthPage() {
         ]);
 
         // Ensure agents is an array
-        const agentsArray = Array.isArray(agentsData) 
+        const agentsArray: Agent[] = Array.isArray(agentsData) 
           ? agentsData 
-          : (agentsData?.agents || []);
+          : [];
         setAgents(agentsArray);
         // Ensure alerts is an array
         setAlerts(Array.isArray(alertsData) ? alertsData : []);
@@ -94,7 +94,7 @@ export default function AgentHealthPage() {
         setSystemHealth(systemHealthData);
 
         // Fetch health and metrics for each agent
-        const healthPromises = agentsArray.map(async (agent) => {
+        const healthPromises = agentsArray.map(async (agent: Agent) => {
           try {
             const [health, metrics, logs] = await Promise.all([
               getAgentHealth(agent.id).catch(() => null),

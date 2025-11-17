@@ -87,5 +87,42 @@ impl std::fmt::Display for LearningError {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn learning_error_display_all_variants() {
+        assert_eq!(
+            LearningError::Algorithm("test".to_string()).to_string(),
+            "Algorithm error: test"
+        );
+        assert_eq!(
+            LearningError::TrainingData("test".to_string()).to_string(),
+            "Training data error: test"
+        );
+        assert_eq!(
+            LearningError::Model("test".to_string()).to_string(),
+            "Model error: test"
+        );
+        assert_eq!(
+            LearningError::Optimization("test".to_string()).to_string(),
+            "Optimization error: test"
+        );
+        assert_eq!(
+            LearningError::Configuration("test".to_string()).to_string(),
+            "Configuration error: test"
+        );
+    }
+
+    #[test]
+    fn learning_error_display_with_empty_message() {
+        assert_eq!(
+            LearningError::Algorithm("".to_string()).to_string(),
+            "Algorithm error: "
+        );
+    }
+}
+
 /// Result type for learning operations
 pub type LearningResult<T> = Result<T, LearningError>;

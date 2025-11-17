@@ -64,7 +64,7 @@ export async function getWorkerName(workerId: string | null | undefined): Promis
 export async function refreshWorkerCache(): Promise<void> {
   try {
     const agents = await getAgents();
-    const agentArray = Array.isArray(agents) ? agents : (agents?.agents || []);
+    const agentArray: Agent[] = Array.isArray(agents) ? agents : [];
 
     workerNameCache.clear();
 

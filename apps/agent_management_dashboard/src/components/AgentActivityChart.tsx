@@ -54,15 +54,11 @@ export function AgentActivityChart({
         ]);
 
         // Safely extract arrays
-        const activity = Array.isArray(activityResponse?.activity)
-          ? activityResponse.activity
-          : Array.isArray(activityResponse)
+        const activity: AgentActivityPoint[] = Array.isArray(activityResponse)
           ? activityResponse
           : [];
         
-        const agentsList = Array.isArray(agentsListResponse?.agents)
-          ? agentsListResponse.agents
-          : Array.isArray(agentsListResponse)
+        const agentsList: Agent[] = Array.isArray(agentsListResponse)
           ? agentsListResponse
           : [];
 

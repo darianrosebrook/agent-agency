@@ -86,14 +86,19 @@ pub async fn setup_unified_workspace(
 
     let context_config = ContextGenerationConfig {
         enabled: true,
+        code_context_enabled: true,
+        docs_context_enabled: true,
+        config_context_enabled: true,
         max_files_per_context: 50,
-        max_file_content_chars: 10000,
-        max_total_context_chars: 100000,
+        similarity_threshold: 0.7,
+        language_filters: Vec::new(),
+        framework_filters: Vec::new(),
     };
 
     let metrics_config = MetricsConfig {
         enabled: true,
         update_interval_secs: 60,
+        detailed_metrics: false,
     };
 
     let unified_config = UnifiedWorkspaceConfig {
@@ -219,14 +224,19 @@ pub async fn setup_unified_workspace_watcher_only(
 
     let context_config = ContextGenerationConfig {
         enabled: true,
+        code_context_enabled: true,
+        docs_context_enabled: true,
+        config_context_enabled: true,
         max_files_per_context: 50,
-        max_file_content_chars: 10000,
-        max_total_context_chars: 100000,
+        similarity_threshold: 0.7,
+        language_filters: Vec::new(),
+        framework_filters: Vec::new(),
     };
 
     let metrics_config = MetricsConfig {
         enabled: true,
         update_interval_secs: 60,
+        detailed_metrics: false,
     };
 
     let unified_config = UnifiedWorkspaceConfig {

@@ -152,40 +152,57 @@ impl ToolChainBridge {
             DependencyEdge, DependencyEdgeType, DependencyNode, DependencyNodeType,
         };
 
-        // Create milestones from tool chain nodes
+        // Create milestones from tool chain DAG nodes
         let mut milestones = Vec::new();
-        let mut node_indices = std::collections::HashMap::new();
+        let mut node_indices: std::collections::HashMap<petgraph::graph::NodeIndex, String> = std::collections::HashMap::new();
 
-        // Map tool chain nodes to milestones
-        for (idx, node) in tool_chain.nodes.iter().enumerate() {
-            let milestone_id = format!("TC-{}", node.id);
-            let milestone =
-                self.create_milestone_from_tool_node(node, &milestone_id, &working_spec)?;
-            milestones.push(milestone);
-            node_indices.insert(idx, milestone_id);
+        // Convert DAG nodes to milestones using topological sort
+        use petgraph::algo::toposort;
+        let sorted_indices = match toposort(&tool_chain.dag, None) {
+            Ok(indices) => indices,
+            Err(_) => {
+                // Cycle detected - fallback to node order
+                tool_chain.dag.node_indices().collect()
+            }
+        };
+
+        // Map DAG nodes to milestones
+        for dag_idx in &sorted_indices {
+            if let Some(node) = tool_chain.dag.node_weight(*dag_idx) {
+                let milestone_id = format!("TC-{}", node.tool_id);
+                // Convert system_federated_ml::tool_chain_planner::ToolNode to ExternalToolNode
+                // For now, create a minimal ExternalToolNode-like structure
+                let external_node = crate::planning::tool_chain_types::ToolNode {
+                    id: node.tool_id.clone(),
+                    tool_name: node.tool_id.clone(),
+                    tool_version: "1.0.0".to_string(),
+                    inputs: HashMap::new(),
+                    output_schema: None,
+                    dependencies: Vec::new(), // Will be extracted from edges below
+                };
+                let milestone =
+                    self.create_milestone_from_tool_node(&external_node, &milestone_id, &working_spec)?;
+                milestones.push(milestone);
+                node_indices.insert(*dag_idx, milestone_id);
+            }
         }
 
-        // Create dependency graph from tool chain node dependencies
+        // Create dependency graph from DAG edges
         let mut edges = Vec::new();
-        for (idx, node) in tool_chain.nodes.iter().enumerate() {
-            let to_id = node_indices.get(&idx).unwrap().clone();
-            for dep_id in &node.dependencies {
-                // Find the milestone ID for the dependency node
-                if let Some((dep_idx, _)) = tool_chain
-                    .nodes
-                    .iter()
-                    .enumerate()
-                    .find(|(_, n)| &n.id == dep_id)
-                {
-                    if let Some(from_id) = node_indices.get(&dep_idx) {
-                        edges.push(DependencyEdge {
-                            from: from_id.clone(),
-                            to: to_id.clone(),
-                            edge_type: DependencyEdgeType::Hard, // Tool chains have hard dependencies
-                            weight: 1.0,
-                            metadata: std::collections::HashMap::new(),
-                        });
-                    }
+        // Build a map from NodeIndex to milestone ID
+        let mut dag_to_milestone: std::collections::HashMap<petgraph::graph::NodeIndex, String> = node_indices.clone();
+
+        // Extract dependencies from DAG edges
+        for edge_idx in tool_chain.dag.edge_indices() {
+            if let Some((from_idx, to_idx)) = tool_chain.dag.edge_endpoints(edge_idx) {
+                if let (Some(from_id), Some(to_id)) = (dag_to_milestone.get(&from_idx), dag_to_milestone.get(&to_idx)) {
+                    edges.push(DependencyEdge {
+                        from: from_id.clone(),
+                        to: to_id.clone(),
+                        edge_type: DependencyEdgeType::Hard, // Tool chains have hard dependencies
+                        weight: 1.0,
+                        metadata: std::collections::HashMap::new(),
+                    });
                 }
             }
         }
@@ -304,9 +321,16 @@ impl ToolChainBridge {
     ) -> Result<ContractMilestone> {
         use agent_agency_contracts::planning_io::{Milestone, MilestonePriority, MilestoneScope};
 
+        // Extract tool identifier - ExternalToolNode is either system_federated_ml::ToolNode (has tool_id)
+        // or crate::planning::tool_chain_types::ToolNode (has id), depending on feature flags
+        #[cfg(feature = "tool-chain")]
+        let tool_identifier = &node.tool_id;
+        #[cfg(not(feature = "tool-chain"))]
+        let tool_identifier = &node.id;
+
         Ok(Milestone {
             id: milestone_id.to_string(),
-            objective: format!("Execute tool: {}", node.id),
+            objective: format!("Execute tool: {}", tool_identifier),
             scope: MilestoneScope {
                 files: vec![], // Tool-specific files would be determined by tool
                 directories: vec![],

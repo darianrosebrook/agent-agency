@@ -22,7 +22,7 @@ use crate::OrchestrationError;
 #[cfg(feature = "data-processing")]
 use agent_data_processing::{
     UnifiedIngestor, FileWatcher, UnifiedEnrichmentStage, UnifiedIndexer, JobScheduler,
-    EnrichmentCircuitBreakerConfig,
+    EnrichmentCircuitBreakerConfig, ingestion::IngestionStage,
 };
 
 // Local type definitions used instead of agent_data_processing
@@ -848,9 +848,9 @@ impl MultimodalOrchestrator {
         info!("Starting directory watch: {}", directory_path.display());
 
         self.file_watcher
-            .watch(directory_path)
+            .start_watching()
             .await
-            .context("Failed to start directory watching")?;
+            .map_err(|e| anyhow::anyhow!("Failed to start directory watching: {}", e))?;
 
         info!("Directory watch started successfully");
         Ok(())

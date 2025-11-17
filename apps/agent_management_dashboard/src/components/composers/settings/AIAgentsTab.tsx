@@ -19,7 +19,11 @@ export function AIAgentsTabContent() {
 
       try {
         const agentsData = await getAgents();
-        setAgents(agentsData);
+        // Ensure agents is an array before setting
+        const agentsArray: Agent[] = Array.isArray(agentsData) 
+          ? agentsData 
+          : [];
+        setAgents(agentsArray);
       } catch (err) {
         console.error("Failed to fetch agents:", err);
         setError(err instanceof Error ? err : new Error("Failed to load agents"));

@@ -1821,7 +1821,7 @@ impl UnifiedOrchestrator {
             info!("Using ArbiterPipelineOptimizer for milestone decision optimization");
             for milestone in &mut plan_for_execution.contract_plan.milestones {
                 // Create decision input from milestone
-                let task_description = format!("{}: {}", milestone.id, milestone.description);
+                let task_description = format!("{}: {}", milestone.id, milestone.objective);
                 let context = format!(
                     "milestone_id={}, dependencies={:?}",
                     milestone.id, milestone.dependencies

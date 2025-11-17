@@ -71,8 +71,8 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             .plan_chain(&planning_context, &constraints)
             .await
             .map_err(
-                |e| agent_agency_contracts::ContractError::ServiceUnavailable {
-                    service: "tool-chain".to_string(),
+                |e| agent_agency_contracts::errors::PlanningError::PlanGenerationFailed {
+                    reason: format!("Tool chain planning failed: {}", e),
                 },
             )?;
 
@@ -253,11 +253,16 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             ]),
         })
     }
-}
 
-#[cfg(feature = "tool-chain")]
-impl ToolChainPlannerAdapter {
-    /// Get planning statistics and performance metrics
+    async fn optimize_tool_chain(
+        &self,
+        plan: &ToolChainPlan,
+        optimization_criteria: Vec<String>,
+    ) -> ToolChainResult<ToolChainPlan> {
+        // Delegate to helper method in private impl block
+        self.optimize_tool_chain_impl(plan, optimization_criteria).await
+    }
+
     async fn get_planning_stats(&self) -> ToolChainResult<PlanningStats> {
         // Return basic stats - in a full implementation, this would query the planner
         Ok(PlanningStats {
@@ -269,6 +274,10 @@ impl ToolChainPlannerAdapter {
             last_planning_time: None,
         })
     }
+}
+
+#[cfg(feature = "tool-chain")]
+impl ToolChainPlannerAdapter {
 
     /// Detect cycles in dependency graph using DFS
     fn detect_dependency_cycle(
@@ -333,7 +342,8 @@ impl ToolChainPlannerAdapter {
         None
     }
 
-    async fn optimize_tool_chain(
+    /// Internal implementation of optimize_tool_chain (called from trait implementation)
+    async fn optimize_tool_chain_impl(
         &self,
         plan: &ToolChainPlan,
         optimization_criteria: Vec<String>,
@@ -429,21 +439,6 @@ impl ToolChainPlannerAdapter {
         Ok(optimized_plan)
     }
 
-    async fn get_planning_stats(&self) -> ToolChainResult<PlanningStats> {
-        // Return basic stats - in a full implementation, this would query the planner
-        Ok(PlanningStats {
-            total_plans_generated: 0,
-            average_planning_time_ms: 0.0,
-            plan_success_rate: 0.0,
-            average_optimization_improvement: 0.0,
-            cache_hit_rate: 0.0,
-            last_planning_time: None,
-        })
-    }
-}
-
-#[cfg(feature = "tool-chain")]
-impl ToolChainPlannerAdapter {
     /// Optimize tool chain for parallelization
     async fn optimize_parallelization(
         &self,
@@ -635,18 +630,6 @@ impl ToolChainPlannerAdapter {
         );
 
         Ok(optimized_plan)
-    }
-
-    async fn get_planning_stats(&self) -> ToolChainResult<PlanningStats> {
-        // Return basic stats - in a full implementation, this would query the planner
-        Ok(PlanningStats {
-            total_plans_generated: 0,
-            average_planning_time_ms: 0.0,
-            plan_success_rate: 0.0,
-            average_optimization_improvement: 0.0,
-            cache_hit_rate: 0.0,
-            last_planning_time: None,
-        })
     }
 }
 

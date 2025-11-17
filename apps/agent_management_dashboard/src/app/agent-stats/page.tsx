@@ -84,17 +84,20 @@ export default function AgentStatsPage() {
         ]);
 
         setStats(statsData);
-        // Ensure agents is an array - handle case where API returns object with agents property
-        const agentsArray = Array.isArray(agentsData) 
+        // Ensure agents is an array
+        const agentsArray: Agent[] = Array.isArray(agentsData) 
           ? agentsData 
-          : (agentsData?.agents || []);
+          : [];
         setAgents(agentsArray);
         setActivity(activityData);
         // Handle both array and object responses from getModelContributions
-        const modelArray = Array.isArray(modelData) 
-          ? modelData 
-          : (modelData?.models || modelData?.monthly_contributions || []);
-        setModelContributions(modelArray);
+        if (Array.isArray(modelData)) {
+          setModelContributions(modelData);
+        } else if (modelData) {
+          setModelContributions(modelData);
+        } else {
+          setModelContributions(null);
+        }
         // Handle both array and object responses from getContributions
         setContributions(Array.isArray(contributionsData) ? contributionsData : contributionsData as ContributionsResponse);
         setEfficiency(efficiencyData);
@@ -182,16 +185,19 @@ export default function AgentStatsPage() {
                 ]);
                 setStats(statsData);
                 // Ensure agents is an array - handle case where API returns object with agents property
-                const agentsArray = Array.isArray(agentsData) 
+                const agentsArray: Agent[] = Array.isArray(agentsData) 
                   ? agentsData 
-                  : (agentsData?.agents || []);
+                  : [];
                 setAgents(agentsArray);
                 setActivity(activityData);
                 // Handle both array and object responses from getModelContributions
-                const modelArray = Array.isArray(modelData) 
-                  ? modelData 
-                  : (modelData?.models || modelData?.monthly_contributions || []);
-                setModelContributions(modelArray);
+                if (Array.isArray(modelData)) {
+                  setModelContributions(modelData);
+                } else if (modelData) {
+                  setModelContributions(modelData);
+                } else {
+                  setModelContributions(null);
+                }
                 // Handle both array and object responses from getContributions
         setContributions(Array.isArray(contributionsData) ? contributionsData : contributionsData as ContributionsResponse);
                 setEfficiency(efficiencyData);

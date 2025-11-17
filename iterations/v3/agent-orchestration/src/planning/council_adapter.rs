@@ -67,9 +67,54 @@ impl CouncilCoordinatorAdapter {
         match priority {
             agent_agency_contracts::types::planning::TaskPriority::Low => ReviewPriority::Low,
             agent_agency_contracts::types::planning::TaskPriority::Normal => ReviewPriority::Normal,
+            agent_agency_contracts::types::planning::TaskPriority::Medium => ReviewPriority::Normal,
             agent_agency_contracts::types::planning::TaskPriority::High => ReviewPriority::High,
             agent_agency_contracts::types::planning::TaskPriority::Urgent => ReviewPriority::High,
             agent_agency_contracts::types::planning::TaskPriority::Critical => ReviewPriority::Critical,
+        }
+    }
+
+    /// Convert internal CouncilError to contracts CouncilError
+    fn convert_council_error(
+        &self,
+        error: crate::council_errors::CouncilError,
+    ) -> agent_agency_contracts::errors::CouncilError {
+        match error {
+            crate::council_errors::CouncilError::JudgeError { judge_id, message } => {
+                agent_agency_contracts::errors::CouncilError::JudgeError {
+                    judge_id: Some(judge_id),
+                    reason: message,
+                }
+            }
+            crate::council_errors::CouncilError::SessionTimeout {
+                session_id,
+                timeout_seconds,
+            } => agent_agency_contracts::errors::CouncilError::Timeout {
+                session_id,
+                timeout_seconds,
+            }
+            crate::council_errors::CouncilError::AggregationFailure { reason } => {
+                agent_agency_contracts::errors::CouncilError::AggregationError { reason }
+            }
+            crate::council_errors::CouncilError::DecisionFailure { reason, .. } => {
+                agent_agency_contracts::errors::CouncilError::DecisionError { reason }
+            }
+            crate::council_errors::CouncilError::InvalidInput { message } => {
+                agent_agency_contracts::errors::CouncilError::SessionError {
+                    session_id: None,
+                    reason: message,
+                }
+            }
+            crate::council_errors::CouncilError::QuorumFailure { .. } => {
+                agent_agency_contracts::errors::CouncilError::SessionError {
+                    session_id: None,
+                    reason: "Council quorum not met".to_string(),
+                }
+            }
+            _ => agent_agency_contracts::errors::CouncilError::ReviewError {
+                session_id: "unknown".to_string(),
+                reason: format!("{}", error),
+            }
         }
     }
 }
@@ -78,14 +123,40 @@ impl CouncilCoordinatorAdapter {
 #[async_trait]
 impl CouncilCoordinator for CouncilCoordinatorAdapter {
     async fn start_session(&self, task: &TaskDescriptor) -> CouncilResult<SessionId> {
-        // Convert contracts TaskDescriptor to council ReviewContext
-        let review_context = crate::judge_backup::types::ReviewContext {
-            working_spec: self.task_descriptor_to_working_spec(task),
-            context: std::collections::HashMap::new(),
-            priority: self.map_task_priority(task.priority),
+        let session_id = SessionId(uuid::Uuid::new_v4());
+        let session_id_str = session_id.0.to_string();
+
+        // Convert TaskDescriptor to WorkingSpec and serialize to string
+        let working_spec = self.task_descriptor_to_working_spec(task);
+        let working_spec_json = serde_json::to_string(&working_spec)
+            .map_err(|e| agent_agency_contracts::errors::CouncilError::SessionError {
+                session_id: None,
+                reason: format!("Failed to serialize working spec: {}", e),
+            })?;
+
+        // Convert TaskPriority to risk_tier (u8)
+        let risk_tier = match task.risk_tier {
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier1) => 1,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier2) => 2,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier3) => 3,
+            None => match task.priority {
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => 1,
+            },
         };
 
-        let session_id = SessionId(uuid::Uuid::new_v4());
+        // Convert contracts TaskDescriptor to council ReviewContext
+        let review_context = crate::judge_backup::types::ReviewContext {
+            session_id: session_id_str.clone(),
+            working_spec: working_spec_json,
+            risk_tier,
+            previous_reviews: Vec::new(),
+            constraints: std::collections::HashMap::new(),
+        };
 
         // Create session record in database if database operations are available
         if let Some(ref db_ops) = self.db_ops {
@@ -97,12 +168,12 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
 
             // Create session record with review context
             let create_session = CreateCouncilSession {
-                session_id: *session_id,
+                session_id: session_id.0,
                 task_id: Some(task_id),
-                working_spec_id: Some(review_context.working_spec.id.clone()),
+                working_spec_id: Some(working_spec.id.clone()),
                 review_context: json!({
-                    "priority": format!("{:?}", review_context.priority),
-                    "context": review_context.context,
+                    "risk_tier": risk_tier,
+                    "session_id": session_id_str,
                 }),
                 status: Some("initialized".to_string()),
                 selected_judges: None,
@@ -110,7 +181,7 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
                 progress: Some(0.0),
                 metadata: Some(json!({
                     "task_id": task_id.to_string(),
-                    "working_spec_id": review_context.working_spec.id,
+                    "working_spec_id": working_spec.id,
                 })),
             };
 
@@ -123,11 +194,9 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
 
         // The council doesn't have explicit session management, so we'll just validate
         // that the task can be reviewed by attempting a dry-run evaluation
-        let _dry_run_result = self.council.evaluate(&review_context).await.map_err(|e| {
-            agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "council".to_string(),
-            }
-        })?;
+        // Use conduct_review which takes working_spec and review_context
+        let _dry_run_session = self.council.conduct_review(working_spec, review_context).await
+            .map_err(|e| self.convert_council_error(e))?;
 
         Ok(session_id)
     }
@@ -137,11 +206,38 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
         session_id: &SessionId,
         task: &TaskDescriptor,
     ) -> CouncilResult<CouncilVerdict> {
+        let session_id_str = session_id.0.to_string();
+
+        // Convert TaskDescriptor to WorkingSpec (we need the actual WorkingSpec, not JSON for conduct_review)
+        let working_spec = self.task_descriptor_to_working_spec(task);
+        let working_spec_json = serde_json::to_string(&working_spec)
+            .map_err(|e| agent_agency_contracts::errors::CouncilError::SessionError {
+                session_id: Some(session_id_str.clone()),
+                reason: format!("Failed to serialize working spec: {}", e),
+            })?;
+
+        // Convert TaskPriority to risk_tier (u8)
+        let risk_tier = match task.risk_tier {
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier1) => 1,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier2) => 2,
+            Some(agent_agency_contracts::types::planning::RiskTier::Tier3) => 3,
+            None => match task.priority {
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Normal => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Critical => 1,
+            },
+        };
+
         // Convert to council ReviewContext
         let review_context = crate::judge_backup::types::ReviewContext {
-            working_spec: self.task_descriptor_to_working_spec(task),
-            context: std::collections::HashMap::new(),
-            priority: self.map_task_priority(task.priority),
+            session_id: session_id_str,
+            working_spec: working_spec_json,
+            risk_tier,
+            previous_reviews: Vec::new(),
+            constraints: std::collections::HashMap::new(),
         };
 
         // Update session status to review_in_progress if database operations available
@@ -160,16 +256,20 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
                 metadata: None,
             };
 
-            if let Err(e) = db_ops.update_council_session(*session_id, update).await {
+            if let Err(e) = db_ops.update_council_session(session_id.0, update).await {
                 tracing::warn!("Failed to update council session status: {}", e);
                 // Continue with review despite update failure
             }
         }
 
-        // Perform the actual evaluation
-        let final_decision = self.council.evaluate(&review_context).await.map_err(|e| {
-            agent_agency_contracts::ContractError::ServiceUnavailable {
-                service: "council".to_string(),
+        // Perform the actual evaluation using conduct_review
+        let council_session = self.council.conduct_review(working_spec, review_context).await
+            .map_err(|e| self.convert_council_error(e))?;
+        
+        // Extract final_decision from the session
+        let final_decision = council_session.final_decision.ok_or_else(|| {
+            agent_agency_contracts::errors::CouncilError::DecisionError {
+                reason: "Council session completed without final decision".to_string(),
             }
         })?;
 
@@ -180,28 +280,41 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
 
             let final_status = "completed"; // Simplified - council integration needs proper verdict mapping
 
+            // Extract information from FinalDecision enum variant
+            let (decision_type, confidence, reason) = match &final_decision {
+                crate::decision_making::FinalDecision::Proceed { confidence, .. } => {
+                    ("proceed", *confidence, "Task approved by council".to_string())
+                }
+                crate::decision_making::FinalDecision::Refine { refinement_directive, .. } => {
+                    ("refine", 0.5, format!("Refinement required: {} changes", refinement_directive.required_changes.len()))
+                }
+                crate::decision_making::FinalDecision::Reject { reason, .. } => {
+                    ("reject", 0.0, reason.clone())
+                }
+                crate::decision_making::FinalDecision::Escalate { reason, .. } => {
+                    ("escalate", 0.3, reason.clone())
+                }
+            };
+
             let update = UpdateCouncilSession {
                 status: Some(final_status.to_string()),
                 progress: Some(1.0),
                 selected_judges: None,
                 contributions: None,
                 aggregation_result: Some(json!({
-                    "average_score": final_decision.score,
-                    "consensus_label": format!("{:?}", final_decision.verdict),
+                    "decision_type": decision_type,
+                    "confidence": confidence,
                 })),
                 final_decision: Some(json!({
-                    "verdict": format!("{:?}", final_decision.verdict),
-                    "score": final_decision.score,
-                    "rationale": final_decision.rationale,
-                    "judge_verdicts": final_decision.judge_verdicts,
-                    "consensus_violations": final_decision.consensus_violations,
-                    "recommended_actions": final_decision.recommended_actions,
+                    "decision_type": decision_type,
+                    "confidence": confidence,
+                    "reason": reason,
                 })),
                 completed_at: Some(chrono::Utc::now()),
                 metadata: None,
             };
 
-            if let Err(e) = db_ops.update_council_session(*session_id, update).await {
+            if let Err(e) = db_ops.update_council_session(session_id.0, update).await {
                 tracing::warn!(
                     "Failed to update council session with final decision: {}",
                     e
@@ -210,16 +323,14 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
             }
         }
 
-        // Convert council FinalDecision to contracts CouncilVerdict enum
-        // Map verdict label to CouncilVerdict enum variant
-        let verdict = match final_decision.label {
-            agent_agency_contracts::VerdictLabel::Approved => CouncilVerdict::Approved,
-            agent_agency_contracts::VerdictLabel::ConditionalApproval => {
-                CouncilVerdict::ConditionalApproval
-            }
-            agent_agency_contracts::VerdictLabel::Rejected => CouncilVerdict::Rejected,
-            agent_agency_contracts::VerdictLabel::NeedsMoreInfo => {
-                // Treat NeedsMoreInfo as ConditionalApproval
+        // Convert council FinalDecision enum to contracts CouncilVerdict enum
+        // Map FinalDecision variant to CouncilVerdict enum variant
+        let verdict = match final_decision {
+            crate::decision_making::FinalDecision::Proceed { .. } => CouncilVerdict::Approved,
+            crate::decision_making::FinalDecision::Refine { .. } => CouncilVerdict::ConditionalApproval,
+            crate::decision_making::FinalDecision::Reject { .. } => CouncilVerdict::Rejected,
+            crate::decision_making::FinalDecision::Escalate { .. } => {
+                // Treat Escalate as ConditionalApproval
                 CouncilVerdict::ConditionalApproval
             }
         };
@@ -230,7 +341,7 @@ impl CouncilCoordinator for CouncilCoordinatorAdapter {
     async fn get_session_status(&self, session_id: &SessionId) -> CouncilResult<SessionStatus> {
         // Query session status from database if available
         if let Some(ref db_ops) = self.db_ops {
-            match db_ops.get_council_session(*session_id).await {
+            match db_ops.get_council_session(session_id.0).await {
                 Ok(Some(session)) => {
                     // Map database session status to contracts SessionStatusType
                     let status_type = match session.status.as_str() {
@@ -311,8 +422,8 @@ impl CouncilCoordinatorAdapter {
             max_duration_minutes: None, // Could be extracted from change budget or task metadata
             max_iterations: None,       // Could be configured based on risk tier
             budget_limits: Some(agent_agency_contracts::BudgetLimits {
-                max_files: task.change_budget.max_files.map(|x| x as u32),
-                max_loc: task.change_budget.max_loc.map(|x| x as u32),
+                max_files: Some(task.change_budget.max_files as u32),
+                max_loc: Some(task.change_budget.max_loc as u32),
             }),
             scope_restrictions: Some(agent_agency_contracts::ScopeRestrictions {
                 allowed_paths: {
@@ -400,10 +511,13 @@ impl CouncilCoordinatorAdapter {
                 deps
             },
             environment: match task.execution_mode {
+                agent_agency_contracts::types::planning::ExecutionMode::DryRun => {
+                    agent_agency_contracts::task_request::Environment::Development
+                }
                 agent_agency_contracts::types::planning::ExecutionMode::Auto => {
                     agent_agency_contracts::task_request::Environment::Development
                 }
-                agent_agency_contracts::types::planning::ExecutionMode::Manual => {
+                agent_agency_contracts::types::planning::ExecutionMode::Strict => {
                     agent_agency_contracts::task_request::Environment::Production
                 }
             },
@@ -415,13 +529,11 @@ impl CouncilCoordinatorAdapter {
             integration_tests: vec![], // Would be populated from task requirements
             e2e_scenarios: if risk_tier == 1 {
                 vec![agent_agency_contracts::E2eScenario {
-                    id: format!("e2e-{}", task.task_id),
-                    name: format!("End-to-end test for {}", task.task_id),
                     description: format!(
                         "Complete end-to-end test scenario for task {}",
                         task.task_id
                     ),
-                    steps: vec![],
+                    user_journey: format!("End-to-end test journey for task {}", task.task_id),
                     expected_outcomes: vec![],
                 }]
             } else {

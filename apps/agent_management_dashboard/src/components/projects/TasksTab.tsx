@@ -151,7 +151,11 @@ export function TasksTab() {
         getAgents().catch(() => []),
       ]);
 
-      setAgents(agentsData);
+      // Ensure agents is an array before setting
+      const agentsArray = Array.isArray(agentsData) 
+        ? agentsData 
+        : (agentsData?.agents || []);
+      setAgents(agentsArray);
 
       // Fetch comment counts for each task
       const tasksWithComments = await Promise.all(

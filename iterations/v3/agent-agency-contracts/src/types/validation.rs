@@ -481,6 +481,97 @@ mod tests {
     }
 
     #[test]
+    fn validation_result_has_critical_issues_boolean_mutation_detection() {
+        // Test that has_critical_issues() actually checks severity, not just returns true/false
+        // This catches mutations that return hardcoded true or false
+        
+        // Case 1: Has critical - MUST return true
+        let with_critical = ValidationResult {
+            valid: false,
+            score: 0.5,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Critical,
+                ValidationCategoryEnum::Security,
+                "Critical".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(with_critical.has_critical_issues(), "Must return true for Critical severity");
+        
+        // Case 2: Has high - MUST return true
+        let with_high = ValidationResult {
+            valid: false,
+            score: 0.6,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::High,
+                ValidationCategoryEnum::Quality,
+                "High".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(with_high.has_critical_issues(), "Must return true for High severity");
+        
+        // Case 3: Has error - MUST return true
+        let with_error = ValidationResult {
+            valid: false,
+            score: 0.7,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Error,
+                ValidationCategoryEnum::Scope,
+                "Error".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(with_error.has_critical_issues(), "Must return true for Error severity");
+        
+        // Case 4: Only warning - MUST return false
+        let only_warning = ValidationResult {
+            valid: true,
+            score: 0.9,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Warning,
+                ValidationCategoryEnum::Performance,
+                "Warning".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(!only_warning.has_critical_issues(), "Must return false for Warning severity");
+        
+        // Case 5: Empty - MUST return false
+        let empty = ValidationResult {
+            valid: true,
+            score: 1.0,
+            issues: vec![],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(!empty.has_critical_issues(), "Must return false for empty issues");
+        
+        // Case 6: Mixed severities - MUST return true if any critical/high/error
+        let mixed = ValidationResult {
+            valid: false,
+            score: 0.5,
+            issues: vec![
+                ValidationIssue::new(ValidationSeverity::Warning, ValidationCategoryEnum::Performance, "Warning".to_string()),
+                ValidationIssue::new(ValidationSeverity::Critical, ValidationCategoryEnum::Security, "Critical".to_string()),
+            ],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(mixed.has_critical_issues(), "Must return true when Critical present even with Warning");
+    }
+
+    #[test]
     fn validation_category_enum_display() {
         assert_eq!(ValidationCategoryEnum::Dependency.to_string(), "dependency");
         assert_eq!(ValidationCategoryEnum::Scope.to_string(), "scope");

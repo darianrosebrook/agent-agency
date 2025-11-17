@@ -1725,6 +1725,7 @@ pub enum EnrichmentType {
 
 /// Unified enrichment stage combining all enrichers
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct UnifiedEnrichmentStage {
     asr_enricher: AsrEnricher,
     vision_enricher: VisionEnricher,

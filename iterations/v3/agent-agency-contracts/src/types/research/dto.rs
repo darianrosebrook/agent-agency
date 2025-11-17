@@ -285,6 +285,25 @@ mod tests {
     }
 
     #[test]
+    fn entity_key_as_str_returns_actual_value_not_stub() {
+        // Test multiple values to prove as_str() returns the actual value
+        let test_cases = vec![
+            ("key1", "key1"),
+            ("key-2", "key-2"),
+            ("test_key_123", "test_key_123"),
+            ("a", "a"),
+        ];
+        
+        for (input, expected) in test_cases {
+            let key = EntityKey::new(input.to_string());
+            assert_eq!(key.as_str(), expected, "as_str() should return actual value, not stub");
+            // Verify it's not mutated
+            assert_ne!(key.as_str(), "");
+            assert_ne!(key.as_str(), "xyzzy");
+        }
+    }
+
+    #[test]
     fn entity_key_as_str_with_empty_string() {
         let key = EntityKey::new("".to_string());
         assert_eq!(key.as_str(), "");
@@ -348,5 +367,43 @@ mod tests {
         assert_ne!(hash1, hash2);
         // Same strings should have same hash
         assert_eq!(hash1, hash3);
+    }
+
+    #[test]
+    fn entity_type_hash_all_variants() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        // Test all enum variants hash correctly
+        // This catches mutations that return () instead of hashing
+        
+        let variants = vec![
+            EntityType::Concept,
+            EntityType::Person,
+            EntityType::Organization,
+            EntityType::Location,
+            EntityType::Other("custom1".to_string()),
+            EntityType::Other("custom2".to_string()),
+        ];
+        
+        let mut hashes = Vec::new();
+        for variant in &variants {
+            let mut hasher = DefaultHasher::new();
+            variant.hash(&mut hasher);
+            let hash = hasher.finish();
+            hashes.push(hash);
+            
+            // Hash should not be zero (proves hash() was called)
+            assert_ne!(hash, 0, "Hash should not be zero - hash() may be stubbed");
+        }
+        
+        // All variants should have different hashes (except same Other strings)
+        // Concept != Person != Organization != Location
+        assert_ne!(hashes[0], hashes[1], "Concept and Person should hash differently");
+        assert_ne!(hashes[1], hashes[2], "Person and Organization should hash differently");
+        assert_ne!(hashes[2], hashes[3], "Organization and Location should hash differently");
+        
+        // Other("custom1") != Other("custom2")
+        assert_ne!(hashes[4], hashes[5], "Different Other strings should hash differently");
     }
 }

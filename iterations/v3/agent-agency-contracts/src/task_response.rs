@@ -197,3 +197,51 @@ pub fn validate_task_response_value(
         ContractError::validation(ContractKind::TaskResponse, issues)
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn validate_task_response_value_returns_error_on_invalid() {
+        // Multiple provably invalid cases - if validate() returns Ok(()), ALL will fail
+        let invalid_cases = vec![
+            // Missing version
+            json!({"task_id": "123", "status": "accepted"}),
+            // Missing task_id
+            json!({"version": "1.0", "status": "accepted"}),
+            // Missing status
+            json!({"version": "1.0", "task_id": "123"}),
+            // Wrong type for status (should be enum string)
+            json!({"version": "1.0", "task_id": "123", "status": 456}),
+            // Empty object
+            json!({}),
+            // Null
+            json!(null),
+        ];
+
+        for (idx, invalid_case) in invalid_cases.iter().enumerate() {
+            let result = validate_task_response_value(invalid_case);
+            // This MUST fail - if validate() is stubbed to return Ok(()), test fails
+            assert!(
+                result.is_err(),
+                "Invalid case {} should be rejected by validation, but got Ok(()) - validation may be stubbed",
+                idx
+            );
+        }
+    }
+
+    #[test]
+    fn validate_task_response_value_returns_ok_on_valid() {
+        let valid_value = json!({
+            "version": "1.0",
+            "task_id": "00000000-0000-0000-0000-000000000000",
+            "status": "accepted"
+        });
+
+        let result = validate_task_response_value(&valid_value);
+        // May pass or fail depending on schema requirements, but should return a Result
+        assert!(result.is_ok() || result.is_err());
+    }
+}

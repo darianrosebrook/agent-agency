@@ -1030,6 +1030,12 @@ pub use types::{DiffStats, MultimodalProcessingResult, MultimodalTask, Orchestra
 #[cfg(feature = "api-server")]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct AgentOrchestrationService {
+    /// Council for task review and approval
+    #[cfg(feature = "api-server")]
+    council: std::sync::Arc<council::Council>,
+    /// Orchestrator for task execution
+    #[cfg(feature = "api-server")]
+    orchestrator: std::sync::Arc<multimodal_orchestration::MultimodalOrchestrator>,
     /// Audit trail manager for tracking all operations
     pub audit_trail: audit_trail::AuditTrailManager,
 }
@@ -1091,20 +1097,24 @@ impl AgentOrchestrationService {
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
         let decision_engine = crate::decision_making::create_decision_engine();
 
-        let _council = council::Council::new(
+        let council = std::sync::Arc::new(council::Council::new(
             config.council_config,
             available_judges,
             verdict_aggregator,
             decision_engine,
-        );
+        ));
 
-        let _orchestrator = multimodal_orchestration::MultimodalOrchestrator::new()
+        let orchestrator = std::sync::Arc::new(multimodal_orchestration::MultimodalOrchestrator::new()
             .await
-            .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?;
+            .map_err(|e| OrchestrationError::ExecutionError(Box::new(e)))?);
 
         let audit_trail = audit_trail::AuditTrailManager::new(config.audit_config);
 
-        Ok(Self { audit_trail })
+        Ok(Self {
+            council,
+            orchestrator,
+            audit_trail,
+        })
     }
 
     /// Execute a task with full orchestration and governance
@@ -1119,22 +1129,154 @@ impl AgentOrchestrationService {
         &self,
         task: OrchestratedTask,
     ) -> Result<OrchestrationResult, OrchestrationError> {
-        // TEMPORARILY DISABLED - struct fields commented out
-        todo!("Re-enable when struct fields are restored");
         // Convert OrchestratedTask to TaskDescriptor for council review
         let task_descriptor = self.to_task_descriptor(&task);
 
         // 1. Council review and approval
-        let council_session = self
+        // Convert TaskDescriptor to WorkingSpec for council review
+        // (Duplicating logic from Council::convert_task_to_working_spec since it's private)
+        use agent_agency_contracts::task_request::Environment;
+        use agent_agency_contracts::{RollbackPlan, TestPlan, WorkingSpec, WorkingSpecConstraints, WorkingSpecContext};
+        
+        let working_spec = WorkingSpec {
+            id: task_descriptor.task_id.to_string(),
+            title: format!("Task: {}", task_descriptor.task_id),
+            description: task_descriptor.description.clone(),
+            version: "1.0.0".to_string(),
+            goals: vec![task_descriptor.description.clone()],
+            acceptance_criteria: vec![],
+            test_plan: TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
+            },
+            rollback_plan: RollbackPlan {
+                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
+                automated_steps: vec!["git revert".to_string()],
+                manual_steps: vec![],
+                data_impact: agent_agency_contracts::DataImpact::None,
+                downtime_required: Some(false),
+                rollback_window_minutes: Some(30),
+            },
+            risk_tier: match task_descriptor.priority {
+                agent_agency_contracts::types::planning::TaskPriority::Critical
+                | agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+                agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Normal
+                | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
+            },
+            constraints: WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: None,
+                scope_restrictions: None,
+            },
+            context: WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: Environment::Development,
+            },
+            change_budget: agent_agency_contracts::planning_io::ChangeBudget {
+                max_files: 100,
+                max_loc: 2000,
+                max_migrations: 10,
+                allow_breaking_changes: false,
+                allow_new_dependencies: true,
+                enforcement_mode: agent_agency_contracts::planning_io::BudgetEnforcement::Strict,
+            },
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            coverage_targets: None,
+            file_changes: vec![],
+            milestones: vec![],
+            quality_gates: None,
+            scope: vec![],
+            overview: String::new(),
+            metadata: None,
+            non_functional_requirements: None,
+            validation_results: None,
+        };
+
+        // Create review context for full review
+        let review_context = crate::judge_backup::types::ReviewContext {
+            session_id: format!("council_session_{}", uuid::Uuid::new_v4()),
+            working_spec: serde_json::to_string(&working_spec)
+                .map_err(|e| OrchestrationError::CouncilError(
+                    crate::council_errors::CouncilError::InvalidInput {
+                        message: format!("Failed to serialize working spec: {}", e),
+                    }
+                ))?,
+            risk_tier: match task_descriptor.priority {
+                agent_agency_contracts::types::planning::TaskPriority::Critical
+                | agent_agency_contracts::types::planning::TaskPriority::High => 1,
+                agent_agency_contracts::types::planning::TaskPriority::Normal
+                | agent_agency_contracts::types::planning::TaskPriority::Medium => 2,
+                agent_agency_contracts::types::planning::TaskPriority::Low => 3,
+                agent_agency_contracts::types::planning::TaskPriority::Urgent => 1,
+            },
+            previous_reviews: Vec::new(),
+            constraints: std::collections::HashMap::new(),
+        };
+
+        // Perform full council review using conduct_review
+        let reviewed_session = self
             .council
-            .start_session(&task_descriptor)
+            .conduct_review(working_spec, review_context)
             .await
             .map_err(|e| OrchestrationError::CouncilError(e))?;
 
-        let consensus_result = council_session
-            .review_task(&task)
-            .await
-            .map_err(|e| OrchestrationError::CouncilError(e))?;
+        // Extract consensus result from final decision
+        let consensus_result = if let Some(ref decision) = reviewed_session.final_decision {
+            match decision {
+                crate::decision_making::FinalDecision::Proceed { confidence, .. } => {
+                    crate::council_types::ConsensusResult {
+                        approved: true,
+                        confidence: *confidence,
+                        reason: format!(
+                            "Task approved by council with {:.1}% confidence",
+                            confidence * 100.0
+                        ),
+                    }
+                }
+                crate::decision_making::FinalDecision::Refine {
+                    refinement_directive,
+                    ..
+                } => {
+                    crate::council_types::ConsensusResult {
+                        approved: false,
+                        confidence: 0.5,
+                        reason: format!(
+                            "Task requires refinement: {} changes required",
+                            refinement_directive.required_changes.len()
+                        ),
+                    }
+                }
+                crate::decision_making::FinalDecision::Reject { reason, .. } => {
+                    crate::council_types::ConsensusResult {
+                        approved: false,
+                        confidence: 0.2,
+                        reason: reason.clone(),
+                    }
+                }
+                crate::decision_making::FinalDecision::Escalate { reason, .. } => {
+                    crate::council_types::ConsensusResult {
+                        approved: false,
+                        confidence: 0.3,
+                        reason: reason.clone(),
+                    }
+                }
+            }
+        } else {
+            return Err(OrchestrationError::CouncilError(
+                crate::council_errors::CouncilError::InvalidInput {
+                    message: "Council session completed without final decision".to_string(),
+                },
+            ));
+        };
 
         if !consensus_result.approved {
             return Err(OrchestrationError::CouncilRejection(
@@ -1162,18 +1304,14 @@ impl AgentOrchestrationService {
         let task_execution_result = TaskExecutionResult {
             execution_id,
             task_id: task.id.clone(),
-            success: execution_result.status
-                == multimodal_orchestration::ProcessingStatus::Completed,
+            success: matches!(execution_result.status, multimodal_orchestration::ProcessingStatus::Completed),
             output: format!(
                 "Multimodal processing: {} blocks processed",
                 execution_result.blocks_processed
             ),
-            errors: if execution_result.status
-                == multimodal_orchestration::ProcessingStatus::Completed
-            {
-                vec![]
-            } else {
-                vec!["Processing failed".to_string()]
+            errors: match execution_result.status {
+                multimodal_orchestration::ProcessingStatus::Completed => vec![],
+                _ => vec!["Processing failed".to_string()],
             },
             metadata: std::collections::HashMap::new(),
             started_at: Utc::now(),

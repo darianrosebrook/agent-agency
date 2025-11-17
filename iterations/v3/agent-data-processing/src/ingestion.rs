@@ -2047,7 +2047,7 @@ impl FileWatcher {
 }
 
 /// Unified ingestor combining all ingestion capabilities
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnifiedIngestor {
     captions_ingestor: CaptionsIngestor,
     diagrams_ingestor: DiagramsIngestor,

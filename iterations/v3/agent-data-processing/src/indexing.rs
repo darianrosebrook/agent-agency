@@ -2259,6 +2259,7 @@ pub struct JobSchedulerStats {
 
 /// Unified indexer combining BM25, HNSW, and database storage
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct UnifiedIndexer {
     bm25_indexer: Bm25Indexer,
     hnsw_indexer: HnswIndexer,

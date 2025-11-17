@@ -56,17 +56,17 @@ export function TimelineTab() {
           getAgents().catch(() => []), // Gracefully handle agent fetch failure
         ]);
 
-        setAgents(agentsData);
+        // Ensure agents is an array before setting
+        const agentsArray = Array.isArray(agentsData) 
+          ? agentsData 
+          : (agentsData?.agents || []);
+        setAgents(agentsArray);
 
         // Create a map of agent IDs to agent names
         const agentMap = new Map<string, string>();
-        if (Array.isArray(agentsData)) {
-          agentsData.forEach((agent) => {
-            agentMap.set(agent.id, agent.name);
-          });
-        } else {
-          console.warn("Agents data is not an array:", agentsData);
-        }
+        agentsArray.forEach((agent) => {
+          agentMap.set(agent.id, agent.name);
+        });
 
         // Transform API tasks to TimelineTask format
         const timelineTasks: TimelineTask[] = tasksResponse.tasks

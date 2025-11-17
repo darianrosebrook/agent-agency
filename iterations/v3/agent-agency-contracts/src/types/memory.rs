@@ -42,6 +42,23 @@ impl std::str::FromStr for MemoryId {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn memory_id_display() {
+        let id = MemoryId(Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap());
+        assert_eq!(id.to_string(), "00000000-0000-0000-0000-000000000000");
+    }
+
+    #[test]
+    fn memory_id_display_with_different_uuid() {
+        let id = MemoryId(Uuid::parse_str("123e4567-e89b-12d3-a456-426614174000").unwrap());
+        assert_eq!(id.to_string(), "123e4567-e89b-12d3-a456-426614174000");
+    }
+}
+
 /// Temporal context for memory operations
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct TemporalContext {

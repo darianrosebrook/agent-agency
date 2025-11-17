@@ -161,4 +161,34 @@ mod tests {
         assert_ne!(version, "");
         assert_ne!(version, "xyzzy");
     }
+
+    #[test]
+    fn api_version_matches_cargo_version_format() {
+        let version = api_version();
+        // Must match format: "MAJOR.MINOR" (e.g., "1.3")
+        // This catches mutations to "" or "xyzzy"
+        let parts: Vec<&str> = version.split('.').collect();
+        assert_eq!(parts.len(), 2, "api_version must be MAJOR.MINOR format, got: {}", version);
+        
+        // Both parts must be numeric
+        assert!(parts[0].parse::<u32>().is_ok(), "Major version must be numeric, got: {}", parts[0]);
+        assert!(parts[1].parse::<u32>().is_ok(), "Minor version must be numeric, got: {}", parts[1]);
+        
+        // Must not be mutated values
+        assert_ne!(version, "");
+        assert_ne!(version, "xyzzy");
+        assert!(!version.contains("xyzzy"));
+    }
+
+    #[test]
+    fn api_version_uses_actual_cargo_version() {
+        // Verify api_version actually uses CARGO_PKG_VERSION_MAJOR/MINOR
+        // This test ensures the function isn't stubbed
+        let version = api_version();
+        let major = env!("CARGO_PKG_VERSION_MAJOR");
+        let minor = env!("CARGO_PKG_VERSION_MINOR");
+        let expected = format!("{}.{}", major, minor);
+        
+        assert_eq!(version, expected, "api_version should match Cargo version");
+    }
 }

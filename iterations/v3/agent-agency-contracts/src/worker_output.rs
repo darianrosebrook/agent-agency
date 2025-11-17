@@ -204,15 +204,48 @@ mod tests {
     fn worker_output_contract_validate_returns_error_on_invalid() {
         use serde_json::json;
 
-        let invalid_value = json!({
-            "metadata": {
-                "task_id": "TASK-123"
-                // Missing required fields
-            }
-        });
+        // Multiple invalid cases - if validate() returns Ok(()), ALL will fail
+        let invalid_cases = vec![
+            // Missing metadata
+            json!({}),
+            // Missing required fields in metadata
+            json!({
+                "metadata": {
+                    "task_id": "TASK-123"
+                    // Missing risk_tier, seeds
+                }
+            }),
+            // Wrong type for risk_tier
+            json!({
+                "metadata": {
+                    "task_id": "TASK-123",
+                    "risk_tier": "high", // Should be number
+                    "seeds": {
+                        "time_seed": "2025-01-01T00:00:00Z",
+                        "uuid_seed": "00000000-0000-0000-0000-000000000000",
+                        "random_seed": 42
+                    }
+                },
+                "artifacts": {"patches": [], "commands": []},
+                "rationale": "Test",
+                "self_assessment": {"caws_checklist": {"within_scope": true, "within_budget": true, "tests_added": true, "deterministic": true}, "notes": ""},
+                "waivers": [],
+                "claims": [],
+                "evidence_refs": []
+            }),
+            // Null
+            json!(null),
+        ];
 
-        let result = validate_worker_output_value(&invalid_value);
-        assert!(result.is_err());
+        for (idx, invalid_case) in invalid_cases.iter().enumerate() {
+            let result = validate_worker_output_value(invalid_case);
+            // This MUST fail - if validate() is stubbed to return Ok(()), test fails
+            assert!(
+                result.is_err(),
+                "Invalid case {} should be rejected by validation, but got Ok(()) - validation may be stubbed",
+                idx
+            );
+        }
     }
 
     #[test]
