@@ -74,8 +74,15 @@ verify-tier3: test-coverage schema-validate gates
 test-coverage:
 	@echo "Running Rust tests with coverage..."
 	@mkdir -p target/coverage
-	@RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
-	cargo test --workspace --all-features
+	@if command -v cargo-nextest >/dev/null 2>&1; then \
+		echo "Using cargo-nextest for parallel test execution"; \
+		RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+		cargo nextest run --workspace --all-features --test-threads auto; \
+	else \
+		echo "Using cargo test (consider installing cargo-nextest for better performance)"; \
+		RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+		cargo test --workspace --all-features --test-threads auto; \
+	fi
 	@echo "Generating lcov.info via grcov..."
 	@grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
 		-o target/coverage/lcov.info --ignore "/*" --ignore "target/*"

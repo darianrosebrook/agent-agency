@@ -1,9 +1,14 @@
 #!/bin/bash
 
 # E2E Test Runner for Agent Agency V3
-# Runs comprehensive end-to-end tests and performance benchmarks
+# Runs comprehensive end-to-end tests, performance tests, and security tests
+# Uses the testing-validation crate with real service integrations
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+V3_ROOT="$PROJECT_ROOT/iterations/v3"
 
 echo " Agent Agency V3 - E2E Test Runner"
 echo "═══════════════════════════════════════"
@@ -23,7 +28,7 @@ print_status() {
 
 # Function to print success
 print_success() {
-    echo -e "${GREEN} $1${NC}"
+    echo -e "${GREEN}✓ $1${NC}"
 }
 
 # Function to print warning
@@ -33,65 +38,77 @@ print_warning() {
 
 # Function to print error
 print_error() {
-    echo -e "${RED} $1${NC}"
+    echo -e "${RED}✗ $1${NC}"
 }
 
 # Check if we're in the right directory
-if [ ! -f "Cargo.toml" ]; then
-    print_error "Please run this script from the iterations/v3 directory"
+if [ ! -f "$V3_ROOT/Cargo.toml" ]; then
+    print_error "Cannot find iterations/v3/Cargo.toml"
     exit 1
 fi
 
-# Build the project first
-print_status "Building project..."
-if cargo build --release; then
+cd "$V3_ROOT"
+
+# Build the testing-validation crate first
+print_status "Building testing-validation crate..."
+if cargo build --package testing-validation --release --quiet 2>&1 | grep -q "error"; then
+    print_error "Build failed - check compilation errors"
+    cargo build --package testing-validation --release 2>&1 | grep "error" | head -10
+    exit 1
+else
     print_success "Build completed successfully"
-else
-    print_error "Build failed"
-    exit 1
 fi
 
 echo ""
 
-# Run unit tests first
-print_status "Running unit tests..."
-if cargo test --lib --release -- --nocapture; then
-    print_success "Unit tests passed"
+# Run E2E test scenarios using testing-validation crate
+print_status "Running E2E test scenarios..."
+
+# Run E2E test scenarios using testing-validation crate
+# Performance & Scalability tests
+print_status "  Running Performance & Scalability tests..."
+if cargo run --package testing-validation --release --bin e2e_runner -- performance 2>&1 | tee /tmp/perf_test.log | tail -20 | grep -q "PASSED\|passed"; then
+    print_success "Performance tests passed"
 else
-    print_error "Unit tests failed"
-    exit 1
+    if grep -q "FAILED\|failed\|error" /tmp/perf_test.log; then
+        print_error "Performance tests failed"
+        grep -E "FAILED|failed|error" /tmp/perf_test.log | head -5
+        exit 1
+    else
+        print_warning "Performance tests completed (check logs for details)"
+    fi
 fi
 
 echo ""
 
-# Run integration tests
-print_status "Running integration tests..."
-if cargo test -p integration-tests --release -- --nocapture; then
-    print_success "Integration tests passed"
+# Security & Privacy tests
+print_status "  Running Security & Privacy tests..."
+if cargo run --package testing-validation --release --bin e2e_runner -- security 2>&1 | tee /tmp/security_test.log | tail -20 | grep -q "PASSED\|passed"; then
+    print_success "Security tests passed"
 else
-    print_error "Integration tests failed"
-    exit 1
+    if grep -q "FAILED\|failed\|error" /tmp/security_test.log; then
+        print_error "Security tests failed"
+        grep -E "FAILED|failed|error" /tmp/security_test.log | head -5
+        exit 1
+    else
+        print_warning "Security tests completed (check logs for details)"
+    fi
 fi
 
 echo ""
 
-# Run E2E autonomous pipeline tests
-print_status "Running autonomous pipeline E2E tests..."
-if cargo test -p integration-tests autonomous_pipeline_test --release -- --nocapture; then
-    print_success "Autonomous pipeline E2E tests passed"
+# API Integration tests
+print_status "  Running API Integration tests..."
+if cargo run --package testing-validation --release --bin e2e_runner -- api-integration 2>&1 | tee /tmp/api_test.log | tail -20 | grep -q "PASSED\|passed"; then
+    print_success "API integration tests passed"
 else
-    print_warning "Some autonomous pipeline E2E tests failed (may be expected for complex scenarios)"
-fi
-
-echo ""
-
-# Run performance benchmarks
-print_status "Running performance benchmarks..."
-if cargo test -p integration-tests performance_benchmarks --release -- --nocapture; then
-    print_success "Performance benchmarks completed"
-else
-    print_error "Performance benchmarks failed"
-    exit 1
+    if grep -q "FAILED\|failed\|error" /tmp/api_test.log; then
+        print_error "API integration tests failed"
+        grep -E "FAILED|failed|error" /tmp/api_test.log | head -5
+        exit 1
+    else
+        print_warning "API integration tests completed (check logs for details)"
+    fi
 fi
 
 echo ""

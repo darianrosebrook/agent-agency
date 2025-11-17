@@ -1,16 +1,28 @@
 #!/bin/bash
 
-# Production Deployment Script for Multimodal RAG System
-# This script handles the complete production deployment process
+# Production Deployment Script for Agent Agency V3
 
 set -euo pipefail
 
-# Configuration
+# Path configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPTS_V3_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 ENVIRONMENT="${ENVIRONMENT:-production}"
-BACKUP_DIR="${BACKUP_DIR:-/backups}"
-LOG_FILE="${LOG_FILE:-/var/log/multimodal-rag-deploy.log}"
+COMPOSE_FILE="${COMPOSE_FILE:-$REPO_ROOT/deploy/docker/docker-compose.production.yml}"
+MIGRATIONS_DIR="${MIGRATIONS_DIR:-$REPO_ROOT/iterations/v3/data-infrastructure/migrations}"
+BACKUP_ROOT="${BACKUP_ROOT:-$REPO_ROOT/deploy/backups}"
+LOG_FILE="${LOG_FILE:-$REPO_ROOT/deploy/logs/production-deploy.log}"
+
+# Docker compose wrapper (supports docker compose v2 or docker-compose v1)
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_BIN="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE_BIN="docker compose"
+else
+    echo "docker compose is required but not installed"
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -56,12 +68,16 @@ check_prerequisites() {
     fi
     
     # Check if Docker Compose is installed
-    if ! command -v docker-compose &> /dev/null; then
-        error_exit "Docker Compose is not installed"
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        error_exit "Compose file not found at $COMPOSE_FILE"
+    fi
+
+    if [ ! -d "$MIGRATIONS_DIR" ]; then
+        error_exit "Migrations directory not found at $MIGRATIONS_DIR"
     fi
     
     # Check if required environment variables are set
-    local required_vars=("POSTGRES_PASSWORD" "REDIS_PASSWORD" "JWT_SECRET" "API_KEY")
+    local required_vars=("DATABASE_PASSWORD" "REDIS_PASSWORD" "JWT_SECRET" "API_KEY")
     for var in "${required_vars[@]}"; do
         if [[ -z "${!var:-}" ]]; then
             error_exit "Required environment variable $var is not set"
@@ -75,30 +91,41 @@ check_prerequisites() {
 create_backup() {
     log "Creating backup of current deployment..."
     
-    local backup_timestamp=$(date +'%Y%m%d_%H%M%S')
-    local backup_path="$BACKUP_DIR/multimodal-rag-backup-$backup_timestamp"
+    local backup_timestamp
+    backup_timestamp=$(date +'%Y%m%d_%H%M%S')
+    local backup_path="$BACKUP_ROOT/agent-agency-$backup_timestamp"
     
+    mkdir -p "$BACKUP_ROOT"
     mkdir -p "$backup_path"
     
-    # Backup database
-    if docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" ps postgres | grep -q "Up"; then
+    if $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" ps postgres | grep -q "Up"; then
         log "Backing up PostgreSQL database..."
-        docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" exec -T postgres pg_dump -U multimodal_rag multimodal_rag > "$backup_path/database.sql"
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres pg_dump -U agent_agency agent_agency > "$backup_path/database.sql"
         log_success "Database backup created"
     else
         log_warning "PostgreSQL container not running, skipping database backup"
     fi
     
-    # Backup configuration files
-    cp -r "$PROJECT_ROOT/config" "$backup_path/"
-    cp -r "$PROJECT_ROOT/migrations" "$backup_path/"
+    cp -r "$REPO_ROOT/deploy/docker/nginx" "$backup_path/nginx"
+    cp -r "$REPO_ROOT/deploy/docker/monitoring" "$backup_path/monitoring"
+    cp -r "$MIGRATIONS_DIR" "$backup_path/migrations"
     
-    # Backup volumes
-    if docker volume ls | grep -q "multimodal-rag"; then
-        log "Backing up Docker volumes..."
-        docker run --rm -v multimodal-rag_postgres_data:/data -v "$backup_path":/backup alpine tar czf /backup/postgres_data.tar.gz -C /data .
-        docker run --rm -v multimodal-rag_redis_data:/data -v "$backup_path":/backup alpine tar czf /backup/redis_data.tar.gz -C /data .
-        log_success "Volume backups created"
+    local postgres_volume
+    postgres_volume=$(docker volume ls --format '{{.Name}}' | grep -m1 'postgres_data$' || true)
+    if [[ -n "$postgres_volume" ]]; then
+        log "Backing up Docker volume: $postgres_volume"
+        docker run --rm -v "$postgres_volume":/data -v "$backup_path":/backup alpine tar czf /backup/postgres_data.tar.gz -C /data .
+    else
+        log_warning "PostgreSQL volume not found, skipping volume backup"
+    fi
+
+    local redis_volume
+    redis_volume=$(docker volume ls --format '{{.Name}}' | grep -m1 'redis_data$' || true)
+    if [[ -n "$redis_volume" ]]; then
+        log "Backing up Docker volume: $redis_volume"
+        docker run --rm -v "$redis_volume":/data -v "$backup_path":/backup alpine tar czf /backup/redis_data.tar.gz -C /data .
+    else
+        log_warning "Redis volume not found, skipping volume backup"
     fi
     
     log_success "Backup completed: $backup_path"
@@ -114,7 +141,7 @@ run_migrations() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" exec -T postgres pg_isready -U multimodal_rag -d multimodal_rag &> /dev/null; then
+        if $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres pg_isready -U agent_agency -d agent_agency &> /dev/null; then
             log_success "PostgreSQL is ready"
             break
         fi
@@ -128,11 +155,10 @@ run_migrations() {
         ((attempt++))
     done
     
-    # Run migrations
-    for migration_file in "$PROJECT_ROOT/migrations"/*.sql; do
+    for migration_file in "$MIGRATIONS_DIR"/*.sql; do
         if [[ -f "$migration_file" ]]; then
             log "Running migration: $(basename "$migration_file")"
-            docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" exec -T postgres psql -U multimodal_rag -d multimodal_rag -f - < "$migration_file"
+            $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" exec -T postgres psql -U agent_agency -d agent_agency -f - < "$migration_file"
         fi
     done
     
@@ -143,19 +169,16 @@ run_migrations() {
 deploy_services() {
     log "Building and deploying services..."
     
-    cd "$PROJECT_ROOT"
-    
-    # Pull latest images
+    # Pull upstream images for infrastructure components
     log "Pulling latest base images..."
-    docker-compose -f docker/docker-compose.production.yml pull postgres redis nginx prometheus grafana elasticsearch kibana
+    $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" pull postgres redis nginx prometheus grafana fluent-bit
     
-    # Build custom images
-    log "Building multimodal RAG service image..."
-    docker-compose -f docker/docker-compose.production.yml build multimodal-rag-service
+    # Build first-party services
+    log "Building Agent Agency services..."
+    $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" build api dashboard worker
     
-    # Deploy services
     log "Deploying services..."
-    docker-compose -f docker/docker-compose.production.yml up -d
+    $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" up -d
     
     log_success "Services deployed"
 }
@@ -164,7 +187,7 @@ deploy_services() {
 run_health_checks() {
     log "Running health checks..."
     
-    local services=("postgres" "redis" "multimodal-rag-service" "nginx" "prometheus" "grafana")
+    local services=("postgres" "redis" "api" "worker" "dashboard" "nginx" "prometheus" "grafana" "fluent-bit" "node-exporter" "cadvisor")
     local max_attempts=30
     local attempt=1
     
@@ -172,7 +195,7 @@ run_health_checks() {
         log "Checking health of $service..."
         
         while [ $attempt -le $max_attempts ]; do
-            if docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" ps "$service" | grep -q "Up"; then
+            if $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" ps "$service" | grep -q "Up"; then
                 log_success "$service is healthy"
                 break
             fi
@@ -189,30 +212,39 @@ run_health_checks() {
         attempt=1
     done
     
-    # Test API endpoints
     log "Testing API endpoints..."
+    local api_url="http://localhost:3000"
+    local api_endpoints=("/health" "/metrics" "/api/v1/projects")
     
-    local api_url="http://localhost:8080"
-    local endpoints=("/health" "/metrics" "/api/v1/search")
-    
-    for endpoint in "${endpoints[@]}"; do
-        local max_attempts=10
-        local attempt=1
-        
-        while [ $attempt -le $max_attempts ]; do
+    for endpoint in "${api_endpoints[@]}"; do
+        local api_attempt=1
+        while [ $api_attempt -le 10 ]; do
             if curl -f -s "$api_url$endpoint" &> /dev/null; then
                 log_success "API endpoint $endpoint is responding"
                 break
             fi
-            
-            if [ $attempt -eq $max_attempts ]; then
+            if [ $api_attempt -eq 10 ]; then
                 error_exit "API endpoint $endpoint failed health check"
             fi
-            
-            log "Attempt $attempt/$max_attempts: $endpoint not responding, waiting..."
+            log "Attempt $api_attempt/10: $endpoint not responding, waiting..."
             sleep 5
-            ((attempt++))
+            ((api_attempt++))
         done
+    done
+
+    log "Testing worker health endpoint..."
+    local worker_attempt=1
+    while [ $worker_attempt -le 10 ]; do
+        if curl -f -s "http://localhost:9090/health" &> /dev/null; then
+            log_success "Worker health endpoint is responding"
+            break
+        fi
+        if [ $worker_attempt -eq 10 ]; then
+            error_exit "Worker health endpoint failed health check"
+        fi
+        log "Attempt $worker_attempt/10: worker not responding, waiting..."
+        sleep 5
+        ((worker_attempt++))
     done
     
     log_success "All health checks passed"
@@ -229,10 +261,20 @@ run_performance_tests() {
     fi
     
     # Run basic load test
+    local load_test_dir="$REPO_ROOT/tests/performance"
+    if [[ ! -d "$load_test_dir" ]]; then
+        log_warning "Performance test directory not found ($load_test_dir). Documenting dependency and continuing."
+        return
+    fi
+
+    local test_script="$load_test_dir/agent-agency-smoke.js"
+    if [[ ! -f "$test_script" ]]; then
+        log_warning "k6 test script missing at $test_script. Please provide a load test script to enable automated performance validation."
+        return
+    fi
+
     log "Running basic load test..."
-    cd "$PROJECT_ROOT/load-testing"
-    
-    if k6 run --duration 2m --vus 10 k6-multimodal-rag-test.js; then
+    if k6 run --duration 2m --vus 10 "$test_script"; then
         log_success "Performance tests passed"
     else
         log_warning "Performance tests failed, but deployment continues"
@@ -257,9 +299,9 @@ cleanup() {
 
 # Main deployment function
 main() {
-    log "Starting Multimodal RAG production deployment..."
+    log "Starting Agent Agency production deployment..."
     log "Environment: $ENVIRONMENT"
-    log "Project root: $PROJECT_ROOT"
+    log "Repo root: $REPO_ROOT"
     
     # Create log directory if it doesn't exist
     mkdir -p "$(dirname "$LOG_FILE")"
@@ -275,11 +317,11 @@ main() {
     
     log_success "Production deployment completed successfully!"
     log "Services are available at:"
-    log "  - API: http://localhost:8080"
-    log "  - Metrics: http://localhost:8081"
-    log "  - Grafana: http://localhost:3000"
-    log "  - Kibana: http://localhost:5601"
+    log "  - API: http://localhost:3000"
+    log "  - Dashboard: http://localhost:3001"
+    log "  - Grafana: http://localhost:3002"
     log "  - Prometheus: http://localhost:9090"
+    log "  - Nginx: http://localhost"
 }
 
 # Handle script arguments
@@ -293,21 +335,21 @@ case "${1:-deploy}" in
         ;;
     "status")
         log "Checking deployment status..."
-        docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" ps
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" ps
         ;;
     "logs")
-        service="${2:-multimodal-rag-service}"
-        docker-compose -f "$PROJECT_ROOT/docker/docker-compose.production.yml" logs -f "$service"
+        service="${2:-api}"
+        $DOCKER_COMPOSE_BIN -f "$COMPOSE_FILE" logs -f "$service"
         ;;
     "backup")
         create_backup
         ;;
     *)
         echo "Usage: $0 {deploy|rollback|status|logs|backup}"
-        echo "  deploy  - Deploy the multimodal RAG system (default)"
+        echo "  deploy  - Deploy the Agent Agency stack (default)"
         echo "  rollback - Rollback to previous version (not implemented)"
         echo "  status  - Show deployment status"
-        echo "  logs    - Show logs for a service"
+        echo "  logs    - Show logs for a service (default: api)"
         echo "  backup  - Create a backup"
         exit 1
         ;;

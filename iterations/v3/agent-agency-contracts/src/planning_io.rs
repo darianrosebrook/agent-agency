@@ -1010,4 +1010,12 @@ mod tests {
         assert_eq!(graph.critical_path.len(), 2);
         assert!(!graph.has_cycles);
     }
+
+    #[test]
+    fn milestone_priority_display_all_variants() {
+        assert_eq!(MilestonePriority::Low.to_string(), "Low");
+        assert_eq!(MilestonePriority::Normal.to_string(), "Normal");
+        assert_eq!(MilestonePriority::High.to_string(), "High");
+        assert_eq!(MilestonePriority::Critical.to_string(), "Critical");
+    }
 }

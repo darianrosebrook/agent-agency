@@ -81,24 +81,21 @@ scrape_configs:
           environment: 'production'
     scrape_interval: 30s
 
-  # Node.js Application Metrics (if using node-exporter)
+  # System Metrics via Node Exporter
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
-    scrape_interval: 30s
-
-  # Docker Container Metrics
-  - job_name: 'docker'
-    static_configs:
-      - targets: ['docker-exporter:9323']
-    scrape_interval: 30s
-
-  # System Metrics
-  - job_name: 'agent-agency-system'
-    static_configs:
-      - targets: ['node-exporter:9100']
         labels:
-          service: 'system'
+          service: 'node-exporter'
+          environment: 'production'
+    scrape_interval: 30s
+
+  # Docker Container Metrics via cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
           environment: 'production'
     scrape_interval: 30s
 

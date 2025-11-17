@@ -2,6 +2,14 @@
 # Default to aarch64-apple-darwin for Apple Silicon
 # Comment out if you need to build for x86_64 or universal binary
 target = "aarch64-apple-darwin"
+# Note: jobs is set via CARGO_BUILD_JOBS environment variable
+# Defaults to number of CPUs if not set
+
+# Network configuration for dependency downloads
+# Prevent timeout issues during crate downloads
+[net]
+retry = 3
+git-fetch-with-cli = true
 
 [target.aarch64-apple-darwin]
 rustflags = [
@@ -17,6 +25,7 @@ rustflags = [
 CXXFLAGS = "-std=c++17 -stdlib=libc++"
 CXX = "clang++"
 CC = "clang"
+# Note: CARGO_NET_TIMEOUT should be set as environment variable, not in config.toml
 
 # Optional: speed up linker on dev (keeps symbol info)
 [profile.dev]

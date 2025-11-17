@@ -178,4 +178,39 @@ mod tests {
         assert!(caps.acceleration.contains(&"ANE".to_string()));
         assert!(caps.max_ctx > 0);
     }
+
+    #[test]
+    fn token_usage_from_text_calculation() {
+        // Test that from_text calculates tokens correctly (~4 chars per token)
+        let usage = TokenUsage::from_text("Hello world");
+        // 11 characters / 4 = 2.75, rounded down to 2
+        assert_eq!(usage.completion_tokens, 2);
+        assert_eq!(usage.total_tokens, 2);
+        assert_eq!(usage.prompt_tokens, 0);
+    }
+
+    #[test]
+    fn token_usage_from_text_empty() {
+        let usage = TokenUsage::from_text("");
+        assert_eq!(usage.completion_tokens, 0);
+        assert_eq!(usage.total_tokens, 0);
+        assert_eq!(usage.prompt_tokens, 0);
+    }
+
+    #[test]
+    fn token_usage_from_text_exact_multiple() {
+        // 16 characters = exactly 4 tokens
+        let usage = TokenUsage::from_text("1234567890123456");
+        assert_eq!(usage.completion_tokens, 4);
+        assert_eq!(usage.total_tokens, 4);
+    }
+
+    #[test]
+    fn token_usage_from_text_large_text() {
+        // 100 characters / 4 = 25 tokens
+        let text = "x".repeat(100);
+        let usage = TokenUsage::from_text(&text);
+        assert_eq!(usage.completion_tokens, 25);
+        assert_eq!(usage.total_tokens, 25);
+    }
 }

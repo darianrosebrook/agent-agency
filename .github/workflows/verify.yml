@@ -84,18 +84,21 @@ jobs:
         include:
           - tier: 1
             coverage_min: 0.90
+            branch_coverage_min: 0.95
             mutation_min: 0.70
             enable_mutation: true
             enable_contract: true
             enable_e2e: true
           - tier: 2
             coverage_min: 0.80
+            branch_coverage_min: 0.90
             mutation_min: 0.50
             enable_mutation: true
             enable_contract: true
             enable_e2e: false
           - tier: 3
             coverage_min: 0.70
+            branch_coverage_min: 0.80
             mutation_min: 0.30
             enable_mutation: false
             enable_contract: false
@@ -155,11 +158,23 @@ jobs:
     - name: Run Rust tests with coverage (Tier ${{ matrix.tier }})
       env:
         COVERAGE_MIN: ${{ matrix.coverage_min }}
+        # Configure parallel test execution
+        CARGO_BUILD_JOBS: ${{ github.event.repository.name == 'agent-agency' && '4' || '2' }}
+        # Network timeout for dependency downloads
+        CARGO_NET_TIMEOUT: "300"
       run: |
         cd iterations/v3
         mkdir -p target/coverage
-        RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
-          cargo test --workspace --all-features
+        # Use cargo-nextest if available for better parallelization, otherwise use cargo test
+        if command -v cargo-nextest >/dev/null 2>&1; then
+          echo "Using cargo-nextest for parallel test execution"
+          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+            cargo nextest run --workspace --all-features --test-threads auto
+        else
+          echo "Using cargo test (consider installing cargo-nextest for better performance)"
+          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+            cargo test --workspace --all-features --test-threads auto
+        fi
 
     - name: Generate coverage report
       run: |
@@ -169,7 +184,8 @@ jobs:
 
     - name: Enforce coverage threshold (Tier ${{ matrix.tier }})
       env:
-        COVERAGE_MIN: ${{ matrix.coverage_min }}
+        LINE_COVERAGE_MIN: ${{ matrix.coverage_min }}
+        BRANCH_COVERAGE_MIN: ${{ matrix.branch_coverage_min || '0.90' }}
       run: |
         cd iterations/v3
         node scripts/check-coverage.js

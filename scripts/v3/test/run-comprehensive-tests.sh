@@ -166,8 +166,16 @@ generate_coverage_report() {
         echo -e "${YELLOW}Running tests with coverage instrumentation...${NC}"
         
         # Run tests with coverage
-        RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
-        cargo test --workspace --all-features > "$RESULTS_DIR/coverage_tests.log" 2>&1
+        # Use cargo-nextest if available for better parallelization
+        if command -v cargo-nextest >/dev/null 2>&1; then
+          echo -e "${YELLOW}Using cargo-nextest for parallel test execution${NC}"
+          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+          cargo nextest run --workspace --all-features --test-threads auto > "$RESULTS_DIR/coverage_tests.log" 2>&1
+        else
+          echo -e "${YELLOW}Using cargo test (consider installing cargo-nextest for better performance)${NC}"
+          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+          cargo test --workspace --all-features --test-threads auto > "$RESULTS_DIR/coverage_tests.log" 2>&1
+        fi
         
         # Generate coverage report
         grcov . -s . -t lcov --llvm --branch --ignore-not-existing \

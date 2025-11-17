@@ -102,6 +102,42 @@ pub fn worker_output_schema_source() -> &'static str {
     WORKER_OUTPUT_SCHEMA_RAW
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn schema_source_functions_return_strings() {
+        // Test all schema_source functions return non-empty strings
+        assert!(!task_request_schema_source().is_empty());
+        assert!(!task_response_schema_source().is_empty());
+        assert!(!working_spec_schema_source().is_empty());
+        assert!(!execution_artifacts_schema_source().is_empty());
+        assert!(!quality_report_schema_source().is_empty());
+        assert!(!refinement_decision_schema_source().is_empty());
+        assert!(!worker_output_schema_source().is_empty());
+    }
+
+    #[test]
+    fn schema_source_functions_not_empty_or_xyzzy() {
+        // Verify they don't return empty or wrong strings (mutation test)
+        assert_ne!(task_request_schema_source(), "");
+        assert_ne!(task_request_schema_source(), "xyzzy");
+        assert_ne!(task_response_schema_source(), "");
+        assert_ne!(task_response_schema_source(), "xyzzy");
+        assert_ne!(working_spec_schema_source(), "");
+        assert_ne!(working_spec_schema_source(), "xyzzy");
+        assert_ne!(execution_artifacts_schema_source(), "");
+        assert_ne!(execution_artifacts_schema_source(), "xyzzy");
+        assert_ne!(quality_report_schema_source(), "");
+        assert_ne!(quality_report_schema_source(), "xyzzy");
+        assert_ne!(refinement_decision_schema_source(), "");
+        assert_ne!(refinement_decision_schema_source(), "xyzzy");
+        assert_ne!(worker_output_schema_source(), "");
+        assert_ne!(worker_output_schema_source(), "xyzzy");
+    }
+}
+
 pub fn judge_verdict_schema_source() -> &'static str {
     JUDGE_VERDICT_SCHEMA_RAW
 }

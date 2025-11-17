@@ -91,3 +91,70 @@ impl ContractError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn contract_kind_display_all_variants() {
+        assert_eq!(ContractKind::TaskRequest.to_string(), "task-request");
+        assert_eq!(ContractKind::TaskResponse.to_string(), "task-response");
+        assert_eq!(ContractKind::WorkingSpec.to_string(), "working-spec");
+        assert_eq!(
+            ContractKind::ExecutionArtifacts.to_string(),
+            "execution-artifacts"
+        );
+        assert_eq!(ContractKind::QualityReport.to_string(), "quality-report");
+        assert_eq!(
+            ContractKind::RefinementDecision.to_string(),
+            "refinement-decision"
+        );
+        assert_eq!(ContractKind::WorkerOutput.to_string(), "worker-output");
+        assert_eq!(ContractKind::JudgeVerdict.to_string(), "judge-verdict");
+        assert_eq!(ContractKind::FinalVerdict.to_string(), "final-verdict");
+        assert_eq!(ContractKind::RouterDecision.to_string(), "router-decision");
+    }
+
+    #[test]
+    fn validation_issue_display_format() {
+        let issue = ValidationIssue {
+            instance_path: "/path/to/field".to_string(),
+            schema_path: "/properties/field".to_string(),
+            message: "Invalid type".to_string(),
+        };
+
+        let formatted = issue.to_string();
+        assert!(formatted.contains("Invalid type"));
+        assert!(formatted.contains("/path/to/field"));
+        assert!(formatted.contains("/properties/field"));
+        assert!(formatted.contains("instance:"));
+        assert!(formatted.contains("schema:"));
+    }
+
+    #[test]
+    fn validation_issue_display_empty_fields() {
+        let issue = ValidationIssue {
+            instance_path: String::new(),
+            schema_path: String::new(),
+            message: String::new(),
+        };
+
+        let formatted = issue.to_string();
+        assert_eq!(formatted, " (instance: , schema: )");
+    }
+
+    #[test]
+    fn validation_issue_display_special_characters() {
+        let issue = ValidationIssue {
+            instance_path: "/path/with/special-chars".to_string(),
+            schema_path: "/properties/field[0]".to_string(),
+            message: "Error: \"quoted\" message".to_string(),
+        };
+
+        let formatted = issue.to_string();
+        assert!(formatted.contains("Error: \"quoted\" message"));
+        assert!(formatted.contains("/path/with/special-chars"));
+        assert!(formatted.contains("/properties/field[0]"));
+    }
+}

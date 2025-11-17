@@ -262,7 +262,8 @@ impl DatabaseLearningPersistence {
                 task_id UUID NOT NULL,
                 worker_id UUID NOT NULL,
                 execution_time_ms BIGINT NOT NULL,
-                success BOOLEAN NOT NULL,
+                success SMALLINT NOT NULL DEFAULT 0,
+                quality_score DOUBLE PRECISION NOT NULL DEFAULT 0.0,
                 error_message TEXT,
                 metadata JSONB,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -298,14 +299,12 @@ impl DatabaseLearningPersistence {
             r#"
             CREATE TABLE IF NOT EXISTS success_patterns (
                 id UUID PRIMARY KEY,
-                pattern_name VARCHAR(255) NOT NULL,
                 pattern_type VARCHAR(100) NOT NULL,
-                confidence_score DOUBLE PRECISION NOT NULL,
-                frequency INTEGER NOT NULL,
-                conditions JSONB NOT NULL,
-                outcomes JSONB NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                success_rate DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                average_quality DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                frequency BIGINT NOT NULL DEFAULT 0,
+                conditions JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
             "#,
         )
@@ -318,14 +317,12 @@ impl DatabaseLearningPersistence {
             r#"
             CREATE TABLE IF NOT EXISTS failure_patterns (
                 id UUID PRIMARY KEY,
-                pattern_name VARCHAR(255) NOT NULL,
                 pattern_type VARCHAR(100) NOT NULL,
-                confidence_score DOUBLE PRECISION NOT NULL,
-                frequency INTEGER NOT NULL,
-                conditions JSONB NOT NULL,
-                outcomes JSONB NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                failure_rate DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                frequency BIGINT NOT NULL DEFAULT 0,
+                conditions JSONB NOT NULL DEFAULT '{}'::jsonb,
+                common_errors TEXT[] NOT NULL DEFAULT '{}',
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
             "#,
         )
@@ -338,14 +335,12 @@ impl DatabaseLearningPersistence {
             r#"
             CREATE TABLE IF NOT EXISTS optimal_configs (
                 id UUID PRIMARY KEY,
-                worker_type VARCHAR(100) NOT NULL,
-                task_type VARCHAR(100) NOT NULL,
-                config JSONB NOT NULL,
-                performance_metrics JSONB NOT NULL,
-                confidence DOUBLE PRECISION NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                expires_at TIMESTAMP WITH TIME ZONE,
-                metadata JSONB DEFAULT '{}'
+                config_type VARCHAR(100) NOT NULL,
+                parameters JSONB NOT NULL DEFAULT '{}'::jsonb,
+                performance_metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+                conditions JSONB NOT NULL DEFAULT '{}'::jsonb,
+                confidence DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             )
             "#,
         )
@@ -358,10 +353,11 @@ impl DatabaseLearningPersistence {
             r#"
             CREATE TABLE IF NOT EXISTS optimization_events (
                 id UUID PRIMARY KEY,
-                config_id UUID NOT NULL,
                 event_type VARCHAR(100) NOT NULL,
-                event_data JSONB NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                config_id UUID NOT NULL,
+                performance_delta JSONB NOT NULL DEFAULT '{}'::jsonb,
+                timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb
             )
             "#,
         )
@@ -413,7 +409,7 @@ impl LearningPersistence for DatabaseLearningPersistence {
             .bind(record.task_id.0)
             .bind(record.worker_id.0)
             .bind(record.execution_time_ms as i64)
-            .bind(record.success)
+            .bind(if record.success { 1i16 } else { 0i16 })
             .bind(record.quality_score)
             .bind(record.error_message.as_deref())
             .bind(serde_json::to_value(&record.metadata).ok())

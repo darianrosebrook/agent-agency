@@ -53,6 +53,10 @@ full = ["agent-research", "system-federated-ml", "agent-orchestration/evaluation
 e2e = []
 
 [[bin]]
+name = "e2e_runner"
+path = "src/main.rs"
+
+[[bin]]
 name = "ensure_services"
 path = "src/bin/ensure_services.rs"
 

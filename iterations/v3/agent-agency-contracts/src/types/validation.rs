@@ -314,6 +314,78 @@ mod tests {
     }
 
     #[test]
+    fn validation_category_from_string_all_enum_variants() {
+        // Test all 8 match arms
+        assert!(matches!(
+            ValidationCategory::from_string("dependency".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Dependency)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("scope".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Scope)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("resource".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Resource)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("quality".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Quality)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("evidence".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Evidence)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("council".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Council)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("performance".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Performance)
+        ));
+        assert!(matches!(
+            ValidationCategory::from_string("security".to_string()),
+            ValidationCategory::Enum(ValidationCategoryEnum::Security)
+        ));
+        // Test custom string (catch-all)
+        match ValidationCategory::from_string("custom".to_string()) {
+            ValidationCategory::String(s) => assert_eq!(s, "custom"),
+            _ => panic!("Expected String variant"),
+        }
+    }
+
+    #[test]
+    fn validation_category_enum_as_str_all_variants() {
+        // Test all 8 match arms
+        assert_eq!(
+            ValidationCategoryEnum::Dependency.as_str(),
+            "dependency"
+        );
+        assert_eq!(ValidationCategoryEnum::Scope.as_str(), "scope");
+        assert_eq!(ValidationCategoryEnum::Resource.as_str(), "resource");
+        assert_eq!(ValidationCategoryEnum::Quality.as_str(), "quality");
+        assert_eq!(ValidationCategoryEnum::Evidence.as_str(), "evidence");
+        assert_eq!(ValidationCategoryEnum::Council.as_str(), "council");
+        assert_eq!(
+            ValidationCategoryEnum::Performance.as_str(),
+            "performance"
+        );
+        assert_eq!(ValidationCategoryEnum::Security.as_str(), "security");
+    }
+
+    #[test]
+    fn validation_category_as_str() {
+        // Test Enum variant
+        let cat = ValidationCategory::Enum(ValidationCategoryEnum::Dependency);
+        assert_eq!(cat.as_str(), "dependency");
+
+        // Test String variant
+        let cat = ValidationCategory::String("custom".to_string());
+        assert_eq!(cat.as_str(), "custom");
+    }
+
+    #[test]
     fn validation_issue_creation() {
         let issue = ValidationIssue::new(
             ValidationSeverity::Error,
@@ -325,5 +397,110 @@ mod tests {
             issue.category,
             ValidationCategory::Enum(ValidationCategoryEnum::Quality)
         ));
+    }
+
+    #[test]
+    fn validation_result_has_critical_issues_with_critical() {
+        let result = ValidationResult {
+            valid: false,
+            score: 0.5,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Critical,
+                ValidationCategoryEnum::Security,
+                "Critical security issue".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(result.has_critical_issues());
+    }
+
+    #[test]
+    fn validation_result_has_critical_issues_with_high() {
+        let result = ValidationResult {
+            valid: false,
+            score: 0.6,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::High,
+                ValidationCategoryEnum::Quality,
+                "High severity issue".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(result.has_critical_issues());
+    }
+
+    #[test]
+    fn validation_result_has_critical_issues_with_error() {
+        let result = ValidationResult {
+            valid: false,
+            score: 0.7,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Error,
+                ValidationCategoryEnum::Scope,
+                "Error severity issue".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(result.has_critical_issues());
+    }
+
+    #[test]
+    fn validation_result_has_critical_issues_without_critical() {
+        let result = ValidationResult {
+            valid: true,
+            score: 0.9,
+            issues: vec![ValidationIssue::new(
+                ValidationSeverity::Warning,
+                ValidationCategoryEnum::Performance,
+                "Warning only".to_string(),
+            )],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(!result.has_critical_issues());
+    }
+
+    #[test]
+    fn validation_result_has_critical_issues_empty() {
+        let result = ValidationResult {
+            valid: true,
+            score: 1.0,
+            issues: vec![],
+            warnings: vec![],
+            suggestions: vec![],
+            metadata: std::collections::HashMap::new(),
+        };
+        assert!(!result.has_critical_issues());
+    }
+
+    #[test]
+    fn validation_category_enum_display() {
+        assert_eq!(ValidationCategoryEnum::Dependency.to_string(), "dependency");
+        assert_eq!(ValidationCategoryEnum::Scope.to_string(), "scope");
+        assert_eq!(ValidationCategoryEnum::Resource.to_string(), "resource");
+        assert_eq!(ValidationCategoryEnum::Quality.to_string(), "quality");
+        assert_eq!(ValidationCategoryEnum::Evidence.to_string(), "evidence");
+        assert_eq!(ValidationCategoryEnum::Council.to_string(), "council");
+        assert_eq!(
+            ValidationCategoryEnum::Performance.to_string(),
+            "performance"
+        );
+        assert_eq!(ValidationCategoryEnum::Security.to_string(), "security");
+    }
+
+    #[test]
+    fn validation_category_display() {
+        let cat_enum = ValidationCategory::Enum(ValidationCategoryEnum::Dependency);
+        assert_eq!(cat_enum.to_string(), "dependency");
+
+        let cat_string = ValidationCategory::String("custom".to_string());
+        assert_eq!(cat_string.to_string(), "custom");
     }
 }

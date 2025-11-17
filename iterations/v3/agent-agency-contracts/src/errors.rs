@@ -379,4 +379,112 @@ mod tests {
         let json_schema = serde_json::to_string_pretty(&schema).unwrap();
         assert!(json_schema.contains("InvalidTaskDescriptor"));
     }
+
+    #[test]
+    fn council_error_display_session_error_with_id() {
+        let error = CouncilError::SessionError {
+            session_id: Some("session-123".to_string()),
+            reason: "judge selection failed".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Session error"));
+        assert!(formatted.contains("session-123"));
+        assert!(formatted.contains("judge selection failed"));
+    }
+
+    #[test]
+    fn council_error_display_session_error_without_id() {
+        let error = CouncilError::SessionError {
+            session_id: None,
+            reason: "connection failed".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Session error"));
+        assert!(formatted.contains("connection failed"));
+        assert!(!formatted.contains("session"));
+    }
+
+    #[test]
+    fn council_error_display_review_error() {
+        let error = CouncilError::ReviewError {
+            session_id: "session-456".to_string(),
+            reason: "invalid verdict format".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Review error for session"));
+        assert!(formatted.contains("session-456"));
+        assert!(formatted.contains("invalid verdict format"));
+    }
+
+    #[test]
+    fn council_error_display_judge_error_with_id() {
+        let error = CouncilError::JudgeError {
+            judge_id: Some("judge-tech".to_string()),
+            reason: "timeout occurred".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Judge error"));
+        assert!(formatted.contains("judge-tech"));
+        assert!(formatted.contains("timeout occurred"));
+    }
+
+    #[test]
+    fn council_error_display_judge_error_without_id() {
+        let error = CouncilError::JudgeError {
+            judge_id: None,
+            reason: "processing failed".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Judge error"));
+        assert!(formatted.contains("processing failed"));
+        assert!(!formatted.contains("judge"));
+    }
+
+    #[test]
+    fn council_error_display_aggregation_error() {
+        let error = CouncilError::AggregationError {
+            reason: "insufficient votes".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Verdict aggregation error"));
+        assert!(formatted.contains("insufficient votes"));
+    }
+
+    #[test]
+    fn council_error_display_decision_error() {
+        let error = CouncilError::DecisionError {
+            reason: "conflict detected".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Decision error"));
+        assert!(formatted.contains("conflict detected"));
+    }
+
+    #[test]
+    fn council_error_display_timeout() {
+        let error = CouncilError::Timeout {
+            session_id: "session-789".to_string(),
+            timeout_seconds: 30,
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Session"));
+        assert!(formatted.contains("session-789"));
+        assert!(formatted.contains("timed out"));
+        assert!(formatted.contains("30"));
+        assert!(formatted.contains("seconds"));
+    }
+
+    #[test]
+    fn council_error_display_invalid_state() {
+        let error = CouncilError::InvalidState {
+            session_id: "session-999".to_string(),
+            current_state: "pending".to_string(),
+            required_state: "active".to_string(),
+        };
+        let formatted = error.to_string();
+        assert!(formatted.contains("Invalid state for session"));
+        assert!(formatted.contains("session-999"));
+        assert!(formatted.contains("current=pending"));
+        assert!(formatted.contains("required=active"));
+    }
 }

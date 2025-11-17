@@ -38,6 +38,14 @@ hmac = "0.12"
 sha2 = "0.10"
 blake3 = "1.5"
 
+# Homomorphic encryption for federated learning
+# Paillier cryptosystem for secure aggregation
+# Using num-bigint for direct implementation to avoid dependency conflicts
+num-bigint = "0.4"
+num-traits = "0.2"
+num-integer = "0.1"
+num-prime = "0.4"
+
 # Math operations (from federated-learning + runtime-optimization)
 nalgebra = "0.32"
 statrs = "0.16"

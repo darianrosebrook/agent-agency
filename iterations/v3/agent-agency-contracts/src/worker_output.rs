@@ -199,4 +199,56 @@ mod tests {
         assert_eq!(err.kind(), ContractKind::WorkerOutput);
         assert!(!err.issues().is_empty());
     }
+
+    #[test]
+    fn worker_output_contract_validate_returns_error_on_invalid() {
+        use serde_json::json;
+
+        let invalid_value = json!({
+            "metadata": {
+                "task_id": "TASK-123"
+                // Missing required fields
+            }
+        });
+
+        let result = validate_worker_output_value(&invalid_value);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn worker_output_contract_validate_returns_ok_on_valid() {
+        use serde_json::json;
+
+        let valid_value = json!({
+            "metadata": {
+                "task_id": "TASK-123",
+                "risk_tier": 2,
+                "seeds": {
+                    "time_seed": "2025-01-01T00:00:00Z",
+                    "uuid_seed": "00000000-0000-0000-0000-000000000000",
+                    "random_seed": 42
+                }
+            },
+            "artifacts": {
+                "patches": [],
+                "commands": []
+            },
+            "rationale": "Test",
+            "self_assessment": {
+                "caws_checklist": {
+                    "within_scope": true,
+                    "within_budget": true,
+                    "tests_added": true,
+                    "deterministic": true
+                },
+                "notes": ""
+            },
+            "waivers": [],
+            "claims": [],
+            "evidence_refs": []
+        });
+
+        let result = validate_worker_output_value(&valid_value);
+        assert!(result.is_ok());
+    }
 }

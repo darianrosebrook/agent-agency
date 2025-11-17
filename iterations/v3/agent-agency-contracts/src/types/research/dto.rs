@@ -192,6 +192,62 @@ mod tests {
     }
 
     #[test]
+    fn embedding_into_vec() {
+        let embedding = Embedding(vec![0.1, 0.2, 0.3, 0.4, 0.5]);
+        let vec = embedding.into_vec();
+        assert_eq!(vec, vec![0.1, 0.2, 0.3, 0.4, 0.5]);
+    }
+
+    #[test]
+    fn embedding_into_vec_empty() {
+        let embedding = Embedding(vec![]);
+        let vec = embedding.into_vec();
+        assert_eq!(vec, Vec::<f32>::new());
+    }
+
+    #[test]
+    fn embedding_into_vec_single_element() {
+        let embedding = Embedding(vec![1.0]);
+        let vec = embedding.into_vec();
+        assert_eq!(vec, vec![1.0]);
+    }
+
+    #[test]
+    fn embedding_into_vec_negative_values() {
+        let embedding = Embedding(vec![-1.0, 0.0, 1.0]);
+        let vec = embedding.into_vec();
+        assert_eq!(vec, vec![-1.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn embedding_as_slice() {
+        let embedding = Embedding(vec![0.1, 0.2, 0.3]);
+        let slice = embedding.as_slice();
+        assert_eq!(slice, &[0.1, 0.2, 0.3]);
+    }
+
+    #[test]
+    fn embedding_as_slice_empty() {
+        let embedding = Embedding(vec![]);
+        let slice = embedding.as_slice();
+        assert_eq!(slice, &[] as &[f32]);
+    }
+
+    #[test]
+    fn embedding_as_slice_single_element() {
+        let embedding = Embedding(vec![1.0]);
+        let slice = embedding.as_slice();
+        assert_eq!(slice, &[1.0]);
+    }
+
+    #[test]
+    fn embedding_as_slice_negative_values() {
+        let embedding = Embedding(vec![-1.0, 0.0, 1.0]);
+        let slice = embedding.as_slice();
+        assert_eq!(slice, &[-1.0, 0.0, 1.0]);
+    }
+
+    #[test]
     fn entity_match_confidence_boundary() {
         let cases = vec![
             (0.0, true),
@@ -217,5 +273,80 @@ mod tests {
                 if valid { "valid" } else { "invalid" }
             );
         }
+    }
+
+    #[test]
+    fn entity_key_as_str_returns_correct_string() {
+        let key = EntityKey::new("test-key".to_string());
+        assert_eq!(key.as_str(), "test-key");
+        // Mutation test: should not return empty or wrong string
+        assert_ne!(key.as_str(), "");
+        assert_ne!(key.as_str(), "xyzzy");
+    }
+
+    #[test]
+    fn entity_key_as_str_with_empty_string() {
+        let key = EntityKey::new("".to_string());
+        assert_eq!(key.as_str(), "");
+    }
+
+    #[test]
+    fn entity_key_as_str_with_special_characters() {
+        let key = EntityKey::new("test-key-123".to_string());
+        assert_eq!(key.as_str(), "test-key-123");
+    }
+
+    #[test]
+    fn entity_type_hash_consistency() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let type1 = EntityType::Concept;
+        let type2 = EntityType::Concept;
+        let type3 = EntityType::Other("custom".to_string());
+
+        let mut hasher1 = DefaultHasher::new();
+        type1.hash(&mut hasher1);
+        let hash1 = hasher1.finish();
+
+        let mut hasher2 = DefaultHasher::new();
+        type2.hash(&mut hasher2);
+        let hash2 = hasher2.finish();
+
+        let mut hasher3 = DefaultHasher::new();
+        type3.hash(&mut hasher3);
+        let hash3 = hasher3.finish();
+
+        // Same types should have same hash
+        assert_eq!(hash1, hash2);
+        // Different types should have different hashes
+        assert_ne!(hash1, hash3);
+    }
+
+    #[test]
+    fn entity_type_hash_with_other_string() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let type1 = EntityType::Other("test1".to_string());
+        let type2 = EntityType::Other("test2".to_string());
+        let type3 = EntityType::Other("test1".to_string());
+
+        let mut hasher1 = DefaultHasher::new();
+        type1.hash(&mut hasher1);
+        let hash1 = hasher1.finish();
+
+        let mut hasher2 = DefaultHasher::new();
+        type2.hash(&mut hasher2);
+        let hash2 = hasher2.finish();
+
+        let mut hasher3 = DefaultHasher::new();
+        type3.hash(&mut hasher3);
+        let hash3 = hasher3.finish();
+
+        // Different strings should have different hashes
+        assert_ne!(hash1, hash2);
+        // Same strings should have same hash
+        assert_eq!(hash1, hash3);
     }
 }

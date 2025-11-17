@@ -515,4 +515,638 @@ mod tests {
         assert!(blocking.is_some());
         assert_eq!(blocking.unwrap().severity, Severity::Critical);
     }
+
+    // Boolean logic tests for check_no_console_log
+    #[test]
+    fn test_no_console_log_console_dot() {
+        // Test console. (without log) - should fail
+        let spec = create_test_spec("Use console.error for debugging");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_console_log_case_insensitive() {
+        // Test case insensitivity
+        let spec = create_test_spec("Use CONSOLE.LOG for debugging");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoConsoleDotLog))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    // Boolean logic tests for check_no_placeholders
+    #[test]
+    fn test_no_placeholders_todo() {
+        let spec = create_test_spec("TODO: add tests");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_placeholders_fixme() {
+        let spec = create_test_spec("FIXME: fix this bug");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_placeholders_placeholder() {
+        let spec = create_test_spec("PLACEHOLDER: implement later");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_placeholders_stub() {
+        let spec = create_test_spec("STUB: temporary implementation");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_placeholders_none() {
+        let spec = create_test_spec("Complete implementation with tests");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoPlaceholderCode))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    // Boolean logic tests for check_structured_logging
+    #[test]
+    fn test_structured_logging_with_tracing() {
+        let spec = create_test_spec("Use tracing crate for logging");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireStructuredLogging))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_structured_logging_with_structured_logging() {
+        let spec = create_test_spec("Implement structured logging");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireStructuredLogging))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_structured_logging_with_log_crate() {
+        let spec = create_test_spec("Use log::info for logging");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireStructuredLogging))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_structured_logging_missing() {
+        let spec = create_test_spec("Add logging functionality");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireStructuredLogging))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    // Boolean logic tests for check_no_hardcoded_secrets
+    #[test]
+    fn test_no_hardcoded_secrets_password() {
+        let spec = create_test_spec("Hardcoded password in config");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_hardcoded_secrets_secret() {
+        let spec = create_test_spec("Hardcoded secret key");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_hardcoded_secrets_key() {
+        let spec = create_test_spec("Hardcoded API key");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_hardcoded_secrets_token() {
+        let spec = create_test_spec("Hardcoded access token");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_no_hardcoded_secrets_hardcoded_only() {
+        // Should pass - hardcoded without secret keywords
+        let spec = create_test_spec("Hardcoded timeout value");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_no_hardcoded_secrets_secret_only() {
+        // Should pass - secret without hardcoded keyword
+        let spec = create_test_spec("Secret management system");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::NoHardcodedSecrets))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    // Boolean logic tests for check_semver_compliance
+    #[test]
+    fn test_semver_compliance_breaking_change_without_version() {
+        let spec = create_test_spec("Breaking change to API");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_semver_compliance_breaking_change_with_major_version() {
+        let spec = create_test_spec("Breaking change requires major version bump");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_semver_compliance_breaking_api_with_version_bump() {
+        let spec = create_test_spec("Breaking API change with version bump");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_semver_compliance_incompatible_with_semver() {
+        let spec = create_test_spec("Incompatible change following semver");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_semver_compliance_no_breaking_change() {
+        let spec = create_test_spec("Add new feature");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::SemanticVersioning))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    // Boolean logic tests for check_error_handling
+    #[test]
+    fn test_error_handling_network_without_handling() {
+        let spec = create_test_spec("Make network request");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_file_with_error_handling() {
+        let spec = create_test_spec("File operations with error handling");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_database_with_try_catch() {
+        let spec = create_test_spec("Database query with try/catch");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_api_call_with_result() {
+        let spec = create_test_spec("API call returning Result type");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_external_service_with_option() {
+        let spec = create_test_spec("External service call using Option");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_external_service_with_question_mark() {
+        let spec = create_test_spec("External service using ? operator");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_error_handling_no_fallible_operations() {
+        let spec = create_test_spec("Simple calculation");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::RequireErrorHandling))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    // Boolean logic tests for check_api_backward_compat
+    #[test]
+    fn test_api_backward_compat_remove_api_without_strategy() {
+        let spec = create_test_spec("Remove API endpoint");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat))
+            .unwrap();
+        assert!(!check.passed);
+    }
+
+    #[test]
+    fn test_api_backward_compat_delete_function_with_versioned() {
+        let spec = create_test_spec("Delete function with versioned API");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_api_backward_compat_change_signature_with_deprecated() {
+        let spec = create_test_spec("Change signature with deprecated marker");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_api_backward_compat_change_signature_with_backward_compatible() {
+        let spec = create_test_spec("Change signature maintaining backward compatible");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    #[test]
+    fn test_api_backward_compat_no_api_changes() {
+        let spec = create_test_spec("Add new feature");
+        let results = run_caws_invariants(&spec);
+        let check = results
+            .checks
+            .iter()
+            .find(|c| matches!(c.invariant, CAWSInvariant::APIBackwardCompat))
+            .unwrap();
+        assert!(check.passed);
+    }
+
+    // Boolean logic tests for blocking_failure
+    #[test]
+    fn test_blocking_failure_no_failures() {
+        let spec = create_test_spec("Complete implementation");
+        let results = run_caws_invariants(&spec);
+        let blocking = results.blocking_failure();
+        assert!(blocking.is_none());
+    }
+
+    #[test]
+    fn test_blocking_failure_critical_severity() {
+        let spec = create_test_spec("TODO: incomplete code");
+        let results = run_caws_invariants(&spec);
+        let blocking = results.blocking_failure();
+        assert!(blocking.is_some());
+        assert_eq!(blocking.unwrap().severity, Severity::Critical);
+    }
+
+    #[test]
+    fn test_blocking_failure_high_severity_when_no_critical() {
+        let spec = create_test_spec("Use console.log for debugging");
+        let results = run_caws_invariants(&spec);
+        let blocking = results.blocking_failure();
+        assert!(blocking.is_some());
+        assert_eq!(blocking.unwrap().severity, Severity::High);
+    }
+
+    #[test]
+    fn test_blocking_failure_medium_severity_ignored() {
+        let spec = create_test_spec("Add logging without structured logging");
+        let results = run_caws_invariants(&spec);
+        let blocking = results.blocking_failure();
+        // Medium severity should not be blocking
+        assert!(blocking.is_none());
+    }
+
+    #[test]
+    fn test_blocking_failure_critical_takes_precedence() {
+        let spec = create_test_spec("TODO: use console.log");
+        let results = run_caws_invariants(&spec);
+        let blocking = results.blocking_failure();
+        assert!(blocking.is_some());
+        // Critical should take precedence over High
+        assert_eq!(blocking.unwrap().severity, Severity::Critical);
+    }
+
+    // Return value tests for WorkingSpec methods
+    #[test]
+    fn working_spec_max_files_with_budget() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: Some(25),
+            max_loc: Some(1000),
+        });
+        assert_eq!(spec.max_files(), Some(25));
+    }
+
+    #[test]
+    fn working_spec_max_files_without_budget() {
+        let spec = create_test_spec("Test spec");
+        assert_eq!(spec.max_files(), None);
+    }
+
+    #[test]
+    fn working_spec_max_files_zero() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: Some(0),
+            max_loc: None,
+        });
+        assert_eq!(spec.max_files(), Some(0));
+    }
+
+    #[test]
+    fn working_spec_max_files_one() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: Some(1),
+            max_loc: None,
+        });
+        assert_eq!(spec.max_files(), Some(1));
+    }
+
+    #[test]
+    fn working_spec_max_loc_with_budget() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: None,
+            max_loc: Some(500),
+        });
+        assert_eq!(spec.max_loc(), Some(500));
+    }
+
+    #[test]
+    fn working_spec_max_loc_without_budget() {
+        let spec = create_test_spec("Test spec");
+        assert_eq!(spec.max_loc(), None);
+    }
+
+    #[test]
+    fn working_spec_max_loc_zero() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: None,
+            max_loc: Some(0),
+        });
+        assert_eq!(spec.max_loc(), Some(0));
+    }
+
+    #[test]
+    fn working_spec_max_loc_one() {
+        use crate::working_spec::{BudgetLimits, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.budget_limits = Some(BudgetLimits {
+            max_files: None,
+            max_loc: Some(1),
+        });
+        assert_eq!(spec.max_loc(), Some(1));
+    }
+
+    #[test]
+    fn working_spec_allowed_paths_with_restrictions() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec!["src/".to_string(), "tests/".to_string()],
+            blocked_paths: vec!["node_modules/".to_string()],
+        });
+        let paths = spec.allowed_paths();
+        assert_eq!(paths.len(), 2);
+        assert!(paths.contains(&"src/".to_string()));
+        assert!(paths.contains(&"tests/".to_string()));
+    }
+
+    #[test]
+    fn working_spec_allowed_paths_empty() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        });
+        let paths = spec.allowed_paths();
+        assert_eq!(paths, Vec::<String>::new());
+    }
+
+    #[test]
+    fn working_spec_allowed_paths_with_single_string() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec!["xyzzy".to_string()],
+            blocked_paths: vec![],
+        });
+        let paths = spec.allowed_paths();
+        assert_eq!(paths, vec!["xyzzy".to_string()]);
+    }
+
+    #[test]
+    fn working_spec_allowed_paths_without_restrictions() {
+        let spec = create_test_spec("Test spec");
+        let paths = spec.allowed_paths();
+        assert_eq!(paths, Vec::<String>::new());
+    }
+
+    #[test]
+    fn working_spec_blocked_paths_with_restrictions() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec!["src/".to_string()],
+            blocked_paths: vec!["node_modules/".to_string(), "dist/".to_string()],
+        });
+        let paths = spec.blocked_paths();
+        assert_eq!(paths.len(), 2);
+        assert!(paths.contains(&"node_modules/".to_string()));
+        assert!(paths.contains(&"dist/".to_string()));
+    }
+
+    #[test]
+    fn working_spec_blocked_paths_empty() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec![],
+        });
+        let paths = spec.blocked_paths();
+        assert_eq!(paths, Vec::<String>::new());
+    }
+
+    #[test]
+    fn working_spec_blocked_paths_with_single_string() {
+        use crate::working_spec::{ScopeRestrictions, WorkingSpecConstraints};
+        let mut spec = create_test_spec("Test spec");
+        spec.constraints.scope_restrictions = Some(ScopeRestrictions {
+            allowed_paths: vec![],
+            blocked_paths: vec!["xyzzy".to_string()],
+        });
+        let paths = spec.blocked_paths();
+        assert_eq!(paths, vec!["xyzzy".to_string()]);
+    }
+
+    #[test]
+    fn working_spec_blocked_paths_without_restrictions() {
+        let spec = create_test_spec("Test spec");
+        let paths = spec.blocked_paths();
+        assert_eq!(paths, Vec::<String>::new());
+    }
 }

@@ -681,3 +681,77 @@ fn test_execution_event_creation() {
     assert!(event.milestone_id.is_none());
     assert_eq!(event.description, "Plan execution initiated");
 }
+
+#[test]
+fn execution_event_type_from_all_variants() {
+    // Test all 16 match arms
+    assert!(matches!(
+        ExecutionEventType::from("PlanStarted"),
+        ExecutionEventType::PlanStarted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("BatchStarted"),
+        ExecutionEventType::BatchStarted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("MilestoneStarted"),
+        ExecutionEventType::MilestoneStarted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("MilestoneCompleted"),
+        ExecutionEventType::MilestoneCompleted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("BatchCompleted"),
+        ExecutionEventType::BatchCompleted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("MilestoneFailed"),
+        ExecutionEventType::MilestoneFailed
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("DependencyResolved"),
+        ExecutionEventType::DependencyResolved
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("QualityGateValidated"),
+        ExecutionEventType::QualityGateValidated
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("CouncilReviewCompleted"),
+        ExecutionEventType::CouncilReviewCompleted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("WorkerAssigned"),
+        ExecutionEventType::WorkerAssigned
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("WorkerCompleted"),
+        ExecutionEventType::WorkerCompleted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("EvidenceCollected"),
+        ExecutionEventType::EvidenceCollected
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("TimelineUpdated"),
+        ExecutionEventType::TimelineUpdated
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("RiskAssessed"),
+        ExecutionEventType::RiskAssessed
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("PlanCompleted"),
+        ExecutionEventType::PlanCompleted
+    ));
+    assert!(matches!(
+        ExecutionEventType::from("PlanFailed"),
+        ExecutionEventType::PlanFailed
+    ));
+    // Test custom variant (catch-all)
+    match ExecutionEventType::from("CustomEvent") {
+        ExecutionEventType::Custom(s) => assert_eq!(s, "CustomEvent"),
+        _ => panic!("Expected Custom variant"),
+    }
+}

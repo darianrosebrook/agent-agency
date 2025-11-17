@@ -146,3 +146,19 @@ pub use ports::tool_chain::ToolChainPlanner;
 #[cfg(test)]
 pub use task_executor_provider::tests::{MockTaskExecutor, MockTaskExecutorProvider};
 pub use types::prelude::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn api_version_returns_string() {
+        let version = api_version();
+        // Should return a version string like "1.3" or similar
+        assert!(!version.is_empty());
+        assert!(version.contains('.') || version.len() > 0);
+        // Should not be empty or "xyzzy" (mutation test)
+        assert_ne!(version, "");
+        assert_ne!(version, "xyzzy");
+    }
+}

@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-secure-password-change-me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+      - ../../iterations/v3/data-infrastructure/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     networks:
@@ -204,6 +204,36 @@ services:
       - ./logs:/var/log/agent-agency:ro
     ports:
       - "24224:24224"
+    networks:
+      - agent-agency-network
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: agent-agency-node-exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: "host"
+    privileged: true
+    ports:
+      - "9100:9100"
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - agent-agency-network
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: agent-agency-cadvisor
+    privileged: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
     networks:
       - agent-agency-network
     restart: unless-stopped
