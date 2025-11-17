@@ -17,6 +17,8 @@ pub struct RecoveryMetricsCollector {
     global_metrics: Arc<RwLock<RecoveryMetrics>>,
     /// Latency samples for percentile calculation (limited to recent samples for memory efficiency)
     latency_samples: Arc<RwLock<Vec<f64>>>,
+    /// Total conflicts tracked for rate calculation
+    total_conflicts: Arc<RwLock<u64>>,
 }
 
 impl RecoveryMetricsCollector {
@@ -42,6 +44,7 @@ impl RecoveryMetricsCollector {
                 budget_usage_pct: 0.0,
             })),
             latency_samples: Arc::new(RwLock::new(Vec::new())),
+            total_conflicts: Arc::new(RwLock::new(0)),
         }
     }
     
@@ -247,44 +250,30 @@ impl RecoveryMetricsCollector {
             )
             .await;
 
-        // TODO: Calculate actual conflict rate from metrics
-        //       Currently uses basic increment; should calculate actual conflict rate from metrics data for accurate conflict tracking.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Conflict rate is calculated from actual metrics
-        // - Calculation is accurate
-        // - Rate reflects actual conflict frequency
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Metrics query infrastructure (Required)
-        // - Rate calculation utilities (Required)
-        // - Conflict tracking infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (metrics calculation feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Metrics calculation expertise
+        // Calculate conflict rate from actual metrics
+        // Conflict rate = conflicts / total_operations (recoveries + restores)
         {
+            // Increment conflict count
+            let conflicts = {
+                let mut conflicts = self.total_conflicts.write().await;
+                *conflicts += 1;
+                *conflicts
+            };
+            
+            // Calculate rate from actual counts
             let mut global = self.global_metrics.write().await;
-            global.conflict_rate += 0.01; // Temporary: basic increment until proper calculation
+            let total_operations = global.total_recoveries + global.successful_recoveries;
+            
+            if total_operations > 0 {
+                // Rate = conflicts / total_operations
+                global.conflict_rate = conflicts as f64 / total_operations as f64;
+            } else {
+                // No operations yet, but we have conflicts - rate is 100%
+                global.conflict_rate = 1.0;
+            }
+            
+            // Clamp to [0.0, 1.0]
+            global.conflict_rate = global.conflict_rate.min(1.0).max(0.0);
         }
 
         Ok(())
