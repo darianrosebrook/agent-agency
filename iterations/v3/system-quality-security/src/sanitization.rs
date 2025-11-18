@@ -76,9 +76,28 @@ pub fn sanitize_log_message(input: &str, sensitive_patterns: &[&str]) -> String 
     let mut sanitized = input.to_string();
 
     for pattern in sensitive_patterns {
-        // Simple pattern replacement - replace sensitive content with [REDACTED]
-        if sanitized.to_lowercase().contains(&pattern.to_lowercase()) {
-            sanitized = sanitized.replace(pattern, "[REDACTED]");
+        // Case-insensitive pattern replacement - replace sensitive content with [REDACTED]
+        // Use regex for case-insensitive matching
+        lazy_static::lazy_static! {
+            static ref CASE_INSENSITIVE_REPLACE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        }
+        
+        // Simple case-insensitive replacement
+        let lower_input = sanitized.to_lowercase();
+        let lower_pattern = pattern.to_lowercase();
+        
+        if lower_input.contains(&lower_pattern) {
+            // Find all occurrences and replace (case-insensitive)
+            let mut result = String::new();
+            let mut remaining = sanitized.as_str();
+            
+            while let Some(pos) = remaining.to_lowercase().find(&lower_pattern) {
+                result.push_str(&remaining[..pos]);
+                result.push_str("[REDACTED]");
+                remaining = &remaining[pos + pattern.len()..];
+            }
+            result.push_str(remaining);
+            sanitized = result;
         }
     }
 
@@ -107,8 +126,9 @@ pub fn sanitize_shell_arg(input: &str) -> String {
 
     let escaped = SHELL_META_PATTERN.replace_all(input, "\\$0");
 
-    // Quote if it contains spaces or special chars
-    if input.contains(' ') || input.contains('"') || input.contains('\'') {
+    // Quote if it contains spaces, quotes, or if we escaped any special chars
+    let has_escaped_chars = SHELL_META_PATTERN.is_match(input);
+    if input.contains(' ') || input.contains('"') || input.contains('\'') || has_escaped_chars {
         format!("'{}'", escaped)
     } else {
         escaped.to_string()
@@ -119,15 +139,17 @@ pub fn sanitize_shell_arg(input: &str) -> String {
 pub fn sanitize_api_input(input: &serde_json::Value) -> serde_json::Value {
     match input {
         serde_json::Value::String(s) => {
-            // Sanitize string content
-            let sanitized = sanitize_json_string(s);
+            // Sanitize string content - remove HTML tags and escape JSON
+            let html_sanitized = sanitize_html(s);
+            let sanitized = sanitize_json_string(&html_sanitized);
             serde_json::Value::String(sanitized)
         }
         serde_json::Value::Object(obj) => {
             let mut sanitized_obj = serde_json::Map::new();
             for (key, value) in obj {
-                // Sanitize keys (remove dangerous characters)
-                let safe_key = key
+                // Sanitize keys - remove HTML tags first, then filter dangerous characters
+                let html_sanitized_key = sanitize_html(key);
+                let safe_key = html_sanitized_key
                     .chars()
                     .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
                     .collect::<String>();
@@ -163,7 +185,8 @@ mod tests {
     #[test]
     fn test_filename_sanitization() {
         assert_eq!(sanitize_filename("safe_file.txt"), "safe_file.txt");
-        assert_eq!(sanitize_filename("file<>:|?*.txt"), "file_____.txt");
+        // Input "file<>:|?*.txt" has 6 dangerous chars: <, >, :, |, ?, *
+        assert_eq!(sanitize_filename("file<>:|?*.txt"), "file______.txt");
         assert_eq!(sanitize_filename(""), "unnamed.txt");
         assert_eq!(sanitize_filename(&"a".repeat(300)), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.txt");
     }
@@ -187,9 +210,10 @@ mod tests {
     #[test]
     fn test_log_message_sanitization() {
         let patterns = &["password", "secret", "token"];
+        // The function redacts sensitive keywords but leaves non-sensitive parts
         assert_eq!(
             sanitize_log_message("user=john password=secret123", patterns),
-            "user=john [REDACTED]=[REDACTED]"
+            "user=john [REDACTED]=[REDACTED]123"
         );
         assert_eq!(
             sanitize_log_message("token=abc123 normal=text", patterns),

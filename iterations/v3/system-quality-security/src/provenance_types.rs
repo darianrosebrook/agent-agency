@@ -530,7 +530,8 @@ mod tests {
         };
 
         // Expected: (0.8 + 0.9 + 0.85) / 3 = 0.85
-        assert_eq!(record.overall_quality_score(), 0.85);
+        // Use approximate equality due to floating point precision
+        assert!((record.overall_quality_score() - 0.85).abs() < 0.0001);
     }
 }
 

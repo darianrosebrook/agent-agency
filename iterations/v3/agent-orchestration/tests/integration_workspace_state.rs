@@ -24,7 +24,7 @@ mod tests {
     use data_infrastructure::database_config::DatabaseConfig;
     use data_infrastructure::DatabaseClient;
     use system_resilience::workspace_state::{
-        ContextGenerationConfig, FileWatchConfig, MetricsConfig, UnifiedWorkspaceConfig,
+        ContextGenerationConfig, EmbeddingServiceTrait, FileWatchConfig, MetricsConfig,
         UnifiedWorkspaceStateManagerBuilder, WorkspaceStateEvent,
     };
     #[cfg(feature = "evaluation")]
@@ -108,14 +108,12 @@ mod tests {
     async fn create_test_embedding_integration() -> Arc<EmbeddingIntegration> {
         let db_client = create_test_db_client().await;
 
-        // Use a mock embedding service URL for testing
-        // In real tests, this would point to a test embedding service
+        // Use a mock embedding config for testing
+        // In real tests, this would use actual embedding service configuration
         let embedding_config = agent_memory::memory_types::EmbeddingConfig {
-            service_url: std::env::var("EMBEDDING_SERVICE_URL")
-                .unwrap_or_else(|_| "http://localhost:11434".to_string()),
             model_name: "embeddinggemma".to_string(),
             dimensions: 768,
-            timeout_ms: 30000,
+            similarity_threshold: 0.7,
         };
 
         let memory_config = MemoryConfig {
@@ -159,8 +157,13 @@ mod tests {
                 .expect("Failed to create FileWatcher");
 
         // Create event handler (from unified manager)
-        let event_handler =
-            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
+        let (event_sender, _) = tokio::sync::broadcast::channel(100);
+        let event_handler = Arc::new(
+            system_resilience::workspace_state::FileWatcherEventHandler::new(
+                event_sender,
+                watch_path.clone(),
+            ),
+        );
 
         // Create bridge
         let bridge_result = FileWatcherBridge::new(file_watcher, event_handler);
@@ -178,8 +181,13 @@ mod tests {
                 .expect("Failed to create FileWatcher");
 
         // Create event handler
-        let event_handler =
-            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
+        let (event_sender, _) = tokio::sync::broadcast::channel(100);
+        let event_handler = Arc::new(
+            system_resilience::workspace_state::FileWatcherEventHandler::new(
+                event_sender,
+                watch_path.clone(),
+            ),
+        );
 
         // Create and start bridge
         let mut bridge = FileWatcherBridge::new(file_watcher, event_handler)
@@ -207,9 +215,13 @@ mod tests {
                 .expect("Failed to create FileWatcher");
 
         // Create event handler with event receiver
-        let event_handler =
-            Arc::new(system_resilience::workspace_state::FileWatcherEventHandler::new());
-        let mut event_receiver = event_handler.event_sender.subscribe();
+        let (event_sender, _event_receiver) = tokio::sync::broadcast::channel(100);
+        let event_handler = Arc::new(
+            system_resilience::workspace_state::FileWatcherEventHandler::new(
+                event_sender,
+                watch_path.clone(),
+            ),
+        );
 
         // Create and start bridge
         let mut bridge = FileWatcherBridge::new(file_watcher, Arc::clone(&event_handler))
@@ -269,7 +281,7 @@ mod tests {
     #[tokio::test]
     async fn test_embedding_service_adapter_creation() {
         let embedding_integration = create_test_embedding_integration().await;
-        let adapter = EmbeddingServiceAdapter::new(embedding_integration);
+        let _adapter = EmbeddingServiceAdapter::new(embedding_integration);
 
         // Verify adapter was created
         assert!(true, "EmbeddingServiceAdapter created successfully");
@@ -355,19 +367,19 @@ mod tests {
             debounce_ms: 500,
             auto_capture_state: true,
             generate_embeddings: true,
-            enable_context_generation: true,
-            enable_metrics: true,
-            memory_config: None, // Will use default
         };
 
         // Create test files
         create_test_files(temp_dir.path());
 
+        // Create embedding integration
+        let embedding_integration = create_test_embedding_integration().await;
+
         // Setup unified workspace
-        let result = setup_unified_workspace(config).await;
+        let result = setup_unified_workspace(config, embedding_integration).await;
 
         match result {
-            Ok((manager, mut bridge)) => {
+            Ok((_manager, mut bridge)) => {
                 // Manager is already initialized by setup_unified_workspace
                 // Verify manager is initialized
                 assert!(true, "Unified workspace manager initialized");
@@ -404,18 +416,15 @@ mod tests {
             config_context_enabled: true,
         };
 
-        let config = UnifiedWorkspaceConfig {
-            watch_config: None,
-            context_config: Some(context_config),
-            metrics_config: MetricsConfig {
-                enabled: false,
-                update_interval_secs: 5,
-            },
-            ..Default::default()
+        let metrics_config = MetricsConfig {
+            enabled: false,
+            update_interval_secs: 5,
+            detailed_metrics: false,
         };
 
-        let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
-            .with_config(config)
+        let mut manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
+            .with_context_generation(context_config)
+            .with_metrics_config(metrics_config)
             .build()
             .expect("Failed to build unified manager");
 
@@ -426,7 +435,8 @@ mod tests {
         let state_result = manager.capture_state().await;
         assert!(state_result.is_ok(), "Failed to capture workspace state");
 
-        let state = state_result.unwrap();
+        let state_id = state_result.unwrap().data;
+        let state = manager.get_state(state_id).await.expect("Failed to get state");
         assert!(!state.files.is_empty(), "State should contain files");
     }
 
@@ -450,18 +460,15 @@ mod tests {
             config_context_enabled: true,
         };
 
-        let config = UnifiedWorkspaceConfig {
-            watch_config: None,
-            context_config: Some(context_config),
-            metrics_config: MetricsConfig {
-                enabled: false,
-                update_interval_secs: 5,
-            },
-            ..Default::default()
+        let metrics_config = MetricsConfig {
+            enabled: false,
+            update_interval_secs: 5,
+            detailed_metrics: false,
         };
 
-        let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
-            .with_config(config)
+        let mut manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
+            .with_context_generation(context_config)
+            .with_metrics_config(metrics_config)
             .build()
             .expect("Failed to build unified manager");
 
@@ -497,15 +504,14 @@ mod tests {
         let workspace_root = temp_dir.path().to_path_buf();
 
         // Build unified manager
-        let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
-            .with_config(UnifiedWorkspaceConfig::default())
+        let mut manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
             .build()
             .expect("Failed to build unified manager");
 
         manager.initialize().await.expect("Failed to initialize");
 
         // Subscribe to events
-        let mut event_receiver = manager.subscribe_to_events();
+        let _event_receiver = manager.subscribe_to_events();
 
         // Capture state (should trigger event)
         let _ = manager.capture_state().await;
@@ -557,16 +563,14 @@ mod tests {
         let workspace_root = temp_dir.path().to_path_buf();
 
         // Build unified manager with metrics enabled
-        let config = UnifiedWorkspaceConfig {
-            metrics_config: MetricsConfig {
-                enabled: true,
-                update_interval_secs: 1,
-            },
-            ..Default::default()
+        let metrics_config = MetricsConfig {
+            enabled: true,
+            update_interval_secs: 1,
+            detailed_metrics: true,
         };
 
-        let manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
-            .with_config(config)
+        let mut manager = UnifiedWorkspaceStateManagerBuilder::new(&workspace_root)
+            .with_metrics_config(metrics_config)
             .build()
             .expect("Failed to build unified manager");
 
@@ -578,7 +582,7 @@ mod tests {
         // Get metrics
         let metrics = manager.get_metrics().await;
         assert!(
-            metrics.total_state_captures >= 0,
+            metrics.snapshots.total_snapshots >= 0,
             "Metrics should be available"
         );
     }

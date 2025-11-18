@@ -977,7 +977,7 @@ mod tests {
 
         let expected_overall =
             (0.8 * 0.3) + (0.9 * 0.25) + (0.7 * 0.2) + (0.8 * 0.15) + (0.9 * 0.1);
-        assert!((expected_overall - 0.83).abs() < 0.01); // Approximately 0.83
+        assert!((expected_overall - 0.83f64).abs() < 0.01); // Approximately 0.83
     }
 
     #[test]

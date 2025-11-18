@@ -171,10 +171,13 @@ impl TamperingDetector {
             .perform_source_specific_analysis(content, source_type)
             .await?
         {
+            // Always add source analysis details, even if no indicators found
+            // This provides visibility into what analysis was performed
+            analysis_details.insert("source_analysis".to_string(), source_result.details);
+            
             if !source_result.indicators.is_empty() {
                 indicators.extend(source_result.indicators);
                 confidence_scores.push(source_result.confidence);
-                analysis_details.insert("source_analysis".to_string(), source_result.details);
             }
         }
 
@@ -517,20 +520,18 @@ impl TamperingDetector {
             }
         }
 
-        if confidence > 0.0 {
-            let has_indicators = !indicators.is_empty();
-            Ok(Some(SourceSpecificAnalysis {
-                indicators,
-                confidence: confidence.min(0.9),
-                details: serde_json::json!({
-                    "analysis_type": "file_analysis",
-                    "detected_file_type": file_type.to_string(),
-                    "tampering_indicators_detected": has_indicators
-                }),
-            }))
-        } else {
-            Ok(None)
-        }
+        // Always return analysis details, even if no tampering detected
+        // This provides visibility into what file type was detected and what analysis was performed
+        let has_indicators = !indicators.is_empty();
+        Ok(Some(SourceSpecificAnalysis {
+            indicators,
+            confidence: confidence.min(0.9),
+            details: serde_json::json!({
+                "analysis_type": "file_analysis",
+                "detected_file_type": file_type.to_string(),
+                "tampering_indicators_detected": has_indicators
+            }),
+        }))
     }
 
     /// Detect file type from content analysis

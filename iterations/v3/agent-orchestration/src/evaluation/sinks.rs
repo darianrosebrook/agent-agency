@@ -427,6 +427,9 @@ impl SinkFactory {
 mod tests {
     use super::*;
     use crate::evaluation::trace::EventKind;
+    use crate::chain_of_thought::DecisionPoint;
+    use chrono::Utc;
+    use uuid::Uuid;
 
     fn create_test_trace() -> Trace {
         Trace {

@@ -134,11 +134,12 @@ mod tests {
 
     #[test]
     fn test_seeded_rng() {
+        use rand::RngCore;
         let mut rng1 = SeededRng::new(42);
         let mut rng2 = SeededRng::new(42);
 
         // Same seed should produce same sequence
-        assert_eq!(rng1.rng().next_u32(), rng2.rng().next_u32());
+        assert_eq!(rng1.rng().next_u64(), rng2.rng().next_u64());
     }
 
     #[test]

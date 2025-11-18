@@ -169,6 +169,8 @@ export function VoicemailPlayer({
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  // Track previous audioUrl to detect changes and clear connection markers
+  const previousAudioUrlRef = useRef<string | undefined>(undefined);
 
   // Interpolate color in LCH space based on intensity
   const getHeatmapColor = useMemo(() => {
@@ -270,12 +272,30 @@ export function VoicemailPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Clear the connection marker when audioUrl changes (new audio element)
+    // This allows the new audio element to be connected
+    if (previousAudioUrlRef.current !== undefined && previousAudioUrlRef.current !== audioUrl) {
+      // Audio URL changed, clear the marker for the old element and reset refs
+      if (audio.dataset.audioSourceConnected === 'true') {
+        audio.dataset.audioSourceConnected = 'false';
+      }
+      // Reset refs when audioUrl changes
+      sourceNodeRef.current = null;
+      analyserRef.current = null;
+    }
+    previousAudioUrlRef.current = audioUrl;
+
+    let cleanupFn: (() => void) | null = null;
+    let isMounted = true;
+
     const initializeAudioAnalysis = async () => {
       try {
         // Create AudioContext if it doesn't exist
-        audioContextRef.current ??= new (window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext)();
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext })
+              .webkitAudioContext)();
+        }
 
         const audioContext = audioContextRef.current;
 
@@ -290,15 +310,64 @@ export function VoicemailPlayer({
         const analyser = analyserRef.current;
 
         // Create source node from audio element
-        if (!sourceNodeRef.current) {
-          sourceNodeRef.current = audioContext.createMediaElementSource(audio);
-          sourceNodeRef.current.connect(analyser);
-          analyser.connect(audioContext.destination);
+        // Only create if it doesn't exist - once an audio element is connected,
+        // it cannot be connected to another MediaElementSourceNode
+        // Use a data attribute to track if this audio element has been connected
+        // This prevents issues in React Strict Mode where effects run twice
+        const isAlreadyConnected = audio.dataset.audioSourceConnected === 'true';
+        
+        // Helper function to generate synthetic waveform
+        const generateSyntheticWaveform = (columns: number): number[] => {
+          const waveform: number[] = [];
+          for (let i = 0; i < columns; i++) {
+            const progress = i / columns;
+            const wave = Math.sin(progress * Math.PI * 3) * 0.5 + 0.3;
+            const randomness = Math.random() * 0.3;
+            const height = Math.max(0.2, Math.min(0.9, wave + randomness));
+            waveform.push(height);
+          }
+          return waveform;
+        };
+
+        // If already connected (from previous effect run in Strict Mode), use synthetic waveform
+        if (isAlreadyConnected && !sourceNodeRef.current) {
+          // Audio element was connected in a previous effect run (React Strict Mode)
+          // Fallback to synthetic waveform since we can't reconnect
+          // This is expected behavior in React Strict Mode - no need to log
+          if (isMounted) {
+            setWaveformData(generateSyntheticWaveform(DOT_GRID_CONFIG.columns));
+          }
+          return; // Exit early, don't set up audio analysis
+        }
+        
+        // Try to create source node if not already connected
+        if (!sourceNodeRef.current && !isAlreadyConnected) {
+          try {
+            sourceNodeRef.current = audioContext.createMediaElementSource(audio);
+            sourceNodeRef.current.connect(analyser);
+            analyser.connect(audioContext.destination);
+            // Mark the audio element as connected to prevent duplicate connections
+            audio.dataset.audioSourceConnected = 'true';
+          } catch (error) {
+            // If the audio element is already connected, we can't create a new source
+            // This can happen in React Strict Mode or if the effect runs multiple times
+            if (error instanceof Error && error.message.includes('already connected')) {
+              // Mark as connected even if the error occurred
+              audio.dataset.audioSourceConnected = 'true';
+              // This is expected in React Strict Mode - silently fallback to synthetic waveform
+              // No need to log warnings for expected behavior
+              if (isMounted) {
+                setWaveformData(generateSyntheticWaveform(DOT_GRID_CONFIG.columns));
+              }
+              return; // Exit early, don't set up audio analysis
+            }
+            throw error; // Re-throw if it's a different error
+          }
         }
 
         // Extract waveform data when audio metadata is loaded
         const extractWaveformData = () => {
-          if (!analyser) return;
+          if (!analyser || !isMounted) return;
 
           const bufferLength = analyser.frequencyBinCount;
           const dataArray = new Uint8Array(bufferLength);
@@ -332,7 +401,9 @@ export function VoicemailPlayer({
             waveform.push(scaled);
           }
 
-          setWaveformData(waveform);
+          if (isMounted) {
+            setWaveformData(waveform);
+          }
         };
 
         // Extract initial waveform data
@@ -346,25 +417,34 @@ export function VoicemailPlayer({
         }
 
         // Update waveform data periodically during playback
+        let animationFrameId: number | null = null;
         const updateWaveform = () => {
-          if (!analyser || audio.paused) return;
+          if (!analyser || audio.paused || !isMounted) return;
           extractWaveformData();
-          requestAnimationFrame(updateWaveform);
+          animationFrameId = requestAnimationFrame(updateWaveform);
         };
 
-        audio.addEventListener("play", () => {
+        const handlePlay = () => {
           if (audioContext.state === "suspended") {
             audioContext.resume();
           }
           updateWaveform();
-        });
+        };
 
-        // Cleanup
-        return () => {
+        audio.addEventListener("play", handlePlay);
+
+        // Cleanup function for this initialization
+        cleanupFn = () => {
           audio.removeEventListener("loadedmetadata", extractWaveformData);
+          audio.removeEventListener("play", handlePlay);
+          if (animationFrameId !== null) {
+            cancelAnimationFrame(animationFrameId);
+          }
         };
       } catch (error) {
-        console.warn("Failed to initialize audio analysis:", error);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn("Failed to initialize audio analysis:", error);
+        }
         // Fallback to synthetic waveform
         const generateSyntheticWaveform = (columns: number): number[] => {
           const waveform: number[] = [];
@@ -377,29 +457,48 @@ export function VoicemailPlayer({
           }
           return waveform;
         };
-        setWaveformData(generateSyntheticWaveform(DOT_GRID_CONFIG.columns));
+        if (isMounted) {
+          setWaveformData(generateSyntheticWaveform(DOT_GRID_CONFIG.columns));
+        }
       }
     };
 
     initializeAudioAnalysis();
 
-    // Cleanup on unmount
+    // Cleanup on unmount or when audioUrl changes
     return () => {
+      isMounted = false;
+
+      // Run initialization cleanup if it exists
+      if (cleanupFn) {
+        cleanupFn();
+      }
+
+      // Disconnect audio nodes
       if (sourceNodeRef.current) {
-        sourceNodeRef.current.disconnect();
+        try {
+          sourceNodeRef.current.disconnect();
+        } catch (error) {
+          // Ignore disconnect errors (node may already be disconnected)
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('Error disconnecting source node:', error);
+          }
+        }
         sourceNodeRef.current = null;
       }
       if (analyserRef.current) {
-        analyserRef.current.disconnect();
+        try {
+          analyserRef.current.disconnect();
+        } catch (error) {
+          // Ignore disconnect errors
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('Error disconnecting analyser:', error);
+          }
+        }
         analyserRef.current = null;
       }
-      if (
-        audioContextRef.current &&
-        audioContextRef.current.state !== "closed"
-      ) {
-        audioContextRef.current.close().catch(console.error);
-        audioContextRef.current = null;
-      }
+      // Note: We don't close the AudioContext here because it might be reused
+      // Only close it if we're sure we're done with it
     };
   }, [audioUrl]);
 

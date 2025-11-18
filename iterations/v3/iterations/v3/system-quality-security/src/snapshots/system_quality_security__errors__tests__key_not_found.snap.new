@@ -1,6 +1,6 @@
 ---
 source: iterations/v3/system-quality-security/src/errors.rs
-assertion_line: 242
+assertion_line: 250
 expression: key_not_found.to_string()
 ---
 Key not found: test-key-123

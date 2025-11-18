@@ -1269,12 +1269,32 @@ mod tests {
 
     #[test]
     fn test_tool_chain_bridge_creation() {
-        use crate::planning::tool_chain_types::{SchemaRegistry, ToolChainPlanner, ToolRegistry};
-        let _bridge = ToolChainBridge::new(
-            Arc::new(ToolChainPlanner::default()),
-            Arc::new(SchemaRegistry::default()),
-            Arc::new(ToolRegistry::default()),
+        use crate::planning::tool_chain_types::{
+            ExternalSchemaRegistry, ExternalToolChainPlanner, ExternalToolRegistry,
+        };
+        
+        // Create instances based on feature flag
+        #[cfg(feature = "tool-chain")]
+        let (planner, schema_registry, tool_registry) = {
+            use system_federated_ml::tool_registry::ToolRegistry as ExternalToolRegistryImpl;
+            use system_federated_ml::tool_chain_planner::SchemaRegistry as ExternalSchemaRegistryImpl;
+            let tool_registry = Arc::new(ExternalToolRegistryImpl::new());
+            let schema_registry = Arc::new(ExternalSchemaRegistryImpl::new());
+            let planner = Arc::new(ExternalToolChainPlanner::new(
+                tool_registry.clone(),
+                schema_registry.clone(),
+            ));
+            (planner, schema_registry, tool_registry)
+        };
+        
+        #[cfg(not(feature = "tool-chain"))]
+        let (planner, schema_registry, tool_registry) = (
+            Arc::new(ExternalToolChainPlanner::default()),
+            Arc::new(ExternalSchemaRegistry::default()),
+            Arc::new(ExternalToolRegistry::default()),
         );
+        
+        let _bridge = ToolChainBridge::new(planner, schema_registry, tool_registry);
         // Bridge created successfully
         assert!(true);
     }

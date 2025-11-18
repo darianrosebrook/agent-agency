@@ -488,9 +488,9 @@ mod tests {
 
         let auth_service = AuthService::new(config);
 
-        // Test valid password
+        // Test valid password (must include special character per policy)
         assert!(auth_service
-            .validate_password_strength("ValidPass123")
+            .validate_password_strength("ValidPass123!")
             .is_ok());
 
         // Test invalid passwords
@@ -520,15 +520,15 @@ mod tests {
 
         let auth_service = AuthService::new(config);
 
-        // Register user
+        // Register user (password must include special character per policy)
         let user_id = auth_service
-            .register_user("testuser", "ValidPass123", vec!["user".to_string()])
+            .register_user("testuser", "ValidPass123!", vec!["user".to_string()])
             .await
             .unwrap();
 
         // Authenticate user
         let token = auth_service
-            .authenticate("testuser", "ValidPass123")
+            .authenticate("testuser", "ValidPass123!")
             .await
             .unwrap();
         assert!(!token.is_empty());

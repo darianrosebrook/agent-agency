@@ -362,6 +362,7 @@ fn property_metric_monotonicity() {
                 pros: vec!["Pro 1".to_string()],
                 cons: vec![],
                 score: 0.8,
+                confidence: 0.8,
             },
             crate::chain_of_thought::Alternative {
                 option: "Option 2".to_string(),
@@ -369,6 +370,7 @@ fn property_metric_monotonicity() {
                 pros: vec![],
                 cons: vec!["Con 1".to_string()],
                 score: 0.7,
+                confidence: 0.7,
             },
         ];
         decisions_advanced.push(dp);

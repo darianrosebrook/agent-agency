@@ -323,8 +323,15 @@ mod tests {
     use super::*;
     use crate::evaluation::framework::{create_code_fix_scenario, ProblemType, ScenarioDifficulty};
 
+    #[derive(Debug)]
     struct MockAgentExecutor;
 
+    // Explicitly implement Send + Sync (though unit structs are automatically Send + Sync)
+    // This helps the compiler understand the bounds match the trait requirement
+    unsafe impl Send for MockAgentExecutor {}
+    unsafe impl Sync for MockAgentExecutor {}
+
+    #[async_trait::async_trait]
     impl AgentExecutor for MockAgentExecutor {
         async fn execute(
             &self,

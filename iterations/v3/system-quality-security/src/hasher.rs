@@ -403,7 +403,7 @@ mod tests {
     fn test_tampering_detection() {
         let hasher = ContentHasher::new(HashAlgorithm::Sha256);
         let original_content = "original content";
-        let tampered_content = "tampered content";
+        let tampered_content = "tampered content with more text"; // Different length to trigger SizeChange
         let hash = hasher.calculate_hash(original_content).unwrap();
 
         let indicators = hasher

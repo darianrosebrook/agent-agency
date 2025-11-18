@@ -13,7 +13,7 @@ use crate::evaluation::reporters::{
     HtmlReporter, JUnitReporter, MarkdownReporter, MetricsReporter,
 };
 use crate::evaluation::scenario_runner::ScenarioRunner;
-use crate::evaluation::sinks::{InMemorySink, JsonlSink, SinkFactory};
+use crate::evaluation::sinks::{InMemorySink, JsonlSink, SinkFactory, TraceSink};
 use chrono::Utc;
 use serde_json;
 use std::sync::Arc;

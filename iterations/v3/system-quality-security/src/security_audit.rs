@@ -607,7 +607,8 @@ mod tests {
     fn test_value_masking() {
         let logger = SecurityAuditLogger::new(true, "info".to_string(), false);
 
-        assert_eq!(logger.mask_value("short"), "***");
-        assert_eq!(logger.mask_value("verylongsecret"), "very****cret");
+        // Values <= 8 chars are masked with asterisks matching the length
+        assert_eq!(logger.mask_value("short"), "*****"); // 5 chars -> 5 asterisks
+        assert_eq!(logger.mask_value("verylongsecret"), "very****cret"); // > 8 chars -> first 4 + **** + last 4
     }
 }

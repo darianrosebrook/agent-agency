@@ -19,6 +19,12 @@ interface ToastOptions {
   duration?: number;
   action?: Action | React.ReactNode;
   cancel?: Action | React.ReactNode;
+  /**
+   * If true, skip persisting to notification store.
+   * Use this when triggering toasts from the notifications page
+   * to prevent circular loops.
+   */
+  skipPersistence?: boolean;
 }
 
 /**
@@ -98,11 +104,18 @@ if (typeof window !== 'undefined') {
  * Show success toast
  */
 export function toastSuccess(message: string, options?: ToastOptions) {
-  // Persist notification
-  addNotification({
-    type: 'success',
-    message,
-  });
+  // Console log in dev mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Toast] Success:', message, { skipPersistence: options?.skipPersistence });
+  }
+
+  // Persist notification (unless explicitly skipped)
+  if (!options?.skipPersistence) {
+    addNotification({
+      type: 'success',
+      message,
+    });
+  }
 
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 4000,
@@ -136,12 +149,24 @@ export function toastError(error: unknown, options?: ToastOptions) {
     
     // Always persist notification to store (deduplication will prevent duplicates)
     // This ensures all errors are available in the notification center
-    addNotification({
-      type: 'error',
-      message: displayMessage,
-      errorCode: appError.code,
-      errorDetails: appError.details,
-    });
+    // Skip if explicitly requested to prevent circular loops
+    if (!options?.skipPersistence) {
+      addNotification({
+        type: 'error',
+        message: displayMessage,
+        errorCode: appError.code,
+        errorDetails: appError.details,
+      });
+    }
+
+    // Console log in dev mode
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Toast] Error:', displayMessage, {
+        code: appError.code,
+        skipPersistence: options?.skipPersistence,
+        details: appError.details,
+      });
+    }
 
     // Check if we should show the toast (debounced)
     const shouldShow = shouldShowError(displayMessage, appError.code);
@@ -191,11 +216,18 @@ export function toastError(error: unknown, options?: ToastOptions) {
  * Show warning toast
  */
 export function toastWarning(message: string, options?: ToastOptions) {
-  // Persist notification
-  addNotification({
-    type: 'warning',
-    message,
-  });
+  // Console log in dev mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Toast] Warning:', message, { skipPersistence: options?.skipPersistence });
+  }
+
+  // Persist notification (unless explicitly skipped)
+  if (!options?.skipPersistence) {
+    addNotification({
+      type: 'warning',
+      message,
+    });
+  }
 
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 5000,
@@ -209,11 +241,18 @@ export function toastWarning(message: string, options?: ToastOptions) {
  * Show info toast
  */
 export function toastInfo(message: string, options?: ToastOptions) {
-  // Persist notification
-  addNotification({
-    type: 'info',
-    message,
-  });
+  // Console log in dev mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Toast] Info:', message, { skipPersistence: options?.skipPersistence });
+  }
+
+  // Persist notification (unless explicitly skipped)
+  if (!options?.skipPersistence) {
+    addNotification({
+      type: 'info',
+      message,
+    });
+  }
 
   const toastOptions: ExternalToast = {
     duration: options?.duration ?? 4000,
@@ -227,8 +266,18 @@ export function toastInfo(message: string, options?: ToastOptions) {
  * Show loading toast (returns dismiss function)
  */
 export function toastLoading(message: string): () => void {
+  // Console log in dev mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Toast] Loading:', message);
+  }
+
   const toastId = sonnerToast.loading(message);
-  return () => sonnerToast.dismiss(toastId);
+  return () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Toast] Loading dismissed:', message);
+    }
+    sonnerToast.dismiss(toastId);
+  };
 }
 
 /**

@@ -22,6 +22,7 @@ pub struct ScenarioState {
 }
 
 /// Playground manager for test environments
+#[derive(Clone)]
 pub struct PlaygroundManager {
     playground_root: PathBuf,
     active_scenarios: Arc<RwLock<HashMap<String, ScenarioState>>>,

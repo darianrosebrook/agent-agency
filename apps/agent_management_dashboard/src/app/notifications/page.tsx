@@ -9,7 +9,7 @@
  * @author @darianrosebrook
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Bell,
   AlertCircle,
@@ -46,11 +46,33 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<NotificationType | "all">("all");
   const [showRead, setShowRead] = useState(true);
-  const [lastNotificationId, setLastNotificationId] = useState<string | null>(
-    null
-  );
+  // Track which notification IDs have already had toasts triggered
+  // Use ref to persist across re-renders
+  const toastProcessedIdsRef = useRef<Set<string>>(new Set());
+  // Track the last timestamp we processed toasts for
+  // Initialize to the most recent notification timestamp on first load
+  const lastProcessedTimestampRef = useRef<number | null>(null);
+  const isInitializedRef = useRef<boolean>(false);
 
   useEffect(() => {
+    // On first load, initialize the timestamp to the most recent notification
+    // This prevents triggering toasts for all existing notifications
+    if (!isInitializedRef.current) {
+      const all = getNotifications();
+      if (all.length > 0) {
+        // Set to the most recent notification's timestamp
+        // This means we won't trigger toasts for existing notifications
+        lastProcessedTimestampRef.current = all[0].timestamp;
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Notifications Page] Initialized last processed timestamp to:', new Date(all[0].timestamp).toISOString());
+        }
+      } else {
+        // No notifications yet, start from now
+        lastProcessedTimestampRef.current = Date.now();
+      }
+      isInitializedRef.current = true;
+    }
+
     loadNotifications();
     // Refresh every 5 seconds to catch new notifications
     const interval = setInterval(loadNotifications, 5000);
@@ -61,36 +83,68 @@ export default function NotificationsPage() {
   const loadNotifications = () => {
     const all = getNotifications();
 
-    // Check for new notifications and trigger toasts
+    // Check for new notifications and trigger toasts (only once per notification)
     if (all.length > 0) {
-      const lastNotification = all.find((n) => n.id === lastNotificationId);
-      const lastTimestamp = lastNotification?.timestamp ?? 0;
+      const lastProcessedTimestamp = lastProcessedTimestampRef.current ?? Date.now();
+      const now = Date.now();
 
+      // Only process notifications that:
+      // 1. Are unread
+      // 2. Were created after the last processed timestamp
+      // 3. Haven't been processed for toasts yet
       const newNotifications = all.filter(
-        (n) => !n.read && n.timestamp > lastTimestamp
+        (n) =>
+          !n.read &&
+          n.timestamp > lastProcessedTimestamp &&
+          !toastProcessedIdsRef.current.has(n.id) // Only process notifications that haven't had toasts yet
       );
 
-      newNotifications.forEach((notification) => {
-        // Trigger toast for new unread notifications
-        switch (notification.type) {
-          case "error":
-            toastError(notification.message);
-            break;
-          case "warning":
-            toastWarning(notification.message);
-            break;
-          case "info":
-            toastInfo(notification.message);
-            break;
-          case "success":
-            toastSuccess(notification.message);
-            break;
+      if (newNotifications.length > 0) {
+        // Console log in dev mode
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Notifications Page] Triggering toasts for', newNotifications.length, 'new notifications');
         }
-      });
 
-      // Update last notification ID to the most recent one
-      if (all[0] && (!lastNotificationId || all[0].timestamp > lastTimestamp)) {
-        setLastNotificationId(all[0].id);
+        newNotifications.forEach((notification) => {
+          // Trigger toast for new unread notifications (only once)
+          // Skip persistence to prevent circular loops since notification is already in store
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[Notifications Page] Triggering toast:', notification.type, notification.id, notification.message);
+          }
+
+          switch (notification.type) {
+            case "error":
+              toastError(notification.message, { skipPersistence: true });
+              break;
+            case "warning":
+              toastWarning(notification.message, { skipPersistence: true });
+              break;
+            case "info":
+              toastInfo(notification.message, { skipPersistence: true });
+              break;
+            case "success":
+              toastSuccess(notification.message, { skipPersistence: true });
+              break;
+          }
+          // Mark as processed to prevent duplicate toasts
+          toastProcessedIdsRef.current.add(notification.id);
+        });
+
+        // Update last processed timestamp to the most recent notification we just processed
+        const mostRecentTimestamp = Math.max(
+          ...newNotifications.map((n) => n.timestamp),
+          lastProcessedTimestamp
+        );
+        lastProcessedTimestampRef.current = mostRecentTimestamp;
+      } else {
+        // No new notifications, but update timestamp to now to avoid processing old ones
+        // Only update if we have notifications (to handle case where all are read)
+        if (all.length > 0) {
+          const mostRecentTimestamp = all[0]?.timestamp ?? now;
+          if (mostRecentTimestamp > lastProcessedTimestamp) {
+            lastProcessedTimestampRef.current = mostRecentTimestamp;
+          }
+        }
       }
     }
 
