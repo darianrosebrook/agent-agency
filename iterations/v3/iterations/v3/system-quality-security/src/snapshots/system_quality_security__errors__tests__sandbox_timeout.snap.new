@@ -1,6 +1,0 @@
----
-source: iterations/v3/system-quality-security/src/errors.rs
-assertion_line: 275
-expression: sandbox_timeout.to_string()
----
-Execution timeout: 300s

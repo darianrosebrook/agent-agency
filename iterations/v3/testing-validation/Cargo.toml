@@ -33,7 +33,7 @@ git2 = "0.19"
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 sysinfo = "0.31"
-ring = "0.17"
+ring = "0.17.12"
 base64 = "0.22"
 hex = "0.4"
 

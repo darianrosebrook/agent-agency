@@ -25,7 +25,7 @@ clap = { version = "4.0", features = ["derive"] }
 schemars = { version = "0.8", features = ["uuid1", "chrono"] }
 
 # Security-specific dependencies (from security)
-ring = { version = "0.17", features = ["std"] }
+ring = { version = "0.17.12", features = ["std"] }
 rustls = "0.23"
 jsonwebtoken = "9.0"
 argon2 = { version = "0.5", features = ["std"] }

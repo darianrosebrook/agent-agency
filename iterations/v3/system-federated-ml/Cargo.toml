@@ -32,7 +32,7 @@ rand_distr = "0.4"
 schemars = { version = "0.8", features = ["derive"] }
 
 # Cryptography (from federated-learning)
-ring = "0.17"
+ring = "0.17.12"
 rust-crypto = "0.2"
 hmac = "0.12"
 sha2 = "0.10"
