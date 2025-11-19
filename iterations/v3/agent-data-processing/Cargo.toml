@@ -42,7 +42,7 @@ notify = "6.0"  # File system watching
 
 # Image and video processing
 image = { workspace = true, features = ["jpeg", "png", "webp", "tiff", "bmp", "gif"] }
-av-data = "0.2"
+av-data = "0.4"
 
 # PDF processing
 lopdf = "0.32"
