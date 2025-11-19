@@ -54,7 +54,7 @@ console = { version = "0.16", features = ["std"] }
 # DO NOT change tokenizers - must use workspace version (0.19) for CoreML compatibility.
 # Last fixed: P0 priority - candle-core dependency alignment (2025-01-XX)
 # Benchmarking and metrics (from model-benchmarking)
-prometheus = "0.13"
+prometheus = "0.14"
 statistical = "0.1"
 candle-core = { workspace = true }
 candle-nn = { workspace = true }

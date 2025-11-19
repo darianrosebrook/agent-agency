@@ -31,7 +31,7 @@ system-common-interfaces = { path = "../system-common-interfaces" }
 
 # System monitoring (from system-health-monitor)
 sysinfo = "0.30"
-prometheus = "0.13"
+prometheus = "0.14"
 dashmap = "5.5"
 crossbeam = "0.8"
 parking_lot = "0.12"
@@ -50,7 +50,7 @@ tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 cadence = "1.4"   # StatsD client
 
 # ONNX protobuf parsing (from observability)
-protobuf = "3.4"
+protobuf = "3.7"
 lru = "0.12"  # LRU cache for metadata
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
 
