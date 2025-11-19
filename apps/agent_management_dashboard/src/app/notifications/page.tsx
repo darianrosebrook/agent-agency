@@ -9,37 +9,37 @@
  * @author @darianrosebrook
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { VoicemailPlayer } from "@/components/notifications/VoicemailPlayer";
+import { cn } from "@/components/primitives/utils";
 import {
-  Bell,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCircle,
-  X,
-  CheckCheck,
-  Trash2,
-  Filter,
-} from "lucide-react";
-import {
-  getNotifications,
-  markNotificationAsRead,
-  markAllAsRead,
-  deleteNotification,
-  deleteAllNotifications,
-  getUnreadCount,
   deduplicateNotifications,
+  deleteAllNotifications,
+  deleteNotification,
+  getNotifications,
+  getUnreadCount,
+  markAllAsRead,
+  markNotificationAsRead,
   type Notification,
   type NotificationType,
 } from "@/lib/stores/notificationStore";
 import {
   toastError,
-  toastWarning,
   toastInfo,
   toastSuccess,
+  toastWarning,
 } from "@/lib/utils/toast";
-import { cn } from "@/components/primitives/utils";
-import { VoicemailPlayer } from "@/components/notifications/VoicemailPlayer";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Bell,
+  CheckCheck,
+  CheckCircle,
+  Filter,
+  Info,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.scss";
 
 export default function NotificationsPage() {
@@ -63,8 +63,11 @@ export default function NotificationsPage() {
         // Set to the most recent notification's timestamp
         // This means we won't trigger toasts for existing notifications
         lastProcessedTimestampRef.current = all[0].timestamp;
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[Notifications Page] Initialized last processed timestamp to:', new Date(all[0].timestamp).toISOString());
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[Notifications Page] Initialized last processed timestamp to:",
+            new Date(all[0].timestamp).toISOString()
+          );
         }
       } else {
         // No notifications yet, start from now
@@ -85,7 +88,8 @@ export default function NotificationsPage() {
 
     // Check for new notifications and trigger toasts (only once per notification)
     if (all.length > 0) {
-      const lastProcessedTimestamp = lastProcessedTimestampRef.current ?? Date.now();
+      const lastProcessedTimestamp =
+        lastProcessedTimestampRef.current ?? Date.now();
       const now = Date.now();
 
       // Only process notifications that:
@@ -101,15 +105,24 @@ export default function NotificationsPage() {
 
       if (newNotifications.length > 0) {
         // Console log in dev mode
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[Notifications Page] Triggering toasts for', newNotifications.length, 'new notifications');
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[Notifications Page] Triggering toasts for",
+            newNotifications.length,
+            "new notifications"
+          );
         }
 
         newNotifications.forEach((notification) => {
           // Trigger toast for new unread notifications (only once)
           // Skip persistence to prevent circular loops since notification is already in store
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[Notifications Page] Triggering toast:', notification.type, notification.id, notification.message);
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "[Notifications Page] Triggering toast:",
+              notification.type,
+              notification.id,
+              notification.message
+            );
           }
 
           switch (notification.type) {

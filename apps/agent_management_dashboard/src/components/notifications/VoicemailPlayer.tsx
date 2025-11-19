@@ -9,10 +9,10 @@
  * @author @darianrosebrook
  */
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import type React from "react";
-import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
 import { cn } from "@/components/primitives/utils";
+import { Pause, Play, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./VoicemailPlayer.module.scss";
 
 // Color interpolation helpers (LCH color space for perceptual uniformity)
@@ -274,10 +274,13 @@ export function VoicemailPlayer({
 
     // Clear the connection marker when audioUrl changes (new audio element)
     // This allows the new audio element to be connected
-    if (previousAudioUrlRef.current !== undefined && previousAudioUrlRef.current !== audioUrl) {
+    if (
+      previousAudioUrlRef.current !== undefined &&
+      previousAudioUrlRef.current !== audioUrl
+    ) {
       // Audio URL changed, clear the marker for the old element and reset refs
-      if (audio.dataset.audioSourceConnected === 'true') {
-        audio.dataset.audioSourceConnected = 'false';
+      if (audio.dataset.audioSourceConnected === "true") {
+        audio.dataset.audioSourceConnected = "false";
       }
       // Reset refs when audioUrl changes
       sourceNodeRef.current = null;
@@ -314,8 +317,9 @@ export function VoicemailPlayer({
         // it cannot be connected to another MediaElementSourceNode
         // Use a data attribute to track if this audio element has been connected
         // This prevents issues in React Strict Mode where effects run twice
-        const isAlreadyConnected = audio.dataset.audioSourceConnected === 'true';
-        
+        const isAlreadyConnected =
+          audio.dataset.audioSourceConnected === "true";
+
         // Helper function to generate synthetic waveform
         const generateSyntheticWaveform = (columns: number): number[] => {
           const waveform: number[] = [];
@@ -339,25 +343,31 @@ export function VoicemailPlayer({
           }
           return; // Exit early, don't set up audio analysis
         }
-        
+
         // Try to create source node if not already connected
         if (!sourceNodeRef.current && !isAlreadyConnected) {
           try {
-            sourceNodeRef.current = audioContext.createMediaElementSource(audio);
+            sourceNodeRef.current =
+              audioContext.createMediaElementSource(audio);
             sourceNodeRef.current.connect(analyser);
             analyser.connect(audioContext.destination);
             // Mark the audio element as connected to prevent duplicate connections
-            audio.dataset.audioSourceConnected = 'true';
+            audio.dataset.audioSourceConnected = "true";
           } catch (error) {
             // If the audio element is already connected, we can't create a new source
             // This can happen in React Strict Mode or if the effect runs multiple times
-            if (error instanceof Error && error.message.includes('already connected')) {
+            if (
+              error instanceof Error &&
+              error.message.includes("already connected")
+            ) {
               // Mark as connected even if the error occurred
-              audio.dataset.audioSourceConnected = 'true';
+              audio.dataset.audioSourceConnected = "true";
               // This is expected in React Strict Mode - silently fallback to synthetic waveform
               // No need to log warnings for expected behavior
               if (isMounted) {
-                setWaveformData(generateSyntheticWaveform(DOT_GRID_CONFIG.columns));
+                setWaveformData(
+                  generateSyntheticWaveform(DOT_GRID_CONFIG.columns)
+                );
               }
               return; // Exit early, don't set up audio analysis
             }
@@ -442,7 +452,7 @@ export function VoicemailPlayer({
           }
         };
       } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           console.warn("Failed to initialize audio analysis:", error);
         }
         // Fallback to synthetic waveform
@@ -480,8 +490,8 @@ export function VoicemailPlayer({
           sourceNodeRef.current.disconnect();
         } catch (error) {
           // Ignore disconnect errors (node may already be disconnected)
-          if (process.env.NODE_ENV !== 'production') {
-            console.debug('Error disconnecting source node:', error);
+          if (process.env.NODE_ENV !== "production") {
+            console.debug("Error disconnecting source node:", error);
           }
         }
         sourceNodeRef.current = null;
@@ -491,8 +501,8 @@ export function VoicemailPlayer({
           analyserRef.current.disconnect();
         } catch (error) {
           // Ignore disconnect errors
-          if (process.env.NODE_ENV !== 'production') {
-            console.debug('Error disconnecting analyser:', error);
+          if (process.env.NODE_ENV !== "production") {
+            console.debug("Error disconnecting analyser:", error);
           }
         }
         analyserRef.current = null;

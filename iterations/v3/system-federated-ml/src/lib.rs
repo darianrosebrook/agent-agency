@@ -33,6 +33,7 @@ pub mod tool_registry;
 pub mod validation;
 pub mod model_updates;
 pub mod security;
+pub mod encryption;
 
 pub use arbiter_pipeline::{
     ArbiterPipelineOptimizer, DecisionInput, DecisionPipelineConfig, DecisionResult,

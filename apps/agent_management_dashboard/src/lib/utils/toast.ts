@@ -1,16 +1,16 @@
 /**
  * Toast notification utilities
- * 
+ *
  * Provides consistent toast notifications using sonner.
  * Wraps sonner with error handling and user-friendly messages.
- * 
+ *
  * @author @darianrosebrook
  */
 
-import { toast as sonnerToast, type ExternalToast, type Action } from 'sonner';
-import { parseApiError, ErrorMessages, ErrorCode } from '../errors';
-import { addNotification, type NotificationType } from '../stores/notificationStore';
-import type React from 'react';
+import type React from "react";
+import { toast as sonnerToast, type Action, type ExternalToast } from "sonner";
+import { ErrorCode, ErrorMessages, parseApiError } from "../errors";
+import { addNotification } from "../stores/notificationStore";
 
 /**
  * Toast notification options
@@ -96,7 +96,7 @@ function cleanupDebounceMap() {
 }
 
 // Clean up old entries every 30 seconds
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   setInterval(cleanupDebounceMap, 30000);
 }
 
@@ -105,14 +105,16 @@ if (typeof window !== 'undefined') {
  */
 export function toastSuccess(message: string, options?: ToastOptions) {
   // Console log in dev mode
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Toast] Success:', message, { skipPersistence: options?.skipPersistence });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Toast] Success:", message, {
+      skipPersistence: options?.skipPersistence,
+    });
   }
 
   // Persist notification (unless explicitly skipped)
   if (!options?.skipPersistence) {
     addNotification({
-      type: 'success',
+      type: "success",
       message,
     });
   }
@@ -130,29 +132,30 @@ export function toastSuccess(message: string, options?: ToastOptions) {
  */
 export function toastError(error: unknown, options?: ToastOptions) {
   try {
-  const appError = parseApiError(error);
+    const appError = parseApiError(error);
     const message = appError.getUserMessage();
-    
+
     // Ensure we always have a valid, non-empty string message
     let displayMessage: string;
-    if (typeof message === 'string' && message.trim().length > 0) {
+    if (typeof message === "string" && message.trim().length > 0) {
       displayMessage = message.trim();
     } else {
       // Fallback to error code message or default
-      displayMessage = ErrorMessages[appError.code] || 'An unexpected error occurred';
+      displayMessage =
+        ErrorMessages[appError.code] || "An unexpected error occurred";
     }
-    
+
     // Ensure displayMessage is a string (defensive check)
-    if (typeof displayMessage !== 'string' || displayMessage.length === 0) {
-      displayMessage = 'An unexpected error occurred';
+    if (typeof displayMessage !== "string" || displayMessage.length === 0) {
+      displayMessage = "An unexpected error occurred";
     }
-    
+
     // Always persist notification to store (deduplication will prevent duplicates)
     // This ensures all errors are available in the notification center
     // Skip if explicitly requested to prevent circular loops
     if (!options?.skipPersistence) {
       addNotification({
-        type: 'error',
+        type: "error",
         message: displayMessage,
         errorCode: appError.code,
         errorDetails: appError.details,
@@ -160,8 +163,8 @@ export function toastError(error: unknown, options?: ToastOptions) {
     }
 
     // Console log in dev mode
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Toast] Error:', displayMessage, {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Toast] Error:", displayMessage, {
         code: appError.code,
         skipPersistence: options?.skipPersistence,
         details: appError.details,
@@ -170,14 +173,16 @@ export function toastError(error: unknown, options?: ToastOptions) {
 
     // Check if we should show the toast (debounced)
     const shouldShow = shouldShowError(displayMessage, appError.code);
-    
+
     if (!shouldShow) {
       // Suppress toast but log that it was suppressed
       const key = getErrorKey(displayMessage, appError.code);
       const entry = errorDebounceMap.get(key);
       if (entry && entry.count > 1) {
         // Log suppression only if count > 1 to avoid spam in console too
-        console.debug(`[Toast Debounce] Suppressed duplicate error: "${displayMessage}" (${entry.count} occurrences)`);
+        console.debug(
+          `[Toast Debounce] Suppressed duplicate error: "${displayMessage}" (${entry.count} occurrences)`
+        );
       }
       return;
     }
@@ -186,23 +191,23 @@ export function toastError(error: unknown, options?: ToastOptions) {
     const key = getErrorKey(displayMessage, appError.code);
     const entry = errorDebounceMap.get(key);
     let finalMessage = displayMessage;
-    
+
     if (entry && entry.count > 1) {
       // Add count indicator if there were suppressed duplicates
       finalMessage = `${displayMessage} (${entry.count}x)`;
     }
 
-  const toastOptions: ExternalToast = {
-    duration: options?.duration ?? 6000,
-    ...(options?.action && { action: options.action }),
-    ...(options?.cancel && { cancel: options.cancel }),
-  };
-    
+    const toastOptions: ExternalToast = {
+      duration: options?.duration ?? 6000,
+      ...(options?.action && { action: options.action }),
+      ...(options?.cancel && { cancel: options.cancel }),
+    };
+
     return sonnerToast.error(finalMessage, toastOptions);
   } catch (err) {
     // If anything fails, show a generic error toast (but still debounce it)
-    console.error('Error in toastError:', err);
-    const genericMessage = 'An unexpected error occurred';
+    console.error("Error in toastError:", err);
+    const genericMessage = "An unexpected error occurred";
     // Use OPERATION_FAILED as fallback since UNKNOWN_ERROR doesn't exist
     if (shouldShowError(genericMessage, ErrorCode.OPERATION_FAILED)) {
       return sonnerToast.error(genericMessage, {
@@ -217,14 +222,16 @@ export function toastError(error: unknown, options?: ToastOptions) {
  */
 export function toastWarning(message: string, options?: ToastOptions) {
   // Console log in dev mode
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Toast] Warning:', message, { skipPersistence: options?.skipPersistence });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Toast] Warning:", message, {
+      skipPersistence: options?.skipPersistence,
+    });
   }
 
   // Persist notification (unless explicitly skipped)
   if (!options?.skipPersistence) {
     addNotification({
-      type: 'warning',
+      type: "warning",
       message,
     });
   }
@@ -242,14 +249,16 @@ export function toastWarning(message: string, options?: ToastOptions) {
  */
 export function toastInfo(message: string, options?: ToastOptions) {
   // Console log in dev mode
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Toast] Info:', message, { skipPersistence: options?.skipPersistence });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Toast] Info:", message, {
+      skipPersistence: options?.skipPersistence,
+    });
   }
 
   // Persist notification (unless explicitly skipped)
   if (!options?.skipPersistence) {
     addNotification({
-      type: 'info',
+      type: "info",
       message,
     });
   }
@@ -267,14 +276,14 @@ export function toastInfo(message: string, options?: ToastOptions) {
  */
 export function toastLoading(message: string): () => void {
   // Console log in dev mode
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Toast] Loading:', message);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[Toast] Loading:", message);
   }
 
   const toastId = sonnerToast.loading(message);
   return () => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Toast] Loading dismissed:', message);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[Toast] Loading dismissed:", message);
     }
     sonnerToast.dismiss(toastId);
   };
@@ -295,10 +304,12 @@ export function toastPromise<T>(
   return sonnerToast.promise(promise, {
     loading: messages.loading,
     success: messages.success,
-    error: messages.error ?? ((error: unknown) => {
-      const appError = parseApiError(error);
-      return appError.getUserMessage();
-    }),
+    error:
+      messages.error ??
+      ((error: unknown) => {
+        const appError = parseApiError(error);
+        return appError.getUserMessage();
+      }),
   });
 }
 
@@ -318,4 +329,3 @@ export function dismissToast(toastId: string | number) {
 
 // Re-export toast for direct access if needed
 export { sonnerToast as toast };
-
