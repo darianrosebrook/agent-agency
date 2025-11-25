@@ -66,7 +66,7 @@ export async function setCacheEnabled(
           await getUserSetting(CACHE_ENABLED_KEY);
           // Setting exists, update it
           await updateUserSetting(CACHE_ENABLED_KEY, enabled, "boolean");
-        } catch (error) {
+        } catch {
           // Setting doesn't exist, create it
           await createUserSetting(CACHE_ENABLED_KEY, enabled, "boolean");
         }
@@ -92,22 +92,18 @@ export async function loadCacheSettingFromApi(): Promise<void> {
   }
 
   try {
-    const { getUserSetting } = await import("../api/settings");
-    const setting = await getUserSetting(CACHE_ENABLED_KEY);
+    const { getUserSettingOptional } = await import("../api/settings");
+    const setting = await getUserSettingOptional(CACHE_ENABLED_KEY);
 
     if (setting?.setting_value !== undefined) {
       const enabled =
         setting.setting_value === true || setting.setting_value === "true";
       localStorage.setItem(CACHE_ENABLED_KEY, String(enabled));
     }
+    // If setting is null, it doesn't exist yet - use default (already set)
   } catch (error) {
-    // Setting doesn't exist in API yet, use default
-    console.debug("Cache setting not found in API, using default:", error);
+    // Only log unexpected errors (network, auth, etc.)
+    // 404s are handled by getUserSettingOptional and return null
+    console.warn("Failed to load cache setting from API:", error);
   }
 }
-
-
-
-
-
-

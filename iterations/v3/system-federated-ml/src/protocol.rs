@@ -60,6 +60,8 @@ pub enum ProtocolMessage {
 /// Participant contribution data
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ParticipantContribution {
+    /// Participant identifier
+    pub participant_id: String,
     /// Encrypted model update
     pub encrypted_update: Vec<u8>,
     /// Zero-knowledge proof of correctness
@@ -79,6 +81,8 @@ pub struct ContributionMetadata {
     pub device_type: String,
     /// Software version
     pub software_version: String,
+    /// Whether differential privacy noise was added
+    pub dp_noise_added: bool,
 }
 
 /// Quality metrics for aggregation

@@ -338,6 +338,11 @@ impl EvaluationEngine {
             .insert(scenario.scenario_id.clone(), scenario);
     }
 
+    /// Check if a scenario exists
+    pub fn has_scenario(&self, scenario_id: &str) -> bool {
+        self.scenarios.contains_key(scenario_id)
+    }
+
     /// Set baseline score for comparison
     pub fn set_baseline(&mut self, scenario_id: &str, score: f64) {
         self.baseline_scores.insert(scenario_id.to_string(), score);
@@ -977,7 +982,8 @@ mod tests {
 
         let expected_overall =
             (0.8 * 0.3) + (0.9 * 0.25) + (0.7 * 0.2) + (0.8 * 0.15) + (0.9 * 0.1);
-        assert!((expected_overall - 0.83f64).abs() < 0.01); // Approximately 0.83
+        // Expected: 0.24 + 0.225 + 0.14 + 0.12 + 0.09 = 0.815
+        assert!((expected_overall - 0.815f64).abs() < 0.01); // Approximately 0.815
     }
 
     #[test]

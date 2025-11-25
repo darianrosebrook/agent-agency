@@ -1515,9 +1515,9 @@ pub struct PolicyValidationResult {
     pub compliance_score: f64,
 }
 
-/// Change budget
+/// Change budget usage tracking
 #[derive(Debug, Clone, JsonSchema)]
-pub struct ChangeBudget {
+pub struct ChangeBudgetUsage {
     /// Maximum files
     pub max_files: u32,
     /// Maximum lines of code
@@ -1541,17 +1541,28 @@ pub struct Scope {
 #[derive(Debug, Clone, JsonSchema)]
 pub struct TaskDescriptor {
     /// Task ID
-    #[schemars(with = "String")]
-    pub id: Uuid,
+    pub id: String,
     /// Task title
     pub title: String,
+    /// Task type
+    pub task_type: String,
     /// Task description
     pub description: String,
-    /// Estimated effort
+    /// Task priority
+    pub priority: TaskPriority,
+    /// Estimated effort in hours
     pub estimated_effort: u32,
-    /// Created at
-    #[schemars(with = "String")]
-    pub created_at: DateTime<Utc>,
+    /// Task metadata
+    pub metadata: serde_json::Value,
+}
+
+/// Task priority levels
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+pub enum TaskPriority {
+    Low,
+    Normal,
+    High,
+    Critical,
 }
 
 /// SubTask
@@ -1672,19 +1683,107 @@ pub struct ComplianceReport {
 /// Working specification
 #[derive(Debug, Clone, JsonSchema)]
 pub struct WorkingSpec {
-    /// Risk tier
+    /// Spec ID
+    pub id: String,
+    /// Spec title
+    pub title: String,
+    /// Risk tier (1-3)
     pub risk_tier: u8,
+    /// Mode (feature, fix, refactor, etc.)
+    pub mode: String,
+    /// Change budget
+    pub change_budget: ChangeBudget,
+    /// Blast radius
+    pub blast_radius: BlastRadius,
+    /// Operational rollback SLO
+    pub operational_rollback_slo: String,
+    /// Scope definition
+    pub scope: WorkingSpecScope,
+    /// Invariants
+    pub invariants: Vec<String>,
     /// Acceptance criteria
-    pub acceptance_criteria: Vec<AcceptanceCriterion>,
+    pub acceptance: Vec<AcceptanceCriterion>,
+    /// Non-functional requirements
+    pub non_functional: WorkingSpecNonFunctional,
+    /// Contracts (optional)
+    pub contracts: Option<Vec<Contract>>,
+}
+
+/// Working spec scope
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct WorkingSpecScope {
+    /// Included paths
+    pub in_paths: Vec<String>,
+    /// Excluded paths
+    pub out_paths: Vec<String>,
+}
+
+/// Working spec non-functional requirements
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct WorkingSpecNonFunctional {
+    /// Performance requirements
+    pub performance: WorkingSpecPerformance,
+    /// Security requirements
+    pub security: Vec<String>,
+    /// Accessibility requirements
+    pub accessibility: Vec<String>,
+    /// Compliance requirements
+    pub compliance: Vec<String>,
+}
+
+/// Working spec performance requirements
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct WorkingSpecPerformance {
+    /// Response time in ms
+    pub response_time_ms: u64,
+    /// Throughput per second
+    pub throughput_per_second: f64,
+    /// Availability percentage
+    pub availability_percent: f64,
+}
+
+/// Contract definition
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct Contract {
+    /// Contract type
+    pub contract_type: String,
+    /// Contract path
+    pub path: String,
+}
+
+/// Change budget for working spec
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ChangeBudget {
+    /// Maximum files
+    pub max_files: u32,
+    /// Maximum lines of code
+    pub max_loc: u32,
+    /// Maximum days
+    pub max_days: u32,
+}
+
+/// Blast radius for working spec
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct BlastRadius {
+    /// Affected modules
+    pub modules: Vec<String>,
+    /// Data migration involved
+    pub data_migration: bool,
+    /// External APIs involved
+    pub external_apis: bool,
 }
 
 /// Acceptance criterion
-#[derive(Debug, Clone, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct AcceptanceCriterion {
     /// Criterion ID
     pub id: String,
-    /// Description
-    pub description: String,
+    /// Given condition
+    pub given: String,
+    /// When action
+    pub when: String,
+    /// Then expectation
+    pub then: String,
 }
 
 impl PolicyEnforcementTools {

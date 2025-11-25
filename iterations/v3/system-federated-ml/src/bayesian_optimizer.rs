@@ -158,7 +158,7 @@ impl BayesianOptimizer {
     }
 
     /// Optimize parameters using Bayesian optimization
-    pub async fn optimize_parameters(&self, baseline_metrics: &PerformanceMetrics) -> Result<OptimizationResult> {
+    pub async fn optimize_parameters(&mut self, baseline_metrics: &PerformanceMetrics) -> Result<OptimizationResult> {
         info!("Starting Bayesian parameter optimization");
 
         let mut current_best = self.config.parameter_space.initial_values.clone();
@@ -212,21 +212,27 @@ impl BayesianOptimizer {
     }
 
     /// Generate candidate parameters using acquisition function
-    async fn generate_candidate(&self) -> Result<HashMap<String, f64>> {
+    async fn generate_candidate(&mut self) -> Result<HashMap<String, f64>> {
+        // Collect parameter definitions first to avoid borrow issues
+        let params: Vec<(String, ParameterDefinition)> = self.config.parameter_space.parameters
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        
         let mut candidate = HashMap::new();
 
-        for (param_name, param_def) in &self.config.parameter_space.parameters {
-            let value = match param_def.param_type {
+        for (param_name, param_def) in params {
+            let value = match &param_def.param_type {
                 ParameterType::Continuous => {
                     // Use Gaussian Process surrogate model for continuous parameters
-                    self.sample_continuous_parameter(param_name, param_def)
+                    self.sample_continuous_parameter(&param_name, &param_def)
                 }
                 ParameterType::Integer => {
                     // Sample integer parameter
-                    let continuous = self.sample_continuous_parameter(param_name, param_def);
+                    let continuous = self.sample_continuous_parameter(&param_name, &param_def);
                     continuous.round()
                 }
-                ParameterType::Categorical(ref choices) => {
+                ParameterType::Categorical(choices) => {
                     // Sample categorical parameter
                     let index = (self.rng.gen::<f64>() * choices.len() as f64) as usize;
                     // Convert to numeric representation (could be improved)
@@ -236,14 +242,14 @@ impl BayesianOptimizer {
 
             // Clamp to bounds
             let clamped_value = value.max(param_def.min).min(param_def.max);
-            candidate.insert(param_name.clone(), clamped_value);
+            candidate.insert(param_name, clamped_value);
         }
 
         Ok(candidate)
     }
 
     /// Sample continuous parameter using Upper Confidence Bound (UCB) acquisition
-    fn sample_continuous_parameter(&self, param_name: &str, param_def: &ParameterDefinition) -> f64 {
+    fn sample_continuous_parameter(&mut self, param_name: &str, param_def: &ParameterDefinition) -> f64 {
         // TODO: Implement full UCB acquisition using Gaussian Process regression
         //       Currently uses basic UCB; should use Gaussian Process regression for accurate uncertainty estimation.
         //
@@ -323,7 +329,7 @@ impl BayesianOptimizer {
     }
 
     /// Evaluate parameter set against performance metrics
-    async fn evaluate_parameters(&self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<f64> {
+    async fn evaluate_parameters(&mut self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<f64> {
         // TODO: Implement real parameter evaluation by running system with parameters and measuring performance
         //       Currently uses theoretical model; should run actual system and measure real performance metrics.
         //
@@ -488,7 +494,7 @@ impl BayesianOptimizer {
 
     /// Calculate compliance score for parameters
     fn calculate_compliance_score(&self, parameters: &HashMap<String, f64>) -> Result<f64> {
-        let mut score = 1.0;
+        let mut score: f64 = 1.0;
 
         // Check parameter bounds compliance
         for (param_name, value) in parameters {

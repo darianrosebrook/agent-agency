@@ -205,11 +205,19 @@ impl FederationCoordinator {
         // Validate the contribution
         self.validate_contribution(participant_id, &contribution).await?;
 
-        // Forward to aggregator
+        // Forward to aggregator - convert protocol ZKP to security ZKP
+        let security_zkp = crate::security::ZeroKnowledgeProof {
+            commitment: vec![],
+            response: vec![],
+            challenge: vec![],
+            public_inputs: contribution.zero_knowledge_proof.public_inputs.clone(),
+            proof_type: contribution.zero_knowledge_proof.proof_type.clone(),
+            verification_key: vec![],
+        };
         self.aggregator.accept_encrypted_update(
             participant_id,
             contribution.encrypted_update.clone(),
-            contribution.zero_knowledge_proof.clone(),
+            &security_zkp,
         ).await?;
 
         // Update round state

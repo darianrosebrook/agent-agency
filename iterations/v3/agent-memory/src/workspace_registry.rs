@@ -420,7 +420,10 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(entry.access, WorkspaceAccess::Enabled);
-        assert!(entry.is_default);
+        // is_default is only true if the path is in default_workspaces config
+        // For a temp directory test, this will be false unless we configure it
+        let is_in_default_workspaces = registry.config.default_workspaces.iter().any(|d| temp_dir.path().to_string_lossy().starts_with(d));
+        assert_eq!(entry.is_default, is_in_default_workspaces, "is_default should match whether path is in default_workspaces config");
     }
 
     #[tokio::test]

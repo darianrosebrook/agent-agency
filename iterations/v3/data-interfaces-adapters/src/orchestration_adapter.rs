@@ -573,6 +573,8 @@ impl UnifiedOrchestratorAdapter {
                 None, // session_manager - optional
                 Some(state_persistence), // Enable state persistence for pause/resume/cancel
                 None, // federated_learning - optional
+                #[cfg(feature = "runtime-optimization")]
+                None, // arbiter_optimizer - optional
             ));
 
             Ok(Self {

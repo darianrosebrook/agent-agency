@@ -2,9 +2,9 @@ name: Verify
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,66 +15,66 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
 
-    - name: Get changed files
-      id: changed-files
-      run: |
-        # Get files changed in this PR
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ' ')
-        else
-          CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
-        fi
-        echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get files changed in this PR
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | tr '\n' ' ')
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
+          fi
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
 
-    - name: Check for hidden TODOs in changed files
-      run: |
-        if [ -n "${{ steps.changed-files.outputs.changed_files }}" ]; then
-          echo "Checking files: ${{ steps.changed-files.outputs.changed_files }}"
-          cd iterations/v3
-          python3 scripts/todo_analyzer.py --files ${{ steps.changed-files.outputs.changed_files }} --warn-only --verbose
-        else
-          echo "No files changed in this commit"
-        fi
+      - name: Check for hidden TODOs in changed files
+        run: |
+          if [ -n "${{ steps.changed-files.outputs.changed_files }}" ]; then
+            echo "Checking files: ${{ steps.changed-files.outputs.changed_files }}"
+            cd iterations/v3
+            python3 scripts/todo_analyzer.py --files ${{ steps.changed-files.outputs.changed_files }} --warn-only --verbose
+          else
+            echo "No files changed in this commit"
+          fi
 
   push-block-check:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip-todo-check]')
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
 
-    - name: Get changed files in push
-      id: push-changed-files
-      run: |
-        CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
-        echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
+      - name: Get changed files in push
+        id: push-changed-files
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD~1 | tr '\n' ' ')
+          echo "changed_files=$CHANGED_FILES" >> $GITHUB_OUTPUT
 
-    - name: Block push if hidden TODOs found
-      run: |
-        if [ -n "${{ steps.push-changed-files.outputs.changed_files }}" ]; then
-          echo "Blocking push - checking files: ${{ steps.push-changed-files.outputs.changed_files }}"
-          cd iterations/v3
-          python3 scripts/todo_analyzer.py --files ${{ steps.push-changed-files.outputs.changed_files }} --ci-mode --verbose
-        else
-          echo "No files changed in this push"
-        fi
+      - name: Block push if hidden TODOs found
+        run: |
+          if [ -n "${{ steps.push-changed-files.outputs.changed_files }}" ]; then
+            echo "Blocking push - checking files: ${{ steps.push-changed-files.outputs.changed_files }}"
+            cd iterations/v3
+            python3 scripts/todo_analyzer.py --files ${{ steps.push-changed-files.outputs.changed_files }} --ci-mode --verbose
+          else
+            echo "No files changed in this push"
+          fi
 
   verify:
     runs-on: ubuntu-latest
@@ -105,190 +105,201 @@ jobs:
             enable_e2e: false
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
 
-    - name: Install grcov (for coverage)
-      run: cargo install grcov
+      - name: Install coverage tools
+        run: |
+          cargo install grcov
+          # Install cargo-llvm-cov for macOS compatibility
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            cargo install cargo-llvm-cov || echo "cargo-llvm-cov installation failed, will use grcov"
+          fi
 
-    - name: Cache Cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-    - name: Cache Rust target
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-target-
+      - name: Cache Rust target
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-target-
 
-    - name: Install dependencies
-      run: |
-        cd iterations/v3
-        npm ci
+      - name: Install dependencies
+        run: |
+          cd iterations/v3
+          npm ci
 
-    - name: Check working spec validation
-      run: |
-        cd iterations/v3
-        node apps/tools/caws/validate.js --ci
+      - name: Check working spec validation
+        run: |
+          cd iterations/v3
+          node apps/tools/caws/validate.js --ci
 
-    - name: Run schema validation
-      run: |
-        cd iterations/v3
-        node docs/contracts/validate.cjs
+      - name: Run schema validation
+        run: |
+          cd iterations/v3
+          node docs/contracts/validate.cjs
 
-    - name: Run Rust tests with coverage (Tier ${{ matrix.tier }})
-      env:
-        COVERAGE_MIN: ${{ matrix.coverage_min }}
-        # Configure parallel test execution
-        CARGO_BUILD_JOBS: ${{ github.event.repository.name == 'agent-agency' && '4' || '2' }}
-        # Network timeout for dependency downloads
-        CARGO_NET_TIMEOUT: "300"
-      run: |
-        cd iterations/v3
-        mkdir -p target/coverage
-        # Use cargo-nextest if available for better parallelization, otherwise use cargo test
-        if command -v cargo-nextest >/dev/null 2>&1; then
-          echo "Using cargo-nextest for parallel test execution"
-          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
-            cargo nextest run --workspace --all-features --test-threads auto
-        else
-          echo "Using cargo test (consider installing cargo-nextest for better performance)"
-          RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+      - name: Run Rust tests with coverage (Tier ${{ matrix.tier }})
+        env:
+          COVERAGE_MIN: ${{ matrix.coverage_min }}
+          # Configure parallel test execution
+          CARGO_BUILD_JOBS: ${{ github.event.repository.name == 'agent-agency' && '4' || '2' }}
+          # Network timeout for dependency downloads
+          CARGO_NET_TIMEOUT: "300"
+        run: |
+          cd iterations/v3
+          mkdir -p target/coverage
+          # Use cargo-llvm-cov on macOS (handles macOS-specific LLVM profiling issues)
+          # Fall back to grcov on Linux/CI
+          if [[ "$RUNNER_OS" == "macOS" ]] && command -v cargo-llvm-cov &> /dev/null; then
+            echo "Using cargo-llvm-cov for macOS coverage generation"
+            # Run tests first, then generate coverage (matches Linux behavior)
             cargo test --workspace --all-features --test-threads auto
-        fi
+            cargo llvm-cov --workspace --all-features --lcov --output-path target/coverage/lcov.info
+          else
+            echo "Using grcov for coverage generation"
+            # Use cargo-nextest if available for better parallelization, otherwise use cargo test
+            if command -v cargo-nextest >/dev/null 2>&1; then
+              echo "Using cargo-nextest for parallel test execution"
+              RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+                cargo nextest run --workspace --all-features --test-threads auto
+            else
+              echo "Using cargo test (consider installing cargo-nextest for better performance)"
+              RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+                cargo test --workspace --all-features --test-threads auto
+            fi
+            echo "Generating coverage report (lcov)..."
+            grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
+              -o target/coverage/lcov.info --ignore "/*" --ignore "target/*"
+          fi
 
-    - name: Generate coverage report
-      run: |
-        cd iterations/v3
-        grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
-          -o target/coverage/lcov.info --ignore "/*" --ignore "target/*"
+      - name: Enforce coverage threshold (Tier ${{ matrix.tier }})
+        env:
+          LINE_COVERAGE_MIN: ${{ matrix.coverage_min }}
+          BRANCH_COVERAGE_MIN: ${{ matrix.branch_coverage_min || '0.90' }}
+        run: |
+          cd iterations/v3
+          node scripts/check-coverage.js
 
-    - name: Enforce coverage threshold (Tier ${{ matrix.tier }})
-      env:
-        LINE_COVERAGE_MIN: ${{ matrix.coverage_min }}
-        BRANCH_COVERAGE_MIN: ${{ matrix.branch_coverage_min || '0.90' }}
-      run: |
-        cd iterations/v3
-        node scripts/check-coverage.js
+      - name: Run CAWS gates (Tier ${{ matrix.tier }})
+        run: |
+          cd iterations/v3/apps/tools/caws
+          node gates.js tier ${{ matrix.tier }}
 
-    - name: Run CAWS gates (Tier ${{ matrix.tier }})
-      run: |
-        cd iterations/v3/apps/tools/caws
-        node gates.js tier ${{ matrix.tier }}
+      - name: Run mutation testing (Tier ${{ matrix.tier }})
+        if: matrix.enable_mutation
+        env:
+          MUTATION_MIN: ${{ matrix.mutation_min }}
+        run: |
+          cd iterations/v3
+          # TODO: Add mutation testing setup when available
+          echo "Mutation testing would run here with min score: ${{ matrix.mutation_min }}"
 
-    - name: Run mutation testing (Tier ${{ matrix.tier }})
-      if: matrix.enable_mutation
-      env:
-        MUTATION_MIN: ${{ matrix.mutation_min }}
-      run: |
-        cd iterations/v3
-        # TODO: Add mutation testing setup when available
-        echo "Mutation testing would run here with min score: ${{ matrix.mutation_min }}"
+      - name: Run contract tests (Tier ${{ matrix.tier }})
+        if: matrix.enable_contract
+        run: |
+          cd iterations/v3
+          # Run contract validation tests
+          npm run test:contract 2>/dev/null || echo "Contract tests not yet implemented"
 
-    - name: Run contract tests (Tier ${{ matrix.tier }})
-      if: matrix.enable_contract
-      run: |
-        cd iterations/v3
-        # Run contract validation tests
-        npm run test:contract 2>/dev/null || echo "Contract tests not yet implemented"
+      - name: Run E2E tests (Tier ${{ matrix.tier }})
+        if: matrix.enable_e2e
+        run: |
+          cd iterations/v3
+          # Run end-to-end tests
+          npm run test:e2e 2>/dev/null || echo "E2E tests not yet implemented"
 
-    - name: Run E2E tests (Tier ${{ matrix.tier }})
-      if: matrix.enable_e2e
-      run: |
-        cd iterations/v3
-        # Run end-to-end tests
-        npm run test:e2e 2>/dev/null || echo "E2E tests not yet implemented"
+      - name: Generate provenance report
+        run: |
+          cd iterations/v3
+          node scripts/provenance-report.js
 
-    - name: Generate provenance report
-      run: |
-        cd iterations/v3
-        node scripts/provenance-report.js
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: iterations/v3/target/coverage/lcov.info
+          flags: tier-${{ matrix.tier }}
+          name: V3 Coverage (Tier ${{ matrix.tier }})
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v4
-      with:
-        file: iterations/v3/target/coverage/lcov.info
-        flags: tier-${{ matrix.tier }}
-        name: V3 Coverage (Tier ${{ matrix.tier }})
-
-    - name: Upload provenance artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: provenance-report-tier-${{ matrix.tier }}
-        path: iterations/v3/target/provenance/report.json
+      - name: Upload provenance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: provenance-report-tier-${{ matrix.tier }}
+          path: iterations/v3/target/provenance/report.json
 
   caws-tools-tests:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-    - name: Install CAWS tools dependencies
-      run: |
-        cd apps/tools/caws
-        npm ci
+      - name: Install CAWS tools dependencies
+        run: |
+          cd apps/tools/caws
+          npm ci
 
-    - name: Run CAWS tools tests
-      run: |
-        cd apps/tools/caws
-        npm test
+      - name: Run CAWS tools tests
+        run: |
+          cd apps/tools/caws
+          npm test
 
-    - name: Run CAWS CLI integration tests
-      run: |
-        cd apps/tools/caws
-        npm run test:integration
+      - name: Run CAWS CLI integration tests
+        run: |
+          cd apps/tools/caws
+          npm run test:integration
 
   # Additional job for performance regression detection
   performance-regression:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-    - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Run performance benchmarks
-      run: |
-        cd iterations/v3
-        # TODO: Add performance benchmark setup
-        echo "Performance benchmarks would run here"
+      - name: Run performance benchmarks
+        run: |
+          cd iterations/v3
+          # TODO: Add performance benchmark setup
+          echo "Performance benchmarks would run here"
 
-    - name: Check for performance regressions
-      run: |
-        cd iterations/v3
-        # Compare against baseline performance metrics
-        echo "Performance regression check would run here"
-
+      - name: Check for performance regressions
+        run: |
+          cd iterations/v3
+          # Compare against baseline performance metrics
+          echo "Performance regression check would run here"

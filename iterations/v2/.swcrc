@@ -26,12 +26,5 @@
   },
   "minify": false,
   "sourceMaps": true,
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/*.d.ts"
-  ]
+  "exclude": "node_modules"
 }

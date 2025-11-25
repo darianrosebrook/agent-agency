@@ -140,13 +140,11 @@ impl KokoroTuner {
             
             // Initialize ANE manager for Apple Silicon acceleration
             match ANEManager::new() {
-                Ok(ane_manager) => {
-                    let caps = &ane_manager.device_capabilities;
+                Ok(_ane_manager) => {
+                    // ANE manager is initialized with default capabilities
+                    // Device capabilities are managed internally by the ANEManager
                     info!(
-                        "ANE available: {} compute units, {} MB memory, {} max concurrent operations",
-                        caps.compute_units,
-                        caps.max_memory_mb,
-                        caps.max_concurrent_operations
+                        "ANE available: using default configuration (compute units and memory managed internally)"
                     );
                     
                     // Configure resource management for ML workloads
@@ -158,10 +156,7 @@ impl KokoroTuner {
                     
                     info!("Apple Silicon orchestration configured for ANE acceleration");
                     debug!(
-                        "ANE capabilities: precisions={:?}, max_memory={}MB, compute_units={}",
-                        caps.supported_precisions,
-                        caps.max_memory_mb,
-                        caps.compute_units
+                        "ANE capabilities: managed internally by ANEManager"
                     );
                     
                     // Store ANE manager for use during tuning
@@ -207,6 +202,10 @@ impl KokoroTuner {
         // Note: baseline_metrics is not mutable, so we need to update through a method
         // Since PerformanceTracker is private, we'll update best_metrics to match baseline
         // and the tracker will use baseline_metrics for comparison
+        let log_throughput = baseline_tuning_metrics.throughput_ops_per_sec;
+        let log_latency = baseline_tuning_metrics.latency_p95_ms;
+        let log_cpu = baseline_tuning_metrics.cpu_utilization_percent;
+        
         self.performance_tracker.update_baseline(baseline_tuning_metrics.clone()).await;
 
         // Also update best_metrics to baseline initially
@@ -214,9 +213,9 @@ impl KokoroTuner {
 
         info!(
             "Baseline established: throughput={:.1} ops/sec, latency={:.1}ms, cpu={:.1}%",
-            baseline_tuning_metrics.throughput_ops_per_sec,
-            baseline_tuning_metrics.latency_p95_ms,
-            baseline_tuning_metrics.cpu_utilization_percent
+            log_throughput,
+            log_latency,
+            log_cpu
         );
 
         Ok(())
@@ -393,15 +392,17 @@ impl KokoroTuner {
         };
         
         // Collect thermal metrics (temperature, throttling)
+        // Note: thermal_status function is inside nested iokit module
         let thermal_status = {
             #[cfg(target_os = "macos")]
             {
-                use system_acceleration::ane::compat::iokit;
-                tokio::task::spawn_blocking(|| iokit::thermal_status())
+                use system_acceleration::ane::compat::iokit::iokit as iokit_funcs;
+                use system_acceleration::ane::compat::ThermalStatus;
+                tokio::task::spawn_blocking(|| iokit_funcs::thermal_status())
                     .await
                     .unwrap_or_else(|_| {
                         // Fallback on error
-                        iokit::ThermalStatus {
+                        ThermalStatus {
                             system_temperature: 45.0,
                             ane_temperature: None,
                             battery_temperature: None,
@@ -414,7 +415,8 @@ impl KokoroTuner {
             #[cfg(not(target_os = "macos"))]
             {
                 // Non-macOS: use basic system metrics
-                system_acceleration::ane::compat::iokit::ThermalStatus {
+                use system_acceleration::ane::compat::ThermalStatus;
+                ThermalStatus {
                     system_temperature: 45.0,
                     ane_temperature: None,
                     battery_temperature: None,
@@ -430,8 +432,8 @@ impl KokoroTuner {
         let memory_usage_mb = {
             // Convert memory usage percentage to MB
             // Note: This is approximate - actual MB would require total memory size
-            let total_memory_gb = 16.0; // Default assumption, could be queried
-            (system_metrics.memory_usage / 100.0) * (total_memory_gb * 1024.0) as f32
+            let total_memory_gb: f64 = 16.0; // Default assumption, could be queried
+            (system_metrics.memory_usage / 100.0) * (total_memory_gb * 1024.0)
         };
         
         // Measure actual throughput and latency from trial execution
@@ -490,11 +492,12 @@ impl KokoroTuner {
     }
 
     /// Create fallback result when tuning cannot proceed
-    async fn create_fallback_result(&self, workload: &WorkloadSpec) -> Result<TuningResult> {
+    async fn create_fallback_result(&self, _workload: &WorkloadSpec) -> Result<TuningResult> {
+        let baseline_metrics = self.performance_tracker.baseline_metrics.read().await.clone();
         Ok(TuningResult {
             session_id: format!("fallback_{}", chrono::Utc::now().timestamp()),
             parameters: HashMap::new(),
-            metrics: self.performance_tracker.baseline_metrics.clone(),
+            metrics: baseline_metrics,
             timestamp: chrono::Utc::now(),
             improvement: false,
             optimal_parameters: std::collections::HashMap::new(),

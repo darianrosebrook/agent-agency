@@ -33,7 +33,7 @@ pub struct ScenarioExecutionResult {
 
 /// Scenario runner with determinism controls
 pub struct ScenarioRunner {
-    engine: EvaluationEngine,
+    engine: Arc<tokio::sync::Mutex<EvaluationEngine>>,
     playground: PlaygroundManager,
     clock: Option<Arc<dyn Clock>>,
     rng_source: Option<Arc<ThreadSafeRngSource>>,
@@ -44,7 +44,7 @@ impl ScenarioRunner {
     /// Create new scenario runner with system clock and RNG
     pub fn new(engine: EvaluationEngine, playground: PlaygroundManager) -> Self {
         Self {
-            engine,
+            engine: Arc::new(tokio::sync::Mutex::new(engine)),
             playground,
             clock: None,
             rng_source: None,
@@ -60,7 +60,7 @@ impl ScenarioRunner {
         rng_source: Arc<ThreadSafeRngSource>,
     ) -> Self {
         Self {
-            engine,
+            engine: Arc::new(tokio::sync::Mutex::new(engine)),
             playground,
             clock: Some(clock),
             rng_source: Some(rng_source),
@@ -75,7 +75,7 @@ impl ScenarioRunner {
         oracle: Arc<dyn Oracle>,
     ) -> Self {
         Self {
-            engine,
+            engine: Arc::new(tokio::sync::Mutex::new(engine)),
             playground,
             clock: None,
             rng_source: None,
@@ -92,7 +92,7 @@ impl ScenarioRunner {
         oracle: Arc<dyn Oracle>,
     ) -> Self {
         Self {
-            engine,
+            engine: Arc::new(tokio::sync::Mutex::new(engine)),
             playground,
             clock: Some(clock),
             rng_source: Some(rng_source),
@@ -189,8 +189,16 @@ impl ScenarioRunner {
     ) -> Result<AgentEvaluation, String> {
         let execution_result = self.run_scenario(scenario, agent_executor).await?;
 
+        // Register scenario with engine if not already registered
+        {
+            let mut engine = self.engine.lock().await;
+            if !engine.has_scenario(&scenario.scenario_id) {
+                engine.add_scenario(scenario.clone());
+            }
+        }
+
         // Evaluate the execution
-        self.engine.evaluate_scenario(
+        self.engine.lock().await.evaluate_scenario(
             &scenario.scenario_id,
             &execution_result.decisions,
             &execution_result.coordination_events,

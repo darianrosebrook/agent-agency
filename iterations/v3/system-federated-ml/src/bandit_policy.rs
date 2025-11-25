@@ -418,8 +418,10 @@ impl BanditPolicy for LinUCB {
         // - CAWS Tier: 2 (standard feature)
         // - Change Budget: ~60 LOC
         // - Reviewer Requirements: Concurrency domain expertise
-        let theta = self.theta.get(&task_type).unwrap_or(&vec![0.0; feature_dim]);
-        let covariance = self.covariance.get(&task_type).unwrap_or(&vec![vec![0.0; feature_dim]; feature_dim]);
+        let default_theta = vec![0.0; feature_dim];
+        let default_covariance = vec![vec![0.0; feature_dim]; feature_dim];
+        let theta = self.theta.get(&task_type).unwrap_or(&default_theta);
+        let _covariance = self.covariance.get(&task_type).unwrap_or(&default_covariance);
 
         let mut best_arm_idx = 0;
         let mut best_ucb = f64::NEG_INFINITY;

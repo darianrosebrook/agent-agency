@@ -16,12 +16,21 @@ node docs/contracts/validate.cjs
 
 echo "[verify] Running Rust tests with coverage..."
 mkdir -p target/coverage
-RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
-  cargo test --workspace --all-features
 
-echo "[verify] Generating coverage report (lcov)..."
-grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
-  -o target/coverage/lcov.info --ignore "/*" --ignore "target/*"
+# Use cargo-llvm-cov on macOS (handles macOS-specific LLVM profiling issues)
+# Fall back to grcov on Linux/CI
+if [[ "$OSTYPE" == "darwin"* ]] && command -v cargo-llvm-cov &> /dev/null; then
+  echo "[verify] Using cargo-llvm-cov for macOS coverage generation..."
+  cargo llvm-cov --workspace --all-features --lib --lcov --output-path target/coverage/lcov.info
+else
+  echo "[verify] Using grcov for coverage generation..."
+  RUSTFLAGS="-C instrument-coverage" LLVM_PROFILE_FILE="target/coverage/%p-%m.profraw" \
+    cargo test --workspace --all-features
+  
+  echo "[verify] Generating coverage report (lcov)..."
+  grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
+    -o target/coverage/lcov.info --ignore "/*" --ignore "target/*"
+fi
 
 echo "[verify] Enforcing branch coverage threshold..."
 node scripts/check-coverage.js

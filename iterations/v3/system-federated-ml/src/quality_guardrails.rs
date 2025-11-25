@@ -70,7 +70,7 @@ pub struct PerformanceThreshold {
     /// Maximum acceptable latency (ms)
     pub max_latency_ms: f32,
     /// Maximum acceptable memory usage (MB)
-    pub max_memory_mb: usize,
+    pub max_memory_mb: f32,
     /// Minimum acceptable accuracy score (0.0-1.0)
     pub min_accuracy: f32,
     /// Maximum acceptable error rate

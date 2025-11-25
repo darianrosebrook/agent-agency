@@ -26,6 +26,30 @@
   color: $color-white; // text-white
 }
 
+.phaseTitleEditable {
+  font-size: $font-size-xl; // text-xl
+  color: $color-white; // text-white
+  cursor: text;
+
+  &:hover {
+    background-color: rgba($color-zinc-800, 0.3);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+  }
+}
+
+.phaseTitleInput {
+  font-size: $font-size-xl; // text-xl
+  color: $color-white; // text-white
+  background: transparent;
+  border: 1px solid $color-blue-500;
+  border-radius: 4px;
+  padding: 2px 4px;
+  outline: none;
+  flex: 1;
+}
+
 .phaseBadge {
   padding-inline: $spacing-3; // px-3
   padding-block: $spacing-1; // py-1
@@ -40,7 +64,57 @@
   font-size: $font-size-sm; // text-sm
 }
 
+.phaseDescriptionEditable {
+  color: $color-zinc-400; // text-zinc-400
+  font-size: $font-size-sm; // text-sm
+  cursor: text;
+  min-height: 1.5rem;
+
+  &:hover {
+    background-color: rgba($color-zinc-800, 0.3);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+  }
+}
+
+.phaseDescriptionInput {
+  color: $color-zinc-400; // text-zinc-400
+  font-size: $font-size-sm; // text-sm
+  background: transparent;
+  border: 1px solid $color-blue-500;
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  font-family: inherit;
+}
+
 .phaseAccordion {
   width: 100%; // w-full
 }
 
+.addTaskContainer {
+  padding: $spacing-4; // p-4
+  border-top: 1px solid $color-zinc-800; // border-t border-zinc-800
+}
+
+.addTaskButton {
+  width: 100%; // w-full
+  padding: $spacing-2 $spacing-4; // py-2 px-4
+  background-color: transparent; // bg-transparent
+  border: 1px dashed $color-zinc-700; // border border-dashed border-zinc-700
+  border-radius: 0.5rem; // rounded-lg
+  color: $color-zinc-400; // text-zinc-400
+  font-size: $font-size-sm; // text-sm
+  cursor: pointer;
+  transition: all $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    border-color: $color-zinc-600; // hover:border-zinc-600
+    color: $color-zinc-300; // hover:text-zinc-300
+  }
+}

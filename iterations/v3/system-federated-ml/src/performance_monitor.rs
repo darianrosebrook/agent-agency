@@ -62,6 +62,9 @@ pub struct RuntimeOptimizationMetrics {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+/// Type alias for backward compatibility
+pub type PerformanceMetrics = RuntimeOptimizationMetrics;
+
 impl Default for RuntimeOptimizationMetrics {
     fn default() -> Self {
         Self {
@@ -83,17 +86,29 @@ impl Default for RuntimeOptimizationMetrics {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SLAMetrics {
     /// Target throughput SLA
-    pub target_throughput: f64,
+    pub target_throughput: f32,
     /// Target P95 latency SLA (ms)
-    pub target_p95_latency_ms: f64,
+    pub target_p95_latency_ms: f32,
     /// Target availability SLA (0.0-1.0)
-    pub target_availability: f64,
+    pub target_availability: f32,
     /// Current SLA compliance (0.0-1.0)
-    pub current_compliance: f64,
+    pub current_compliance: f32,
     /// SLA violations in current window
     pub violations: u32,
     /// Last SLA check timestamp
     pub last_check: chrono::DateTime<chrono::Utc>,
+    /// Current accuracy score (0.0-1.0)
+    pub accuracy_score: f32,
+    /// Current throughput in operations per second
+    pub throughput_ops_per_sec: f32,
+    /// P95 latency in milliseconds
+    pub latency_p95_ms: f32,
+    /// Number of thermal throttling events
+    pub thermal_throttling_events: u32,
+    /// Memory usage in MB
+    pub memory_usage_mb: f32,
+    /// CPU utilization percentage (0-100)
+    pub cpu_utilization_percent: f32,
 }
 
 /// Performance monitor for real-time metrics collection
@@ -124,6 +139,12 @@ impl PerformanceMonitor {
                 current_compliance: 1.0,
                 violations: 0,
                 last_check: chrono::Utc::now(),
+                accuracy_score: 1.0,
+                throughput_ops_per_sec: 0.0,
+                latency_p95_ms: 0.0,
+                thermal_throttling_events: 0,
+                memory_usage_mb: 0.0,
+                cpu_utilization_percent: 0.0,
             })),
             monitor_task: None,
         }
@@ -244,9 +265,9 @@ impl PerformanceMonitor {
         let metrics = self.get_current_metrics().await;
         let sla = self.get_sla_metrics().await;
 
-        let throughput_ok = metrics.throughput >= sla.target_throughput;
-        let latency_ok = metrics.p95_latency_ms <= sla.target_p95_latency_ms;
-        let availability_ok = (1.0 - metrics.error_rate) >= sla.target_availability;
+        let throughput_ok = metrics.throughput >= sla.target_throughput as f64;
+        let latency_ok = metrics.p95_latency_ms <= sla.target_p95_latency_ms as f64;
+        let availability_ok = (1.0 - metrics.error_rate) >= sla.target_availability as f64;
 
         let compliant = throughput_ok && latency_ok && availability_ok;
 
@@ -370,9 +391,9 @@ impl PerformanceMonitor {
     async fn update_sla_compliance(sla_metrics: &Arc<RwLock<SLAMetrics>>, current_metrics: &PerformanceMetrics) {
         let mut sla = sla_metrics.write().await;
 
-        let throughput_ok = current_metrics.throughput >= sla.target_throughput;
-        let latency_ok = current_metrics.p95_latency_ms <= sla.target_p95_latency_ms;
-        let availability_ok = (1.0 - current_metrics.error_rate) >= sla.target_availability;
+        let throughput_ok = current_metrics.throughput >= sla.target_throughput as f64;
+        let latency_ok = current_metrics.p95_latency_ms <= sla.target_p95_latency_ms as f64;
+        let availability_ok = (1.0 - current_metrics.error_rate) >= sla.target_availability as f64;
 
         let violations_before = sla.violations;
         if !throughput_ok || !latency_ok || !availability_ok {
@@ -381,7 +402,7 @@ impl PerformanceMonitor {
 
         // Calculate compliance based on recent violations
         let total_checks = 100; // Assume 100 checks in measurement window
-        sla.current_compliance = 1.0 - (sla.violations as f64 / total_checks as f64);
+        sla.current_compliance = 1.0 - (sla.violations as f32 / total_checks as f32);
 
         sla.last_check = chrono::Utc::now();
 

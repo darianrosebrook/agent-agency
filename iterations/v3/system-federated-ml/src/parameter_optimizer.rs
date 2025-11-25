@@ -2,7 +2,10 @@
 //!
 //! Implements safe, constrained parameter optimization using contextual bandits
 //! with trust regions, quality gates, and CAWS compliance.
+//!
+//! @author @darianrosebrook
 
+use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -14,12 +17,17 @@ use chrono::{DateTime, Utc};
 use crate::bandit_policy::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB};
+use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB, UsedParameters};
+
 #[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{CounterfactualLogger, TaskOutcome, LoggedDecision};
 
 #[cfg(not(feature = "bandit_policy"))]
 use crate::{reward::TaskOutcome, bandit_stubs::{CounterfactualLogger, LoggedDecision}};
+
+// Re-export UsedParameters for use by other modules
+#[cfg(feature = "bandit_policy")]
+pub use crate::llm_parameter_feedback_example::UsedParameters;
 
 /// LLM Parameter Optimizer
 pub struct LLMParameterOptimizer {
@@ -222,7 +230,7 @@ impl LLMParameterOptimizer {
         request_id: Uuid,
         task_type: &str,
         context_fingerprint: u64,
-        parameters: crate::orchestration::planning::llm_client::UsedParameters,
+        parameters: UsedParameters,
         outcome: TaskOutcome,
         log_propensity: f64,
     ) -> Result<()> {
@@ -236,8 +244,12 @@ impl LLMParameterOptimizer {
             stop_sequences: parameters.stop_sequences,
             seed: parameters.seed,
             origin: parameters.origin,
-            policy_version: parameters.policy_version.clone(),
+            policy_version: parameters.policy_version.clone().unwrap_or_else(|| "unknown".to_string()),
             created_at: parameters.created_at,
+            execution_id: Some(request_id.to_string()),
+            parameters: std::collections::HashMap::new(),
+            execution_mode: None,
+            quality_gates: None,
         };
 
         // Calculate reward
@@ -250,16 +262,17 @@ impl LLMParameterOptimizer {
         }
 
         // Log for counterfactual evaluation
-        self.cf_logger.log_decision(
-            request_id,
-            task_type.to_string(),
-            parameters.model_name,
-            TaskFeatures::default(), // Would use actual features
-            param_set.clone(),
-            log_propensity,
-            outcome.clone(),
-            parameters.policy_version,
-        )?;
+        let decision = LoggedDecision {
+            decision_id: request_id,
+            task_type: task_type.to_string(),
+            context: TaskFeatures::default(),
+            chosen_params: param_set.clone(),
+            propensity: log_propensity,
+            outcome: Some(outcome.clone()),
+            policy_version: parameters.policy_version.clone().unwrap_or_else(|| "unknown".to_string()),
+            timestamp: Utc::now(),
+        };
+        self.cf_logger.log_decision(decision);
 
         // Update parameter history
         {
@@ -295,6 +308,10 @@ impl LLMParameterOptimizer {
                 origin: "baseline".to_string(),
                 policy_version: "1.0.0".to_string(),
                 created_at: Utc::now(),
+                execution_id: None,
+                parameters: std::collections::HashMap::new(),
+                execution_mode: None,
+                quality_gates: None,
             })
         }
     }
@@ -319,12 +336,12 @@ impl LLMParameterOptimizer {
                     .max(1).min(constraints.max_tokens as i32) as u32;
 
                 // Check trust region constraints
-                if (new_temp - baseline.temperature).abs() <= constraints.max_delta_temperature as f64
+                if (new_temp - baseline.temperature).abs() <= constraints.max_delta_temperature
                     && (new_tokens as i32 - baseline.max_tokens as i32).abs() <= constraints.max_delta_max_tokens as i32
                 {
                     let mut candidate = baseline.clone();
                     candidate.temperature = new_temp;
-                    candidate.max_tokens = new_tokens as usize;
+                    candidate.max_tokens = new_tokens;
                     candidate.origin = "optimizer".to_string();
                     candidate.created_at = Utc::now();
                     candidates.push(candidate);
@@ -428,7 +445,7 @@ impl QualityGateValidator {
         // - CAWS Tier: 2 (validation feature)
         // - Change Budget: ~80 LOC
         // - Reviewer Requirements: Parameter validation expertise
-        if proposed.max_tokens > constraints.max_tokens as usize { // Temporary: basic validation until comprehensive validation
+        if proposed.max_tokens > constraints.max_tokens { // Temporary: basic validation until comprehensive validation
             return Ok(ValidationResult::Rejected {
                 reason: format!("Token limit {} exceeds constraint {}",
                                 proposed.max_tokens, constraints.max_tokens),
@@ -450,7 +467,7 @@ impl QualityGateValidator {
 }
 
 /// Validation result
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ValidationResult {
     Approved {
         quality_delta: f64,
@@ -468,22 +485,5 @@ impl ValidationResult {
     }
 }
 
-impl Default for TaskFeatures {
-    fn default() -> Self {
-        Self {
-            risk_tier: 2,
-            title_length: 10,
-            description_length: 50,
-            acceptance_criteria_count: 3,
-            scope_files_count: 5,
-            max_files: 10,
-            max_loc: 1000,
-            has_external_deps: false,
-            complexity_indicators: vec![],
-            model_name: None,
-            prompt_tokens: None,
-            prior_failures: None,
-        }
-    }
-}
+// Default implementation for TaskFeatures is provided in bandit_policy or bandit_stubs modules
 

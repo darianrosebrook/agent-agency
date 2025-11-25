@@ -1,4 +1,5 @@
 use anyhow::{Result, anyhow};
+use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;

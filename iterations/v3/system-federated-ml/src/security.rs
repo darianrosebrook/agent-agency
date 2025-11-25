@@ -58,23 +58,14 @@ impl SecurityValidator {
     
     /// Get Schnorr parameters (simplified - in production use standard curves)
     fn schnorr_params() -> SchnorrParams {
-        // Simplified parameters for demonstration
-        // In production, use standard elliptic curve parameters (e.g., secp256k1, ed25519)
-        // For now, use small primes for testing - NOT SECURE FOR PRODUCTION
+        // Use parameters where q divides p-1 for multiplicative group Schnorr proofs
+        // p = 23 (prime), p-1 = 22 = 2 * 11, so q = 11 works
+        // g = 2 is a generator modulo 23, and g^((p-1)/q) = 2^2 = 4 mod 23 has order 11
+        // For testing only - NOT SECURE FOR PRODUCTION
         SchnorrParams {
-            g: BigInt::from(2u64),
-            p: BigInt::from_bytes_be(Sign::Plus, &[
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xfc, 0x2f,
-            ]),
-            q: BigInt::from_bytes_be(Sign::Plus, &[
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
-                0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
-                0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41,
-            ]),
+            g: BigInt::from(4u64), // Generator with order q
+            p: BigInt::from(23u64),
+            q: BigInt::from(11u64),
         }
     }
     
@@ -134,13 +125,30 @@ impl SecurityValidator {
         // - y = g^x mod p (the public key)
         // - s = r + c*x mod q (the response)
         // - c = H(g, y, R, public_inputs) mod q (the challenge)
+        //
+        // Math: g^s = g^(r + c*x) = g^r * g^(c*x) mod p
+        // But: g^(c*x) = (g^x)^c = y^c mod p
+        // So: g^s = g^r * y^c = R * y^c mod p
+        
+        // Recompute challenge to verify it matches the proof
+        let computed_challenge = Self::compute_challenge(&params.g, &y, &r_commitment, &proof.public_inputs) % &params.q;
+        
+        // Verify the challenge matches
+        if computed_challenge != c {
+            return Ok(false);
+        }
         
         // Compute left side: g^s mod p
+        // In Schnorr, s = r + c*x mod q, so g^s = g^(r + c*x mod q) mod p
+        // Since g has order q, we can compute g^s directly
         let g_s = params.g.modpow(&s, &params.p);
         
         // Compute right side: R * y^c mod p
+        // Where R = g^r mod p and y = g^x mod p
+        // So R * y^c = g^r * (g^x)^c = g^r * g^(c*x) = g^(r + c*x) mod p
+        // This should equal g^s if s = r + c*x mod q
         let y_c = y.modpow(&c, &params.p);
-        let rhs = (r_commitment * y_c) % &params.p;
+        let rhs = (r_commitment.clone() * y_c) % &params.p;
         
         // Normalize both sides modulo p for comparison
         let lhs_mod = g_s % &params.p;
@@ -174,20 +182,30 @@ impl SecurityValidator {
         }
         
         // Compute public key y = g^x mod p
+        // Since g has order q, we can compute g^x directly
         let y = params.g.modpow(&x, &params.p);
         
         // Generate random r in [1, q)
+        // Use a bounded loop to prevent infinite loops during mutation testing
         let rng = SystemRandom::new();
-        let r_bytes = loop {
-            let mut bytes = vec![0u8; 32];
-            rng.fill(&mut bytes)
-                .context("Failed to generate random bytes")?;
-            let candidate = BigInt::from_bytes_be(Sign::Plus, &bytes) % &params.q;
-            if candidate > BigInt::zero() && candidate < params.q {
-                break candidate.to_bytes_be().1;
+        let r = {
+            let mut attempts = 0;
+            const MAX_ATTEMPTS: usize = 1000;
+            loop {
+                if attempts >= MAX_ATTEMPTS {
+                    return Err(anyhow::anyhow!("Failed to generate valid random r after {} attempts", MAX_ATTEMPTS));
+                }
+                attempts += 1;
+                
+                let mut bytes = vec![0u8; 32];
+                rng.fill(&mut bytes)
+                    .context("Failed to generate random bytes")?;
+                let candidate = BigInt::from_bytes_be(Sign::Plus, &bytes) % &params.q;
+                if candidate > BigInt::zero() && candidate < params.q {
+                    break candidate;
+                }
             }
         };
-        let r = BigInt::from_bytes_be(Sign::Plus, &r_bytes);
         
         // Compute commitment R = g^r mod p
         let r_commitment = params.g.modpow(&r, &params.p);
@@ -196,7 +214,10 @@ impl SecurityValidator {
         let c = Self::compute_challenge(&params.g, &y, &r_commitment, public_inputs) % &params.q;
         
         // Compute response s = r + c*x mod q
-        let s = (r + (&c * &x)) % &params.q;
+        // Ensure result is positive and properly normalized
+        let cx = &c * &x;
+        let r_plus_cx = &r + &cx;
+        let s = ((r_plus_cx % &params.q) + &params.q) % &params.q;
         
         // Serialize proof components
         let commitment = r_commitment.to_bytes_be().1;

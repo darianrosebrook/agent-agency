@@ -173,7 +173,7 @@ impl RewardFunction {
         let mut severity = ConstraintSeverity::Info;
 
         // 1. Trust region checks
-        let temp_delta = (proposed.temperature - baseline.temperature as f64).abs();
+        let temp_delta = (proposed.temperature as f64 - baseline.temperature as f64).abs();
         if temp_delta > constraints.max_delta_temperature as f64 {
             violations.push(format!(
                 "Temperature delta {:.3} exceeds trust region {:.3}",
@@ -192,7 +192,7 @@ impl RewardFunction {
         }
 
         // 2. Hard constraint checks
-        if proposed.max_tokens > constraints.max_tokens as usize {
+        if proposed.max_tokens as u32 > constraints.max_tokens {
             violations.push(format!(
                 "Token limit {} exceeds constraint {}",
                 proposed.max_tokens, constraints.max_tokens

@@ -11,7 +11,15 @@
 //! 4. **Quality Gate Tools**: Code analysis, test execution, performance validation
 //! 5. **Conflict Resolution Tools**: Debate orchestration, consensus building, evidence synthesis
 //! 6. **Workflow Tools**: Task decomposition, progress tracking, resource allocation
+//!
+//! ## Federated ML Components
+//!
+//! - **Aggregation**: Secure multi-party computation for model updates
+//! - **Coordinator**: Federation round management and participant orchestration
+//! - **Encryption**: Homomorphic encryption (Paillier) for privacy-preserving computation
+//! - **Bandit Policy**: Contextual bandit algorithms for parameter optimization
 
+// Core tool ecosystem modules
 pub mod arbiter_pipeline;
 pub mod claim_extraction;
 pub mod conflict_resolution_tools;
@@ -34,6 +42,49 @@ pub mod validation;
 pub mod model_updates;
 pub mod security;
 pub mod encryption;
+
+// Federated ML modules
+pub mod aggregation;
+pub mod coordinator;
+pub mod differential_privacy;
+pub mod participant;
+
+// LLM Parameter Optimization modules
+pub mod bandit_policy;
+pub mod bandit_stubs;
+pub mod bayesian_optimizer;
+pub mod counterfactual_log;
+pub mod parameter_optimizer;
+pub mod parameter_dashboard;
+pub mod performance_monitor;
+pub mod reward;
+pub mod rollout;
+
+// CAWS Integration modules
+pub mod caws_integration {
+    //! CAWS Integration - re-exports from runtime_caws_integration
+    pub use crate::runtime_caws_integration::*;
+}
+pub mod runtime_caws_integration;
+pub mod planning_agent_integration;
+pub mod quality_gate_validator;
+pub mod quality_guardrails;
+
+// Advanced optimization modules
+#[cfg(feature = "chunked_execution")]
+pub mod chunked_execution;
+pub mod chunked_executor;
+#[cfg(feature = "precision_engineering")]
+pub mod precision_engineering;
+// streaming_pipeline requires common_pipeline crate - disabled until dependency is added
+// pub mod streaming_pipeline;
+#[cfg(feature = "thermal_scheduler")]
+pub mod thermal_scheduler;
+pub mod tool_bandits;
+
+// Example and tuning modules
+pub mod kokoro_tuning;
+pub mod llm_parameter_feedback_example;
 
 pub use arbiter_pipeline::{
     ArbiterPipelineOptimizer, DecisionInput, DecisionPipelineConfig, DecisionResult,

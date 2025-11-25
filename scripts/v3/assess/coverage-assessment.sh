@@ -78,36 +78,59 @@ rm -rf target/coverage/*.profraw 2>/dev/null || true
 echo -e "${BLUE}[coverage-assessment] Running tests with coverage instrumentation...${NC}"
 COVERAGE_TEST_OUTPUT="$OUTPUT_DIR/coverage-tests.log"
 
-export RUSTFLAGS="$INSTRUMENTATION_FLAGS"
-export LLVM_PROFILE_FILE="$PROFILE_PATTERN"
-
-if cargo test --workspace --all-features 2>&1 | tee "$COVERAGE_TEST_OUTPUT"; then
-    TEST_EXIT_CODE=0
+# Use cargo-llvm-cov on macOS (handles macOS-specific LLVM profiling issues)
+# Fall back to grcov on Linux/CI
+if [[ "$OSTYPE" == "darwin"* ]] && command -v cargo-llvm-cov &> /dev/null; then
+    echo -e "${BLUE}[coverage-assessment] Using cargo-llvm-cov for macOS coverage generation...${NC}"
+    if cargo llvm-cov --workspace --all-features --lib --lcov --output-path "$GROCV_OUTPUT" 2>&1 | tee "$COVERAGE_TEST_OUTPUT"; then
+        TEST_EXIT_CODE=0
+    else
+        TEST_EXIT_CODE=$?
+    fi
+    
+    if [ $TEST_EXIT_CODE -ne 0 ]; then
+        echo -e "${YELLOW}[coverage-assessment] Some tests failed, but continuing with coverage analysis...${NC}"
+    fi
+    
+    if [ -f "$GROCV_OUTPUT" ]; then
+        echo -e "${GREEN}[coverage-assessment] Coverage report generated with cargo-llvm-cov${NC}"
+    else
+        echo -e "${RED}[coverage-assessment] Failed to generate coverage report${NC}"
+        exit 1
+    fi
 else
-    TEST_EXIT_CODE=$?
-fi
-
-unset RUSTFLAGS
-unset LLVM_PROFILE_FILE
-
-if [ $TEST_EXIT_CODE -ne 0 ]; then
-    echo -e "${YELLOW}[coverage-assessment] Some tests failed, but continuing with coverage analysis...${NC}"
-fi
-
-# Generate lcov report
-echo -e "${BLUE}[coverage-assessment] Generating lcov coverage report...${NC}"
-GROCV_IGNORE=$(get_config "grcov_ignore_patterns" | tr '\n' ' ' | sed 's/^/--ignore /g')
-
-if grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
-    -o "$GROCV_OUTPUT" \
-    --ignore "/*" \
-    --ignore "target/*" \
-    --ignore "tests/*" \
-    --ignore "**/tests/*" 2>&1 | tee "$OUTPUT_DIR/grcov.log"; then
-    echo -e "${GREEN}[coverage-assessment] Coverage report generated${NC}"
-else
-    echo -e "${RED}[coverage-assessment] Failed to generate coverage report${NC}"
-    exit 1
+    echo -e "${BLUE}[coverage-assessment] Using grcov for coverage generation...${NC}"
+    export RUSTFLAGS="$INSTRUMENTATION_FLAGS"
+    export LLVM_PROFILE_FILE="$PROFILE_PATTERN"
+    
+    if cargo test --workspace --all-features 2>&1 | tee "$COVERAGE_TEST_OUTPUT"; then
+        TEST_EXIT_CODE=0
+    else
+        TEST_EXIT_CODE=$?
+    fi
+    
+    unset RUSTFLAGS
+    unset LLVM_PROFILE_FILE
+    
+    if [ $TEST_EXIT_CODE -ne 0 ]; then
+        echo -e "${YELLOW}[coverage-assessment] Some tests failed, but continuing with coverage analysis...${NC}"
+    fi
+    
+    # Generate lcov report
+    echo -e "${BLUE}[coverage-assessment] Generating lcov coverage report...${NC}"
+    GROCV_IGNORE=$(get_config "grcov_ignore_patterns" | tr '\n' ' ' | sed 's/^/--ignore /g')
+    
+    if grcov . -s . -t lcov --llvm --branch --ignore-not-existing \
+        -o "$GROCV_OUTPUT" \
+        --ignore "/*" \
+        --ignore "target/*" \
+        --ignore "tests/*" \
+        --ignore "**/tests/*" 2>&1 | tee "$OUTPUT_DIR/grcov.log"; then
+        echo -e "${GREEN}[coverage-assessment] Coverage report generated${NC}"
+    else
+        echo -e "${RED}[coverage-assessment] Failed to generate coverage report${NC}"
+        exit 1
+    fi
 fi
 
 # Parse lcov file to extract coverage data

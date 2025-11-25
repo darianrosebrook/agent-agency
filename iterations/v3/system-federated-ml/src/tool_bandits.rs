@@ -5,6 +5,7 @@
 
 use schemars::JsonSchema;
 use std::collections::HashMap;
+use std::sync::Arc;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
@@ -152,8 +153,10 @@ impl ToolPolicy for LinUCBPolicy {
                 continue;
             }
 
-            let theta_t = self.theta.get(tool_id).unwrap_or(&vec![0.0; self.feature_dim]);
-            let cov_t = self.cov.get(tool_id).unwrap_or(&Matrix::identity(self.feature_dim));
+            let default_theta = vec![0.0; self.feature_dim];
+            let default_cov = Matrix::identity(self.feature_dim);
+            let theta_t = self.theta.get(tool_id).unwrap_or(&default_theta);
+            let cov_t = self.cov.get(tool_id).unwrap_or(&default_cov);
 
             // LinUCB score: θᵀx + α·sqrt(xᵀ A⁻¹ x)
             let mean = dot_product(theta_t, &x);
@@ -209,8 +212,10 @@ impl ToolPolicy for ThompsonSamplingPolicy {
                 continue;
             }
 
-            let alpha_t = self.alpha.get(tool_id).unwrap_or(&vec![1.0; self.feature_dim]);
-            let beta_t = self.beta.get(tool_id).unwrap_or(&vec![1.0; self.feature_dim]);
+            let default_alpha = vec![1.0; self.feature_dim];
+            let default_beta = vec![1.0; self.feature_dim];
+            let alpha_t = self.alpha.get(tool_id).unwrap_or(&default_alpha);
+            let beta_t = self.beta.get(tool_id).unwrap_or(&default_beta);
 
             // Sample from Beta distribution for each feature
             let mut sample_score = 0.0;
@@ -342,12 +347,12 @@ impl ToolLearningSystem {
         }
     }
 
-    pub fn select_tool(&self, ctx: &ToolContextFeatures, constraints: &ToolConstraints)
+    pub async fn select_tool(&self, ctx: &ToolContextFeatures, constraints: &ToolConstraints)
         -> Result<(ToolId, f64, f64), ToolLearningError> {
         let policy = self.policies.get(&self.active_policy)
-            .ok_or(ToolLearningError::PolicyNotFound)?;
+            .ok_or_else(|| ToolLearningError::PolicyNotFound(self.active_policy.clone()))?;
 
-        let available_tools = self.get_available_tools()?;
+        let available_tools = self.get_available_tools().await?;
         if available_tools.is_empty() {
             return Err(ToolLearningError::NoToolsAvailable);
         }
@@ -368,7 +373,7 @@ impl ToolLearningSystem {
                    self.active_policy, tool, reward);
             Ok(())
         } else {
-            Err(ToolLearningError::PolicyNotFound)
+            Err(ToolLearningError::PolicyNotFound(self.active_policy.clone()))
         }
     }
 
@@ -378,14 +383,14 @@ impl ToolLearningSystem {
             info!("Switched to policy: {}", policy_name);
             Ok(())
         } else {
-            Err(ToolLearningError::PolicyNotFound)
+            Err(ToolLearningError::PolicyNotFound(policy_name.to_string()))
         }
     }
 
-    pub fn get_available_tools(&self) -> Result<Vec<ToolId>, ToolLearningError> {
+    pub async fn get_available_tools(&self) -> Result<Vec<ToolId>, ToolLearningError> {
         // Get all tools from registry
-        let tools = self.tool_registry.get_all_tools().unwrap_or_default();
-        Ok(tools.into_iter().map(|t| t.name).collect())
+        let tools = self.tool_registry.get_all_tools().await;
+        Ok(tools.into_iter().map(|(name, _tool)| name).collect())
     }
 
     pub fn get_policy_stats(&self) -> HashMap<String, String> {
@@ -411,8 +416,5 @@ pub enum ToolLearningError {
     RegistryError(String),
 }
 
-impl From<ToolLearningError> for anyhow::Error {
-    fn from(err: ToolLearningError) -> Self {
-        anyhow::anyhow!(err)
-    }
-}
+// Note: ToolLearningError already implements std::error::Error via thiserror,
+// which provides automatic conversion to anyhow::Error through the blanket impl

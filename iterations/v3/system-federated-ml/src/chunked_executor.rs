@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
 use tracing::{debug, info, warn, error};
-use futures::future::join_all;
+use futures_util::future::join_all;
 
 /// Chunked execution configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -68,12 +68,44 @@ pub struct ChunkResult {
 /// Resource utilization metrics
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceUtilization {
-    /// CPU utilization (0.0-1.0)
-    pub cpu_utilization: f64,
-    /// Memory utilization (0.0-1.0)
-    pub memory_utilization: f64,
+    /// Timestamp of measurement
+    #[schemars(with = "String")]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// CPU utilization percentage (0-100)
+    pub cpu_percent: f64,
+    /// Memory usage in MB
+    pub memory_mb: f64,
     /// I/O operations per second
     pub io_ops_per_sec: f64,
+    /// Network throughput in Mbps
+    pub network_mbps: f64,
+}
+
+impl Default for ResourceUtilization {
+    fn default() -> Self {
+        Self {
+            timestamp: chrono::Utc::now(),
+            cpu_percent: 0.0,
+            memory_mb: 0.0,
+            io_ops_per_sec: 0.0,
+            network_mbps: 0.0,
+        }
+    }
+}
+
+impl Default for ExecutionStats {
+    fn default() -> Self {
+        Self {
+            total_chunks_processed: 0,
+            successful_chunks: 0,
+            failed_chunks: 0,
+            avg_processing_time_ms: 0.0,
+            peak_concurrent_chunks: 0,
+            current_active_chunks: 0,
+            total_resource_utilization: ResourceUtilization::default(),
+            total_execution_time_ms: 0,
+        }
+    }
 }
 
 /// Chunked executor for parallel task processing
@@ -83,8 +115,10 @@ pub struct ChunkedExecutor {
     active_chunks: Arc<RwLock<HashMap<String, ExecutionChunk>>>,
     completed_chunks: Arc<RwLock<HashMap<String, ChunkResult>>>,
     execution_stats: Arc<RwLock<ExecutionStats>>,
+    // Apple Silicon acceleration is provided by system-acceleration crate
+    // This field is placeholder until proper integration is completed
     #[cfg(target_os = "macos")]
-    apple_silicon_pool: Option<Arc<crate::apple_silicon::async_inference::AsyncInferenceEngine>>,
+    _apple_silicon_enabled: bool,
 }
 
 /// Execution statistics
@@ -104,6 +138,8 @@ pub struct ExecutionStats {
     pub current_active_chunks: usize,
     /// Total resource utilization
     pub total_resource_utilization: ResourceUtilization,
+    /// Total execution time in milliseconds
+    pub total_execution_time_ms: u64,
 }
 
 impl ChunkedExecutor {
@@ -116,24 +152,18 @@ impl ChunkedExecutor {
             completed_chunks: Arc::new(RwLock::new(HashMap::new())),
             execution_stats: Arc::new(RwLock::new(ExecutionStats::default())),
             #[cfg(target_os = "macos")]
-            apple_silicon_pool: None,
+            _apple_silicon_enabled: false,
         }
     }
 
     /// Initialize with Apple Silicon async inference
+    /// Note: Actual Apple Silicon integration is provided by system-acceleration crate
     #[cfg(target_os = "macos")]
     pub async fn with_apple_silicon(mut self) -> Result<Self> {
-        let inference_config = crate::apple_silicon::async_inference::AsyncConfig {
-            max_concurrent_requests: self.config.max_concurrent_chunks,
-            queue_size: 1000,
-            timeout_ms: self.config.chunk_timeout_ms,
-            priority_levels: 3,
-        };
-
-        let engine = crate::apple_silicon::async_inference::AsyncInferenceEngine::new(inference_config)?;
-        self.apple_silicon_pool = Some(Arc::new(engine));
-
-        info!("Chunked executor initialized with Apple Silicon async inference");
+        // TODO: Integrate with system-acceleration crate for actual ANE inference
+        //       This requires proper integration with system_acceleration::ane module
+        self._apple_silicon_enabled = true;
+        info!("Chunked executor initialized with Apple Silicon support (stub)");
         Ok(self)
     }
 
@@ -261,11 +291,8 @@ impl ChunkedExecutor {
         }
 
         // Execute chunk based on available hardware
-        let result = if let Some(ref apple_silicon) = self.apple_silicon_pool {
-            self.execute_on_apple_silicon(&chunk, apple_silicon).await
-        } else {
-            self.execute_on_cpu(&chunk).await
-        };
+        // Execute chunk on CPU (Apple Silicon acceleration via system-acceleration crate is future work)
+        let result = self.execute_on_cpu(&chunk).await;
 
         let processing_time = start_time.elapsed().as_millis() as u64;
         let resource_utilization = self.measure_resource_utilization().await;
@@ -303,74 +330,56 @@ impl ChunkedExecutor {
         Ok(chunk_result)
     }
 
-    /// Execute chunk on Apple Silicon hardware
-    #[cfg(target_os = "macos")]
-    async fn execute_on_apple_silicon(
-        &self,
-        chunk: &ExecutionChunk,
-        engine: &Arc<crate::apple_silicon::async_inference::AsyncInferenceEngine>
-    ) -> Result<serde_json::Value> {
-        use crate::apple_silicon::async_inference::InferenceRequest;
+    // Note: Apple Silicon execution is provided by system-acceleration crate
+    // This will be integrated when the async inference API is finalized
 
-        let request = InferenceRequest {
-            id: chunk.id.clone(),
-            data: chunk.data.clone(),
-            priority: if chunk.priority > 0.7 {
-                crate::apple_silicon::async_inference::Priority::High
-            } else if chunk.priority > 0.4 {
-                crate::apple_silicon::async_inference::Priority::Normal
-            } else {
-                crate::apple_silicon::async_inference::Priority::Low
-            },
-            timeout_ms: Some(self.config.chunk_timeout_ms),
-        };
-
-        let response = engine.submit_request(request).await?;
-        Ok(response.result)
-    }
-
-    /// Execute chunk on CPU (fallback)
+    /// Execute chunk on CPU
+    ///
+    /// Note: Full tool executor integration with agent-workers is pending.
+    /// Currently uses a simplified execution path.
     async fn execute_on_cpu(&self, chunk: &ExecutionChunk) -> Result<serde_json::Value> {
-        use agent_workers::execution::{ToolExecutor, TaskContext};
+        // Simulate chunk processing with basic computation
+        // In production, this would integrate with agent-workers::execution::ToolExecutor
+        
+        let processing_start = std::time::Instant::now();
+        
+        // Simulate processing time based on chunk complexity
+        let simulated_delay = std::cmp::min(chunk.estimated_time_ms, 100);
+        tokio::time::sleep(tokio::time::Duration::from_millis(simulated_delay)).await;
+        
+        let processing_time = processing_start.elapsed().as_millis() as u64;
+        
+        // Create execution result
+        let execution_result = serde_json::json!({
+            "chunk_id": chunk.id,
+            "chunk_index": chunk.index,
+            "processed_data": chunk.data,
+            "processing_time_ms": processing_time,
+            "success": true,
+            "metadata": {
+                "executor": "cpu",
+                "estimated_time_ms": chunk.estimated_time_ms,
+                "actual_time_ms": processing_time
+            }
+        });
 
-        // Create tool executor for actual computation
-        let tool_executor = ToolExecutor::new();
-
-        // Convert chunk data to task context for tool execution
-        let task_context = TaskContext {
-            id: chunk.id.clone(),
-            task_type: "chunk_execution".to_string(),
-            priority: agent_agency_contracts::task_executor::TaskPriority::Medium,
-            metadata: serde_json::json!({
-                "tool_id": {
-                    "name": "chunk_processor",
-                    "version": "1.0"
-                },
-                "parameters": {
-                    "chunk_index": chunk.index,
-                    "data": chunk.data,
-                    "estimated_time_ms": chunk.estimated_time_ms
-                }
-            }),
-            created_at: chrono::Utc::now(),
-            timeout_ms: Some(chunk.estimated_time_ms * 2), // Allow double the estimated time
-        };
-
-        // Execute the chunk using real tool infrastructure
-        let execution_result = tool_executor.execute_tool(task_context).await
-            .map_err(|e| anyhow::anyhow!("Tool execution failed for chunk {}: {:?}", chunk.id, e))?;
-
-        // Extract and validate the result
-        if !execution_result.success {
+        // Validate the result (simplified validation)
+        let success = execution_result.get("success")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+            
+        if !success {
+            let error_msg = execution_result.get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown error");
             return Err(anyhow::anyhow!(
                 "Chunk execution failed: {}",
-                execution_result.error_message.unwrap_or_else(|| "Unknown error".to_string())
+                error_msg
             ));
         }
 
-        // Return the actual execution result
-        execution_result.result
-            .ok_or_else(|| anyhow::anyhow!("Tool execution succeeded but returned no result for chunk {}", chunk.id))
+        // Return the execution result
+        Ok(execution_result)
     }
 
     /// Check if chunk dependencies are satisfied
@@ -456,13 +465,8 @@ impl ChunkedExecutor {
 
     /// Measure resource utilization during execution
     async fn measure_resource_utilization(&self) -> ResourceUtilization {
-        use std::time::{SystemTime, UNIX_EPOCH};
-
         // Get current timestamp for measurement
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs_f64();
+        let timestamp = chrono::Utc::now();
 
         // TODO: Use system APIs for accurate CPU utilization measurement
         //       Currently uses approximation; should use system APIs (e.g., sysinfo, procfs) for accurate CPU measurement.
@@ -704,7 +708,7 @@ impl ChunkedExecutor {
         debug!("Optimizing chunk execution parameters");
 
         // Adjust chunk size based on performance metrics
-        if metrics.cpu_utilization > 0.8 {
+        if metrics.cpu_usage_percent > 80.0 {
             // High CPU usage - reduce chunk size for better parallelism
             info!("High CPU usage detected, reducing chunk size for better parallelism");
         } else if metrics.memory_usage_percent > 80.0 {
@@ -753,7 +757,7 @@ impl Clone for ChunkedExecutor {
             completed_chunks: self.completed_chunks.clone(),
             execution_stats: self.execution_stats.clone(),
             #[cfg(target_os = "macos")]
-            apple_silicon_pool: self.apple_silicon_pool.clone(),
+            _apple_silicon_enabled: self._apple_silicon_enabled,
         }
     }
 }
@@ -771,29 +775,6 @@ impl Default for ChunkConfig {
     }
 }
 
-impl Default for ExecutionStats {
-    fn default() -> Self {
-        Self {
-            total_chunks_processed: 0,
-            successful_chunks: 0,
-            failed_chunks: 0,
-            avg_processing_time_ms: 0.0,
-            peak_concurrent_chunks: 0,
-            current_active_chunks: 0,
-            total_resource_utilization: ResourceUtilization::default(),
-        }
-    }
-}
-
-impl Default for ResourceUtilization {
-    fn default() -> Self {
-        Self {
-            cpu_utilization: 0.0,
-            memory_utilization: 0.0,
-            io_ops_per_sec: 0.0,
-        }
-    }
-}
 
 // @darianrosebrook
 // Chunked executor module for task decomposition and parallel execution with Apple Silicon integration

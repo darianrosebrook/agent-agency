@@ -17,7 +17,7 @@ import {
   TestTube,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -29,6 +29,7 @@ import styles from "./Sidebar.module.scss";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const isActive = (path: string) => {
@@ -78,12 +79,28 @@ export function Sidebar() {
 
         {/* Search */}
         {!isCollapsed && (
-          <div className={styles.searchContainer}>
+          <div
+            className={styles.searchContainer}
+            onClick={() => router.push("/search")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push("/search");
+              }
+            }}
+          >
             <Search className={styles.searchIcon} />
             <input
               type="text"
               placeholder="Search"
               className={styles.searchInput}
+              readOnly
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push("/search");
+              }}
             />
             <kbd className={styles.searchKbd}>/</kbd>
           </div>

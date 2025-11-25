@@ -144,11 +144,14 @@ impl ToolChainBridge {
             DependencyEdge, DependencyEdgeType, DependencyNode, DependencyNodeType,
         };
 
-        // Create milestones from tool chain DAG nodes
+        // Create milestones from tool chain nodes
         let mut milestones = Vec::new();
-        let mut node_indices: std::collections::HashMap<petgraph::graph::NodeIndex, String> = std::collections::HashMap::new();
+        let mut node_indices: std::collections::HashMap<usize, String> = std::collections::HashMap::new();
+        let mut edges = Vec::new();
 
-        // Convert DAG nodes to milestones using topological sort
+        #[cfg(feature = "tool-chain")]
+        {
+            // When tool-chain feature is enabled, ExternalToolChain has a DAG
         use petgraph::algo::toposort;
         let sorted_indices = match toposort(&tool_chain.dag, None) {
             Ok(indices) => indices,
@@ -162,41 +165,18 @@ impl ToolChainBridge {
         for dag_idx in &sorted_indices {
             if let Some(node) = tool_chain.dag.node_weight(*dag_idx) {
                 let milestone_id = format!("TC-{}", node.tool_id);
-                // Convert system_federated_ml::tool_chain_planner::ToolNode to ExternalToolNode
-                // For now, create a minimal ExternalToolNode-like structure
-                // Convert system_federated_ml::ToolNode to ExternalToolNode
-                // ExternalToolNode is a type alias that resolves to the appropriate type based on feature flags
-                let external_node: ExternalToolNode = {
-                    #[cfg(feature = "tool-chain")]
-                    {
-                        // When tool-chain feature is enabled, ExternalToolNode is system_federated_ml::ToolNode
-                        // So we can use the node directly
-                        node.clone()
-                    }
-                    #[cfg(not(feature = "tool-chain"))]
-                    {
-                        // When tool-chain feature is not enabled, ExternalToolNode is tool_chain_types::ToolNode
-                        crate::planning::tool_chain_types::ToolNode {
-                            id: node.tool_id.clone(),
-                            tool_name: node.tool_id.clone(),
-                            tool_version: "1.0.0".to_string(),
-                            inputs: HashMap::new(),
-                            output_schema: None,
-                            dependencies: Vec::new(), // Will be extracted from edges below
-                        }
-                    }
-                };
+                    let external_node: ExternalToolNode = node.clone();
                 let milestone =
                     self.create_milestone_from_tool_node(&external_node, &milestone_id, &working_spec)?;
                 milestones.push(milestone);
-                node_indices.insert(*dag_idx, milestone_id);
+                    node_indices.insert(dag_idx.index(), milestone_id);
             }
         }
 
         // Create dependency graph from DAG edges
-        let mut edges = Vec::new();
-        // Build a map from NodeIndex to milestone ID
-        let mut dag_to_milestone: std::collections::HashMap<petgraph::graph::NodeIndex, String> = node_indices.clone();
+            let mut dag_to_milestone: std::collections::HashMap<petgraph::graph::NodeIndex, String> = node_indices.iter()
+                .map(|(idx, id)| (petgraph::graph::NodeIndex::new(*idx), id.clone()))
+                .collect();
 
         // Extract dependencies from DAG edges
         for edge_idx in tool_chain.dag.edge_indices() {
@@ -205,10 +185,92 @@ impl ToolChainBridge {
                     edges.push(DependencyEdge {
                         from: from_id.clone(),
                         to: to_id.clone(),
-                        edge_type: DependencyEdgeType::Hard, // Tool chains have hard dependencies
+                            edge_type: DependencyEdgeType::Hard,
                         weight: 1.0,
                         metadata: std::collections::HashMap::new(),
                     });
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(feature = "tool-chain"))]
+        {
+            // When tool-chain feature is not enabled, ExternalToolChain is a simple struct with nodes
+            // Process nodes sequentially based on roots and dependencies
+            let mut processed = std::collections::HashSet::new();
+            
+            // Process root nodes first
+            for root_idx in &tool_chain.roots {
+                if let Some(node) = tool_chain.nodes.get(*root_idx) {
+                    let milestone_id = format!("TC-{}", node.id);
+                    let external_node: ExternalToolNode = node.clone();
+                    let milestone =
+                        self.create_milestone_from_tool_node(&external_node, &milestone_id, &working_spec)?;
+                    milestones.push(milestone);
+                    node_indices.insert(*root_idx, milestone_id);
+                    processed.insert(*root_idx);
+                }
+            }
+
+            // Process remaining nodes based on dependencies
+            let mut remaining: Vec<usize> = (0..tool_chain.nodes.len())
+                .filter(|idx| !processed.contains(idx))
+                .collect();
+            
+            while !remaining.is_empty() {
+                let mut progress = false;
+                let mut to_process = Vec::new();
+                
+                for &idx in &remaining {
+                    let node = &tool_chain.nodes[idx];
+                    // Check if all dependencies are processed
+                    let deps_ready = node.dependencies.iter().all(|dep_id| {
+                        tool_chain.nodes.iter().enumerate().any(|(i, n)| {
+                            n.id == *dep_id && processed.contains(&i)
+                        })
+                    });
+                    
+                    if deps_ready {
+                        to_process.push(idx);
+                        progress = true;
+                    }
+                }
+                
+                if !progress {
+                    // No progress - process remaining nodes anyway
+                    to_process = remaining.clone();
+                }
+                
+                for idx in &to_process {
+                    if let Some(node) = tool_chain.nodes.get(*idx) {
+                        let milestone_id = format!("TC-{}", node.id);
+                        let external_node: ExternalToolNode = node.clone();
+                        let milestone =
+                            self.create_milestone_from_tool_node(&external_node, &milestone_id, &working_spec)?;
+                        milestones.push(milestone);
+                        node_indices.insert(*idx, milestone_id);
+                        processed.insert(*idx);
+                    }
+                }
+                
+                remaining.retain(|idx| !to_process.contains(idx));
+            }
+
+            // Create dependency graph from node dependencies
+            for (idx, node) in tool_chain.nodes.iter().enumerate() {
+                for dep_id in &node.dependencies {
+                    // Find the index of the dependency node
+                    if let Some(dep_idx) = tool_chain.nodes.iter().position(|n| n.id == *dep_id) {
+                        if let (Some(from_id), Some(to_id)) = (node_indices.get(&dep_idx), node_indices.get(&idx)) {
+                            edges.push(DependencyEdge {
+                                from: from_id.clone(),
+                                to: to_id.clone(),
+                                edge_type: DependencyEdgeType::Hard,
+                                weight: 1.0,
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -230,19 +292,43 @@ impl ToolChainBridge {
         }
 
         // Determine root and sink milestones
-        let roots: Vec<String> = tool_chain
-            .roots
+        let roots: Vec<String> = {
+            #[cfg(feature = "tool-chain")]
+            {
+                tool_chain.roots
             .iter()
-            .filter_map(|&idx| node_indices.get(&idx))
+                    .filter_map(|idx| node_indices.get(&idx.index()))
             .cloned()
-            .collect();
+                    .collect()
+            }
+            #[cfg(not(feature = "tool-chain"))]
+            {
+                tool_chain.roots
+                    .iter()
+                    .filter_map(|idx| node_indices.get(idx))
+                    .cloned()
+                    .collect()
+            }
+        };
 
-        let sinks: Vec<String> = tool_chain
-            .sinks
+        let sinks: Vec<String> = {
+            #[cfg(feature = "tool-chain")]
+            {
+                tool_chain.sinks
             .iter()
-            .filter_map(|&idx| node_indices.get(&idx))
+                    .filter_map(|idx| node_indices.get(&idx.index()))
             .cloned()
-            .collect();
+                    .collect()
+            }
+            #[cfg(not(feature = "tool-chain"))]
+            {
+                tool_chain.sinks
+                    .iter()
+                    .filter_map(|idx| node_indices.get(idx))
+                    .cloned()
+                    .collect()
+            }
+        };
 
         // Use shared graph algorithm for critical path calculation
         let critical_path =

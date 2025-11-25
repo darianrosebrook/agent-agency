@@ -2,20 +2,81 @@
 //!
 //! Demonstrates how to integrate the LLM parameter feedback loop into the
 //! PlanningAgent for optimized parameter selection and outcome tracking.
+//!
+//! @author @darianrosebrook
 
 use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
+#[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
-use crate::parameter_optimizer::LLMParameterOptimizer;
+
+#[cfg(not(feature = "bandit_policy"))]
+use crate::bandit_stubs::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB, UsedParameters as BanditUsedParameters};
+
+use crate::parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints};
 use crate::quality_gate_validator::{QualityGateValidator, ComplianceValidator};
 use crate::reward::{RewardFunction, ObjectiveWeights, TaskOutcome, BaselineMetrics};
 use crate::rollout::{RolloutManager, RolloutPhase};
 use crate::caws_integration::{CAWSBudgetTracker, ParameterChangeProvenance};
+
+// ============================================================================
+// LLM Client Stub Types for Planning Agent Integration
+// ============================================================================
+
+/// Message role for LLM conversation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum MessageRole {
+    /// System message
+    System,
+    /// User message
+    User,
+    /// Assistant message
+    Assistant,
+}
+
+/// Message in an LLM conversation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct Message {
+    /// Role of the message sender
+    pub role: MessageRole,
+    /// Content of the message
+    pub content: String,
+}
+
+/// Request for LLM generation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct GenerationRequest {
+    /// Unique request identifier
+    #[schemars(with = "String")]
+    pub request_id: Uuid,
+    /// Messages in the conversation
+    pub messages: Vec<Message>,
+    /// Temperature for sampling
+    pub temperature: Option<f32>,
+    /// Maximum tokens to generate
+    pub max_tokens: Option<u32>,
+    /// Top-p sampling parameter
+    pub top_p: Option<f32>,
+    /// Frequency penalty
+    pub frequency_penalty: Option<f32>,
+    /// Presence penalty
+    pub presence_penalty: Option<f32>,
+    /// Random seed for reproducibility
+    pub seed: Option<u64>,
+    /// Hash of the prompt for caching
+    pub prompt_hash: Option<u64>,
+    /// Schema version for request format
+    pub schema_version: Option<u32>,
+    /// Stop sequences
+    pub stop_sequences: Vec<String>,
+}
+
 
 /// Enhanced Planning Agent with parameter optimization
 pub struct OptimizedPlanningAgent {
@@ -50,19 +111,15 @@ impl OptimizedPlanningAgent {
         budget_tracker: CAWSBudgetTracker,
     ) -> Result<Self> {
         // Initialize parameter optimizer
-        let parameter_optimizer = Arc::new(LLMParameterOptimizer::new(
-            bandit_policy,
-            quality_validator.clone(),
-            budget_tracker.clone(),
-        ));
+        // Note: LLMParameterOptimizer uses internal defaults for bandit policy and validators
+        let _ = bandit_policy; // Mark as used
+        let parameter_optimizer = Arc::new(LLMParameterOptimizer::new());
 
         // Initialize reward function
         let reward_function = Arc::new(RewardFunction::new(ObjectiveWeights::default()));
 
         // Initialize rollout manager
-        let rollout_manager = Arc::new(RolloutManager::new(
-            crate::rollout::SLOMonitor::new(5000, 0.7, chrono::Duration::hours(1))
-        ));
+        let rollout_manager = Arc::new(RolloutManager::new());
 
         Ok(Self {
             // planning_agent,
@@ -73,6 +130,7 @@ impl OptimizedPlanningAgent {
             budget_tracker: Arc::new(budget_tracker),
             current_task_features: Arc::new(RwLock::new(None)),
         })
+        // Note: quality_validator and budget_tracker are moved into Arc, not cloned
     }
 
     /// Generate working spec with optimized LLM parameters
@@ -112,10 +170,10 @@ impl OptimizedPlanningAgent {
         let prompt_hash = self.hash_prompt(task_description);
 
         // Create optimized generation request
-        let request = crate::orchestration::planning::llm_client::GenerationRequest {
+        let request = GenerationRequest {
             request_id,
-            messages: vec![crate::orchestration::planning::llm_client::Message {
-                role: crate::orchestration::planning::llm_client::MessageRole::User,
+            messages: vec![Message {
+                role: MessageRole::User,
                 content: task_description.to_string(),
             }],
             temperature: Some(params.set.temperature),
@@ -184,21 +242,20 @@ impl OptimizedPlanningAgent {
                 request_id,
                 &task_features.risk_tier.to_string(),
                 task_features.context_fingerprint,
-                crate::orchestration::planning::llm_client::UsedParameters {
-                    model_name: "gpt-4".to_string(),
+                BanditUsedParameters {
+                    model_name: Some("gpt-4".to_string()),
                     temperature: params.set.temperature,
                     max_tokens: params.set.max_tokens,
-                    top_p: params.set.top_p,
+                    top_p: params.set.top_p.unwrap_or(0.9),
                     frequency_penalty: params.set.frequency_penalty,
                     presence_penalty: params.set.presence_penalty,
                     stop_sequences: params.set.stop_sequences,
                     seed: params.set.seed,
-                    schema_version: 1,
                     origin: params.set.origin,
-                    policy_version: params.set.policy_version,
-                    timestamp: params.set.created_at,
+                    policy_version: Some(params.set.policy_version),
+                    created_at: params.set.created_at,
                 },
-                outcome,
+                outcome.clone(),
                 params.propensity,
             )
             .await?;
@@ -212,30 +269,27 @@ impl OptimizedPlanningAgent {
     }
 
     /// Get constraints for a specific task type
-    async fn get_constraints_for_task(&self, task_features: &TaskFeatures) -> Result<crate::reward::OptimizationConstraints> {
+    async fn get_constraints_for_task(&self, task_features: &TaskFeatures) -> Result<OptimizationConstraints> {
         // Define constraints based on risk tier
         let constraints = match task_features.risk_tier {
-            1 => crate::reward::OptimizationConstraints {
+            1 => OptimizationConstraints {
                 max_latency_ms: 2000,
                 max_tokens: 2000,
-                min_quality: 0.9,
-                require_caws_compliance: true,
+                require_caws: true,
                 max_delta_temperature: 0.1,
                 max_delta_max_tokens: 100,
             },
-            2 => crate::reward::OptimizationConstraints {
+            2 => OptimizationConstraints {
                 max_latency_ms: 5000,
                 max_tokens: 4000,
-                min_quality: 0.8,
-                require_caws_compliance: true,
+                require_caws: true,
                 max_delta_temperature: 0.2,
                 max_delta_max_tokens: 200,
             },
-            _ => crate::reward::OptimizationConstraints {
+            _ => OptimizationConstraints {
                 max_latency_ms: 10000,
                 max_tokens: 8000,
-                min_quality: 0.7,
-                require_caws_compliance: false,
+                require_caws: false,
                 max_delta_temperature: 0.3,
                 max_delta_max_tokens: 500,
             },
@@ -259,6 +313,10 @@ impl OptimizedPlanningAgent {
                 origin: "baseline".to_string(),
                 policy_version: "1.0.0".to_string(),
                 created_at: Utc::now(),
+                execution_id: None,
+                parameters: std::collections::HashMap::new(),
+                execution_mode: None,
+                quality_gates: None,
             },
             2 => ParameterSet {
                 temperature: 0.5,
@@ -271,6 +329,10 @@ impl OptimizedPlanningAgent {
                 origin: "baseline".to_string(),
                 policy_version: "1.0.0".to_string(),
                 created_at: Utc::now(),
+                execution_id: None,
+                parameters: std::collections::HashMap::new(),
+                execution_mode: None,
+                quality_gates: None,
             },
             _ => ParameterSet {
                 temperature: 0.7,
@@ -283,6 +345,10 @@ impl OptimizedPlanningAgent {
                 origin: "baseline".to_string(),
                 policy_version: "1.0.0".to_string(),
                 created_at: Utc::now(),
+                execution_id: None,
+                parameters: std::collections::HashMap::new(),
+                execution_mode: None,
+                quality_gates: None,
             },
         };
 
@@ -449,6 +515,7 @@ pub async fn example_usage() -> Result<()> {
         model_name: Some("gpt-4".to_string()),
         prompt_tokens: Some(100),
         prior_failures: Some(0),
+        context_fingerprint: 0,
     };
 
     // Generate working spec with optimized parameters

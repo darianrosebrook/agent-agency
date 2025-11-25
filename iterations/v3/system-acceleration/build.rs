@@ -136,32 +136,57 @@ fn main() {
         // Only link if CoreML feature is enabled (production builds)
         #[cfg(feature = "coreml")]
         {
-            let swift_runtime_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
-            if std::path::Path::new(swift_runtime_path).exists() {
-                println!("cargo:rustc-link-search=native={}", swift_runtime_path);
-                // Link Swift compatibility libraries required by Swift static libraries
+            // Swift runtime library paths - order matters for resolution
+            // Swift 6 is required for the new concurrency API with isolation parameter
+            // The order prioritizes Swift 6 libraries over Swift 5.5
+            let swift_runtime_paths = vec![
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.0/macosx",
+                "/usr/lib/swift",
+                // Swift 5.5 as fallback (lower priority)
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx",
+            ];
+
+            // Add all existing paths as native link search paths
+            // This ensures dyld can find Swift runtime libraries at test time
+            for path in &swift_runtime_paths {
+                if std::path::Path::new(path).exists() {
+                    println!("cargo:rustc-link-search=native={}", path);
+                }
+            }
+
+            // Link Swift compatibility libraries required by Swift static libraries
+            let swift_compat_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
+            if std::path::Path::new(swift_compat_path).exists() {
                 println!("cargo:rustc-link-lib=static=swiftCompatibility56");
                 println!("cargo:rustc-link-lib=static=swiftCompatibilityConcurrency");
                 println!("cargo:rustc-link-lib=static=swiftCompatibilityPacks");
             }
 
-            // Add Swift runtime library paths to rpath for runtime resolution
-            // Include system Swift library paths for Concurrency runtime
-            // Also check for Swift 6.x paths (newer Xcode versions)
-            let swift_runtime_paths = vec![
-                "/usr/lib/swift",
-                "/System/Library/Frameworks",
-                "/System/Library/Frameworks/CoreML.framework",
+            // Link Swift Concurrency runtime dynamically - required for Swift async/await features
+            // This is needed by WhisperKit and other Swift packages that use async/await
+            // Try Swift 6 location first, then fall back to Swift 5.5
+            let swift_concurrency_paths = vec![
                 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
                 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx",
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.0/macosx",
             ];
+            for path in &swift_concurrency_paths {
+                if std::path::Path::new(path).join("libswift_Concurrency.dylib").exists() {
+                    println!("cargo:rustc-link-lib=dylib=swift_Concurrency");
+                    break;
+                }
+            }
 
-            for path in swift_runtime_paths {
+            // Add Swift runtime library paths to rpath for runtime resolution
+            for path in &swift_runtime_paths {
                 if std::path::Path::new(path).exists() {
                     println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
                 }
             }
+
+            // Add framework paths
+            println!("cargo:rustc-link-arg=-Wl,-rpath,/System/Library/Frameworks");
+            println!("cargo:rustc-link-arg=-Wl,-rpath,/System/Library/Frameworks/CoreML.framework");
 
             // Also add @rpath resolution for Swift libraries embedded in frameworks
             println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/../Frameworks");
@@ -169,6 +194,17 @@ fn main() {
             // Add @executable_path for test binaries
             println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path");
             println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path/../Frameworks");
+
+            // Set DYLD_LIBRARY_PATH for test execution via cargo environment
+            // This ensures tests can find Swift runtime libraries
+            let dyld_paths: Vec<&str> = swift_runtime_paths
+                .iter()
+                .filter(|p| std::path::Path::new(p).exists())
+                .copied()
+                .collect();
+            if !dyld_paths.is_empty() {
+                println!("cargo:rustc-env=DYLD_LIBRARY_PATH={}", dyld_paths.join(":"));
+            }
         }
 
         // Print build info

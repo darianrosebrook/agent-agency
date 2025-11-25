@@ -1,6 +1,7 @@
 @use "../../../styles/design-tokens.scss" as *;
 
 .taskItem {
+  margin-top: $spacing-lg; // mt-lg
   border-bottom: 1px solid $color-zinc-800; // border-b border-zinc-800
 
   &:last-child {
@@ -33,10 +34,27 @@
   gap: $spacing-2; // gap-2
 }
 
+.taskToggleButton {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .taskProgressIcon {
   width: $spacing-5; // w-5
   height: $spacing-5; // h-5
   color: $color-zinc-500; // text-zinc-500
+}
+
+.taskCompletedIcon {
+  width: $spacing-5; // w-5
+  height: $spacing-5; // h-5
+  color: $color-green-500; // text-green-500
 }
 
 .taskProgressText {
@@ -59,6 +77,11 @@
   padding-inline: $spacing-2; // px-2
   padding-block: $spacing-1; // py-1
   margin-left: -$spacing-2; // -ml-2
+}
+
+.taskTitleCompleted {
+  color: $color-zinc-500; // text-zinc-500
+  text-decoration: line-through; // line-through
 }
 
 .taskContent {
@@ -101,7 +124,7 @@
 }
 
 .subtasksContainer {
-  margin-bottom: $spacing-4; // mb-4
+  margin-block: $spacing-4; // mb-4
   margin-left: $spacing-8; // ml-8
   display: flex;
   flex-direction: column;
@@ -126,4 +149,3 @@
     color: $color-zinc-100; // hover:text-zinc-100
   }
 }
-

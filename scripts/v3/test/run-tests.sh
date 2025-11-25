@@ -13,6 +13,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Set Swift library path for CoreML dependencies (fixes libswift_Concurrency.dylib errors)
+export DYLD_FALLBACK_LIBRARY_PATH="/usr/lib/swift:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

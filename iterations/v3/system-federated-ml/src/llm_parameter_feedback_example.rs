@@ -2,19 +2,24 @@
 //!
 //! Demonstrates how to integrate the LLM parameter optimization system
 //! with the planning agent for adaptive parameter tuning.
+//!
+//! @author @darianrosebrook
+
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
 
 #[cfg(feature = "bandit_policy")]
-use schemars::JsonSchema;
-use crate::bandit_policy::{TaskFeatures, ThompsonGaussian};
+use crate::bandit_policy::{TaskFeatures, ThompsonGaussian, ParameterSet};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::bandit_stubs::{TaskFeatures, ThompsonGaussian};
+use crate::bandit_stubs::{TaskFeatures, ThompsonGaussian, ParameterSet};
 
 #[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{CounterfactualLogger, TaskOutcome};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::{reward::TaskOutcome, bandit_stubs::{CounterfactualLogger, ParameterSet}};
+use crate::{reward::TaskOutcome, bandit_stubs::CounterfactualLogger};
 
 use crate::{
     parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints},
@@ -23,6 +28,53 @@ use crate::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+
+// ============================================================================
+// LLM Client Stub Types
+// ============================================================================
+// These types are stubs for the LLM client interface. In production, these
+// would be provided by an external LLM client crate or orchestration module.
+
+/// Finish reason for LLM generation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum FinishReason {
+    /// Generation completed successfully
+    Stop,
+    /// Generation reached max tokens limit
+    MaxTokens,
+    /// Generation was truncated
+    Truncated,
+    /// Generation encountered an error
+    Error(String),
+}
+
+/// Parameters used for LLM generation
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UsedParameters {
+    /// Model name used for generation
+    pub model_name: Option<String>,
+    /// Temperature parameter
+    pub temperature: f32,
+    /// Maximum tokens to generate
+    pub max_tokens: u32,
+    /// Top-p sampling parameter
+    pub top_p: f32,
+    /// Frequency penalty
+    pub frequency_penalty: Option<f32>,
+    /// Presence penalty
+    pub presence_penalty: Option<f32>,
+    /// Stop sequences
+    pub stop_sequences: Vec<String>,
+    /// Random seed for reproducibility
+    pub seed: Option<u64>,
+    /// Origin of parameters (e.g., "bandit_policy", "default")
+    pub origin: String,
+    /// Policy version that generated these parameters
+    pub policy_version: Option<String>,
+    /// Timestamp when parameters were created
+    #[schemars(with = "String")]
+    pub created_at: DateTime<Utc>,
+}
 
 /// Example integration of LLM parameter feedback loop
 pub struct LLMParameterFeedbackExample {
@@ -136,7 +188,7 @@ impl LLMParameterFeedbackExample {
     }
 
     /// Get baseline parameters for a task type
-    async fn get_baseline_parameters(&self, task_type: &str) -> Result<ParameterSet> {
+    async fn get_baseline_parameters(&self, _task_type: &str) -> Result<ParameterSet> {
         use chrono::Utc;
 
         Ok(ParameterSet {
@@ -150,6 +202,10 @@ impl LLMParameterFeedbackExample {
             origin: "baseline".to_string(),
             policy_version: "1.0.0".to_string(),
             created_at: Utc::now(),
+            execution_id: None,
+            parameters: std::collections::HashMap::new(),
+            execution_mode: None,
+            quality_gates: None,
         })
     }
 
@@ -178,8 +234,8 @@ impl LLMParameterFeedbackExample {
                 completion_tokens: 100,
                 total_tokens: 150,
             },
-            finish_reason: crate::orchestration::planning::llm_client::FinishReason::Stop,
-            parameters_used: self.convert_to_used_parameters(params),
+            finish_reason: FinishReason::Stop,
+            parameters_used: self.convert_to_local_used_parameters(params),
         })
     }
 
@@ -202,7 +258,7 @@ impl LLMParameterFeedbackExample {
             quality_score,
             latency_ms,
             tokens_used: response.usage.total_tokens as usize,
-            success: matches!(response.finish_reason, crate::orchestration::planning::llm_client::FinishReason::Stop),
+            success: matches!(response.finish_reason, FinishReason::Stop),
             caws_compliance,
         })
     }
@@ -291,11 +347,25 @@ impl LLMParameterFeedbackExample {
         !content.contains("TODO") && !content.contains("PLACEHOLDER") // Temporary: basic check until validator integration
     }
 
-    /// Convert ParameterSet to UsedParameters
-    fn convert_to_used_parameters(&self, params: &ParameterSet) -> crate::orchestration::planning::llm_client::UsedParameters {
-        use crate::orchestration::planning::llm_client::UsedParameters;
-        use chrono::Utc;
-
+    /// Convert ParameterSet to bandit_stubs::UsedParameters (for record_outcome)
+    fn convert_to_used_parameters(&self, params: &ParameterSet) -> crate::bandit_stubs::UsedParameters {
+        crate::bandit_stubs::UsedParameters {
+            model_name: Some("gpt-4".to_string()),
+            temperature: params.temperature,
+            max_tokens: params.max_tokens,
+            top_p: params.top_p.unwrap_or(0.9),
+            frequency_penalty: params.frequency_penalty,
+            presence_penalty: params.presence_penalty,
+            stop_sequences: params.stop_sequences.clone(),
+            seed: params.seed,
+            origin: params.origin.clone(),
+            policy_version: Some(params.policy_version.clone()),
+            created_at: params.created_at,
+        }
+    }
+    
+    /// Convert ParameterSet to local UsedParameters (for GenerationResponse)
+    fn convert_to_local_used_parameters(&self, params: &ParameterSet) -> UsedParameters {
         UsedParameters {
             model_name: Some("gpt-4".to_string()),
             temperature: params.temperature,
@@ -306,7 +376,7 @@ impl LLMParameterFeedbackExample {
             stop_sequences: params.stop_sequences.clone(),
             seed: params.seed,
             origin: params.origin.clone(),
-            policy_version: params.policy_version.clone(),
+            policy_version: Some(params.policy_version.clone()),
             created_at: params.created_at,
         }
     }
@@ -352,8 +422,8 @@ pub struct GenerationResponse {
     pub request_id: Uuid,
     pub content: String,
     pub usage: TokenUsage,
-    pub finish_reason: crate::orchestration::planning::llm_client::FinishReason,
-    pub parameters_used: crate::orchestration::planning::llm_client::UsedParameters,
+    pub finish_reason: FinishReason,
+    pub parameters_used: UsedParameters,
 }
 
 #[derive(Debug, Clone, JsonSchema)]

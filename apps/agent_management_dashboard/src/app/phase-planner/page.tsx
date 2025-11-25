@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
+import { useProjectContext } from "@/components/ProjectContext";
 import { PhaseManager } from "@/components/projects/PhaseManager";
-import { useProjectContext } from "@/components/projects/ProjectContext";
 import styles from "./page.module.scss";
 
 export default function PhasePlannerPage() {

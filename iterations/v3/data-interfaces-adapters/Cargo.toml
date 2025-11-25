@@ -59,13 +59,15 @@ agent-memory = { path = "../agent-memory" }
 data-infrastructure = { path = "../data-infrastructure", features = ["orchestration"], default-features = false }  # Disable coreml by default
 agent-mcp = { path = "../agent-mcp" }
 agent-data-processing = { path = "../agent-data-processing" }  # CoreML disabled to avoid Swift library loading issues
+system-acceleration = { path = "../system-acceleration", default-features = false, optional = true }  # Optional dependency for CoreML features
 
 [features]
 default = ["orchestration"]
 orchestration = ["research", "memory"]  # Enable both research and memory for UnifiedOrchestrator
 memory = ["agent-orchestration/memory"]  # Enable memory feature for UnifiedOrchestrator
 research = ["agent-orchestration/research"]  # Enable research feature for UnifiedOrchestrator
-system-acceleration = ["agent-orchestration/system-acceleration"]  # Enable system acceleration features
+system-acceleration = ["agent-orchestration/system-acceleration", "dep:system-acceleration"]  # Enable system acceleration features
+runtime-optimization = ["agent-orchestration/runtime-optimization"]  # Enable runtime optimization features
 testing = []  # Enable testing endpoints (uses subprocess, no direct dependency)
 
 [[bin]]

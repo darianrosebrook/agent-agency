@@ -88,6 +88,31 @@ export async function getUserSetting(key: string): Promise<UserSetting> {
   return apiGet<UserSetting>(`${API_BASE}/settings/user/${encodeURIComponent(key)}`);
 }
 
+/**
+ * Get user setting if it exists, returns null if not found
+ * 
+ * Use this when the setting is optional and missing is expected behavior.
+ * For required settings, use getUserSetting() which throws on 404.
+ */
+export async function getUserSettingOptional(key: string): Promise<UserSetting | null> {
+  try {
+    return await apiGet<UserSetting>(`${API_BASE}/settings/user/${encodeURIComponent(key)}`, {
+      showToast: false, // Suppress toast for expected 404
+    });
+  } catch (error: unknown) {
+    // Check if it's a 404 (setting doesn't exist)
+    if (
+      error instanceof Error &&
+      'status' in error &&
+      (error as { status: number }).status === 404
+    ) {
+      return null;
+    }
+    // Re-throw other errors (network, auth, etc.)
+    throw error;
+  }
+}
+
 export async function createUserSetting(
   key: string,
   value: SettingValue,

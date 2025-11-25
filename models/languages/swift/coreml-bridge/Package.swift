@@ -19,7 +19,7 @@ let package = Package(
     targets: [
         .target(
             name: "CoreMLBridge",
-            dependencies: ["MistralTokenizer"],
+            dependencies: ["MistralTokenizer", "WhisperAudio", "YOLOImage"],
             linkerSettings: [
                 .linkedFramework("CoreML"),
                 .linkedFramework("Foundation")

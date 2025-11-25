@@ -1,10 +1,11 @@
-@use "../../styles/tokens" as *;
+@use "../../styles/design-tokens.scss" as *;
 
 .searchPage {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: $color-background;
+  background: $color-zinc-950; // Match main.tsx background (#09090b)
+  color: $color-white;
 }
 
 .searchContainer {
@@ -27,21 +28,21 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: $color-surface;
-  border: 1px solid $color-border;
+  background: $color-dark-bg-secondary; // bg-[#0f0f0f]
+  border: 1px solid $color-gray-800; // border-gray-800
   border-radius: 8px;
   padding: 0.75rem 1rem;
   transition: border-color 0.2s;
 
   &:focus-within {
-    border-color: $color-primary;
+    border-color: $color-blue-500; // Use blue for focus
   }
 }
 
 .searchIcon {
   width: 20px;
   height: 20px;
-  color: $color-text-secondary;
+  color: $color-gray-400; // text-gray-400
   margin-right: 0.75rem;
 }
 
@@ -49,12 +50,12 @@
   flex: 1;
   border: none;
   background: transparent;
-  color: $color-text;
+  color: $color-gray-200; // text-gray-200
   font-size: 1rem;
   outline: none;
 
   &::placeholder {
-    color: $color-text-secondary;
+    color: $color-gray-500; // placeholder:text-gray-500
   }
 }
 
@@ -66,11 +67,11 @@
   border: none;
   cursor: pointer;
   padding: 0.25rem;
-  color: $color-text-secondary;
+  color: $color-gray-500; // text-gray-500
   transition: color 0.2s;
 
   &:hover {
-    color: $color-text;
+    color: $color-gray-200; // hover:text-gray-200
   }
 }
 
@@ -87,27 +88,27 @@
 
 .typeButton {
   padding: 0.5rem 1rem;
-  border: 1px solid $color-border;
-  background: $color-surface;
-  color: $color-text-secondary;
+  border: 1px solid $color-gray-800; // border-gray-800
+  background: $color-dark-bg-primary; // bg-[#1a1a1a]
+  color: $color-gray-400; // text-gray-400
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
 
   &:hover {
-    background: $color-surface-hover;
-    color: $color-text;
+    background: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    color: $color-gray-200; // hover:text-gray-200
   }
 }
 
 .typeButtonActive {
-  background: $color-primary;
-  color: white;
-  border-color: $color-primary;
+  background: $color-blue-600; // bg-blue-600
+  color: $color-white; // text-white
+  border-color: $color-blue-600; // border-blue-600
 
   &:hover {
-    background: $color-primary-hover;
+    background: $color-blue-700; // hover:bg-blue-700
   }
 }
 
@@ -126,14 +127,14 @@
   justify-content: center;
   padding: 4rem 2rem;
   text-align: center;
-  color: $color-text-secondary;
+  color: $color-gray-400; // text-gray-400
 }
 
 .loadingIcon {
   width: 32px;
   height: 32px;
   animation: spin 1s linear infinite;
-  color: $color-primary;
+  color: $color-blue-500; // text-blue-500
   margin-bottom: 1rem;
 }
 
@@ -147,13 +148,13 @@
 }
 
 .errorMessage {
-  color: $color-destructive;
+  color: $color-red-500; // text-red-500
 }
 
 .initialIcon {
   width: 64px;
   height: 64px;
-  color: $color-text-secondary;
+  color: $color-gray-500; // text-gray-500
   margin-bottom: 1rem;
   opacity: 0.5;
 }
@@ -161,12 +162,13 @@
 .initialState {
   h2 {
     margin: 0.5rem 0;
-    color: $color-text;
+    color: $color-gray-200; // text-gray-200
   }
 
   p {
     max-width: 500px;
     line-height: 1.6;
+    color: $color-gray-400; // text-gray-400
   }
 }
 
@@ -175,7 +177,7 @@
 }
 
 .resultsCount {
-  color: $color-text-secondary;
+  color: $color-gray-400; // text-gray-400
   font-size: 0.875rem;
 }
 
@@ -189,15 +191,15 @@
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background: $color-surface;
-  border: 1px solid $color-border;
+  background: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px solid $color-gray-800; // border-gray-800
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: $color-surface-hover;
-    border-color: $color-primary;
+    background: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    border-color: $color-blue-500; // hover:border-blue-500
   }
 }
 
@@ -210,7 +212,7 @@
 .resultIcon {
   width: 20px;
   height: 20px;
-  color: $color-text-secondary;
+  color: $color-gray-400; // text-gray-400
 }
 
 .resultContent {
@@ -224,13 +226,13 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: $color-text;
+  color: $color-gray-200; // text-gray-200
 }
 
 .resultDescription {
   margin: 0;
   font-size: 0.875rem;
-  color: $color-text-secondary;
+  color: $color-gray-400; // text-gray-400
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -243,13 +245,13 @@
   gap: 1rem;
   align-items: center;
   font-size: 0.75rem;
-  color: $color-text-secondary;
+  color: $color-gray-500; // text-gray-500
 }
 
 .resultType {
   text-transform: capitalize;
   padding: 0.25rem 0.5rem;
-  background: $color-surface-hover;
+  background: $color-dark-bg-secondary; // bg-[#0f0f0f]
   border-radius: 4px;
 }
 
@@ -258,8 +260,8 @@
 }
 
 .highlight {
-  background: $color-primary-light;
-  color: $color-primary;
+  background: $color-blue-900; // bg-blue-900
+  color: $color-blue-300; // text-blue-300
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
   font-weight: 600;

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Search, X, FileText, MessageSquare, FolderKanban, Users, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { search, type SearchResult, type SearchResponse } from "../../lib/api/search";
 import { useDebounce } from "../../hooks/useDebounce";
 import styles from "./page.module.scss";
 
 export default function SearchPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +53,9 @@ export default function SearchPage() {
           limit: 50,
         });
 
-        setResults(response.results);
-        setTotal(response.total);
+        // Ensure results is always an array, even if API returns undefined
+        setResults(Array.isArray(response?.results) ? response.results : []);
+        setTotal(typeof response?.total === 'number' ? response.total : 0);
       } catch (err) {
         console.error("Search error:", err);
         setError(err instanceof Error ? err : new Error("Failed to search"));
@@ -69,7 +70,7 @@ export default function SearchPage() {
   }, [debouncedQuery, selectedType]);
 
   const handleResultClick = (result: SearchResult) => {
-    router.push(result.url);
+    navigate(result.url);
   };
 
   const getTypeIcon = (type: SearchResult['type']) => {
@@ -89,8 +90,8 @@ export default function SearchPage() {
     }
   };
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
+  const highlightText = (text: string | null | undefined, query: string) => {
+    if (!text || !query.trim()) return text || '';
     
     const parts = text.split(new RegExp(`(${query})`, 'gi'));
     return parts.map((part, i) => 
@@ -157,13 +158,13 @@ export default function SearchPage() {
             </div>
           )}
 
-          {!isLoading && !error && query && results.length === 0 && (
+          {!isLoading && !error && query && (!results || results.length === 0) && (
             <div className={styles.emptyState}>
               <p>No results found for &quot;{query}&quot;</p>
             </div>
           )}
 
-          {!isLoading && !error && query && results.length > 0 && (
+          {!isLoading && !error && query && results && results.length > 0 && (
             <>
               <div className={styles.resultsHeader}>
                 <p className={styles.resultsCount}>

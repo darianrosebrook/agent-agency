@@ -12,6 +12,7 @@ use system_resilience::workspace_state::{
 
 #[cfg(feature = "memory")]
 use crate::workspace_integration::EmbeddingServiceAdapter;
+#[cfg(feature = "data-processing")]
 use crate::workspace_integration::FileWatcherBridge;
 
 use agent_data_processing::ingestion::FileWatcher as DataProcessingFileWatcher;

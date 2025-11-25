@@ -96,8 +96,7 @@ impl CAWSBudgetTracker {
         task_type: &str,
         reason: String,
         approver: String,
-        #[schemars(with = "String")]
-    expiry: DateTime<Utc>,
+        expiry: DateTime<Utc>,
     ) -> Result<WaiverId> {
         let waiver_id = Uuid::new_v4();
 

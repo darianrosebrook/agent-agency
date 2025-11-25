@@ -2,5 +2,28 @@
 
 .phaseManager {
   width: 100%; // w-full
+  padding: $spacing-6; // p-6
 }
 
+.addPhaseContainer {
+  margin-top: $spacing-6; // mt-6
+}
+
+.addPhaseButton {
+  width: 100%; // w-full
+  padding: $spacing-4 $spacing-6; // py-4 px-6
+  background-color: $color-dark-bg-primary; // bg-[#1a1a1a]
+  border: 1px dashed $color-zinc-700; // border border-dashed border-zinc-700
+  border-radius: 0.75rem; // rounded-xl
+  color: $color-zinc-400; // text-zinc-400
+  font-size: $font-size-base; // text-base
+  font-weight: $font-weight-medium; // font-medium
+  cursor: pointer;
+  transition: all $transition-normal;
+
+  &:hover {
+    background-color: $color-dark-bg-hover-alt; // hover:bg-[#1f1f1f]
+    border-color: $color-zinc-600; // hover:border-zinc-600
+    color: $color-zinc-300; // hover:text-zinc-300
+  }
+}

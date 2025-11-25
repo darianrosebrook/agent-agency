@@ -16,6 +16,9 @@ rustflags = [
   # Dev iteration speed:
   "-C", "codegen-units=16",
   "-C", "incremental=true",
+  # macOS 13.0 minimum for Swift Concurrency compatibility
+  # Required by WhisperKit and other Swift packages using async/await
+  "-C", "link-arg=-mmacosx-version-min=13.0",
 ]
 
 # C++17 support for torch-sys and CoreML compilation
@@ -26,6 +29,11 @@ CXXFLAGS = "-std=c++17 -stdlib=libc++"
 CXX = "clang++"
 CC = "clang"
 # Note: CARGO_NET_TIMEOUT should be set as environment variable, not in config.toml
+
+# Swift runtime library path for CoreML/Swift bridge integration
+# This ensures libswift_Concurrency.dylib and other Swift runtime libraries are found
+# Swift 6 (swift/macosx) takes priority for the new concurrency API with isolation parameter
+DYLD_LIBRARY_PATH = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx:/usr/lib/swift:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx"
 
 # Optional: speed up linker on dev (keeps symbol info)
 [profile.dev]
