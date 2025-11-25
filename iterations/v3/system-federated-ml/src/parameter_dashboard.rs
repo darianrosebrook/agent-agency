@@ -1,25 +1,24 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[cfg(feature = "bandit_policy")]
 use crate::bandit_policy::{ParameterSet, TaskFeatures};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::bandit_stubs::{ParameterSet, TaskFeatures};
+use crate::bandit_stubs::ParameterSet;
 #[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{LoggedDecision, TaskOutcome, PolicyEvaluationResult};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::{reward::TaskOutcome, bandit_stubs::{LoggedDecision, PolicyEvaluationResult}};
-use crate::parameter_optimizer::{LLMParameterOptimizer, RecommendedParameters};
-use crate::rollout::{RolloutPhase, RolloutState, SLOMonitor};
-use crate::reward::{RewardResult, BaselineMetrics};
+use crate::bandit_stubs::LoggedDecision;
+use crate::parameter_optimizer::LLMParameterOptimizer;
+use crate::rollout::{RolloutPhase, SLOMonitor};
 use crate::caws_integration::CAWSBudgetTracker;
 
 /// Dashboard data structures for LLM Parameter Feedback Loop observability
@@ -432,7 +431,7 @@ impl ParameterDashboardManager {
     }
 
     // Private helper methods
-    async fn update_optimization_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+    async fn update_optimization_status(&self, _dashboard: &mut ParameterDashboard) -> Result<()> {
         // TODO: Query optimizer for current optimization status
         //       Query LLMParameterOptimizer for real-time optimization status and metrics to provide accurate dashboard information.
         //
@@ -478,7 +477,7 @@ impl ParameterDashboardManager {
         Ok(())
     }
 
-    async fn update_performance_metrics(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+    async fn update_performance_metrics(&self, _dashboard: &mut ParameterDashboard) -> Result<()> {
         // TODO: Calculate performance metrics from historical data
         //       Query performance monitor for historical metrics and calculate trends to show optimization effectiveness over time.
         //
@@ -526,7 +525,7 @@ impl ParameterDashboardManager {
         Ok(())
     }
 
-    async fn update_rollout_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+    async fn update_rollout_status(&self, _dashboard: &mut ParameterDashboard) -> Result<()> {
         // TODO: Query rollout manager for current rollout status
         //       Query rollout manager for active rollout phases and progress to show parameter deployment status in dashboard.
         //
@@ -573,7 +572,7 @@ impl ParameterDashboardManager {
         Ok(())
     }
 
-    async fn update_budget_status(&self, dashboard: &mut ParameterDashboard) -> Result<()> {
+    async fn update_budget_status(&self, _dashboard: &mut ParameterDashboard) -> Result<()> {
         // TODO: Query budget tracker for current budget status
         //       Query budget tracker for utilization metrics and limits to show resource consumption in dashboard.
         //
@@ -621,7 +620,7 @@ impl ParameterDashboardManager {
         Ok(())
     }
 
-    async fn get_historical_decisions(&self, task_type: &str) -> Result<Vec<LoggedDecision>> {
+    async fn get_historical_decisions(&self, _task_type: &str) -> Result<Vec<LoggedDecision>> {
         // TODO: Query counterfactual logger for historical decisions
         //       Query counterfactual logger for historical optimization decisions to show learning trends and decision patterns.
         //

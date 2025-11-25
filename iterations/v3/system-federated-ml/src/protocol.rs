@@ -338,7 +338,7 @@ struct ContributionHandler;
 impl MessageHandler for ContributionHandler {
     async fn handle_message(&self, message: &ProtocolMessage) -> Result<Option<ProtocolMessage>> {
         match message {
-            ProtocolMessage::Contribution { participant_id, contribution } => {
+            ProtocolMessage::Contribution { participant_id, contribution: _contribution } => {
                 debug!("Handling contribution from participant {}", participant_id);
                 // In practice, this would validate and forward the contribution
                 Ok(None)

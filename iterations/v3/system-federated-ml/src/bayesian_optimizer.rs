@@ -4,7 +4,7 @@
 //! 2-4x throughput improvements while preserving CAWS compliance and quality standards.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -329,7 +329,7 @@ impl BayesianOptimizer {
     }
 
     /// Evaluate parameter set against performance metrics
-    async fn evaluate_parameters(&mut self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<f64> {
+    async fn evaluate_parameters(&mut self, parameters: &HashMap<String, f64>, _baseline: &PerformanceMetrics) -> Result<f64> {
         // TODO: Implement real parameter evaluation by running system with parameters and measuring performance
         //       Currently uses theoretical model; should run actual system and measure real performance metrics.
         //
@@ -390,7 +390,7 @@ impl BayesianOptimizer {
     }
 
     /// Check if quality is preserved with these parameters
-    async fn check_quality_preservation(&self, parameters: &HashMap<String, f64>, baseline: &PerformanceMetrics) -> Result<bool> {
+    async fn check_quality_preservation(&self, parameters: &HashMap<String, f64>, _baseline: &PerformanceMetrics) -> Result<bool> {
         // TODO: Implement real quality validation by running quality tests with parameters
         //       Currently uses basic heuristic; should run actual quality validation tests.
         //

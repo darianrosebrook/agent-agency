@@ -34,7 +34,9 @@ system-resilience = { path = "../system-resilience" }
 system-observability = { path = "../system-observability" }
 
 # Database client
-data-infrastructure = { path = "../data-infrastructure" }
+# Disable CoreML/Swift features for agent-workers to avoid Swift linking issues
+# The Swift bridge is only needed for specific CoreML features, not for database operations
+data-infrastructure = { path = "../data-infrastructure", default-features = false, features = ["orchestration"] }
 
 # Database dependencies (used by learning persistence)
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }

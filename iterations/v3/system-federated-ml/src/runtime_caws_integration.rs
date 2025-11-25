@@ -93,10 +93,10 @@ impl CAWSBudgetTracker {
     /// Request waiver for budget exceed
     pub async fn request_waiver(
         &self,
-        task_type: &str,
-        reason: String,
-        approver: String,
-        expiry: DateTime<Utc>,
+        _task_type: &str,
+        _reason: String,
+        _approver: String,
+        _expiry: DateTime<Utc>,
     ) -> Result<WaiverId> {
         let waiver_id = Uuid::new_v4();
 

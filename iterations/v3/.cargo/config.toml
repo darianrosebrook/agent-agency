@@ -32,8 +32,10 @@ CC = "clang"
 
 # Swift runtime library path for CoreML/Swift bridge integration
 # This ensures libswift_Concurrency.dylib and other Swift runtime libraries are found
-# Swift 6 (swift/macosx) takes priority for the new concurrency API with isolation parameter
-DYLD_LIBRARY_PATH = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx:/usr/lib/swift:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx"
+# IMPORTANT: /usr/lib/swift must come FIRST - it contains Swift 6 concurrency symbols
+# with the 'isolation' parameter (withTaskGroup, withCheckedContinuation, etc.)
+# The swift-5.5 backport library does NOT have these Swift 6 symbols
+DYLD_LIBRARY_PATH = "/usr/lib/swift:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx"
 
 # Optional: speed up linker on dev (keeps symbol info)
 [profile.dev]

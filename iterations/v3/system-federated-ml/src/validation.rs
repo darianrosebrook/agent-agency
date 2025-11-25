@@ -125,7 +125,7 @@ impl UpdateValidator {
         &self,
         update: &ModelUpdate,
         issues: &mut Vec<ValidationIssue>,
-        score: &mut f32,
+        _score: &mut f32,
         recommendations: &mut Vec<String>,
     ) -> Result<()> {
         // Check if parameters exist
@@ -178,7 +178,7 @@ impl UpdateValidator {
         &self,
         update: &ModelUpdate,
         issues: &mut Vec<ValidationIssue>,
-        score: &mut f32,
+        _score: &mut f32,
         recommendations: &mut Vec<String>,
     ) -> Result<()> {
         let metrics = match &update.quality_metrics {
@@ -243,8 +243,8 @@ impl UpdateValidator {
         &self,
         update: &ModelUpdate,
         issues: &mut Vec<ValidationIssue>,
-        score: &mut f32,
-        recommendations: &mut Vec<String>,
+        _score: &mut f32,
+        _recommendations: &mut Vec<String>,
     ) -> Result<()> {
         // Check for potential poisoning attempts
         let parameter_data = serde_json::to_vec(&update.parameters)?;
@@ -274,8 +274,8 @@ impl UpdateValidator {
         &self,
         update: &ModelUpdate,
         issues: &mut Vec<ValidationIssue>,
-        score: &mut f32,
-        recommendations: &mut Vec<String>,
+        _score: &mut f32,
+        _recommendations: &mut Vec<String>,
     ) -> Result<()> {
         // Check parameter dimensions are reasonable
         for (layer_idx, layer) in update.parameters.iter().enumerate() {

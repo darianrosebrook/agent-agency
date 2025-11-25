@@ -8,9 +8,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
-use crate::tool_registry::{ToolRegistry, RegisteredTool};
+use crate::tool_registry::ToolRegistry;
 
 /// Tool selection policy trait
 #[async_trait::async_trait]

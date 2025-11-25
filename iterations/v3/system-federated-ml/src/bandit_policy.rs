@@ -539,8 +539,9 @@ impl BanditPolicy for LinUCB {
         let features = Self::features_to_vector(ctx);
         let feature_dim = features.len();
 
-        // Get or initialize model parameters
-        let (theta, covariance) = self.get_or_init_model(&task_type, feature_dim);
+        // Get or initialize model parameters (mutable access for update)
+        let theta = self.theta.entry(task_type.clone()).or_insert_with(|| vec![0.0; feature_dim]);
+        let _covariance = self.covariance.entry(task_type).or_insert_with(|| vec![vec![0.0; feature_dim]; feature_dim]);
 
         // TODO: Implement proper LinUCB parameter update with ridge regression
         //       Currently uses basic gradient step; should implement proper ridge regression for parameter updates with matrix operations.

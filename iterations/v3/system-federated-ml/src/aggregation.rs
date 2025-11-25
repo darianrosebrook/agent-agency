@@ -110,7 +110,7 @@ impl SecureAggregator {
         // Unwrap the Arc to get the inner DifferentialPrivacyEngine
         // If unwrap fails (multiple references), we'll need to handle it
         let privacy_engine_inner = Arc::try_unwrap(privacy_engine)
-            .unwrap_or_else(|arc| {
+            .unwrap_or_else(|_arc| {
                 // If we can't unwrap due to multiple references, extract parameters and recreate
                 // This is safe because PrivacyParameters implements Default
                 warn!("Multiple references to privacy engine detected, creating new instance");

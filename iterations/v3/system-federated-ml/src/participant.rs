@@ -6,7 +6,6 @@
 use schemars::JsonSchema;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -218,8 +217,8 @@ impl FederationParticipant {
         let parameter_updates = self.compute_parameter_updates(&initial_model.parameters, &current_model)?;
 
         // Apply differential privacy if configured
-        let final_updates = if let Some(privacy_engine) = &self.privacy_engine {
-            let mut noisy_updates = parameter_updates.clone();
+        let final_updates = if let Some(_privacy_engine) = &self.privacy_engine {
+            let _noisy_updates = parameter_updates.clone();
             // Note: In practice, we'd need mutable access to privacy engine
             parameter_updates // Placeholder - would apply noise here
         } else {
@@ -406,7 +405,7 @@ impl FederationParticipant {
             },
             communication_channel: Arc::clone(&self.communication_channel),
             current_round: Arc::clone(&self.current_round),
-            privacy_engine: self.privacy_engine.as_ref().map(|engine| {
+            privacy_engine: self.privacy_engine.as_ref().map(|_engine| {
                 // In practice, we'd need to implement cloning for the privacy engine
                 DifferentialPrivacyEngine::new(self.config.privacy_parameters.as_ref().unwrap().clone())
             }),

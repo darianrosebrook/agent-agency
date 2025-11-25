@@ -5,7 +5,6 @@
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};

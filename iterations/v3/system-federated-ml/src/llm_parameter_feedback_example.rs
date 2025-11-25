@@ -23,8 +23,8 @@ use crate::{reward::TaskOutcome, bandit_stubs::CounterfactualLogger};
 
 use crate::{
     parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints},
-    rollout::{RolloutManager, RolloutPhase},
-    caws_integration::{CAWSComplianceValidator, CAWSBudgetTracker},
+    rollout::RolloutManager,
+    caws_integration::CAWSComplianceValidator,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -224,7 +224,7 @@ impl LLMParameterFeedbackExample {
         // Simulate LLM generation
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let latency = start_time.elapsed().as_millis() as u64;
+        let _latency = start_time.elapsed().as_millis() as u64;
 
         Ok(GenerationResponse {
             request_id,
@@ -243,7 +243,7 @@ impl LLMParameterFeedbackExample {
     async fn measure_outcome(
         &self,
         response: &GenerationResponse,
-        params: &ParameterSet,
+        _params: &ParameterSet,
     ) -> Result<TaskOutcome> {
         // Simulate quality measurement
         let quality_score = self.estimate_quality(&response.content);

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info, error};
 
 /// Federation coordinator that manages the entire federated learning process
 pub struct FederationCoordinator {
@@ -322,15 +322,15 @@ impl FederationCoordinator {
     /// Process an individual protocol message
     async fn process_message(
         message: ProtocolMessage,
-        aggregator: &Arc<SecureAggregator>,
-        config: &FederationConfig,
-        current_round: &Arc<RwLock<Option<AggregationRound>>>,
+        _aggregator: &Arc<SecureAggregator>,
+        _config: &FederationConfig,
+        _current_round: &Arc<RwLock<Option<AggregationRound>>>,
     ) -> Result<()> {
         match message {
             ProtocolMessage::ParticipantReady { participant_id } => {
                 debug!("Participant {} ready for round", participant_id);
             }
-            ProtocolMessage::Contribution { participant_id, contribution } => {
+            ProtocolMessage::Contribution { participant_id, contribution: _contribution } => {
                 // Handle contribution (this would typically come from the coordinator's handle_contribution method)
                 debug!("Received contribution from {}", participant_id);
             }
@@ -458,6 +458,5 @@ pub struct RoundInfo {
 use crate::aggregation::SecureAggregator;
 use crate::protocol::{FederationProtocol, ParticipantContribution, ProtocolMessage};
 use crate::participant::FederationParticipant;
-use crate::security::ZeroKnowledgeProof;
 use crate::differential_privacy::PrivacyParameters;
 

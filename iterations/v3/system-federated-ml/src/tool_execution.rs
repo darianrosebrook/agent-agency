@@ -12,7 +12,7 @@ use tracing::{debug, error, info, warn};
 
 // Tool registry for dynamic tool dispatch
 use agent_mcp::ToolRegistry;
-use agent_mcp::mcp_types::{ToolExecutionRequest, ToolExecutionResult, ExecutionContext as MCPExecutionContext, ExecutionPriority, ExecutionStatus};
+use agent_mcp::mcp_types::{ToolExecutionRequest, ExecutionContext as MCPExecutionContext, ExecutionPriority, ExecutionStatus};
 use uuid::Uuid;
 use std::collections::HashMap;
 use chrono::Utc;

@@ -8,8 +8,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use rand::prelude::*;
 use rand_distr::{Normal, Distribution};
-use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 // Import types from lib.rs
 use crate::protocol::ParticipantContribution;
@@ -173,7 +172,7 @@ impl DifferentialPrivacyEngine {
         // Compute basic statistics
         let count = participant_data.len() as f32;
         let sum: f32 = participant_data.iter().sum();
-        let mean = sum / count;
+        let _mean = sum / count;
 
         // Add noise to statistics
         let noisy_count = count + self.sample_noise(1.0)?;

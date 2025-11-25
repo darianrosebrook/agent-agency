@@ -133,7 +133,7 @@ impl KokoroTuner {
     }
 
     /// Enable Apple Silicon orchestration for enhanced performance
-    pub async fn with_apple_silicon_orchestration(mut self) -> Result<Self> {
+    pub async fn with_apple_silicon_orchestration(self) -> Result<Self> {
         #[cfg(target_os = "macos")]
         {
             use system_acceleration::ane::ANEManager;

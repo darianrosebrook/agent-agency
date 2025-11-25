@@ -4,12 +4,12 @@
 //! improved throughput and resource utilization.
 
 use schemars::JsonSchema;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, Semaphore};
-use tracing::{debug, info, warn, error};
+use tracing::{debug, info, error};
 use futures_util::future::join_all;
 
 /// Chunked execution configuration

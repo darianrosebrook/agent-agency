@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 use crate::bandit_policy::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, LinUCB, UsedParameters};
+use crate::bandit_stubs::{ParameterSet, TaskFeatures, BanditPolicy, ThompsonGaussian, UsedParameters};
 
 #[cfg(feature = "bandit_policy")]
 use crate::counterfactual_log::{CounterfactualLogger, TaskOutcome, LoggedDecision};
@@ -229,7 +229,7 @@ impl LLMParameterOptimizer {
         &self,
         request_id: Uuid,
         task_type: &str,
-        context_fingerprint: u64,
+        _context_fingerprint: u64,
         parameters: UsedParameters,
         outcome: TaskOutcome,
         log_propensity: f64,
@@ -409,7 +409,7 @@ impl QualityGateValidator {
     /// Validate parameters are within trust region and constraints
     pub async fn validate_pre_deployment(
         &self,
-        task_type: &str,
+        _task_type: &str,
         proposed: &ParameterSet,
         constraints: &OptimizationConstraints,
     ) -> Result<ValidationResult> {

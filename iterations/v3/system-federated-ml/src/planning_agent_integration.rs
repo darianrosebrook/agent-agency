@@ -17,13 +17,13 @@ use chrono::{DateTime, Utc};
 use crate::bandit_policy::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB};
 
 #[cfg(not(feature = "bandit_policy"))]
-use crate::bandit_stubs::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, LinUCB, UsedParameters as BanditUsedParameters};
+use crate::bandit_stubs::{BanditPolicy, ParameterSet, TaskFeatures, ThompsonGaussian, UsedParameters as BanditUsedParameters};
 
 use crate::parameter_optimizer::{LLMParameterOptimizer, OptimizationConstraints};
-use crate::quality_gate_validator::{QualityGateValidator, ComplianceValidator};
-use crate::reward::{RewardFunction, ObjectiveWeights, TaskOutcome, BaselineMetrics};
+use crate::quality_gate_validator::QualityGateValidator;
+use crate::reward::{RewardFunction, ObjectiveWeights, TaskOutcome};
 use crate::rollout::{RolloutManager, RolloutPhase};
-use crate::caws_integration::{CAWSBudgetTracker, ParameterChangeProvenance};
+use crate::caws_integration::CAWSBudgetTracker;
 
 // ============================================================================
 // LLM Client Stub Types for Planning Agent Integration
@@ -170,7 +170,7 @@ impl OptimizedPlanningAgent {
         let prompt_hash = self.hash_prompt(task_description);
 
         // Create optimized generation request
-        let request = GenerationRequest {
+        let _request = GenerationRequest {
             request_id,
             messages: vec![Message {
                 role: MessageRole::User,

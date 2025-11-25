@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn, error};
+use tracing::info;
 
 /// Quality guardrails enforcer
 pub struct QualityGuardrails {
@@ -141,7 +141,7 @@ impl QualityGuardrails {
         let mut results = Vec::new();
         let checks = self.active_checks.read().await.clone();
 
-        for (check_id, check) in checks {
+        for (_check_id, check) in checks {
             if !check.enabled {
                 continue;
             }
@@ -313,7 +313,7 @@ impl QualityGuardrails {
         }
     }
 
-    async fn check_compliance(&self, context: &CheckContext) -> ComplianceCheck {
+    async fn check_compliance(&self, _context: &CheckContext) -> ComplianceCheck {
         // Check for compliance with organizational policies
         // This would integrate with actual compliance frameworks
 
@@ -421,7 +421,7 @@ impl QualityGuardrails {
         // Extract compliance scores from optimization result
         // The optimization result contains quality_preservation and metadata with compliance_score
         let quality_preservation = optimization_result.quality_preservation;
-        let confidence = optimization_result.confidence;
+        let _confidence = optimization_result.confidence;
 
         // Calculate CAWS compliance score from evaluation history
         // Use the average compliance score from parameter evaluations

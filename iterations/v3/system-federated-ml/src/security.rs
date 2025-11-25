@@ -8,11 +8,11 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
-use ring::signature::{Ed25519KeyPair, KeyPair as RingKeyPair, VerificationAlgorithm};
+use ring::signature::{Ed25519KeyPair, KeyPair as RingKeyPair};
 use ring::rand::{SecureRandom, SystemRandom};
 use sha2::{Sha256, Digest};
-use num_bigint::{BigInt, BigUint, Sign};
-use num_traits::{One, Zero};
+use num_bigint::{BigInt, Sign};
+use num_traits::Zero;
 
 // Import types from lib.rs
 use crate::protocol::ParticipantContribution;
@@ -160,7 +160,7 @@ impl SecurityValidator {
     /// Generate a zero-knowledge proof for a model update
     pub async fn generate_proof(&self, data: &[u8], secret_key: &[u8]) -> Result<ZeroKnowledgeProof> {
         match "schnorr" {
-            proof_type => {
+            _proof_type => {
                 self.generate_schnorr_proof(data, secret_key)
                     .context("Failed to generate Schnorr proof")
             }
@@ -236,7 +236,7 @@ impl SecurityValidator {
     }
 
     /// Validate participant credentials
-    pub async fn validate_credentials(&self, participant_id: &str, credentials: &[u8]) -> Result<bool> {
+    pub async fn validate_credentials(&self, _participant_id: &str, credentials: &[u8]) -> Result<bool> {
         // Basic credential validation
         // In practice, this would verify certificates, signatures, etc.
         Ok(!credentials.is_empty() && credentials.len() > 10)

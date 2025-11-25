@@ -128,12 +128,13 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=Foundation");
 
             // Swift runtime library paths - order matters for resolution
-            // swift-5.5/macosx contains libswift_Concurrency.dylib which is required
+            // IMPORTANT: /usr/lib/swift must come FIRST - it contains Swift 6 concurrency symbols
+            // with the 'isolation' parameter (withTaskGroup, withCheckedContinuation, etc.)
+            // The swift-5.5 backport does NOT have these Swift 6 symbols
             let swift_runtime_paths = vec![
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx",
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.0/macosx",
                 "/usr/lib/swift",
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
+                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx",
             ];
 
             // Add all existing paths as native link search paths
@@ -154,17 +155,20 @@ fn main() {
 
             // Link Swift Concurrency runtime dynamically - required for Swift async/await features
             // This is needed by WhisperKit and other Swift packages that use async/await
-            // Use direct linker flags to ensure proper library resolution
-            let swift_concurrency_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx";
-            let swift_concurrency_lib = format!("{}/libswift_Concurrency.dylib", swift_concurrency_path);
-            if std::path::Path::new(&swift_concurrency_lib).exists() {
-                // Add library search path
-                println!("cargo:rustc-link-arg=-L{}", swift_concurrency_path);
-                // Force load the Swift Concurrency library to ensure all symbols are available
-                println!("cargo:rustc-link-arg={}", swift_concurrency_lib);
-            }
-
-            // Also link swiftCore which is required by Swift Concurrency
+            //
+            // IMPORTANT: Swift 6 uses new concurrency APIs with 'isolation' parameter
+            // The Swift 5.5 backport library does NOT have these symbols
+            // We must link against the SYSTEM Swift concurrency library at /usr/lib/swift/
+            // which contains both Swift 5.5 and Swift 6 concurrency symbols
+            
+            // Link the system Swift concurrency library (contains Swift 6 isolation symbols)
+            // This is the primary source for Swift 6 concurrency symbols like:
+            // - withTaskGroup(of:returning:isolation:body:)
+            // - withCheckedContinuation(isolation:function:_:)
+            println!("cargo:rustc-link-arg=-L/usr/lib/swift");
+            println!("cargo:rustc-link-lib=dylib=swift_Concurrency");
+            
+            // Also link swiftCore from the toolchain
             let swift_core_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
             let swift_core_lib = format!("{}/libswiftCore.dylib", swift_core_path);
             if std::path::Path::new(&swift_core_lib).exists() {
