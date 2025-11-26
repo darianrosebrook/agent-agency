@@ -1337,7 +1337,6 @@ fn detect_content_type_from_path(path: &Path) -> ContentType {
 }
 
 /// Convert local DataInput to agent_data_processing::DataInput
-#[cfg(feature = "data-processing")]
 fn convert_data_input_to_processing(
     input: DataInput,
 ) -> Result<agent_data_processing::DataInput, OrchestrationError> {

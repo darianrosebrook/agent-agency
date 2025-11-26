@@ -127,53 +127,74 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=Metal");
             println!("cargo:rustc-link-lib=framework=Foundation");
 
-            // Swift runtime library paths - order matters for resolution
-            // IMPORTANT: /usr/lib/swift must come FIRST - it contains Swift 6 concurrency symbols
-            // with the 'isolation' parameter (withTaskGroup, withCheckedContinuation, etc.)
-            // The swift-5.5 backport does NOT have these Swift 6 symbols
-            let swift_runtime_paths = vec![
-                "/usr/lib/swift",
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
-                "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx",
-            ];
+            // Swift 6 is required for the new concurrency API with isolation parameter
+            // WhisperKit was built with Swift 6 and requires these symbols
+            // Prioritize Swift 6 libraries to avoid conflicts with Swift 5.5
+            let swift6_system_path = "/usr/lib/swift";
+            let swift6_toolchain_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
+            let swift55_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx";
+            
+            // Determine which Swift version to use - prefer Swift 6
+            let use_swift6 = std::path::Path::new(swift6_system_path).exists() 
+                || std::path::Path::new(swift6_toolchain_path).exists();
+            
+            let swift_runtime_paths = if use_swift6 {
+                // Use Swift 6 - prioritize system Swift, then toolchain Swift 6
+                vec![
+                    swift6_system_path,
+                    swift6_toolchain_path,
+                ]
+            } else {
+                // Fallback to Swift 5.5 only if Swift 6 is not available
+                vec![swift55_path]
+            };
 
-            // Add all existing paths as native link search paths
-            // This ensures dyld can find Swift runtime libraries at test time
+            // Add only the selected Swift runtime paths as native link search paths
+            // This prevents mixing Swift 5.5 and Swift 6 libraries
             for path in &swift_runtime_paths {
                 if std::path::Path::new(path).exists() {
                     println!("cargo:rustc-link-search=native={}", path);
                 }
             }
 
-            // Link Swift compatibility libraries required by Swift static libraries
-            let swift_compat_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
-            if std::path::Path::new(swift_compat_path).exists() {
+            // Link Swift compatibility libraries (only if using toolchain Swift 6)
+            if use_swift6 && std::path::Path::new(swift6_toolchain_path).exists() {
                 println!("cargo:rustc-link-lib=static=swiftCompatibility56");
                 println!("cargo:rustc-link-lib=static=swiftCompatibilityConcurrency");
                 println!("cargo:rustc-link-lib=static=swiftCompatibilityPacks");
             }
 
-            // Link Swift Concurrency runtime dynamically - required for Swift async/await features
-            // This is needed by WhisperKit and other Swift packages that use async/await
-            //
-            // IMPORTANT: Swift 6 uses new concurrency APIs with 'isolation' parameter
-            // The Swift 5.5 backport library does NOT have these symbols
-            // We must link against the SYSTEM Swift concurrency library at /usr/lib/swift/
-            // which contains both Swift 5.5 and Swift 6 concurrency symbols
+            // Swift 6 concurrency symbols with isolation parameter
+            // WhisperKit requires Swift 6 concurrency symbols (withTaskGroup with isolation, etc.)
+            // These symbols are part of the system Swift runtime on macOS
+            if use_swift6 {
+                // Add system Swift runtime paths for symbol resolution
+                // Swift 6 concurrency symbols are resolved automatically by the system Swift runtime
+                if std::path::Path::new(swift6_system_path).exists() {
+                    println!("cargo:rustc-link-search=native={}", swift6_system_path);
+                }
+                if std::path::Path::new(swift6_toolchain_path).exists() {
+                    println!("cargo:rustc-link-search=native={}", swift6_toolchain_path);
+                }
+                // Note: Swift 6 concurrency symbols are resolved automatically by the system
+                // Swift runtime at runtime. We ensure the paths are available via rpath.
+            } else {
+                // Fallback to Swift 5.5 - link explicitly if available
+                if std::path::Path::new(swift55_path).join("libswift_Concurrency.dylib").exists() {
+                    println!("cargo:rustc-link-arg=-L{}", swift55_path);
+                    println!("cargo:rustc-link-lib=dylib=swift_Concurrency");
+                }
+            }
             
-            // Link the system Swift concurrency library (contains Swift 6 isolation symbols)
-            // This is the primary source for Swift 6 concurrency symbols like:
-            // - withTaskGroup(of:returning:isolation:body:)
-            // - withCheckedContinuation(isolation:function:_:)
-            println!("cargo:rustc-link-arg=-L/usr/lib/swift");
-            println!("cargo:rustc-link-lib=dylib=swift_Concurrency");
-            
-            // Also link swiftCore from the toolchain
-            let swift_core_path = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx";
-            let swift_core_lib = format!("{}/libswiftCore.dylib", swift_core_path);
-            if std::path::Path::new(&swift_core_lib).exists() {
-                println!("cargo:rustc-link-arg=-L{}", swift_core_path);
-                println!("cargo:rustc-link-arg={}", swift_core_lib);
+            // Link swiftCore from the selected Swift version
+            if use_swift6 {
+                if std::path::Path::new(swift6_toolchain_path).join("libswiftCore.dylib").exists() {
+                    println!("cargo:rustc-link-arg=-L{}", swift6_toolchain_path);
+                    println!("cargo:rustc-link-arg=-lswiftCore");
+                }
+            } else if std::path::Path::new(swift55_path).join("libswiftCore.dylib").exists() {
+                println!("cargo:rustc-link-arg=-L{}", swift55_path);
+                println!("cargo:rustc-link-arg=-lswiftCore");
             }
 
             // Add Swift runtime library paths to rpath for runtime resolution

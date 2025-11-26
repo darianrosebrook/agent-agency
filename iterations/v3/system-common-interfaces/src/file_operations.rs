@@ -198,6 +198,10 @@ pub trait FileOperationsService: Send + Sync + std::fmt::Debug {
     /// Read file content with security checks
     async fn read_file(&self, file_path: &Path, max_size: Option<u64>) -> FileResult<Vec<u8>>;
 
+    /// Write content to a file
+    /// Creates parent directories if they don't exist
+    async fn write_file(&self, file_path: &Path, content: &[u8]) -> FileResult<()>;
+
     /// Check if a file or directory exists
     async fn file_exists(&self, file_path: &Path) -> FileResult<bool>;
 

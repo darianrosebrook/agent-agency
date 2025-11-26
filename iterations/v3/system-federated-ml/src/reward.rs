@@ -462,6 +462,10 @@ mod tests {
             origin: "test".to_string(),
             policy_version: "1.0.0".to_string(),
             created_at: chrono::Utc::now(),
+            execution_id: None,
+            parameters: std::collections::HashMap::new(),
+            execution_mode: None,
+            quality_gates: None,
         };
 
         let result = reward_fn.check_constraints(&params, &constraints, &baseline);

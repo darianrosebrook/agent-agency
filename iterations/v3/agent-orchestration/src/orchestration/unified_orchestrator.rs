@@ -431,10 +431,20 @@ impl UnifiedOrchestrator {
                     }
                 }
 
-                // Use plan_id from recovered state if found, otherwise generate new one
-                found_plan_id.unwrap_or_else(|| Uuid::new_v4())
+                // Use plan_id from recovered state if found, otherwise extract from working_spec.id
+                found_plan_id.unwrap_or_else(|| {
+                    // Try to extract UUID from working_spec.id (format: TASK-<UUID>)
+                    working_spec.id
+                        .strip_prefix("TASK-")
+                        .and_then(|s| Uuid::parse_str(s).ok())
+                        .unwrap_or_else(|| Uuid::new_v4())
+                })
             } else {
-                Uuid::new_v4()
+                // Try to extract UUID from working_spec.id (format: TASK-<UUID>)
+                working_spec.id
+                    .strip_prefix("TASK-")
+                    .and_then(|s| Uuid::parse_str(s).ok())
+                    .unwrap_or_else(|| Uuid::new_v4())
             }
         };
 

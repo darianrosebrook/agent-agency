@@ -84,3 +84,6 @@ test-utils = []
 
 [dev-dependencies]
 tokio-test = "0.4"
+tempfile = "3.10"
+# Real FileOperationsService for integration tests (no circular dependency issue for dev-deps)
+data-infrastructure = { path = "../data-infrastructure", default-features = false }

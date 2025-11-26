@@ -567,6 +567,7 @@ mod tests {
             model_name: Some("gpt-4".to_string()),
             prompt_tokens: Some(100),
             prior_failures: Some(0),
+            context_fingerprint: 0,
         };
 
         let fingerprint = features.fingerprint();

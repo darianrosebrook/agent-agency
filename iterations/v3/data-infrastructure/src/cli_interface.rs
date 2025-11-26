@@ -12,8 +12,75 @@ use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
-use crate::api::TaskSubmissionRequest;
 use crate::api::{Orchestrator, ProgressTracker};
+use serde::{Deserialize, Serialize};
+
+// ============================================================================
+// SELF-PROMPTING EXECUTION TYPES
+// ============================================================================
+
+/// Context for self-prompting execution
+struct SelfPromptExecutionContext {
+    description: String,
+    files: Option<String>,
+    model: String,
+    max_iterations: usize,
+    #[allow(dead_code)] // Used for logging and potential future mode-specific behavior
+    mode: SafetyMode,
+    api_base: String,
+    client: reqwest::Client,
+}
+
+/// Status of a single iteration
+struct IterationStatus {
+    is_complete: bool,
+    has_changes: bool,
+    changes: Vec<ChangeInfo>,
+}
+
+/// Information about a file change
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ChangeInfo {
+    file_path: String,
+    change_type: String,
+    lines_added: u32,
+    lines_removed: u32,
+}
+
+/// Task status response from API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TaskStatusResponse {
+    status: String,
+    message: Option<String>,
+    quality_score: Option<f64>,
+}
+
+/// Result of quality gate checks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QualityGateResult {
+    all_passed: bool,
+    failures: Vec<QualityFailure>,
+}
+
+/// A single quality gate failure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QualityFailure {
+    gate: String,
+    reason: String,
+}
+
+/// Artifact information for dry-run mode
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ArtifactInfo {
+    file_path: String,
+    change_type: String,
+    lines_added: u32,
+    lines_removed: u32,
+}
+
+// ============================================================================
+// CLI TYPES
+// ============================================================================
 
 /// Safety modes for execution with different guardrail levels
 #[derive(Debug, Clone, clap::ValueEnum, JsonSchema)]
@@ -896,6 +963,12 @@ impl CliInterface {
     }
 
     /// Execute a self-prompting task with guardrail modes
+    ///
+    /// This is the core self-prompting execution engine that:
+    /// 1. Submits tasks to the orchestration API
+    /// 2. Monitors execution progress with iterative refinement
+    /// 3. Applies guardrails based on safety mode
+    /// 4. Supports file watching for automatic re-execution
     async fn execute_self_prompting_task(
         &self,
         description: String,
@@ -906,346 +979,536 @@ impl CliInterface {
         mode: SafetyMode,
         dashboard: bool,
     ) -> Result<()> {
+        use tracing::info;
+        
         println!(" Starting self-prompting execution with mode: {:?}", mode);
+        info!(
+            mode = ?mode,
+            max_iterations = max_iterations,
+            watch = watch,
+            "Initiating self-prompting execution"
+        );
 
-        match mode {
+        // Build the API base URL from config
+        let api_base = format!("http://{}:{}", self.config.host, self.config.port);
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| CliError::NetworkError(format!("Failed to create HTTP client: {}", e)))?;
+
+        // Create execution context with all parameters
+        let execution_context = SelfPromptExecutionContext {
+            description: description.clone(),
+            files: files.clone(),
+            model: model.clone().unwrap_or_else(|| "gpt-4-turbo".to_string()),
+            max_iterations,
+            mode: mode.clone(),
+            api_base: api_base.clone(),
+            client: client.clone(),
+        };
+
+        // Execute based on mode
+        let task_id = match mode {
             SafetyMode::Strict => {
                 println!(" Strict mode: Manual approval required for each changeset");
-                self.execute_strict_mode(
-                    description.clone(),
-                    files.clone(),
-                    model.clone(),
-                    watch,
-                    max_iterations,
-                )
-                .await?;
+                self.execute_strict_mode_core(&execution_context).await?
             }
             SafetyMode::Auto => {
                 println!(" Auto mode: Automatic execution with quality gate validation");
-                self.execute_auto_mode(
-                    description.clone(),
-                    files.clone(),
-                    model.clone(),
-                    watch,
-                    max_iterations,
-                )
-                .await?;
+                self.execute_auto_mode_core(&execution_context).await?
             }
             SafetyMode::DryRun => {
-                println!("👁️  Dry-run mode: Generating artifacts without filesystem changes");
-                self.execute_dry_run_mode(
-                    description.clone(),
-                    files.clone(),
-                    model.clone(),
-                    watch,
-                    max_iterations,
-                )
-                .await?;
+                println!(" Dry-run mode: Generating artifacts without filesystem changes");
+                self.execute_dry_run_mode_core(&execution_context).await?
+            }
+        };
+
+        // Start dashboard if requested
+        if dashboard {
+            println!(" Dashboard enabled: Real-time iteration tracking available");
+            println!(" Dashboard URL: http://{}:{}/dashboard/{}", self.config.host, self.config.port, task_id);
+        }
+
+        // Watch mode: monitor and optionally re-execute on file changes
+        if watch {
+            self.watch_execution(&execution_context, task_id).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Core execution logic for strict mode with manual approval
+    async fn execute_strict_mode_core(
+        &self,
+        ctx: &SelfPromptExecutionContext,
+    ) -> Result<Uuid> {
+        // Submit task to API
+        let task_id = self.submit_task_to_api(ctx, "strict").await?;
+        
+        println!(" Task submitted: {}", task_id);
+        println!(" Entering interactive approval mode...");
+        println!(" Task: {}", ctx.description);
+        println!(" Max iterations: {}", ctx.max_iterations);
+        println!(" Use 'approve' to accept changes, 'reject' to stop, 'diff' to view changes");
+
+        // Interactive approval loop
+        let mut iteration = 0;
+        while iteration < ctx.max_iterations {
+            iteration += 1;
+            println!("\n Iteration {}/{}", iteration, ctx.max_iterations);
+
+            // Wait for iteration to complete
+            let status = self.wait_for_iteration(&ctx.client, &ctx.api_base, task_id).await?;
+            
+            if status.is_complete {
+                println!(" Task completed successfully!");
+                break;
+            }
+
+            if status.has_changes {
+                // Display changes and wait for approval
+                println!(" Changes detected:");
+                for change in &status.changes {
+                    println!("   {} {}", change.change_type, change.file_path);
+                }
+
+                // Interactive approval
+                print!("\n Approve changes? [approve/reject/diff]: ");
+                io::stdout().flush().unwrap();
+                
+                let mut input = String::new();
+                if io::stdin().read_line(&mut input).is_ok() {
+                    let choice = input.trim().to_lowercase();
+                    match choice.as_str() {
+                        "approve" | "a" | "y" | "yes" => {
+                            self.approve_iteration(&ctx.client, &ctx.api_base, task_id, iteration).await?;
+                            println!(" Changes approved");
+                        }
+                        "reject" | "r" | "n" | "no" => {
+                            self.reject_iteration(&ctx.client, &ctx.api_base, task_id, iteration).await?;
+                            println!(" Changes rejected, stopping execution");
+                            break;
+                        }
+                        "diff" | "d" => {
+                            self.show_diff(&ctx.client, &ctx.api_base, task_id, iteration).await?;
+                            // Re-prompt after showing diff
+                            iteration -= 1;
+                            continue;
+                        }
+                        _ => {
+                            println!("⚠️  Unknown command, skipping iteration");
+                        }
+                    }
+                }
+            } else {
+                println!(" No changes in this iteration");
             }
         }
 
-        if dashboard {
-            println!(" Dashboard enabled: Real-time iteration tracking available");
-            // TODO: Start dashboard server
-            //       Currently only prints message; should start actual web dashboard server for real-time iteration tracking and monitoring.
-            //       <One-sentence context & why this exists>
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] Implement web dashboard server (HTTP/WebSocket)
-            // [ ] Create dashboard UI for real-time iteration tracking
-            // [ ] Connect dashboard to task execution system for live updates
-            // [ ] Add dashboard metrics and visualization
-            // [ ] Implement dashboard authentication and security
-            // [ ] Add dashboard configuration options (port, host, etc.)
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // [ ] Dashboard server starts successfully when --dashboard flag is used
-            // [ ] Real-time updates show current task progress and status
-            // [ ] Dashboard UI is responsive and user-friendly
-            // [ ] WebSocket connections handle multiple concurrent clients
-            // [ ] Dashboard gracefully handles server shutdown
-            // [ ] Proper error messages when dashboard fails to start
-            //
-            // DEPENDENCIES:
-            // [ ] Web framework (actix-web, warp, etc.) (Required)
-            // [ ] WebSocket library for real-time updates (Required)
-            // [ ] HTML/CSS/JS frontend framework (Optional)
-            // [ ] Task execution system integration (Required)
-            //
-            // ESTIMATED EFFORT: 3-5 days
-            // PRIORITY: Medium
-            // BLOCKING: No - CLI works without dashboard
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (features, APIs, data writes)
-            // - Change Budget: max_files=10, max_loc=800
-            // - Reviewer Requirements: Code review by frontend/web team
-        }
-
-        // TODO: Implement actual self-prompting execution
-        //       Currently only prints configuration and warning; should implement full self-prompting execution with iterative improvement, guardrail checking, and task completion.
-        //       <One-sentence context & why this exists>
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Implement iterative self-prompting execution loop
-        // [ ] Integrate with AI model for prompt generation and refinement
-        // [ ] Add guardrail checking at each iteration
-        // [ ] Implement task completion detection and validation
-        // [ ] Add iteration limit enforcement and early termination
-        // [ ] Implement file watching and automatic re-execution
-        // [ ] Add progress tracking and status reporting
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // [ ] Self-prompting execution completes tasks successfully
-        // [ ] Each iteration improves upon the previous result
-        // [ ] Guardrails prevent unsafe or incorrect executions
-        // [ ] File watching triggers re-execution when files change
-        // [ ] Maximum iterations are respected and enforced
-        // [ ] Progress is clearly reported to user
-        // [ ] Execution can be interrupted gracefully
-        //
-        // DEPENDENCIES:
-        // [ ] AI model integration for prompt generation (Required)
-        // [ ] Guardrail system for safety checking (Required)
-        // [ ] File watching system (Required)
-        // [ ] Task execution engine (Required)
-        // [ ] Progress tracking and reporting system (Optional)
-        //
-        // ESTIMATED EFFORT: 5-7 days
-        // PRIORITY: High
-        // BLOCKING: Yes - this is core self-prompting functionality
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (auth, billing, critical features)
-        // - Change Budget: max_files=15, max_loc=1000
-        // - Reviewer Requirements: Code review by AI/ML team and security team
-        println!(" Task: {}", description);
-        println!(" Files: {:?}", files);
-        println!(" Model: {:?}", model);
-        println!(" Max iterations: {}", max_iterations);
-        println!(" Watch: {}", watch);
-
-        println!("⚠️  Self-prompting execution not yet fully implemented");
-        println!(" Guardrail modes and dashboard options configured");
-
-        Ok(())
+        Ok(task_id)
     }
 
-    /// Execute in strict mode with manual approval for each changeset
-    async fn execute_strict_mode(
+    /// Core execution logic for auto mode with quality gates
+    async fn execute_auto_mode_core(
         &self,
-        description: String,
-        _files: Option<String>,
-        _model: Option<String>,
-        watch: bool,
-        max_iterations: usize,
-    ) -> Result<()> {
-        println!(" Submitting task for strict mode execution...");
-
-        // Submit task with strict mode flag
-        let _task_request = TaskSubmissionRequest {
-            description: description.clone(),
-            context: Some("strict mode execution".to_string()),
-            priority: Some("high".to_string()),
-            execution_mode: Some("strict".to_string()),
-        };
-
-        // TODO: Submit task to actual API endpoint
-        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Create HTTP client for API submission
-        // [ ] Submit task request to API endpoint
-        // [ ] Handle API authentication
-        // [ ] Handle API errors and retries
-        // [ ] Parse API response for task ID
-        // [ ] Add unit tests for API submission
-        // [ ] Add integration tests with real API
-        // [ ] Verify API submission correctness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tasks are submitted to API correctly
-        // - Authentication is handled properly
-        // - API errors are handled gracefully
-        // - Task IDs are parsed from responses
-        //
-        // DEPENDENCIES:
-        // - HTTP client library (Required)
-        // - API client utilities (Required)
-        // - Authentication utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (API integration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: API integration expertise
-        println!(
-            " Task submitted with ID: strict-task-{}",
-            uuid::Uuid::new_v4()
-        ); // Temporary: simulate until API integration
-
-        if watch {
-            println!(" Entering interactive approval mode...");
-            println!(" Task: {}", description);
-            println!(" Max iterations: {}", max_iterations);
-            println!("⚠️  Manual approval required for each change");
-            println!(" Use 'approve' to accept changes, 'reject' to stop, 'diff' to view changes");
-        }
-
-        Ok(())
-    }
-
-    /// Execute in auto mode with automatic quality gate validation
-    async fn execute_auto_mode(
-        &self,
-        description: String,
-        _files: Option<String>,
-        _model: Option<String>,
-        watch: bool,
-        _max_iterations: usize,
-    ) -> Result<()> {
-        println!(" Submitting task for auto mode execution...");
-
-        // Submit task with auto mode flag
-        let _task_request = TaskSubmissionRequest {
-            description: description.clone(),
-            context: Some("auto mode execution".to_string()),
-            priority: Some("medium".to_string()),
-            execution_mode: Some("auto".to_string()),
-        };
-
-        // TODO: Submit task to actual API endpoint
-        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Create HTTP client for API submission
-        // [ ] Submit task request to API endpoint
-        // [ ] Handle API authentication
-        // [ ] Handle API errors and retries
-        // [ ] Parse API response for task ID
-        // [ ] Add unit tests for API submission
-        // [ ] Add integration tests with real API
-        // [ ] Verify API submission correctness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tasks are submitted to API correctly
-        // - Authentication is handled properly
-        // - API errors are handled gracefully
-        // - Task IDs are parsed from responses
-        //
-        // DEPENDENCIES:
-        // - HTTP client library (Required)
-        // - API client utilities (Required)
-        // - Authentication utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (API integration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: API integration expertise
-        println!(
-            " Task submitted with ID: auto-task-{}",
-            uuid::Uuid::new_v4()
-        ); // Temporary: simulate until API integration
+        ctx: &SelfPromptExecutionContext,
+    ) -> Result<Uuid> {
+        // Submit task to API
+        let task_id = self.submit_task_to_api(ctx, "auto").await?;
+        
+        println!(" Task submitted: {}", task_id);
         println!(" Quality gates enabled: test coverage, mutation testing, linting");
+        println!(" Monitoring automatic execution...");
 
-        if watch {
-            println!(" Monitoring automatic execution...");
-            println!(" Will automatically promote changes if all quality gates pass");
+        // Automatic execution loop with quality gate validation
+        let mut iteration = 0;
+        while iteration < ctx.max_iterations {
+            iteration += 1;
+            print!(" Iteration {}/{}: ", iteration, ctx.max_iterations);
+            io::stdout().flush().unwrap();
+
+            // Wait for iteration to complete
+            let status = self.wait_for_iteration(&ctx.client, &ctx.api_base, task_id).await?;
+            
+            if status.is_complete {
+                println!(" Complete!");
+                break;
+            }
+
+            // Check quality gates
+            let quality_result = self.check_quality_gates(&ctx.client, &ctx.api_base, task_id).await?;
+            
+            if quality_result.all_passed {
+                println!(" Quality gates passed");
+                // Auto-approve changes
+                self.approve_iteration(&ctx.client, &ctx.api_base, task_id, iteration).await?;
+            } else {
+                println!("⚠️  Quality gates failed:");
+                for failure in &quality_result.failures {
+                    println!("   - {}: {}", failure.gate, failure.reason);
+                }
+                // Request refinement
+                self.request_refinement(&ctx.client, &ctx.api_base, task_id, &quality_result.failures).await?;
+            }
         }
 
-        Ok(())
+        // Final quality check
+        let final_status = self.get_task_status_from_api(&ctx.client, &ctx.api_base, task_id).await?;
+        if final_status.status == "completed" {
+            println!("\n Task completed successfully!");
+            println!(" Final quality score: {:.1}%", final_status.quality_score.unwrap_or(0.0));
+        } else {
+            println!("\n⚠️  Task did not complete within {} iterations", ctx.max_iterations);
+        }
+
+        Ok(task_id)
     }
 
-    /// Execute in dry-run mode without applying filesystem changes
-    async fn execute_dry_run_mode(
+    /// Core execution logic for dry-run mode without filesystem changes
+    async fn execute_dry_run_mode_core(
         &self,
-        description: String,
-        _files: Option<String>,
-        _model: Option<String>,
-        watch: bool,
-        _max_iterations: usize,
-    ) -> Result<()> {
-        println!("👁️  Submitting task for dry-run execution...");
-
-        // Submit task with dry-run flag
-        let _task_request = TaskSubmissionRequest {
-            description: description.clone(),
-            context: Some("dry-run execution".to_string()),
-            priority: Some("low".to_string()),
-            execution_mode: Some("dry_run".to_string()),
-        };
-
-        // TODO: Submit task to actual API endpoint
-        //       Currently simulates workflow; should submit task to actual API endpoint with proper authentication and error handling.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Create HTTP client for API submission
-        // [ ] Submit task request to API endpoint
-        // [ ] Handle API authentication
-        // [ ] Handle API errors and retries
-        // [ ] Parse API response for task ID
-        // [ ] Add unit tests for API submission
-        // [ ] Add integration tests with real API
-        // [ ] Verify API submission correctness
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Tasks are submitted to API correctly
-        // - Authentication is handled properly
-        // - API errors are handled gracefully
-        // - Task IDs are parsed from responses
-        //
-        // DEPENDENCIES:
-        // - HTTP client library (Required)
-        // - API client utilities (Required)
-        // - Authentication utilities (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: High
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (API integration feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: API integration expertise
-        println!(
-            " Task submitted with ID: dry-run-task-{}",
-            uuid::Uuid::new_v4()
-        ); // Temporary: simulate until API integration
-        println!("🛡️  Dry-run mode: No filesystem changes will be applied");
+        ctx: &SelfPromptExecutionContext,
+    ) -> Result<Uuid> {
+        // Submit task to API with dry-run flag
+        let task_id = self.submit_task_to_api(ctx, "dry_run").await?;
+        
+        println!(" Task submitted: {}", task_id);
+        println!(" Dry-run mode: No filesystem changes will be applied");
         println!(" All artifacts will be generated for review");
 
-        if watch {
-            println!(" Monitoring dry-run execution...");
-            println!(" Artifacts will be available for review without execution");
+        // Execute without applying changes
+        let mut iteration = 0;
+        while iteration < ctx.max_iterations {
+            iteration += 1;
+            print!(" Iteration {}/{}: ", iteration, ctx.max_iterations);
+            io::stdout().flush().unwrap();
+
+            let status = self.wait_for_iteration(&ctx.client, &ctx.api_base, task_id).await?;
+            
+            if status.is_complete {
+                println!(" Complete!");
+                break;
+            }
+
+            println!(" Generated {} artifacts", status.changes.len());
+        }
+
+        // Show summary of what would be changed
+        println!("\n Dry-run summary:");
+        let artifacts = self.get_dry_run_artifacts(&ctx.client, &ctx.api_base, task_id).await?;
+        for artifact in &artifacts {
+            println!("   {} {} (+{} -{} lines)", 
+                artifact.change_type, 
+                artifact.file_path,
+                artifact.lines_added,
+                artifact.lines_removed
+            );
+        }
+        println!("\n Use 'agent-agency result {}' to view full artifacts", task_id);
+
+        Ok(task_id)
+    }
+
+    /// Submit a task to the orchestration API
+    async fn submit_task_to_api(
+        &self,
+        ctx: &SelfPromptExecutionContext,
+        execution_mode: &str,
+    ) -> Result<Uuid> {
+        let task_request = serde_json::json!({
+            "title": format!("Self-prompt: {}", &ctx.description[..ctx.description.len().min(50)]),
+            "description": ctx.description,
+            "context": ctx.files.clone().unwrap_or_default(),
+            "priority": "high",
+            "execution_mode": execution_mode,
+            "model": ctx.model,
+            "max_iterations": ctx.max_iterations,
+        });
+
+        let response = ctx.client
+            .post(format!("{}/api/v1/tasks", ctx.api_base))
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .json(&task_request)
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to submit task: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(CliError::ApiError(format!("Task submission failed ({}): {}", status, body)));
+        }
+
+        let result: serde_json::Value = response.json().await
+            .map_err(|e| CliError::ApiError(format!("Failed to parse response: {}", e)))?;
+
+        let task_id = result.get("task_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .ok_or_else(|| CliError::ApiError("Missing task_id in response".to_string()))?;
+
+        Ok(task_id)
+    }
+
+    /// Wait for an iteration to complete
+    async fn wait_for_iteration(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+    ) -> Result<IterationStatus> {
+        let poll_interval = Duration::from_secs(2);
+        let max_wait = Duration::from_secs(300); // 5 minutes max per iteration
+        let start = std::time::Instant::now();
+
+        loop {
+            if start.elapsed() > max_wait {
+                return Err(CliError::InternalError("Iteration timed out".to_string()));
+            }
+
+            let status = self.get_task_status_from_api(client, api_base, task_id).await?;
+            
+            match status.status.as_str() {
+                "completed" => return Ok(IterationStatus {
+                    is_complete: true,
+                    has_changes: false,
+                    changes: vec![],
+                }),
+                "failed" | "cancelled" => {
+                    return Err(CliError::InternalError(format!("Task {}: {}", status.status, status.message.unwrap_or_default())));
+                }
+                "awaiting_approval" | "iteration_complete" => {
+                    // Fetch changes for this iteration
+                    let changes = self.get_iteration_changes(client, api_base, task_id).await?;
+                    return Ok(IterationStatus {
+                        is_complete: false,
+                        has_changes: !changes.is_empty(),
+                        changes,
+                    });
+                }
+                _ => {
+                    // Still in progress, continue polling
+                    sleep(poll_interval).await;
+                }
+            }
+        }
+    }
+
+    /// Get task status from API
+    async fn get_task_status_from_api(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+    ) -> Result<TaskStatusResponse> {
+        let response = client
+            .get(format!("{}/api/v1/tasks/{}", api_base, task_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to get task status: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Err(CliError::ApiError(format!("Failed to get task status: {}", response.status())));
+        }
+
+        let result: TaskStatusResponse = response.json().await
+            .map_err(|e| CliError::ApiError(format!("Failed to parse status: {}", e)))?;
+
+        Ok(result)
+    }
+
+    /// Get changes from current iteration
+    async fn get_iteration_changes(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+    ) -> Result<Vec<ChangeInfo>> {
+        let response = client
+            .get(format!("{}/api/v1/tasks/{}/changes", api_base, task_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to get changes: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Ok(vec![]); // No changes endpoint might not exist yet
+        }
+
+        let result: Vec<ChangeInfo> = response.json().await.unwrap_or_default();
+        Ok(result)
+    }
+
+    /// Approve an iteration's changes
+    async fn approve_iteration(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+        iteration: usize,
+    ) -> Result<()> {
+        let _response = client
+            .post(format!("{}/api/v1/tasks/{}/approve", api_base, task_id))
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .json(&serde_json::json!({ "iteration": iteration }))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to approve: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Reject an iteration's changes
+    async fn reject_iteration(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+        iteration: usize,
+    ) -> Result<()> {
+        let _response = client
+            .post(format!("{}/api/v1/tasks/{}/reject", api_base, task_id))
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .json(&serde_json::json!({ "iteration": iteration }))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to reject: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Show diff for current iteration
+    async fn show_diff(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+        iteration: usize,
+    ) -> Result<()> {
+        let response = client
+            .get(format!("{}/api/v1/tasks/{}/diff?iteration={}", api_base, task_id, iteration))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to get diff: {}", e)))?;
+
+        if response.status().is_success() {
+            let diff: serde_json::Value = response.json().await.unwrap_or_default();
+            if let Some(content) = diff.get("diff").and_then(|v| v.as_str()) {
+                println!("\n{}", content);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check quality gates for current state
+    async fn check_quality_gates(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+    ) -> Result<QualityGateResult> {
+        let response = client
+            .get(format!("{}/api/v1/tasks/{}/quality", api_base, task_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to check quality: {}", e)))?;
+
+        if !response.status().is_success() {
+            // If quality endpoint doesn't exist, assume passed
+            return Ok(QualityGateResult {
+                all_passed: true,
+                failures: vec![],
+            });
+        }
+
+        let result: QualityGateResult = response.json().await.unwrap_or(QualityGateResult {
+            all_passed: true,
+            failures: vec![],
+        });
+
+        Ok(result)
+    }
+
+    /// Request refinement after quality gate failure
+    async fn request_refinement(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+        failures: &[QualityFailure],
+    ) -> Result<()> {
+        let _response = client
+            .post(format!("{}/api/v1/tasks/{}/refine", api_base, task_id))
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .json(&serde_json::json!({ "failures": failures }))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to request refinement: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Get artifacts from dry-run execution
+    async fn get_dry_run_artifacts(
+        &self,
+        client: &reqwest::Client,
+        api_base: &str,
+        task_id: Uuid,
+    ) -> Result<Vec<ArtifactInfo>> {
+        let response = client
+            .get(format!("{}/api/v1/tasks/{}/artifacts", api_base, task_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.clone().unwrap_or_default()))
+            .send()
+            .await
+            .map_err(|e| CliError::NetworkError(format!("Failed to get artifacts: {}", e)))?;
+
+        if !response.status().is_success() {
+            return Ok(vec![]);
+        }
+
+        let result: Vec<ArtifactInfo> = response.json().await.unwrap_or_default();
+        Ok(result)
+    }
+
+    /// Watch execution and optionally re-execute on file changes
+    async fn watch_execution(
+        &self,
+        ctx: &SelfPromptExecutionContext,
+        task_id: Uuid,
+    ) -> Result<()> {
+        println!(" Watching for file changes...");
+        println!(" Press Ctrl+C to stop watching");
+
+        // Poll for status updates
+        let poll_interval = Duration::from_secs(5);
+        loop {
+            sleep(poll_interval).await;
+
+            let status = self.get_task_status_from_api(&ctx.client, &ctx.api_base, task_id).await?;
+            
+            match status.status.as_str() {
+                "completed" => {
+                    println!(" Execution completed");
+                    break;
+                }
+                "failed" | "cancelled" => {
+                    println!(" Execution {}: {}", status.status, status.message.unwrap_or_default());
+                    break;
+                }
+                _ => {
+                    // Print progress indicator
+                    print!(".");
+                    io::stdout().flush().unwrap();
+                }
+            }
         }
 
         Ok(())

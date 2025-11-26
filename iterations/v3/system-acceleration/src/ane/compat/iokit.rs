@@ -222,38 +222,68 @@ pub mod iokit {
                 .collect();
             
             if let Ok(current_percent) = percent_str.parse::<f32>() {
-                // Look for time remaining pattern: "H:MM remaining" or "M:SS remaining"
-                if let Some(remaining_pos) = output_str.find("remaining") {
-                    let before_remaining = &output_str[..remaining_pos];
-                    // Find time pattern like "3:45" or "2:30"
-                    if let Some(time_start) = before_remaining.rfind(|c: char| c.is_ascii_digit()) {
-                        let time_str = &before_remaining[time_start.saturating_sub(3)..time_start + 4];
-                        // Parse time as "H:MM" or "M:SS"
-                        if let Some(colon_pos) = time_str.find(':') {
-                            let hours_str = &time_str[..colon_pos];
-                            let minutes_str = &time_str[colon_pos + 1..];
+                // Look for time pattern like "H:MM" or "M:SS" before "remaining" or at end of line
+                // Try to find "remaining" first, otherwise look for time pattern anywhere
+                let search_area = if let Some(remaining_pos) = output_str.find("remaining") {
+                    &output_str[..remaining_pos]
+                } else {
+                    output_str.as_str()
+                };
+                
+                // Find time pattern using regex-like approach: look for "N:NN" pattern
+                // Start from the end of the search area and work backwards
+                let chars: Vec<char> = search_area.chars().collect();
+                let mut time_found = None;
+                
+                for i in (0..chars.len().saturating_sub(3)).rev() {
+                    // Look for pattern: digit(s) + ':' + two digits
+                    if chars.get(i + 1) == Some(&':') {
+                        let first_digit = chars.get(i).map(|c| c.is_ascii_digit()).unwrap_or(false);
+                        let third_digit = chars.get(i + 2).map(|c| c.is_ascii_digit()).unwrap_or(false);
+                        let fourth_digit = chars.get(i + 3).map(|c| c.is_ascii_digit()).unwrap_or(false);
+                        
+                        if first_digit && third_digit && fourth_digit {
+                            // Found a valid time pattern
+                            // Check if there's another digit before (for times like "12:34")
+                            let start_idx = if i > 0 && chars.get(i - 1).map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                                i - 1
+                            } else {
+                                i
+                            };
+                            let end_idx = (i + 4).min(chars.len());
+                            let time_str: String = chars[start_idx..end_idx].iter().collect();
+                            time_found = Some(time_str);
+                            break;
+                        }
+                    }
+                }
+                
+                if let Some(time_str) = time_found {
+                    // Parse time as "H:MM" or "M:SS"
+                    if let Some(colon_pos) = time_str.find(':') {
+                        let hours_str = &time_str[..colon_pos];
+                        let minutes_str = &time_str[colon_pos + 1..];
+                        
+                        if let (Ok(hours), Ok(minutes)) = (hours_str.parse::<f32>(), minutes_str.parse::<f32>()) {
+                            let total_minutes = hours * 60.0 + minutes;
                             
-                            if let (Ok(hours), Ok(minutes)) = (hours_str.parse::<f32>(), minutes_str.parse::<f32>()) {
-                                let total_minutes = hours * 60.0 + minutes;
+                            // Estimate power usage from discharge rate
+                            // Power (W) ≈ (Battery Capacity (Wh) * Discharge Rate (%/hour)) / 100
+                            // Discharge rate = (100 - current_percent) / (time_remaining in hours)
+                            // For typical MacBook: ~50-60 Wh battery capacity
+                            let battery_capacity_wh = 55.0; // Typical MacBook battery capacity
+                            let time_remaining_hours = total_minutes / 60.0;
+                            
+                            if time_remaining_hours > 0.0 {
+                                // Calculate discharge rate (% per hour)
+                                let discharge_rate_percent_per_hour = (100.0 - current_percent) / time_remaining_hours;
                                 
-                                // Estimate power usage from discharge rate
-                                // Power (W) ≈ (Battery Capacity (Wh) * Discharge Rate (%/hour)) / 100
-                                // Discharge rate = (100 - current_percent) / (time_remaining in hours)
-                                // For typical MacBook: ~50-60 Wh battery capacity
-                                let battery_capacity_wh = 55.0; // Typical MacBook battery capacity
-                                let time_remaining_hours = total_minutes / 60.0;
+                                // Estimate power: Power = (Capacity * Discharge Rate) / 100
+                                let estimated_power = (battery_capacity_wh * discharge_rate_percent_per_hour) / 100.0;
                                 
-                                if time_remaining_hours > 0.0 {
-                                    // Calculate discharge rate (% per hour)
-                                    let discharge_rate_percent_per_hour = (100.0 - current_percent) / time_remaining_hours;
-                                    
-                                    // Estimate power: Power = (Capacity * Discharge Rate) / 100
-                                    let estimated_power = (battery_capacity_wh * discharge_rate_percent_per_hour) / 100.0;
-                                    
-                                    // Validate power estimate is reasonable (0-100W for laptop)
-                                    if estimated_power >= 0.0 && estimated_power <= 100.0 {
-                                        return Some(estimated_power);
-                                    }
+                                // Validate power estimate is reasonable (0-100W for laptop)
+                                if estimated_power >= 0.0 && estimated_power <= 100.0 {
+                                    return Some(estimated_power);
                                 }
                             }
                         }

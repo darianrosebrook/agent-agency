@@ -54,7 +54,7 @@ impl Default for UnifiedWorkspaceSetupConfig {
 }
 
 /// Setup unified workspace state manager with file watcher and embedding service
-#[cfg(feature = "memory")]
+#[cfg(all(feature = "memory", feature = "data-processing"))]
 pub async fn setup_unified_workspace(
     config: UnifiedWorkspaceSetupConfig,
     embedding_integration: Arc<EmbeddingIntegration>,

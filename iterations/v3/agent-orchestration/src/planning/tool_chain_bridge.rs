@@ -99,21 +99,43 @@ impl ToolChainBridge {
         // Determine risk tolerance
         let risk_tolerance = self.determine_risk_tolerance(working_spec);
 
-        // Create constraints
-        let constraints = self.create_planning_constraints(working_spec)?;
+        // When tool-chain feature is enabled, use system_federated_ml types
+        #[cfg(feature = "tool-chain")]
+        {
+            Ok(ExternalPlanningContext {
+                task_description,
+                task_type,
+                complexity,
+                required_capabilities,
+                time_budget_ms: working_spec
+                    .constraints
+                    .max_duration_minutes
+                    .map(|mins| (mins as u64) * 60 * 1000),
+                cost_budget_cents: Some(1000), // Default cost budget
+                risk_tolerance,
+            })
+        }
 
-        Ok(ExternalPlanningContext {
-            task_description: task_description,
-            task_type: task_type,
-            complexity: complexity,
-            required_capabilities,
-            time_budget_ms: working_spec
-                .constraints
-                .max_duration_minutes
-                .map(|mins| (mins as u64) * 60 * 1000),
-            cost_budget_cents: Some(1000), // Default cost budget - no cost field in WorkingSpecConstraints
-            risk_tolerance,
-        })
+        // When tool-chain feature is not enabled, use local types with extended fields
+        #[cfg(not(feature = "tool-chain"))]
+        {
+            let constraints = self.create_planning_constraints(working_spec)?;
+            Ok(ExternalPlanningContext {
+                working_spec_id: working_spec.id.clone(),
+                available_tools: Vec::new(), // Will be populated by tool registry
+                constraints,
+                risk_tolerance,
+                task_description: Some(task_description),
+                task_type: Some(task_type),
+                complexity: Some(complexity),
+                required_capabilities,
+                time_budget_ms: working_spec
+                    .constraints
+                    .max_duration_minutes
+                    .map(|mins| (mins as u64) * 60 * 1000),
+                cost_budget_cents: Some(1000), // Default cost budget
+            })
+        }
     }
 
     /// Create planning constraints from working spec
@@ -121,17 +143,42 @@ impl ToolChainBridge {
         &self,
         working_spec: &WorkingSpec,
     ) -> Result<ExternalPlanningConstraints> {
-        Ok(ExternalPlanningConstraints {
-            max_chain_length: 5, // Default reasonable limit
-            max_parallelism: 3,   // Allow some parallelism
-            max_cost_cents: 1000, // Default cost budget
-            max_time_ms: working_spec
-                .constraints
-                .max_duration_minutes
-                .map(|mins| (mins as u64) * 60 * 1000)
-                .unwrap_or(30000), // Default 30 seconds
-            require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
-        })
+        // When tool-chain feature is enabled, use system_federated_ml types
+        #[cfg(feature = "tool-chain")]
+        {
+            Ok(ExternalPlanningConstraints {
+                max_chain_length: 5, // Default reasonable limit
+                max_parallelism: 3,   // Allow some parallelism
+                max_cost_cents: 1000, // Default cost budget
+                max_time_ms: working_spec
+                    .constraints
+                    .max_duration_minutes
+                    .map(|mins| (mins as u64) * 60 * 1000)
+                    .unwrap_or(30000), // Default 30 seconds
+                require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
+            })
+        }
+
+        // When tool-chain feature is not enabled, use local types with extended fields
+        #[cfg(not(feature = "tool-chain"))]
+        {
+            Ok(ExternalPlanningConstraints {
+                max_execution_time_secs: working_spec
+                    .constraints
+                    .max_duration_minutes
+                    .map(|mins| (mins as u64) * 60),
+                max_chain_length: Some(5), // Default reasonable limit
+                required_capabilities: Vec::new(), // Will be populated based on task analysis
+                prohibited_tools: Vec::new(), // No prohibited tools by default
+                max_parallelism: Some(3),   // Allow some parallelism
+                max_cost_cents: Some(1000), // Default cost budget
+                max_time_ms: working_spec
+                    .constraints
+                    .max_duration_minutes
+                    .map(|mins| (mins as u64) * 60 * 1000),
+                require_fallbacks: working_spec.risk_tier > 1, // Require fallbacks for high-risk work
+            })
+        }
     }
 
     /// Convert tool chain to execution plan
@@ -268,6 +315,7 @@ impl ToolChainBridge {
                                 to: to_id.clone(),
                                 edge_type: DependencyEdgeType::Hard,
                                 weight: 1.0,
+                                metadata: std::collections::HashMap::new(),
                             });
                         }
                     }

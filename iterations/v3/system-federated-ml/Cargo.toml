@@ -79,10 +79,11 @@ system-observability = { path = "../system-observability" }
 system-configuration = { path = "../system-configuration" }
 agent-mcp = { path = "../agent-mcp" }
 agent-workers = { path = "../agent-workers" }
-system-acceleration = { path = "../system-acceleration" }
+system-acceleration = { path = "../system-acceleration", default-features = false }
 
 [features]
-default = []
+default = ["coreml"]  # Enable CoreML by default for M1 Max MacBook Pro
+coreml = ["system-acceleration/coreml"]  # CoreML acceleration feature
 full_optimization = []
 bayesian_opt = []
 bandit_policy = []

@@ -14,14 +14,9 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-use agent_agency_contracts::planning_io::ExecutionPlan as ContractExecutionPlan;
-use agent_agency_contracts::WorkingSpec;
-
-use agent_orchestration::planning::caws_complexity_mode::{
-    CawsComplexityMode, QualityRequirements,
-};
+use agent_orchestration::planning::caws_complexity_mode::CawsComplexityMode;
 use agent_orchestration::planning::caws_integration::CawsPlanBridge;
-use agent_orchestration::planning::caws_spec_resolver::{CawsSpecResolver, SpecInfo};
+use agent_orchestration::planning::caws_spec_resolver::CawsSpecResolver;
 
 /// Helper to create a test CAWS directory structure
 fn setup_test_caws_dir(temp_dir: &TempDir) -> PathBuf {
@@ -32,27 +27,86 @@ fn setup_test_caws_dir(temp_dir: &TempDir) -> PathBuf {
 
 /// Helper to create a test working spec YAML content
 fn create_test_spec_yaml(id: &str, title: &str, risk_tier: u8) -> String {
+    let now = chrono::Utc::now().to_rfc3339();
+    
+    // Adjust coverage targets based on risk tier to meet validation requirements
+    // Enterprise mode + Tier 1 requires 90%, Tier 2 requires 85.5%, Tier 3 requires 81%
+    // Standard mode + Tier 1 requires 80%, Tier 2 requires 76%, Tier 3 requires 72%
+    // Simple mode + Tier 1 requires 70%, Tier 2 requires 66.5%, Tier 3 requires 63%
+    let (line_cov, branch_cov, mutation) = match risk_tier {
+        1 => (0.95, 0.90, 0.75), // High enough for Enterprise + Tier 1
+        2 => (0.85, 0.80, 0.60), // High enough for Enterprise + Tier 2
+        _ => (0.75, 0.70, 0.50), // High enough for Enterprise + Tier 3
+    };
+    
+    // For tier 1, we need security requirements
+    let non_functional = if risk_tier == 1 {
+        r#"non_functional_requirements:
+  security:
+    - "input-validation"
+    - "authentication-required"
+    - "authorization-checks"
+"#
+    } else {
+        ""
+    };
+    
     format!(
         r#"version: "1.0"
-id: "{}"
-title: "{}"
-description: "Test specification"
-risk_tier: {}
+id: "{id}"
+title: "{title}"
+description: "Test specification for {title}"
+goals:
+  - "Complete the {title} implementation"
+  - "Ensure all tests pass"
+risk_tier: {risk_tier}
+constraints:
+  max_duration_minutes: 60
+  max_iterations: 10
 acceptance_criteria:
   - id: "A1"
     given: "User is logged out"
     when: "User submits valid credentials"
     then: "User is logged in and redirected to dashboard"
-scope:
-  - allowed_paths: ["src/"]
-    blocked_paths: ["node_modules/"]
-file_changes: []
+test_plan:
+  unit_tests:
+    - name: "test_basic_functionality"
+      description: "Test basic functionality"
+  integration_tests: []
+rollback_plan:
+  strategy: git_revert
+  automated_steps:
+    - "git revert HEAD"
+  manual_steps: []
+  data_impact: none
+context:
+  workspace_root: "/tmp/test-workspace"
+  git_branch: "main"
+  recent_changes: []
+  dependencies: {{}}
+  environment: development
+change_budget:
+  max_files: 25
+  max_loc: 1000
+  max_migrations: 0
+  allow_breaking_changes: false
+  allow_new_dependencies: true
+  enforcement_mode: Strict
 coverage_targets:
-  line_coverage: 0.85
-  branch_coverage: 0.80
-  mutation_score: 0.60
+  line_coverage: {line_cov}
+  branch_coverage: {branch_cov}
+  mutation_score: {mutation}
+{non_functional}created_at: "{now}"
+updated_at: "{now}"
 "#,
-        id, title, risk_tier
+        id = id,
+        title = title,
+        risk_tier = risk_tier,
+        line_cov = line_cov,
+        branch_cov = branch_cov,
+        mutation = mutation,
+        non_functional = non_functional,
+        now = now
     )
 }
 
@@ -288,7 +342,13 @@ async fn test_bridge_creates_mode_aware_evidence_gates() -> Result<()> {
     // Access evidence gate creation through spec_to_plan conversion
     let spec = bridge.load_spec(Some("test-spec"), None)?;
     let plan = bridge.spec_to_plan(spec)?;
-    let gate = &plan.milestones[0].evidence_gate;
+    
+    // Find the acceptance criterion milestone (not the infrastructure milestone)
+    let acceptance_milestone = plan.milestones.iter()
+        .find(|m| !m.id.starts_with("M0"))
+        .expect("Plan should have at least one acceptance criterion milestone");
+    
+    let gate = &acceptance_milestone.evidence_gate;
     let requirements = CawsComplexityMode::Simple.quality_requirements(2);
     assert_eq!(gate.min_coverage, requirements.line_coverage);
     assert_eq!(gate.min_mutation_score, requirements.mutation_score);
@@ -308,7 +368,14 @@ async fn test_bridge_creates_mode_aware_evidence_gates() -> Result<()> {
     // Access evidence gate creation through spec_to_plan conversion
     let spec = bridge.load_spec(Some("test-spec-2"), None)?;
     let plan = bridge.spec_to_plan(spec)?;
-    let gate = &plan.milestones[0].evidence_gate;
+    
+    // Find the acceptance criterion milestone (not the infrastructure milestone)
+    // Infrastructure milestone has ID "M0-INFRA", so find the first non-infra milestone
+    let acceptance_milestone = plan.milestones.iter()
+        .find(|m| !m.id.starts_with("M0"))
+        .expect("Plan should have at least one acceptance criterion milestone");
+    
+    let gate = &acceptance_milestone.evidence_gate;
     let requirements = CawsComplexityMode::Enterprise.quality_requirements(1);
     assert_eq!(gate.min_coverage, requirements.line_coverage);
     assert_eq!(gate.min_mutation_score, requirements.mutation_score);
@@ -328,29 +395,55 @@ async fn test_bridge_validates_with_mode_aware_requirements() -> Result<()> {
     fs::write(caws_dir.join("mode"), "enterprise")?;
 
     // Create spec with insufficient coverage for Enterprise mode
-    let spec_yaml = format!(
-        r#"version: "1.0"
+    let now = chrono::Utc::now().to_rfc3339();
+    let spec_yaml = format!(r#"version: "1.0"
 id: "test-spec"
 title: "Test Spec"
-description: "Test"
+description: "Test specification for validation"
+goals:
+  - "Complete test implementation"
 risk_tier: 2
+constraints:
+  max_duration_minutes: 60
+  max_iterations: 10
 acceptance_criteria:
   - id: "A1"
-    given: "Test"
-    when: "Test"
-    then: "Test"
-scope:
-  - allowed_paths: ["src/"]
-    blocked_paths: []
-file_changes: []
+    given: "User is logged out and on the login page"
+    when: "User submits valid credentials"
+    then: "User is logged in and redirected to dashboard"
+test_plan:
+  unit_tests:
+    - name: "test_basic"
+      description: "Basic test"
+  integration_tests: []
+rollback_plan:
+  strategy: git_revert
+  automated_steps:
+    - "git revert HEAD"
+  manual_steps: []
+  data_impact: none
+context:
+  workspace_root: "/tmp/test-workspace"
+  git_branch: "main"
+  recent_changes: []
+  dependencies: {{}}
+  environment: development
+change_budget:
+  max_files: 25
+  max_loc: 1000
+  max_migrations: 0
+  allow_breaking_changes: false
+  allow_new_dependencies: true
+  enforcement_mode: Strict
 coverage_targets:
   line_coverage: 0.75
   branch_coverage: 0.70
   mutation_score: 0.40
-"#
-    );
+created_at: "{now}"
+updated_at: "{now}"
+"#);
 
-    fs::write(specs_dir.join("test-spec.yaml"), spec_yaml)?;
+    fs::write(specs_dir.join("test-spec.yaml"), &spec_yaml)?;
 
     let bridge = CawsPlanBridge::with_project_root(temp_dir.path())?;
     let spec = bridge.load_spec(Some("test-spec"), None)?;
@@ -360,33 +453,61 @@ coverage_targets:
     assert!(bridge.validate_risk_tier_constraints(&spec).is_err());
 
     // Update spec to meet requirements
-    let spec_yaml = format!(
-        r#"version: "1.0"
+    let spec_yaml = format!(r#"version: "1.0"
 id: "test-spec"
 title: "Test Spec"
-description: "Test"
+description: "Test specification for validation"
+goals:
+  - "Complete test implementation"
 risk_tier: 2
+constraints:
+  max_duration_minutes: 60
+  max_iterations: 10
 acceptance_criteria:
   - id: "A1"
-    given: "Test"
-    when: "Test"
-    then: "Test"
-scope:
-  - allowed_paths: ["src/"]
-    blocked_paths: []
-file_changes: []
+    given: "User is logged out and on the login page"
+    when: "User submits valid credentials"
+    then: "User is logged in and redirected to dashboard"
+test_plan:
+  unit_tests:
+    - name: "test_basic"
+      description: "Basic test"
+  integration_tests: []
+rollback_plan:
+  strategy: git_revert
+  automated_steps:
+    - "git revert HEAD"
+  manual_steps: []
+  data_impact: none
+context:
+  workspace_root: "/tmp/test-workspace"
+  git_branch: "main"
+  recent_changes: []
+  dependencies: {{}}
+  environment: development
+change_budget:
+  max_files: 25
+  max_loc: 1000
+  max_migrations: 0
+  allow_breaking_changes: false
+  allow_new_dependencies: true
+  enforcement_mode: Strict
 coverage_targets:
-  line_coverage: 0.80
-  branch_coverage: 0.75
-  mutation_score: 0.50
-"#
-    );
+  line_coverage: 0.90
+  branch_coverage: 0.85
+  mutation_score: 0.70
+created_at: "{now}"
+updated_at: "{now}"
+"#);
 
     fs::write(specs_dir.join("test-spec.yaml"), spec_yaml)?;
     let spec = bridge.load_spec(Some("test-spec"), None)?;
 
-    // Should pass validation
-    assert!(bridge.validate_working_spec(&spec).is_ok());
+    // Should pass validation - Enterprise + Tier 2 requires 0.855 coverage (0.90 * 0.95)
+    match bridge.validate_working_spec(&spec) {
+        Ok(()) => {},
+        Err(e) => panic!("Validation should pass but failed with: {}", e),
+    }
 
     Ok(())
 }
@@ -415,20 +536,27 @@ async fn test_spec_to_plan_with_complexity_mode() -> Result<()> {
 
     // Verify plan has correct quality gates based on mode
     assert_eq!(plan.quality_gates.coverage_requirements.len(), 2); // unit and integration
-    assert!(plan.quality_gates.mutation_requirements.required);
+    // Mutation testing is only required for risk tier 1, not tier 2
+    // The test uses tier 2, so mutation_requirements.required should be false
+    assert!(!plan.quality_gates.mutation_requirements.required);
 
     // Verify evidence gates use mode-aware requirements
-    for milestone in &plan.milestones {
+    // Skip infrastructure milestone (M0-INFRA) which has different evidence requirements
+    for milestone in plan.milestones.iter().filter(|m| !m.id.starts_with("M0")) {
         let requirements = bridge
             .complexity_mode()
             .quality_requirements(milestone.risk_tier as u8);
         assert_eq!(
             milestone.evidence_gate.min_coverage,
-            requirements.line_coverage
+            requirements.line_coverage,
+            "Milestone {} should have correct min_coverage",
+            milestone.id
         );
         assert_eq!(
             milestone.evidence_gate.min_mutation_score,
-            requirements.mutation_score
+            requirements.mutation_score,
+            "Milestone {} should have correct min_mutation_score",
+            milestone.id
         );
     }
 

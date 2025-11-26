@@ -130,6 +130,27 @@ mod tests {
 
     /// Helper to create test files in a temporary directory
     fn create_test_files(temp_dir: &Path) -> Vec<PathBuf> {
+        // Initialize a git repository in the temp directory
+        // This is required because capture_state uses git to determine file status
+        std::process::Command::new("git")
+            .args(["init"])
+            .current_dir(temp_dir)
+            .output()
+            .expect("Failed to initialize git repository");
+
+        // Configure git user for commits
+        std::process::Command::new("git")
+            .args(["config", "user.email", "test@example.com"])
+            .current_dir(temp_dir)
+            .output()
+            .expect("Failed to configure git user email");
+
+        std::process::Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(temp_dir)
+            .output()
+            .expect("Failed to configure git user name");
+
         let files = vec![
             ("test.rs", "fn main() { println!(\"Hello, world!\"); }"),
             ("README.md", "# Test Project\n\nThis is a test project."),
@@ -142,6 +163,19 @@ mod tests {
             std::fs::write(&file_path, content).expect("Failed to write test file");
             created_files.push(file_path);
         }
+
+        // Add and commit the files so git can track them
+        std::process::Command::new("git")
+            .args(["add", "."])
+            .current_dir(temp_dir)
+            .output()
+            .expect("Failed to add files to git");
+
+        std::process::Command::new("git")
+            .args(["commit", "-m", "Initial commit"])
+            .current_dir(temp_dir)
+            .output()
+            .expect("Failed to commit files");
 
         created_files
     }
@@ -433,7 +467,11 @@ mod tests {
 
         // Capture state
         let state_result = manager.capture_state().await;
-        assert!(state_result.is_ok(), "Failed to capture workspace state");
+        assert!(
+            state_result.is_ok(),
+            "Failed to capture workspace state: {:?}",
+            state_result.err()
+        );
 
         let state_id = state_result.unwrap().data;
         let state = manager.get_state(state_id).await.expect("Failed to get state");
@@ -477,7 +515,11 @@ mod tests {
         // Generate code context
         let code_context = manager.generate_code_context(Some("rust"), None).await;
 
-        assert!(code_context.is_ok(), "Failed to generate code context");
+        assert!(
+            code_context.is_ok(),
+            "Failed to generate code context: {:?}",
+            code_context.err()
+        );
         let context = code_context.unwrap();
         assert!(
             !context.files.is_empty(),

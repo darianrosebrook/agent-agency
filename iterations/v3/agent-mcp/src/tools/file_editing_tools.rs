@@ -1154,10 +1154,8 @@ impl FileEditingToolExecutor {
 
     /// Execute file write operation
     ///
-    /// DEPENDENCY: FileOperationsService interface could benefit from a simpler
-    /// `write_file` method for single-file writes without requiring workspace setup.
-    /// Currently using workspace/changeset model which is more complex but provides
-    /// better security and rollback capabilities.
+    /// Uses FileOperationsService.write_file() for simple, direct file writes.
+    /// For complex atomic operations with rollback, use execute_file_edit() instead.
     pub async fn execute_file_write(
         &self,
         params: serde_json::Value,
@@ -1184,11 +1182,6 @@ impl FileEditingToolExecutor {
             .unwrap_or("utf-8")
             .to_string();
 
-        let create_dirs: bool = params
-            .get("create_dirs")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-
         let backup: bool = params
             .get("backup")
             .and_then(|v| v.as_bool())
@@ -1199,97 +1192,54 @@ impl FileEditingToolExecutor {
             return Err(format!("Unsupported encoding: {}", encoding));
         }
 
-        // Create a temporary task_id for this write operation
-        let task_id = format!("file_write_{}", uuid::Uuid::new_v4());
-
-        // Get current directory as repo path
         use std::path::Path;
-        let current_dir = std::env::current_dir()
-            .map_err(|e| format!("Failed to get current directory: {}", e))?;
-        let repo_path = Path::new(&current_dir);
+        let file_path = Path::new(&path);
 
-        // Create workspace for this write operation
-        let workspace = self
-            .file_ops
-            .create_workspace(&task_id, repo_path)
+        // Create backup if requested and file exists
+        let backup_path = if backup {
+            if self.file_ops.file_exists(file_path).await.unwrap_or(false) {
+                let backup_file = format!("{}.backup", path);
+                let backup_path_obj = Path::new(&backup_file);
+                
+                // Read existing content and write to backup
+                if let Ok(existing_content) = self.file_ops.read_file(file_path, None).await {
+                    self.file_ops
+                        .write_file(backup_path_obj, &existing_content)
+                        .await
+                        .map_err(|e| format!("Failed to create backup: {}", e))?;
+                    Some(backup_file)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Convert content to bytes based on encoding
+        let content_bytes = content.as_bytes();
+
+        // Write file using FileOperationsService
+        self.file_ops
+            .write_file(file_path, content_bytes)
             .await
-            .map_err(|e| format!("Failed to create workspace: {}", e))?;
-
-        // Read existing file content if it exists (for backup and patch generation)
-        let old_content = std::fs::read_to_string(&path).unwrap_or_default();
-
-        // Create changeset with single file write
-        let patch = system_common_interfaces::Patch {
-            path: path.clone(),
-            hunks: vec![system_common_interfaces::Hunk {
-                old_start: 1,
-                old_lines: old_content.lines().count().max(1),
-                new_start: 1,
-                new_lines: content.lines().count().max(1),
-                lines: format!("-{}\n+{}", old_content, content),
-            }],
-        };
-
-        let changeset = system_common_interfaces::Changeset {
-            id: system_common_interfaces::ChangesetId(uuid::Uuid::new_v4().to_string()),
-            description: format!("File write operation: {}", path),
-            patches: vec![patch],
-            metadata: system_common_interfaces::ChangesetMetadata {
-                author: "agent-mcp".to_string(),
-                timestamp: chrono::Utc::now(),
-                risk_tier: 2,
-                tags: vec!["file_write".to_string()],
-            },
-        };
-
-        // Set up allowlist and budgets
-        let allowlist = AllowList {
-            allowed_patterns: vec!["*".to_string()],
-            blocked_patterns: vec![
-                ".git/".to_string(),
-                "target/".to_string(),
-                "*.log".to_string(),
-            ],
-            max_file_size: Some(content.len() as u64 + 1024), // Allow some overhead
-            max_changeset_size: Some(content.len() as u64 + 2048),
-        };
-
-        let budgets = Budgets {
-            max_files: Some(1),
-            max_lines: Some(content.lines().count()),
-            max_time_seconds: Some(30),
-        };
-
-        // Validate changeset
-        if let Err(e) = self
-            .file_ops
-            .validate_changeset(&changeset, &allowlist, &budgets)
-            .await
-        {
-            return Err(format!("Changeset validation failed: {}", e));
-        }
-
-        // Apply changeset
-        let changeset_id = workspace
-            .apply(&changeset, &allowlist, &budgets)
-            .await
-            .map_err(|e| format!("Failed to apply changeset: {}", e))?;
+            .map_err(|e| format!("Failed to write file: {}", e))?;
 
         // Get file size after write
-        let file_size = std::fs::metadata(&path)
-            .map(|m| m.len())
+        let file_size = self
+            .file_ops
+            .get_file_metadata(file_path)
+            .await
+            .map(|m| m.size)
             .unwrap_or(content.len() as u64);
 
         Ok(serde_json::json!({
             "success": true,
             "path": path,
             "size": file_size,
-            "backup_path": if backup && !old_content.is_empty() {
-                Some(format!("{}.backup", path))
-            } else {
-                None
-            },
-            "changeset_id": changeset_id.0,
+            "backup_path": backup_path,
         }))
     }
 

@@ -83,6 +83,7 @@ tower-http.workspace = true
 [features]
 default = []
 test-utils = []
+coreml = []  # Enable CoreML/Swift bridge linking (requires Swift 6 runtime)
 
 [dev-dependencies]
 tokio-test = "0.4"

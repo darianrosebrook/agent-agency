@@ -282,6 +282,26 @@ impl FileOperationsService for DataInfrastructureFileOperationsService {
         fs::read(&full_path).await.map_err(|e| FileOpsError::Io(e))
     }
 
+    async fn write_file(&self, file_path: &Path, content: &[u8]) -> FileResult<()> {
+        let full_path = if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            self.default_repo_path.join(file_path)
+        };
+
+        // Create parent directories if they don't exist
+        if let Some(parent) = full_path.parent() {
+            fs::create_dir_all(parent)
+                .await
+                .map_err(|e| FileOpsError::Io(e))?;
+        }
+
+        // Write file content
+        fs::write(&full_path, content)
+            .await
+            .map_err(|e| FileOpsError::Io(e))
+    }
+
     async fn file_exists(&self, file_path: &Path) -> FileResult<bool> {
         let full_path = if file_path.is_absolute() {
             file_path.to_path_buf()

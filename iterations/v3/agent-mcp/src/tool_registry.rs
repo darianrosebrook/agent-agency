@@ -114,6 +114,16 @@ impl FileOperationsService for PlaceholderFileOperationsService {
         ))
     }
 
+    async fn write_file(
+        &self,
+        _file_path: &std::path::Path,
+        _content: &[u8],
+    ) -> FileResult<()> {
+        Err(FileOpsError::Validation(
+            "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()
+        ))
+    }
+
     async fn file_exists(&self, _file_path: &std::path::Path) -> FileResult<bool> {
         Err(FileOpsError::Validation(
             "FileOperationsService not configured: Inject a real implementation via ToolRegistry::with_file_ops()".to_string()

@@ -208,3 +208,27 @@ waivers:
         modified. Banned modifier warnings are false positives (Rust "new"
         constructor pattern). God object violations are pre-existing.
     title: Documentation - TODO Checklist Enhancement
+  WV-API-SERVER-HARDENING:
+    approved_by: darianrosebrook
+    created_at: '2025-11-26T03:20:00.000Z'
+    description: >-
+      API server hardening with SQL injection protection, database consistency
+      fixes, and dashboard integration. The api-server.rs file is a pre-existing
+      large file that consolidates all API endpoints. Current changes add
+      critical security and data consistency fixes.
+    expires_at: '2025-12-31'
+    gates:
+      - god_objects
+    id: WV-API-SERVER-HARDENING
+    metadata:
+      change_type: security-hardening
+      files_changed: 30
+    reason: security-hardening
+    risk_assessment:
+      impact_level: medium
+      mitigation_plan: >
+        The api-server.rs file size is a pre-existing architectural decision.
+        Current changes add critical security fixes (SQL injection protection)
+        and data consistency improvements. Future refactoring to split endpoints
+        into separate modules is planned but should not block security fixes.
+    title: API Server Security Hardening and Dashboard Integration

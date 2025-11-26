@@ -18,6 +18,14 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    proxy: {
+      // Proxy API requests to the Rust backend
+      '/api/proxy': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
+      },
+    },
   },
   // Ensure errors are logged to console and terminal
   logLevel: "info",
