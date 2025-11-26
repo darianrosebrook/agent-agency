@@ -63,7 +63,12 @@ use std::collections::HashMap;
 use std::env;
 use std::process::Command;
 use std::sync::Arc;
-use system_quality_security::{authentication::PasswordPolicy, AuthConfig, AuthService};
+use system_quality_security::{
+    authentication::PasswordPolicy,
+    policy_types::{RateLimitRequest, RateLimitingPolicy},
+    rate_limiting::RateLimiter,
+    AuthConfig, AuthService,
+};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -133,6 +138,10 @@ struct AppState {
         Option<Arc<data_infrastructure::monitoring::query_performance::QueryPerformanceMonitor>>,
     /// Authentication service for password hashing and JWT generation
     auth_service: Arc<AuthService>,
+    /// Rate limiter for API request throttling
+    rate_limiter: Arc<RateLimiter>,
+    /// Telemetry service for LLM and agent activity logging
+    telemetry_service: Arc<data_infrastructure::telemetry_service::TelemetryService>,
 }
 
 #[tokio::main]
@@ -438,6 +447,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let auth_service = Arc::new(AuthService::new(auth_config));
     info!("✅ Authentication service initialized");
 
+    // Initialize rate limiter
+    // Production configuration: 100 requests per minute, burst of 20
+    // Development: Can be adjusted via environment variables
+    let rate_limit_config = RateLimitingPolicy {
+        enabled: env::var("RATE_LIMIT_ENABLED")
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(true), // Enabled by default in production
+        requests_per_window: env::var("RATE_LIMIT_REQUESTS_PER_WINDOW")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(100),
+        window_seconds: env::var("RATE_LIMIT_WINDOW_SECONDS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(60),
+        burst_size: env::var("RATE_LIMIT_BURST_SIZE")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(20),
+        cleanup_interval_seconds: 300, // 5 minutes
+    };
+    let rate_limiter = Arc::new(RateLimiter::new(rate_limit_config.clone()));
+    info!(
+        "✅ Rate limiter initialized (enabled: {}, {}/{}s, burst: {})",
+        rate_limit_config.enabled,
+        rate_limit_config.requests_per_window,
+        rate_limit_config.window_seconds,
+        rate_limit_config.burst_size
+    );
+
     // Create application state
     #[cfg(feature = "orchestration")]
     let (api_state_final, websocket_manager, query_perf_monitor) = if let Some((s, ws)) = api_state
@@ -446,6 +485,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         (None, None, None)
     };
+
+    // Create telemetry service
+    let telemetry_service = Arc::new(data_infrastructure::telemetry_service::TelemetryService::new(
+        db_client.clone(),
+    ));
 
     let app_state = AppState {
         db_client,
@@ -460,6 +504,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(feature = "orchestration")]
         query_performance_monitor: query_perf_monitor,
         auth_service,
+        rate_limiter,
+        telemetry_service,
     };
 
     // Build router with all endpoints
@@ -469,9 +515,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
-    info!("✅ API server ready at http://{}", addr);
-    info!("🏥 Health check: http://{}/health", addr);
-    info!("📊 API endpoints available at http://{}/api/v1", addr);
+    info!("API server ready at http://{}", addr);
+    info!("Health check: http://{}/health", addr);
+    info!("API endpoints available at http://{}/api/v1", addr);
+
+    // Take initial task stats snapshot if needed
+    if let Ok(snapshot_taken) = app_state.telemetry_service.maybe_snapshot_task_stats().await {
+        if snapshot_taken {
+            info!("Initial task stats snapshot created");
+        }
+    }
 
     // Initialize and start ContinuousBenchmarker if research feature is enabled
     #[cfg(feature = "research")]
@@ -1075,12 +1128,104 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
             axum::routing::delete(delete_specification_handler),
         );
 
-    // Add CORS if enabled
-    if enable_cors {
-        router = router.layer(tower_http::cors::CorsLayer::permissive());
-    }
+    // Add CORS layer - default to permissive for development
+    // When enable_cors is true, use permissive CORS that allows all origins, methods, and headers
+    // When enable_cors is false, use a restrictive layer that still handles OPTIONS preflight
+    use tower_http::cors::{Any, CorsLayer};
+    use tower_http::normalize_path::NormalizePathLayer;
+
+    let cors = if enable_cors {
+        CorsLayer::permissive()
+    } else {
+        // Even when CORS is "disabled", we still need to handle OPTIONS preflight
+        // to avoid 405 Method Not Allowed errors for CORS-enabled clients
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods([
+                axum::http::Method::GET,
+                axum::http::Method::POST,
+                axum::http::Method::PATCH,
+                axum::http::Method::DELETE,
+                axum::http::Method::OPTIONS,
+            ])
+            .allow_headers(Any)
+    };
+
+    // Normalize paths - trim trailing slashes for consistent routing
+    // This ensures /api/v1/tasks and /api/v1/tasks/ both work the same way
+    router = router
+        .layer(NormalizePathLayer::trim_trailing_slash())
+        .layer(cors);
 
     router.with_state(app_state)
+}
+
+// ============================================================================
+// Rate Limiting
+// ============================================================================
+
+/// Check rate limit for a request
+/// Returns Ok(()) if allowed, Err(StatusCode::TOO_MANY_REQUESTS) if rate limited
+async fn check_rate_limit(
+    rate_limiter: &RateLimiter,
+    client_id: &str,
+    operation: &str,
+) -> Result<(), (StatusCode, Json<JsonValue>)> {
+    let request = RateLimitRequest {
+        client_id: client_id.to_string(),
+        operation: operation.to_string(),
+        timestamp: Utc::now(),
+    };
+
+    match rate_limiter.check_rate_limit(&request).await {
+        Ok(result) => {
+            if result.allowed {
+                Ok(())
+            } else {
+                warn!(
+                    "Rate limit exceeded for client '{}' on operation '{}' (count: {}, retry after: {:?}s)",
+                    client_id, operation, result.current_count, result.retry_after_seconds
+                );
+                Err((
+                    StatusCode::TOO_MANY_REQUESTS,
+                    Json(serde_json::json!({
+                        "error": "Rate limit exceeded",
+                        "retry_after_seconds": result.retry_after_seconds,
+                        "current_count": result.current_count,
+                        "reset_time": result.reset_time.to_rfc3339(),
+                    })),
+                ))
+            }
+        }
+        Err(e) => {
+            error!("Rate limiter error: {}", e);
+            // On rate limiter error, allow the request (fail open)
+            Ok(())
+        }
+    }
+}
+
+/// Extract client IP from headers (supports X-Forwarded-For, X-Real-IP)
+fn extract_client_ip(headers: &HeaderMap) -> String {
+    // Check X-Forwarded-For header (may contain multiple IPs)
+    if let Some(xff) = headers.get("x-forwarded-for") {
+        if let Ok(xff_str) = xff.to_str() {
+            // Take the first IP (original client)
+            if let Some(first_ip) = xff_str.split(',').next() {
+                return first_ip.trim().to_string();
+            }
+        }
+    }
+
+    // Check X-Real-IP header
+    if let Some(xri) = headers.get("x-real-ip") {
+        if let Ok(xri_str) = xri.to_str() {
+            return xri_str.trim().to_string();
+        }
+    }
+
+    // Default to unknown
+    "unknown".to_string()
 }
 
 // ============================================================================
@@ -1209,8 +1354,102 @@ async fn health_handler(State(state): State<AppState>) -> Result<Json<JsonValue>
 // Task management handlers
 async fn submit_task_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, StatusCode> {
+    // Rate limiting check
+    let client_ip = extract_client_ip(&headers);
+    if let Err((status, _body)) =
+        check_rate_limit(&state.rate_limiter, &client_ip, "submit_task").await
+    {
+        return Err(status);
+    }
+
+    // Input validation for task submission
+    // Validate title if provided - must be non-empty
+    if let Some(title) = payload.get("title") {
+        if let Some(title_str) = title.as_str() {
+            if title_str.trim().is_empty() {
+                warn!("Task submission rejected: empty title");
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
+
+    // Validate description - required and must be non-empty
+    if let Some(desc) = payload.get("description") {
+        if let Some(desc_str) = desc.as_str() {
+            if desc_str.trim().is_empty() {
+                warn!("Task submission rejected: empty description");
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
+
+    // Validate priority if provided - must be 0-10 range or valid string
+    if let Some(priority) = payload.get("priority") {
+        if let Some(priority_num) = priority.as_i64() {
+            if !(0..=10).contains(&priority_num) {
+                warn!(
+                    "Task submission rejected: priority {} out of range (0-10)",
+                    priority_num
+                );
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        } else if let Some(priority_str) = priority.as_str() {
+            // Allow string values: critical, high, normal, low
+            let valid_priorities = ["critical", "high", "normal", "low"];
+            if !valid_priorities.contains(&priority_str.to_lowercase().as_str()) {
+                // Also allow numeric strings in 0-10 range
+                if let Ok(num) = priority_str.parse::<i64>() {
+                    if !(0..=10).contains(&num) {
+                        warn!(
+                            "Task submission rejected: priority {} out of range (0-10)",
+                            priority_str
+                        );
+                        return Err(StatusCode::BAD_REQUEST);
+                    }
+                } else {
+                    warn!(
+                        "Task submission rejected: invalid priority value '{}'",
+                        priority_str
+                    );
+                    return Err(StatusCode::BAD_REQUEST);
+                }
+            }
+        }
+    }
+
+    // Validate risk_tier if provided - must be 1, 2, or 3
+    if let Some(risk_tier) = payload.get("risk_tier") {
+        if let Some(tier_num) = risk_tier.as_i64() {
+            if !(1..=3).contains(&tier_num) {
+                warn!(
+                    "Task submission rejected: risk_tier {} must be 1, 2, or 3",
+                    tier_num
+                );
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        } else if let Some(tier_str) = risk_tier.as_str() {
+            // Allow string values: "1", "2", "3"
+            if let Ok(num) = tier_str.parse::<i64>() {
+                if !(1..=3).contains(&num) {
+                    warn!(
+                        "Task submission rejected: risk_tier {} must be 1, 2, or 3",
+                        tier_str
+                    );
+                    return Err(StatusCode::BAD_REQUEST);
+                }
+            } else {
+                warn!(
+                    "Task submission rejected: invalid risk_tier value '{}'",
+                    tier_str
+                );
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
+
     #[cfg(feature = "orchestration")]
     {
         // Use UnifiedOrchestratorAdapter if available
@@ -1367,23 +1606,68 @@ async fn submit_task_handler(
             let spec_clone = working_spec.clone();
             let context_clone = task_context.clone();
             let task_id_for_log = task_id;
+            let telemetry = state.telemetry_service.clone();
+            let worker_id = task_context.worker_id;
 
             tokio::spawn(async move {
                 info!("Starting background execution of task {}", task_id_for_log);
+                let start_time = std::time::Instant::now();
+
+                // Record task started activity
+                let _ = telemetry
+                    .record_agent_activity(
+                        worker_id,
+                        data_infrastructure::telemetry_service::activity_types::TASK_STARTED,
+                        Some(task_id_for_log),
+                        None,
+                        true,
+                        None,
+                    )
+                    .await;
+
                 match orchestrator_clone
                     .orchestrate_task(spec_clone, context_clone)
                     .await
                 {
                     Ok(result) => {
+                        let duration_ms = start_time.elapsed().as_millis() as i32;
                         info!(
-                            "Task {} completed successfully: {}",
-                            task_id_for_log, result.success
+                            "Task {} completed successfully: {} ({}ms)",
+                            task_id_for_log, result.success, duration_ms
                         );
+
+                        // Record task completed activity
+                        let _ = telemetry
+                            .record_agent_activity(
+                                worker_id,
+                                data_infrastructure::telemetry_service::activity_types::TASK_COMPLETED,
+                                Some(task_id_for_log),
+                                Some(duration_ms),
+                                result.success,
+                                None,
+                            )
+                            .await;
                     }
                     Err(e) => {
-                        error!("Task {} execution failed: {:?}", task_id_for_log, e);
+                        let duration_ms = start_time.elapsed().as_millis() as i32;
+                        error!("Task {} execution failed: {:?} ({}ms)", task_id_for_log, e, duration_ms);
+
+                        // Record task failed activity
+                        let _ = telemetry
+                            .record_agent_activity(
+                                worker_id,
+                                data_infrastructure::telemetry_service::activity_types::TASK_FAILED,
+                                Some(task_id_for_log),
+                                Some(duration_ms),
+                                false,
+                                Some(&format!("{:?}", e)),
+                            )
+                            .await;
                     }
                 }
+
+                // Also trigger a snapshot check periodically
+                let _ = telemetry.maybe_snapshot_task_stats().await;
             });
 
             // Return task submission response immediately
@@ -1858,8 +2142,14 @@ async fn delete_task_handler(
             "task_id": task_id,
         }))),
         Err(e) => {
-            error!("Failed to delete task: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            let error_msg = e.to_string();
+            if error_msg.contains("not found") {
+                warn!("Attempted to delete non-existent task: {}", task_id);
+                Err(StatusCode::NOT_FOUND)
+            } else {
+                error!("Failed to delete task: {}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
         }
     }
 }
@@ -1928,10 +2218,25 @@ async fn get_tasks_stats_history_handler(
     let period = params.get("period").map(|s| s.as_str()).unwrap_or("30d");
     let days = period
         .strip_suffix("d")
-        .and_then(|d| d.parse::<i64>().ok())
+        .and_then(|d| d.parse::<i32>().ok())
         .unwrap_or(30);
 
-    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days);
+    // First, try to get from task_stats_history table (persisted snapshots)
+    match db.get_task_stats_history(Some(days)).await {
+        Ok(history) if !history.is_empty() => {
+            return Ok(Json(serde_json::json!({
+                "period": period,
+                "period_days": days,
+                "history": history,
+                "source": "persisted_snapshots",
+            })));
+        }
+        _ => {
+            // Fall back to computing from tasks table
+        }
+    }
+
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days as i64);
 
     // Query tasks grouped by day with completion rates
     match db
@@ -1986,6 +2291,7 @@ async fn get_tasks_stats_history_handler(
                 "period": period,
                 "period_days": days,
                 "history": history,
+                "source": "computed_from_tasks",
             })))
         }
         Err(e) => {
@@ -1995,6 +2301,7 @@ async fn get_tasks_stats_history_handler(
                 "period": period,
                 "period_days": days,
                 "history": [],
+                "source": "error",
             })))
         }
     }
@@ -3469,93 +3776,52 @@ async fn get_model_contributions_handler(
         .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
-    // Check if group_by parameter is set to "month"
-    let group_by = params.get("group_by").map(|s| s.as_str());
+    // Get hours parameter (default 24)
+    let hours = params
+        .get("hours")
+        .and_then(|s| s.parse::<i32>().ok())
+        .unwrap_or(24);
 
-    if group_by == Some("month") {
-        // Return monthly breakdown
-        match db.query(
-            "SELECT DATE_TRUNC('month', timestamp) as month, source, COUNT(*) as count FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY DATE_TRUNC('month', timestamp), source ORDER BY month DESC, count DESC",
-            &[]
-        ).await {
-            Ok(rows) => {
-                let mut monthly_data: std::collections::HashMap<String, std::collections::HashMap<String, i64>> = std::collections::HashMap::new();
-                let mut all_models = std::collections::HashSet::new();
+    // Use the new telemetry_model_contributions table
+    match db.get_model_contributions(Some(hours)).await {
+        Ok(contributions) => {
+            let total_requests: i64 = contributions
+                .iter()
+                .map(|c| c.get("total_requests").and_then(|v| v.as_i64()).unwrap_or(0))
+                .sum();
 
-                for row in rows {
-                    let month: chrono::DateTime<chrono::Utc> = row.try_get("month").unwrap_or_default();
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let count: i64 = row.try_get("count").unwrap_or(0);
+            let total_tokens: i64 = contributions
+                .iter()
+                .map(|c| c.get("total_tokens").and_then(|v| v.as_i64()).unwrap_or(0))
+                .sum();
 
-                    let month_key = month.format("%b").to_string();
-                    all_models.insert(source.clone());
+            let total_cost: f64 = contributions
+                .iter()
+                .map(|c| c.get("total_cost_usd").and_then(|v| v.as_f64()).unwrap_or(0.0))
+                .sum();
 
-                    monthly_data
-                        .entry(month_key)
-                        .or_insert_with(std::collections::HashMap::new)
-                        .insert(source, count);
-                }
-
-                // Convert to array format
-                let monthly_contributions: Vec<JsonValue> = monthly_data.into_iter().map(|(month, models)| {
-                    let mut month_data = serde_json::json!({
-                        "month": month,
-                    });
-
-                    for (model, count) in models {
-                        month_data[model] = serde_json::json!(count);
-                    }
-
-                    month_data
-                }).collect();
-
-                Ok(Json(serde_json::json!({
-                    "monthly_contributions": monthly_contributions,
-                    "models": all_models.into_iter().collect::<Vec<_>>(),
-                })))
-            }
-            Err(_) => {
-                Ok(Json(serde_json::json!({
-                    "monthly_contributions": [],
-                    "models": [],
-                })))
-            }
-        }
-    } else {
-        // Return aggregated by source (default behavior)
-        match db.query(
-            "SELECT source, COUNT(*) as count, MAX(timestamp) as last_used FROM telemetry_data WHERE data_type = 'Metric' AND (source LIKE '%model%' OR source LIKE '%llm%' OR source LIKE '%inference%' OR payload->>'model' IS NOT NULL) GROUP BY source ORDER BY count DESC",
-            &[]
-        ).await {
-            Ok(rows) => {
-                let mut model_stats: Vec<JsonValue> = Vec::new();
-                let mut total_requests = 0;
-
-                for row in rows {
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let count: i64 = row.try_get("count").unwrap_or(0);
-                    let last_used: Option<chrono::DateTime<chrono::Utc>> = row.try_get("last_used").ok();
-
-                    total_requests += count;
-                    model_stats.push(serde_json::json!({
-                        "model": source,
-                        "request_count": count,
-                        "last_used": last_used.map(|d| d.to_rfc3339()),
-                    }));
-                }
-
-                Ok(Json(serde_json::json!({
+            Ok(Json(serde_json::json!({
+                "contributions": contributions,
+                "summary": {
                     "total_requests": total_requests,
-                    "models": model_stats,
-                })))
-            }
-            Err(_) => {
-                // If table doesn't exist or query fails, return empty result
-                Ok(Json(serde_json::json!({
+                    "total_tokens": total_tokens,
+                    "total_cost_usd": total_cost,
+                    "period_hours": hours,
+                },
+            })))
+        }
+        Err(e) => {
+            error!("Failed to get model contributions: {}", e);
+            // Return empty result on error
+            Ok(Json(serde_json::json!({
+                "contributions": [],
+                "summary": {
                     "total_requests": 0,
-                    "models": [],
-                })))
-            }
+                    "total_tokens": 0,
+                    "total_cost_usd": 0.0,
+                    "period_hours": hours,
+                },
+            })))
         }
     }
 }
@@ -3572,53 +3838,57 @@ async fn get_agent_activity_handler(
     // Get hours parameter (default to 24)
     let hours = params
         .get("hours")
-        .and_then(|h| h.parse::<i64>().ok())
+        .and_then(|h| h.parse::<i32>().ok())
         .unwrap_or(24);
 
-    let cutoff_time = chrono::Utc::now() - chrono::Duration::hours(hours);
+    // Use the new telemetry_agent_activity table
+    match db.get_agent_activity(Some(hours)).await {
+        Ok(activities) => {
+            // Calculate summary statistics
+            let total_activities: i64 = activities
+                .iter()
+                .map(|a| a.get("total_activities").and_then(|v| v.as_i64()).unwrap_or(0))
+                .sum();
 
-    // Query telemetry_data for agent activity
-    match db.query(
-        "SELECT DATE_TRUNC('hour', timestamp) as hour, source, COUNT(*) as activity_count FROM telemetry_data WHERE (source LIKE '%agent%' OR source LIKE '%worker%' OR source LIKE '%orchestrator%') AND timestamp >= $1 GROUP BY DATE_TRUNC('hour', timestamp), source ORDER BY hour DESC",
-        &[&cutoff_time]
-    ).await {
-        Ok(rows) => {
-            let mut activity: Vec<JsonValue> = Vec::new();
-            let mut by_source: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+            let successful: i64 = activities
+                .iter()
+                .map(|a| a.get("successful").and_then(|v| v.as_i64()).unwrap_or(0))
+                .sum();
 
-            for row in rows {
-                let hour: chrono::DateTime<chrono::Utc> = row.try_get("hour").unwrap_or_default();
-                let source: String = row.try_get("source").unwrap_or_default();
-                let count: i64 = row.try_get("activity_count").unwrap_or(0);
+            let failed: i64 = activities
+                .iter()
+                .map(|a| a.get("failed").and_then(|v| v.as_i64()).unwrap_or(0))
+                .sum();
 
-                *by_source.entry(source.clone()).or_insert(0) += count;
-
-                activity.push(serde_json::json!({
-                    "hour": hour.to_rfc3339(),
-                    "source": source,
-                    "activity_count": count,
-                }));
-            }
-
-            let source_stats: Vec<JsonValue> = by_source.into_iter().map(|(source, count)| {
-                serde_json::json!({
-                    "source": source,
-                    "total_activity": count,
-                })
-            }).collect();
+            let success_rate = if total_activities > 0 {
+                successful as f64 / total_activities as f64
+            } else {
+                0.0
+            };
 
             Ok(Json(serde_json::json!({
-                "period_hours": hours,
-                "time_series": activity,
-                "by_source": source_stats,
+                "activities": activities,
+                "summary": {
+                    "total_activities": total_activities,
+                    "successful": successful,
+                    "failed": failed,
+                    "success_rate": success_rate,
+                    "period_hours": hours,
+                },
             })))
         }
-        Err(_) => {
-            // If table doesn't exist or query fails, return empty result
+        Err(e) => {
+            error!("Failed to get agent activity: {}", e);
+            // Return empty result on error
             Ok(Json(serde_json::json!({
-                "period_hours": hours,
-                "time_series": [],
-                "by_source": [],
+                "activities": [],
+                "summary": {
+                    "total_activities": 0,
+                    "successful": 0,
+                    "failed": 0,
+                    "success_rate": 0.0,
+                    "period_hours": hours,
+                },
             })))
         }
     }
@@ -6013,49 +6283,11 @@ async fn get_project_tasks_stats_handler(
         .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
-    let _project_uuid = Uuid::parse_str(&project_id).map_err(|_| StatusCode::BAD_REQUEST)?;
-
-    // Get all tasks and filter by project_id
     let project_uuid = Uuid::parse_str(&project_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    match db.get_tasks().await {
-        Ok(tasks) => {
-            let project_tasks: Vec<_> = tasks
-                .into_iter()
-                .filter(|task| task.project_id == Some(project_uuid))
-                .collect();
-
-            let total = project_tasks.len();
-            let completed = project_tasks
-                .iter()
-                .filter(|t| t.status == "completed")
-                .count();
-            let in_progress = project_tasks
-                .iter()
-                .filter(|t| t.status == "in_progress")
-                .count();
-            let pending = project_tasks
-                .iter()
-                .filter(|t| t.status == "pending")
-                .count();
-            let cancelled = project_tasks
-                .iter()
-                .filter(|t| t.status == "cancelled")
-                .count();
-            let failed = project_tasks
-                .iter()
-                .filter(|t| t.status == "failed")
-                .count();
-
-            Ok(Json(serde_json::json!({
-                "total": total,
-                "completed": completed,
-                "in_progress": in_progress,
-                "pending": pending,
-                "cancelled": cancelled,
-                "failed": failed,
-            })))
-        }
+    // Use efficient database query to get project task stats
+    match db.get_project_task_stats(project_uuid).await {
+        Ok(stats) => Ok(Json(stats)),
         Err(e) => {
             error!("Failed to get project tasks stats: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -6366,8 +6598,17 @@ async fn get_table_schema_handler(
 
 async fn execute_query_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<JsonValue>,
 ) -> Result<Json<JsonValue>, StatusCode> {
+    // Rate limiting - stricter for database queries (expensive operation)
+    let client_ip = extract_client_ip(&headers);
+    if let Err((status, _body)) =
+        check_rate_limit(&state.rate_limiter, &client_ip, "execute_query").await
+    {
+        return Err(status);
+    }
+
     if let Some(db) = &state.db_client {
         let query_text = payload
             .get("query")

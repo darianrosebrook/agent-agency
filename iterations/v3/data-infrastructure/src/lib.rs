@@ -51,6 +51,7 @@ pub mod sandbox_api;
 pub mod service_failover;
 pub mod simple_client; // simple_client.rs is automatically included as a module
 pub mod system_observability;
+pub mod telemetry_service;
 
 // Data infrastructure modules (from consolidated caching, embedding-service, file_ops crates)
 pub mod caching;

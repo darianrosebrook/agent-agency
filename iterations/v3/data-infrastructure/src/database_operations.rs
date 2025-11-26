@@ -34,6 +34,8 @@ pub trait DatabaseOperations {
     async fn create_task(&self, task: CreateTask) -> Result<Task>;
     async fn get_task(&self, id: Uuid) -> Result<Option<Task>>;
     async fn get_tasks(&self) -> Result<Vec<Task>>;
+    async fn get_tasks_by_project(&self, project_id: Uuid) -> Result<Vec<Task>>;
+    async fn get_project_task_stats(&self, project_id: Uuid) -> Result<serde_json::Value>;
     async fn update_task(&self, id: Uuid, update: UpdateTask) -> Result<Task>;
     async fn delete_task(&self, id: Uuid) -> Result<()>;
 

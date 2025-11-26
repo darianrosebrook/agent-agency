@@ -428,6 +428,307 @@ impl DatabaseClient {
             .collect())
     }
 
+    /// Get tasks filtered by project_id
+    pub async fn get_tasks_by_project(&self, project_id: Uuid) -> Result<Vec<crate::models::Task>> {
+        let tasks = self.inner.get_tasks_by_project(project_id).await?;
+        Ok(tasks
+            .into_iter()
+            .map(|t| crate::models::Task {
+                id: t.id,
+                title: t.title,
+                description: t.description,
+                risk_tier: t.risk_tier,
+                scope: t.scope,
+                acceptance_criteria: t.acceptance_criteria,
+                context: t.context,
+                caws_spec: t.caws_spec,
+                status: t.status,
+                assigned_worker_id: t.assigned_worker_id,
+                project_id: t.project_id,
+                priority: t.priority,
+                deadline: t.deadline,
+                metadata: t.metadata,
+                created_at: t.created_at,
+                updated_at: t.updated_at,
+                completed_at: t.completed_at,
+            })
+            .collect())
+    }
+
+    /// Get task statistics for a specific project
+    pub async fn get_project_task_stats(&self, project_id: Uuid) -> Result<serde_json::Value> {
+        self.inner.get_project_task_stats(project_id).await
+    }
+
+    // =========================================================================
+    // TELEMETRY OPERATIONS
+    // =========================================================================
+
+    /// Get model contributions (LLM usage statistics)
+    pub async fn get_model_contributions(
+        &self,
+        hours: Option<i32>,
+    ) -> Result<Vec<serde_json::Value>> {
+        let hours = hours.unwrap_or(24);
+        let rows = self
+            .query(
+                r#"
+            SELECT 
+                model_name,
+                SUM(request_count) as total_requests,
+                SUM(total_tokens) as total_tokens,
+                SUM(prompt_tokens) as prompt_tokens,
+                SUM(completion_tokens) as completion_tokens,
+                SUM(success_count) as successful_requests,
+                SUM(failure_count) as failed_requests,
+                CASE 
+                    WHEN SUM(request_count) > 0 
+                    THEN SUM(success_count)::DOUBLE PRECISION / SUM(request_count)
+                    ELSE 0.0 
+                END as success_rate,
+                AVG(avg_response_time_ms) as avg_response_time_ms,
+                SUM(total_cost_usd) as total_cost_usd
+            FROM telemetry_model_contributions
+            WHERE recorded_at >= NOW() - ($1 || ' hours')::INTERVAL
+            GROUP BY model_name
+            ORDER BY total_requests DESC
+            "#,
+                &[&hours.to_string()],
+            )
+            .await;
+
+        match rows {
+            Ok(rows) => {
+                let mut contributions = Vec::new();
+                for row in rows {
+                    contributions.push(serde_json::json!({
+                        "model_name": row.try_get::<String, _>("model_name").unwrap_or_default(),
+                        "total_requests": row.try_get::<i64, _>("total_requests").unwrap_or(0),
+                        "total_tokens": row.try_get::<i64, _>("total_tokens").unwrap_or(0),
+                        "prompt_tokens": row.try_get::<i64, _>("prompt_tokens").unwrap_or(0),
+                        "completion_tokens": row.try_get::<i64, _>("completion_tokens").unwrap_or(0),
+                        "successful_requests": row.try_get::<i64, _>("successful_requests").unwrap_or(0),
+                        "failed_requests": row.try_get::<i64, _>("failed_requests").unwrap_or(0),
+                        "success_rate": row.try_get::<f64, _>("success_rate").unwrap_or(0.0),
+                        "avg_response_time_ms": row.try_get::<f64, _>("avg_response_time_ms").unwrap_or(0.0),
+                        "total_cost_usd": row.try_get::<f64, _>("total_cost_usd").unwrap_or(0.0),
+                    }));
+                }
+                Ok(contributions)
+            }
+            Err(_) => {
+                // Table might not exist yet, return empty array
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Get agent activity data
+    pub async fn get_agent_activity(&self, hours: Option<i32>) -> Result<Vec<serde_json::Value>> {
+        let hours = hours.unwrap_or(24);
+        let rows = self
+            .query(
+                r#"
+            SELECT 
+                a.agent_id,
+                w.name as agent_name,
+                a.activity_type,
+                SUM(a.activity_count) as total_activities,
+                COUNT(*) FILTER (WHERE a.success = TRUE) as successful,
+                COUNT(*) FILTER (WHERE a.success = FALSE) as failed,
+                AVG(a.duration_ms) as avg_duration_ms,
+                MAX(a.recorded_at) as last_activity
+            FROM telemetry_agent_activity a
+            LEFT JOIN workers w ON a.agent_id = w.id
+            WHERE a.recorded_at >= NOW() - ($1 || ' hours')::INTERVAL
+            GROUP BY a.agent_id, w.name, a.activity_type
+            ORDER BY total_activities DESC
+            "#,
+                &[&hours.to_string()],
+            )
+            .await;
+
+        match rows {
+            Ok(rows) => {
+                let mut activities = Vec::new();
+                for row in rows {
+                    activities.push(serde_json::json!({
+                        "agent_id": row.try_get::<Uuid, _>("agent_id").ok(),
+                        "agent_name": row.try_get::<String, _>("agent_name").ok(),
+                        "activity_type": row.try_get::<String, _>("activity_type").unwrap_or_default(),
+                        "total_activities": row.try_get::<i64, _>("total_activities").unwrap_or(0),
+                        "successful": row.try_get::<i64, _>("successful").unwrap_or(0),
+                        "failed": row.try_get::<i64, _>("failed").unwrap_or(0),
+                        "avg_duration_ms": row.try_get::<f64, _>("avg_duration_ms").ok(),
+                        "last_activity": row.try_get::<chrono::DateTime<chrono::Utc>, _>("last_activity").ok(),
+                    }));
+                }
+                Ok(activities)
+            }
+            Err(_) => {
+                // Table might not exist yet, return empty array
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Get task stats history
+    pub async fn get_task_stats_history(&self, days: Option<i32>) -> Result<Vec<serde_json::Value>> {
+        let days = days.unwrap_or(30);
+        let rows = self
+            .query(
+                r#"
+            SELECT 
+                snapshot_date,
+                total,
+                completed,
+                in_progress,
+                pending,
+                failed,
+                cancelled,
+                paused,
+                completion_rate,
+                success_rate,
+                avg_completion_time_ms
+            FROM task_stats_history
+            WHERE snapshot_date >= CURRENT_DATE - ($1 || ' days')::INTERVAL
+            ORDER BY snapshot_date DESC
+            "#,
+                &[&days.to_string()],
+            )
+            .await;
+
+        match rows {
+            Ok(rows) => {
+                let mut history = Vec::new();
+                for row in rows {
+                    history.push(serde_json::json!({
+                        "snapshot_date": row.try_get::<chrono::NaiveDate, _>("snapshot_date").ok(),
+                        "total": row.try_get::<i32, _>("total").unwrap_or(0),
+                        "completed": row.try_get::<i32, _>("completed").unwrap_or(0),
+                        "in_progress": row.try_get::<i32, _>("in_progress").unwrap_or(0),
+                        "pending": row.try_get::<i32, _>("pending").unwrap_or(0),
+                        "failed": row.try_get::<i32, _>("failed").unwrap_or(0),
+                        "cancelled": row.try_get::<i32, _>("cancelled").unwrap_or(0),
+                        "paused": row.try_get::<i32, _>("paused").unwrap_or(0),
+                        "completion_rate": row.try_get::<f64, _>("completion_rate").unwrap_or(0.0),
+                        "success_rate": row.try_get::<f64, _>("success_rate").unwrap_or(0.0),
+                        "avg_completion_time_ms": row.try_get::<f64, _>("avg_completion_time_ms").ok(),
+                    }));
+                }
+                Ok(history)
+            }
+            Err(_) => {
+                // Table might not exist yet, return empty array
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Record an LLM request for telemetry
+    pub async fn record_llm_request(
+        &self,
+        model_name: &str,
+        provider: &str,
+        task_id: Option<Uuid>,
+        agent_id: Option<Uuid>,
+        prompt_tokens: i32,
+        completion_tokens: i32,
+        response_time_ms: Option<i32>,
+        success: bool,
+        error_message: Option<&str>,
+        cost_usd: Option<f64>,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<Uuid> {
+        let request_id = Uuid::new_v4();
+        let total_tokens = prompt_tokens + completion_tokens;
+
+        self.execute(
+            r#"
+            INSERT INTO telemetry_llm_requests (
+                request_id, model_name, provider, task_id, agent_id,
+                prompt_tokens, completion_tokens, total_tokens,
+                response_time_ms, success, error_message, cost_usd, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            "#,
+            &[
+                &request_id,
+                &model_name.to_string(),
+                &provider.to_string(),
+                &task_id,
+                &agent_id,
+                &prompt_tokens,
+                &completion_tokens,
+                &total_tokens,
+                &response_time_ms,
+                &success,
+                &error_message.map(|s| s.to_string()),
+                &cost_usd.unwrap_or(0.0),
+                &metadata.unwrap_or(serde_json::json!({})),
+            ],
+        )
+        .await?;
+
+        Ok(request_id)
+    }
+
+    /// Record agent activity for telemetry
+    pub async fn record_agent_activity(
+        &self,
+        agent_id: Uuid,
+        activity_type: &str,
+        task_id: Option<Uuid>,
+        duration_ms: Option<i32>,
+        success: bool,
+        error_message: Option<&str>,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<Uuid> {
+        let id = Uuid::new_v4();
+
+        self.execute(
+            r#"
+            INSERT INTO telemetry_agent_activity (
+                id, agent_id, activity_type, task_id, duration_ms,
+                success, error_message, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#,
+            &[
+                &id,
+                &agent_id,
+                &activity_type.to_string(),
+                &task_id,
+                &duration_ms,
+                &success,
+                &error_message.map(|s| s.to_string()),
+                &metadata.unwrap_or(serde_json::json!({})),
+            ],
+        )
+        .await?;
+
+        Ok(id)
+    }
+
+    /// Trigger a task stats snapshot
+    pub async fn snapshot_task_stats(&self) -> Result<()> {
+        self.execute("SELECT snapshot_task_stats()", &[]).await?;
+        Ok(())
+    }
+
+    /// Check if a snapshot has been taken today
+    pub async fn has_snapshot_today(&self) -> Result<bool> {
+        let row = self
+            .query_one(
+                "SELECT EXISTS(SELECT 1 FROM task_stats_history WHERE snapshot_date = CURRENT_DATE) as exists",
+                &[],
+            )
+            .await?;
+
+        match row {
+            Some(r) => Ok(r.try_get::<bool, _>("exists").unwrap_or(false)),
+            None => Ok(false),
+        }
+    }
+
     /// Revoke a waiver
     pub async fn revoke_waiver(
         &self,

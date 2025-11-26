@@ -667,6 +667,52 @@ impl DatabaseOperations for DatabaseClient {
         Ok(rows)
     }
 
+    async fn get_tasks_by_project(&self, project_id: Uuid) -> Result<Vec<Task>> {
+        let rows = sqlx::query_as::<_, Task>(
+            r#"
+            SELECT id, title, description, risk_tier, scope, acceptance_criteria,
+                   context, caws_spec, status, assigned_worker_id, project_id, priority,
+                   deadline, metadata, created_at, updated_at, completed_at
+            FROM tasks
+            WHERE project_id = $1
+            ORDER BY created_at DESC
+            "#,
+        )
+        .bind(project_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    async fn get_project_task_stats(&self, project_id: Uuid) -> Result<serde_json::Value> {
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE status = 'completed') as completed,
+                COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress,
+                COUNT(*) FILTER (WHERE status = 'pending') as pending,
+                COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
+                COUNT(*) FILTER (WHERE status = 'failed') as failed
+            FROM tasks
+            WHERE project_id = $1
+            "#,
+        )
+        .bind(project_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(serde_json::json!({
+            "total": row.get::<i64, _>("total"),
+            "completed": row.get::<i64, _>("completed"),
+            "in_progress": row.get::<i64, _>("in_progress"),
+            "pending": row.get::<i64, _>("pending"),
+            "cancelled": row.get::<i64, _>("cancelled"),
+            "failed": row.get::<i64, _>("failed"),
+        }))
+    }
+
     async fn update_task(&self, id: Uuid, update: UpdateTask) -> Result<Task> {
         let now = Utc::now();
 
@@ -727,10 +773,14 @@ impl DatabaseOperations for DatabaseClient {
     }
 
     async fn delete_task(&self, id: Uuid) -> Result<()> {
-        sqlx::query("DELETE FROM tasks WHERE id = $1")
+        let result = sqlx::query("DELETE FROM tasks WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!("Task not found: {}", id));
+        }
 
         Ok(())
     }
