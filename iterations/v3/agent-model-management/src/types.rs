@@ -297,8 +297,65 @@ pub struct ModelMetrics {
     /// Memory usage percentage
     pub memory_usage: f64,
 
+    /// CAWS compliance score (0.0-1.0)
+    pub caws_compliance_score: f64,
+
+    /// Efficiency rating (0.0-1.0)
+    pub efficiency_rating: f64,
+
+    /// Tool adoption rate (0.0-1.0)
+    pub tool_adoption_rate: f64,
+
     /// Last updated
     pub last_updated: chrono::DateTime<chrono::Utc>,
+}
+
+/// Model selection result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelSelection {
+    /// Selected model ID
+    pub model_id: String,
+
+    /// Reasoning for selection
+    pub reasoning: String,
+
+    /// Predicted performance score
+    pub predicted_score: f64,
+
+    /// Alternative models considered
+    pub alternatives: Vec<String>,
+}
+
+/// Routing decision outcome
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutingDecision {
+    /// Task ID
+    pub task_id: String,
+
+    /// Selected model ID
+    pub model_id: String,
+
+    /// Selection timestamp
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+
+    /// Predicted score at time of selection
+    pub predicted_score: f64,
+
+    /// Actual outcome (if available)
+    pub outcome: Option<RoutingOutcome>,
+}
+
+/// Routing outcome
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutingOutcome {
+    /// Whether the task was successful
+    pub success: bool,
+
+    /// Actual quality score
+    pub quality_score: f64,
+
+    /// Execution time in ms
+    pub execution_time_ms: u64,
 }
 
 /// Deployment status

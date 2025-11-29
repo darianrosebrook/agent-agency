@@ -132,10 +132,25 @@ pub struct OllamaProvider {
 impl OllamaProvider {
     /// Create a new Ollama provider
     pub fn new(base_url: String, default_model: String) -> Self {
+        // Create client with 30-second timeout
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+        
         Self {
             base_url,
             default_model,
-            client: reqwest::Client::new(),
+            client,
+        }
+    }
+
+    /// Check if Ollama service is available
+    async fn is_available(&self) -> bool {
+        let health_url = format!("{}/api/tags", self.base_url);
+        match self.client.get(&health_url).send().await {
+            Ok(resp) => resp.status().is_success(),
+            Err(_) => false,
         }
     }
 }
@@ -147,8 +162,14 @@ impl ModelProvider for OllamaProvider {
         prompt: &str,
         options: &GenerationOptions,
     ) -> Result<String, SelfPromptingAgentError> {
-        let model_name = options.model_name.as_ref().unwrap_or(&self.default_model);
+        // Check if Ollama is available before making call
+        if !self.is_available().await {
+            return Err(SelfPromptingAgentError::ModelProvider(
+                format!("Ollama service unavailable at {}", self.base_url)
+            ));
+        }
 
+        let model_name = options.model_name.as_ref().unwrap_or(&self.default_model);
         let request_body = serde_json::json!({
             "model": model_name,
             "prompt": prompt,
@@ -162,33 +183,88 @@ impl ModelProvider for OllamaProvider {
         });
 
         let url = format!("{}/api/generate", self.base_url);
-        let response = self
-            .client
-            .post(&url)
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| {
-                SelfPromptingAgentError::ModelProvider(format!("HTTP request failed: {}", e))
-            })?;
+        
+        // Retry logic with exponential backoff (max 3 retries)
+        let max_retries = 3;
+        let mut last_error = None;
+        
+        for attempt in 0..max_retries {
+            if attempt > 0 {
+                // Exponential backoff: 1s, 2s, 4s
+                let delay_ms = 1000 * (1 << (attempt - 1));
+                tracing::warn!(
+                    attempt = attempt,
+                    delay_ms = delay_ms,
+                    "Retrying Ollama API call after {}ms delay",
+                    delay_ms
+                );
+                tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+            }
 
-        if !response.status().is_success() {
-            return Err(SelfPromptingAgentError::ModelProvider(format!(
-                "HTTP error: {}",
-                response.status()
-            )));
+            tracing::debug!(
+                attempt = attempt + 1,
+                model = model_name,
+                "Calling Ollama API (attempt {}/{})",
+                attempt + 1,
+                max_retries
+            );
+
+            match self
+                .client
+                .post(&url)
+                .json(&request_body)
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    if !response.status().is_success() {
+                        let status = response.status();
+                        let error_msg = format!("HTTP error: {}", status);
+                        last_error = Some(SelfPromptingAgentError::ModelProvider(error_msg));
+                        if attempt < max_retries - 1 {
+                            continue;
+                        }
+                        break;
+                    }
+
+                    match response.json::<serde_json::Value>().await {
+                        Ok(response_json) => {
+                            return response_json["response"]
+                                .as_str()
+                                .map(|s| s.to_string())
+                                .ok_or_else(|| {
+                                    SelfPromptingAgentError::ModelProvider(
+                                        "Invalid response format".to_string()
+                                    )
+                                });
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Failed to parse response: {}", e);
+                            last_error = Some(SelfPromptingAgentError::ModelProvider(error_msg));
+                            if attempt < max_retries - 1 {
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                }
+                Err(e) => {
+                    let error_msg = format!("HTTP request failed: {}", e);
+                    last_error = Some(SelfPromptingAgentError::ModelProvider(error_msg));
+                    if attempt < max_retries - 1 {
+                        continue;
+                    }
+                    break;
+                }
+            }
         }
 
-        let response_json: serde_json::Value = response.json().await.map_err(|e| {
-            SelfPromptingAgentError::ModelProvider(format!("Failed to parse response: {}", e))
-        })?;
-
-        response_json["response"]
-            .as_str()
-            .map(|s| s.to_string())
-            .ok_or_else(|| {
-                SelfPromptingAgentError::ModelProvider("Invalid response format".to_string())
-            })
+        // All retries exhausted
+        Err(last_error.unwrap_or_else(|| {
+            SelfPromptingAgentError::ModelProvider(
+                "Ollama API call failed after all retries".to_string()
+            )
+        }))
     }
 
     fn name(&self) -> &str {

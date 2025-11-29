@@ -149,6 +149,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "dashmap 5.5.3",
+ "data-infrastructure",
  "development-tools",
  "futures-util",
  "glob",
@@ -2588,6 +2589,7 @@ dependencies = [
  "sha2",
  "sqlx",
  "sysinfo 0.30.13",
+ "system-acceleration",
  "system-quality-security",
  "thiserror 1.0.69",
  "tokio",
@@ -9866,6 +9868,7 @@ dependencies = [
 name = "system-federated-ml"
 version = "0.1.0"
 dependencies = [
+ "agent-agency-contracts",
  "agent-mcp",
  "agent-research",
  "agent-workers",

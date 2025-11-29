@@ -47,6 +47,7 @@ use crate::planning::plan_executor::{ExecutionConfig, PlanExecutor};
 use crate::planning::plan_types::ExecutionPlan;
 use crate::planning::factory::PlanningSystemFactory;
 use async_trait::async_trait;
+use agent_model_management::deployment::DeploymentOrchestrator;
 
 /// Factory for creating UnifiedOrchestrator instances
 pub struct UnifiedOrchestratorFactory;
@@ -637,6 +638,17 @@ impl UnifiedOrchestratorFactory {
                 }
             };
 
+            let deployment_orchestrator = match DeploymentOrchestrator::new().await {
+                Ok(orchestrator) => {
+                    info!("DeploymentOrchestrator created successfully");
+                    Some(Arc::new(orchestrator))
+                }
+                Err(e) => {
+                    warn!("Failed to create DeploymentOrchestrator: {}", e);
+                    None
+                }
+            };
+
             Arc::new(UnifiedOrchestrator::new(
                 config,
                 planning_components.plan_generator,
@@ -660,6 +672,7 @@ impl UnifiedOrchestratorFactory {
                 None,                    // federated_learning - optional
                 #[cfg(feature = "runtime-optimization")]
                 arbiter_optimizer,
+                deployment_orchestrator,
             ))
         };
 

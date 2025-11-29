@@ -104,10 +104,20 @@ export async function apiFetch<T = unknown>(
 
   // Create the fetch function
   const fetchFn = async (): Promise<T> => {
+    // Get auth token from localStorage
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const authHeaders: Record<string, string> = {};
+
+    // Only add Authorization header for real tokens (not mock tokens)
+    if (authToken && !authToken.startsWith('mock-jwt-token-')) {
+      authHeaders['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const response = await fetch(url, {
       ...fetchOptions,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...headers,
       },
     });

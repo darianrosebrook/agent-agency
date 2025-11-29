@@ -116,6 +116,19 @@ impl PerformanceMonitor {
         let memory_usage =
             (output.performance.memory_usage_mb as f64 / TOTAL_SYSTEM_MEMORY_MB) * 100.0;
 
+        // Calculate CAWS compliance score (placeholder logic for now)
+        // In a real implementation, this would come from the inference output metadata or a separate evaluation
+        let caws_compliance_score = if success { 0.95 } else { 0.0 };
+
+        // Calculate efficiency rating based on latency and resource usage
+        let latency_score = (1000.0 / avg_latency.max(1.0)).min(1.0);
+        let memory_score = (1.0 - memory_usage / 100.0).max(0.0);
+        let efficiency_rating = (latency_score * 0.6 + memory_score * 0.4);
+
+        // Calculate tool adoption rate (placeholder)
+        // This would track how often the model successfully uses requested tools
+        let tool_adoption_rate = 0.8; 
+
         // Create comprehensive metrics
         let metrics = ModelMetrics {
             rps,
@@ -128,6 +141,9 @@ impl PerformanceMonitor {
             },
             cpu_usage,
             memory_usage: memory_usage.min(100.0).max(0.0), // Clamp to 0-100%
+            caws_compliance_score,
+            efficiency_rating,
+            tool_adoption_rate,
             last_updated: now,
         };
 
@@ -163,6 +179,9 @@ impl PerformanceMonitor {
                 error_rate: 0.0,
                 cpu_usage: 0.0,
                 memory_usage: 0.0,
+                caws_compliance_score: 0.0,
+                efficiency_rating: 0.0,
+                tool_adoption_rate: 0.0,
                 last_updated: chrono::Utc::now(),
             }),
         }
@@ -195,6 +214,9 @@ impl PerformanceMonitor {
                 let avg_error_rate = metrics.iter().map(|m| m.error_rate).sum::<f64>() / len;
                 let avg_cpu = metrics.iter().map(|m| m.cpu_usage).sum::<f64>() / len;
                 let avg_memory = metrics.iter().map(|m| m.memory_usage).sum::<f64>() / len;
+                let avg_caws = metrics.iter().map(|m| m.caws_compliance_score).sum::<f64>() / len;
+                let avg_efficiency = metrics.iter().map(|m| m.efficiency_rating).sum::<f64>() / len;
+                let avg_tool_adoption = metrics.iter().map(|m| m.tool_adoption_rate).sum::<f64>() / len;
 
                 // P95 would need proper percentile calculation
                 let p95_latency = metrics
@@ -210,6 +232,9 @@ impl PerformanceMonitor {
                     error_rate: avg_error_rate,
                     cpu_usage: avg_cpu,
                     memory_usage: avg_memory,
+                    caws_compliance_score: avg_caws,
+                    efficiency_rating: avg_efficiency,
+                    tool_adoption_rate: avg_tool_adoption,
                     last_updated: chrono::Utc::now(),
                 })
             }

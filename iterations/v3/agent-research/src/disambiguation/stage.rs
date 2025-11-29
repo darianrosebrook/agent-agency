@@ -65,6 +65,10 @@ impl DisambiguationStage {
     }
 
     /// Process a sentence through disambiguation
+    /// 
+    /// Returns a DisambiguationResult with a hard gate: if unresolvable ambiguities
+    /// are detected and cannot be resolved with available context, the result will
+    /// indicate that extraction should be skipped.
     pub async fn process(
         &self,
         sentence: &str,
@@ -76,16 +80,43 @@ impl DisambiguationStage {
         let ambiguities = self.identify_ambiguities(sentence, context).await?;
         debug!("Identified {} ambiguities", ambiguities.len());
 
-        // Step 2: Resolve referential ambiguities (pronouns, etc.)
+        // Step 2: Detect unresolvable ambiguities BEFORE attempting resolution
+        // This is the hard gate - if we can't resolve with available context, skip extraction
+        let unresolvable = self.detect_unresolvable_ambiguities(&ambiguities, context);
+        
+        // Hard gate: If there are unresolvable ambiguities that require external knowledge,
+        // we should skip extraction rather than guess
+        let has_critical_unresolvable = unresolvable.iter().any(|ua| {
+            matches!(
+                ua.reason,
+                UnresolvableReason::InsufficientContext
+                    | UnresolvableReason::AmbiguousReference
+                    | UnresolvableReason::MissingInformation
+                    | UnresolvableReason::ConflictingEvidence
+            )
+        });
+        
+        if has_critical_unresolvable {
+            debug!(
+                "Hard gate triggered: {} unresolvable ambiguities detected, skipping extraction",
+                unresolvable.len()
+            );
+            // Return result indicating extraction should be skipped
+            return Ok(DisambiguationResult {
+                original_sentence: sentence.to_string(),
+                disambiguated_sentence: sentence.to_string(), // Keep original
+                ambiguities_resolved: 0,
+                unresolvable_ambiguities: unresolvable,
+            });
+        }
+
+        // Step 3: Resolve referential ambiguities (pronouns, etc.)
         let disambiguated_sentence = self
             .resolve_referential_ambiguities(sentence, &ambiguities, context)
             .await?;
 
-        // Step 3: Count resolved ambiguities
+        // Step 4: Count resolved ambiguities
         let ambiguities_resolved = ambiguities.len() as u32;
-
-        // Step 4: Detect unresolvable ambiguities
-        let unresolvable = self.detect_unresolvable_ambiguities(&ambiguities, context);
 
         Ok(DisambiguationResult {
             original_sentence: sentence.to_string(),
@@ -93,6 +124,32 @@ impl DisambiguationStage {
             ambiguities_resolved,
             unresolvable_ambiguities: unresolvable,
         })
+    }
+    
+    /// Check if a sentence should skip extraction due to unresolvable ambiguities
+    /// 
+    /// This is the hard gate function that determines whether extraction should proceed.
+    /// Returns true if extraction should be skipped.
+    pub async fn should_skip_extraction(
+        &self,
+        sentence: &str,
+        context: &ProcessingContext,
+    ) -> Result<bool> {
+        let ambiguities = self.identify_ambiguities(sentence, context).await?;
+        let unresolvable = self.detect_unresolvable_ambiguities(&ambiguities, context);
+        
+        // Skip if there are critical unresolvable ambiguities
+        let should_skip = unresolvable.iter().any(|ua| {
+            matches!(
+                ua.reason,
+                UnresolvableReason::InsufficientContext
+                    | UnresolvableReason::AmbiguousReference
+                    | UnresolvableReason::MissingInformation
+                    | UnresolvableReason::ConflictingEvidence
+            )
+        });
+        
+        Ok(should_skip)
     }
 
     /// Identify ambiguities in a sentence

@@ -109,6 +109,12 @@ pub struct ParallelConfig {
 
 impl Default for ParallelConfig {
     fn default() -> Self {
+        // Allow timeout to be configured via environment variable
+        let batch_timeout = std::env::var("BATCH_TIMEOUT_SECONDS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(120); // 2 minutes default (reduced from 600)
+        
         Self {
             max_parallel_milestones: 5,
             max_parallel_batches: 2,
@@ -118,7 +124,7 @@ impl Default for ParallelConfig {
             scope_conflict_retry_delay_ms: 1000,
             enable_council_monitoring: true,
             emergency_stop_on_violation: true,
-            batch_timeout_seconds: 600, // 10 minutes
+            batch_timeout_seconds: batch_timeout,
         }
     }
 }
@@ -318,12 +324,83 @@ impl ParallelCoordinator {
 
         // Wait for all milestone executions with timeout
         let batch_timeout = Duration::from_secs(self.config.batch_timeout_seconds);
+        let batch_timeout_secs = self.config.batch_timeout_seconds;
+        let milestone_count = handles.len();
+        
+        // Spawn progress monitoring task
+        let progress_handle = {
+            let handles_count = handles.len();
+            let batch_id = batch_index;
+            let plan_id = plan.contract_plan.id;
+            tokio::spawn(async move {
+                let mut elapsed = 0u64;
+                let progress_interval = Duration::from_secs(10);
+                let warning_50 = batch_timeout_secs / 2;
+                let warning_90 = (batch_timeout_secs * 9) / 10;
+                
+                loop {
+                    tokio::time::sleep(progress_interval).await;
+                    elapsed += 10;
+                    
+                    if elapsed >= batch_timeout_secs {
+                        break;
+                    }
+                    
+                    if elapsed == warning_50 {
+                        tracing::warn!(
+                            plan_id = %plan_id,
+                            batch_index = batch_id,
+                            milestone_count = handles_count,
+                            elapsed_seconds = elapsed,
+                            timeout_seconds = batch_timeout_secs,
+                            "Batch execution at 50% of timeout - {} milestones still executing",
+                            handles_count
+                        );
+                    } else if elapsed == warning_90 {
+                        tracing::warn!(
+                            plan_id = %plan_id,
+                            batch_index = batch_id,
+                            milestone_count = handles_count,
+                            elapsed_seconds = elapsed,
+                            timeout_seconds = batch_timeout_secs,
+                            "Batch execution at 90% of timeout - {} milestones still executing",
+                            handles_count
+                        );
+                    } else {
+                        tracing::info!(
+                            plan_id = %plan_id,
+                            batch_index = batch_id,
+                            milestone_count = handles_count,
+                            elapsed_seconds = elapsed,
+                            "Batch execution progress: {} milestones executing for {} seconds",
+                            handles_count,
+                            elapsed
+                        );
+                    }
+                }
+            })
+        };
+        
         let results = match timeout(batch_timeout, join_all(handles)).await {
-            Ok(results) => results,
+            Ok(results) => {
+                progress_handle.abort(); // Stop progress monitoring
+                results
+            }
             Err(_) => {
+                progress_handle.abort(); // Stop progress monitoring
+                tracing::error!(
+                    plan_id = %plan.contract_plan.id,
+                    batch_index = batch_index,
+                    milestone_count = milestone_count,
+                    timeout_seconds = batch_timeout_secs,
+                    "Batch execution timed out after {} seconds with {} milestones",
+                    batch_timeout_secs,
+                    milestone_count
+                );
                 return Err(anyhow!(
-                    "Batch execution timed out after {} seconds",
-                    self.config.batch_timeout_seconds
+                    "Batch execution timed out after {} seconds ({} milestones were executing)",
+                    batch_timeout_secs,
+                    milestone_count
                 ));
             }
         };

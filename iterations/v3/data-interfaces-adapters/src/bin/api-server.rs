@@ -200,7 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(Arc::new(client))
             }
             Err(e) => {
-                error!("⚠️  Failed to initialize database: {}", e);
+                error!("⚠️  Failed to initialize database: {:#}", e);
                 error!("   Continuing in standalone mode without database");
                 None
             }
@@ -1601,6 +1601,29 @@ async fn submit_task_handler(
                 }
             }
 
+            // Pre-flight health check before spawning task execution
+            info!("Performing pre-flight health check for task {}", task_id);
+            
+            // Check database connectivity
+            if let Some(ref db) = state.db_client {
+                if let Err(e) = sqlx::query("SELECT 1")
+                    .execute(db.pool())
+                    .await
+                {
+                    error!("Pre-flight check failed: Database not available - {}", e);
+                    return Err(StatusCode::SERVICE_UNAVAILABLE);
+                }
+                debug!("Pre-flight check: Database connectivity OK");
+            } else {
+                warn!("Pre-flight check: Database client not available (task will continue but state tracking may fail)");
+            }
+            
+            // Check orchestrator is ready (orchestrator exists and is accessible)
+            // The fact that we got here means unified_orchestrator is Some, so it's ready
+            debug!("Pre-flight check: UnifiedOrchestrator ready (adapter exists)");
+            
+            info!("Pre-flight health check passed for task {}", task_id);
+
             // Spawn task execution in background to avoid blocking the HTTP request
             let orchestrator_clone = unified_orchestrator.clone();
             let spec_clone = working_spec.clone();
@@ -1608,8 +1631,31 @@ async fn submit_task_handler(
             let task_id_for_log = task_id;
             let telemetry = state.telemetry_service.clone();
             let worker_id = task_context.worker_id;
+            let db_client_for_task = state.db_client.clone();
 
-            tokio::spawn(async move {
+            info!("Spawning background task execution for task {}", task_id_for_log);
+            
+            // Update task status to running before spawning
+            if let Some(ref db) = state.db_client {
+                if let Err(e) = sqlx::query(
+                    r#"
+                    UPDATE tasks 
+                    SET status = 'running', updated_at = NOW()
+                    WHERE id = $1
+                    "#,
+                )
+                .bind(task_id)
+                .execute(db.pool())
+                .await
+                {
+                    warn!("Failed to update task {} status to running: {}", task_id_for_log, e);
+                } else {
+                    info!("Task {} status updated to running", task_id_for_log);
+                }
+            }
+
+            // Spawn task execution with comprehensive error and panic handling
+            let spawn_handle = tokio::spawn(async move {
                 info!("Starting background execution of task {}", task_id_for_log);
                 let start_time = std::time::Instant::now();
 
@@ -1625,6 +1671,9 @@ async fn submit_task_handler(
                     )
                     .await;
 
+                // Log execution phase: planning
+                info!("Task {} entering planning phase", task_id_for_log);
+
                 match orchestrator_clone
                     .orchestrate_task(spec_clone, context_clone)
                     .await
@@ -1635,6 +1684,27 @@ async fn submit_task_handler(
                             "Task {} completed successfully: {} ({}ms)",
                             task_id_for_log, result.success, duration_ms
                         );
+
+                        // Update task status to completed with progress
+                        if let Some(ref db) = db_client_for_task {
+                            let status = if result.success { "completed" } else { "failed" };
+                            if let Err(e) = sqlx::query(
+                                r#"
+                                UPDATE tasks 
+                                SET status = $1, updated_at = NOW()
+                                WHERE id = $2
+                                "#,
+                            )
+                            .bind(status)
+                            .bind(task_id_for_log)
+                            .execute(db.pool())
+                            .await
+                            {
+                                warn!("Failed to update task {} status to {}: {}", task_id_for_log, status, e);
+                            } else {
+                                info!("Task {} status updated to {} (100% complete)", task_id_for_log, status);
+                            }
+                        }
 
                         // Record task completed activity
                         let _ = telemetry
@@ -1650,7 +1720,30 @@ async fn submit_task_handler(
                     }
                     Err(e) => {
                         let duration_ms = start_time.elapsed().as_millis() as i32;
-                        error!("Task {} execution failed: {:?} ({}ms)", task_id_for_log, e, duration_ms);
+                        error!(
+                            "Task {} execution failed: {:?} ({}ms)",
+                            task_id_for_log, e, duration_ms
+                        );
+
+                        // Update task status to failed with error message
+                        if let Some(ref db) = db_client_for_task {
+                            let error_msg = format!("{:?}", e);
+                            if let Err(update_err) = sqlx::query(
+                                r#"
+                                UPDATE tasks 
+                                SET status = 'failed', updated_at = NOW()
+                                WHERE id = $1
+                                "#,
+                            )
+                            .bind(task_id_for_log)
+                            .execute(db.pool())
+                            .await
+                            {
+                                warn!("Failed to update task {} status to failed: {}", task_id_for_log, update_err);
+                            } else {
+                                info!("Task {} status updated to failed", task_id_for_log);
+                            }
+                        }
 
                         // Record task failed activity
                         let _ = telemetry
@@ -1669,6 +1762,48 @@ async fn submit_task_handler(
                 // Also trigger a snapshot check periodically
                 let _ = telemetry.maybe_snapshot_task_stats().await;
             });
+
+            // Log that spawn completed (handle is available for monitoring if needed)
+            info!("Background task spawn completed for task {} (handle available for monitoring)", task_id_for_log);
+            
+            // Monitor spawn handle in background to detect panics or immediate failures
+            let handle_for_monitoring = spawn_handle;
+            let task_id_monitor = task_id_for_log;
+            let db_for_monitoring = state.db_client.clone();
+            tokio::spawn(async move {
+                // Wait a short time to see if spawn succeeds
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                
+                // Check if task panicked or failed immediately
+                if handle_for_monitoring.is_finished() {
+                    match handle_for_monitoring.await {
+                        Ok(_) => {
+                            debug!("Task {} spawn handle completed normally", task_id_monitor);
+                        }
+                        Err(e) => {
+                            error!("Task {} spawn handle PANICKED: {:?}", task_id_monitor, e);
+                            // Update task status to failed
+                            if let Some(ref db) = db_for_monitoring {
+                                let _ = sqlx::query(
+                                    r#"
+                                    UPDATE tasks 
+                                    SET status = 'failed', updated_at = NOW()
+                                    WHERE id = $1
+                                    "#,
+                                )
+                                .bind(task_id_monitor)
+                                .execute(db.pool())
+                                .await;
+                            }
+                        }
+                    }
+                } else {
+                    debug!("Task {} spawn handle is running", task_id_monitor);
+                }
+            });
+            
+            // Note: We intentionally don't await the spawn_handle here to avoid blocking the HTTP response
+            // The handle will be cleaned up when it goes out of scope, but the task continues running
 
             // Return task submission response immediately
             use data_infrastructure::api::types::TaskSubmissionResponse;

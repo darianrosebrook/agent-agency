@@ -24,30 +24,36 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
-    // TODO: Replace mock authentication with real API call to v3 authentication service with the following requirements:
-    // 1. Authentication API call: Send credentials to authentication endpoint
-    //    - Data source: POST /api/auth/login endpoint in `iterations/v3/data-infrastructure/src/api/handlers`
-    //    - Request body: { email, password }
-    //    - Handle authentication errors (invalid credentials, account locked, etc.)
-    // 2. Token management: Store authentication token securely
-    //    - Store JWT token in httpOnly cookie or secure storage
-    //    - Set token expiration and refresh logic
-    //    - Handle token refresh on expiration
-    // 3. User session: Create user session after successful login
-    //    - Store user information in session storage or context
-    //    - Redirect to dashboard or intended destination
-    //    - Handle "Remember me" functionality if implemented
-    // 4. Error handling: Display user-friendly error messages
-    //    - Show specific error messages for different failure scenarios
-    //    - Handle network errors gracefully
-    //    - Provide password reset link for forgotten passwords
+    try {
+      // TODO: Replace with real API call when backend is fixed
+      // For now, use mock authentication to test the UI
+      if (email === 'testuser' && password === 'password') {
+        // Mock successful login
+        const mockUser = {
+          id: '123',
+          username: 'testuser',
+          name: 'Test User',
+          roles: ['user'],
+          is_active: true,
+        };
 
-    // Mock authentication - replace with real API call
-    setTimeout(() => {
+        const mockToken = 'mock-jwt-token-' + Date.now();
+
+        // Store authentication data
+        localStorage.setItem('auth_token', mockToken);
+        localStorage.setItem('user', JSON.stringify(mockUser));
+
+        // Redirect to dashboard
+        router.push("/");
+      } else {
+        throw new Error('Invalid username or password');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
       setIsLoading(false);
-      // For now, just redirect to dashboard
-      router.push("/");
-    }, 1000);
+    }
   };
 
   return (
@@ -136,8 +142,20 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* UX Requirements */}
+          {/* Test Credentials */}
           <div className={styles.requirementsSection}>
+            <h2 className={styles.requirementsTitle}>Test Credentials</h2>
+            <div className={styles.requirementsContent}>
+              <div className={styles.testCredentials}>
+                <p><strong>Username:</strong> testuser</p>
+                <p><strong>Password:</strong> password</p>
+                <p className={styles.note}>Note: Using mock authentication until backend is fixed</p>
+              </div>
+            </div>
+          </div>
+
+          {/* UX Requirements */}
+          <div className={`${styles.requirementsSection} ${styles.divider}`}>
             <h2 className={styles.requirementsTitle}>UX Requirements</h2>
             <div className={styles.requirementsContent}>
               <ul className={styles.requirementsList}>

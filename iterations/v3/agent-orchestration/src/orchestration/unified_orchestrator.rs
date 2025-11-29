@@ -64,6 +64,8 @@ use crate::learning::federated_learning::FederatedLearningEngine;
 
 #[cfg(feature = "runtime-optimization")]
 use system_federated_ml::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
+use agent_model_management::deployment::DeploymentOrchestrator;
+use agent_model_management::types::ModelSelection;
 
 /// Unified orchestrator configuration
 #[derive(Debug, Clone)]
@@ -176,6 +178,9 @@ pub struct UnifiedOrchestrator {
     /// Arbiter pipeline optimizer for sub-50ms decision making
     #[cfg(feature = "runtime-optimization")]
     arbiter_optimizer: Option<Arc<ArbiterPipelineOptimizer>>,
+
+    /// Deployment orchestrator for model selection
+    deployment_orchestrator: Option<Arc<DeploymentOrchestrator>>,
 }
 
 impl UnifiedOrchestrator {
@@ -201,6 +206,7 @@ impl UnifiedOrchestrator {
         #[cfg(feature = "runtime-optimization")] arbiter_optimizer: Option<
             Arc<ArbiterPipelineOptimizer>,
         >,
+        deployment_orchestrator: Option<Arc<DeploymentOrchestrator>>,
     ) -> Self {
         Self {
             config,
@@ -228,6 +234,7 @@ impl UnifiedOrchestrator {
             federated_learning,
             #[cfg(feature = "runtime-optimization")]
             arbiter_optimizer,
+            deployment_orchestrator,
         }
     }
 
@@ -451,6 +458,15 @@ impl UnifiedOrchestrator {
         info!(
             "UnifiedOrchestrator: Starting execution for plan {} (resuming: {})",
             plan_id, is_resuming
+        );
+        
+        // Log execution context for debugging
+        debug!(
+            plan_id = %plan_id,
+            working_spec_id = %working_spec.id,
+            working_spec_title = %working_spec.title,
+            is_resuming = is_resuming,
+            "Execution context initialized"
         );
 
         // Phase 0.1: Initialize execution state (recovered or fresh)
@@ -782,7 +798,12 @@ impl UnifiedOrchestrator {
             }
         } else {
             // Generate new execution plan
-            info!("Phase 1: Generating execution plan");
+            let plan_gen_start = std::time::Instant::now();
+            info!(
+                plan_id = %plan_id,
+                "Phase 1: Generating execution plan (working spec: {})",
+                working_spec.id
+            );
             // Create PlanGenerationContext from WorkingSpec
             struct SimpleWorkingSpecProvider {
                 spec: WorkingSpec,
@@ -932,11 +953,55 @@ impl UnifiedOrchestrator {
                 execution_mode: agent_agency_contracts::types::planning::ExecutionMode::Auto,
                 planning_strategy: PlanGenerationStrategy::AIAssisted,
             };
-            let execution_plan = self.plan_generator.generate(&context).await?;
             info!(
-                "Generated plan with {} milestones",
-                execution_plan.contract_plan.milestones.len()
+                plan_id = %plan_id,
+                "Waiting on plan generator (may call LLM service)..."
             );
+            
+            // Generate execution plan with comprehensive error handling
+            let execution_plan = match self.plan_generator.generate(&context).await {
+                Ok(plan) => {
+                    let plan_gen_duration = plan_gen_start.elapsed();
+                    info!(
+                        plan_id = %plan_id,
+                        milestone_count = plan.contract_plan.milestones.len(),
+                        duration_ms = plan_gen_duration.as_millis(),
+                        "Phase 1 complete: Generated execution plan with {} milestones ({}ms)",
+                        plan.contract_plan.milestones.len(),
+                        plan_gen_duration.as_millis()
+                    );
+                    plan
+                }
+                Err(e) => {
+                    let plan_gen_duration = plan_gen_start.elapsed();
+                    error!(
+                        plan_id = %plan_id,
+                        error = %e,
+                        duration_ms = plan_gen_duration.as_millis(),
+                        "Phase 1 FAILED: Plan generation failed after {}ms: {}",
+                        plan_gen_duration.as_millis(),
+                        e
+                    );
+                    
+                    // Update execution state with error
+                    execution_state.current_phase = "plan_generation_failed".to_string();
+                    execution_state.error = Some(format!("Plan generation failed: {}", e));
+                    execution_state.status = ExecutionStateStatus::Failed;
+                    
+                    // Save error state
+                    if let Some(ref persistence) = self.state_persistence {
+                        if let Err(save_err) = persistence.save_state(&execution_state).await {
+                            warn!("Failed to save error state: {}", save_err);
+                        }
+                    }
+                    
+                    return Err(anyhow::anyhow!(
+                        "Plan generation failed for task {}: {}",
+                        plan_id,
+                        e
+                    ));
+                }
+            };
 
             // Update execution state with plan (only if not resuming)
             if !is_resuming {
@@ -960,7 +1025,11 @@ impl UnifiedOrchestrator {
 
         // Phase 2: Council plan review (CAWS Examination stage)
         if self.config.enable_council_review {
-            info!("Phase 2: Council plan review (CAWS Examination)");
+            let council_start = std::time::Instant::now();
+            info!(
+                plan_id = %plan_id,
+                "Phase 2: Starting council plan review (CAWS Examination)"
+            );
 
             // Create review context for council
             use crate::decision_making::FinalDecision;
@@ -1022,6 +1091,14 @@ impl UnifiedOrchestrator {
                 }
             }
 
+            let council_duration = council_start.elapsed();
+            info!(
+                plan_id = %plan_id,
+                duration_ms = council_duration.as_millis(),
+                "Phase 2 complete: Council review finished ({}ms)",
+                council_duration.as_millis()
+            );
+
             // Update execution state with council review result
             execution_state.current_phase = "council_examination_complete".to_string();
             execution_state.progress_percentage = 20.0;
@@ -1057,11 +1134,23 @@ impl UnifiedOrchestrator {
             }
         } else {
             // Execute milestones
-            info!("Phase 3: Executing plan with parallel milestones");
-            let executed_artifacts = self.execute_plan_milestones(&execution_plan).await?;
+            let exec_start = std::time::Instant::now();
             info!(
-                "Completed {} milestone executions",
-                executed_artifacts.len()
+                plan_id = %plan_id,
+                milestone_count = execution_plan.contract_plan.milestones.len(),
+                "Phase 3: Starting milestone execution ({} milestones)",
+                execution_plan.contract_plan.milestones.len()
+            );
+            let executed_artifacts = self.execute_plan_milestones(&execution_plan).await?;
+            let exec_duration = exec_start.elapsed();
+            info!(
+                plan_id = %plan_id,
+                artifact_count = executed_artifacts.len(),
+                duration_ms = exec_duration.as_millis(),
+                "Phase 3 complete: Executed {} milestones, produced {} artifacts ({}ms)",
+                execution_plan.contract_plan.milestones.len(),
+                executed_artifacts.len(),
+                exec_duration.as_millis()
             );
 
             // Update execution state with artifacts
@@ -1359,6 +1448,7 @@ impl UnifiedOrchestrator {
                         worker_bridge: self.worker_bridge.clone(),
                         worktree_manager: self.worktree_manager.clone(),
                         worker_lifecycle_manager: self.worker_lifecycle_manager.clone(),
+                        deployment_orchestrator: self.deployment_orchestrator.clone(),
                     });
 
                 let validator: Arc<dyn ArtifactValidator> = Arc::new(UnifiedArtifactValidator);
@@ -1368,7 +1458,7 @@ impl UnifiedOrchestrator {
                         council: self.council.clone(),
                     }));
 
-                let spec_refiner: Option<Arc<dyn SpecRefiner>> = Some(Arc::new(UnifiedSpecRefiner));
+                let spec_refiner: Option<Arc<dyn SpecRefiner>> = Some(Arc::new(UnifiedSpecRefiner::new()));
 
                 // Use RealTimeProgressTracker for actual progress tracking
                 let base_progress_tracker: Arc<dyn crate::progress_tracker::ProgressTracker> =
@@ -1983,6 +2073,7 @@ struct UnifiedOrchestrationExecutor {
     worker_bridge: Arc<WorkerExecutionBridge>,
     worktree_manager: Arc<WorktreeManager>,
     worker_lifecycle_manager: Arc<WorkerLifecycleManager>,
+    deployment_orchestrator: Option<Arc<DeploymentOrchestrator>>,
 }
 
 impl UnifiedOrchestrationExecutor {
@@ -2448,6 +2539,29 @@ impl OrchestrationExecutor for UnifiedOrchestrationExecutor {
         // Execute milestones
         let mut artifacts = Vec::new();
         for milestone in &execution_plan.contract_plan.milestones {
+            // Select optimal model if deployment orchestrator is available
+            let model_id = if let Some(ref deployment) = self.deployment_orchestrator {
+                // Create task requirements from milestone
+                let requirements = serde_json::json!({
+                    "task_id": milestone.id,
+                    "objective": milestone.objective,
+                    "priority": milestone.priority,
+                });
+                
+                match deployment.select_optimal_model(&requirements).await {
+                    Ok(selection) => {
+                        info!("Selected optimal model {} for milestone {}", selection.model_id, milestone.id);
+                        Some(selection.model_id)
+                    }
+                    Err(e) => {
+                        warn!("Failed to select optimal model: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
             let worker_id = Uuid::new_v4();
             self.worker_lifecycle_manager
                 .handle_assignment(worker_id, milestone)
@@ -2460,7 +2574,7 @@ impl OrchestrationExecutor for UnifiedOrchestrationExecutor {
                 .worktree_path;
             let artifact = self
                 .worker_bridge
-                .execute_milestone(milestone, &worktree_path, worker_id)
+                .execute_milestone(milestone, &worktree_path, worker_id, model_id)
                 .await?;
             self.worker_lifecycle_manager
                 .handle_completion(worker_id, artifact.clone())
@@ -2551,8 +2665,26 @@ impl CouncilReviewer for UnifiedCouncilReviewer {
     }
 }
 
-/// Spec refiner implementation
-struct UnifiedSpecRefiner;
+/// Spec refiner implementation using intelligent refinement
+struct UnifiedSpecRefiner {
+    /// Intelligent spec refiner for council feedback-based improvements
+    intelligent_refiner: crate::planning::intelligent_spec_refiner::IntelligentSpecRefiner,
+}
+
+impl UnifiedSpecRefiner {
+    /// Create a new unified spec refiner with intelligent refinement capabilities
+    fn new() -> Self {
+        Self {
+            intelligent_refiner: crate::planning::intelligent_spec_refiner::IntelligentSpecRefiner::new(),
+        }
+    }
+}
+
+impl Default for UnifiedSpecRefiner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[async_trait::async_trait]
 impl SpecRefiner for UnifiedSpecRefiner {
@@ -2561,14 +2693,47 @@ impl SpecRefiner for UnifiedSpecRefiner {
         current_spec: &WorkingSpec,
         refinement_reason: &str,
     ) -> Result<WorkingSpec> {
-        // Simple refinement: update description with refinement reason
-        let mut refined = current_spec.clone();
-        refined.description = format!(
-            "{} (Refined: {})",
-            current_spec.description, refinement_reason
+        // Use intelligent refinement based on council feedback
+        info!(
+            "Refining working spec '{}' using intelligent refinement",
+            current_spec.title
         );
-        refined.updated_at = chrono::Utc::now();
-        Ok(refined)
+
+        // Parse council feedback into structured directives
+        let directive = self.intelligent_refiner.parse_council_feedback(refinement_reason);
+
+        debug!(
+            "Parsed {} improvement areas from council feedback: {:?}",
+            directive.improvement_areas.len(),
+            directive.priority
+        );
+
+        // Apply refinements
+        let result = self.intelligent_refiner.apply_refinements(current_spec, &directive);
+
+        // Log refinement actions
+        for action in &result.actions {
+            if action.successful {
+                info!("[Refinement] {}: {}", action.area, action.description);
+            } else {
+                warn!("[Refinement] Failed {}: {}", action.area, action.description);
+            }
+        }
+
+        // Log unresolved issues for manual review
+        if !result.unresolved_issues.is_empty() {
+            warn!(
+                "Unresolved refinement issues requiring manual review: {:?}",
+                result.unresolved_issues
+            );
+        }
+
+        info!(
+            "Intelligent refinement complete. Estimated quality improvement: {:.1}%",
+            result.estimated_quality_improvement * 100.0
+        );
+
+        Ok(result.refined_spec)
     }
 }
 

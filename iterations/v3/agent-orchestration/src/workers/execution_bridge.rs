@@ -67,16 +67,18 @@ impl WorkerExecutionBridge {
         milestone: &Milestone,
         worktree_path: &PathBuf,
         worker_id: Uuid,
+        model_id: Option<String>,
     ) -> Result<ExecutionArtifacts> {
         info!(
-            "Executing milestone {} via worker {} in worktree {}",
+            "Executing milestone {} via worker {} in worktree {} (model: {:?})",
             milestone.id,
             worker_id,
-            worktree_path.display()
+            worktree_path.display(),
+            model_id
         );
 
         // Convert milestone to TaskDefinition
-        let task_def = self.milestone_to_task_definition(milestone, worktree_path)?;
+        let task_def = self.milestone_to_task_definition(milestone, worktree_path, model_id)?;
 
         // Execute via worker pool - convert error to anyhow
         let worker_result = self
@@ -146,7 +148,7 @@ impl WorkerExecutionBridge {
 
                     // Execute milestone
                     bridge
-                        .execute_milestone(&milestone, worktree_path, worker_id)
+                        .execute_milestone(&milestone, worktree_path, worker_id, None)
                         .await
                 }
             });
@@ -201,7 +203,7 @@ impl WorkerExecutionBridge {
                         .get(&worker_id)
                         .ok_or_else(|| anyhow!("No worktree path for worker {}", worker_id))?;
                     let milestone = self.parallel_task_to_milestone(task)?;
-                    let artifacts = self.execute_milestone(&milestone, worktree_path, worker_id).await?;
+                    let artifacts = self.execute_milestone(&milestone, worktree_path, worker_id, None).await?;
                     results.push(artifacts);
                     completed_task_ids.insert(task.id);
                 }
@@ -231,7 +233,7 @@ impl WorkerExecutionBridge {
                 .into_iter()
                 .map(|(milestone, worktree_path, worker_id)| {
                     async move {
-                        self.execute_milestone(&milestone, &worktree_path, worker_id).await
+                        self.execute_milestone(&milestone, &worktree_path, worker_id, None).await
                     }
                 })
                 .collect();
@@ -260,6 +262,7 @@ impl WorkerExecutionBridge {
         &self,
         milestone: &Milestone,
         worktree_path: &PathBuf,
+        model_id: Option<String>,
     ) -> Result<TaskDefinition> {
         // Extract required tools from milestone scope and interfaces
         let mut required_tools = Vec::new();
@@ -318,6 +321,22 @@ impl WorkerExecutionBridge {
         // So we use a generic name that doesn't match any specific pattern
         let task_name = format!("task_{}", milestone.id);
 
+        let mut metadata = std::collections::HashMap::from([
+            ("milestone_id".to_string(), serde_json::json!(milestone.id)),
+            (
+                "risk_tier".to_string(),
+                serde_json::json!(milestone.risk_tier),
+            ),
+            (
+                "estimated_effort".to_string(),
+                serde_json::json!(milestone.estimated_effort),
+            ),
+        ]);
+
+        if let Some(mid) = model_id {
+            metadata.insert("model_id".to_string(), serde_json::json!(mid));
+        }
+
         Ok(TaskDefinition {
             id: Uuid::new_v4(),
             name: task_name,
@@ -327,17 +346,7 @@ impl WorkerExecutionBridge {
             timeout_seconds: milestone.estimated_duration.map(|m| m as u32 * 60),
             priority,
             deadline: None,
-            metadata: std::collections::HashMap::from([
-                ("milestone_id".to_string(), serde_json::json!(milestone.id)),
-                (
-                    "risk_tier".to_string(),
-                    serde_json::json!(milestone.risk_tier),
-                ),
-                (
-                    "estimated_effort".to_string(),
-                    serde_json::json!(milestone.estimated_effort),
-                ),
-            ]),
+            metadata,
         })
     }
 

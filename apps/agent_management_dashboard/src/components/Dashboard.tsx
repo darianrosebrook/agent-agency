@@ -6,10 +6,13 @@ import { HexagonHeatmap } from "./HexagonHeatmap";
 import { ModelContributionStream } from "./ModelContributionStream";
 import { TaskCompletionGauge } from "./TaskCompletionGauge";
 import { ServerEfficiencyChart } from "./ServerEfficiencyChart";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, LogOut, User } from "lucide-react";
+import { useAuth } from "@/lib/providers/AuthProvider";
 import styles from "./Dashboard.module.scss";
 
 export function Dashboard() {
+  const { user, logout } = useAuth();
+
   return (
     <div className={styles.dashboard}>
       {/* Header */}
@@ -17,8 +20,25 @@ export function Dashboard() {
         <div className={styles.headerTop}>
           <LayoutGrid className={styles.headerIcon} />
           <span className={styles.headerLabel}>Dashboard</span>
+          <div className={styles.headerActions}>
+            <div className={styles.userInfo}>
+              <User className={styles.userIcon} />
+              <span className={styles.userName}>
+                {user?.name || user?.username || 'User'}
+              </span>
+            </div>
+            <button
+              onClick={logout}
+              className={styles.logoutButton}
+              title="Logout"
+            >
+              <LogOut className={styles.logoutIcon} />
+            </button>
+          </div>
         </div>
-        <h1 className={styles.headerTitle}>Welcome back John Doe!</h1>
+        <h1 className={styles.headerTitle}>
+          Welcome back {user?.name || user?.username || 'User'}!
+        </h1>
       </div>
 
       {/* Bento Grid */}

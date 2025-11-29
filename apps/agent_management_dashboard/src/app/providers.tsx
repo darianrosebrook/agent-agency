@@ -8,6 +8,8 @@ import { Sidebar as NavigationSidebar } from "@/components/dashboard/NavigationS
 import { Toaster } from "@/components/primitives/sonner";
 import { ProjectProvider } from "@/components/ProjectContext";
 import { ApiProvider } from "@/lib/providers/ApiProvider";
+import { AuthProvider } from "@/lib/providers/AuthProvider";
+import { AuthGuard } from "@/components/AuthGuard";
 import { useNotificationSync } from "@/hooks/useNotificationSync";
 import { polyfillClassNameSplit } from "@/lib/utils/className-fix";
 import { deduplicateNotifications } from "@/lib/stores/notificationStore";
@@ -43,11 +45,13 @@ export function Providers({ children }: { children: ReactNode }) {
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return (
-      <ApiProvider>
-        <ProjectProvider>
-          <div className={styles.providersContainer}>{children}</div>
-        </ProjectProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider>
+          <ProjectProvider>
+            <div className={styles.providersContainer}>{children}</div>
+          </ProjectProvider>
+        </ApiProvider>
+      </AuthProvider>
     );
   }
 
@@ -58,17 +62,21 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <ApiProvider>
-        <ProjectProvider>
-          <ErrorBoundary>
-            <div className={styles.providersContainer}>
-              <NavigationSidebar />
-              <main className={styles.main}>{children}</main>
-            </div>
-            <Toaster />
-          </ErrorBoundary>
-        </ProjectProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider>
+          <ProjectProvider>
+            <ErrorBoundary>
+              <AuthGuard>
+                <div className={styles.providersContainer}>
+                  <NavigationSidebar />
+                  <main className={styles.main}>{children}</main>
+                </div>
+              </AuthGuard>
+              <Toaster />
+            </ErrorBoundary>
+          </ProjectProvider>
+        </ApiProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

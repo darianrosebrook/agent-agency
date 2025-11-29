@@ -3,6 +3,72 @@
 use crate::deployment::LoadBalancer;
 use crate::models::ModelRegistry;
 use crate::types::*;
+use crate::monitoring::monitor::PerformanceMonitor;
+use crate::ModelManagementError;
+
+/// Trait for deployment orchestration (for dependency injection)
+#[async_trait::async_trait]
+pub trait DeploymentOrchestratorTrait: Send + Sync {
+    /// Select optimal model for a task
+    async fn select_optimal_model(
+        &self,
+        task: &serde_json::Value,
+        available_models: &[String],
+    ) -> Result<ModelSelection, ModelManagementError>;
+
+    /// Learn from routing outcomes
+    async fn learn_from_routing(
+        &self,
+        decision: &crate::types::RoutingDecision,
+        outcome: &crate::types::RoutingOutcome,
+    ) -> Result<(), ModelManagementError>;
+}
+
+/// Routing decision for model selection
+#[derive(Debug, Clone)]
+pub struct RoutingDecision {
+    /// Task being routed
+    pub task_id: String,
+    /// Selected model for the task
+    pub selected_model: String,
+    /// Tools required by the task
+    pub tools_required: Vec<String>,
+    /// Reasoning for model selection
+    pub reasoning: String,
+}
+
+/// Task outcome for learning
+#[derive(Debug, Clone)]
+pub enum TaskOutcome {
+    /// Task completed successfully
+    Success(u64), // duration in milliseconds
+    /// Task failed
+    Failure {
+        /// Error message
+        error: String,
+        /// Execution time before failure
+        execution_time: u64,
+    },
+}
+
+#[async_trait::async_trait]
+impl DeploymentOrchestratorTrait for DeploymentOrchestrator {
+    async fn select_optimal_model(
+        &self,
+        task: &Task,
+        available_models: &[String],
+    ) -> Result<ModelSelection> {
+        self.select_optimal_model(task, available_models).await
+    }
+
+    async fn learn_from_routing(
+        &self,
+        decision: &RoutingDecision,
+        outcome: &TaskOutcome,
+    ) -> Result<()> {
+        self.learn_from_routing(decision, outcome).await
+    }
+}
 use crate::ModelManagementError;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -19,6 +85,9 @@ pub struct DeploymentOrchestrator {
 
     /// Active deployments
     active_deployments: Arc<RwLock<HashMap<String, DeploymentInfo>>>,
+
+    /// Performance monitor
+    monitor: Arc<PerformanceMonitor>,
 
     /// Deployment configuration
     config: DeploymentConfig,
@@ -97,11 +166,13 @@ impl DeploymentOrchestrator {
         let model_registry = Arc::new(ModelRegistry::new());
         let load_balancer = Arc::new(LoadBalancer::new());
         let active_deployments = Arc::new(RwLock::new(HashMap::new()));
+        let monitor = Arc::new(PerformanceMonitor::new());
 
         Ok(Self {
             model_registry,
             load_balancer,
             active_deployments,
+            monitor,
             config: DeploymentConfig::default(),
         })
     }
@@ -128,6 +199,9 @@ impl DeploymentOrchestrator {
                 error_rate: 0.0,
                 cpu_usage: 0.0,
                 memory_usage: 0.0,
+                caws_compliance_score: 0.0,
+                efficiency_rating: 0.0,
+                tool_adoption_rate: 0.0,
                 last_updated: chrono::Utc::now(),
             },
             deployed_at: chrono::Utc::now(),
@@ -518,5 +592,128 @@ impl DeploymentOrchestrator {
             deployment.traffic_allocation = traffic_allocation;
             deployment.last_health_check = chrono::Utc::now();
         }
+    }
+    /// Select the optimal model for a given task
+    pub async fn select_optimal_model(
+        &self,
+        _task_requirements: &serde_json::Value,
+    ) -> Result<crate::types::ModelSelection, ModelManagementError> {
+        let deployments = self.active_deployments.read().await;
+        let mut best_model = None;
+        let mut best_score = -1.0;
+        let mut alternatives = Vec::new();
+
+        // Simple scoring strategy:
+        // Score = (Success Rate * 0.4) + (Efficiency * 0.3) + (CAWS * 0.3)
+        // Penalize if high latency
+        
+        for (model_id, _info) in deployments.iter() {
+            // Get metrics
+            let metrics = self.monitor.get_model_metrics(model_id).await?;
+            
+            // Calculate score
+            let success_score = 1.0 - metrics.error_rate;
+            let efficiency_score = metrics.efficiency_rating;
+            let caws_score = metrics.caws_compliance_score;
+            
+            let mut score = (success_score * 0.4) + (efficiency_score * 0.3) + (caws_score * 0.3);
+            
+            // Penalize for high latency (> 2000ms)
+            if metrics.avg_latency_ms > 2000.0 {
+                score *= 0.8;
+            }
+
+            alternatives.push(model_id.clone());
+
+            if score > best_score {
+                best_score = score;
+                best_model = Some(model_id.clone());
+            }
+        }
+
+        match best_model {
+            Some(model_id) => Ok(crate::types::ModelSelection {
+                model_id: model_id.clone(),
+                reasoning: format!("Highest performance score: {:.2}", best_score),
+                predicted_score: best_score,
+                alternatives,
+            }),
+            None => Err(ModelManagementError::DeploymentError(
+                "No active models available for selection".to_string(),
+            )),
+        }
+    }
+
+    /// Learn from routing outcome
+    pub async fn learn_from_routing(
+        &self,
+        decision: &crate::types::RoutingDecision,
+        outcome: &crate::types::RoutingOutcome,
+    ) -> Result<(), ModelManagementError> {
+        // Log the outcome for analysis
+        info!(
+            "Routing outcome for task {}: success={}, score={:.2}, time={}ms",
+            decision.task_id, outcome.success, outcome.quality_score, outcome.execution_time_ms
+        );
+
+        // Record inference metrics in the monitor
+        // This updates the historical data which drives future selection
+        let output = crate::types::InferenceOutput {
+            data: serde_json::json!({"mock": "data"}),
+            metadata: crate::types::InferenceMetadata {
+                backend: "simulation".to_string(),
+                model_version: "1.0".to_string(),
+                executed_at: chrono::Utc::now(),
+                tokens_processed: Some(0),
+            },
+            performance: crate::types::InferencePerformance {
+                total_latency_ms: outcome.execution_time_ms,
+                model_execution_ms: outcome.execution_time_ms,
+                preprocessing_ms: 0,
+                postprocessing_ms: 0,
+                memory_usage_mb: 0,
+            },
+        };
+
+        self.monitor.record_inference(
+            &decision.model_id,
+            &output,
+            outcome.success
+        ).await?;
+
+        Ok(())
+    }
+        // Log the outcome for analysis
+        info!(
+            "Routing outcome for task {}: success={}, score={:.2}, time={}ms",
+            decision.task_id, outcome.success, outcome.quality_score, outcome.execution_time_ms
+        );
+
+        // Record inference metrics in the monitor
+        // This updates the historical data which drives future selection
+        let output = crate::types::InferenceOutput {
+            data: serde_json::json!({"mock": "data"}),
+            metadata: crate::types::InferenceMetadata {
+                backend: "simulation".to_string(),
+                model_version: "1.0".to_string(),
+                executed_at: chrono::Utc::now(),
+                tokens_processed: Some(0),
+            },
+            performance: crate::types::InferencePerformance {
+                total_latency_ms: outcome.execution_time_ms,
+                model_execution_ms: outcome.execution_time_ms,
+                preprocessing_ms: 0,
+                postprocessing_ms: 0,
+                memory_usage_mb: 0,
+            },
+        };
+
+        self.monitor.record_inference(
+            &decision.model_id,
+            &output,
+            outcome.success
+        ).await?;
+        
+        Ok(())
     }
 }

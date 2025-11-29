@@ -110,7 +110,7 @@ system-observability = { path = "../system-observability" }
 sysinfo = "0.30"
 
 [features]
-default = ["research", "coreml", "evaluation", "data-processing", "tool-chain"]  # Research (claim extraction) is always-on per arbiter stack requirements; evaluation enabled for M1 Max development; data-processing and tool-chain required for orchestration
+default = ["research", "coreml", "evaluation", "data-processing", "tool-chain", "model-management", "memory"]  # Research (claim extraction) is always-on per arbiter stack requirements; evaluation enabled for M1 Max development; data-processing and tool-chain required for orchestration
 coreml = ["system-acceleration/coreml", "data-infrastructure/coreml", "agent-memory/embeddings-coreml"]  # CoreML/ANE acceleration for production
 system-acceleration = ["coreml"]  # Enable system acceleration features (alias for coreml)
 api-server = ["axum", "axum-extra", "tower-http", "utoipa", "utoipa-swagger-ui"]

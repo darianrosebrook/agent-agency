@@ -11,6 +11,7 @@
 .headerTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: $spacing-2; // gap-2
   color: $color-zinc-300; // text-zinc-300
   margin-bottom: $spacing-4; // mb-4
@@ -23,6 +24,57 @@
 
 .headerLabel {
   font-size: $font-size-sm; // text-sm
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3; // gap-3
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2; // gap-2
+  padding: $spacing-2; // p-2
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: $border-radius-md; // rounded-md
+}
+
+.userIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
+  color: $color-zinc-400; // text-zinc-400
+}
+
+.userName {
+  font-size: $font-size-sm; // text-sm
+  color: $color-zinc-300; // text-zinc-300
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem; // w-8
+  height: 2rem; // h-8
+  padding: $spacing-1; // p-1
+  background-color: rgba(239, 68, 68, 0.1); // bg-red-500/10
+  border: 1px solid rgba(239, 68, 68, 0.2); // border-red-500/20
+  border-radius: $border-radius-md; // rounded-md
+  color: $color-red-400; // text-red-400
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(239, 68, 68, 0.2); // bg-red-500/20
+    color: $color-red-300; // text-red-300
+  }
+}
+
+.logoutIcon {
+  width: 1rem; // w-4
+  height: 1rem; // h-4
 }
 
 .headerTitle {

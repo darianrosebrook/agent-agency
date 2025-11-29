@@ -593,10 +593,47 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
         _context: TaskContext,
     ) -> Result<TaskExecutionResult, ServiceError> {
         // Execute plan using UnifiedOrchestrator
+        let execution_start = std::time::Instant::now();
         let execution_result = self.orchestrator
             .execute_plan(spec.clone())
             .await
-            .map_err(|e| ServiceError::Internal(format!("Orchestration failed: {}", e)))?;
+            .map_err(|e| {
+                let duration = execution_start.elapsed();
+                let error_msg = e.to_string();
+                
+                // Determine which phase likely failed based on error message
+                let phase = if error_msg.contains("plan") || error_msg.contains("Plan") || error_msg.contains("generation") {
+                    "planning"
+                } else if error_msg.contains("council") || error_msg.contains("Council") || error_msg.contains("review") {
+                    "council_review"
+                } else if error_msg.contains("timeout") || error_msg.contains("timed out") || error_msg.contains("Batch execution") {
+                    "execution_timeout"
+                } else if error_msg.contains("milestone") || error_msg.contains("execution") {
+                    "milestone_execution"
+                } else {
+                    "unknown"
+                };
+
+                // Check if it's a timeout error
+                let is_timeout = error_msg.contains("timeout") || error_msg.contains("timed out") || duration.as_secs() >= 100;
+                
+                let mut enhanced_error = format!(
+                    "Orchestration failed in {} phase after {}ms",
+                    phase,
+                    duration.as_millis()
+                );
+                
+                if is_timeout {
+                    enhanced_error.push_str(&format!(
+                        " (timeout after {} seconds). This may indicate LLM service (Ollama) is unavailable or slow.",
+                        duration.as_secs()
+                    ));
+                }
+                
+                enhanced_error.push_str(&format!(": {}", error_msg));
+                
+                ServiceError::Internal(enhanced_error)
+            })?;
 
         // Convert ExecutionResult to TaskExecutionResult
         let success = execution_result.final_verdict

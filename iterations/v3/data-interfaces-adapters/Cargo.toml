@@ -23,7 +23,7 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chr
 
 # Web framework (for API server binary)
 axum = { version = "0.7", features = ["json", "ws"] }
-tower-http = { version = "0.5", features = ["cors"] }
+tower-http = { version = "0.5", features = ["cors", "normalize-path"] }
 futures-util = "0.3"
 
 # CLI framework (for API server binary)
