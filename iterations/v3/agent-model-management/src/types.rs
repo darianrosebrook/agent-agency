@@ -47,6 +47,22 @@ pub struct PerformanceTargets {
     pub max_error_rate: f64,
 }
 
+/// Task representation for model management
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    /// Task unique identifier
+    pub id: String,
+
+    /// Task description
+    pub description: String,
+
+    /// Task requirements (e.g., model types, capabilities)
+    pub requirements: Vec<String>,
+
+    /// Task priority (higher = more important)
+    pub priority: u32,
+}
+
 /// Model metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {
