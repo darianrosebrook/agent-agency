@@ -625,10 +625,41 @@ impl UnifiedOrchestratorFactory {
             // Create ArbiterPipelineOptimizer if runtime-optimization feature is enabled
             #[cfg(feature = "runtime-optimization")]
             let arbiter_optimizer = {
-                use system_federated_ml::{ArbiterPipelineOptimizer, DecisionPipelineConfig};
-                match ArbiterPipelineOptimizer::new(DecisionPipelineConfig::default()).await {
-                    Ok(optimizer) => {
-                        info!("ArbiterPipelineOptimizer created successfully");
+                use system_federated_ml::{ArbiterPipelineOptimizer, DecisionPipelineConfig, StreamingPipelineConfig};
+                use system_configuration::StreamingPipelineConfig as BaseStreamingConfig;
+
+                // Configure for streaming execution with judge deliberations
+                let mut config = DecisionPipelineConfig::default();
+                config.enable_streaming = true;
+                config.streaming = Some(StreamingPipelineConfig {
+                    base: BaseStreamingConfig::default(),
+                    buffer_size: 100, // Support concurrent decision streams
+                    max_concurrent_streams: 50, // Allow parallel judge deliberations
+                    enable_backpressure: true,
+                    backpressure_threshold: 25,
+                });
+
+                match ArbiterPipelineOptimizer::new(config).await {
+                    Ok(mut optimizer) => {
+                        // Create continuous optimization service
+                        use system_federated_ml::continuous_optimization::{ContinuousOptimizationService, ContinuousOptimizationConfig};
+
+                        let opt_config = ContinuousOptimizationConfig::default();
+                        let continuous_optimizer = Arc::new(ContinuousOptimizationService::new(
+                            opt_config,
+                            Arc::new(tokio::sync::RwLock::new(system_federated_ml::BayesianOptimizer::new(Default::default()).unwrap()))
+                        ));
+
+                        // Start the continuous optimizer
+                        if let Err(e) = continuous_optimizer.start().await {
+                            tracing::warn!("Failed to start continuous optimization service: {}", e);
+                        } else {
+                            // Set continuous optimizer on arbiter
+                            optimizer.set_continuous_optimizer(Arc::clone(&continuous_optimizer));
+                            info!("Continuous optimization service integrated with ArbiterPipelineOptimizer");
+                        }
+
+                        info!("ArbiterPipelineOptimizer created with streaming support and continuous optimization for judge deliberations");
                         Some(Arc::new(optimizer))
                     }
                     Err(e) => {
@@ -649,6 +680,25 @@ impl UnifiedOrchestratorFactory {
                 }
             };
 
+            // Create curriculum learning engine for skill progression
+            let curriculum_engine = {
+                use crate::planning::curriculum_learning::CurriculumLearningEngine;
+                use data_infrastructure::DatabaseOperations;
+
+                // Create database operations instance
+                let db_config = data_infrastructure::database_config::DatabaseConfig::default();
+                match data_infrastructure::create_database_operations(db_config).await {
+                    Ok(db_ops) => {
+                        info!("Curriculum learning engine initialized with database persistence");
+                        Some(Arc::new(CurriculumLearningEngine::new(db_ops)))
+                    }
+                    Err(e) => {
+                        warn!("Failed to create database operations for curriculum engine: {}", e);
+                        None
+                    }
+                }
+            };
+
             Arc::new(UnifiedOrchestrator::new(
                 config,
                 planning_components.plan_generator,
@@ -662,6 +712,7 @@ impl UnifiedOrchestratorFactory {
                 worker_lifecycle_manager,
                 Some(worker_assignment_strategy),
                 Some(reflexive_learner),
+                curriculum_engine
                 #[cfg(feature = "memory")]
                 Some(memory_system),
                 #[cfg(not(feature = "memory"))]

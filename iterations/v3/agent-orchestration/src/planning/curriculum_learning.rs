@@ -299,6 +299,9 @@ pub struct CurriculumLearningEngine {
     /// Learning history
     learning_history: Arc<RwLock<Vec<LearningRecord>>>,
 
+    /// Database operations for persistence
+    db_ops: Arc<dyn data_infrastructure::DatabaseOperations + Send + Sync>,
+
     /// Configuration
     config: CurriculumConfig,
 }
@@ -354,8 +357,8 @@ impl Default for CurriculumConfig {
 }
 
 impl CurriculumLearningEngine {
-    /// Create new curriculum learning engine
-    pub fn new() -> Self {
+    /// Create new curriculum learning engine with database operations
+    pub fn new(db_ops: Arc<dyn data_infrastructure::DatabaseOperations + Send + Sync>) -> Self {
         let mut curriculum_paths = HashMap::new();
 
         // Create default curriculum paths for each domain
@@ -374,6 +377,7 @@ impl CurriculumLearningEngine {
             skill_profiles: Arc::new(RwLock::new(HashMap::new())),
             curriculum_paths: Arc::new(RwLock::new(curriculum_paths)),
             learning_history: Arc::new(RwLock::new(Vec::new())),
+            db_ops,
             config: CurriculumConfig::default(),
         }
     }
@@ -528,35 +532,31 @@ impl CurriculumLearningEngine {
         success: bool,
         quality_score: f64,
     ) -> Result<()> {
+        let skill_level_before = self.get_skill_level_from_db(agent_id, &domain).await?;
+
+        // Record in database
+        let db_record = data_infrastructure::CreateLearningRecord {
+            agent_id,
+            task_id: Some(task_id),
+            domain: domain.to_string(),
+            complexity: complexity.to_string(),
+            adjusted_complexity: adjusted_complexity.map(|c| c.to_string()),
+            skill_level_before: skill_level_before.to_string(),
+            skill_level_after: None, // Will be calculated and updated
+            success,
+            quality_score,
+            execution_metadata: Some(serde_json::json!({
+                "recorded_via": "curriculum_engine"
+            })),
+        };
+
+        self.db_ops.record_learning_outcome(db_record).await?;
+
+        // Update in-memory cache for performance
         let mut profiles = self.skill_profiles.write().await;
         let profile = profiles
             .entry(agent_id)
             .or_insert_with(|| AgentSkillProfile::new(agent_id));
-
-        let skill_level_before = profile.get_skill_level(&domain);
-
-        // Record learning history
-        let record = LearningRecord {
-            agent_id,
-            task_id,
-            domain: domain.clone(),
-            complexity,
-            adjusted_complexity,
-            skill_level_before,
-            skill_level_after: None,
-            success,
-            quality_score,
-            timestamp: Utc::now(),
-        };
-
-        let mut history = self.learning_history.write().await;
-        history.push(record);
-
-        // Trim history to last 1000 entries
-        if history.len() > 1000 {
-            let excess = history.len() - 1000;
-            history.drain(0..excess);
-        }
 
         // Update task counts
         profile.total_tasks_completed += 1;
@@ -576,10 +576,89 @@ impl CurriculumLearningEngine {
                     "Agent {} advanced in {:?} from {:?} to {:?}",
                     agent_id, domain, skill_level_before, new_level
                 );
+
+                // Update skill level in database
+                self.update_skill_level_in_db(agent_id, &domain, new_level).await?;
             }
         }
 
         Ok(())
+    }
+
+    /// Get skill level from database
+    async fn get_skill_level_from_db(&self, agent_id: Uuid, domain: &SkillDomain) -> Result<SkillLevel> {
+        let skill_level_str = self.db_ops.get_agent_skill_level(agent_id, &domain.to_string()).await?;
+        match skill_level_str.as_str() {
+            "beginner" => Ok(SkillLevel::Beginner),
+            "novice" => Ok(SkillLevel::Novice),
+            "intermediate" => Ok(SkillLevel::Intermediate),
+            "advanced" => Ok(SkillLevel::Advanced),
+            "expert" => Ok(SkillLevel::Expert),
+            _ => Ok(SkillLevel::Beginner), // Default to beginner for unknown levels
+        }
+    }
+
+    /// Update skill level in database
+    async fn update_skill_level_in_db(&self, agent_id: Uuid, domain: &SkillDomain, new_level: SkillLevel) -> Result<()> {
+        // Get current profile
+        let current_profile = self.db_ops.get_curriculum_profile(agent_id).await?;
+
+        let mut skills = if let Some(profile) = current_profile {
+            profile.skills
+        } else {
+            serde_json::json!({})
+        };
+
+        // Update the skill level for this domain
+        if let serde_json::Value::Object(ref mut map) = skills {
+            map.insert(domain.to_string(), serde_json::json!(new_level.to_string()));
+        }
+
+        // Upsert the profile
+        let updated_profile = data_infrastructure::CreateCurriculumProfile {
+            agent_id,
+            overall_level: self.calculate_overall_level_from_skills(&skills).await,
+            skills,
+        };
+
+        self.db_ops.upsert_curriculum_profile(updated_profile).await?;
+        Ok(())
+    }
+
+    /// Calculate overall level from skills JSON
+    async fn calculate_overall_level_from_skills(&self, skills: &serde_json::Value) -> String {
+        let mut total_level = 0.0;
+        let mut count = 0;
+
+        if let serde_json::Value::Object(map) = skills {
+            for (_, level_value) in map {
+                if let Some(level_str) = level_value.as_str() {
+                    let level = match level_str {
+                        "beginner" => 0.2,
+                        "novice" => 0.4,
+                        "intermediate" => 0.6,
+                        "advanced" => 0.8,
+                        "expert" => 1.0,
+                        _ => 0.2,
+                    };
+                    total_level += level;
+                    count += 1;
+                }
+            }
+        }
+
+        if count == 0 {
+            return "beginner".to_string();
+        }
+
+        let avg_level = total_level / count as f64;
+        match avg_level {
+            x if x < 0.3 => "beginner",
+            x if x < 0.5 => "novice",
+            x if x < 0.7 => "intermediate",
+            x if x < 0.9 => "advanced",
+            _ => "expert",
+        }.to_string()
     }
 
     /// Calculate new skill level based on performance
@@ -665,22 +744,22 @@ impl CurriculumLearningEngine {
         None
     }
 
-    /// Check if prerequisites are met
+    /// Check if prerequisites are met using database milestone completions
     async fn check_prerequisites(&self, agent_id: Uuid, prerequisite_ids: &[String]) -> bool {
         if prerequisite_ids.is_empty() {
             return true;
         }
 
-        let history = self.learning_history.read().await;
-        // TODO: Use agent_history for prerequisite checking in v4
-        let _agent_history: Vec<&LearningRecord> = history
-            .iter()
-            .filter(|r| r.agent_id == agent_id && r.success)
-            .collect();
-
-        // TODO: Implement proper prerequisite milestone tracking
-        //       Currently assumes prerequisites are met; should track actual milestone completions for accurate prerequisite checking.
-        true // Temporary: basic assumption until milestone tracking is implemented
+        // Use database to check milestone completions
+        // This implementation connects to the database operations for proper prerequisite validation
+        match self.db_ops.check_milestone_prerequisites(agent_id, prerequisite_ids.to_vec()).await {
+            Ok(prerequisites_met) => prerequisites_met,
+            Err(e) => {
+                warn!("Failed to check milestone prerequisites for agent {}: {}", agent_id, e);
+                // Fall back to assuming prerequisites are met to avoid blocking learning
+                true
+            }
+        }
     }
 
     /// Get skill progression statistics
@@ -736,8 +815,4 @@ pub struct ProgressionStats {
     pub skills_by_domain: HashMap<SkillDomain, SkillLevel>,
 }
 
-impl Default for CurriculumLearningEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// Note: CurriculumLearningEngine requires database operations and cannot have a default implementation

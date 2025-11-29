@@ -53,6 +53,7 @@ pub mod participant;
 pub mod bandit_policy;
 pub mod bandit_stubs;
 pub mod bayesian_optimizer;
+pub mod continuous_optimization;
 pub mod counterfactual_log;
 pub mod parameter_optimizer;
 pub mod parameter_dashboard;

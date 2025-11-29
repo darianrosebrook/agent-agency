@@ -86,7 +86,6 @@ system-acceleration = { path = "../system-acceleration", default-features = fals
 default = ["coreml"]  # Enable CoreML by default for M1 Max MacBook Pro
 coreml = ["system-acceleration/coreml"]  # CoreML acceleration feature
 full_optimization = []
-bayesian_opt = []
 bandit_policy = []
 thermal_scheduler = []
 chunked_execution = []

@@ -1039,6 +1039,233 @@ impl system_common_interfaces::DatabaseAuditOperations for DatabaseAuditOperatio
     }
 }
 
+/// Milestone completion input types
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateMilestoneCompletion {
+    #[schemars(with = "String")]
+    pub agent_id: Uuid,
+    pub milestone_id: String,
+    pub domain: String,
+    pub required_level: String,
+    pub target_level: String,
+    pub complexity: String,
+    pub success: bool,
+    pub quality_score: f64,
+    pub completion_time_ms: Option<i32>,
+    pub attempts: i32,
+    pub prerequisites_met: bool,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateLearningRecord {
+    #[schemars(with = "String")]
+    pub agent_id: Uuid,
+    #[schemars(with = "String")]
+    pub task_id: Option<Uuid>,
+    pub domain: String,
+    pub complexity: String,
+    pub adjusted_complexity: Option<String>,
+    pub skill_level_before: String,
+    pub skill_level_after: Option<String>,
+    pub success: bool,
+    pub quality_score: f64,
+    pub execution_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateCurriculumProfile {
+    #[schemars(with = "String")]
+    pub agent_id: Uuid,
+    pub overall_level: String,
+    pub skills: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct MilestoneCompletionResult {
+    pub id: Uuid,
+    pub agent_id: Uuid,
+    pub milestone_id: String,
+    pub success: bool,
+    pub completed_at: DateTime<Utc>,
+}
+
+/// Curriculum learning database operations
+impl crate::client::orchestrator::DatabaseClient {
+    /// Record milestone completion
+    pub async fn record_milestone_completion(
+        &self,
+        completion: CreateMilestoneCompletion,
+    ) -> Result<MilestoneCompletionResult> {
+        let result = sqlx::query!(
+            r#"
+            SELECT record_milestone_completion(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            ) as completion_id
+            "#,
+            completion.agent_id,
+            completion.milestone_id,
+            completion.domain,
+            completion.required_level,
+            completion.target_level,
+            completion.complexity,
+            completion.success,
+            completion.quality_score,
+            completion.completion_time_ms,
+            completion.attempts,
+            completion.prerequisites_met,
+            completion.metadata.unwrap_or(serde_json::Value::Null)
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        // Get the created completion details
+        let completion_details = sqlx::query!(
+            r#"
+            SELECT id, agent_id, milestone_id, success, completed_at
+            FROM milestone_completions
+            WHERE id = $1
+            "#,
+            result.completion_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(MilestoneCompletionResult {
+            id: completion_details.id,
+            agent_id: completion_details.agent_id,
+            milestone_id: completion_details.milestone_id,
+            success: completion_details.success,
+            completed_at: completion_details.completed_at,
+        })
+    }
+
+    /// Record learning outcome
+    pub async fn record_learning_outcome(
+        &self,
+        record: CreateLearningRecord,
+    ) -> Result<Uuid> {
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO learning_history (
+                agent_id, task_id, domain, complexity, adjusted_complexity,
+                skill_level_before, skill_level_after, success, quality_score,
+                execution_metadata
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id
+            "#,
+            record.agent_id,
+            record.task_id,
+            record.domain,
+            record.complexity,
+            record.adjusted_complexity,
+            record.skill_level_before,
+            record.skill_level_after,
+            record.success,
+            record.quality_score,
+            record.execution_metadata.unwrap_or(serde_json::Value::Null)
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.id)
+    }
+
+    /// Check if milestone prerequisites are met
+    pub async fn check_milestone_prerequisites(
+        &self,
+        agent_id: Uuid,
+        prerequisite_ids: Vec<String>,
+    ) -> Result<bool> {
+        let prerequisites_json = serde_json::Value::Array(
+            prerequisite_ids.into_iter().map(serde_json::Value::String).collect()
+        );
+
+        let result = sqlx::query!(
+            r#"
+            SELECT check_milestone_prerequisites($1, $2) as prerequisites_met
+            "#,
+            agent_id,
+            prerequisites_json
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.prerequisites_met.unwrap_or(false))
+    }
+
+    /// Get agent skill level for domain
+    pub async fn get_agent_skill_level(
+        &self,
+        agent_id: Uuid,
+        domain: &str,
+    ) -> Result<String> {
+        let result = sqlx::query!(
+            r#"
+            SELECT get_agent_skill_level($1, $2) as skill_level
+            "#,
+            agent_id,
+            domain
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.skill_level.unwrap_or_else(|| "beginner".to_string()))
+    }
+
+    /// Create or update curriculum profile
+    pub async fn upsert_curriculum_profile(
+        &self,
+        profile: CreateCurriculumProfile,
+    ) -> Result<Uuid> {
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO curriculum_profiles (
+                agent_id, overall_level, skills, total_tasks_completed,
+                total_tasks_succeeded, last_updated
+            )
+            VALUES ($1, $2, $3, 0, 0, NOW())
+            ON CONFLICT (agent_id) DO UPDATE SET
+                overall_level = EXCLUDED.overall_level,
+                skills = EXCLUDED.skills,
+                last_updated = NOW()
+            RETURNING id
+            "#,
+            profile.agent_id,
+            profile.overall_level,
+            profile.skills
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.id)
+    }
+
+    /// Get curriculum profile for agent
+    pub async fn get_curriculum_profile(
+        &self,
+        agent_id: Uuid,
+    ) -> Result<Option<CreateCurriculumProfile>> {
+        let result = sqlx::query!(
+            r#"
+            SELECT agent_id, overall_level, skills
+            FROM curriculum_profiles
+            WHERE agent_id = $1
+            "#,
+            agent_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.map(|row| CreateCurriculumProfile {
+            agent_id: row.agent_id,
+            overall_level: row.overall_level,
+            skills: row.skills,
+        }))
+    }
+}
+
 /// Factory function to create a DatabaseAuditOperations adapter
 ///
 /// This wraps a DatabaseOperations implementation in an adapter that implements

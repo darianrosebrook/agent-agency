@@ -148,6 +148,9 @@ pub struct UnifiedOrchestrator {
     /// Reflexive learner for continuous learning from outcomes
     reflexive_learner: Option<Arc<ReflexiveLearner>>,
 
+    /// Curriculum learning engine for skill progression and task difficulty adjustment
+    curriculum_engine: Option<Arc<crate::planning::curriculum_learning::CurriculumLearningEngine>>,
+
     /// Memory system for context preservation and retrieval (long-horizon support)
     #[cfg(feature = "memory")]
     memory_system: Option<Arc<MemorySystem>>,
@@ -198,6 +201,7 @@ impl UnifiedOrchestrator {
         worker_lifecycle_manager: Arc<WorkerLifecycleManager>,
         worker_assignment_strategy: Option<Arc<WorkerAssignmentStrategy>>,
         reflexive_learner: Option<Arc<ReflexiveLearner>>,
+        curriculum_engine: Option<Arc<crate::planning::curriculum_learning::CurriculumLearningEngine>>,
         #[cfg(feature = "memory")] memory_system: Option<Arc<MemorySystem>>,
         turn_level_tracker: Option<Arc<dyn TurnLevelTracker>>,
         session_manager: Option<Arc<SessionManager>>,
@@ -221,6 +225,7 @@ impl UnifiedOrchestrator {
             worker_lifecycle_manager,
             worker_assignment_strategy,
             reflexive_learner,
+            curriculum_engine,
             #[cfg(feature = "memory")]
             memory_system,
             #[cfg(not(feature = "memory"))]
@@ -2012,6 +2017,11 @@ impl UnifiedOrchestrator {
             parallel_result.artifacts.len()
         );
 
+        // Record learning outcomes with curriculum engine for skill progression
+        if let Some(ref curriculum_engine) = self.curriculum_engine {
+            self.record_curriculum_learning_outcomes(&plan_for_execution, &parallel_result).await;
+        }
+
         // Use artifacts collected during execution from ParallelCoordinator
         let artifacts = if !parallel_result.artifacts.is_empty() {
             parallel_result.artifacts
@@ -2548,7 +2558,7 @@ impl OrchestrationExecutor for UnifiedOrchestrationExecutor {
                     "priority": milestone.priority,
                 });
                 
-                match deployment.select_optimal_model(&requirements).await {
+                match deployment.select_optimal_model(&requirements, &[]).await {
                     Ok(selection) => {
                         info!("Selected optimal model {} for milestone {}", selection.model_id, milestone.id);
                         Some(selection.model_id)
@@ -2950,5 +2960,101 @@ impl ProgressTracker for UnifiedProgressTracker {
         }
 
         Ok(())
+    }
+
+    /// Record learning outcomes with curriculum engine for skill progression
+    async fn record_curriculum_learning_outcomes(
+        &self,
+        execution_plan: &ExecutionPlan,
+        parallel_result: &crate::planning::parallel_coordinator::ParallelExecutionResult,
+    ) {
+        if let Some(ref curriculum_engine) = self.curriculum_engine {
+            for milestone in &execution_plan.contract_plan.milestones {
+                // Extract worker assignment information from milestone metadata
+                let worker_id = if let Some(serde_json::Value::String(worker_id_str)) =
+                    milestone.metadata.get("assigned_worker_id") {
+                    match Uuid::parse_str(worker_id_str) {
+                        Ok(id) => Some(id),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                };
+
+                // Skip if no worker assigned (milestone not executed)
+                let worker_id = match worker_id {
+                    Some(id) => id,
+                    None => continue,
+                };
+
+                // Determine success based on milestone completion status
+                let success = parallel_result.successful_milestones > 0; // Simplified - could be more granular
+
+                // Extract task complexity from milestone
+                let complexity = crate::planning::thinking_budget::TaskComplexity::assess_milestone(milestone);
+
+                // Extract adjusted complexity if available
+                let adjusted_complexity = milestone.metadata.get("adjusted_complexity")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| match s {
+                        "simple" => Some(crate::planning::thinking_budget::TaskComplexity::Simple),
+                        "moderate" => Some(crate::planning::thinking_budget::TaskComplexity::Moderate),
+                        "complex" => Some(crate::planning::thinking_budget::TaskComplexity::Complex),
+                        "very_complex" => Some(crate::planning::thinking_budget::TaskComplexity::VeryComplex),
+                        _ => None,
+                    });
+
+                // Extract quality score (simplified - could be based on actual evaluation)
+                let quality_score = if success { 0.85 } else { 0.3 };
+
+                // Determine skill domain from milestone objective
+                let domain = Self::classify_milestone_domain(milestone);
+
+                // Record the learning outcome
+                if let Err(e) = curriculum_engine.record_learning_outcome(
+                    worker_id,
+                    execution_plan.id, // Use plan ID as task ID
+                    domain,
+                    complexity,
+                    adjusted_complexity,
+                    success,
+                    quality_score,
+                ).await {
+                    warn!("Failed to record learning outcome for milestone {}: {}", milestone.id, e);
+                } else {
+                    debug!("Recorded learning outcome for milestone {}: success={}, quality={:.2}",
+                           milestone.id, success, quality_score);
+                }
+            }
+        }
+    }
+
+    /// Classify milestone skill domain based on objective content
+    fn classify_milestone_domain(milestone: &crate::planning::plan_types::Milestone) -> crate::planning::curriculum_learning::SkillDomain {
+        let content = format!("{} {}", milestone.id, milestone.objective).to_lowercase();
+
+        if content.contains("code") || content.contains("implement") || content.contains("build") {
+            crate::planning::curriculum_learning::SkillDomain::CodeGeneration
+        } else if content.contains("test") || content.contains("spec") || content.contains("validate") {
+            crate::planning::curriculum_learning::SkillDomain::Testing
+        } else if content.contains("doc") || content.contains("document") || content.contains("readme") {
+            crate::planning::curriculum_learning::SkillDomain::Documentation
+        } else if content.contains("refactor") || content.contains("optimize") || content.contains("clean") {
+            crate::planning::curriculum_learning::SkillDomain::Refactoring
+        } else if content.contains("fix") || content.contains("bug") || content.contains("debug") {
+            crate::planning::curriculum_learning::SkillDomain::BugFixing
+        } else if content.contains("security") || content.contains("auth") || content.contains("encrypt") {
+            crate::planning::curriculum_learning::SkillDomain::Security
+        } else if content.contains("performance") || content.contains("speed") || content.contains("optimize") {
+            crate::planning::curriculum_learning::SkillDomain::Performance
+        } else if content.contains("design") || content.contains("architecture") || content.contains("structure") {
+            crate::planning::curriculum_learning::SkillDomain::Architecture
+        } else if content.contains("data") || content.contains("process") || content.contains("analyze") {
+            crate::planning::curriculum_learning::SkillDomain::DataProcessing
+        } else if content.contains("deploy") || content.contains("infra") || content.contains("ci/cd") {
+            crate::planning::curriculum_learning::SkillDomain::Infrastructure
+        } else {
+            crate::planning::curriculum_learning::SkillDomain::CodeGeneration // Default
+        }
     }
 }

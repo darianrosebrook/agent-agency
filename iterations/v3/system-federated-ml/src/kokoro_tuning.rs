@@ -10,7 +10,6 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use std::time::Instant;
 
-#[cfg(feature = "bayesian_opt")]
 use crate::bayesian_optimizer::OptimizationResult;
 
 /// Configuration for Kokoro tuner
@@ -222,8 +221,7 @@ impl KokoroTuner {
     }
 
     /// Perform final tuning with optimization results
-    #[cfg(feature = "bayesian_opt")]
-    pub async fn final_tune(&self, optimization_result: &OptimizationResult) -> Result<TuningResult> {
+    pub async fn final_tune(&mut self, optimization_result: &OptimizationResult) -> Result<TuningResult> {
         info!(
             "Performing final tuning with optimization result: expected_improvement={:.2}%, confidence={:.2}%",
             optimization_result.expected_improvement * 100.0,

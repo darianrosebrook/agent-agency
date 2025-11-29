@@ -137,6 +137,7 @@ pub struct ParameterEvaluation {
 }
 
 /// Bayesian optimizer for hyper-parameter tuning
+#[derive(Debug)]
 pub struct BayesianOptimizer {
     config: OptimizationConfig,
     /// Historical evaluations for surrogate modeling
