@@ -432,10 +432,20 @@ impl UnifiedOrchestratorFactory {
         let evolution_engine =
             Arc::new(WorkerEvolutionEngine::new(db_ops.clone(), evolution_config));
 
-        // Create reflexive learner with evolution engine
-        let reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
+        // Create curriculum learning engine
+        let curriculum_config = crate::planning::curriculum_learning::CurriculumConfig::default();
+        let curriculum_engine = Arc::new(
+            crate::planning::curriculum_learning::CurriculumLearningEngine::new(
+                db_ops.clone(),
+                curriculum_config,
+            )
+        );
+
+        // Create reflexive learner with both evolution and curriculum engines
+        let reflexive_learner = Arc::new(ReflexiveLearner::with_both_engines(
             worker_assignment_strategy.clone(),
             evolution_engine,
+            (*curriculum_engine).clone(),
             LearningConfig::default(),
         ));
 
