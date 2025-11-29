@@ -75,6 +75,7 @@ lru = "0.12"
 # Local crate dependencies
 # agent-orchestration removed to break circular dependency - arbiter_pipeline doesn't need it
 agent-research = { path = "../agent-research" }
+agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-observability = { path = "../system-observability" }
 system-configuration = { path = "../system-configuration" }
 agent-mcp = { path = "../agent-mcp" }

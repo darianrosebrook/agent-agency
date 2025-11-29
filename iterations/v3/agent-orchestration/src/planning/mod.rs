@@ -19,6 +19,7 @@ pub mod dependency_resolver;
 pub mod evidence;
 pub mod factory;
 pub mod graph_algorithms;
+pub mod intelligent_spec_refiner;
 pub mod legacy_plan_adapter;
 pub mod memory_adapter;
 pub mod model_lifecycle;
@@ -141,6 +142,9 @@ pub use data_infrastructure_types::{
 
 // From refinement_loop - no conflicts
 pub use refinement_loop::*;
+
+// From intelligent_spec_refiner - no conflicts
+pub use intelligent_spec_refiner::*;
 
 // From council_integration - no conflicts
 pub use council_integration::*;

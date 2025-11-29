@@ -21,14 +21,54 @@ use agent_evaluation::{EvaluationHook, EvaluationOrchestrator, StopReason};
 /// Iteration record for tracking refinement history
 #[derive(Debug, Clone)]
 pub struct IterationRecord {
+    /// Iteration number (1-indexed)
     pub iteration: u32,
+    /// Timestamp of this iteration
     pub timestamp: chrono::DateTime<Utc>,
+    /// Snapshot of the working spec at this iteration
     pub working_spec_snapshot: WorkingSpec,
+    /// Quality score achieved in this iteration
     pub quality_score: f64,
+    /// Whether the council approved this iteration
     pub council_approved: bool,
+    /// Reason for refinement (from council feedback)
     pub refinement_reason: Option<String>,
+    /// Detailed council feedback
     pub council_feedback: Option<String>,
+    /// Artifacts produced in this iteration
     pub artifacts_produced: Vec<String>,
+    /// Pre-execution review result (for iterations > 1)
+    pub pre_execution_review: Option<PreExecutionReview>,
+    /// Refinement actions applied in this iteration
+    pub refinement_actions: Vec<RefinementActionRecord>,
+    /// Quality improvement from previous iteration
+    pub quality_delta: Option<f64>,
+}
+
+/// Pre-execution review result
+#[derive(Debug, Clone)]
+pub struct PreExecutionReview {
+    /// Whether the pre-execution review approved
+    pub approved: bool,
+    /// Whether refinement was requested
+    pub needs_refinement: bool,
+    /// Reason for the decision
+    pub reason: String,
+    /// Whether refinement was applied before execution
+    pub refinement_applied: bool,
+}
+
+/// Record of a refinement action
+#[derive(Debug, Clone)]
+pub struct RefinementActionRecord {
+    /// Area that was refined
+    pub area: String,
+    /// Description of the refinement
+    pub description: String,
+    /// Whether the refinement was successful
+    pub successful: bool,
+    /// Timestamp of the action
+    pub timestamp: chrono::DateTime<Utc>,
 }
 
 /// Result of refinement loop execution
@@ -243,6 +283,100 @@ impl RefinementLoopCoordinator {
                 ));
             }
 
+            // Pre-execution council review (for iterations > 1, review refined spec before execution)
+            // This ensures the council approves the refined spec before we execute it
+            if self.config.enable_council_review && iteration > 1 {
+                if let Some(ref council) = council_reviewer {
+                    tracing::info!(
+                        "Pre-execution council review for iteration {} of task {}",
+                        iteration,
+                        task_id
+                    );
+
+                    match council
+                        .perform_council_review(&current_spec, task_descriptor)
+                        .await
+                    {
+                        Ok((pre_approved, pre_needs_refinement, pre_reason)) => {
+                            // Update progress with pre-execution review status
+                            progress_tracker
+                                .update_task_progress(
+                                    task_id,
+                                    50.0 + (iteration as f32 * 3.0),
+                                    Some(format!(
+                                        "Pre-execution council review: approved={}, needs_refinement={}",
+                                        pre_approved, pre_needs_refinement
+                                    )),
+                                )
+                                .await?;
+
+                            if !pre_approved && pre_needs_refinement {
+                                // Council wants more refinement before execution
+                                tracing::info!(
+                                    "Pre-execution review requests further refinement: {}",
+                                    pre_reason
+                                );
+
+                                // Refine before executing
+                                if let Some(ref refiner) = spec_refiner {
+                                    match refiner
+                                        .refine_working_spec(&current_spec, &pre_reason)
+                                        .await
+                                    {
+                                        Ok(refined_spec) => {
+                                            current_spec = refined_spec;
+                                            tracing::info!(
+                                                "Pre-execution refinement applied for iteration {}",
+                                                iteration
+                                            );
+                                            // Continue to next iteration without executing
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!(
+                                                "Pre-execution refinement failed, proceeding with current spec: {}",
+                                                e
+                                            );
+                                            // Fall through to execution with current spec
+                                        }
+                                    }
+                                } else {
+                                    tracing::warn!(
+                                        "Pre-execution refinement requested but no spec refiner available"
+                                    );
+                                    // Fall through to execution with current spec
+                                }
+                            } else if !pre_approved && !pre_needs_refinement {
+                                // Council rejected without refinement option
+                                tracing::warn!(
+                                    "Pre-execution review rejected spec: {}",
+                                    pre_reason
+                                );
+                                progress_tracker
+                                    .update_task_status(
+                                        task_id,
+                                        ExecutionStatus::Failed,
+                                        Some(format!("Pre-execution review rejected: {}", pre_reason)),
+                                    )
+                                    .await?;
+                                return Err(anyhow::anyhow!(
+                                    "Pre-execution council review rejected: {}",
+                                    pre_reason
+                                ));
+                            }
+                            // If pre_approved, continue to execution
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Pre-execution council review failed, proceeding with execution: {}",
+                                e
+                            );
+                            // Continue to execution despite review failure
+                        }
+                    }
+                }
+            }
+
             // Execute task orchestration for this iteration
             let verdict = match task_descriptor.execution_mode {
                 ExecutionMode::DryRun => {
@@ -396,6 +530,14 @@ impl RefinementLoopCoordinator {
             }
 
             // Record iteration history
+            // Calculate quality delta from previous iteration
+            let quality_delta = if iteration > 1 && !quality_scores.is_empty() {
+                let prev_score = quality_scores[quality_scores.len() - 1];
+                Some(quality_score - prev_score)
+            } else {
+                None
+            };
+
             let iteration_record = IterationRecord {
                 iteration,
                 timestamp: Utc::now(),
@@ -405,6 +547,9 @@ impl RefinementLoopCoordinator {
                 refinement_reason: None,
                 council_feedback: None,
                 artifacts_produced: vec![],
+                pre_execution_review: None,
+                refinement_actions: vec![],
+                quality_delta,
             };
 
             // Update execution state with iteration data
