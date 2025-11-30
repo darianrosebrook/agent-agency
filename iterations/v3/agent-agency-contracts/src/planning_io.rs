@@ -565,6 +565,25 @@ pub enum BudgetEnforcement {
     Flexible,
 }
 
+impl Default for BudgetEnforcement {
+    fn default() -> Self {
+        Self::Warning
+    }
+}
+
+impl Default for ChangeBudget {
+    fn default() -> Self {
+        Self {
+            max_files: 25,
+            max_loc: 1000,
+            max_migrations: 3,
+            allow_breaking_changes: false,
+            allow_new_dependencies: true,
+            enforcement_mode: BudgetEnforcement::default(),
+        }
+    }
+}
+
 /// Quality gates that must be satisfied
 /// Defines the quality standards for plan completion
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

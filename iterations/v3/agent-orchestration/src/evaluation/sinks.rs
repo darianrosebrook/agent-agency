@@ -159,43 +159,7 @@ impl ParquetSink {
 
 impl TraceSink for ParquetSink {
     fn write_trace(&self, _trace: &Trace) -> Result<(), String> {
-        // TODO: Implement Parquet trace sink
-        //       Currently returns error; should implement Parquet trace sink using parquet crate for efficient columnar storage.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Traces are written to Parquet format correctly
-        // - Parquet schema matches trace structure
-        // - Write performance is acceptable
-        // - Error handling works for write failures
-        //
-        // DEPENDENCIES:
-        // - Parquet crate (Required)
-        // - Trace serialization utilities (Required)
-        // - Parquet schema definition (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (storage format enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Parquet and data serialization expertise
         Err("Parquet sink not yet implemented. Use JSONL sink instead.".to_string())
-        // Temporary: error until Parquet implementation
     }
 
     fn sink_type(&self) -> &str {
@@ -521,41 +485,17 @@ mod tests {
         // Check that PII was redacted
         let traces = inner.get_traces();
         assert_eq!(traces.len(), 1);
-        // The reasoning should be redacted
-        // TODO: Implement comprehensive PII detection test
-        //       Currently uses basic test; should implement comprehensive test covering all PII types and edge cases.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - All PII types are tested
-        // - Edge cases are covered
-        // - Test assertions are comprehensive
-        // - Test reliability is high
-        //
-        // DEPENDENCIES:
-        // - PII detection infrastructure (Required)
-        // - Test data fixtures (Required)
-        // - Test utilities (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (test coverage enhancement)
-        // - Change Budget: ~60 LOC
-        // - Reviewer Requirements: Testing and PII detection expertise
+        
+        // Verify trace was written (PII redaction is handled by RedactingSink)
+        let trace_data = &traces[0];
+        assert!(!trace_data.reasoning.is_empty(), "Trace should contain reasoning");
+        
+        // Verify email pattern was redacted
+        assert!(!trace_data.reasoning.contains("user@example.com"), 
+            "Email should be redacted from trace");
+        
+        // Verify SSN pattern was redacted  
+        assert!(!trace_data.reasoning.contains("123-45-6789"),
+            "SSN should be redacted from trace");
     }
 }

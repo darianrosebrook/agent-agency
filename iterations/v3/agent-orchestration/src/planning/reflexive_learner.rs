@@ -209,13 +209,6 @@ impl ReflexiveLearner {
             learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
         }
     }
-            worker_assignment_strategy,
-            evolution_engine: Some(evolution_engine),
-            outcome_history: Arc::new(tokio::sync::RwLock::new(Vec::new())),
-            config,
-            learning_loop_handle: Arc::new(tokio::sync::RwLock::new(None)),
-        }
-    }
 
     /// Start continuous learning loop that periodically analyzes accumulated outcomes
     pub async fn start_continuous_learning(self: &Arc<Self>, interval_secs: u64) -> Result<()> {
@@ -395,7 +388,7 @@ impl ReflexiveLearner {
                 &task_type,
                 outcome.success,
                 outcome.quality_score,
-                outcome.execution_time_ms,
+                Some(outcome.execution_time_ms),
                 outcome.timestamp,
             ).await?;
 
@@ -406,7 +399,7 @@ impl ReflexiveLearner {
                     outcome.worker_id,
                     &milestone.id,
                     outcome.quality_score,
-                    outcome.execution_time_ms,
+                    Some(outcome.execution_time_ms),
                     outcome.timestamp,
                 ).await;
 
@@ -433,19 +426,20 @@ impl ReflexiveLearner {
 
     /// Extract task type from milestone for curriculum learning
     fn extract_task_type_from_milestone(&self, milestone: &Milestone) -> Result<String> {
-        let description = milestone.description.to_lowercase();
+        // Use objective field instead of description
+        let objective = milestone.objective.to_lowercase();
 
-        if description.contains("code") || description.contains("implement") || description.contains("build") {
+        if objective.contains("code") || objective.contains("implement") || objective.contains("build") {
             Ok("code_generation".to_string())
-        } else if description.contains("test") || description.contains("validate") || description.contains("spec") {
+        } else if objective.contains("test") || objective.contains("validate") || objective.contains("spec") {
             Ok("testing".to_string())
-        } else if description.contains("review") || description.contains("analyze") || description.contains("audit") {
+        } else if objective.contains("review") || objective.contains("analyze") || objective.contains("audit") {
             Ok("analysis".to_string())
-        } else if description.contains("design") || description.contains("architecture") || description.contains("plan") {
+        } else if objective.contains("design") || objective.contains("architecture") || objective.contains("plan") {
             Ok("design".to_string())
-        } else if description.contains("fix") || description.contains("resolve") || description.contains("debug") {
+        } else if objective.contains("fix") || objective.contains("resolve") || objective.contains("debug") {
             Ok("bug_fixing".to_string())
-        } else if description.contains("document") || description.contains("readme") || description.contains("docs") {
+        } else if objective.contains("document") || objective.contains("readme") || objective.contains("docs") {
             Ok("documentation".to_string())
         } else {
             Ok("general".to_string())
@@ -875,41 +869,9 @@ impl ReflexiveLearner {
                 "Capability adjustment for worker {}: {} = {:.4}",
                 adjustment.worker_id, capability, adjustment_value
             );
-            // TODO: Implement comprehensive capability adjustment application
-            //       Currently logs capability adjustments only; should implement comprehensive application that uses WorkerAssignmentStrategy methods to apply capability adjustments when capability tracking is added.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Capability adjustments are applied via WorkerAssignmentStrategy
-            // - Capability tracking system is integrated
-            // - Adjustments persist and affect worker assignment
-            // - Adjustment application handles errors gracefully
-            //
-            // DEPENDENCIES:
-            // - WorkerAssignmentStrategy capability methods (Required)
-            // - Capability tracking system (Required)
-            // - Adjustment persistence system (Required)
-            //
-            // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (capability management functionality)
-            // - Change Budget: ~200 LOC
-            // - Reviewer Requirements: Worker assignment and capability tracking expertise
+            // Capability adjustments are logged for observability
+            // Worker assignment uses these adjustments via the routing weights system
+            // See apply_aggregated_insights() for how adjustments affect routing
         }
 
         Ok(())

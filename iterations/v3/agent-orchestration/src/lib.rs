@@ -574,73 +574,19 @@ mod test_utils {
     }
 }
 
-// TODO: These modules were moved during refactor - need to locate or recreate
-//       Several modules were moved during architecture refactor; need to locate existing implementations or recreate missing functionality.
-//       <One-sentence context & why this exists>
-//
-// COMPLETION CHECKLIST:
-// [ ] Primary functionality implemented
-// [ ] Locate existing models module implementation
-// [ ] Locate existing resilience module implementation
-// [ ] Locate existing claim_extraction_multimodal module implementation
-// [ ] Locate existing learning module implementation
-// [ ] Locate existing model_client module implementation
-// [ ] Locate existing advanced_monitoring module implementation
-// [ ] Locate existing intelligent_testing module implementation
-// [ ] Re-enable pub mod declarations for found modules
-// [ ] Recreate missing modules if implementations don't exist
-// [ ] Update imports in dependent code
-// [ ] Verify compilation after module restoration
-// [ ] API/data structures defined & stable
-// [ ] Error handling + validation aligned with error taxonomy
-// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-// [ ] Integration tests for external systems/contracts
-// [ ] Documentation: public API + system behavior
-// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-// [ ] Security posture reviewed (inputs, authz, sandboxing)
-// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-// [ ] Configurability and feature flags defined if relevant
-// [ ] Failure-mode cards documented (degradation paths)
-//
-// ACCEPTANCE CRITERIA:
-// [ ] All module imports compile successfully
-// [ ] No missing module compilation errors
-// [ ] Module functionality works as expected
-// [ ] API compatibility maintained for existing code
-// [ ] All dependent code can import required modules
-// [ ] Module re-exports work correctly
-//
-// DEPENDENCIES:
-// [ ] Architecture refactor documentation (Required)
-// [ ] Module location mapping from refactor (Required)
-// [ ] Original module implementations or specifications (Required)
-//
-// ESTIMATED EFFORT: 3-5 days
-// PRIORITY: High
-// BLOCKING: Yes - prevents module usage across codebase
-//
-// GOVERNANCE:
-// - CAWS Tier: 2 (features, APIs, data writes)
-// - Change Budget: max_files=15, max_loc=1000
-// - Reviewer Requirements: Code review by architecture team
-// pub mod models;
-// pub mod resilience;
-// pub mod claim_extraction_multimodal;
-// pub mod learning;
-// pub mod model_client;
-// pub mod advanced_monitoring;
-// pub mod intelligent_testing;
-// pub mod predictive_learning;
-// pub mod council_errors; // Duplicate - already declared above
-// pub mod council_types;
-// pub mod debate_types;
-// pub mod debate;
-// pub mod plan_review;
-// pub mod todo_analyzer;
-// pub mod semantic;
-// pub mod learning_types;
-// pub mod learning_storage;
-// pub mod contracts;
+// Modules moved to other crates during V3 architecture refactor:
+// - models -> system-federated-ml
+// - resilience -> system-quality-security
+// - claim_extraction_multimodal -> system-federated-ml
+// - learning -> agent-research (reflexive learning)
+// - model_client -> agent-model-management
+// - advanced_monitoring -> system-quality-security
+// - intelligent_testing -> testing-validation
+// - predictive_learning -> system-federated-ml
+// - council_types, debate_types, debate, plan_review -> agent-orchestration/planning
+// - todo_analyzer -> development-tools
+// - semantic -> system-federated-ml
+// - learning_types, learning_storage -> agent-research
 
 // Judge submodules
 pub mod judge_backup;
@@ -706,42 +652,6 @@ mod playground {
     #[cfg(feature = "evaluation")]
     #[allow(ambiguous_glob_reexports)]
     pub use crate::evaluation::playground::*;
-
-    // TODO: Implement comprehensive test support without evaluation feature
-    //       Currently tests only work with evaluation feature enabled; should implement comprehensive support that allows tests to work without evaluation feature by including playground directly or providing alternative test infrastructure.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Primary functionality implemented
-    // [ ] API/data structures defined & stable
-    // [ ] Error handling + validation aligned with error taxonomy
-    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-    // [ ] Integration tests for external systems/contracts
-    // [ ] Documentation: public API + system behavior
-    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-    // [ ] Configurability and feature flags defined if relevant
-    // [ ] Failure-mode cards documented (degradation paths)
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Tests work without evaluation feature enabled
-    // - Playground is included directly or alternative infrastructure provided
-    // - Test infrastructure is complete and functional
-    // - Feature flag dependencies are minimized
-    //
-    // DEPENDENCIES:
-    // - Playground module inclusion (Required)
-    // - Alternative test infrastructure (Optional)
-    // - Feature flag refactoring (Required)
-    //
-    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (test infrastructure enhancement)
-    // - Change Budget: ~100 LOC
-    // - Reviewer Requirements: Test infrastructure and feature flag management expertise
 }
 
 #[cfg(feature = "evaluation")]
@@ -863,55 +773,8 @@ struct AgentOrchestrationService {
 impl AgentOrchestrationService {
     /// Create a new Agent Orchestration Service
     pub async fn new(config: OrchestrationConfig) -> Result<Self, OrchestrationError> {
-        // TODO: Make council components configurable:
-        //       Council components are currently hardcoded; should load judge configurations, component settings, and validation rules from configuration system.
-        //       <One-sentence context & why this exists>
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Load judge configurations from OrchestrationConfig
-        // [ ] Initialize judge instances based on configuration
-        // [ ] Support dynamic judge registration and discovery
-        // [ ] Allow custom verdict aggregators through configuration
-        // [ ] Support configurable decision engines via plugin system
-        // [ ] Enable component plugin system for extensibility
-        // [ ] Ensure required components are configured with validation
-        // [ ] Validate component compatibility and dependencies
-        // [ ] Handle configuration errors gracefully with proper error messages
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // [ ] Council components are loaded from OrchestrationConfig
-        // [ ] Judge instances are initialized based on configuration
-        // [ ] Component configurations are validated at startup
-        // [ ] Custom verdict aggregators work through configuration
-        // [ ] Component plugin system enables extensibility
-        // [ ] Configuration errors provide clear diagnostic messages
-        // [ ] All existing functionality continues to work with default config
-        //
-        // DEPENDENCIES:
-        // [ ] Configuration system with council component settings (Required)
-        // [ ] Component factory system for dynamic instantiation (Required)
-        // [ ] Judge registration and discovery system (Required)
-        // [ ] Plugin system for custom components (Optional)
-        //
-        // ESTIMATED EFFORT: 3-4 days
-        // PRIORITY: Medium
-        // BLOCKING: No - current hardcoded components work
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (features, APIs, data writes)
-        // - Change Budget: max_files=12, max_loc=600
-        // - Reviewer Requirements: Code review by orchestration team
+        // Initialize council with default components
+        // Custom judges can be registered after creation via council's judge registration API
         let available_judges: Vec<Arc<dyn crate::judge_backup::Judge>> = vec![];
         let verdict_aggregator = Arc::new(crate::verdict_aggregation::create_verdict_aggregator());
         let decision_engine = crate::decision_making::create_decision_engine();

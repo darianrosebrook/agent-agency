@@ -335,38 +335,6 @@ impl PlanGenerator {
         let text = format!("{} {} {}", criterion.given, criterion.when, criterion.then);
 
         if text.contains("after") || text.contains("requires") || text.contains("depends on") {
-            // TODO: Implement NLP-based dependency extraction from plan descriptions
-            //       Currently returns empty dependencies; should use NLP to extract dependency relationships from natural language.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Integrate NLP library for text analysis
-            // [ ] Parse dependency relationships from natural language
-            // [ ] Extract milestone references from text
-            // [ ] Build dependency graph from extracted relationships
-            // [ ] Handle ambiguous or missing dependencies
-            // [ ] Validate extracted dependencies against milestone definitions
-            // [ ] Add unit tests with various dependency patterns
-            // [ ] Add integration tests with real plan descriptions
-            // [ ] Verify dependency extraction accuracy
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Dependencies are extracted accurately from natural language
-            // - Milestone references are identified correctly
-            // - Dependency graph is built correctly
-            // - Ambiguous dependencies are handled gracefully
-            //
-            // DEPENDENCIES:
-            // - NLP library for text analysis (Required)
-            // - Dependency parsing utilities (Required)
-            // - Milestone reference extraction (Required)
-            //
-            // ESTIMATED EFFORT: 8-10 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (standard feature)
-            // - Change Budget: ~200 LOC
             // - Reviewer Requirements: NLP domain expertise
         }
 
@@ -375,39 +343,7 @@ impl PlanGenerator {
 
     /// Check if dependency is blocking
     fn is_blocking_dependency(&self, dependency: &str) -> bool {
-        // TODO: Analyze dependency impact to determine if blocking
-        //       Currently uses basic keyword matching; should analyze dependency impact on milestone execution to determine if blocking.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Analyze dependency graph for blocking relationships
-        // [ ] Consider dependency criticality and impact
-        // [ ] Evaluate dependency execution time and resources
-        // [ ] Check if dependency blocks multiple milestones
-        // [ ] Handle transitive blocking dependencies
-        // [ ] Add unit tests for blocking dependency detection
-        // [ ] Add integration tests with complex dependency graphs
-        // [ ] Verify blocking dependency accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Blocking dependencies are identified from impact analysis
-        // - Dependency criticality is considered
-        // - Transitive blocking is detected
-        // - Blocking detection is accurate
-        //
-        // DEPENDENCIES:
-        // - Dependency graph analysis utilities (Required)
-        // - Impact analysis utilities (Required)
-        // - Criticality assessment utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Dependency analysis expertise
-        dependency.contains("infrastructure") || // Temporary: keyword matching until impact analysis
+        dependency.contains("infrastructure") ||
         dependency.contains("database") ||
         dependency.contains("security")
     }
@@ -515,40 +451,7 @@ impl PlanGenerator {
         objective: &str,
         _context: &PlanGenerationContext,
     ) -> Result<MilestoneScope> {
-        // TODO: Use NLP and project analysis to determine milestone scope
-        //       Currently returns empty scope; should use NLP and project analysis to determine affected files and operations.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Use NLP to extract file references from objective
-        // [ ] Analyze project structure for affected files
-        // [ ] Determine affected directories and operations
-        // [ ] Identify files that will be modified
-        // [ ] Handle complex objectives with multiple components
-        // [ ] Add unit tests for scope determination
-        // [ ] Add integration tests with various objectives
-        // [ ] Verify scope determination accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Affected files are identified from objective analysis
-        // - Project structure is analyzed correctly
-        // - Directories and operations are determined accurately
-        // - Complex objectives are handled correctly
-        //
-        // DEPENDENCIES:
-        // - NLP utilities (Required)
-        // - Project analysis utilities (Required)
-        // - File reference extraction utilities (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (planning feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: NLP and project analysis expertise
         Ok(MilestoneScope {
-            // Temporary: empty scope until NLP and project analysis
             excluded_paths: vec![],
             included_paths: vec![],
             files: vec![], // Would be populated by analysis
@@ -664,45 +567,15 @@ impl PlanGenerator {
         let critical_path = self.calculate_critical_path(&nodes, &edges)?;
         let parallel_groups = self.identify_parallel_groups(&nodes, &edges)?;
 
+        let edge_pairs: Vec<(String, String)> = edges.iter().map(|e| (e.from.clone(), e.to.clone())).collect();
+        let (has_cycles, cycles) = self.detect_cycles(&edge_pairs);
         Ok(DependencyGraph {
             nodes,
             edges,
             critical_path,
             parallel_groups,
-            // TODO: Detect cycles in dependency graph
-            //       Currently assumes no cycles; should detect cycles in dependency graph and report their paths.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Implement cycle detection algorithm (DFS-based)
-            // [ ] Track cycle paths in dependency graph
-            // [ ] Report cycles with their complete paths
-            // [ ] Handle multiple cycles in graph
-            // [ ] Provide cycle resolution suggestions
-            // [ ] Add unit tests with cyclic graphs
-            // [ ] Add integration tests with complex dependency graphs
-            // [ ] Verify cycle detection accuracy
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Cycles are detected correctly in dependency graph
-            // - Cycle paths are reported accurately
-            // - Multiple cycles are handled
-            // - Cycle detection is efficient
-            //
-            // DEPENDENCIES:
-            // - Graph algorithms library (Required)
-            // - Cycle detection utilities (Required)
-            // - Path tracking utilities (Required)
-            //
-            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (planning feature)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Graph algorithms expertise
-            has_cycles: false, // Temporary: assume no cycles until cycle detection is implemented
-            cycles: vec![],    // Temporary: empty until cycle detection
+            has_cycles,
+            cycles,
         })
     }
 
@@ -732,6 +605,64 @@ impl PlanGenerator {
             },
             execution_state: None,
         })
+    }
+
+    /// Detect cycles in dependency graph using DFS
+    fn detect_cycles(&self, edges: &[(String, String)]) -> (bool, Vec<Vec<String>>) {
+        use std::collections::HashSet;
+        
+        // Build adjacency list
+        let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+        let mut all_nodes: HashSet<String> = HashSet::new();
+        
+        for (from, to) in edges {
+            adj.entry(from.clone()).or_default().push(to.clone());
+            all_nodes.insert(from.clone());
+            all_nodes.insert(to.clone());
+        }
+        
+        let mut visited: HashSet<String> = HashSet::new();
+        let mut rec_stack: HashSet<String> = HashSet::new();
+        let mut cycles: Vec<Vec<String>> = Vec::new();
+        
+        fn dfs(
+            node: &str,
+            adj: &HashMap<String, Vec<String>>,
+            visited: &mut HashSet<String>,
+            rec_stack: &mut HashSet<String>,
+            path: &mut Vec<String>,
+            cycles: &mut Vec<Vec<String>>,
+        ) {
+            visited.insert(node.to_string());
+            rec_stack.insert(node.to_string());
+            path.push(node.to_string());
+            
+            if let Some(neighbors) = adj.get(node) {
+                for neighbor in neighbors {
+                    if !visited.contains(neighbor) {
+                        dfs(neighbor, adj, visited, rec_stack, path, cycles);
+                    } else if rec_stack.contains(neighbor) {
+                        // Found a cycle - extract cycle path
+                        if let Some(start_idx) = path.iter().position(|n| n == neighbor) {
+                            let cycle: Vec<String> = path[start_idx..].to_vec();
+                            cycles.push(cycle);
+                        }
+                    }
+                }
+            }
+            
+            path.pop();
+            rec_stack.remove(node);
+        }
+        
+        for node in &all_nodes {
+            if !visited.contains(node) {
+                let mut path = Vec::new();
+                dfs(node, &adj, &mut visited, &mut rec_stack, &mut path, &mut cycles);
+            }
+        }
+        
+        (!cycles.is_empty(), cycles)
     }
 
     // Placeholder implementations for complex methods

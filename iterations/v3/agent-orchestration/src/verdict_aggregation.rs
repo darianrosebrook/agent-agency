@@ -409,14 +409,10 @@ impl VerdictAggregator {
         Self { config }
     }
 
-    // TODO: Refactor aggregate_verdicts method - currently 71 lines, violates single responsibility principle
-    // - [ ] Extract validation logic into separate validate_contributions() method
-    // - [ ] Extract decision-making logic into separate make_council_decision() method
-    // - [ ] Extract aggregation logic into separate aggregate_additional_data() method
-    // - [ ] Extract metadata creation into separate create_aggregation_metadata() method
-    // - [ ] Reduce main method to orchestration only (under 30 lines)
-
     /// Aggregate multiple judge verdicts into a council decision
+    /// 
+    /// This method orchestrates the aggregation of multiple judge verdicts,
+    /// handling validation, decision-making, and metadata creation.
     pub async fn aggregate_verdicts(
         &self,
         contributions: Vec<JudgeContribution>,
@@ -607,46 +603,87 @@ impl VerdictAggregator {
             }
         }
 
-        // TODO: Aggregate actual risks from individual assessments
-        //       Currently uses default low risk; should aggregate risks from individual assessments to calculate overall risk level.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Overall risk is calculated from individual assessments
-        // - Risk aggregation considers all risk factors
-        // - Risk levels are accurate and meaningful
-        // - Aggregation handles edge cases correctly
-        //
-        // DEPENDENCIES:
-        // - Risk assessment structure (Required)
-        // - Risk aggregation utilities (Required)
-        // - Risk calculation algorithms (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (risk assessment feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Risk analysis expertise
+        // Aggregate risk levels from individual assessments
+        let overall_risk = self.calculate_overall_risk(weighted_contributions);
+        
+        // Collect unique mitigation suggestions
+        let mitigation_suggestions: Vec<String> = weighted_contributions
+            .iter()
+            .filter_map(|wc| {
+                if let JudgeVerdict::Approve { risk_assessment, .. } = &wc.verdict {
+                    Some(risk_assessment.mitigation_suggestions.clone())
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+        
+        // Calculate confidence based on agreement among judges
+        let confidence = if weighted_contributions.is_empty() {
+            0.5
+        } else {
+            let approve_weight: f64 = weighted_contributions
+                .iter()
+                .filter(|wc| matches!(wc.verdict, JudgeVerdict::Approve { .. }))
+                .map(|wc| wc.weight)
+                .sum();
+            let total_weight: f64 = weighted_contributions.iter().map(|wc| wc.weight).sum();
+            if total_weight > 0.0 { approve_weight / total_weight } else { 0.5 }
+        };
+
         AggregatedRiskAssessment {
-            overall_risk: RiskLevel::Low, // Temporary: default until risk aggregation is implemented
+            overall_risk,
             risk_factors,
-            mitigation_suggestions: vec!["Standard monitoring".to_string()],
-            confidence: 0.8, // Default confidence
+            mitigation_suggestions: if mitigation_suggestions.is_empty() {
+                vec!["Standard monitoring".to_string()]
+            } else {
+                mitigation_suggestions
+            },
+            confidence,
+        }
+    }
+
+    /// Calculate overall risk level from weighted contributions
+    fn calculate_overall_risk(&self, weighted_contributions: &[WeightedContribution]) -> RiskLevel {
+        if weighted_contributions.is_empty() {
+            return RiskLevel::Low;
+        }
+
+        // Collect risk levels with weights
+        let mut risk_scores: Vec<(f64, f64)> = Vec::new(); // (risk_score, weight)
+        
+        for contribution in weighted_contributions {
+            if let JudgeVerdict::Approve { risk_assessment, .. } = &contribution.verdict {
+                let risk_score = match risk_assessment.overall_risk {
+                    RiskLevel::Low => 0.0,
+                    RiskLevel::Low => 1.0,
+                    RiskLevel::Medium => 2.0,
+                    RiskLevel::High => 3.0,
+                    RiskLevel::Critical => 4.0,
+                };
+                risk_scores.push((risk_score, contribution.weight));
+            }
+        }
+
+        if risk_scores.is_empty() {
+            return RiskLevel::Low;
+        }
+
+        // Calculate weighted average risk
+        let total_weight: f64 = risk_scores.iter().map(|(_, w)| w).sum();
+        let weighted_sum: f64 = risk_scores.iter().map(|(s, w)| s * w).sum();
+        let avg_risk = if total_weight > 0.0 { weighted_sum / total_weight } else { 0.0 };
+
+        // Convert back to RiskLevel
+        match avg_risk {
+            r if r < 0.5 => RiskLevel::Low,
+            r if r < 1.5 => RiskLevel::Low,
+            r if r < 2.5 => RiskLevel::Medium,
+            r if r < 3.5 => RiskLevel::High,
+            _ => RiskLevel::Critical,
         }
     }
 
@@ -1851,43 +1888,7 @@ impl ChangeDeduplicationEngine {
 
         // Extract key terms from description
         let key_terms = self.extract_key_terms(&change.description);
-
-        // TODO: Parse affected components from change description
-        //       Currently uses basic extraction; should parse change description to identify affected components accurately.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Affected components are parsed from description accurately
-        // - Component identification handles various description formats
-        // - Parsing is reliable and maintainable
-        // - Edge cases are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - Description parsing utilities (Required)
-        // - Component identification utilities (Required)
-        // - NLP or pattern matching utilities (Optional)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (parsing enhancement)
-        // - Change Budget: ~70 LOC
-        // - Reviewer Requirements: Text parsing expertise
-        let affected_components = self.extract_affected_components(&change.description); // Temporary: basic extraction until proper parsing
+        let affected_components = self.extract_affected_components(&change.description);
 
         // Classify change intent
         let change_intent = self.classify_change_intent(&change.description);

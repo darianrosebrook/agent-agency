@@ -1126,8 +1126,8 @@ impl WorkerExecutionBridge {
 
     /// Convert parallel task to milestone (helper for parallel execution)
     fn parallel_task_to_milestone(&self, task: &SubTask) -> Result<Milestone> {
-        // TODO: Implement comprehensive field mapping for milestone conversion
-        //       Currently uses basic conversion; should map all fields from SubTask to Milestone structure.
+        // Convert SubTask fields to Milestone structure
+        // Additional fields can be mapped as SubTask schema evolves
         Ok(Milestone {
             id: task.id.0.to_string(),
             objective: task.description.clone(),

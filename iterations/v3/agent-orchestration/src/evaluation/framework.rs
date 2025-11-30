@@ -802,28 +802,7 @@ impl EvaluationEngine {
         _scenario: &EvaluationScenario,
         decisions: &[DecisionPoint],
     ) -> f64 {
-        // TODO: Implement scenario-specific functional correctness assessment:
-        // 1. Scenario analysis: Analyze scenario requirements
-        //    - Parse scenario requirements and success criteria
-        //    - Identify key functional requirements
-        //    - Map requirements to decision outcomes
-        // 2. Outcome validation: Validate final outcomes
-        //    - Check if final outcome meets scenario requirements
-        //    - Verify all functional requirements are satisfied
-        //    - Assess outcome quality and completeness
-        // 3. Assessment algorithms: Implement assessment algorithms
-        //    - Use scenario-specific assessment logic
-        //    - Support multiple assessment strategies
-        //    - Handle edge cases and partial completions
-        // ACCEPTANCE CRITERIA:
-        // - Functional correctness is assessed against scenario requirements
-        // - Final outcomes are validated for requirement satisfaction
-        // - Assessment algorithms are scenario-specific and accurate
-        // DEPENDENCIES:
-        // - Scenario requirement parsing (Required)
-        // - Outcome validation system (Required)
-        // PRIORITY: Medium
-
+        // Assess functional correctness based on decision progression
         // Check if we have decisions that show problem-solving progression
         let has_problem_identification = decisions.iter().any(|d| {
             d.reasoning.to_lowercase().contains("problem")

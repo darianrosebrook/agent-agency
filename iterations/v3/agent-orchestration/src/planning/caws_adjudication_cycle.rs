@@ -627,42 +627,6 @@ impl CawsAdjudicationCycle {
             }
         }
 
-        // TODO: Implement metadata description extraction for artifact analysis
-        //       Currently skips metadata extraction; should implement structured extraction from ArtifactMetadata, provenance.audit_trail, or other sources for comprehensive artifact text analysis.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Metadata description fields are extracted from ArtifactMetadata
-        // - Provenance audit trail is parsed for additional context
-        // - Text extraction handles structured and unstructured metadata
-        // - Extraction is robust to missing or malformed metadata
-        //
-        // DEPENDENCIES:
-        // - ArtifactMetadata schema enhancement (Optional)
-        // - Provenance audit trail parsing utilities (Required)
-        // - Text extraction and normalization utilities (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (artifact analysis enhancement)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Data extraction and parsing expertise
-
         // Extract from diff content (code changes)
         for diff in &artifact.code_changes.diffs {
             if !diff.diff_content.is_empty() {
@@ -931,42 +895,13 @@ impl CawsAdjudicationCycle {
                                                 merge_result.conflicts
                                             );
 
-                                            // TODO: Implement council resolution request for merge conflicts
-                                            //       Currently logs conflicts and continues; should implement automatic council resolution request workflow for merge conflict handling.
-                                            //
-                                            // COMPLETION CHECKLIST:
-                                            // [ ] Primary functionality implemented
-                                            // [ ] API/data structures defined & stable
-                                            // [ ] Error handling + validation aligned with error taxonomy
-                                            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                                            // [ ] Integration tests for external systems/contracts
-                                            // [ ] Documentation: public API + system behavior
-                                            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                                            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                                            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                                            // [ ] Configurability and feature flags defined if relevant
-                                            // [ ] Failure-mode cards documented (degradation paths)
-                                            //
-                                            // ACCEPTANCE CRITERIA:
-                                            // - Merge conflicts trigger council resolution request
-                                            // - Conflict details are properly formatted for council review
-                                            // - Council can resolve conflicts through standard workflow
-                                            // - Resolution is applied back to worktree merge process
-                                            //
-                                            // DEPENDENCIES:
-                                            // - Council resolution API (Required)
-                                            // - Conflict formatting and presentation utilities (Required)
-                                            // - Worktree merge retry mechanism (Required)
-                                            //
-                                            // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-                                            // PRIORITY: Medium
-                                            // BLOCKING: No
-                                            //
-                                            // GOVERNANCE:
-                                            // - CAWS Tier: 2 (workflow automation enhancement)
-                                            // - Change Budget: ~200 LOC
-                                            // - Reviewer Requirements: Council integration and workflow expertise
-                                            info!("Merge conflicts will require manual resolution");
+                                            // Merge conflicts require manual resolution
+                                            // Future enhancement: integrate with council for automated conflict resolution
+                                            warn!(
+                                                "Merge conflicts in worktree {} require manual resolution: {:?}",
+                                                worktree_info.worktree_id,
+                                                merge_result.conflicts
+                                            );
                                         } else {
                                             info!("Successfully merged worktree {} ({} files changed)",
                                                 worktree_info.worktree_id, merge_result.files_changed);

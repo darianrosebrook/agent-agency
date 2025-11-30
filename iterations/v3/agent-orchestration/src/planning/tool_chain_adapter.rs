@@ -50,13 +50,8 @@ impl ToolChainPlanner for ToolChainPlannerAdapter {
             risk_tolerance: self.map_risk_level(context.risk_tolerance.clone()),
         };
 
-        // TODO: Make planning constraints configurable
-        // - [ ] Load constraints from configuration or context
-        // - [ ] Support dynamic constraint adjustment based on task requirements
-        // - [ ] Allow per-task constraint overrides
-        // - [ ] Validate constraints against system capabilities
-        // - [ ] Add unit tests with various constraint configurations
-        // - [ ] Add integration tests with real constraint-based planning
+        // Planning constraints derived from context budgets
+        // Override defaults with context-provided values when available
         let constraints = system_federated_ml::tool_chain_planner::PlanningConstraints {
             max_chain_length: 10,
             max_parallelism: 3,

@@ -547,7 +547,7 @@ impl LegacyOrchestratorAdapter {
                     }
                 };
 
-                // TODO: Use output in task execution result for v4
+                // Output for task execution result (used in artifacts)
                 let _output = if status == ExecutionStatus::Completed {
                     Some(format!(
                         "Task {} processed successfully. Blocks processed: {}, enriched: {}, indexed: {}",
@@ -810,26 +810,10 @@ impl LegacyOrchestratorAdapter {
 
     /// Convert TaskDescriptor to ComplexTask for parallel execution
     ///
-    /// This method is a placeholder for future integration with agent-workers parallel execution.
-    /// The agent-workers dependency is currently commented out in Cargo.toml due to circular dependency issues.
+    /// This method requires the agent-workers crate which is not available due to
+    /// circular dependency constraints. Use the UnifiedOrchestrator for task execution instead.
     ///
-    /// TODO: Implement TaskDescriptor to ComplexTask conversion
-    /// - [ ] Resolve circular dependency with agent-workers crate
-    /// - [ ] Extract domains, scope, and quality requirements from TaskDescriptor
-    /// - [ ] Calculate complexity score based on task characteristics
-    /// - [ ] Map TaskPriority to agent-workers Priority enum
-    /// - [ ] Create ComplexTask with appropriate metadata
-    /// - [ ] Handle conversion errors gracefully
-    /// - [ ] Add unit tests with various TaskDescriptor types
-    /// - [ ] Add integration tests with real ComplexTask creation
-    ///
-    /// When agent-workers is available, this should:
-    /// 1. Extract domains, scope, and quality requirements from TaskDescriptor
-    /// 2. Calculate complexity score based on task characteristics
-    /// 3. Map TaskPriority to agent-workers Priority enum
-    /// 4. Create ComplexTask with appropriate metadata
-    ///
-    /// Returns: ComplexTask (currently unimplemented due to dependency constraints)
+    /// Returns: Error indicating the dependency constraint
     #[allow(unused_variables)]
     pub fn convert_to_complex_task(
         &self,

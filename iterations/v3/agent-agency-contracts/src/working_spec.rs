@@ -151,6 +151,17 @@ pub struct WorkingSpecConstraints {
     pub scope_restrictions: Option<ScopeRestrictions>,
 }
 
+impl Default for WorkingSpecConstraints {
+    fn default() -> Self {
+        Self {
+            max_duration_minutes: Some(60),
+            max_iterations: Some(10),
+            budget_limits: None,
+            scope_restrictions: None,
+        }
+    }
+}
+
 /// Change budget constraints
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -249,6 +260,17 @@ pub struct TestPlan {
     /// Test coverage targets
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coverage_targets: Option<CoverageTargets>,
+}
+
+impl Default for TestPlan {
+    fn default() -> Self {
+        Self {
+            unit_tests: vec![],
+            integration_tests: vec![],
+            e2e_scenarios: vec![],
+            coverage_targets: None,
+        }
+    }
 }
 
 /// Unit test specification
@@ -406,6 +428,18 @@ pub struct WorkingSpecContext {
 
     /// Target environment
     pub environment: Environment,
+}
+
+impl Default for WorkingSpecContext {
+    fn default() -> Self {
+        Self {
+            workspace_root: ".".to_string(),
+            git_branch: "main".to_string(),
+            recent_changes: vec![],
+            dependencies: std::collections::HashMap::new(),
+            environment: Environment::Development,
+        }
+    }
 }
 
 /// File change information

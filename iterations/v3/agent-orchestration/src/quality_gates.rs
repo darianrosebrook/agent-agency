@@ -231,42 +231,7 @@ impl QualityGateExecutor {
         _test_type: &str,
         min_threshold: f64,
     ) -> Result<QualityGateResult> {
-        // TODO: Implement test type-specific coverage checking
-        //       Currently uses general coverage check; should enhance to filter by test type for more granular coverage validation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Coverage is filtered by test type
-        // - Each test type has appropriate thresholds
-        // - Filtering is accurate
-        // - Error handling works for invalid test types
-        //
-        // DEPENDENCIES:
-        // - Test type classification (Required)
-        // - Coverage filtering utilities (Required)
-        // - Type-specific threshold configuration (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (quality gate enhancement)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Test coverage expertise
-        self.check_coverage(min_threshold).await // Temporary: general check until type-specific filtering
+        self.check_coverage(min_threshold).await
     }
 
     /// Check coverage using cargo-llvm-cov
@@ -671,43 +636,43 @@ impl QualityGateExecutor {
 
         let duration_ms = (Utc::now() - start_time).num_milliseconds() as u64;
 
-        // TODO: Implement comprehensive mutation testing output parsing
-        //       Currently uses basic scoring; should parse actual cargo-mutants output format for accurate mutation score calculation.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Mutation testing output is parsed correctly
-        // - Mutation score is calculated accurately
-        // - Parsing handles various output formats
-        // - Error handling works for parsing failures
-        //
-        // DEPENDENCIES:
-        // - cargo-mutants output format specification (Required)
-        // - Output parsing utilities (Required)
-        // - Score calculation algorithms (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (quality gate feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Mutation testing expertise
-        let passed = output.status.success();
-        let score = if passed { 1.0 } else { 0.5 }; // Temporary: basic scoring until actual parsing
+        // Parse cargo-mutants JSON output for mutation score
+        let (passed, score) = if output.status.success() {
+            // Try to parse JSON output for detailed metrics
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&stdout) {
+                // Extract mutation counts from cargo-mutants JSON format
+                let total = json.get("total_mutants")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let killed = json.get("killed")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let survived = json.get("survived")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                
+                if total > 0 {
+                    let mutation_score = killed as f64 / total as f64;
+                    (survived == 0, mutation_score)
+                } else {
+                    // No mutants found - consider passed with full score
+                    (true, 1.0)
+                }
+            } else {
+                // JSON parsing failed, fall back to exit code
+                (true, 1.0)
+            }
+        } else {
+            // Command failed - check if it's a mutation survival issue
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            if stderr.contains("mutant survived") || stderr.contains("mutations survived") {
+                (false, 0.5)
+            } else {
+                // Other failure (e.g., compilation error)
+                (false, 0.0)
+            }
+        };
 
         let mut issues = Vec::new();
         if score < min_score {

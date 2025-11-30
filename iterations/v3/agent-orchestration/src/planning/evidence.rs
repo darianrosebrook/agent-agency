@@ -459,15 +459,19 @@ impl EvidenceCollector {
     }
 
     /// Store evidence to database
+    /// 
+    /// Database storage requires data-infrastructure integration.
+    /// Currently only file storage is supported.
     async fn store_to_database(&self, _bundle: &EvidenceBundle) -> Result<()> {
-        // TODO: Implement database storage
-        Err(anyhow!("Database storage not yet implemented"))
+        Err(anyhow!("Database storage requires data-infrastructure integration. Use file storage."))
     }
 
     /// Store evidence to distributed storage
+    /// 
+    /// Distributed storage requires S3/GCS integration.
+    /// Currently only file storage is supported.
     async fn store_to_distributed(&self, _bundle: &EvidenceBundle) -> Result<()> {
-        // TODO: Implement distributed storage
-        Err(anyhow!("Distributed storage not yet implemented"))
+        Err(anyhow!("Distributed storage requires S3/GCS integration. Use file storage."))
     }
 
     /// Helper methods for evidence validation

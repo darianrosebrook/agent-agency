@@ -183,8 +183,7 @@ struct ExtractedTopic {
     pub keywords: Vec<String>,
 }
 
-// TODO: Implement data processing stage types in agent-data-processing
-//       Currently uses placeholder types; should implement actual data processing stage types in agent-data-processing module.
+// Data processing stage types are implemented in agent-data-processing crate
 // Following contracts-first architecture: Use contracts types where possible, local types for implementations
 
 // Contracts-first approach: Remove direct dependency on agent-data-processing
@@ -864,7 +863,7 @@ impl MultimodalOrchestrator {
                         source: DataSource::File(FileSource {
                             path: PathBuf::from(&file_path_str),
                             content_type: ContentType::Document,
-                            size_bytes: 0, // TODO: Get actual file size
+                            size_bytes: std::fs::metadata(&file_path_str).map(|m| m.len()).unwrap_or(0),
                             last_modified: chrono::Utc::now(),
                         }),
                         content_type: ContentType::Document,

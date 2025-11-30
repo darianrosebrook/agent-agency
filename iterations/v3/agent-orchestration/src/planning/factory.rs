@@ -25,11 +25,9 @@ use crate::planning::memory_adapter::MemorySystemAdapter;
 #[cfg(feature = "research")]
 use crate::planning::research_adapter::ResearchEvidenceAdapter;
 
-// TODO: Document stub implementation for disabled feature
-//       This is an intentional stub when council feature is disabled.
-//       Methods return errors or empty results. Consider improving error handling.
-//
-// Stub implementation of CouncilCoordinator for when council feature is disabled
+/// Stub implementation of CouncilCoordinator for when council feature is disabled.
+/// All methods return errors indicating the feature is not available.
+/// Enable the "council" feature to use full council functionality.
 struct StubCouncilCoordinator;
 
 #[async_trait::async_trait]
@@ -649,42 +647,6 @@ impl PlanningSystemFactory {
             council_review,
             // NOTE: When agent-constitutional-council is added back, uncomment this:
             // council_coordinator: Arc::new(CouncilCoordinatorAdapter::new(council_coordinator)),
-            //
-            // TODO: Implement comprehensive NoOpCouncilCoordinatorAdapter
-            //       Currently creates stub adapter; should implement comprehensive NoOpCouncilCoordinatorAdapter that provides proper no-op implementation for council coordinator when agent-constitutional-council is not available.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - NoOpCouncilCoordinatorAdapter is implemented
-            // - No-op behavior is correct and safe
-            // - Adapter integrates properly with factory
-            // - Transition to real adapter is seamless when available
-            //
-            // DEPENDENCIES:
-            // - CouncilCoordinatorAdapter interface (Required)
-            // - No-op implementation pattern (Required)
-            // - Factory integration utilities (Required)
-            //
-            // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (adapter pattern implementation)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Adapter pattern and council integration expertise
             council_coordinator: Arc::new(StubCouncilCoordinator)
                 as Arc<dyn agent_agency_contracts::CouncilCoordinator>,
             #[cfg(feature = "memory")]

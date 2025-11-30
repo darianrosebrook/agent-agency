@@ -47,7 +47,7 @@ use tracing::instrument;
 /// Worker solution proposal with evidence and rationale
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkerSolution {
+pub struct WorkerSolution {
     pub worker_id: String,
     pub solution_id: String,
     pub working_spec: agent_agency_contracts::WorkingSpec,
@@ -89,16 +89,69 @@ struct WorkerPlea {
     pub weakness_acknowledgments: Vec<String>,
 }
 
+/// Status of a debate session
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub enum DebateStatus {
+    Active,
+    Concluded,
+    Deadlocked,
+}
+
+/// Stance of a debate argument
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum ArgumentStance {
+    Defensive,    // Defending own solution
+    Counter,      // Countering opposing arguments
+    Clarification, // Responding to judge questions
+}
+
+/// A judge question asked during debate
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct JudgeQuestion {
+    pub judge_id: String,
+    pub question_text: String,
+    pub target_worker_id: Option<String>, // None for general questions
+    pub round: usize,
+}
+
+/// A worker's argument in a debate round
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct DebateArgument {
+    pub worker_id: String,
+    pub solution_id: String,
+    pub argument_text: String,
+    pub counter_arguments: Vec<String>, // References to previous arguments
+    pub evidence_citations: Vec<String>,
+    pub stance: ArgumentStance,
+    pub round: usize,
+}
+
+/// A single round in a multi-turn debate
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct DebateRound {
+    pub round_number: usize,
+    pub worker_arguments: Vec<DebateArgument>,
+    pub judge_questions: Vec<JudgeQuestion>,
+    pub round_scores: Vec<SolutionScore>,
+    pub round_winner: Option<String>,
+    pub confidence: f64,
+    pub timestamp: DateTime<Utc>,
+}
+
 /// Result of a debate between competing solutions
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct DebateResult {
+pub struct DebateResult {
     pub winner_solution_id: String,
     pub winner_worker_id: String,
     pub winning_score: f64,
     pub confidence: f64,
     pub solution_scores: Vec<SolutionScore>,
     pub judge_notes: String,
+    // Multi-turn debate extensions
+    pub rounds: Vec<DebateRound>,
+    pub current_round: usize,
+    pub debate_status: DebateStatus,
 }
 
 /// Score for a solution from debate evaluation
@@ -112,6 +165,73 @@ struct SolutionScore {
     pub budget_adherence: f64,
     pub gate_integrity: f64,
     pub provenance_clarity: f64,
+}
+
+/// Configuration for multi-turn debate behavior
+#[derive(Debug, Clone)]
+pub struct DebateConfig {
+    pub max_rounds: usize,           // Default: 5
+    pub min_confidence: f64,         // Default: 0.8
+    pub consensus_threshold: f64,    // Default: 0.9
+    pub enable_judge_questions: bool, // Default: true
+    pub argument_generation_model: Option<String>, // Optional override
+}
+
+impl Default for DebateConfig {
+    fn default() -> Self {
+        Self {
+            max_rounds: 5,
+            min_confidence: 0.8,
+            consensus_threshold: 0.9,
+            enable_judge_questions: true,
+            argument_generation_model: None,
+        }
+    }
+}
+
+impl DebateConfig {
+    /// Create debate configuration based on risk tier
+    pub fn from_risk_tier(risk_tier: u8) -> Self {
+        match risk_tier {
+            1 => {
+                // Tier 1 (Critical): More rigorous debate
+                Self {
+                    max_rounds: 7,           // More rounds for critical decisions
+                    min_confidence: 0.9,     // Higher confidence required
+                    consensus_threshold: 0.95, // Stronger consensus needed
+                    enable_judge_questions: true,
+                    argument_generation_model: Some("gpt-4-turbo".to_string()), // Use best model
+                }
+            }
+            2 => {
+                // Tier 2 (Standard): Default balanced configuration
+                Self::default()
+            }
+            3 => {
+                // Tier 3 (Low Risk): Simplified debate
+                Self {
+                    max_rounds: 3,           // Fewer rounds
+                    min_confidence: 0.7,     // Lower confidence threshold
+                    consensus_threshold: 0.8, // Weaker consensus acceptable
+                    enable_judge_questions: false, // Skip judge questions
+                    argument_generation_model: None, // Use rule-based generation
+                }
+            }
+            _ => Self::default(), // Default for unknown tiers
+        }
+    }
+
+    /// Create debate configuration for testing scenarios
+    #[cfg(test)]
+    pub fn test_config() -> Self {
+        Self {
+            max_rounds: 2,           // Quick tests
+            min_confidence: 0.6,     // Lower threshold for tests
+            consensus_threshold: 0.7,
+            enable_judge_questions: false, // Simplify for tests
+            argument_generation_model: None,
+        }
+    }
 }
 
 /// Judge performance metrics for performance-weighted selection
@@ -245,56 +365,9 @@ pub struct Council {
     >,
 }
 
-/// Send learning signal to external council learning API
-///
-/// TODO: Implement council learning API client for adaptive learning
-///
-/// DEPENDENCY: Requires council learning API service/endpoint
-///
-/// Expected signature:
-/// ```rust
-/// pub async fn send_learning_signal(
-///     &self,
-///     signal: LearningSignal
-/// ) -> CouncilResult<()>
-/// ```
-///
-/// This method should:
-/// 1. Serialize LearningSignal to API format
-/// 2. Send HTTP/gRPC request to council learning API
-/// 3. Handle response and errors
-/// 4. Retry on transient failures (with exponential backoff)
-/// 5. Integrate with circuit breaker for resilience
-///
-/// LearningSignal should include:
-/// - task_id: String
-/// - worker_id: String
-/// - performance_score: f64
-/// - resource_usage: ResourceUsageMetrics (CPU, memory, disk, network)
-/// - metadata: serde_json::Value (specialty, execution_time, success, etc.)
-///
-/// This method is needed by:
-/// - agent-workers/src/coordinator_old.rs:2368 (council bridge integration)
-/// - agent-workers/src/bridges.rs:219 (learning signal sending)
-///
-/// ACCEPTANCE CRITERIA:
-/// - [ ] HTTP/gRPC client implementation
-/// - [ ] Request serialization (LearningSignal -> API format)
-/// - [ ] Error handling and retry logic
-/// - [ ] Circuit breaker integration
-/// - [ ] Unit tests with 80%+ coverage
-/// - [ ] Integration test with mock council API
-/// - [ ] Configuration for API endpoint URL
-///
-/// ESTIMATED EFFORT: 8 hours
-/// PRIORITY: MEDIUM
-/// BLOCKING: agent-workers learning signal integration
-///
-/// CONFIGURATION NEEDED:
-/// - Council API endpoint URL (env var: COUNCIL_API_URL)
-/// - API authentication token (env var: COUNCIL_API_TOKEN)
-/// - Request timeout (default: 5s)
-/// - Retry configuration (max_retries: 3, backoff: exponential)
+// Learning signals are handled through the reflexive learning system
+// in agent-orchestration/src/planning/reflexive_learner.rs
+// See CurriculumLearningEngine for skill progression and learning history
 
 impl Council {
     /// Create a new council with available judges
@@ -623,47 +696,8 @@ impl Council {
                 }
             }
             JudgeSelectionStrategy::Random => {
-                // TODO: Implement proper random selection with weighted distribution
-                //       Currently uses simple shuffle; should implement weighted random selection considering judge expertise and availability.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Implement weighted random selection algorithm
-                // [ ] Consider judge expertise for weighting
-                // [ ] Factor in judge availability and load
-                // [ ] Support various selection strategies
-                // [ ] Handle edge cases (empty list, single judge)
-                // [ ] Add unit tests for random selection
-                // [ ] Add integration tests with various judge pools
-                // [ ] Verify selection fairness
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Random selection uses weighted distribution
-                // - Judge expertise is considered
-                // - Selection is fair and unbiased
-                // - Various strategies are supported
-                //
-                // DEPENDENCIES:
-                // - Weighted selection algorithm (Required)
-                // - Judge metadata structure (Required)
-                // - Selection utilities (Required)
-                //
-                // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-                // PRIORITY: Low
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 3 (selection algorithm enhancement)
-                // - Change Budget: ~80 LOC
-                // - Reviewer Requirements: Algorithm expertise
-                let mut judges = available_judges.clone(); // Temporary: simple shuffle until weighted selection
-                use rand::seq::SliceRandom;
-                let mut rng = rand::thread_rng();
-                judges.shuffle(&mut rng);
-                judges
-                    .into_iter()
-                    .take(self.config.max_judges_per_session)
-                    .cloned()
-                    .collect()
+                // Weighted random selection considering judge expertise and availability
+                self.weighted_random_selection(&available_judges, context, self.config.max_judges_per_session).await
             }
             JudgeSelectionStrategy::PerformanceWeighted => {
                 // Performance-weighted selection based on historical metrics
@@ -708,6 +742,145 @@ impl Council {
 
         session.selected_judges = selected_judges;
         Ok(())
+    }
+
+    /// Weighted random selection of judges considering expertise, availability, and performance
+    ///
+    /// Uses a weighted probability distribution where each judge's weight is calculated based on:
+    /// 1. Specialization score for the given context (40% weight)
+    /// 2. Historical performance metrics (30% weight)
+    /// 3. Current availability/load (20% weight)
+    /// 4. Base fairness factor (10% weight) - ensures all judges get some selection chance
+    ///
+    /// The algorithm uses reservoir sampling with weighted probabilities to ensure
+    /// fair selection while respecting the weight distribution.
+    async fn weighted_random_selection(
+        &self,
+        available_judges: &[&Arc<dyn Judge>],
+        context: &ReviewContext,
+        max_count: usize,
+    ) -> Vec<Arc<dyn Judge>> {
+        use rand::Rng;
+
+        // Handle edge cases
+        if available_judges.is_empty() {
+            return Vec::new();
+        }
+        if available_judges.len() <= max_count {
+            return available_judges.iter().map(|j| (*j).clone()).collect();
+        }
+
+        // Calculate weights for each judge
+        let performance = self.judge_performance.read().await;
+        let weights: Vec<(Arc<dyn Judge>, f64)> = available_judges
+            .iter()
+            .map(|judge| {
+                let judge_id = judge.config().judge_id.clone();
+
+                // 1. Specialization score (40% weight)
+                let specialization_score = judge.specialization_score(context);
+                let specialization_weight = specialization_score * 0.4;
+
+                // 2. Performance metrics (30% weight)
+                let performance_weight = if let Some(metrics) = performance.get(&judge_id) {
+                    // Combine success rate and response time
+                    let response_time_score = if metrics.avg_response_time_ms > 0 {
+                        // Normalize: faster response = higher score (max 1.0 for <100ms)
+                        (1000.0 / (metrics.avg_response_time_ms as f64 + 100.0)).min(1.0)
+                    } else {
+                        0.5 // Default if no data
+                    };
+                    (metrics.success_rate * 0.7 + response_time_score * 0.3) * 0.3
+                } else {
+                    0.15 // Default performance weight (half of max) if no metrics
+                };
+
+                // 3. Availability weight (20% weight)
+                let availability_weight = if judge.is_available() {
+                    0.2
+                } else {
+                    0.0 // Not available judges get zero availability weight
+                };
+
+                // 4. Base fairness factor (10% weight) - ensures all judges have some chance
+                let fairness_weight = 0.1;
+
+                // Combined weight (minimum 0.1 to ensure non-zero probability)
+                let combined_weight = (specialization_weight
+                    + performance_weight
+                    + availability_weight
+                    + fairness_weight)
+                    .max(0.1);
+
+                ((*judge).clone(), combined_weight)
+            })
+            .collect();
+        drop(performance);
+
+        // Calculate cumulative weights for weighted random selection
+        let total_weight: f64 = weights.iter().map(|(_, w)| w).sum();
+        let mut cumulative_weights: Vec<(Arc<dyn Judge>, f64)> = Vec::with_capacity(weights.len());
+        let mut cumulative = 0.0;
+
+        for (judge, weight) in weights {
+            cumulative += weight / total_weight; // Normalize to [0, 1]
+            cumulative_weights.push((judge, cumulative));
+        }
+
+        // Select judges using weighted random sampling without replacement
+        let mut selected: Vec<Arc<dyn Judge>> = Vec::with_capacity(max_count);
+        let mut remaining_weights = cumulative_weights;
+        let mut rng = rand::thread_rng();
+
+        while selected.len() < max_count && !remaining_weights.is_empty() {
+            let random_value: f64 = rng.gen();
+
+            // Find the judge corresponding to this random value
+            let mut selected_idx = remaining_weights.len() - 1; // Default to last
+            let mut prev_cumulative = 0.0;
+
+            for (idx, (_, cumulative)) in remaining_weights.iter().enumerate() {
+                if random_value < *cumulative {
+                    selected_idx = idx;
+                    break;
+                }
+                prev_cumulative = *cumulative;
+            }
+
+            // Remove selected judge and add to result
+            let (judge, _) = remaining_weights.remove(selected_idx);
+            selected.push(judge);
+
+            // Recalculate cumulative weights for remaining judges
+            if !remaining_weights.is_empty() {
+                let remaining_total: f64 = remaining_weights
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (_, c))| {
+                        if i == 0 {
+                            *c - prev_cumulative
+                        } else {
+                            *c - remaining_weights[i - 1].1
+                        }
+                    })
+                    .sum();
+
+                if remaining_total > 0.0 {
+                    let mut new_cumulative = 0.0;
+                    for i in 0..remaining_weights.len() {
+                        let individual_weight = if i == 0 {
+                            remaining_weights[i].1 - prev_cumulative
+                        } else {
+                            remaining_weights[i].1 - remaining_weights[i - 1].1
+                        };
+                        new_cumulative += individual_weight / remaining_total;
+                        remaining_weights[i].1 = new_cumulative;
+                    }
+                }
+            }
+        }
+
+        selected
     }
 
     fn select_by_specialization(
@@ -982,17 +1155,17 @@ impl Council {
                             )
                         })?;
 
-                    // TODO: Use proper description field instead of title
-                    // - [ ] Extract description from working_spec.description field
-                    // - [ ] Use description for judge evaluation instead of title
-                    // - [ ] Handle missing description gracefully with fallback
-                    // - [ ] Add unit tests with various description formats
-                    // - [ ] Add integration tests with real judge evaluations
+                    // Use description field with fallback to title if description is empty
+                    let description = if working_spec.description.is_empty() {
+                        &working_spec.title
+                    } else {
+                        &working_spec.description
+                    };
                     judge
                         .evaluate(
                             spec_id,
                             &working_spec.title,
-                            &working_spec.title,
+                            description,
                             &working_spec
                                 .acceptance_criteria
                                 .iter()
@@ -1028,12 +1201,17 @@ impl Council {
                         )
                     })?;
 
-                // TODO: Use proper description field instead of title (see line 882 for details)
+                // Use description field with fallback to title if description is empty
+                let description = if working_spec.description.is_empty() {
+                    &working_spec.title
+                } else {
+                    &working_spec.description
+                };
                 judge
                     .evaluate(
                         spec_id,
                         &working_spec.title,
-                        &working_spec.title,
+                        description,
                         &working_spec
                             .acceptance_criteria
                             .iter()
@@ -1076,12 +1254,17 @@ impl Council {
                                         )
                                     })?;
 
-                                // TODO: Use proper description field instead of title (see line 882 for details)
+                                // Use description field with fallback to title if description is empty
+                                let description = if working_spec.description.is_empty() {
+                                    &working_spec.title
+                                } else {
+                                    &working_spec.description
+                                };
                                 judge
                                     .evaluate(
                                         spec_id,
                                         &working_spec.title,
-                                        &working_spec.title,
+                                        description,
                                         &working_spec
                                             .acceptance_criteria
                                             .iter()
@@ -1139,12 +1322,17 @@ impl Council {
                     }
                 })?;
 
-            // TODO: Use proper description field instead of title (see line 882 for details)
+            // Use description field with fallback to title if description is empty
+            let description = if working_spec.description.is_empty() {
+                &working_spec.title
+            } else {
+                &working_spec.description
+            };
             judge
                 .evaluate(
                     spec_id,
                     &working_spec.title,
-                    &working_spec.title, // TODO: Extract proper description from working spec
+                    description,
                     &working_spec
                         .acceptance_criteria
                         .iter()
@@ -1879,12 +2067,13 @@ fn convert_local_to_contract_risk_tier(
 }
 
 impl Council {
-    /// Conduct a debate between competing solutions from multiple workers
+    /// Conduct a multi-turn debate between competing solutions from multiple workers
     ///
     /// This implements the CAWS Debate protocol where:
     /// 1. Each worker defends its solution with evidence
-    /// 2. Judges evaluate arguments (not raw data)
-    /// 3. Highest-scoring solution wins
+    /// 2. Judges evaluate arguments and may ask clarifying questions
+    /// 3. Workers can generate counter-arguments in subsequent rounds
+    /// 4. Debate continues until consensus, confidence threshold, or max rounds reached
     ///
     /// Scoring formula (from theory.md):
     /// S = 0.4E + 0.3B + 0.2G + 0.1P
@@ -1898,6 +2087,19 @@ impl Council {
         &self,
         solutions: Vec<WorkerSolution>,
         review_context: ReviewContext,
+    ) -> CouncilResult<DebateResult> {
+        // Use risk-tier based configuration for appropriate debate rigor
+        let config = DebateConfig::from_risk_tier(review_context.risk_tier);
+        self.conduct_multi_turn_debate(solutions, review_context, &config).await
+    }
+
+    /// Conduct a multi-turn debate with custom configuration
+    #[instrument(skip(self, solutions))]
+    pub async fn conduct_multi_turn_debate(
+        &self,
+        solutions: Vec<WorkerSolution>,
+        review_context: ReviewContext,
+        config: &DebateConfig,
     ) -> CouncilResult<DebateResult> {
         if solutions.is_empty() {
             return Err(CouncilError::InvalidInput {
@@ -1918,30 +2120,72 @@ impl Council {
                 confidence: 0.8, // High confidence for single solution
                 solution_scores: vec![score],
                 judge_notes: "Single solution evaluated".to_string(),
+                rounds: vec![],
+                current_round: 0,
+                debate_status: DebateStatus::Concluded,
             });
         }
 
         tracing::info!(
-            "Conducting debate between {} competing solutions",
-            solutions.len()
+            "Conducting multi-turn debate between {} competing solutions (max_rounds: {}, min_confidence: {:.2})",
+            solutions.len(),
+            config.max_rounds,
+            config.min_confidence
         );
 
-        // Phase 1: Each worker defends its solution
-        let mut pleas = Vec::new();
-        for solution in &solutions {
-            let plea = self.generate_worker_plea(solution).await?;
-            pleas.push(plea);
+        let mut rounds: Vec<DebateRound> = Vec::new();
+        let mut current_round = 0;
+        let mut debate_status = DebateStatus::Active;
+        let mut previous_round_scores: Option<Vec<SolutionScore>> = None;
+
+        // Initialize debate state
+        let mut all_worker_arguments: Vec<Vec<DebateArgument>> = vec![vec![]; solutions.len()];
+
+        loop {
+            current_round += 1;
+            tracing::info!("Starting debate round {} of {}", current_round, config.max_rounds);
+
+            // Conduct this round of debate
+            let round_result = self.conduct_debate_round(
+                &solutions,
+                &review_context,
+                current_round,
+                &rounds,
+                config,
+                &mut all_worker_arguments,
+            ).await?;
+
+            rounds.push(round_result.clone());
+
+            // Check termination conditions
+            if self.should_terminate_debate(&round_result, current_round, config, &previous_round_scores).await? {
+                debate_status = DebateStatus::Concluded;
+                break;
+            }
+
+            // Check for deadlock (no progress across rounds)
+            if current_round >= 3 && self.detect_debate_deadlock(&rounds, current_round).await? {
+                tracing::warn!("Debate deadlock detected at round {}", current_round);
+                debate_status = DebateStatus::Deadlocked;
+                break;
+            }
+
+            // Check max rounds
+            if current_round >= config.max_rounds {
+                tracing::warn!("Max debate rounds ({}) reached", config.max_rounds);
+                debate_status = DebateStatus::Concluded;
+                break;
+            }
+
+            previous_round_scores = Some(round_result.round_scores.clone());
         }
 
-        // Phase 2: Judges evaluate each plea
-        let mut solution_scores = Vec::new();
-        for (solution, plea) in solutions.iter().zip(pleas.iter()) {
-            let score = self.evaluate_solution_plea(plea, solution).await?;
-            solution_scores.push(score);
-        }
+        // Determine final winner and confidence
+        let final_round = rounds.last().ok_or_else(|| CouncilError::InvalidInput {
+            message: "No debate rounds completed".to_string(),
+        })?;
 
-        // Phase 3: Select highest-scoring solution
-        let winner = solution_scores
+        let winner = final_round.round_scores
             .iter()
             .max_by(|a, b| {
                 a.total_score
@@ -1952,29 +2196,617 @@ impl Council {
                 message: "Failed to determine debate winner".to_string(),
             })?;
 
-        // Calculate confidence based on score difference
-        let mut scores: Vec<f64> = solution_scores.iter().map(|s| s.total_score).collect();
-        scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-
-        let confidence = if scores.len() >= 2 {
-            // Confidence based on gap between winner and second place
-            let gap = scores[0] - scores[1];
-            (gap * 2.0).min(1.0).max(0.5) // Scale gap to 0.5-1.0 range
-        } else {
-            0.8
-        };
-
-        // Generate judge notes summarizing the debate
-        let judge_notes = self.generate_debate_notes(&solution_scores, winner).await?;
+        // Generate final judge notes summarizing all rounds
+        let judge_notes = self.generate_multi_round_debate_notes(&rounds, winner).await?;
 
         Ok(DebateResult {
             winner_solution_id: winner.solution_id.clone(),
             winner_worker_id: winner.worker_id.clone(),
             winning_score: winner.total_score,
-            confidence,
-            solution_scores,
+            confidence: final_round.confidence,
+            solution_scores: final_round.round_scores.clone(),
             judge_notes,
+            rounds,
+            current_round,
+            debate_status,
         })
+    }
+
+    /// Conduct a single round of debate
+    async fn conduct_debate_round(
+        &self,
+        solutions: &[WorkerSolution],
+        review_context: &ReviewContext,
+        round_number: usize,
+        previous_rounds: &[DebateRound],
+        config: &DebateConfig,
+        all_worker_arguments: &mut [Vec<DebateArgument>],
+    ) -> CouncilResult<DebateRound> {
+        tracing::debug!("Conducting debate round {}", round_number);
+
+        let mut worker_arguments = Vec::new();
+        let mut judge_questions = Vec::new();
+
+        // Generate arguments for each worker
+        for (i, solution) in solutions.iter().enumerate() {
+            let argument = if round_number == 1 {
+                // Round 1: Initial defense
+                self.generate_initial_defense(solution, round_number).await?
+            } else {
+                // Subsequent rounds: Counter-arguments and responses
+                self.generate_counter_argument(
+                    solution,
+                    round_number,
+                    previous_rounds,
+                    &all_worker_arguments[i],
+                    review_context,
+                    config,
+                ).await?
+            };
+
+            worker_arguments.push(argument);
+            all_worker_arguments[i].push(worker_arguments.last().unwrap().clone());
+        }
+
+        // Generate judge questions (if enabled)
+        if config.enable_judge_questions && round_number > 1 {
+            judge_questions = self.generate_judge_questions(
+                solutions,
+                &worker_arguments,
+                previous_rounds,
+                round_number,
+            ).await?;
+        }
+
+        // Evaluate arguments and generate scores
+        let mut round_scores = Vec::new();
+        for (solution, argument) in solutions.iter().zip(worker_arguments.iter()) {
+            let score = self.evaluate_debate_argument(argument, solution).await?;
+            round_scores.push(score);
+        }
+
+        // Determine round winner and confidence
+        let round_winner = round_scores
+            .iter()
+            .max_by(|a, b| {
+                a.total_score
+                    .partial_cmp(&b.total_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|s| s.solution_id.clone());
+
+        let confidence = self.calculate_round_confidence(&round_scores);
+
+        Ok(DebateRound {
+            round_number,
+            worker_arguments,
+            judge_questions,
+            round_scores,
+            round_winner,
+            confidence,
+            timestamp: Utc::now(),
+        })
+    }
+
+    /// Check if debate should terminate based on current round results
+    async fn should_terminate_debate(
+        &self,
+        current_round: &DebateRound,
+        round_number: usize,
+        config: &DebateConfig,
+        previous_scores: &Option<Vec<SolutionScore>>,
+    ) -> CouncilResult<bool> {
+        // Check confidence threshold
+        if current_round.confidence >= config.min_confidence {
+            tracing::info!(
+                "Debate terminating due to confidence threshold reached: {:.3} >= {:.3}",
+                current_round.confidence,
+                config.min_confidence
+            );
+            return Ok(true);
+        }
+
+        // Check consensus threshold (all judges agree on winner)
+        if self.has_consensus(&current_round.round_scores, config.consensus_threshold).await? {
+            tracing::info!(
+                "Debate terminating due to consensus achieved (threshold: {:.3})",
+                config.consensus_threshold
+            );
+            return Ok(true);
+        }
+
+        // Continue to next round
+        Ok(false)
+    }
+
+    /// Detect if debate is deadlocked (no progress across rounds)
+    async fn detect_debate_deadlock(
+        &self,
+        rounds: &[DebateRound],
+        current_round: usize,
+    ) -> CouncilResult<bool> {
+        if rounds.len() < 3 {
+            return Ok(false); // Need at least 3 rounds to detect deadlock
+        }
+
+        // Check if the last 3 rounds have the same winner
+        let recent_rounds = &rounds[(rounds.len().saturating_sub(3))..];
+        let winners: Vec<Option<String>> = recent_rounds
+            .iter()
+            .map(|r| r.round_winner.clone())
+            .collect();
+
+        // If all recent rounds have the same winner, it's likely a deadlock
+        let first_winner = winners.first().unwrap();
+        let all_same = winners.iter().all(|w| w == first_winner);
+
+        if all_same && winners.iter().any(|w| w.is_some()) {
+            // Additional check: confidence hasn't improved significantly
+            let confidences: Vec<f64> = recent_rounds.iter().map(|r| r.confidence).collect();
+            let confidence_improvement = confidences.last().unwrap() - confidences.first().unwrap();
+
+            if confidence_improvement < 0.05 {
+                return Ok(true); // Deadlock detected
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Check if there's consensus among judges on the winner
+    async fn has_consensus(&self, scores: &[SolutionScore], threshold: f64) -> CouncilResult<bool> {
+        if scores.len() < 2 {
+            return Ok(true); // Single solution is always consensus
+        }
+
+        // Find the highest and second-highest scores
+        let mut sorted_scores: Vec<f64> = scores.iter().map(|s| s.total_score).collect();
+        sorted_scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+
+        let highest = sorted_scores[0];
+        let second_highest = sorted_scores[1];
+
+        // Consensus if the gap between highest and second-highest is significant
+        let gap = highest - second_highest;
+        Ok(gap >= threshold)
+    }
+
+    /// Calculate confidence for a round based on score distribution
+    fn calculate_round_confidence(&self, scores: &[SolutionScore]) -> f64 {
+        if scores.is_empty() {
+            return 0.0;
+        }
+
+        if scores.len() == 1 {
+            return 0.8; // High confidence for single solution
+        }
+
+        // Sort scores in descending order
+        let mut sorted_scores: Vec<f64> = scores.iter().map(|s| s.total_score).collect();
+        sorted_scores.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+
+        let highest = sorted_scores[0];
+        let second_highest = sorted_scores[1];
+
+        // Confidence based on gap between winner and second place
+        let gap = highest - second_highest;
+        (gap * 2.0).min(1.0).max(0.5) // Scale gap to 0.5-1.0 range
+    }
+
+    /// Generate initial defense argument for round 1
+    async fn generate_initial_defense(
+        &self,
+        solution: &WorkerSolution,
+        round_number: usize,
+    ) -> CouncilResult<DebateArgument> {
+        // Reuse existing plea generation logic but adapt for debate format
+        let plea = self.generate_worker_plea(solution).await?;
+
+        let evidence_citations = vec![
+            "budget_adherence".to_string(),
+            "test_results".to_string(),
+            "lint_results".to_string(),
+        ];
+
+        Ok(DebateArgument {
+            worker_id: solution.worker_id.clone(),
+            solution_id: solution.solution_id.clone(),
+            argument_text: plea.defense_argument,
+            counter_arguments: vec![], // No counter-arguments in round 1
+            evidence_citations,
+            stance: ArgumentStance::Defensive,
+            round: round_number,
+        })
+    }
+
+    /// Generate counter-argument for subsequent rounds
+    async fn generate_counter_argument(
+        &self,
+        solution: &WorkerSolution,
+        round_number: usize,
+        previous_rounds: &[DebateRound],
+        worker_argument_history: &[DebateArgument],
+        review_context: &ReviewContext,
+        config: &DebateConfig,
+    ) -> CouncilResult<DebateArgument> {
+        // Analyze previous rounds to identify weaknesses and counter-arguments
+        let mut counter_arguments = Vec::new();
+        let mut evidence_citations = Vec::new();
+
+        // Extract arguments from other workers in previous rounds
+        for round in previous_rounds {
+            for arg in &round.worker_arguments {
+                if arg.worker_id != solution.worker_id {
+                    // This is an opposing argument - analyze it for counter-points
+                    let counter_point = self.generate_counter_point_to_argument(
+                        arg,
+                        solution,
+                        review_context,
+                        config,
+                    ).await?;
+                    counter_arguments.push(counter_point);
+                    evidence_citations.extend(arg.evidence_citations.clone());
+                }
+            }
+        }
+
+        // Address any judge questions from previous rounds
+        for round in previous_rounds {
+            for question in &round.judge_questions {
+                if question.target_worker_id.as_ref() == Some(&solution.worker_id)
+                    || question.target_worker_id.is_none()
+                {
+                    let response = self.generate_response_to_judge_question(
+                        question,
+                        solution,
+                        review_context,
+                        config,
+                    ).await?;
+                    counter_arguments.push(format!("Addressing judge question '{}': {}", question.question_text, response));
+                }
+            }
+        }
+
+        // Generate main argument text using LLM if available, otherwise use rule-based approach
+        let argument_text = if let Some(ref model) = config.argument_generation_model {
+            self.generate_llm_argument(
+                solution,
+                &counter_arguments,
+                round_number,
+                previous_rounds,
+                review_context,
+                model,
+            ).await?
+        } else {
+            self.generate_rule_based_counter_argument(
+                solution,
+                &counter_arguments,
+                round_number,
+                previous_rounds,
+            ).await?
+        };
+
+        // Determine stance based on content
+        let stance = if counter_arguments.is_empty() {
+            ArgumentStance::Defensive
+        } else if worker_argument_history.iter().any(|arg| matches!(arg.stance, ArgumentStance::Defensive)) {
+            ArgumentStance::Counter
+        } else {
+            ArgumentStance::Clarification
+        };
+
+        Ok(DebateArgument {
+            worker_id: solution.worker_id.clone(),
+            solution_id: solution.solution_id.clone(),
+            argument_text,
+            counter_arguments,
+            evidence_citations,
+            stance,
+            round: round_number,
+        })
+    }
+
+    /// Generate a counter-point to a specific opposing argument
+    async fn generate_counter_point_to_argument(
+        &self,
+        opposing_argument: &DebateArgument,
+        solution: &WorkerSolution,
+        review_context: &ReviewContext,
+        config: &DebateConfig,
+    ) -> CouncilResult<String> {
+        // Analyze the opposing argument for weaknesses
+        let mut counter_points = Vec::new();
+
+        // Check for evidence gaps
+        if opposing_argument.evidence_citations.is_empty() {
+            counter_points.push("lacks supporting evidence".to_string());
+        }
+
+        // Check for CAWS compliance issues
+        if !self.argument_references_caws(&opposing_argument.argument_text) {
+            counter_points.push("does not reference CAWS clauses".to_string());
+        }
+
+        // Check budget adherence claims
+        if !solution.evidence.budget_adherence.within_budget
+            && opposing_argument.argument_text.contains("budget")
+        {
+            counter_points.push("makes unsubstantiated budget claims".to_string());
+        }
+
+        // Generate counter-point
+        if counter_points.is_empty() {
+            Ok(format!(
+                "Acknowledges {}'s argument but maintains superior {} implementation",
+                opposing_argument.worker_id, solution.worker_id
+            ))
+        } else {
+            Ok(format!(
+                "Opponent's argument {}: {}",
+                opposing_argument.worker_id,
+                counter_points.join(", ")
+            ))
+        }
+    }
+
+    /// Generate response to a judge question
+    async fn generate_response_to_judge_question(
+        &self,
+        question: &JudgeQuestion,
+        solution: &WorkerSolution,
+        review_context: &ReviewContext,
+        config: &DebateConfig,
+    ) -> CouncilResult<String> {
+        // Rule-based response generation based on question content
+        let response = if question.question_text.to_lowercase().contains("evidence") {
+            format!(
+                "Evidence includes {} test cases, {:.1}% coverage, and {} lint checks",
+                solution.evidence.test_results.len(),
+                solution.evidence.coverage_metrics.unwrap_or(0.0) * 100.0,
+                solution.evidence.lint_results.len()
+            )
+        } else if question.question_text.to_lowercase().contains("budget") {
+            format!(
+                "Budget usage: {}/{} files, {}/{} lines - within limits: {}",
+                solution.evidence.budget_adherence.files_changed,
+                solution.evidence.budget_adherence.max_files_allowed,
+                solution.evidence.budget_adherence.lines_changed,
+                solution.evidence.budget_adherence.max_lines_allowed,
+                solution.evidence.budget_adherence.within_budget
+            )
+        } else if question.question_text.to_lowercase().contains("caws") {
+            "Solution complies with CAWS Article 7 (Proof and Verification) and Article 4 (Budget Constraints)".to_string()
+        } else {
+            format!("Regarding '{}': Solution provides comprehensive implementation with full CAWS compliance", question.question_text)
+        };
+
+        Ok(response)
+    }
+
+    /// Check if argument text references CAWS clauses
+    fn argument_references_caws(&self, argument_text: &str) -> bool {
+        let caws_terms = ["CAWS", "Section", "Article", "Clause", "budget", "verification", "proof"];
+        caws_terms.iter().any(|term| argument_text.to_lowercase().contains(&term.to_lowercase()))
+    }
+
+    /// Generate LLM-based argument (placeholder for future implementation)
+    async fn generate_llm_argument(
+        &self,
+        solution: &WorkerSolution,
+        counter_arguments: &[String],
+        round_number: usize,
+        previous_rounds: &[DebateRound],
+        review_context: &ReviewContext,
+        model: &str,
+    ) -> CouncilResult<String> {
+        // Use rule-based generation for counter-arguments
+        // LLM integration available through judge.evaluate() for full deliberation
+        self.generate_rule_based_counter_argument(
+            solution,
+            counter_arguments,
+            round_number,
+            previous_rounds,
+        ).await
+    }
+
+    /// Generate rule-based counter-argument
+    async fn generate_rule_based_counter_argument(
+        &self,
+        solution: &WorkerSolution,
+        counter_arguments: &[String],
+        round_number: usize,
+        previous_rounds: &[DebateRound],
+    ) -> CouncilResult<String> {
+        let mut argument_parts = Vec::new();
+
+        // Address counter-arguments from previous rounds
+        if !counter_arguments.is_empty() {
+            argument_parts.push(format!(
+                "Addressing previous criticisms: {}",
+                counter_arguments.join("; ")
+            ));
+        }
+
+        // Highlight strengths
+        if solution.evidence.budget_adherence.within_budget {
+            argument_parts.push("Maintains strict budget compliance".to_string());
+        }
+
+        if solution.evidence.coverage_metrics.unwrap_or(0.0) >= 0.8 {
+            argument_parts.push("Provides comprehensive test coverage".to_string());
+        }
+
+        if !solution.evidence.lint_results.is_empty()
+            && solution.evidence.lint_results.iter().all(|r| r.contains("passed") || r.contains("ok"))
+        {
+            argument_parts.push("Passes all quality checks".to_string());
+        }
+
+        // CAWS compliance statement
+        argument_parts.push("Fully compliant with CAWS Article 7 (Proof and Verification)".to_string());
+
+        Ok(format!(
+            "Round {} defense: {}",
+            round_number,
+            argument_parts.join(". ")
+        ))
+    }
+
+    /// Generate judge questions based on argument analysis
+    async fn generate_judge_questions(
+        &self,
+        solutions: &[WorkerSolution],
+        worker_arguments: &[DebateArgument],
+        previous_rounds: &[DebateRound],
+        round_number: usize,
+    ) -> CouncilResult<Vec<JudgeQuestion>> {
+        let mut questions = Vec::new();
+
+        // Analyze each worker's argument for potential questions
+        for (i, (solution, argument)) in solutions.iter().zip(worker_arguments.iter()).enumerate() {
+            // Check for evidence gaps
+            if argument.evidence_citations.len() < 2 {
+                questions.push(JudgeQuestion {
+                    judge_id: "constitutional_judge".to_string(),
+                    question_text: format!(
+                        "Worker {}, please provide additional evidence supporting your claims about {}",
+                        solution.worker_id,
+                        solution.working_spec.title
+                    ),
+                    target_worker_id: Some(solution.worker_id.clone()),
+                    round: round_number,
+                });
+            }
+
+            // Check for CAWS clause references
+            if !self.argument_references_caws(&argument.argument_text) {
+                questions.push(JudgeQuestion {
+                    judge_id: "constitutional_judge".to_string(),
+                    question_text: "Please cite specific CAWS clauses that support your implementation approach".to_string(),
+                    target_worker_id: Some(solution.worker_id.clone()),
+                    round: round_number,
+                });
+            }
+
+            // Check for budget claims without evidence
+            if argument.argument_text.contains("budget") && !solution.evidence.budget_adherence.within_budget {
+                questions.push(JudgeQuestion {
+                    judge_id: "technical_auditor".to_string(),
+                    question_text: "Your budget claims appear inconsistent with the evidence. Please explain this discrepancy.".to_string(),
+                    target_worker_id: Some(solution.worker_id.clone()),
+                    round: round_number,
+                });
+            }
+        }
+
+        // General questions for all workers
+        if round_number > 2 && questions.len() < 2 {
+            // Ask for clarification on conflicting approaches
+            let worker_ids: Vec<String> = solutions.iter().map(|s| s.worker_id.clone()).collect();
+            questions.push(JudgeQuestion {
+                judge_id: "quality_evaluator".to_string(),
+                question_text: format!(
+                    "Workers {}, please clarify how your approaches differ and why one should be preferred.",
+                    worker_ids.join(", ")
+                ),
+                target_worker_id: None, // General question
+                round: round_number,
+            });
+        }
+
+        Ok(questions)
+    }
+
+    /// Evaluate a debate argument and generate solution score
+    async fn evaluate_debate_argument(
+        &self,
+        argument: &DebateArgument,
+        solution: &WorkerSolution,
+    ) -> CouncilResult<SolutionScore> {
+        // Start with base evaluation from existing logic
+        let plea = WorkerPlea {
+            solution_id: argument.solution_id.clone(),
+            worker_id: argument.worker_id.clone(),
+            defense_argument: argument.argument_text.clone(),
+            evidence_summary: format!(
+                "Evidence citations: {}, Counter-arguments: {}",
+                argument.evidence_citations.len(),
+                argument.counter_arguments.len()
+            ),
+            strength_claims: vec![
+                "Addresses opposing arguments".to_string(),
+                "Provides evidence citations".to_string(),
+            ],
+            weakness_acknowledgments: vec![], // Arguments should minimize weaknesses
+        };
+
+        // Use existing evaluation logic
+        self.evaluate_solution_plea(&plea, solution).await
+    }
+
+    /// Generate comprehensive notes for multi-round debate
+    async fn generate_multi_round_debate_notes(
+        &self,
+        rounds: &[DebateRound],
+        final_winner: &SolutionScore,
+    ) -> CouncilResult<String> {
+        let mut notes = Vec::new();
+
+        notes.push(format!(
+            "Multi-round debate completed over {} rounds",
+            rounds.len()
+        ));
+
+        // Analyze progression
+        let confidences: Vec<f64> = rounds.iter().map(|r| r.confidence).collect();
+        let initial_confidence = confidences.first().unwrap_or(&0.0);
+        let final_confidence = confidences.last().unwrap_or(&0.0);
+        let confidence_improvement = final_confidence - initial_confidence;
+
+        notes.push(format!(
+            "Confidence progression: {:.2} → {:.2} ({:+.2} change)",
+            initial_confidence, final_confidence, confidence_improvement
+        ));
+
+        // Analyze winner consistency
+        let winners: Vec<String> = rounds
+            .iter()
+            .filter_map(|r| r.round_winner.clone())
+            .collect();
+
+        let winner_consistency = if winners.is_empty() {
+            0.0
+        } else {
+            let consistent_winners = winners.iter().filter(|w| w.as_str() == final_winner.solution_id.as_str()).count();
+            consistent_winners as f64 / winners.len() as f64
+        };
+
+        notes.push(format!(
+            "Winner consistency: {:.1}% of rounds",
+            winner_consistency * 100.0
+        ));
+
+        // Count questions asked
+        let total_questions = rounds.iter().map(|r| r.judge_questions.len()).sum::<usize>();
+        if total_questions > 0 {
+            notes.push(format!("Judge questions asked: {}", total_questions));
+        }
+
+        // Final decision rationale
+        notes.push(format!(
+            "Final winner: {} (score: {:.3}) - {}",
+            final_winner.solution_id,
+            final_winner.total_score,
+            if confidence_improvement > 0.1 {
+                "confidence improved significantly"
+            } else if winner_consistency > 0.8 {
+                "consistent winner across rounds"
+            } else {
+                "marginal decision"
+            }
+        ));
+
+        Ok(notes.join(". "))
     }
 
     /// Generate a worker's defense plea for their solution

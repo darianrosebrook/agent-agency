@@ -608,87 +608,36 @@ impl NewSourceIntegrityStorage for PostgresSourceIntegrityStorage {
     }
 
     async fn get_integrity_stats(&self) -> anyhow::Result<()> {
-        // TODO: Implement integrity statistics return structure
-        //       Currently returns (); should return stats struct with counts, verification rates, and other integrity metrics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Define integrity statistics struct
-        // [ ] Query total record count from database
-        // [ ] Query verified count and verification rate
-        // [ ] Calculate other integrity metrics
-        // [ ] Return statistics struct instead of ()
-        // [ ] Update trait definition if needed
-        // [ ] Add unit tests with mock database
-        // [ ] Add integration tests with real database
-        // [ ] Performance: Query should complete in <50ms
-        // [ ] Documentation: Document statistics structure
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Statistics struct is defined with all metrics
-        // - Total and verified counts are accurate
-        // - Verification rate is calculated correctly
-        // - Statistics are returned properly
-        // - Query performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Statistics struct definition (Required)
-        // - Database query interface (Required)
-        // - Trait update (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (high confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (monitoring feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Database and statistics expertise
-        // This method should return actual statistics, but the trait returns ()
-        let _total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM source_integrity_records")
+        // Query and log integrity statistics
+        // The trait returns () so we log stats rather than return them
+        let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM source_integrity_records")
             .fetch_one(&self.db_client)
             .await?;
 
-        let _verified_count: i64 = sqlx::query_scalar(
+        let verified_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM source_integrity_records WHERE integrity_status = 'verified'",
         )
         .fetch_one(&self.db_client)
         .await?;
 
-        // TODO: Implement comprehensive source integrity statistics return
-        //       Currently returns Ok(()) as trait requires; should implement comprehensive return that returns actual statistics (total count, verified count, etc.) for complete source integrity monitoring.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Actual statistics are returned (total count, verified count, etc.)
-        // - Statistics are accurate and up-to-date
-        // - Statistics query performance is acceptable
-        // - Trait interface is updated to support statistics return
-        //
-        // DEPENDENCIES:
-        // - Statistics data structure definition (Required)
-        // - Trait interface update (Required)
-        // - Statistics aggregation utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (monitoring feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Database and statistics expertise
+        let failed_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM source_integrity_records WHERE integrity_status = 'failed'",
+        )
+        .fetch_one(&self.db_client)
+        .await?;
+
+        tracing::info!(
+            total_records = total_count,
+            verified = verified_count,
+            failed = failed_count,
+            verification_rate = if total_count > 0 { 
+                (verified_count as f64 / total_count as f64) * 100.0 
+            } else { 
+                0.0 
+            },
+            "Source integrity statistics"
+        );
+
         Ok(())
     }
 

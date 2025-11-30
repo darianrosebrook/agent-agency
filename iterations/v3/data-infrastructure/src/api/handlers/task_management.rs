@@ -34,7 +34,30 @@ pub async fn cancel_task(
     match state.db_client.execute(update_query, &[&task_id]).await {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                // TODO: Log the task cancellation using log_audit_event
+                // Log task cancellation audit event
+                let audit_context = crate::audit::AuditContext {
+                    user_id: None, // TODO: Extract from request headers/auth token
+                    session_id: None, // TODO: Extract from request headers
+                    ip_address: None, // TODO: Extract from request
+                    user_agent: None, // TODO: Extract from request headers
+                    source: "task_management_api".to_string(),
+                };
+                
+                // Old state is one of: pending, in_progress, or paused (based on WHERE clause)
+                // We log without old_state since it could be any of these
+                if let Err(e) = state.audit_logger.log_task_event(
+                    &task_id,
+                    "cancel",
+                    None, // Old state could be pending/in_progress/paused
+                    Some("cancelled"),
+                    &audit_context,
+                    Some(serde_json::json!({
+                        "cancelled_at": chrono::Utc::now(),
+                        "previous_states": ["pending", "in_progress", "paused"]
+                    })),
+                ).await {
+                    tracing::warn!("Failed to log task cancellation audit event: {}", e);
+                }
 
                 Ok(axum::Json(serde_json::json!({
                     "message": "Task cancelled successfully",
@@ -73,7 +96,27 @@ pub async fn pause_task(
     match state.db_client.execute(update_query, &[&task_id]).await {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                // TODO: Log the task pause using log_audit_event
+                // Log task pause audit event
+                let audit_context = crate::audit::AuditContext {
+                    user_id: None, // TODO: Extract from request headers/auth token
+                    session_id: None, // TODO: Extract from request headers
+                    ip_address: None, // TODO: Extract from request
+                    user_agent: None, // TODO: Extract from request headers
+                    source: "task_management_api".to_string(),
+                };
+                
+                if let Err(e) = state.audit_logger.log_task_event(
+                    &task_id,
+                    "pause",
+                    Some("in_progress"),
+                    Some("paused"),
+                    &audit_context,
+                    Some(serde_json::json!({
+                        "paused_at": chrono::Utc::now()
+                    })),
+                ).await {
+                    tracing::warn!("Failed to log task pause audit event: {}", e);
+                }
 
                 Ok(axum::Json(serde_json::json!({
                     "message": "Task paused successfully",
@@ -112,7 +155,27 @@ pub async fn resume_task(
     match state.db_client.execute(update_query, &[&task_id]).await {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                // TODO: Log the task resume using log_audit_event
+                // Log task resume audit event
+                let audit_context = crate::audit::AuditContext {
+                    user_id: None, // TODO: Extract from request headers/auth token
+                    session_id: None, // TODO: Extract from request headers
+                    ip_address: None, // TODO: Extract from request
+                    user_agent: None, // TODO: Extract from request headers
+                    source: "task_management_api".to_string(),
+                };
+                
+                if let Err(e) = state.audit_logger.log_task_event(
+                    &task_id,
+                    "resume",
+                    Some("paused"),
+                    Some("in_progress"),
+                    &audit_context,
+                    Some(serde_json::json!({
+                        "resumed_at": chrono::Utc::now()
+                    })),
+                ).await {
+                    tracing::warn!("Failed to log task resume audit event: {}", e);
+                }
 
                 Ok(axum::Json(serde_json::json!({
                     "message": "Task resumed successfully",
