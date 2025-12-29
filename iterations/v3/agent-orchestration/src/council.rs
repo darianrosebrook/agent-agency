@@ -58,7 +58,7 @@ pub struct WorkerSolution {
 /// Evidence supporting a worker solution
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct SolutionEvidence {
+pub struct SolutionEvidence {
     pub test_results: Vec<String>,
     pub coverage_metrics: Option<f64>,
     pub lint_results: Vec<String>,
@@ -69,7 +69,7 @@ struct SolutionEvidence {
 /// Budget adherence verification
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct BudgetAdherence {
+pub struct BudgetAdherence {
     pub files_changed: usize,
     pub max_files_allowed: usize,
     pub lines_changed: usize,
@@ -80,7 +80,7 @@ struct BudgetAdherence {
 /// Worker defense plea for their solution
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct WorkerPlea {
+pub struct WorkerPlea {
     pub solution_id: String,
     pub worker_id: String,
     pub defense_argument: String,
@@ -157,7 +157,7 @@ pub struct DebateResult {
 /// Score for a solution from debate evaluation
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-struct SolutionScore {
+pub struct SolutionScore {
     pub solution_id: String,
     pub worker_id: String,
     pub total_score: f64,
@@ -2320,7 +2320,7 @@ impl Council {
     }
 
     /// Detect if debate is deadlocked (no progress across rounds)
-    async fn detect_debate_deadlock(
+    pub async fn detect_debate_deadlock(
         &self,
         rounds: &[DebateRound],
         current_round: usize,
@@ -2354,7 +2354,11 @@ impl Council {
     }
 
     /// Check if there's consensus among judges on the winner
-    async fn has_consensus(&self, scores: &[SolutionScore], threshold: f64) -> CouncilResult<bool> {
+    pub async fn has_consensus(
+        &self,
+        scores: &[SolutionScore],
+        threshold: f64,
+    ) -> CouncilResult<bool> {
         if scores.len() < 2 {
             return Ok(true); // Single solution is always consensus
         }
@@ -2372,7 +2376,7 @@ impl Council {
     }
 
     /// Calculate confidence for a round based on score distribution
-    fn calculate_round_confidence(&self, scores: &[SolutionScore]) -> f64 {
+    pub fn calculate_round_confidence(&self, scores: &[SolutionScore]) -> f64 {
         if scores.is_empty() {
             return 0.0;
         }

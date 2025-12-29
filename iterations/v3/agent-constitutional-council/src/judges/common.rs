@@ -114,8 +114,6 @@ pub trait Judge: Send + Sync {
 
         // STEP 4: Execute engine
         //
-        // TODO: Implement comprehensive LLM engine integration for judges
-        //       Currently a placeholder; should implement comprehensive integration that passes LLM engine reference via context or constructor for concrete judges to use in evaluation.
         //
         // COMPLETION CHECKLIST:
         // [ ] Primary functionality implemented

@@ -1,0 +1,147 @@
+@use "../../styles/design-tokens.scss" as *;
+
+.registerPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0d0d0d;
+  padding: $spacing-8;
+}
+
+.registerContainer {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.registerCard {
+  background-color: #1a1a1a;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $spacing-lg;
+  padding: $spacing-8;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-6;
+}
+
+.registerHeader {
+  text-align: center;
+}
+
+.registerTitle {
+  font-size: $font-size-2xl;
+  font-weight: $font-weight-bold;
+  color: var(--text-primary);
+  margin-bottom: $spacing-2;
+}
+
+.registerSubtitle {
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+}
+
+.registerForm {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-4;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: var(--text-primary);
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: $spacing-3;
+  width: $spacing-4;
+  height: $spacing-4;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.formInput {
+  width: 100%;
+  padding: $spacing-3 $spacing-3 $spacing-3 $spacing-10;
+  background-color: #0d0d0d;
+  border: 1px solid oklch(0.269 0 0);
+  border-radius: $spacing-md;
+  color: var(--text-primary);
+  font-size: $font-size-sm;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+}
+
+.errorMessage {
+  padding: $spacing-3;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: $spacing-md;
+}
+
+.errorMessageText {
+  color: #ef4444;
+  font-size: $font-size-sm;
+}
+
+.submitButton {
+  width: 100%;
+  padding: $spacing-3;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.loginPrompt {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: $font-size-sm;
+}
+
+.loginLink {
+  color: var(--primary-color);
+  text-decoration: underline;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+
+
+
+

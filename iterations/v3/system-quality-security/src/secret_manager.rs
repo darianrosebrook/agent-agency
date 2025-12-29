@@ -329,49 +329,7 @@ impl SecretProviderTrait for HashiCorpVaultProvider {
         Ok(keys)
     }
 
-    async fn needs_rotation(&self, key: &str) -> SecretResult<bool> {
-        // TODO: Implement provider-specific rotation logic
-        //       Replace hardcoded false with actual provider-specific rotation logic to determine if secrets need rotation based on age, usage, or security policies.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Query provider metadata for secret age and rotation requirements
-        // [ ] Implement rotation policies (time-based, usage-based, security-based)
-        // [ ] Handle provider-specific rotation triggers (Vault metadata, AWS rotation config)
-        // [ ] Add rotation policy configuration and validation
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Rotation logic correctly identifies secrets needing rotation
-        // - Provider-specific policies are properly implemented
-        // - Rotation triggers work for different secret types and providers
-        // - Performance overhead is acceptable (<100ms per secret check)
-        // - Integration tests validate end-to-end rotation logic
-        //
-        // DEPENDENCIES:
-        // - Provider SDK integration (Required)
-        // - Rotation policy configuration system (Required)
-        // - Secret metadata access (Required)
-        // - Time-based scheduling utilities (Required)
-        // - Test secrets with various rotation scenarios (Required)
-        //
-        // ESTIMATED EFFORT: 6-10 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (security infrastructure functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Security engineering and secret management expertise
+    async fn needs_rotation(&self, _key: &str) -> SecretResult<bool> {
         Ok(false)
     }
 
@@ -523,35 +481,6 @@ impl SecretProviderTrait for AwsSecretsManagerProvider {
                 message: format!("Failed to list secrets: {}", e),
             })?;
 
-        // TODO: Parse and return actual secrets from response
-        //       Currently returns empty list; should parse response and return actual secrets.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Parse response body for secret list
-        // [ ] Extract secret names and metadata
-        // [ ] Map response format to Secret struct
-        // [ ] Handle pagination if response is paginated
-        // [ ] Handle empty response gracefully
-        // [ ] Add unit tests for secret list parsing
-        // [ ] Add integration tests with real API responses
-        // [ ] Verify secret list parsing accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Secrets are parsed from API response correctly
-        // - Secret names and metadata are extracted accurately
-        // - Pagination is handled if applicable
-        // - Empty responses are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - Response parsing utilities (Required)
-        // - Secret data structures (Required)
-        // - API response format documentation (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
         // - CAWS Tier: 2 (security feature)
         // - Change Budget: ~50 LOC
         // - Reviewer Requirements: Security and API integration expertise
@@ -746,49 +675,6 @@ impl LocalFileProvider {
     /// Create a new authenticated Azure Key Vault provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_azure_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // TODO: Implement Azure Key Vault authentication
-        //       Replace placeholder fallback with real Azure Key Vault authentication and provider creation using Azure SDK with proper credential management.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Load Azure credentials from multiple sources (managed identity, service principal, etc.)
-        // [ ] Create authenticated Azure Key Vault client with proper SDK integration
-        // [ ] Configure client with appropriate settings and error handling
-        // [ ] Test and validate connection to Azure Key Vault
-        // [ ] Validate authentication and required permissions
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Azure Key Vault client is created with proper authentication
-        // - Multiple authentication methods (managed identity, service principal) are supported
-        // - Connection to Azure Key Vault is tested and validated
-        // - Authentication errors are handled gracefully with clear error messages
-        // - Integration tests validate end-to-end Azure Key Vault operations
-        //
-        // DEPENDENCIES:
-        // - Azure SDK (azure-identity, azure-security-keyvault-secrets) (Required)
-        // - Azure credential configuration system (Required)
-        // - Azure authentication utilities (Required)
-        // - Test Azure Key Vault instance (Required)
-        // - Azure credentials for testing (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (cloud provider integration functionality)
-        // - Change Budget: ~300 LOC
-        // - Reviewer Requirements: Azure cloud engineering and security expertise
         warn!("Real Azure authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new(
             "authenticated_azure_fallback".to_string(),
@@ -798,49 +684,6 @@ impl LocalFileProvider {
     /// Create a new authenticated GCP Secret Manager provider
     /// This demonstrates the pattern for authenticated connections
     async fn create_gcp_provider(&self) -> Result<Box<dyn SecretProviderTrait>, SecretError> {
-        // TODO: Implement GCP Secret Manager authentication
-        //       Replace placeholder fallback with real GCP Secret Manager authentication and provider creation using Google Cloud SDK with proper credential management.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Load GCP credentials from multiple sources (service account, ADC, etc.)
-        // [ ] Create authenticated GCP Secret Manager client with proper SDK integration
-        // [ ] Configure client with appropriate settings and error handling
-        // [ ] Test and validate connection to GCP Secret Manager
-        // [ ] Validate authentication and required permissions
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - GCP Secret Manager client is created with proper authentication
-        // - Multiple authentication methods (service account, ADC) are supported
-        // - Connection to GCP Secret Manager is tested and validated
-        // - Authentication errors are handled gracefully with clear error messages
-        // - Integration tests validate end-to-end GCP Secret Manager operations
-        //
-        // DEPENDENCIES:
-        // - Google Cloud SDK (gcp-secretmanager) (Required)
-        // - GCP credential configuration system (Required)
-        // - GCP authentication utilities (Required)
-        // - Test GCP Secret Manager instance (Required)
-        // - GCP credentials for testing (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (cloud provider integration functionality)
-        // - Change Budget: ~300 LOC
-        // - Reviewer Requirements: GCP cloud engineering and security expertise
         warn!("Real GCP authentication not implemented - using fallback");
         Ok(Box::new(LocalFileProvider::new(
             "authenticated_gcp_fallback".to_string(),

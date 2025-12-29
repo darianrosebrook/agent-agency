@@ -24,9 +24,21 @@ const API_BASE = '/api/proxy/api/v1';
 
 /**
  * Get current authenticated user
+ * Returns null if not authenticated (401) - handled gracefully
  */
-export async function getCurrentUser(): Promise<CurrentUser> {
-  return apiGet<CurrentUser>(`${API_BASE}/users/me`);
+export async function getCurrentUser(): Promise<CurrentUser | null> {
+  try {
+    return await apiGet<CurrentUser>(`${API_BASE}/users/me`, {
+      showToast: false, // Suppress toast for expected 401
+      throwOnError: false,
+    });
+  } catch (error) {
+    // Return null for 401 (not authenticated) - this is expected in development
+    if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 

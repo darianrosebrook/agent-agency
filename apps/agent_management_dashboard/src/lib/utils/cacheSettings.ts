@@ -7,6 +7,8 @@
  * @author @darianrosebrook
  */
 
+import { AppError, ErrorCode } from '../errors/types';
+
 const CACHE_ENABLED_KEY = "cache_enabled";
 const CACHE_ENABLED_DEFAULT = true; // Cache enabled by default
 
@@ -102,8 +104,21 @@ export async function loadCacheSettingFromApi(): Promise<void> {
     }
     // If setting is null, it doesn't exist yet - use default (already set)
   } catch (error) {
-    // Only log unexpected errors (network, auth, etc.)
-    // 404s are handled by getUserSettingOptional and return null
+    // Only log unexpected errors (network, server errors, etc.)
+    // 404s and 401s are handled by getUserSettingOptional and return null
+    // This catch block should only be hit for unexpected errors
+    // But check anyway in case getUserSettingOptional throws for some reason
+    if (error instanceof AppError) {
+      if (
+        error.code === ErrorCode.NOT_FOUND ||
+        error.code === ErrorCode.UNAUTHORIZED
+      ) {
+        // Expected error - user not authenticated or setting doesn't exist
+        // Silently use default from localStorage
+        return;
+      }
+    }
+    // Log unexpected errors
     console.warn("Failed to load cache setting from API:", error);
   }
 }

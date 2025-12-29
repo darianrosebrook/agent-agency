@@ -19,17 +19,18 @@ use uuid::Uuid;
 use super::super::database_audit::DatabaseAuditLogger;
 use super::super::database_operations::{
     CreateApiKey, CreateAppSetting, CreateAuditTrailEntry, CreateCawsRule, CreateCawsSpecification,
-    CreateCawsViolation, CreateCouncilSession, CreateCouncilVerdict, CreateEvidenceArtifact,
-    CreateExecutionPlan, CreateIntegration, CreateJudge, CreateJudgeEvaluation, CreateMilestone,
+    CreateCawsViolation, CreateCouncilSession, CreateCouncilVerdict, CreateCurriculumProfile,
+    CreateEvidenceArtifact, CreateExecutionPlan, CreateIntegration, CreateJudge,
+    CreateJudgeEvaluation, CreateLearningRecord, CreateMilestone, CreateMilestoneCompletion,
     CreatePasswordResetToken, CreatePlanningAuditEvent, CreatePlanningSession,
     CreatePlanningTelemetry, CreateRuleTemplate, CreateSession, CreateTask, CreateTaskExecution,
     CreateTwoFactorAuth, CreateUser, CreateUserSetting, CreateWaiver, CreateWorker,
-    DatabaseOperations, RuleEnforcementStatus, RuleHistory, RuleTemplate, UpdateApiKey,
-    UpdateAppSetting, UpdateCawsRule, UpdateCawsSpecification, UpdateCawsViolation,
-    UpdateCouncilSession, UpdateEvidenceArtifact, UpdateExecutionPlan, UpdateIntegration,
-    UpdateJudge, UpdateMilestone, UpdatePlanningSession, UpdateRuleEnforcementStatus,
-    UpdateSession, UpdateTask, UpdateTaskExecution, UpdateTwoFactorAuth, UpdateUser,
-    UpdateUserSetting, UpdateWaiver, UpdateWorker,
+    DatabaseOperations, MilestoneCompletionResult, RuleEnforcementStatus, RuleHistory,
+    RuleTemplate, UpdateApiKey, UpdateAppSetting, UpdateCawsRule, UpdateCawsSpecification,
+    UpdateCawsViolation, UpdateCouncilSession, UpdateEvidenceArtifact, UpdateExecutionPlan,
+    UpdateIntegration, UpdateJudge, UpdateMilestone, UpdatePlanningSession,
+    UpdateRuleEnforcementStatus, UpdateSession, UpdateTask, UpdateTaskExecution,
+    UpdateTwoFactorAuth, UpdateUser, UpdateUserSetting, UpdateWaiver, UpdateWorker,
 };
 use super::super::models::{
     ApiKey, AppSetting, AuditTrailEntry, CawsRule, CawsSpecification, CawsViolation,
@@ -2004,11 +2005,11 @@ impl DatabaseOperations for DatabaseClient {
         sqlx::query_as::<_, ExecutionPlan>(
             r#"
             INSERT INTO execution_plans (
-                id, session_id, working_spec_id, title, overview, state,
+                id, session_id, workspace_id, working_spec_id, title, overview, state,
                 milestones, dependency_graph, change_budget, quality_gates,
                 evidence_requirements, active_waivers, metadata, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            RETURNING id, session_id, working_spec_id, title, overview, state,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            RETURNING id, session_id, workspace_id, working_spec_id, title, overview, state,
                       milestones, dependency_graph, change_budget, quality_gates,
                       evidence_requirements, active_waivers, metadata, created_at, updated_at,
                       approved_at, completed_at
@@ -2016,6 +2017,7 @@ impl DatabaseOperations for DatabaseClient {
         )
         .bind(plan.id)
         .bind(plan.session_id)
+        .bind(plan.workspace_id.as_deref())
         .bind(&plan.working_spec_id)
         .bind(&plan.title)
         .bind(plan.overview.as_deref())
@@ -2043,7 +2045,7 @@ impl DatabaseOperations for DatabaseClient {
     async fn get_execution_plan(&self, id: Uuid) -> Result<Option<ExecutionPlan>> {
         sqlx::query_as::<_, ExecutionPlan>(
             r#"
-            SELECT id, session_id, working_spec_id, title, overview, state,
+            SELECT id, session_id, workspace_id, working_spec_id, title, overview, state,
                    milestones, dependency_graph, change_budget, quality_gates,
                    evidence_requirements, active_waivers, metadata, created_at, updated_at,
                    approved_at, completed_at
@@ -2060,7 +2062,7 @@ impl DatabaseOperations for DatabaseClient {
     async fn get_execution_plans(&self) -> Result<Vec<ExecutionPlan>> {
         sqlx::query_as::<_, ExecutionPlan>(
             r#"
-            SELECT id, session_id, working_spec_id, title, overview, state,
+            SELECT id, session_id, workspace_id, working_spec_id, title, overview, state,
                    milestones, dependency_graph, change_budget, quality_gates,
                    evidence_requirements, active_waivers, metadata, created_at, updated_at,
                    approved_at, completed_at
@@ -2088,6 +2090,10 @@ impl DatabaseOperations for DatabaseClient {
         }
         if update.overview.is_some() {
             updates.push(format!("overview = ${}", bind_index));
+            bind_index += 1;
+        }
+        if update.workspace_id.is_some() {
+            updates.push(format!("workspace_id = ${}", bind_index));
             bind_index += 1;
         }
         if update.state.is_some() {
@@ -2158,6 +2164,9 @@ impl DatabaseOperations for DatabaseClient {
         }
         if let Some(ref overview) = update.overview {
             query = query.bind(overview);
+        }
+        if let Some(ref workspace_id) = update.workspace_id {
+            query = query.bind(workspace_id);
         }
         if let Some(ref state) = update.state {
             query = query.bind(state);
@@ -4365,6 +4374,157 @@ impl DatabaseOperations for DatabaseClient {
         .await?;
 
         Ok(history)
+    }
+
+    // ============================================================================
+    // Curriculum Learning Operations
+    // ============================================================================
+
+    async fn record_learning_outcome(&self, record: CreateLearningRecord) -> Result<Uuid> {
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO learning_history (
+                agent_id, task_id, domain, complexity, adjusted_complexity,
+                skill_level_before, skill_level_after, success, quality_score,
+                execution_metadata
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id
+            "#,
+            record.agent_id,
+            record.task_id,
+            record.domain,
+            record.complexity,
+            record.adjusted_complexity,
+            record.skill_level_before,
+            record.skill_level_after,
+            record.success,
+            record.quality_score,
+            record.execution_metadata.unwrap_or(serde_json::Value::Null)
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.id)
+    }
+
+    async fn get_agent_skill_level(&self, agent_id: Uuid, domain: &str) -> Result<String> {
+        let result = sqlx::query!(
+            r#"
+            SELECT get_agent_skill_level($1, $2) as skill_level
+            "#,
+            agent_id,
+            domain
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.skill_level.unwrap_or_else(|| "beginner".to_string()))
+    }
+
+    async fn get_curriculum_profile(&self, agent_id: Uuid) -> Result<Option<CreateCurriculumProfile>> {
+        let result = sqlx::query!(
+            r#"
+            SELECT agent_id, overall_level, skills
+            FROM curriculum_profiles
+            WHERE agent_id = $1
+            "#,
+            agent_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.map(|row| CreateCurriculumProfile {
+            agent_id: row.agent_id,
+            overall_level: row.overall_level,
+            skills: row.skills,
+        }))
+    }
+
+    async fn upsert_curriculum_profile(&self, profile: CreateCurriculumProfile) -> Result<Uuid> {
+        let result = sqlx::query!(
+            r#"
+            INSERT INTO curriculum_profiles (
+                agent_id, overall_level, skills, total_tasks_completed,
+                total_tasks_succeeded, last_updated
+            )
+            VALUES ($1, $2, $3, 0, 0, NOW())
+            ON CONFLICT (agent_id) DO UPDATE SET
+                overall_level = EXCLUDED.overall_level,
+                skills = EXCLUDED.skills,
+                last_updated = NOW()
+            RETURNING id
+            "#,
+            profile.agent_id,
+            profile.overall_level,
+            profile.skills
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.id)
+    }
+
+    async fn check_milestone_prerequisites(&self, agent_id: Uuid, prerequisite_ids: Vec<String>) -> Result<bool> {
+        let prerequisites_json = serde_json::Value::Array(
+            prerequisite_ids.into_iter().map(serde_json::Value::String).collect()
+        );
+
+        let result = sqlx::query!(
+            r#"
+            SELECT check_milestone_prerequisites($1, $2) as prerequisites_met
+            "#,
+            agent_id,
+            prerequisites_json
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(result.prerequisites_met.unwrap_or(false))
+    }
+
+    async fn record_milestone_completion(&self, completion: CreateMilestoneCompletion) -> Result<MilestoneCompletionResult> {
+        let result = sqlx::query!(
+            r#"
+            SELECT record_milestone_completion(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            ) as completion_id
+            "#,
+            completion.agent_id,
+            completion.milestone_id,
+            completion.domain,
+            completion.required_level,
+            completion.target_level,
+            completion.complexity,
+            completion.success,
+            completion.quality_score,
+            completion.completion_time_ms,
+            completion.attempts,
+            completion.prerequisites_met,
+            completion.metadata.unwrap_or(serde_json::Value::Null)
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        // Get the created completion details
+        let completion_details = sqlx::query!(
+            r#"
+            SELECT id, agent_id, milestone_id, success, completed_at
+            FROM milestone_completions
+            WHERE id = $1
+            "#,
+            result.completion_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(MilestoneCompletionResult {
+            id: completion_details.id,
+            agent_id: completion_details.agent_id,
+            milestone_id: completion_details.milestone_id,
+            success: completion_details.success,
+            completed_at: completion_details.completed_at,
+        })
     }
 }
 

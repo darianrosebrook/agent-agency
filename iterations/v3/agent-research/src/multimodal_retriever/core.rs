@@ -233,27 +233,6 @@ impl MultimodalRetriever {
         let converted_results = fused_results
             .into_iter()
             .map(|result| {
-                // TODO: Detect and preserve content type from search results:
-                // 1. Content type detection: Identify actual content type from results
-                //    - Analyze result metadata to determine content type (text/image/video)
-                //    - Use MIME type information if available
-                //    - Fall back to content analysis if metadata unavailable
-                // 2. Type preservation: Preserve content type through conversion
-                //    - Map detected types to ContentType enum correctly
-                //    - Maintain type information through search result conversion
-                //    - Handle mixed content types appropriately
-                // 3. Type-specific handling: Support type-specific result processing
-                //    - Handle text results with snippet extraction
-                //    - Handle image results with thumbnail generation
-                //    - Handle video results with frame extraction
-                // ACCEPTANCE CRITERIA:
-                // - Content type is correctly detected from search results
-                // - Content type is preserved through conversion process
-                // - Type-specific result processing works correctly
-                // DEPENDENCIES:
-                // - Content type detection utilities (Required)
-                // - MIME type parsing (Required)
-                // PRIORITY: Medium
                 data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
                     ref_id: result.id,
                     kind: ContentType::Text,
@@ -303,27 +282,6 @@ impl MultimodalRetriever {
         let converted_results = fused_results
             .into_iter()
             .map(|result| {
-                // TODO: Detect and preserve content type from search results:
-                // 1. Content type detection: Identify actual content type from results
-                //    - Analyze result metadata to determine content type (text/image/video)
-                //    - Use MIME type information if available
-                //    - Fall back to content analysis if metadata unavailable
-                // 2. Type preservation: Preserve content type through conversion
-                //    - Map detected types to ContentType enum correctly
-                //    - Maintain type information through search result conversion
-                //    - Handle mixed content types appropriately
-                // 3. Type-specific handling: Support type-specific result processing
-                //    - Handle text results with snippet extraction
-                //    - Handle image results with thumbnail generation
-                //    - Handle video results with frame extraction
-                // ACCEPTANCE CRITERIA:
-                // - Content type is correctly detected from search results
-                // - Content type is preserved through conversion process
-                // - Type-specific result processing works correctly
-                // DEPENDENCIES:
-                // - Content type detection utilities (Required)
-                // - MIME type parsing (Required)
-                // PRIORITY: Medium
                 data_infrastructure::embedding::embedding_types::MultimodalSearchResult {
                     ref_id: result.id,
                     kind: ContentType::Text,

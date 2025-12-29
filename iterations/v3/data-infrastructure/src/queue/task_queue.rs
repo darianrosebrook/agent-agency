@@ -439,41 +439,6 @@ pub enum TaskQueueError {
 
 impl TaskQueueError {
     /// Convert an anyhow::Error to TaskQueueError
-    // TODO: Implement proper sqlx::Error extraction from anyhow::Error
-    //       Currently converts to Generic since extracting sqlx::Error from anyhow::Error requires unstable features; should implement proper error chain traversal and type-specific error extraction for accurate error classification.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Primary functionality implemented
-    // [ ] API/data structures defined & stable
-    // [ ] Error handling + validation aligned with error taxonomy
-    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-    // [ ] Integration tests for external systems/contracts
-    // [ ] Documentation: public API + system behavior
-    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-    // [ ] Configurability and feature flags defined if relevant
-    // [ ] Failure-mode cards documented (degradation paths)
-    //
-    // ACCEPTANCE CRITERIA:
-    // - sqlx::Error is properly extracted from anyhow::Error chain
-    // - Error classification is accurate and type-specific
-    // - Error chain traversal handles all error types correctly
-    // - Solution works without requiring unstable Rust features
-    //
-    // DEPENDENCIES:
-    // - Error chain traversal utilities (Required)
-    // - Type-specific error extraction logic (Required)
-    // - Error classification system (Required)
-    //
-    // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (error handling enhancement)
-    // - Change Budget: ~100 LOC
-    // - Reviewer Requirements: Error handling and Rust type system expertise
     fn from_anyhow(error: anyhow::Error) -> Self {
         // Check if the error chain contains sqlx::Error
         // If so, we can try to extract it, otherwise use Generic

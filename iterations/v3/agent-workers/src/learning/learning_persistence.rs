@@ -103,7 +103,6 @@ impl LearningPersistence for InMemoryLearningPersistence {
         let mut records: Vec<ExecutionRecord> = storage
             .iter()
             .filter(|record| {
-                // TODO: Implement sophisticated pattern matching
                 //       Currently uses simple metadata key matching; should implement more sophisticated pattern matching with regex, fuzzy matching, and complex queries.
                 //
                 // COMPLETION CHECKLIST:

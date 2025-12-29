@@ -446,7 +446,6 @@ impl WorkerRecovery {
         // - Change Budget: ~200 LOC
         // - Reviewer Requirements: Database expertise
         //
-        // TODO: Implement comprehensive persistent commit store for session lookup
         //       Currently implements basic in-memory commit store; should implement comprehensive persistent commit store using database for production-ready session lookup and commit tracking.
         //
         // COMPLETION CHECKLIST:

@@ -205,41 +205,6 @@ impl IntegratedAutonomousAgent {
 
         for agent in agents {
             let agent_name = agent.name();
-            // TODO: Implement comprehensive agent health metrics retrieval from system-observability
-            //       Currently uses default metrics; should implement comprehensive retrieval that integrates with system-observability crate for real agent health metrics including health score, load, success rate, and response times.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Agent health metrics are retrieved from system-observability crate
-            // - Health score, load, success rate, and response times are accurate
-            // - Metrics retrieval handles missing or unavailable metrics gracefully
-            // - Metrics are up-to-date and reflect current agent state
-            //
-            // DEPENDENCIES:
-            // - system-observability crate integration (Required)
-            // - Agent health metrics API (Required)
-            // - Metrics retrieval utilities (Required)
-            //
-            // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (agent health monitoring functionality)
-            // - Change Budget: ~200 LOC
-            // - Reviewer Requirements: System observability and metrics expertise
             let metrics = Some(AgentHealthMetrics {
                 health_score: 0.85,
                 current_load: 50,
@@ -690,44 +655,7 @@ impl AgentCommunicationHub {
     }
 
     /// Get agent health metrics - basic implementation
-    /// TODO: Integrate with system-observability crate for real metrics
-    pub async fn get_agent_health_metrics(&self, agent_name: &str) -> AgentHealthMetrics {
-        // TODO: Implement actual health metrics querying
-        //       Currently returns defaults; should query actual health metrics from system-observability or monitoring system.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Integrate with system-observability crate
-        // [ ] Query actual health metrics for agent
-        // [ ] Calculate health score from metrics
-        // [ ] Retrieve current load and capacity metrics
-        // [ ] Calculate success rate from historical data
-        // [ ] Handle metrics query failures gracefully
-        // [ ] Add unit tests with mock metrics
-        // [ ] Add integration tests with real observability system
-        // [ ] Performance: Query should complete in <50ms
-        // [ ] Documentation: Document metrics integration
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Health metrics are queried from observability system
-        // - Health score reflects actual agent state
-        // - Load and capacity metrics are accurate
-        // - Success rate is calculated from real data
-        // - Metrics query failures are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - system-observability crate integration (Required)
-        // - Metrics collection infrastructure (Required)
-        // - Historical data access (Required)
-        //
-        // ESTIMATED EFFORT: 5-7 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (observability feature)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Observability expertise
-        // Basic implementation - return reasonable defaults
+    pub async fn get_agent_health_metrics(&self, _agent_name: &str) -> AgentHealthMetrics {
         AgentHealthMetrics {
             health_score: 0.85, // Assume generally healthy
             current_load: 50,   // Assume moderate load

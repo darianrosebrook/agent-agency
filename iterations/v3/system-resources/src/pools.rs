@@ -135,41 +135,6 @@ impl ResourcePool for MemoryPool {
             );
 
             // Memory defragmentation: suggest allocation reordering for better memory layout
-            // TODO: Implement allocation reordering to reduce fragmentation
-            //       Currently logs warning; should reorder allocations to reduce memory fragmentation and improve pool efficiency.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Analyze current allocation layout
-            // [ ] Identify fragmentation patterns
-            // [ ] Implement reordering algorithm
-            // [ ] Reorder allocations to reduce fragmentation
-            // [ ] Verify fragmentation reduction
-            // [ ] Handle reordering errors gracefully
-            // [ ] Add unit tests with various fragmentation scenarios
-            // [ ] Add integration tests with real memory pools
-            // [ ] Performance: Reordering should complete in <100ms
-            // [ ] Documentation: Document reordering algorithm
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Allocation layout is analyzed correctly
-            // - Fragmentation is reduced after reordering
-            // - Reordering algorithm is efficient
-            // - Reordering errors are handled gracefully
-            // - Pool efficiency is improved
-            //
-            // DEPENDENCIES:
-            // - Memory layout analysis (Required)
-            // - Reordering algorithm (Required)
-            // - Fragmentation metrics (Required)
-            //
-            // ESTIMATED EFFORT: 8-12 hours (low confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (memory optimization feature)
-            // - Change Budget: ~300 LOC
-            // - Reviewer Requirements: Memory management expertise
             tracing::info!(
                 "Memory pool '{}' triggering defragmentation - consider allocation reordering",
                 self.name

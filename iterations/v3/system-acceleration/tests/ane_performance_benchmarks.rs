@@ -1,3 +1,5 @@
+#![cfg(feature = "coreml")]
+
 //! ANE Acceleration Performance Benchmarks
 //!
 //! This test suite measures actual Core ML performance improvements:

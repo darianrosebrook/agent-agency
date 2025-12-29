@@ -1417,7 +1417,7 @@ impl PlanExecutor {
             );
 
             match worker_bridge
-                .execute_milestone(milestone, &worktree_path, worker_id)
+                .execute_milestone(milestone, &worktree_path, worker_id, None)
                 .await
             {
                 Ok(artifacts) => {

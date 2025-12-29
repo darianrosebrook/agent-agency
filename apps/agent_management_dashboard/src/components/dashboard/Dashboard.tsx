@@ -77,9 +77,16 @@ export function Dashboard() {
     async function fetchUser() {
       try {
         const userData = await getCurrentUser();
-        setUser(userData);
+        // getCurrentUser now returns null for 401 (not authenticated) - this is expected
+        if (userData) {
+          setUser(userData);
+        }
+        // If null, continue without user - component will show fallback
       } catch (error) {
-        console.error("Failed to fetch user:", error);
+        // Only log unexpected errors (not 401)
+        if (error && typeof error === 'object' && 'status' in error && error.status !== 401) {
+          console.error("Failed to fetch user:", error);
+        }
         // Continue with null user - component will show fallback
       } finally {
         setIsLoadingUser(false);

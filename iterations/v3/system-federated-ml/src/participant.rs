@@ -62,6 +62,7 @@ pub struct DeviceCapabilities {
 
 /// Current round participation state
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 struct RoundParticipation {
     round_id: u64,
     start_time: chrono::DateTime<chrono::Utc>,
@@ -71,6 +72,7 @@ struct RoundParticipation {
 
 /// Participation status in current round
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 enum ParticipationStatus {
     Waiting,
     Training,

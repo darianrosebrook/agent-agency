@@ -616,38 +616,6 @@ impl FullTextIndexer {
     }
 
     /// Get average document length
-    // TODO: Implement comprehensive document length calculation with statistical analysis
-    //       Currently uses simple arithmetic mean; should include statistical measures for better BM25 scoring.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Calculate mean, median, and standard deviation of document lengths
-    // [ ] Implement length normalization for BM25 scoring
-    // [ ] Add caching for document length statistics
-    // [ ] Handle edge cases (empty documents, very long documents)
-    // [ ] Add unit tests for statistical calculations
-    // [ ] Add integration tests with real document collections
-    // [ ] Verify improved BM25 scoring accuracy
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Document length statistics include mean, median, and standard deviation
-    // - Length normalization improves BM25 scoring accuracy
-    // - Statistics are cached and updated efficiently
-    // - Edge cases are handled gracefully
-    //
-    // DEPENDENCIES:
-    // - Document collection data structure (Required)
-    // - BM25 scoring algorithm (Required)
-    // - Statistical calculation utilities (Optional)
-    //
-    // ESTIMATED EFFORT: 3-5 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (low risk optimization)
-    // - Change Budget: ~80 LOC
-    // - Reviewer Requirements: Search algorithm expertise
-    //
     // NOTE: This method is kept for future use and as a public API. Internal code uses
     // calculate_avg_document_length() to avoid deadlock when documents are already locked.
     #[allow(dead_code)]
@@ -1924,101 +1892,11 @@ impl DatabasePool {
 
     /// Get number of idle connections
     pub fn num_idle(&self) -> usize {
-        // TODO: Implement actual idle connection count based on pool type
-        //       Currently returns placeholder 0; should query sqlx pool for accurate idle connection count.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Add sqlx pool idle connection count retrieval
-        // [ ] Implement pool type detection and appropriate querying
-        // [ ] Add connection state monitoring and metrics
-        // [ ] Handle different pool implementations (PgPool, MySqlPool, etc.)
-        // [ ] Add connection pool health monitoring
-        // [ ] Add unit tests for connection count accuracy
-        // [ ] Add integration tests with real database pools
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Idle connection count matches actual pool state
-        // - Count retrieval works for all supported database types
-        // - Performance overhead is minimal (<0.1ms per call)
-        // - Error handling covers pool access failures
-        // - Metrics are accurate and up-to-date
-        // - Monitoring works in production environments
-        //
-        // DEPENDENCIES:
-        // - sqlx pool access methods (Required)
-        // - Pool type detection logic (Required)
-        // - Metrics collection infrastructure (Optional)
-        // - Error handling utilities (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~50 LOC
-        // - Reviewer Requirements: Database connection pooling expertise
         0
     }
 
     /// Get pool size
     pub fn size(&self) -> usize {
-        // TODO: Implement actual pool size based on pool type
-        //       Currently returns placeholder 0; should query sqlx pool for accurate total pool size.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] Add sqlx pool size retrieval for total connections
-        // [ ] Implement pool capacity and current size distinction
-        // [ ] Add pool size monitoring and alerting thresholds
-        // [ ] Handle different pool implementations consistently
-        // [ ] Add pool size validation and bounds checking
-        // [ ] Add unit tests for pool size accuracy
-        // [ ] Add integration tests with connection pool lifecycle
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Pool size reflects actual configured capacity
-        // - Size reporting works for all supported database types
-        // - Size information is accurate and current
-        // - Performance overhead is minimal (<0.1ms per call)
-        // - Error handling covers pool access failures
-        // - Monitoring alerts work based on pool size thresholds
-        //
-        // DEPENDENCIES:
-        // - sqlx pool configuration access (Required)
-        // - Pool type detection logic (Required)
-        // - Monitoring and alerting infrastructure (Optional)
-        // - Configuration validation (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~50 LOC
-        // - Reviewer Requirements: Database connection pooling expertise
         0
     }
 }
@@ -2342,7 +2220,7 @@ impl UnifiedIndexer {
             // - CAWS Tier: 1 (core ML integration for semantic search)
             // - Change Budget: ~250 LOC
             // - Reviewer Requirements: ML model integration and vector processing expertise
-            let vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
+            let _vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
 
             // TODO: Use actual model name from embedding service
             //       Currently uses hardcoded "placeholder_model"; should retrieve actual model name from embedding service configuration.
@@ -2390,13 +2268,13 @@ impl UnifiedIndexer {
             // - CAWS Tier: 2 (metadata accuracy and model traceability)
             // - Change Budget: ~120 LOC
             // - Reviewer Requirements: Model management and metadata expertise
-            let vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
+            let _vector = vec![0.1; 384]; // Temporary: placeholder vector until embedding service integration
 
             // Index the content
             self.index_content(
                 block.block.id.0, // Access the inner Uuid
                 &text_content,
-                &vector,
+                &_vector,
                 &block.block.content_type.to_string(),
                 // TODO: Use actual model name from embedding service
                 // - [ ] Retrieve model name from embedding service configuration

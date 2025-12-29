@@ -43,33 +43,6 @@ pub struct DeploymentOrchestrator;
 
 #[cfg(not(feature = "model-management"))]
 impl DeploymentOrchestrator {
-    /// TODO: Implement hot-swap of model version for a worker
-    ///       This is a stub implementation when model-management feature is disabled.
-    ///       Currently returns error; should implement model version hot-swapping.
-    ///
-    /// COMPLETION CHECKLIST:
-    /// [ ] Implement model version hot-swap logic
-    /// [ ] Support different hot-swap strategies (rolling, canary, instant)
-    /// [ ] Handle model loading and unloading
-    /// [ ] Track model version changes
-    /// [ ] Add unit tests with various swap scenarios
-    /// [ ] Add integration tests with real model management
-    ///
-    /// ACCEPTANCE CRITERIA:
-    /// - Model versions can be hot-swapped without downtime
-    /// - Different swap strategies work correctly
-    /// - Model loading errors are handled gracefully
-    ///
-    /// DEPENDENCIES:
-    /// - Model management feature (Required)
-    ///
-    /// ESTIMATED EFFORT: 4-6 hours
-    /// PRIORITY: Medium
-    /// BLOCKING: No (feature-gated)
-    ///
-    /// GOVERNANCE:
-    /// - CAWS Tier: 2 (model lifecycle management)
-    /// - Change Budget: ~150 LOC
     pub async fn perform_hot_swap(
         &self,
         _model_id: &str,

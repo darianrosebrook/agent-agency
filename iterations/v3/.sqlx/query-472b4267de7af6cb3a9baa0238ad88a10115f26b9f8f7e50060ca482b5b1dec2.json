@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO curriculum_profiles (\n                agent_id, overall_level, skills, total_tasks_completed,\n                total_tasks_succeeded, last_updated\n            )\n            VALUES ($1, $2, $3, 0, 0, NOW())\n            ON CONFLICT (agent_id) DO UPDATE SET\n                overall_level = EXCLUDED.overall_level,\n                skills = EXCLUDED.skills,\n                last_updated = NOW()\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "472b4267de7af6cb3a9baa0238ad88a10115f26b9f8f7e50060ca482b5b1dec2"
+}

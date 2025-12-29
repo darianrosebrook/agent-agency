@@ -182,7 +182,6 @@ impl CodeExtractor {
             if self.has_function_documentation(&function.name, &function.name) {
                 documented += 1;
             } else {
-                // TODO: Implement proper documentation checking
                 // - [ ] Check for actual function documentation (doc comments, JSDoc, etc.)
                 // - [ ] Verify documentation completeness and quality
                 // - [ ] Count only properly documented functions
@@ -198,37 +197,6 @@ impl CodeExtractor {
 
     /// Check if function has documentation
     fn has_function_documentation(&self, name: &str, signature: &str) -> bool {
-        // TODO: Implement sophisticated documentation detection
-        //       Currently uses basic string matching; should parse AST to detect actual documentation comments associated with functions.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Parse AST to find documentation comments
-        // [ ] Match documentation to function signatures
-        // [ ] Handle various documentation formats (///, /** */, //!)
-        // [ ] Detect documentation quality and completeness
-        // [ ] Add unit tests with various documentation styles
-        // [ ] Add integration tests with real codebases
-        // [ ] Performance: Documentation detection should complete in <10ms per file
-        // [ ] Documentation: Document detection methodology
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Accurately detects documentation comments for functions
-        // - Handles all Rust documentation comment formats
-        // - Distinguishes between function docs and other comments
-        // - Provides accurate documentation presence status
-        //
-        // DEPENDENCIES:
-        // - AST parsing capabilities (Required)
-        // - Documentation comment detection (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (code analysis feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: AST parsing expertise
         signature.contains("///") || signature.contains("/**") || signature.contains("//")
     }
 
@@ -237,7 +205,6 @@ impl CodeExtractor {
         let mut issues = Vec::new();
         let mut score: f64 = 1.0;
 
-        // Check for outdated TODO comments
         let todo_re = Regex::new(r"//?\s*TODO:?\s*(.*)")?;
         for capture in todo_re.captures_iter(content) {
             if let Some(todo_text) = capture.get(1) {

@@ -431,39 +431,6 @@ impl GarbageCollector {
         use crate::merkle::{Commit, FileTree};
 
         // Create a blob store instance to read objects
-        // TODO: Implement dependency injection for blob store
-        //       Currently creates blob store directly; should be injected or accessed from collector for better testability and configuration.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Add blob store as constructor parameter
-        // [ ] Access blob store from collector instance
-        // [ ] Support configuration-based blob store creation
-        // [ ] Handle missing blob store gracefully
-        // [ ] Add unit tests with mock blob store
-        // [ ] Add integration tests with real blob store
-        // [ ] Performance: No performance impact (construction-time only)
-        // [ ] Documentation: Document injection pattern
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Blob store can be injected via constructor
-        // - Blob store is accessible from collector
-        // - Configuration-based creation is supported
-        // - Missing blob store is handled gracefully
-        // - Injection pattern is testable
-        //
-        // DEPENDENCIES:
-        // - Dependency injection framework (Optional)
-        // - Blob store interface (Required)
-        // - Configuration management (Required)
-        //
-        // ESTIMATED EFFORT: 3-4 hours (high confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (code quality improvement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Dependency injection expertise
         let objects_dir = std::path::PathBuf::from("./.recovery/objects");
         let blob_store = BlobStore::new(objects_dir);
 

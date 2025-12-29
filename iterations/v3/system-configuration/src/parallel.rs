@@ -164,41 +164,6 @@ where
             }
 
             AggregationStrategy::Weighted => {
-                // TODO: Implement comprehensive weighted aggregation strategy
-                //       Currently treats as AllRequired; should implement comprehensive weighted aggregation that defines weight assignment mechanism, implements weighted scoring algorithm, and supports partial success scenarios based on weighted importance.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Weight assignment mechanism is defined for different pipeline stages
-                // - Weighted scoring algorithm aggregates results correctly
-                // - Configurable weight thresholds support success/failure decisions
-                // - Partial success scenarios are supported based on weighted importance
-                //
-                // DEPENDENCIES:
-                // - Weight assignment system (Required)
-                // - Weighted scoring algorithm (Required)
-                // - Aggregation metrics and analysis (Required)
-                //
-                // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (aggregation strategy functionality)
-                // - Change Budget: ~200 LOC
-                // - Reviewer Requirements: Aggregation algorithms and weighted scoring expertise
                 if !failures.is_empty() {
                     return Err(PipelineError::Execution(
                         "Weighted aggregation not implemented".to_string(),

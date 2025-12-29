@@ -17,17 +17,22 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "coreml")]
 pub mod ane;
-// pub mod metal; // TODO: Implement Metal GPU acceleration
-// pub mod coreml; // TODO: Implement Core ML acceleration
+#[cfg(all(feature = "metal-backend", target_os = "macos"))]
+pub mod metal;
+// pub mod coreml; // CoreML/ANE path will be re-enabled once torch-sys conflicts are resolved
 pub mod buffer_pool;
 pub mod model_router;
 pub mod quantization;
 pub mod telemetry;
 
 // Re-export main types
+#[cfg(feature = "coreml")]
 pub use ane::ANEManager;
 pub use buffer_pool::BufferPool;
+#[cfg(all(feature = "metal-backend", target_os = "macos"))]
+pub use metal::MetalExecutor;
 pub use model_router::ModelRouter;
 pub use quantization::QuantizationConfig;
 

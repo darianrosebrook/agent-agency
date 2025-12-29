@@ -363,45 +363,6 @@ impl CoreMLModel {
                         // Extract image dimensions from the data
                         // For RGB images: data length = width * height * 3
                         // We infer dimensions assuming RGB format (3 bytes per pixel)
-                        // TODO: Query model metadata for expected image dimensions
-                        //       Currently infers dimensions from data length; should query model metadata to get expected image dimensions and validate input matches model requirements.
-                        //
-                        // COMPLETION CHECKLIST:
-                        // [ ] Query model metadata for image input constraints
-                        // [ ] Extract expected width, height, and pixel format from metadata
-                        // [ ] Validate input image dimensions match model requirements
-                        // [ ] Provide clear error messages for dimension mismatches
-                        // [ ] API/data structures defined & stable
-                        // [ ] Error handling + validation aligned with error taxonomy
-                        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                        // [ ] Integration tests for external systems/contracts
-                        // [ ] Documentation: public API + system behavior
-                        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                        // [ ] Configurability and feature flags defined if relevant
-                        // [ ] Failure-mode cards documented (degradation paths)
-                        //
-                        // ACCEPTANCE CRITERIA:
-                        // - Model metadata is queried for image constraints
-                        // - Expected dimensions are extracted correctly
-                        // - Input validation catches dimension mismatches
-                        // - Error messages are clear and actionable
-                        // - Performance impact is minimal (<1ms overhead)
-                        //
-                        // DEPENDENCIES:
-                        // - Model metadata query utilities (Required)
-                        // - Image constraint parsing (Required)
-                        // - Dimension validation logic (Required)
-                        //
-                        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-                        // PRIORITY: Low
-                        // BLOCKING: No
-                        //
-                        // GOVERNANCE:
-                        // - CAWS Tier: 3 (validation enhancement)
-                        // - Change Budget: ~100 LOC
-                        // - Reviewer Requirements: CoreML metadata and image processing expertise
                         let channels = 3; // RGB
                         let total_pixels = image_data.len() / channels;
 

@@ -1,3 +1,5 @@
+#![cfg(feature = "coreml")]
+
 //! Phase 4: Hardening and Device Matrix Testing
 //!
 //! This test suite validates the hardening features and device matrix support:

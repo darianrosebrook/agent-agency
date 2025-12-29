@@ -30,7 +30,6 @@
 // - [ ] Add context retrieval from indexed multimodal content
 // - [ ] Add unit tests with mock multimodal content
 // - [ ] Add integration tests with real multimodal RAG system
-// STATUS: Placeholder implementation maintained for future integration with
 // the multimodal RAG system.
 
 use anyhow::{anyhow, Result};

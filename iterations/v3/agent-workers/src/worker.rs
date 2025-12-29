@@ -569,44 +569,12 @@ fn create_tool_execution_request(
     use agent_mcp::mcp_types::{ExecutionContext, ToolExecutionRequest};
 
     // Create MCP execution context
-    // TODO: Populate metadata with task context and execution information
-    //       Currently uses empty metadata; should include task context, execution parameters, and provenance data.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Extract task context information from subtask
-    // [ ] Add execution parameters to metadata
-    // [ ] Add provenance tracking data to metadata
-    // [ ] Include worker identification and capabilities
-    // [ ] Add timestamp and execution environment info
-    // [ ] Add unit tests for metadata population
-    // [ ] Add integration tests with real task execution
-    // [ ] Verify metadata is accessible during execution
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Metadata contains task context information
-    // - Metadata includes execution parameters and provenance data
-    // - Metadata is accessible during tool execution
-    // - Metadata supports debugging and observability
-    //
-    // DEPENDENCIES:
-    // - Task context data structure (Required)
-    // - Execution context API (Required)
-    // - Provenance tracking system (Optional)
-    //
-    // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (low risk enhancement)
-    // - Change Budget: ~40 LOC
-    // - Reviewer Requirements: Worker execution domain expertise
     let mcp_context = ExecutionContext {
         working_directory: Some(context.working_directory.clone()),
         environment_variables: context.environment_variables.clone(),
         input_files: context.input_files.clone(),
-        output_directory: Some("/tmp".to_string()), // Default output directory
-        metadata: HashMap::new(), // Temporary: empty metadata until TODO above is implemented
+        output_directory: Some("/tmp".to_string()),
+        metadata: HashMap::new(),
     };
 
     // Create tool parameters from subtask

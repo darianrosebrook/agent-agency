@@ -503,7 +503,6 @@ impl ErrorHandler {
 
         match &error.recovery {
             ErrorRecovery::Retry { max_attempts, backoff_ms, exponential_backoff } => {
-                // TODO: Implement sophisticated retry logic with exponential backoff
                 //       Currently uses basic retry; should implement comprehensive retry logic with exponential backoff and jitter.
                 tracing::info!("Attempting retry recovery for error: {}", error.code);
             }

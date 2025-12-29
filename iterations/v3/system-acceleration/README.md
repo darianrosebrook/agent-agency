@@ -2,6 +2,11 @@
 
 **High-performance hardware acceleration framework for AI inference**
 
+**Current status (Dec 2025)**: CoreML/ANE remains disabled in the workspace due to
+torch-sys/libtorch conflicts. Metal/MPS is now the active backend (via Candle’s
+Metal device) for Apple Silicon. We will switch back to the CoreML path once the
+torch-sys alignment is restored and validated.
+
 The System Acceleration crate provides a unified framework for leveraging hardware accelerators including Apple Neural Engine (ANE), Metal GPU, and optimized CPU/GPU backends. It enables zero-overhead Core ML acceleration, intelligent model routing, automatic quantization, and resource management for maximum AI inference performance.
 
 ## Overview

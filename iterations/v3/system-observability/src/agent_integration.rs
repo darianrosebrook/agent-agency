@@ -3,42 +3,7 @@
 //! Provides integration between the system health monitor and agent telemetry
 //! for comprehensive monitoring of agent performance and coordination effectiveness.
 
-// TODO: Integrate agent_agency_observability for comprehensive monitoring
-//       Currently implements local types; should integrate agent_agency_observability for comprehensive monitoring of agent performance and coordination effectiveness.
-//
-// COMPLETION CHECKLIST:
-// [ ] Primary functionality implemented
-// [ ] API/data structures defined & stable
-// [ ] Error handling + validation aligned with error taxonomy
-// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-// [ ] Integration tests for external systems/contracts
-// [ ] Documentation: public API + system behavior
-// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-// [ ] Security posture reviewed (inputs, authz, sandboxing)
-// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-// [ ] Configurability and feature flags defined if relevant
-// [ ] Failure-mode cards documented (degradation paths)
-//
-// ACCEPTANCE CRITERIA:
-// - agent_agency_observability is integrated correctly
-// - Monitoring covers agent performance comprehensively
-// - Coordination effectiveness is tracked
-// - Integration works with existing observability infrastructure
-//
-// DEPENDENCIES:
-// - agent_agency_observability crate (Required)
-// - Observability infrastructure (Required)
-// - Monitoring utilities (Required)
-//
-// ESTIMATED EFFORT: 5-6 hours (medium confidence)
-// PRIORITY: Medium
-// BLOCKING: No
-//
-// GOVERNANCE:
-// - CAWS Tier: 2 (observability integration feature)
-// - Change Budget: ~120 LOC
-// - Reviewer Requirements: Observability expertise
-use std::collections::VecDeque; // Temporary: local types until observability integration
+use std::collections::VecDeque;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -132,43 +97,8 @@ pub struct SystemDashboard {
     pub business_metrics: BusinessMetrics,
 }
 
-/// TODO: Enhance system health enum with comprehensive health states
-///       Currently uses basic states; should enhance with comprehensive health states including detailed degradation levels and recovery states.
-//
-// COMPLETION CHECKLIST:
-// [ ] Primary functionality implemented
-// [ ] API/data structures defined & stable
-// [ ] Error handling + validation aligned with error taxonomy
-// [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-// [ ] Integration tests for external systems/contracts
-// [ ] Documentation: public API + system behavior
-// [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-// [ ] Security posture reviewed (inputs, authz, sandboxing)
-// [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-// [ ] Configurability and feature flags defined if relevant
-// [ ] Failure-mode cards documented (degradation paths)
-//
-// ACCEPTANCE CRITERIA:
-// - Health enum includes all relevant states
-// - Degradation levels are clearly defined
-// - Recovery states are represented
-// - Enum is extensible for future states
-//
-// DEPENDENCIES:
-// - Health monitoring infrastructure (Required)
-// - State machine utilities (Required)
-// - Health assessment algorithms (Required)
-//
-// ESTIMATED EFFORT: 3-4 hours (medium confidence)
-// PRIORITY: Low
-// BLOCKING: No
-//
-// GOVERNANCE:
-// - CAWS Tier: 3 (monitoring enhancement)
-// - Change Budget: ~80 LOC
-// - Reviewer Requirements: System health monitoring expertise
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SystemHealth { // Temporary: basic until comprehensive enhancement
+pub enum SystemHealth {
     Healthy,
     Degraded,
     Critical,
@@ -660,15 +590,7 @@ impl AgentIntegratedHealthMonitor {
         // - Time window management (Required)
         // - SLA calculation utilities (Required)
         //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (monitoring feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: SLA monitoring expertise
-        let availability_sla = self.calculate_availability_sla().await; // Temporary: heuristic until actual uptime tracking
+        let availability_sla = self.calculate_availability_sla().await;
 
         // Update metrics with SLA information
         current_metrics.system_availability = availability_sla.overall_availability;

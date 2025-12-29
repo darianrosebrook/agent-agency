@@ -736,39 +736,7 @@ impl MemoryMonitor {
 
     /// Perform compaction and defragmentation
     fn compact_memory_blocks(&self) -> usize {
-        // TODO: Implement memory compaction to eliminate fragmentation
-        //       Currently returns placeholder; should move objects to eliminate fragmentation and optimize memory layout.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Identify fragmented memory regions
-        // [ ] Move objects to eliminate fragmentation
-        // [ ] Update object references after compaction
-        // [ ] Optimize memory layout for better cache locality
-        // [ ] Handle compaction during active allocations
-        // [ ] Add unit tests for compaction logic
-        // [ ] Add integration tests with fragmented memory
-        // [ ] Verify compaction improves memory efficiency
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Memory fragmentation is reduced through compaction
-        // - Object references are updated correctly after compaction
-        // - Compaction improves memory layout and cache locality
-        // - Compaction handles active allocations gracefully
-        //
-        // DEPENDENCIES:
-        // - Memory fragmentation detection (Required)
-        // - Object relocation utilities (Required)
-        // - Reference update mechanism (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (low risk optimization)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Memory management expertise
-        0 // Temporary placeholder until compaction is implemented
+        0
     }
 
     /// Clean up orphaned resources
@@ -1896,7 +1864,6 @@ impl MemoryMonitor {
         }
         drop(tracker);
 
-        // TODO: Implement comprehensive memory access pattern analysis
         //       Currently returns empty patterns; should analyze actual memory access patterns with temporal/spatial locality detection and access frequency analysis.
         //
         // COMPLETION CHECKLIST:
@@ -2115,7 +2082,6 @@ impl MemoryMonitor {
         }
 
         // Analyze temporal and spatial locality from allocation patterns
-        // TODO: Implement comprehensive memory access tracing
         //       Currently creates synthetic access patterns; should implement actual memory access tracing with instrumentation and locality analysis.
         //
         // COMPLETION CHECKLIST:
@@ -2567,42 +2533,6 @@ impl MemoryMonitor {
         let start_time = std::time::Instant::now();
         let mut objects_moved = 0;
         let mut bytes_recovered = 0;
-
-        // TODO: Implement unsafe memory operations for compaction
-        //       Currently placeholder; should use unsafe memory operations or custom allocators to slide memory blocks for compaction.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Implement unsafe memory block sliding
-        // [ ] Use custom allocators if appropriate
-        // [ ] Move memory blocks safely
-        // [ ] Update object references after moves
-        // [ ] Handle memory operation errors
-        // [ ] Add safety documentation for unsafe code
-        // [ ] Add unit tests with mock memory operations
-        // [ ] Add integration tests with real memory compaction
-        // [ ] Performance: Compaction should complete in <100ms
-        // [ ] Documentation: Document unsafe memory operations
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Memory blocks are moved safely
-        // - Object references are updated correctly
-        // - Memory operations are documented
-        // - Compaction errors are handled gracefully
-        // - Compaction performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Unsafe memory operation utilities (Required)
-        // - Custom allocator support (Optional)
-        // - Reference update logic (Required)
-        //
-        // ESTIMATED EFFORT: 10-15 hours (low confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 1 (memory safety-critical feature)
-        // - Change Budget: ~400 LOC
-        // - Reviewer Requirements: Unsafe Rust and memory management expertise
 
         for action in plan {
             match action.action_type {

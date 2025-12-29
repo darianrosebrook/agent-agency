@@ -108,7 +108,7 @@ futures = "0.3"
 
 [features]
 default = ["workspace-integration"]  # memory-integration disabled by default
-# memory-integration = ["agent-memory"]  # Feature flag for memory integration (disabled)
+memory-integration = []  # Placeholder feature to silence cfg warnings; agent-memory stays disabled to avoid circular deps
 workspace-integration = ["system-resilience"]
 embeddings = ["data-infrastructure"] # Re-enabled for conditional compilation
 coreml = ["system-acceleration"] # CoreML model integration for audio transcription and object detection

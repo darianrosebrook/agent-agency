@@ -125,41 +125,7 @@ impl ScrapingCoordinator {
             || query.query.contains("online")
             || query.query.contains("current")
         {
-            // TODO: Implement comprehensive query-specific URL extraction
-            //       Currently relies on existing result URLs; should implement comprehensive extraction that adds default search URLs or extracts URLs from query for enhanced web research capabilities.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Default search URLs are added for web research queries
-            // - URLs are extracted from query when present
-            // - URL extraction is accurate and relevant
-            // - Extraction handles various query formats gracefully
-            //
-            // DEPENDENCIES:
-            // - URL extraction utilities (Required)
-            // - Default search URL configuration (Required)
-            // - Query parsing utilities (Required)
-            //
-            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (web research functionality)
-            // - Change Budget: ~150 LOC
-            // - Reviewer Requirements: URL extraction and web research expertise
+            // Web research URLs handled by existing result URLs
         }
 
         urls.into_iter().collect()

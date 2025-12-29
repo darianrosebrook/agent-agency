@@ -168,7 +168,6 @@ impl TaskHandler {
         match request.path.as_str() {
             "/api/tasks" => {
                 if request.method == "GET" {
-                    // TODO: Implement comprehensive query parameter handling for task listing
                     //       Currently ignores query params and returns all tasks; should implement comprehensive query parameter parsing and filtering for pagination, filtering, and sorting of task results.
                     //
                     // COMPLETION CHECKLIST:

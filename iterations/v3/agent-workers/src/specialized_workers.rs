@@ -290,41 +290,6 @@ impl RefactoringSpecialist {
         &self,
         params: &RefactoringParams,
     ) -> Result<String, WorkerError> {
-        // TODO: Implement code analysis for refactoring suggestions
-        //       Currently returns generic suggestions; should analyze actual code to generate specific refactoring suggestions.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Implement code analysis and parsing
-        // [ ] Analyze code structure and complexity
-        // [ ] Detect code smells and anti-patterns
-        // [ ] Generate specific refactoring suggestions
-        // [ ] Rank suggestions by impact and priority
-        // [ ] Provide code examples for suggestions
-        // [ ] Add unit tests with various code samples
-        // [ ] Add integration tests with real codebases
-        // [ ] Performance: Analysis should complete in <5s
-        // [ ] Documentation: Document refactoring suggestion methodology
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Code is analyzed for refactoring opportunities
-        // - Suggestions are specific and actionable
-        // - Suggestions are ranked by priority
-        // - Code examples are provided
-        // - Analysis performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Code analysis library (Required)
-        // - AST parsing (Required)
-        // - Refactoring pattern detection (Required)
-        //
-        // ESTIMATED EFFORT: 10-15 hours (low confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (code analysis feature)
-        // - Change Budget: ~400 LOC
-        // - Reviewer Requirements: Code analysis expertise
         let suggestions = vec![
             "Consider extracting methods for complex functions (>50 lines)",
             "Use guard clauses instead of deep nesting",

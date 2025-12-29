@@ -1367,40 +1367,7 @@ impl WorkerAssignmentStrategy {
             // TODO: Implement comprehensive worker-to-model mapping for performance tracking
             //       Currently uses basic approach with worker_id directly; should implement comprehensive mapping that maps worker_id to model_id for accurate historical performance retrieval.
             //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - worker_id is mapped to model_id correctly
-            // - Historical performance is retrieved using model_id
-            // - Mapping handles missing or invalid mappings gracefully
-            // - Performance tracking is accurate and complete
-            //
-            // DEPENDENCIES:
-            // - Worker-to-model mapping system (Required)
-            // - Model ID lookup utilities (Required)
-            // - Performance tracking database (Required)
-            //
-            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (performance tracking functionality)
-            // - Change Budget: ~150 LOC
-            // - Reviewer Requirements: Performance tracking and worker-model mapping expertise
-            // Use worker_id as model_id for now (TODO: implement proper worker-to-model mapping)
-            // This assumes 1:1 mapping between workers and models
+            // Use worker_id as model_id (assumes 1:1 mapping between workers and models)
             match tracker.get_historical_performance(worker_id).await {
                 Ok(historical_results) => {
                     if !historical_results.is_empty() {

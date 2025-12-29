@@ -29,7 +29,6 @@ impl CodeModRunner {
 
         println!("Running codemod: {}", self.script_path);
 
-        // TODO: Implement comprehensive codemod execution
         //       Currently just reads and validates script exists; should implement comprehensive execution that parses codemod script, applies transformations to source files, and handles errors with rollback capability.
         //
         // COMPLETION CHECKLIST:

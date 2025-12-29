@@ -168,7 +168,6 @@ impl AdaptiveWorkerSelector {
         // - [ ] Add unit tests with mock worker load data
         // - [ ] Add integration tests with real worker load balancing
         //
-        // TODO: Implement comprehensive load balancing worker selection
         //       Currently uses fairness-based selection as proxy; should implement comprehensive selection that queries worker load metrics (CPU, memory, active tasks), calculates load scores, and selects worker with lowest load score.
         //
         // COMPLETION CHECKLIST:

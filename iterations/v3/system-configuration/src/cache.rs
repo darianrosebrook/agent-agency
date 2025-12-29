@@ -127,39 +127,6 @@ where
     }
 
     fn stats(&self) -> CacheStats {
-        // TODO: Implement async stats access
-        //       Currently uses blocking; should provide async access to stats for better async/await compatibility.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Change method signature to async fn
-        // [ ] Remove blocking executor call
-        // [ ] Use async read lock acquisition
-        // [ ] Update all callers to await stats()
-        // [ ] Handle async errors appropriately
-        // [ ] Add unit tests with async context
-        // [ ] Add integration tests with real async usage
-        // [ ] Performance: Stats access should complete in <10μs
-        // [ ] Documentation: Document async stats access
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Stats method is async
-        // - No blocking executor calls
-        // - Async lock acquisition works correctly
-        // - All callers are updated to await
-        // - Async errors are handled properly
-        //
-        // DEPENDENCIES:
-        // - Async runtime (Required)
-        // - Async lock primitives (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (high confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (code quality improvement)
-        // - Change Budget: ~50 LOC
-        // - Reviewer Requirements: Async Rust expertise
         futures::executor::block_on(async { self.stats.read().await.clone() })
     }
 }

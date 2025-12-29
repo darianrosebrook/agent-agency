@@ -1,23 +1,23 @@
 "use client";
 
+import {
+    CheckCircle2,
+    ChevronDown,
+    Circle,
+    MoreHorizontal,
+    Plus,
+    X,
+} from "lucide-react";
 import { useState } from "react";
 import {
-  X,
-  ChevronDown,
-  Plus,
-  MoreHorizontal,
-  Circle,
-  CheckCircle2,
-} from "lucide-react";
-import {
-  StatusBadge,
-  PriorityIndicator,
-  MetadataRow,
-  TagChip,
-  taskStatusConfig,
-  priorityConfig,
-  type TaskStatus,
-  type Priority,
+    MetadataRow,
+    priorityConfig,
+    PriorityIndicator,
+    StatusBadge,
+    TagChip,
+    taskStatusConfig,
+    type Priority,
+    type TaskStatus,
 } from "../compounds";
 import { cn } from "../primitives/utils";
 import styles from "./TaskModal.module.scss";
@@ -65,7 +65,7 @@ export function NewTaskModal({
     if (title.trim()) {
       onCreateTask({
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: description.trim() || "",
         status,
         priority,
       });

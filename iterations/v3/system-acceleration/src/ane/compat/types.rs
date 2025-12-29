@@ -265,7 +265,6 @@ impl MLDictionaryFeatureProvider {
         for (name, value) in dict {
             match value {
                 MLFeatureValue::MultiArray(array) => {
-                    // TODO: Implement comprehensive multi-array data type support
                     //       Currently only supports float32 arrays; should implement comprehensive support for multiple data types (int32, int64, float64, etc.) for complete Core ML feature value handling.
                     //
                     // COMPLETION CHECKLIST:

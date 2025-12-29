@@ -638,32 +638,6 @@ impl TemplateBasedSummarizer {
         }
 
         // Calculate inverse document frequency (IDF)
-        // TODO: Improve IDF calculation for single documents
-        //       Currently uses simplified IDF based on word length and frequency.
-        //       Consider using document corpus IDF if available, or improved heuristics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Use document corpus IDF when corpus is available
-        // [ ] Improve heuristics for single-document IDF calculation
-        // [ ] Compare effectiveness of different IDF approaches
-        // [ ] Add unit tests with various document types
-        // [ ] Add integration tests with real document corpus
-        //
-        // ACCEPTANCE CRITERIA:
-        // - IDF scores are more accurate for single documents
-        // - Keyword extraction quality improves
-        // - Works with or without document corpus
-        //
-        // DEPENDENCIES:
-        // - Document corpus access (Optional)
-        //
-        // ESTIMATED EFFORT: 3-4 hours
-        // PRIORITY: Low
-        // BLOCKING: No (current approach works, but could be improved)
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (algorithm improvement)
-        // - Change Budget: ~60 LOC
         // Note: Longer, less common words get higher IDF scores with current simplified approach
         let mut tfidf_scores: Vec<(String, f32)> = term_freq
             .into_iter()
@@ -837,7 +811,6 @@ impl SummaryQualityEvaluator {
     ) -> crate::MemoryResult<SummarizationMetrics> {
         let compression_ratio = summary.len() as f32 / original.len() as f32;
 
-        // TODO: Implement comprehensive quality metrics calculation
         //       Currently uses basic metrics; should implement comprehensive quality metrics using proper NLP techniques and evaluation methods.
         //
         // COMPLETION CHECKLIST:
@@ -885,7 +858,6 @@ impl SummaryQualityEvaluator {
     }
 
     fn calculate_information_retention(&self, _original: &str, _summary: &str) -> f32 {
-        // TODO: Implement comprehensive information retention calculation
         //       Currently uses basic assumption; should implement comprehensive calculation using semantic similarity and content analysis.
         //
         // COMPLETION CHECKLIST:
@@ -936,7 +908,6 @@ impl SummaryQualityEvaluator {
     }
 
     fn calculate_coherence(&self, summary: &str) -> f32 {
-        // TODO: Implement comprehensive coherence calculation
         //       Currently uses basic transition word detection; should implement comprehensive coherence calculation using discourse analysis and linguistic features.
         //
         // COMPLETION CHECKLIST:

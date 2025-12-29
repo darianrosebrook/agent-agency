@@ -1,3 +1,5 @@
+#![cfg(feature = "coreml")]
+
 //! Phase 5: End-to-End Integration & Validation Testing
 //!
 //! This test suite validates the complete Core ML acceleration system integration:

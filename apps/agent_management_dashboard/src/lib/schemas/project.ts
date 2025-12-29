@@ -27,7 +27,7 @@ export const MilestoneSchema = z.object({
 export const ProjectTaskSchema = z.object({
   id: z.string(),
   title: z.string(),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   status: z.enum([
     'pending',
     'in_progress',
@@ -38,8 +38,12 @@ export const ProjectTaskSchema = z.object({
   ] as [string, ...string[]]),
   priority: z.number().int().min(0).max(10).nullable().optional(),
   assigned_worker_id: z.string().uuid().nullable().optional(),
-  createdAt: z.date().or(z.string().transform((str) => new Date(str))),
-});
+  createdAt: z.date().or(z.string().transform((str) => new Date(str))).optional(),
+  created_at: z.date().or(z.string().transform((str) => new Date(str))).optional(),
+}).transform((data) => ({
+  ...data,
+  createdAt: data.createdAt || data.created_at || new Date(),
+}));
 
 /**
  * Project schema
@@ -47,6 +51,9 @@ export const ProjectTaskSchema = z.object({
 export const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
+  workspace_id: z.string().optional().nullable(),
+  workspace_path: z.string().optional().nullable(),
+  workspace_name: z.string().optional().nullable(),
   summary: z.string().optional(),
   description: z.string().optional(),
   milestones: z.array(MilestoneSchema).default([]),
@@ -61,6 +68,9 @@ export const ProjectSchema = z.object({
 export const ProjectResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
+  workspace_id: z.string().optional().nullable(),
+  workspace_path: z.string().optional().nullable(),
+  workspace_name: z.string().optional().nullable(),
   summary: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   created_at: z.string().transform((str) => new Date(str)),
@@ -95,6 +105,7 @@ export const ProjectsResponseSchema = z.array(ProjectResponseSchema);
  */
 export const CreateProjectRequestSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
+  workspace_path: z.string().min(1, 'Workspace path is required'),
   summary: z.string().optional(),
   description: z.string().optional(),
   milestones: z.array(z.string()).optional(),
@@ -107,6 +118,8 @@ export const UpdateProjectRequestSchema = z.object({
   name: z.string().optional(),
   summary: z.string().optional(),
   description: z.string().optional(),
+  workspace_id: z.string().optional(),
+  workspace_path: z.string().optional(),
 });
 
 /**

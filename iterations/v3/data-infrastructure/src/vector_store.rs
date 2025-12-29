@@ -136,38 +136,6 @@ impl Drop for DatabasePool {
 impl DatabasePool {
     /// Perform cleanup when reference count reaches zero
     fn perform_cleanup(&self) {
-        // TODO: Implement graceful pool cleanup and return to connection pool manager
-        //       Currently relies on sqlx drop behavior; should gracefully close pool and return to manager.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Implement graceful pool closure with connection draining
-        // [ ] Return pool to connection pool manager for reuse
-        // [ ] Flush any pending operations before closure
-        // [ ] Close prepared statements and clear caches
-        // [ ] Update monitoring metrics for pool lifecycle
-        // [ ] Add unit tests for cleanup logic
-        // [ ] Add integration tests with pool manager
-        // [ ] Verify connections are properly released
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Pool is gracefully closed with connection draining
-        // - Pool is returned to connection pool manager for reuse
-        // - Pending operations are flushed before closure
-        // - Monitoring metrics are updated correctly
-        //
-        // DEPENDENCIES:
-        // - Connection pool manager API (Required)
-        // - Connection draining utilities (Required)
-        // - Monitoring metrics system (Required)
-        //
-        // ESTIMATED EFFORT: 3-5 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (standard feature)
-        // - Change Budget: ~80 LOC
-        // - Reviewer Requirements: Database connection management expertise
         info!(
             "Performing cleanup for pool {} - closing idle connections",
             self.inner.pool_id

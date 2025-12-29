@@ -119,27 +119,6 @@ impl SourceIntegrityService {
             content_size,
             hash_algorithm: self.config.default_hash_algorithm.clone(),
             integrity_status: IntegrityStatus::Verified,
-            // TODO: Implement tampering detection with the following requirements:
-            // 1. Tampering detection: Detect and record tampering indicators
-            //    - Analyze content for signs of modification or corruption
-            //    - Compare against known good baselines or checksums
-            //    - Record detection metadata and confidence scores
-            // 2. Indicator types: Support multiple tampering indicator types
-            //    - Hash mismatches and checksum failures
-            //    - Timestamp anomalies and unexpected modifications
-            //    - Signature validation failures and certificate issues
-            // 3. Detection algorithms: Implement detection algorithms
-            //    - Content integrity verification against stored hashes
-            //    - Metadata consistency checks and validation
-            //    - Pattern-based anomaly detection
-            // ACCEPTANCE CRITERIA:
-            // - Tampering indicators are detected and recorded for modified content
-            // - Multiple indicator types are supported and properly categorized
-            // - Detection algorithms produce accurate results with low false positives
-            // DEPENDENCIES:
-            // - Content hash verification system (Required)
-            // - Baseline storage and comparison system (Required)
-            // PRIORITY: Medium
             tampering_indicators: tampering_indicators.clone(),
             verification_metadata: metadata
                 .map(|m| {

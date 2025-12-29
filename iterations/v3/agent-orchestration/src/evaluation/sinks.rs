@@ -488,14 +488,25 @@ mod tests {
         
         // Verify trace was written (PII redaction is handled by RedactingSink)
         let trace_data = &traces[0];
-        assert!(!trace_data.reasoning.is_empty(), "Trace should contain reasoning");
-        
+        let decision_event = trace_data
+            .events
+            .iter()
+            .find_map(|e| match &e.kind {
+                crate::evaluation::trace::EventKind::Decision(dp) => Some(dp),
+                _ => None,
+            })
+            .expect("Trace should contain decision event");
+
         // Verify email pattern was redacted
-        assert!(!trace_data.reasoning.contains("user@example.com"), 
-            "Email should be redacted from trace");
+        assert!(
+            !decision_event.reasoning.contains("user@example.com"),
+            "Email should be redacted from trace"
+        );
         
         // Verify SSN pattern was redacted  
-        assert!(!trace_data.reasoning.contains("123-45-6789"),
-            "SSN should be redacted from trace");
+        assert!(
+            !decision_event.reasoning.contains("123-45-6789"),
+            "SSN should be redacted from trace"
+        );
     }
 }

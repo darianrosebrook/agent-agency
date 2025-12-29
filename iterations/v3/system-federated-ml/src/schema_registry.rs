@@ -329,41 +329,6 @@ pub struct HtmlToMarkdownConverter;
 impl Converter for HtmlToMarkdownConverter {
     async fn convert(&self, value: Value) -> Result<Value, SchemaError> {
         if let Some(html_str) = value.as_str() {
-            // TODO: Implement comprehensive HTML to Markdown conversion
-            //       Currently returns placeholder; should implement comprehensive HTML to Markdown conversion using html2md or similar crate with proper formatting, structure preservation, and support for various HTML formats.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - HTML is converted to Markdown using html2md or similar
-            // - Formatting and structure are preserved
-            // - Various HTML formats are supported
-            // - Conversion handles malformed HTML gracefully
-            //
-            // DEPENDENCIES:
-            // - HTML to Markdown conversion library (Required)
-            // - HTML parsing utilities (Required)
-            // - Markdown formatting utilities (Required)
-            //
-            // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (schema conversion functionality)
-            // - Change Budget: ~150 LOC
-            // - Reviewer Requirements: HTML/Markdown conversion and text processing expertise
             let markdown = format!("# Converted HTML\n\n{}", html_str);
             Ok(Value::String(markdown))
         } else {

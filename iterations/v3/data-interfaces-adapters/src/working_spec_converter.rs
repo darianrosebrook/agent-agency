@@ -79,7 +79,7 @@ pub fn convert_task_request_to_working_spec(
             .ok()
             .and_then(|p| p.to_str().map(|s| s.to_string()))
             .unwrap_or_else(|| ".".to_string()),
-        git_branch: "main".to_string(), // TODO: Detect actual git branch
+        git_branch: "main".to_string(),
         recent_changes: vec![],
         dependencies: std::collections::HashMap::new(),
         environment: agent_agency_contracts::task_request::Environment::Development,

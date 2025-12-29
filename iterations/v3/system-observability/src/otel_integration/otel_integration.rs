@@ -179,41 +179,6 @@ impl OtelIntegrator {
         if let Some(provider) = &self.tracer_provider {
             // Force flush any pending spans
             opentelemetry::global::shutdown_tracer_provider();
-
-            // TODO: Implement provider-specific shutdown methods
-            //       Currently uses global shutdown; should call shutdown methods on specific provider type for proper cleanup.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Identify provider type (TracerProvider, MeterProvider, etc.)
-            // [ ] Call provider-specific shutdown methods
-            // [ ] Wait for shutdown completion
-            // [ ] Handle shutdown errors gracefully
-            // [ ] Verify provider is fully shut down
-            // [ ] Add unit tests with mock providers
-            // [ ] Add integration tests with real provider shutdown
-            // [ ] Performance: Shutdown should complete in <5s
-            // [ ] Documentation: Document provider shutdown sequence
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Provider-specific shutdown methods are called
-            // - Shutdown completes successfully
-            // - Pending operations are flushed
-            // - Shutdown errors are handled gracefully
-            // - Provider state is verified after shutdown
-            //
-            // DEPENDENCIES:
-            // - Provider type identification (Required)
-            // - Provider shutdown APIs (Required)
-            // - Shutdown verification logic (Required)
-            //
-            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (observability feature)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: OpenTelemetry expertise
         }
 
         Ok(())

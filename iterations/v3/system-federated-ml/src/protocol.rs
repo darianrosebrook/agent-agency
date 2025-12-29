@@ -110,6 +110,7 @@ pub struct SecurityValidator {
 
 /// Participant credentials for authentication
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 struct ParticipantCredentials {
     public_key: Vec<u8>,
     certificate_chain: Vec<u8>,

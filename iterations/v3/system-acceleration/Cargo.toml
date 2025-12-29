@@ -64,9 +64,9 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 system-configuration = { path = "../system-configuration" }
 
 [features]
-default = ["coreml"]  # CoreML enabled by default for production ANE acceleration
-metal = []
-coreml = ["dep:coreml-rs"]  # Feature flag for CoreML functionality
+default = ["metal-backend"]  # Prefer Metal/MPS for now; CoreML/ANE will return once torch-sys conflicts are resolved
+metal-backend = ["candle-core/metal"]
+coreml = ["coreml-rs"]  # CoreML feature retained for future re-enable
 coreml_probe = []  # Feature flag for CoreML probe functionality
 
 [dev-dependencies]

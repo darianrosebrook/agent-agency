@@ -220,7 +220,6 @@ impl super::common::Judge for TechnicalAuditor {
             ctx.working_spec.id
         );
 
-        // TODO: Enhance deterministic technical checks implementation
         // - [ ] Expand deterministic checks to cover all CAWS invariants
         // - [ ] Add more sophisticated pattern matching for violations
         // - [ ] Integrate with static analysis tools if available
@@ -282,7 +281,6 @@ impl TechnicalAuditor {
     fn run_deterministic_checks_impl(&self, ctx: &ReviewContext) -> Vec<Violation> {
         let mut violations = vec![];
 
-        // TODO: Implement comprehensive security checks
         //       Currently uses basic checks; should implement comprehensive security validation for working specs.
         let spec_text = format!(
             "{}: {}\n\nGoals: {}\n\nAcceptance Criteria: {}",

@@ -49,6 +49,7 @@ struct AggregationRound {
 
 /// Status of aggregation round
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 enum RoundStatus {
     WaitingForContributions,
     Aggregating,

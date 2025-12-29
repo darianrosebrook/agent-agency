@@ -55,21 +55,20 @@ pub enum TaskOutcome {
 impl DeploymentOrchestratorTrait for DeploymentOrchestrator {
     async fn select_optimal_model(
         &self,
-        task: &Task,
+        task: &serde_json::Value,
         available_models: &[String],
-    ) -> Result<ModelSelection> {
+    ) -> Result<ModelSelection, ModelManagementError> {
         self.select_optimal_model(task, available_models).await
     }
 
     async fn learn_from_routing(
         &self,
-        decision: &RoutingDecision,
-        outcome: &TaskOutcome,
-    ) -> Result<()> {
+        decision: &crate::types::RoutingDecision,
+        outcome: &crate::types::RoutingOutcome,
+    ) -> Result<(), ModelManagementError> {
         self.learn_from_routing(decision, outcome).await
     }
 }
-use crate::ModelManagementError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -597,6 +596,7 @@ impl DeploymentOrchestrator {
     pub async fn select_optimal_model(
         &self,
         _task_requirements: &serde_json::Value,
+        _available_models: &[String],
     ) -> Result<crate::types::ModelSelection, ModelManagementError> {
         let deployments = self.active_deployments.read().await;
         let mut best_model = None;
@@ -681,39 +681,6 @@ impl DeploymentOrchestrator {
             outcome.success
         ).await?;
 
-        Ok(())
-    }
-        // Log the outcome for analysis
-        info!(
-            "Routing outcome for task {}: success={}, score={:.2}, time={}ms",
-            decision.task_id, outcome.success, outcome.quality_score, outcome.execution_time_ms
-        );
-
-        // Record inference metrics in the monitor
-        // This updates the historical data which drives future selection
-        let output = crate::types::InferenceOutput {
-            data: serde_json::json!({"mock": "data"}),
-            metadata: crate::types::InferenceMetadata {
-                backend: "simulation".to_string(),
-                model_version: "1.0".to_string(),
-                executed_at: chrono::Utc::now(),
-                tokens_processed: Some(0),
-            },
-            performance: crate::types::InferencePerformance {
-                total_latency_ms: outcome.execution_time_ms,
-                model_execution_ms: outcome.execution_time_ms,
-                preprocessing_ms: 0,
-                postprocessing_ms: 0,
-                memory_usage_mb: 0,
-            },
-        };
-
-        self.monitor.record_inference(
-            &decision.model_id,
-            &output,
-            outcome.success
-        ).await?;
-        
         Ok(())
     }
 }

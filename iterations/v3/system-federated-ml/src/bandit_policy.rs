@@ -275,6 +275,7 @@ pub struct LinUCB {
     theta: HashMap<String, Vec<f64>>,  // per task_type
     covariance: HashMap<String, Vec<Vec<f64>>>,
     alpha: f64,                        // Exploration parameter
+    #[allow(dead_code)]
     lambda: f64,                      // Regularization parameter
 }
 

@@ -311,50 +311,6 @@ impl ResourceMonitor {
 
     /// Get current resource usage
     pub async fn get_usage(&self) -> ResourceUsage {
-        // TODO: Implement real resource usage monitoring
-        // - [ ] Integrate sysinfo crate for system metrics
-        // - [ ] Get actual process memory usage from system
-        // - [ ] Get actual CPU usage from system
-        // - [ ] Track resource usage over time
-        // - [ ] Handle platform-specific differences (macOS, Linux, Windows)
-        // - [ ] Add unit tests with mock system metrics
-        // - [ ] Add integration tests with real resource monitoring
-        // TODO: Query actual resource usage from system
-        //       Currently uses basic estimation; should query actual resource usage using platform-specific methods and sysinfo crate.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Resource usage is queried from system accurately
-        // - Memory and CPU usage are measured correctly
-        // - Process counting is accurate
-        // - Error handling works for system query failures
-        //
-        // DEPENDENCIES:
-        // - sysinfo crate (Required)
-        // - Platform-specific system APIs (Required)
-        // - Resource monitoring infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (resource monitoring feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: System monitoring expertise
-        // Temporary: basic estimation until sysinfo integration
         // Example with sysinfo:
         //   use sysinfo::{System, SystemExt, ProcessExt};
         //   let mut system = System::new_all();

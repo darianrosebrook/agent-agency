@@ -1,0 +1,29 @@
+[package]
+name = "engine-mps"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "README.md"
+
+[dependencies]
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+tracing.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+candle-core.workspace = true
+rand.workspace = true
+
+agent-agency-contracts = { path = "../agent-agency-contracts" }
+system-acceleration = { path = "../system-acceleration", features = ["metal-backend"] }
+
+[features]
+default = ["metal-backend"]
+metal-backend = ["system-acceleration/metal-backend"]
+
+[dev-dependencies]
+tokio-test = "0.4"

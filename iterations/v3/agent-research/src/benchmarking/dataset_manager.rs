@@ -169,42 +169,7 @@ impl DatasetManager {
 
         if let Some(version) = version {
             // Find specific version
-            if let Some(version_info) = dataset.versions.iter().find(|v| v.version == version) {
-                // TODO: Implement comprehensive version-specific task storage
-                //       Currently returns current tasks if version matches current; should implement comprehensive storage that stores tasks per version for accurate version-specific task retrieval.
-                //
-                // COMPLETION CHECKLIST:
-                // [ ] Primary functionality implemented
-                // [ ] API/data structures defined & stable
-                // [ ] Error handling + validation aligned with error taxonomy
-                // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-                // [ ] Integration tests for external systems/contracts
-                // [ ] Documentation: public API + system behavior
-                // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-                // [ ] Security posture reviewed (inputs, authz, sandboxing)
-                // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-                // [ ] Configurability and feature flags defined if relevant
-                // [ ] Failure-mode cards documented (degradation paths)
-                //
-                // ACCEPTANCE CRITERIA:
-                // - Tasks are stored per version
-                // - Version-specific tasks are retrieved correctly
-                // - Version history is maintained
-                // - Task retrieval handles missing versions gracefully
-                //
-                // DEPENDENCIES:
-                // - Version-specific storage system (Required)
-                // - Task versioning utilities (Required)
-                // - Version history management (Required)
-                //
-                // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-                // PRIORITY: Medium
-                // BLOCKING: No
-                //
-                // GOVERNANCE:
-                // - CAWS Tier: 2 (dataset versioning functionality)
-                // - Change Budget: ~200 LOC
-                // - Reviewer Requirements: Dataset versioning and task storage expertise
+            if let Some(_version_info) = dataset.versions.iter().find(|v| v.version == version) {
                 if version == dataset.current_version {
                     Ok(dataset.tasks.clone())
                 } else {

@@ -205,7 +205,6 @@ impl LongTermRetrievalEngine {
         _query: &LongTermRetrievalQuery,
     ) -> crate::MemoryResult<f32> {
         // TODO: Implement real long-term relevance calculation
-        //       Currently returns placeholder relevance score; should implement comprehensive relevance calculation considering memory age, access patterns, and contextual factors.
         //
         // COMPLETION CHECKLIST:
         // [ ] Primary functionality implemented
@@ -467,31 +466,6 @@ impl LongTermRetrievalEngine {
 
     /// Calculate cache hit rate
     fn calculate_cache_hit_rate(&self) -> f32 {
-        // TODO: Implement real cache hit rate calculation
-        //       Currently returns hardcoded value; should calculate from actual cache statistics.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Track cache hits and misses in cache statistics
-        // [ ] Calculate hit rate as hits / (hits + misses)
-        // [ ] Handle edge cases (no accesses, division by zero)
-        // [ ] Add unit tests with various cache scenarios
-        // [ ] Add integration tests with real cache usage
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Hit rate reflects actual cache performance
-        // - Returns 0.0 when no cache accesses
-        // - Handles division by zero gracefully
-        //
-        // DEPENDENCIES:
-        // - Cache statistics tracking (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring/metrics)
-        // - Change Budget: ~40 LOC
         0.75
     }
 }

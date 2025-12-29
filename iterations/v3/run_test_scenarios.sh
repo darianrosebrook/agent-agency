@@ -83,3 +83,9 @@ echo "  cat $SUBMITTED_FILE"
 echo ""
 echo "Individual task status check:"
 echo "  curl -s http://localhost:8080/api/v1/tasks/\$(tail -1 $SUBMITTED_FILE | cut -d'|' -f1) | jq ."
+
+
+
+
+
+

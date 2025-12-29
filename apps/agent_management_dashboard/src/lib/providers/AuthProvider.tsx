@@ -7,7 +7,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 export interface User {
   id: string;
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // Initialize auth state from localStorage
   useEffect(() => {
@@ -69,63 +69,69 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Login user with credentials
    */
   const login = async (username: string, password: string): Promise<void> => {
-    // TODO: Replace with real API call when backend is fixed
-    // For now, use mock authentication
-    if (username === 'testuser' && password === 'password') {
-      const mockUser = {
-        id: '123',
-        username: 'testuser',
-        name: 'Test User',
-        roles: ['user'],
-        is_active: true,
-      };
+    try {
+      const { login: loginApi } = await import('../api/auth');
+      const response = await loginApi({ username, password });
 
-      const mockToken = 'mock-jwt-token-' + Date.now();
+      // Store authentication data
+      localStorage.setItem('auth_token', response.token);
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
+      localStorage.setItem('user', JSON.stringify(response.user));
+      localStorage.setItem('token_expires_at', response.expires_at);
 
-      localStorage.setItem('auth_token', mockToken);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-
-      setToken(mockToken);
-      setUser(mockUser);
-    } else {
-      throw new Error('Invalid username or password');
+      setToken(response.token);
+      setUser(response.user);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error instanceof Error ? error : new Error('Login failed. Please try again.');
     }
   };
 
   /**
    * Logout user
    */
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    router.push('/login');
+  const logout = async () => {
+    try {
+      // Call logout API if token exists
+      if (token && !token.startsWith('mock-jwt-token-')) {
+        const { logout: logoutApi } = await import('../api/auth');
+        await logoutApi();
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with local logout even if API call fails
+    } finally {
+      // Clear local storage
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token_expires_at');
+      
+      setToken(null);
+      setUser(null);
+      navigate('/login');
+    }
   };
 
   /**
    * Refresh user data from API
    */
   const refreshUser = async (): Promise<void> => {
-    if (!token) return;
+    if (!token || token.startsWith('mock-jwt-token-')) return;
 
     try {
-      const response = await fetch('/api/proxy/api/v1/users/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-      } else if (response.status === 401) {
-        // Token expired, logout
-        logout();
-      }
+      const { getCurrentUser } = await import('../api/auth');
+      const userData = await getCurrentUser();
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Failed to refresh user:', error);
+      // If 401, token expired - logout
+      if (error instanceof Error && error.message.includes('401')) {
+        logout();
+      }
     }
   };
 

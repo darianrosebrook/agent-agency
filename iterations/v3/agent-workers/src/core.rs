@@ -565,7 +565,6 @@ impl MCPWorkerPool {
 
                 // Create a minimal changeset - full file replacement
                 // file_edit expects: path, old_content (optional), new_content (optional)
-                // This is a placeholder that will need LLM interpretation in the future
                 let changes = vec![serde_json::json!({
                     "path": file_path,
                     "old_content": "",

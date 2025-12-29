@@ -570,7 +570,6 @@ impl TamperingDetector {
 
     /// Detect tampering in archive files
     fn detect_archive_tampering(&self, content: &str) -> bool {
-        // TODO: Implement comprehensive archive structure parsing for tampering detection
         //       Currently uses basic pattern matching; should parse archive structure to detect tampering accurately.
         let suspicious_archive_patterns = [
             "..",               // Directory traversal

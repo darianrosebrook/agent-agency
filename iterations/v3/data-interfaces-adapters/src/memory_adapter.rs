@@ -59,8 +59,8 @@ impl MemoryService for MemoryServiceAdapter {
         let experience_id = uuid::Uuid::new_v4();
         let experience = AgentExperience {
             id: experience_id,
-            agent_id: "default-agent".to_string(), // TODO: Get from context
-            task_id: "default-task".to_string(),   // TODO: Get from context
+            agent_id: "default-agent".to_string(),
+            task_id: "default-task".to_string(),
             content: content.clone(),
             input: content.clone(),
             output: content,
@@ -131,8 +131,8 @@ impl MemoryService for MemoryServiceAdapter {
         // Convert query to agent-memory query format
         // MemoryQuery in agent-memory has: agent_id, task_type, memory_type, time_range, limit
         let agent_query = AgentMemoryQuery {
-            agent_id: None,  // TODO: Get from context
-            task_type: None, // TODO: Extract from query_text if needed
+            agent_id: None,
+            task_type: None,
             memory_type: query.memory_type.map(|mt| match mt {
                 MemoryType::Episodic => agent_memory::memory_types::MemoryType::Episodic,
                 MemoryType::Semantic => agent_memory::memory_types::MemoryType::Semantic,

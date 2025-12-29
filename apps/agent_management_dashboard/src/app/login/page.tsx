@@ -1,19 +1,16 @@
-"use client";
-
 /**
  * Login Page - Stub Implementation
  *
  * This page provides user authentication and login functionality.
  */
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Lock, Mail } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import styles from "./page.module.scss";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -25,32 +22,33 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // TODO: Replace with real API call when backend is fixed
-      // For now, use mock authentication to test the UI
-      if (email === 'testuser' && password === 'password') {
-        // Mock successful login
-        const mockUser = {
-          id: '123',
-          username: 'testuser',
-          name: 'Test User',
-          roles: ['user'],
-          is_active: true,
-        };
+      // const { useAuth } = await import("@/lib/providers/AuthProvider");
+      // Note: We can't use hooks here, so we'll use the auth API directly
+      const { login: loginApi } = await import("@/lib/api/auth");
 
-        const mockToken = 'mock-jwt-token-' + Date.now();
+      // Use email as username (backend expects username)
+      const response = await loginApi({
+        username: email,
+        password,
+      });
 
-        // Store authentication data
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-
-        // Redirect to dashboard
-        router.push("/");
-      } else {
-        throw new Error('Invalid username or password');
+      // Store authentication data
+      localStorage.setItem("auth_token", response.token);
+      if (response.refresh_token) {
+        localStorage.setItem("refresh_token", response.refresh_token);
       }
+      localStorage.setItem("user", JSON.stringify(response.user));
+      localStorage.setItem("token_expires_at", response.expires_at);
+
+      // Redirect to dashboard
+      navigate("/");
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      console.error("Login error:", err);
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Login failed. Please check your credentials and try again.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -119,10 +117,7 @@ export default function LoginPage() {
                 <input type="checkbox" className={styles.rememberMeCheckbox} />
                 <span className={styles.rememberMeLabel}>Remember me</span>
               </label>
-              <Link
-                href="/forgot-password"
-                className={styles.forgotPasswordLink}
-              >
+              <Link to="/forgot-password" className={styles.forgotPasswordLink}>
                 Forgot password?
               </Link>
             </div>
@@ -142,15 +137,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Test Credentials */}
+          {/* Sign Up Link */}
           <div className={styles.requirementsSection}>
-            <h2 className={styles.requirementsTitle}>Test Credentials</h2>
             <div className={styles.requirementsContent}>
-              <div className={styles.testCredentials}>
-                <p><strong>Username:</strong> testuser</p>
-                <p><strong>Password:</strong> password</p>
-                <p className={styles.note}>Note: Using mock authentication until backend is fixed</p>
-              </div>
+              <p className={styles.signUpPrompt}>
+                Don&apos;t have an account?{" "}
+                <Link to="/register" className={styles.signUpLink}>
+                  Sign up
+                </Link>
+              </p>
             </div>
           </div>
 

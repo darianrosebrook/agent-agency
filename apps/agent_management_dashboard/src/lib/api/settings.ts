@@ -2,6 +2,7 @@
 // @author @darianrosebrook
 
 import { apiGet, apiPost, apiPatch, apiDelete } from '../utils/api';
+import { AppError, ErrorCode } from '../errors/types';
 
 const API_BASE = '/api/proxy/api/v1';
 
@@ -93,23 +94,45 @@ export async function getUserSetting(key: string): Promise<UserSetting> {
  * 
  * Use this when the setting is optional and missing is expected behavior.
  * For required settings, use getUserSetting() which throws on 404.
+ * 
+ * Handles both 404 (setting doesn't exist) and 401 (user not authenticated)
+ * gracefully, returning null in both cases since an unauthenticated user
+ * cannot have user-specific settings.
  */
 export async function getUserSettingOptional(key: string): Promise<UserSetting | null> {
   try {
-    return await apiGet<UserSetting>(`${API_BASE}/settings/user/${encodeURIComponent(key)}`, {
-      showToast: false, // Suppress toast for expected 404
+    const result = await apiGet<UserSetting>(`${API_BASE}/settings/user/${encodeURIComponent(key)}`, {
+      showToast: false, // Suppress toast for expected 404/401
+      throwOnError: false, // Don't throw - return error object instead
     });
-  } catch (error: unknown) {
-    // Check if it's a 404 (setting doesn't exist)
-    if (
-      error instanceof Error &&
-      'status' in error &&
-      (error as { status: number }).status === 404
-    ) {
+    
+    // If throwOnError is false, apiGet returns the error object on failure
+    // Check if result is an error
+    if (result && typeof result === 'object' && 'code' in result) {
+      const error = result as unknown as AppError;
+      if (
+        error.code === ErrorCode.NOT_FOUND ||
+        error.code === ErrorCode.UNAUTHORIZED
+      ) {
+        return null;
+      }
+      // For other errors, return null (graceful degradation)
       return null;
     }
-    // Re-throw other errors (network, auth, etc.)
-    throw error;
+    
+    return result;
+  } catch (error: unknown) {
+    // Fallback error handling (shouldn't happen with throwOnError: false, but just in case)
+    if (error instanceof AppError) {
+      if (
+        error.code === ErrorCode.NOT_FOUND ||
+        error.code === ErrorCode.UNAUTHORIZED
+      ) {
+        return null;
+      }
+    }
+    // For unexpected errors, return null (graceful degradation)
+    return null;
   }
 }
 

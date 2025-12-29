@@ -340,41 +340,6 @@ impl NamedEntityRecognizer {
         entities: Vec<NamedEntity>,
         _context: &ProcessingContext,
     ) -> Result<Vec<NamedEntity>> {
-        // TODO: Implement comprehensive entity disambiguation with embeddings and knowledge base
-        //       Currently returns entities as-is; should implement comprehensive disambiguation that uses embedding provider and knowledge base to resolve entity ambiguities and improve entity accuracy.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Entity disambiguation uses embedding provider
-        // - Knowledge base is consulted for entity resolution
-        // - Disambiguated entities are accurate and contextually relevant
-        // - Disambiguation handles ambiguous cases gracefully
-        //
-        // DEPENDENCIES:
-        // - Embedding provider integration (Required)
-        // - Knowledge base integration (Required)
-        // - Entity resolution algorithms (Required)
-        //
-        // ESTIMATED EFFORT: 10-14 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (entity disambiguation functionality)
-        // - Change Budget: ~250 LOC
-        // - Reviewer Requirements: NLP and entity resolution expertise
         Ok(entities)
     }
 

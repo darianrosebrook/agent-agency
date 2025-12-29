@@ -13,6 +13,7 @@ members = [
     "iterations/v3/agent-orchestration",
     "iterations/v3/agent-memory",
     "iterations/v3/system-acceleration",
+    "iterations/v3/engine-mps",
     "iterations/v3/system-resources",
     "iterations/v3/system-resilience",
     "iterations/v3/system-observability",

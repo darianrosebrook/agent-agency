@@ -863,39 +863,6 @@ pub struct AdvancedGoalAnalyzer {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoalPrioritizationEngine {
-    // TODO: Implement ML model for priority prediction
-    //       Currently uses basic weight map; should implement ML model for accurate priority prediction.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Integrate ML model for priority prediction
-    // [ ] Train model on historical goal data
-    // [ ] Support model inference for new goals
-    // [ ] Handle model updates and retraining
-    // [ ] Support various priority factors
-    // [ ] Add unit tests for priority prediction
-    // [ ] Add integration tests with real goals
-    // [ ] Verify priority prediction accuracy
-    //
-    // ACCEPTANCE CRITERIA:
-    // - ML model predicts priorities accurately
-    // - Model is trained on historical data
-    // [ ] Model inference works correctly
-    // - Model updates are supported
-    //
-    // DEPENDENCIES:
-    // - ML framework (Required)
-    // - Training data infrastructure (Required)
-    // - Model inference utilities (Required)
-    //
-    // ESTIMATED EFFORT: 6-8 hours (low confidence - requires ML expertise)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (ML enhancement)
-    // - Change Budget: ~150 LOC
-    // - Reviewer Requirements: ML expertise
-    /// Temporary: basic weight map until ML model is implemented
     priority_weights: HashMap<String, f64>,
 }
 
@@ -921,39 +888,6 @@ pub struct GoalValidationEngine {
 pub struct GoalValidationRule {
     /// Rule type
     rule_type: ValidationType,
-    // TODO: Implement actual validation function
-    //       Currently uses description string; should implement actual validation function that evaluates goals.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Define validation function signature
-    // [ ] Implement validation logic for each rule type
-    // [ ] Support configurable validation rules
-    // [ ] Handle validation errors gracefully
-    // [ ] Support complex validation conditions
-    // [ ] Add unit tests for validation functions
-    // [ ] Add integration tests with various goals
-    // [ ] Verify validation accuracy
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Validation functions evaluate goals correctly
-    // - Various rule types are supported
-    // - Validation errors are handled gracefully
-    // - Complex conditions are supported
-    //
-    // DEPENDENCIES:
-    // - Validation function infrastructure (Required)
-    // - Rule evaluation utilities (Required)
-    // - Goal analysis utilities (Required)
-    //
-    // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-    // PRIORITY: Medium
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 2 (validation feature)
-    // - Change Budget: ~100 LOC
-    // - Reviewer Requirements: Validation logic expertise
-    /// Temporary: description string until validation function is implemented
     description: String,
 }
 
@@ -1433,39 +1367,7 @@ impl AdvancedGoalAnalyzer {
         // Extract risks
         goal.risks = self.extract_risks(&goal.text, input_text);
 
-        // TODO: Implement comprehensive effort estimation
-        //       Currently uses basic estimation; should implement comprehensive effort estimation considering complexity, dependencies, and historical data.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Analyze goal complexity for effort estimation
-        // [ ] Consider dependencies and prerequisites
-        // [ ] Use historical data for similar goals
-        // [ ] Support various estimation models (story points, hours, etc.)
-        // [ ] Handle uncertainty and confidence intervals
-        // [ ] Add unit tests for effort estimation
-        // [ ] Add integration tests with various goals
-        // [ ] Verify estimation accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Effort is estimated considering complexity
-        // - Dependencies are factored into estimation
-        // - Historical data improves accuracy
-        // - Various estimation models are supported
-        //
-        // DEPENDENCIES:
-        // - Historical data storage (Required)
-        // - Complexity analysis utilities (Required)
-        // - Estimation model infrastructure (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (estimation feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: Project estimation expertise
-        goal.estimated_effort = self.estimate_effort(&goal.text); // Temporary: basic estimation until comprehensive implementation
+        goal.estimated_effort = self.estimate_effort(&goal.text);
 
         // Extract required resources
         goal.required_resources = self.extract_resources(&goal.text);
@@ -1640,17 +1542,9 @@ impl GoalPrioritizationEngine {
             // - Benefit estimation utilities (Required)
             // - ROI calculation infrastructure (Required)
             //
-            // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-            // PRIORITY: Medium
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 2 (business value analysis feature)
-            // - Change Budget: ~100 LOC
-            // - Reviewer Requirements: Business analysis expertise
             business_value_analysis.roi_estimates.insert(
                 goal.id.clone(),
-                goal.business_value * 2.0, // Temporary: placeholder multiplier until proper ROI calculation
+                goal.business_value * 2.0,
             );
 
             business_value_analysis.cost_benefit_results.insert(
@@ -1660,7 +1554,7 @@ impl GoalPrioritizationEngine {
                     estimated_benefits: goal.business_value * 1000.0,
                     net_present_value: goal.business_value * 800.0,
                     benefit_cost_ratio: goal.business_value * 10.0,
-                    payback_period_months: goal.estimated_effort / 10.0, // TODO: Calculate actual payback period
+                    payback_period_months: goal.estimated_effort / 10.0,
                 },
             );
         }

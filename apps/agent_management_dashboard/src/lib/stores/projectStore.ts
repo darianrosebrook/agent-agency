@@ -337,6 +337,9 @@ export const useProjectStore = create<ProjectState>()(
                         assigned_worker_id: task.assigned_worker_id ?? undefined,
                         createdAt: task.created_at,
                       })),
+                      workspace_id: validatedProject.workspace_id ?? undefined,
+                      workspace_path: validatedProject.workspace_path ?? undefined,
+                      workspace_name: validatedProject.workspace_name ?? undefined,
                       createdAt: validatedProject.created_at,
                       lastAccessed: validatedProject.last_accessed,
                     });
@@ -383,9 +386,22 @@ export const useProjectStore = create<ProjectState>()(
               // Use API client function
               const apiResponse = await createProjectApiClient({
                 name: validatedRequest.name,
+                workspace_path: validatedRequest.workspace_path,
                 summary: validatedRequest.summary,
                 description: validatedRequest.description,
               });
+
+              // Handle scaffold_requested response (async project creation)
+              if (apiResponse && typeof apiResponse === 'object' && 'status' in apiResponse && apiResponse.status === 'scaffold_requested') {
+                // Project creation is asynchronous - show message and return task_id as temporary project_id
+                const taskId = 'task_id' in apiResponse ? String(apiResponse.task_id) : 'unknown';
+                const projectName = 'project_name' in apiResponse ? String(apiResponse.project_name) : validatedRequest.name;
+                
+                toastSuccess(`Project "${projectName}" creation requested. It will be available once scaffolding completes.`);
+                set({ isLoading: false, error: null });
+                // Return task_id as temporary identifier - frontend can poll for actual project
+                return taskId;
+              }
 
               const validatedProject = validateApiResponse(
                 ProjectResponseSchema,
@@ -397,6 +413,9 @@ export const useProjectStore = create<ProjectState>()(
               const newProject: Project = ProjectSchema.parse({
                 id: validatedProject.id,
                 name: validatedProject.name,
+                workspace_id: validatedProject.workspace_id ?? undefined,
+                workspace_path: validatedProject.workspace_path ?? undefined,
+                workspace_name: validatedProject.workspace_name ?? undefined,
                 summary: validatedProject.summary ?? undefined,
                 description: validatedProject.description ?? undefined,
                 milestones: Array.isArray(validatedProject.milestones)

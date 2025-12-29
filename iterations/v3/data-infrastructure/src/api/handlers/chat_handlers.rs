@@ -39,6 +39,75 @@ struct StreamEvent {
     error: Option<String>,
 }
 
+/// Generate chat response using Ollama
+///
+/// Tries to use instinct model first, falls back to gemma3n:e2b if unavailable.
+async fn generate_ollama_response(prompt: &str) -> String {
+    let ollama_url = std::env::var("OLLAMA_URL")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    
+    // Try instinct model first, then fallback to gemma3n:e2b
+    let models_to_try = vec!["nate/instinct:latest", "gemma3n:e2b", "olmo-3:latest"];
+    
+    for model in models_to_try {
+        match generate_with_ollama(&ollama_url, model, prompt).await {
+            Ok(response) => {
+                tracing::info!("Generated response using Ollama model: {}", model);
+                return response;
+            }
+            Err(e) => {
+                tracing::debug!("Failed to generate with model {}: {}, trying next", model, e);
+                continue;
+            }
+        }
+    }
+    
+    // If all models fail, return error message
+    format!(
+        "I received your message: '{}'. (Ollama service unavailable - please ensure Ollama is running and models are available)",
+        prompt
+    )
+}
+
+/// Generate text using Ollama API
+async fn generate_with_ollama(
+    base_url: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let client = reqwest::Client::new();
+    let request_body = serde_json::json!({
+        "model": model,
+        "prompt": prompt,
+        "stream": false,
+        "options": {
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "num_predict": 512
+        }
+    });
+
+    let response = client
+        .post(&format!("{}/api/generate", base_url))
+        .json(&request_body)
+        .timeout(Duration::from_secs(60))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        let result: serde_json::Value = response.json().await?;
+        Ok(result["response"]
+            .as_str()
+            .unwrap_or("")
+            .trim()
+            .to_string())
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Ollama generation failed with status {}: {}", status, error_text).into())
+    }
+}
+
 /// Stream agent response via SSE
 ///
 /// Creates a Server-Sent Events stream for real-time agent responses.
@@ -81,21 +150,30 @@ pub async fn stream_agent_response(
         let stream_result = timeout(timeout_duration_clone, async {
             tokio::select! {
                 result = async {
-                    // Try to use CoreML inference if available
-                    let response_text = if let Some(ref callback) = state_clone.coreml_inference_callback {
-                        match callback(request_clone.message.clone()).await {
-                            Ok(text) => {
-                                tracing::info!("CoreML inference successful for chat message");
-                                text
+                    let coreml_enabled = std::env::var("ENABLE_COREML_CHAT")
+                        .ok()
+                        .map(|v| v.eq_ignore_ascii_case("true"))
+                        .unwrap_or(false);
+
+                    let response_text = if coreml_enabled {
+                        if let Some(ref callback) = state_clone.coreml_inference_callback {
+                            match callback(request_clone.message.clone()).await {
+                                Ok(text) => {
+                                    tracing::info!("CoreML inference successful for chat message");
+                                    text
+                                }
+                                Err(e) => {
+                                    tracing::warn!("CoreML inference failed: {}, falling back to Ollama", e);
+                                    generate_ollama_response(&request_clone.message).await
+                                }
                             }
-                            Err(e) => {
-                                tracing::warn!("CoreML inference failed: {}", e);
-                                format!("I received your message: '{}'. (CoreML inference unavailable: {})", request_clone.message, e)
-                            }
+                        } else {
+                            tracing::debug!("CoreML chat disabled or callback not available, using Ollama");
+                            generate_ollama_response(&request_clone.message).await
                         }
                     } else {
-                        tracing::debug!("CoreML inference callback not available, using fallback");
-                        format!("I received your message: '{}'. CoreML orchestrator is not available.", request_clone.message)
+                        tracing::debug!("Using Ollama for chat response");
+                        generate_ollama_response(&request_clone.message).await
                     };
 
                     let words: Vec<&str> = response_text.split_whitespace().collect();

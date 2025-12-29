@@ -9,14 +9,13 @@
 //! - Validates against working spec constraints
 //! - Provides audit trail for verification decisions
 
-use agent_research::extraction_types::{AtomicClaim, ProcessingContext, VerificationStatus, VerificationResults};
+use agent_research::extraction_types::{AtomicClaim, ProcessingContext, VerificationStatus};
 use agent_research::verification::MultiModalVerificationEngine;
-use agent_agency_contracts::working_spec::{WorkingSpec, WorkingSpecConstraints};
-use agent_agency_contracts::planning_io::ChangeBudget;
+use agent_agency_contracts::working_spec::WorkingSpecConstraints;
 use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 /// CAWS verification configuration

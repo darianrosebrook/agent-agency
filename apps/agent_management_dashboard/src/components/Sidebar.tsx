@@ -1,31 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import {
-  Search,
-  MessageSquare,
-  FileSignature,
-  LayoutGrid,
-  TrendingUp,
-  FileCode,
-  HeartPulse,
-  Workflow,
-  Settings,
-  Moon,
-  ChevronDown,
-  FolderPlus,
-  TestTube,
+    ChevronDown,
+    FileCode,
+    FileSignature,
+    FolderPlus,
+    HeartPulse,
+    LayoutGrid,
+    MessageSquare,
+    Moon,
+    Search,
+    Settings,
+    TestTube,
+    TrendingUp,
+    Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "./primitives/tooltip";
 import { cn } from "./primitives/utils";
 import styles from "./Sidebar.module.scss";
+import { GlobalCreateTaskDialog } from "./tasks/GlobalCreateTaskDialog";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -385,6 +386,19 @@ export function Sidebar() {
                 <span className={styles.newProjectText}>New Project</span>
               </button>
             </div>
+          )}
+          
+          {!isCollapsed && (
+             <div className="px-3 mt-2">
+               <GlobalCreateTaskDialog 
+                 trigger={
+                   <button className={styles.newProjectButton}>
+                     <FolderPlus className={styles.icon} />
+                     <span className={styles.newProjectText}>New Task</span>
+                   </button>
+                 }
+               />
+             </div>
           )}
         </TooltipProvider>
       </nav>

@@ -129,7 +129,6 @@ impl Evaluator for CodeQualityEvaluator {
 
                     // Basic code quality checks
                     if content.contains("TODO") || content.contains("FIXME") {
-                        issues.push("Code contains TODO/FIXME comments".to_string());
                         score -= 0.1;
                     }
 

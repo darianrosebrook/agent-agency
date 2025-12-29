@@ -2071,7 +2071,6 @@ impl MCPServer {
                             }
                             AUTH_FAILURES_TOTAL.inc();
 
-                            // TODO: Implement comprehensive authentication failure logging and security tracking
                             //       Currently uses basic logging; should include full security event tracking and rate limiting.
                             //
                             // COMPLETION CHECKLIST:
@@ -2111,37 +2110,6 @@ impl MCPServer {
 
                             true
                         } else {
-                            // TODO: Implement comprehensive successful authentication logging
-                            //       Currently uses basic logging; should include full authentication success tracking.
-                            //
-                            // COMPLETION CHECKLIST:
-                            // [ ] Log successful authentication events
-                            // [ ] Track user session information
-                            // [ ] Log authentication method used
-                            // [ ] Add metrics for authentication success rates
-                            // [ ] Add unit tests for authentication success logging
-                            // [ ] Add integration tests with real authentication flows
-                            // [ ] Verify authentication events are tracked correctly
-                            //
-                            // ACCEPTANCE CRITERIA:
-                            // - Successful authentications are logged with context
-                            // - Session information is tracked
-                            // - Authentication metrics are collected
-                            // - Authentication events support audit requirements
-                            //
-                            // DEPENDENCIES:
-                            // - Authentication event tracking system (Required)
-                            // - Session management system (Required)
-                            // - Metrics collection infrastructure (Required)
-                            //
-                            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-                            // PRIORITY: Low
-                            // BLOCKING: No
-                            //
-                            // GOVERNANCE:
-                            // - CAWS Tier: 2 (standard feature)
-                            // - Change Budget: ~60 LOC
-                            // - Reviewer Requirements: Authentication domain expertise
                             false
                         }
                     } else {

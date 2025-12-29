@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_traits::{One, Zero};
-use num_integer::Integer;
 
 /// Homomorphic encryption scheme trait
 #[async_trait::async_trait]
@@ -210,6 +209,7 @@ impl PaillierHomomorphicEncryption {
     
     /// Convert bytes to integer with length preservation
     /// This version preserves the original byte length for proper roundtrip
+    #[allow(dead_code)]
     fn bytes_to_integer_with_length(data: &[u8], original_len: usize) -> BigInt {
         if data.is_empty() {
             return BigInt::zero();

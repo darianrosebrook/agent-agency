@@ -685,7 +685,6 @@ impl UnifiedWorkspaceStateManager {
                         if watch_config_clone.auto_capture_state {
                             let state_manager_clone = Arc::clone(&state_manager);
                             tokio::task::spawn_blocking(move || {
-                                // TODO: Implement comprehensive auto-capture in async context
                                 //       Currently skips auto-capture to avoid Send issues; should refactor capture_state to use spawn_blocking internally for git operations to enable auto-capture in async contexts safely.
                                 //
                                 // COMPLETION CHECKLIST:

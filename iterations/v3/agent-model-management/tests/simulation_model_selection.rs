@@ -1,9 +1,9 @@
 //! Simulation test for model performance-based selection
 
-use agent_model_management::deployment::orchestrator::{DeploymentOrchestrator, RoutingDecision, TaskOutcome};
-use agent_model_management::monitoring::monitor::PerformanceMonitor;
-use agent_model_management::types::{ModelMetrics, Task};
-use std::sync::Arc;
+use agent_model_management::deployment::orchestrator::DeploymentOrchestrator;
+use agent_model_management::types::{ModelInfo, RoutingDecision, RoutingOutcome, Task};
+use chrono::Utc;
+use serde_json::json;
 use tokio::time::{sleep, Duration};
 
 #[tokio::test]
@@ -12,8 +12,7 @@ async fn test_model_selection_simulation() {
     println!("==========================================");
 
     // Setup
-    let performance_monitor = Arc::new(PerformanceMonitor::new());
-    let orchestrator = DeploymentOrchestrator::new(performance_monitor.clone());
+    let orchestrator = DeploymentOrchestrator::new().await.unwrap();
 
     // Define 3 mock models with different characteristics
     let models = vec![
@@ -21,6 +20,27 @@ async fn test_model_selection_simulation() {
         ("slow-but-safe".to_string(), 500, 0.01),  // 500ms, 1% error rate
         ("balanced".to_string(), 150, 0.05),       // 150ms, 5% error rate
     ];
+
+    // Register models with the orchestrator so selections have deployment state
+    for (model_id, _, _) in &models {
+        let now = Utc::now();
+        orchestrator
+            .register_model(
+                model_id,
+                ModelInfo {
+                    id: model_id.clone(),
+                    name: model_id.clone(),
+                    model_type: "text-generation".to_string(),
+                    version: "v1".to_string(),
+                    size_mb: 128,
+                    modalities: vec!["text".to_string()],
+                    created_at: now,
+                    updated_at: now,
+                },
+            )
+            .await
+            .unwrap();
+    }
 
     // Create mock task
     let task = Task {
@@ -43,11 +63,14 @@ async fn test_model_selection_simulation() {
         // Simulate traffic: select model and execute task
         let available_models: Vec<String> = models.iter().map(|(id, _, _)| id.clone()).collect();
         let selection = orchestrator
-            .select_optimal_model(&task, &available_models)
+            .select_optimal_model(&json!(&task), &available_models)
             .await
             .unwrap();
 
-        println!("  🎯 Selected: {} (score: {:.3})", selection.model_id, selection.composite_score);
+        println!(
+            "  🎯 Selected: {} (score: {:.3})",
+            selection.model_id, selection.predicted_score
+        );
 
         // Find the selected model characteristics
         let (latency, error_rate) = models.iter()
@@ -59,23 +82,25 @@ async fn test_model_selection_simulation() {
         let success = rand::random::<f64>() > error_rate; // Random success based on error rate
         let duration = latency + (rand::random::<u64>() % 50); // Add some variance
 
-        println!("  ⚡ Execution: {}ms, {}", duration, if success { "✅ Success" } else { "❌ Failed" });
+        println!(
+            "  ⚡ Execution: {}ms, {}",
+            duration,
+            if success { "✅ Success" } else { "❌ Failed" }
+        );
 
         // Learn from the outcome
-        let outcome = if success {
-            TaskOutcome::Success(duration)
-        } else {
-            TaskOutcome::Failure {
-                error: "Simulated failure".to_string(),
-                execution_time: duration,
-            }
+        let outcome = RoutingOutcome {
+            success,
+            quality_score: if success { 1.0 } else { 0.0 },
+            execution_time_ms: duration,
         };
 
         let decision = RoutingDecision {
             task_id: format!("sim-task-{}", iteration),
-            selected_model: selection.model_id.clone(),
-            tools_required: vec!["test-tool".to_string()],
-            reasoning: selection.reasoning.clone(),
+            model_id: selection.model_id.clone(),
+            timestamp: Utc::now(),
+            predicted_score: selection.predicted_score,
+            outcome: None,
         };
 
         orchestrator
@@ -86,41 +111,29 @@ async fn test_model_selection_simulation() {
         // Small delay between iterations
         sleep(Duration::from_millis(10)).await;
 
-        if iteration % 9 == 8 { // Print every 10th iteration
-            println!("  📈 Current Metrics:");
-            for (model_id, _, _) in &models {
-                if let Some(metrics) = performance_monitor.get_metrics(model_id).await {
-                    let success_rate = 1.0 - metrics.error_rate;
-                    println!("    {}: {:.1}% success, {:.0}ms avg latency",
-                        model_id, success_rate * 100.0, metrics.avg_response_time_ms);
-                }
-            }
-        }
         println!();
     }
 
     // Final selection
     let final_selection = orchestrator
-        .select_optimal_model(&task, &models.iter().map(|(id, _, _)| id.clone()).collect::<Vec<_>>())
+        .select_optimal_model(
+            &json!(&task),
+            &models.iter().map(|(id, _, _)| id.clone()).collect::<Vec<_>>(),
+        )
         .await
         .unwrap();
 
     println!("🏆 FINAL RESULTS");
     println!("================");
-    println!("🎯 Final Selection: {} (score: {:.3})", final_selection.model_id, final_selection.composite_score);
+    println!(
+        "🎯 Final Selection: {} (score: {:.3})",
+        final_selection.model_id, final_selection.predicted_score
+    );
     println!("📝 Reasoning: {}", final_selection.reasoning);
-    println!("🏅 Highest Performance Score: {:.3}", final_selection.composite_score);
-
-    // Print final metrics
-    println!("\n📊 Final Model Metrics:");
-    for (model_id, _, _) in &models {
-        if let Some(metrics) = performance_monitor.get_metrics(model_id).await {
-            let success_rate = 1.0 - metrics.error_rate;
-            let composite_score = (success_rate * 0.4) + (metrics.efficiency_rating * 0.3) + (metrics.caws_compliance_score * 0.3);
-            println!("  {}: {:.1}% success, {:.0}ms avg, score {:.3}",
-                model_id, success_rate * 100.0, metrics.avg_response_time_ms, composite_score);
-        }
-    }
+    println!(
+        "🏅 Highest Performance Score: {:.3}",
+        final_selection.predicted_score
+    );
 
     // Verify that slow-but-safe was selected (should have highest score)
     assert_eq!(final_selection.model_id, "slow-but-safe",

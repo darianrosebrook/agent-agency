@@ -29,6 +29,10 @@ pub struct ExecutionPlan {
     #[schemars(with = "String")]
     pub session_id: Uuid,
 
+    /// Workspace registry identifier associated with this plan (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+
     /// Reference to CAWS working spec that generated this plan
     pub working_spec_id: String,
 

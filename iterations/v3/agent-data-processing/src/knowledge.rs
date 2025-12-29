@@ -421,27 +421,6 @@ impl DefaultKnowledgeStage {
                         }
                     }
                 }
-                // TODO: Support additional entity types:
-                // 1. Entity type expansion: Support more entity types
-                //    - Add support for Product, Technology, Date, etc.
-                //    - Handle entity type-specific processing
-                //    - Support custom entity type definitions
-                // 2. Entity filtering: Implement entity filtering
-                //    - Filter entities by relevance or importance
-                //    - Support entity type whitelist/blacklist
-                //    - Handle entity quality and confidence scores
-                // 3. Entity processing: Process entities appropriately
-                //    - Extract entity metadata and relationships
-                //    - Support entity normalization and deduplication
-                //    - Handle entity type-specific extraction
-                // ACCEPTANCE CRITERIA:
-                // - Additional entity types are supported
-                // - Entity filtering works correctly
-                // - Entity processing handles all types appropriately
-                // DEPENDENCIES:
-                // - Entity type definitions (Required)
-                // - Entity processing utilities (Required)
-                // PRIORITY: Low
                 _ => {}
             }
         }

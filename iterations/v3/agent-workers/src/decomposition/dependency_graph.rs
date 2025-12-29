@@ -80,7 +80,6 @@ impl DependencyAnalyzer {
         // Types must compile before implementations that use them
 
         // TODO: Implement proper file discovery for dependency analysis
-        //       Currently uses placeholder file list; should discover actual Rust files in project for comprehensive dependency analysis.
         let rust_files = vec!["src/lib.rs".to_string(), "src/main.rs".to_string()];
 
         // Create subtask IDs for each file

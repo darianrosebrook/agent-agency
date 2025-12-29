@@ -16,6 +16,9 @@ export interface ProjectApiResponse {
   project_id: string;
   id?: string; // Alias for project_id for compatibility
   name: string;
+  workspace_id?: string | null;
+  workspace_path?: string | null;
+  workspace_name?: string | null;
   overview?: string | null;
   summary?: string | null; // Alias for overview
   description?: string | null; // May come from overview or metadata
@@ -125,6 +128,9 @@ const API_BASE = "/api/proxy/api/v1";
 export interface ProjectListItem {
   project_id: string;
   name: string;
+  workspace_id?: string | null;
+  workspace_path?: string | null;
+  workspace_name?: string | null;
   overview?: string | null;
   state?: string | null;
   created_at: string;
@@ -170,6 +176,7 @@ export async function listProjects(): Promise<ProjectsListResponse> {
  */
 export async function createProject(request: {
   name: string;
+  workspace_path: string;
   summary?: string;
   description?: string;
 }): Promise<ProjectApiResponse> {

@@ -106,6 +106,10 @@ coreml = ["ort/coreml"]  # CoreML/ANE acceleration for production (optional for 
 name = "run_migrations"
 path = "src/bin/run_migrations.rs"
 
+[[bin]]
+name = "init_db_user"
+path = "src/bin/init_db_user.rs"
+
 [dev-dependencies]
 tokio-test = "0.4"
 tempfile = "3.8"

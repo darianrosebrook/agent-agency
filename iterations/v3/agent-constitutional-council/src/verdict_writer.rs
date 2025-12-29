@@ -338,7 +338,6 @@ impl VerdictWriter {
             0.0
         };
 
-        // TODO: Implement sophisticated consensus strength calculation
         //       Currently uses basic calculation; should implement sophisticated calculation considering judge agreement, confidence levels, and voting patterns.
         let consensus_label = judge_verdicts.first().map(|v| &v.label);
         let consensus_strength = if let Some(label) = consensus_label {

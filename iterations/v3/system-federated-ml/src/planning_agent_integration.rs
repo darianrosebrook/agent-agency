@@ -194,41 +194,6 @@ impl OptimizedPlanningAgent {
         let latency = start.elapsed().as_millis() as u64;
 
         // 7. Record outcome for learning
-        // TODO: Calculate actual token count from LLM response
-        //       Currently uses character length; should calculate actual token count from LLM response metadata.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Token count is calculated accurately
-        // - Tokenizer is used correctly
-        // - Count matches LLM response metadata
-        // - Error handling works for tokenization failures
-        //
-        // DEPENDENCIES:
-        // - Tokenizer library (Required)
-        // - LLM response metadata (Required)
-        // - Token counting utilities (Required)
-        //
-        // ESTIMATED EFFORT: 2-3 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (metrics enhancement)
-        // - Change Budget: ~60 LOC
-        // - Reviewer Requirements: Tokenization expertise
         let outcome = TaskOutcome {
             quality_score: self.estimate_quality(&response_content),
             latency_ms: latency,

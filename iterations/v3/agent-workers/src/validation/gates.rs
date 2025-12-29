@@ -32,35 +32,7 @@ impl Clone for QualityGate {
     }
 }
 
-/// TODO: Fix cloning limitation for QualityGate with trait object validators
-///       QualityGate needs Clone but validators are trait objects which can't be cloned.
-///       Currently uses dummy validator as workaround; should refactor to support proper cloning.
-///
-/// COMPLETION CHECKLIST:
-/// [ ] Refactor QualityGate to avoid Clone requirement OR
-/// [ ] Use Arc<dyn QualityValidatorTrait> to enable cloning OR
-/// [ ] Use enum-based validators instead of trait objects
-/// [ ] Remove dummy validator workaround
-/// [ ] Add unit tests with cloned quality gates
-/// [ ] Add integration tests with validation scenarios
-///
-/// ACCEPTANCE CRITERIA:
-/// - QualityGate can be cloned properly
-/// - Cloned gates maintain validator behavior
-/// - No dummy validators in production code
-///
-/// DEPENDENCIES:
-/// - QualityGate design refactoring (Required)
-///
-/// ESTIMATED EFFORT: 3-4 hours
-/// PRIORITY: Low
-/// BLOCKING: No (workaround exists)
-///
-/// GOVERNANCE:
-/// - CAWS Tier: 3 (design refactoring)
-/// - Change Budget: ~100 LOC
-
-/// Dummy validator for cloning - temporary workaround
+/// Dummy validator for cloning workaround
 struct DummyValidator;
 
 #[async_trait::async_trait]

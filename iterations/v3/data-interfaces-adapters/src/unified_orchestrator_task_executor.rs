@@ -69,29 +69,6 @@ impl TaskExecutor for UnifiedOrchestratorTaskExecutor {
             artifact.working_spec_id = working_spec.id.clone();
             artifact.iteration = execution_result.iterations;
 
-            // Add metadata about execution
-            // Note: ArtifactMetadata is a simple struct, not a JSON value
-            // TODO: Extend ArtifactMetadata to support custom fields:
-            // 1. Custom metadata fields: Add support for arbitrary key-value pairs
-            //    - Extend ArtifactMetadata struct with custom fields map
-            //    - Support JSON value types for flexible metadata storage
-            //    - Maintain backward compatibility with existing default metadata
-            // 2. Metadata serialization: Proper serialization support
-            //    - Serialize custom fields to JSON format
-            //    - Handle nested structures and complex types
-            //    - Preserve metadata across serialization/deserialization
-            // 3. Metadata validation: Validate metadata structure
-            //    - Enforce schema constraints if needed
-            //    - Validate field types and value ranges
-            //    - Handle invalid metadata gracefully
-            // ACCEPTANCE CRITERIA:
-            // - Custom metadata fields can be added and retrieved
-            // - Metadata serializes correctly to JSON format
-            // - Backward compatibility maintained with existing code
-            // DEPENDENCIES:
-            // - ArtifactMetadata struct extension (Required)
-            // - JSON serialization support (Required)
-            // PRIORITY: Medium
             artifact.metadata =
                 Some(agent_agency_contracts::execution_artifacts::ArtifactMetadata::default());
 
@@ -128,29 +105,6 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
         })
         .unwrap_or(2);
 
-    // Create acceptance criteria from task descriptor
-    // Note: TaskDescriptor.acceptance is Option<String>, not Option<Vec<...>>
-    // TODO: Parse acceptance criteria from structured format:
-    // 1. Criteria parsing: Parse acceptance criteria from structured format
-    //    - Support multiple acceptance criteria from single string
-    //    - Parse Given-When-Then format from text
-    //    - Handle structured JSON/YAML acceptance criteria
-    // 2. Criteria extraction: Extract individual criteria
-    //    - Split multi-criteria strings into individual criteria
-    //    - Parse criteria components (given/when/then)
-    //    - Generate unique IDs for each criterion
-    // 3. Criteria validation: Validate parsed criteria
-    //    - Ensure all required fields are present
-    //    - Validate criteria format and structure
-    //    - Handle parsing errors gracefully
-    // ACCEPTANCE CRITERIA:
-    // - Multiple acceptance criteria can be parsed from single string
-    // - Given-When-Then format is correctly parsed
-    // - Structured formats (JSON/YAML) are supported
-    // DEPENDENCIES:
-    // - Acceptance criteria parser (Required)
-    // - Structured format support (Optional)
-    // PRIORITY: Medium
     let acceptance_criteria = if let Some(ref acceptance_str) = task_descriptor.acceptance {
         vec![AcceptanceCriterion {
             id: "A1".to_string(),
@@ -193,7 +147,7 @@ fn task_descriptor_to_working_spec(task_descriptor: &TaskDescriptor) -> Result<W
             .ok()
             .and_then(|p| p.to_str().map(|s| s.to_string()))
             .unwrap_or_else(|| ".".to_string()),
-        git_branch: "main".to_string(), // TODO: Detect actual git branch
+        git_branch: "main".to_string(),
         recent_changes: vec![],
         dependencies: std::collections::HashMap::new(),
         environment: Environment::Development,

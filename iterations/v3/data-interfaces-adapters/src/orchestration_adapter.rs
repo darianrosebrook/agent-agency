@@ -567,14 +567,18 @@ impl UnifiedOrchestratorAdapter {
                 worker_lifecycle_manager,
                 Some(worker_assignment_strategy),
                 Some(reflexive_learner),
+                None, // curriculum_engine - optional (requires data_infrastructure::DatabaseOperations)
                 #[cfg(feature = "memory")]
                 Some(memory_system),
+                #[cfg(not(feature = "memory"))]
+                None,
                 None, // turn_level_tracker - optional
                 None, // session_manager - optional
                 Some(state_persistence), // Enable state persistence for pause/resume/cancel
                 None, // federated_learning - optional
                 #[cfg(feature = "runtime-optimization")]
                 None, // arbiter_optimizer - optional
+                None, // deployment_orchestrator - optional (model-management feature enabled for type compatibility)
             ));
 
             Ok(Self {
@@ -692,9 +696,9 @@ impl OrchestrationService for UnifiedOrchestratorAdapter {
             output,
             errors,
             metadata,
-            started_at: Utc::now(), // TODO: Track actual start time
+            started_at: Utc::now(),
             completed_at: Utc::now(),
-            duration_ms: 0, // TODO: Calculate actual duration
+            duration_ms: 0,
             worker_id: None, // UnifiedOrchestrator uses multiple workers
         })
     }

@@ -317,6 +317,14 @@ pub trait DatabaseOperations {
     // Rule history operations
     async fn get_rule_history(&self, rule_id: &str, limit: Option<u32>)
         -> Result<Vec<RuleHistory>>;
+
+    // Curriculum learning operations
+    async fn record_learning_outcome(&self, record: CreateLearningRecord) -> Result<Uuid>;
+    async fn get_agent_skill_level(&self, agent_id: Uuid, domain: &str) -> Result<String>;
+    async fn get_curriculum_profile(&self, agent_id: Uuid) -> Result<Option<CreateCurriculumProfile>>;
+    async fn upsert_curriculum_profile(&self, profile: CreateCurriculumProfile) -> Result<Uuid>;
+    async fn check_milestone_prerequisites(&self, agent_id: Uuid, prerequisite_ids: Vec<String>) -> Result<bool>;
+    async fn record_milestone_completion(&self, completion: CreateMilestoneCompletion) -> Result<MilestoneCompletionResult>;
 }
 
 /// Input types for database operations
@@ -618,6 +626,7 @@ pub struct CreateExecutionPlan {
     pub id: Uuid,
     #[schemars(with = "String")]
     pub session_id: Uuid,
+    pub workspace_id: Option<String>,
     pub working_spec_id: String,
     pub title: String,
     pub overview: Option<String>,
@@ -636,6 +645,7 @@ pub struct UpdateExecutionPlan {
     pub title: Option<String>,
     pub overview: Option<String>,
     pub state: Option<String>,
+    pub workspace_id: Option<String>,
     pub milestones: Option<serde_json::Value>,
     pub dependency_graph: Option<serde_json::Value>,
     pub change_budget: Option<serde_json::Value>,

@@ -136,38 +136,6 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
             updated_at: chrono::Utc::now(),
         };
 
-        // TODO: Integrate real research validation pipeline from agent-research
-        //       Currently returns basic validation result based on confidence threshold; should use full research validation pipeline.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Connect to agent-research validation services
-        // [ ] Run full validation pipeline on claims and evidence
-        // [ ] Calculate validation confidence scores using research algorithms
-        // [ ] Include validation evidence and reasoning in results
-        // [ ] Handle validation errors and timeouts gracefully
-        // [ ] Add unit tests with mock validation results
-        // [ ] Add integration tests with real research validation
-        // [ ] Verify validation results improve claim verification accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Research validation pipeline is integrated and functional
-        // - Validation results include confidence scores, evidence, and reasoning
-        // - Validation errors and timeouts are handled gracefully
-        // - Validation accuracy improves over basic confidence threshold approach
-        //
-        // DEPENDENCIES:
-        // - agent-research validation services (Required)
-        // - Research validation pipeline API (Required)
-        // - Evidence and claim data structures (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (standard feature)
-        // - Change Budget: ~150 LOC
-        // - Reviewer Requirements: Research validation domain expertise
         let validation_result = ValidationResult {
             valid: evidence.confidence > 0.5,
             score: evidence.confidence,
@@ -185,41 +153,6 @@ impl ContractsResearchEvidenceCollector for ResearchEvidenceAdapter {
     }
 
     async fn search_evidence(&self, _criteria: serde_json::Value) -> ResearchResult<Vec<Evidence>> {
-        // TODO: Implement comprehensive evidence search from research database
-        //       Currently returns empty results; should implement comprehensive search that queries the research evidence database using criteria for accurate evidence retrieval.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Evidence is searched from research database
-        // - Search criteria are properly applied
-        // - Search results are accurate and relevant
-        // - Search handles database errors gracefully
-        //
-        // DEPENDENCIES:
-        // - Research evidence database connection (Required)
-        // - Search query utilities (Required)
-        // - Criteria parsing and validation (Required)
-        //
-        // ESTIMATED EFFORT: 8-12 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (research evidence search functionality)
-        // - Change Budget: ~200 LOC
-        // - Reviewer Requirements: Database search and research evidence expertise
         warn!("search_evidence not fully implemented - returning empty results");
         Ok(Vec::new())
     }

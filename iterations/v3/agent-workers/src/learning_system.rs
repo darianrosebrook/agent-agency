@@ -156,7 +156,6 @@ impl RealAdaptiveSelector {
         // - [ ] Add unit tests with various specialty/task combinations
         // - [ ] Add integration tests with real task patterns
         //
-        // TODO: Implement comprehensive specialty matching with task pattern analysis
         //       Currently returns default match score since domain is not in TaskPattern; should implement comprehensive matching that extracts domain/task type from TaskPattern, maps worker specialties to task domains, and calculates semantic similarity between specialty and task.
         //
         // COMPLETION CHECKLIST:

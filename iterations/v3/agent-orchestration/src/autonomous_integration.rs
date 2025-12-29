@@ -372,7 +372,7 @@ VERIFICATION:
                 info!(
                     "Successfully applied changeset {} with {} changes",
                     changeset_id.0, 1
-                ); // TODO: Calculate actual changeset change count
+                );
                 Ok(FileExecutionResult {
                     success: true,
                     changes_applied: 1, // Would count actual changes

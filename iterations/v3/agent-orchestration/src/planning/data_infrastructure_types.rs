@@ -140,6 +140,7 @@ pub trait DatabaseOperations: Send + Sync {
 pub struct CreateExecutionPlan {
     #[schemars(with = "String")]
     pub id: Uuid,
+    pub workspace_id: Option<String>,
     pub title: String,
     pub overview: String,
     /// Working spec ID (e.g., "TASK-<UUID>" for task-based plans, "PLAN-<UUID>" for direct plans)
@@ -169,6 +170,7 @@ pub mod models {
         pub id: Uuid,
         #[schemars(with = "String")]
         pub session_id: Uuid,
+        pub workspace_id: Option<String>,
         pub working_spec_id: String,
         pub title: String,
         pub overview: Option<String>,

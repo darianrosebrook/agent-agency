@@ -404,25 +404,6 @@ impl AuditStorage {
                         sql_query = sql_query.bind(f);
                     }
                 }
-                // TODO: Support additional JSON value types in SQL query binding:
-                // 1. Boolean binding: Bind boolean values to SQL boolean columns
-                //    - Handle serde_json::Value::Bool(true/false)
-                //    - Map to appropriate SQL boolean type
-                // 2. Null binding: Handle null/None values properly
-                //    - Bind serde_json::Value::Null to SQL NULL
-                //    - Handle Option<T> types appropriately
-                // 3. Array/Object binding: Support complex types
-                //    - Serialize arrays/objects to JSON strings for JSONB columns
-                //    - Handle nested structures appropriately
-                // ACCEPTANCE CRITERIA:
-                // - Boolean values bind correctly to boolean SQL columns
-                // - Null values bind correctly and don't cause errors
-                // - Arrays and objects serialize properly for JSONB columns
-                // - All JSON value types are handled without panics or errors
-                // DEPENDENCIES:
-                // - SQL query builder with type support (Required)
-                // - JSON serialization for complex types (Required)
-                // PRIORITY: Medium
                 _ => {}
             }
         }

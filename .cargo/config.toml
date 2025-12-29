@@ -1,0 +1,9 @@
+# Global Rust build configuration to suppress noisy development warnings.
+[build]
+rustflags = [
+    "-Adead_code",
+    "-Aunused_variables",
+]
+
+
+

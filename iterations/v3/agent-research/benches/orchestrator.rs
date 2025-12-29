@@ -24,7 +24,6 @@ fn bench_orchestrator_algorithm_selection(c: &mut Criterion) {
     c.bench_function("orchestrator_algorithm_selection", |b| {
         b.iter(|| {
             // Benchmark the actual algorithm selection logic
-            // TODO: Implement comprehensive benchmark with proper task specification types
             //       Currently uses basic benchmark; should use proper task specification types for accurate benchmarking.
             let _result = black_box(&orchestrator);
             black_box(&task_spec)

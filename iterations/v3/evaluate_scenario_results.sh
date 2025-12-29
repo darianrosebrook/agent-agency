@@ -111,3 +111,9 @@ echo "📄 Full results saved to: $RESULTS_FILE"
 echo ""
 echo "🔍 Check server logs for detailed execution information:"
 echo "   tail -f /tmp/api-server.log | grep -E '(Task.*completed|Task.*failed|Phase.*complete)'"
+
+
+
+
+
+

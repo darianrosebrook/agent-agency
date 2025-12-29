@@ -30,6 +30,18 @@ export default defineConfig({
   // Ensure errors are logged to console and terminal
   logLevel: "info",
   clearScreen: false, // Keep error output visible in terminal
+  define: {
+    // Provide process.env for Next.js compatibility
+    'process.env': JSON.stringify({
+      NODE_ENV: process.env.NODE_ENV || 'development',
+    }),
+    // Provide process object for Next.js code that expects it
+    'process': JSON.stringify({
+      env: {
+        NODE_ENV: process.env.NODE_ENV || 'development',
+      },
+    }),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

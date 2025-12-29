@@ -1,0 +1,248 @@
+{
+  "dashboard": {
+    "title": "Agent Agency Arbiter Performance Dashboard",
+    "description": "Real-time monitoring of arbiter decision pipeline performance, speculative execution accuracy, and streaming throughput",
+    "tags": ["agent-agency", "arbiter", "performance", "ai"],
+    "timezone": "UTC",
+    "panels": [
+      {
+        "title": "Arbiter Decision Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(arbiter_decision_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P95 Latency (ms)",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(arbiter_decision_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "P50 Latency (ms)",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "ms",
+            "label": "Latency"
+          }
+        ]
+      },
+      {
+        "title": "Speculative Execution Accuracy",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "arbiter_speculative_accuracy",
+            "legendFormat": "Accuracy",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 0.8,
+                  "color": "orange"
+                },
+                {
+                  "value": 0.9,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Streaming Pipeline Throughput",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(arbiter_streaming_decisions_total[5m])",
+            "legendFormat": "Decisions/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "arbiter_active_streams",
+            "legendFormat": "Active Streams",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "reqps",
+            "label": "Throughput"
+          },
+          {
+            "unit": "short",
+            "label": "Active Streams"
+          }
+        ]
+      },
+      {
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "arbiter_cache_hit_rate",
+            "legendFormat": "Cache Hit Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "arbiter_cache_size",
+            "legendFormat": "Cache Size",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "percentunit",
+            "label": "Hit Rate"
+          },
+          {
+            "unit": "short",
+            "label": "Entries"
+          }
+        ]
+      },
+      {
+        "title": "Parallel Processing Efficiency",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "arbiter_parallel_efficiency",
+            "legendFormat": "Efficiency",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": null,
+                  "color": "red"
+                },
+                {
+                  "value": 0.7,
+                  "color": "orange"
+                },
+                {
+                  "value": 0.9,
+                  "color": "green"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Curriculum Learning Progress",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "curriculum_skill_updates_total",
+            "legendFormat": "Skill Updates",
+            "refId": "A"
+          },
+          {
+            "expr": "curriculum_milestones_completed_total",
+            "legendFormat": "Milestones Completed",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "title": "Speculative Decision Patterns",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, arbiter_task_type_accuracy)",
+            "legendFormat": "{{task_type}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit"
+          }
+        }
+      },
+      {
+        "title": "Error Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(arbiter_decision_errors_total[5m])",
+            "legendFormat": "Decision Errors/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(arbiter_speculative_rollback_total[5m])",
+            "legendFormat": "Speculative Rollbacks/sec",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "errors/sec",
+            "label": "Error Rate"
+          }
+        ]
+      },
+      {
+        "title": "System Health",
+        "type": "status-history",
+        "targets": [
+          {
+            "expr": "up{job=\"arbiter\"}",
+            "legendFormat": "Arbiter Service",
+            "refId": "A"
+          },
+          {
+            "expr": "up{job=\"streaming-pipeline\"}",
+            "legendFormat": "Streaming Pipeline",
+            "refId": "B"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": []
+  }
+}
+
+
+
+
+
+

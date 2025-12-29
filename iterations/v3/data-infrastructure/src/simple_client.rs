@@ -6,7 +6,7 @@
 use crate::client::orchestrator::DatabaseClient as ComplexDatabaseClient;
 use crate::database_config::DatabaseConfig;
 use crate::database_operations::DatabaseOperations;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use sqlx::postgres::PgPool;
 use sqlx::Row;
@@ -685,25 +685,25 @@ impl DatabaseClient {
     ) -> Result<Uuid> {
         let id = Uuid::new_v4();
 
-        self.execute(
+        sqlx::query(
             r#"
             INSERT INTO telemetry_agent_activity (
                 id, agent_id, activity_type, task_id, duration_ms,
                 success, error_message, metadata
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
-            &[
-                &id,
-                &agent_id,
-                &activity_type.to_string(),
-                &task_id,
-                &duration_ms,
-                &success,
-                &error_message.map(|s| s.to_string()),
-                &metadata.unwrap_or(serde_json::json!({})),
-            ],
         )
-        .await?;
+        .bind(id)
+        .bind(agent_id)
+        .bind(activity_type)
+        .bind(task_id)
+        .bind(duration_ms)
+        .bind(success)
+        .bind(error_message.map(|s| s.to_string()))
+        .bind(metadata.unwrap_or_else(|| serde_json::json!({})))
+        .execute(self.pool())
+        .await
+        .context("Failed to insert telemetry_agent_activity")?;
 
         Ok(id)
     }
@@ -1092,6 +1092,13 @@ impl DatabaseClient {
     }
 
     // User operations
+    pub async fn create_user(
+        &self,
+        user: crate::database_operations::CreateUser,
+    ) -> Result<crate::models::User> {
+        self.inner.create_user(user).await
+    }
+
     pub async fn get_user(&self, id: Uuid) -> Result<Option<crate::models::User>> {
         self.inner.get_user(id).await
     }

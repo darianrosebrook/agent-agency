@@ -8,8 +8,9 @@
 -- - Row Level Security (RLS) policies
 -- - Privacy configuration for federated learning
 -- - Access control and audit logging
-
-BEGIN;
+--
+-- Note: Transaction handling is managed by the migration runner.
+-- Do not use explicit BEGIN/COMMIT blocks.
 
 -- ============================================================================
 -- CUSTOM TYPES FOR MULTI-TENANCY
@@ -423,10 +424,4 @@ COMMENT ON TABLE tenant_privacy_config IS 'Privacy settings for federated learni
 COMMENT ON FUNCTION set_tenant_context IS 'Set current tenant context for Row Level Security';
 COMMENT ON FUNCTION add_dp_noise IS 'Apply differential privacy noise to values';
 
--- Log migration
-INSERT INTO migration_log (version, description, applied_at)
-VALUES ('011', 'add_multi_tenant_isolation', NOW())
-ON CONFLICT (version) DO NOTHING;
-
-COMMIT;
-
+-- Note: Migration logging is handled by the migration runner

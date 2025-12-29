@@ -5,7 +5,6 @@ use anyhow::Result;
 use schemars::JsonSchema;
 use system_configuration::types::{DeviceKind, Precision};
 
-/// Model router
 #[derive(Debug)]
 pub struct ModelRouter {
     _device_id: DeviceId,
@@ -60,17 +59,22 @@ impl ModelRouter {
         }
     }
 
-    /// Route a model request
+    /// Route a model request, preferring Metal/MPS when available on macOS.
     pub fn route(&self, _model_name: &str, _constraints: &RoutingPolicy) -> Result<ModelVariant> {
-        // TODO: Implement real model routing logic
-        // - [ ] Select optimal model variant based on constraints
-        // - [ ] Consider device availability (CPU, ANE, GPU)
-        // - [ ] Consider precision requirements (FP16, FP32)
-        // - [ ] Load balancing across available devices
-        // - [ ] Add unit tests with various routing scenarios
-        // - [ ] Add integration tests with real model routing
+        #[cfg(all(feature = "metal-backend", target_os = "macos"))]
+        {
+            if crate::metal::MetalExecutor::is_available() {
+                return Ok(ModelVariant {
+                    name: "metal".to_string(),
+                    precision: Precision::FP16,
+                    device: DeviceKind::GPU,
+                });
+            }
+        }
+
+        // Fallback to CPU when Metal is unavailable or not enabled.
         Ok(ModelVariant {
-            name: "default".to_string(),
+            name: "cpu".to_string(),
             precision: Precision::FP32,
             device: DeviceKind::CPU,
         })

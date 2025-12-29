@@ -58,6 +58,7 @@ pub struct UpdateQualityMetrics {
 #[derive(Debug)]
 pub struct UpdateAggregator {
     validation_engine: ValidationUpdateValidator,
+    #[allow(dead_code)]
     quality_thresholds: QualityThresholds,
 }
 

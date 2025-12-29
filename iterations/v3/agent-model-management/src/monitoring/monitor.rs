@@ -123,7 +123,7 @@ impl PerformanceMonitor {
         // Calculate efficiency rating based on latency and resource usage
         let latency_score = (1000.0 / avg_latency.max(1.0)).min(1.0);
         let memory_score = (1.0 - memory_usage / 100.0).max(0.0);
-        let efficiency_rating = (latency_score * 0.6 + memory_score * 0.4);
+        let efficiency_rating = latency_score * 0.6 + memory_score * 0.4;
 
         // Calculate tool adoption rate (placeholder)
         // This would track how often the model successfully uses requested tools

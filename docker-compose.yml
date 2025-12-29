@@ -1,25 +1,42 @@
 version: '3.8'
 
 services:
-  # Development database
-  postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=agent_agency_dev
-      - POSTGRES_USER=dev_user
-      - POSTGRES_PASSWORD=dev_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  # Development database with pgvector extension
+  # NOTE: PostgreSQL is now running locally (Homebrew PostgreSQL@17) instead of Docker
+  # To use Docker PostgreSQL, uncomment below and ensure local PostgreSQL is stopped
+  # To use local PostgreSQL (current setup), set DATABASE_URL environment variable:
+  #   export DATABASE_URL="postgresql://agent_agency:agent_agency_dev@127.0.0.1:5432/agent_agency"
+  #
+  # postgres:
+  #   image: pgvector/pgvector:pg15
+  #   container_name: agent_agency_postgres
+  #   environment:
+  #     - POSTGRES_DB=agent_agency
+  #     - POSTGRES_USER=agent_agency
+  #     - POSTGRES_PASSWORD=agent_agency_dev
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U agent_agency -d agent_agency"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
 
   # Redis for caching
   redis:
     image: redis:7-alpine
+    container_name: agent_agency_redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:

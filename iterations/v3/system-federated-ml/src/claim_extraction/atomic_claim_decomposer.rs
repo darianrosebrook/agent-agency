@@ -9,7 +9,7 @@
 //! - Contextually bracketed to preserve context
 //! - Properly scoped within the working spec
 
-use agent_research::decomposition::{DecompositionStage, DecompositionResult};
+use agent_research::decomposition::DecompositionStage;
 use agent_research::extraction_types::{AtomicClaim, ProcessingContext, ClaimType, VerifiabilityLevel};
 use anyhow::Result;
 use schemars::JsonSchema;

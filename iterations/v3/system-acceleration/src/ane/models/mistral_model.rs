@@ -854,41 +854,6 @@ mod tests {
 
     #[test]
     fn test_memory_usage_estimation() {
-        // TODO: Implement comprehensive memory usage estimation test with real model
-        //       Currently ensures function doesn't panic only; should implement comprehensive test that uses real model to validate memory usage estimation accuracy.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Test uses real model for validation
-        // - Memory usage estimation is accurate
-        // - Test validates expected memory usage thresholds
-        // - Test covers various model sizes
-        //
-        // DEPENDENCIES:
-        // - Real model for testing (Required)
-        // - Memory measurement utilities (Required)
-        // - Test fixtures and model loading (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (test infrastructure enhancement)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: Model testing and memory measurement expertise
         // let model = MistralModel { ... };
         // let usage = estimate_memory_usage(&model);
         // assert!(usage > 4000); // At least 4GB for 7B model

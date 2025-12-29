@@ -20,12 +20,18 @@ CREATE INDEX IF NOT EXISTS idx_plan_execution_results_success ON plan_execution_
 CREATE INDEX IF NOT EXISTS idx_plan_execution_results_created_at ON plan_execution_results(created_at);
 CREATE INDEX IF NOT EXISTS idx_plan_execution_results_final_state ON plan_execution_results(final_state);
 
--- Trigger for updated_at timestamp
-DROP TRIGGER IF EXISTS update_plan_execution_results_updated_at ON plan_execution_results;
-CREATE TRIGGER update_plan_execution_results_updated_at 
-    BEFORE UPDATE ON plan_execution_results 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+-- Trigger for updated_at timestamp (use DO block to handle existing trigger)
+DO $$
+BEGIN
+    DROP TRIGGER IF EXISTS update_plan_execution_results_updated_at ON plan_execution_results;
+    CREATE TRIGGER update_plan_execution_results_updated_at 
+        BEFORE UPDATE ON plan_execution_results 
+        FOR EACH ROW 
+        EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN duplicate_object THEN
+        NULL; -- Trigger already exists, ignore
+END $$;
 
 
 

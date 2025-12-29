@@ -57,7 +57,7 @@ use axum::{
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
+use serde_json::{json, Value as JsonValue};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::env;
@@ -69,6 +69,7 @@ use system_quality_security::{
     rate_limiting::RateLimiter,
     AuthConfig, AuthService,
 };
+use reqwest::Client;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -995,6 +996,7 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
 
     // Authentication endpoints
     router = router
+        .route("/api/v1/auth/register", post(register_handler))
         .route("/api/v1/auth/login", post(login_handler))
         .route("/api/v1/auth/logout", post(logout_handler))
         .route("/api/v1/auth/refresh", post(refresh_token_handler))
@@ -1158,6 +1160,74 @@ fn create_router(app_state: AppState, enable_cors: bool) -> Router {
         .layer(cors);
 
     router.with_state(app_state)
+}
+
+/// Check embedding service availability before starting a task
+async fn verify_embedding_service_ready() -> Result<(), StatusCode> {
+    let embedding_url =
+        env::var("EMBEDDING_SERVICE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let health_url = format!("{}/health", embedding_url.trim_end_matches('/'));
+
+    let client = Client::new();
+    let result = client
+        .get(health_url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await;
+
+    match result {
+        Ok(resp) if resp.status().is_success() => Ok(()),
+        Ok(resp) => {
+            warn!(
+                "Embedding service health check failed with status {}. Set EMBEDDING_SERVICE_URL or start the service.",
+                resp.status()
+            );
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        }
+        Err(err) => {
+            warn!(
+                "Embedding service health check unreachable: {}. Set EMBEDDING_SERVICE_URL or start the service.",
+                err
+            );
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        }
+    }
+}
+
+/// Upsert minimal task execution state for status reporting
+async fn upsert_task_execution_state(
+    db: &DatabaseClient,
+    task_id: Uuid,
+    status: &str,
+    error: Option<&str>,
+) {
+    let state_data = json!({
+        "status": status,
+        "error": error
+    });
+
+    if let Err(e) = sqlx::query(
+        r#"
+        INSERT INTO task_execution_states (task_id, state_data, status, checkpoint_at, last_updated)
+        VALUES ($1, $2, $3, NULL, NOW())
+        ON CONFLICT (task_id) DO UPDATE SET
+            state_data = EXCLUDED.state_data,
+            status = EXCLUDED.status,
+            checkpoint_at = EXCLUDED.checkpoint_at,
+            last_updated = NOW()
+        "#,
+    )
+    .bind(task_id)
+    .bind(state_data)
+    .bind(status)
+    .execute(db.pool())
+    .await
+    {
+        warn!(
+            "Failed to upsert task_execution_states for task {} to status {}: {}",
+            task_id, status, e
+        );
+    }
 }
 
 // ============================================================================
@@ -1365,6 +1435,9 @@ async fn submit_task_handler(
         return Err(status);
     }
 
+    // Fast-fail if embedding/LLM backend is unavailable to avoid long task timeouts
+    verify_embedding_service_ready().await?;
+
     // Input validation for task submission
     // Validate title if provided - must be non-empty
     if let Some(title) = payload.get("title") {
@@ -1376,15 +1449,10 @@ async fn submit_task_handler(
         }
     }
 
-    // Validate description - required and must be non-empty
-    if let Some(desc) = payload.get("description") {
-        if let Some(desc_str) = desc.as_str() {
-            if desc_str.trim().is_empty() {
-                warn!("Task submission rejected: empty description");
-                return Err(StatusCode::BAD_REQUEST);
-            }
-        }
-    }
+    // Validate description - allow empty strings (frontend sends "" for empty descriptions)
+    // Empty descriptions are valid and will be stored as empty strings
+    // This allows frontend to send "" instead of undefined, which was causing 400 errors
+    // No validation needed - empty strings are acceptable
 
     // Validate priority if provided - must be 0-10 range or valid string
     if let Some(priority) = payload.get("priority") {
@@ -1635,12 +1703,12 @@ async fn submit_task_handler(
 
             info!("Spawning background task execution for task {}", task_id_for_log);
             
-            // Update task status to running before spawning
+            // Update task status to in_progress before spawning
             if let Some(ref db) = state.db_client {
                 if let Err(e) = sqlx::query(
                     r#"
                     UPDATE tasks 
-                    SET status = 'running', updated_at = NOW()
+                    SET status = 'in_progress', updated_at = NOW()
                     WHERE id = $1
                     "#,
                 )
@@ -1648,9 +1716,9 @@ async fn submit_task_handler(
                 .execute(db.pool())
                 .await
                 {
-                    warn!("Failed to update task {} status to running: {}", task_id_for_log, e);
+                    warn!("Failed to update task {} status to in_progress: {}", task_id_for_log, e);
                 } else {
-                    info!("Task {} status updated to running", task_id_for_log);
+                    info!("Task {} status updated to in_progress", task_id_for_log);
                 }
             }
 
@@ -1704,6 +1772,9 @@ async fn submit_task_handler(
                             } else {
                                 info!("Task {} status updated to {} (100% complete)", task_id_for_log, status);
                             }
+
+                            // Also persist execution state for API status visibility
+                            upsert_task_execution_state(db, task_id_for_log, status, None).await;
                         }
 
                         // Record task completed activity
@@ -1743,6 +1814,15 @@ async fn submit_task_handler(
                             } else {
                                 info!("Task {} status updated to failed", task_id_for_log);
                             }
+
+                            // Persist failure to execution state table so status API reflects it
+                            upsert_task_execution_state(
+                                db,
+                                task_id_for_log,
+                                "failed",
+                                Some(&error_msg),
+                            )
+                            .await;
                         }
 
                         // Record task failed activity
@@ -2374,9 +2454,9 @@ async fn get_tasks_stats_history_handler(
     let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days as i64);
 
     // Query tasks grouped by day with completion rates
-    match db
-        .query(
-            "SELECT
+    // Use sqlx::query directly with pool to avoid parameterized query trait object issues
+    match sqlx::query(
+        "SELECT
             DATE_TRUNC('day', created_at) as day,
             COUNT(*) as total_tasks,
             COUNT(*) FILTER (WHERE status = 'completed') as completed_tasks,
@@ -2387,9 +2467,10 @@ async fn get_tasks_stats_history_handler(
         FROM tasks
         WHERE created_at >= $1
         GROUP BY DATE_TRUNC('day', created_at)
-        ORDER BY day DESC",
-            &[&cutoff_date],
-        )
+        ORDER BY day DESC"
+    )
+        .bind(cutoff_date)
+        .fetch_all(db.pool())
         .await
     {
         Ok(rows) => {
@@ -2962,7 +3043,10 @@ async fn get_agent_logs_handler(
         .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
-    let agent_uuid = Uuid::parse_str(&agent_id).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let agent_uuid = Uuid::parse_str(&agent_id).map_err(|e| {
+        warn!("Invalid agent UUID '{}': {}", agent_id, e);
+        StatusCode::BAD_REQUEST
+    })?;
 
     // Query audit_trail_entries for agent-specific logs
     // Check both 'agent' and 'worker' entity types
@@ -2983,20 +3067,43 @@ async fn get_agent_logs_handler(
         LIMIT 1000
     "#;
 
-    match db.query_with_params(query, &[&agent_uuid]).await {
+    // Use sqlx::query directly with pool to avoid parameterized query trait object issues
+    match sqlx::query(query)
+        .bind(agent_uuid)
+        .fetch_all(db.pool())
+        .await
+    {
         Ok(rows) => {
-            let logs: Vec<serde_json::Value> = rows.iter().map(|row| {
-                serde_json::json!({
-                    "id": row.get::<Uuid, _>("id").to_string(),
-                    "entity_type": row.get::<String, _>("entity_type"),
-                    "entity_id": row.get::<Uuid, _>("entity_id").to_string(),
-                    "action": row.get::<String, _>("action"),
-                    "details": row.try_get::<serde_json::Value, _>("details").unwrap_or(serde_json::json!({})),
-                    "user_id": row.try_get::<Option<String>, _>("user_id").ok().flatten(),
-                    "ip_address": row.try_get::<Option<String>, _>("ip_address").ok().flatten(),
-                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-                })
-            }).collect();
+            let mut logs: Vec<serde_json::Value> = Vec::new();
+            
+            for row in rows.iter() {
+                // Use try_get for all fields to prevent panics
+                match (
+                    row.try_get::<Uuid, _>("id"),
+                    row.try_get::<String, _>("entity_type"),
+                    row.try_get::<Uuid, _>("entity_id"),
+                    row.try_get::<String, _>("action"),
+                    row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                ) {
+                    (Ok(id), Ok(entity_type), Ok(entity_id), Ok(action), Ok(created_at)) => {
+                        logs.push(serde_json::json!({
+                            "id": id.to_string(),
+                            "entity_type": entity_type,
+                            "entity_id": entity_id.to_string(),
+                            "action": action,
+                            "details": row.try_get::<serde_json::Value, _>("details").unwrap_or(serde_json::json!({})),
+                            "user_id": row.try_get::<Option<String>, _>("user_id").ok().flatten(),
+                            "ip_address": row.try_get::<Option<String>, _>("ip_address").ok().flatten(),
+                            "created_at": created_at.to_rfc3339(),
+                        }));
+                    }
+                    _ => {
+                        warn!("Failed to parse row in agent logs for agent {}", agent_id);
+                        // Skip this row and continue
+                        continue;
+                    }
+                }
+            }
 
             Ok(Json(serde_json::json!({
                 "agent_id": agent_id,
@@ -3006,7 +3113,7 @@ async fn get_agent_logs_handler(
             })))
         }
         Err(e) => {
-            error!("Failed to query agent logs: {}", e);
+            error!("Failed to query agent logs for agent {}: {}", agent_id, e);
             // Return empty logs instead of error for graceful degradation
             Ok(Json(serde_json::json!({
                 "agent_id": agent_id,
@@ -4702,6 +4809,75 @@ async fn generate_coreml_chat_response(
     Err("CoreML chat response requires system-acceleration feature".to_string())
 }
 
+/// Generate chat response using Ollama
+///
+/// Tries to use instinct model first, falls back to gemma3n:e2b if unavailable.
+async fn generate_ollama_chat_response(prompt: &str) -> String {
+    let ollama_url = std::env::var("OLLAMA_URL")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    
+    // Try instinct model first, then fallback to gemma3n:e2b
+    let models_to_try = vec!["nate/instinct:latest", "gemma3n:e2b", "olmo-3:latest"];
+    
+    for model in models_to_try {
+        match generate_with_ollama_api(&ollama_url, model, prompt).await {
+            Ok(response) => {
+                info!("Generated chat response using Ollama model: {}", model);
+                return response;
+            }
+            Err(e) => {
+                debug!("Failed to generate with model {}: {}, trying next", model, e);
+                continue;
+            }
+        }
+    }
+    
+    // If all models fail, return error message
+    format!(
+        "I received your message: '{}'. (Ollama service unavailable - please ensure Ollama is running and models are available)",
+        prompt
+    )
+}
+
+/// Generate text using Ollama API
+async fn generate_with_ollama_api(
+    base_url: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let client = reqwest::Client::new();
+    let request_body = serde_json::json!({
+        "model": model,
+        "prompt": prompt,
+        "stream": false,
+        "options": {
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "num_predict": 512
+        }
+    });
+
+    let response = client
+        .post(&format!("{}/api/generate", base_url))
+        .json(&request_body)
+        .timeout(std::time::Duration::from_secs(60))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        let result: serde_json::Value = response.json().await?;
+        Ok(result["response"]
+            .as_str()
+            .unwrap_or("")
+            .trim()
+            .to_string())
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        Err(format!("Ollama generation failed with status {}: {}", status, error_text).into())
+    }
+}
+
 #[cfg(feature = "orchestration")]
 async fn cancel_stream_wrapper(
     State(state): State<AppState>,
@@ -4757,11 +4933,14 @@ async fn chat_handler(
             .and_then(|v| v.as_str())
             .and_then(|s| Uuid::parse_str(s).ok());
 
+        // Generate response using Ollama
+        let ollama_response = generate_ollama_chat_response(query).await;
+        
         // Context integration with orchestrator
         // Current implementation: Basic context from orchestrator's chain of thought
         // Future enhancement: Full memory system integration with conversation history
         let mut response = serde_json::json!({
-            "response": format!("Query received: '{}'. This endpoint observes orchestrator context. Full chat integration requires orchestrator memory/context system.", query),
+            "response": ollama_response,
             "query": query,
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
@@ -6066,6 +6245,52 @@ async fn scaffold_project_handler(
     #[cfg(feature = "orchestration")]
     {
         if let Some(service) = &state.orchestrator_service {
+            // Determine workspace association
+            let mut workspace_id = payload
+                .get("workspace_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let workspace_path = payload
+                .get("workspace_path")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            if workspace_id.is_none() && workspace_path.is_some() {
+                let path_value = workspace_path.clone().unwrap();
+                let workspace_name = std::path::Path::new(&path_value)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("workspace")
+                    .to_string();
+
+                let db = state
+                    .db_client
+                    .as_ref()
+                    .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+                let generated_id = uuid::Uuid::new_v4().to_string();
+
+                // Register workspace in registry (idempotent on path)
+                if let Err(e) = sqlx::query!(
+                    r#"
+                    INSERT INTO workspace_registry (workspace_id, name, path, access)
+                    VALUES ($1, $2, $3, 'enabled')
+                    ON CONFLICT (workspace_id) DO NOTHING
+                    "#,
+                    generated_id,
+                    workspace_name,
+                    path_value
+                )
+                .execute(&db.pool)
+                .await
+                {
+                    error!("Failed to register workspace: {}", e);
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+
+                workspace_id = Some(generated_id);
+            }
+
             let project_name = payload
                 .get("name")
                 .and_then(|v| v.as_str())
@@ -6093,6 +6318,8 @@ async fn scaffold_project_handler(
                     "status": "scaffold_requested",
                     "task_id": task_id.to_string(),
                     "project_name": project_name,
+                    "workspace_id": workspace_id,
+                    "workspace_path": workspace_path,
                     "message": "Project scaffolding requested. Orchestrator will handle scaffolding. Use task_id to observe progress."
                 }))),
                 Err(e) => {
@@ -6121,14 +6348,56 @@ async fn list_projects_handler(
 
     match db.get_execution_plans().await {
         Ok(plans) => {
+            // Preload workspace metadata for any linked plans
+            let workspace_ids: Vec<String> = plans
+                .iter()
+                .filter_map(|p| p.workspace_id.clone())
+                .collect();
+
+            let workspace_map: std::collections::HashMap<String, (String, String)> =
+                if workspace_ids.is_empty() {
+                    std::collections::HashMap::new()
+                } else {
+                    match sqlx::query!(
+                        r#"
+                        SELECT workspace_id, name, path
+                        FROM workspace_registry
+                        WHERE workspace_id = ANY($1)
+                        "#,
+                        &workspace_ids
+                    )
+                    .fetch_all(&db.pool)
+                    .await
+                    {
+                        Ok(rows) => rows
+                            .into_iter()
+                            .filter_map(|row| {
+                                row.workspace_id
+                                    .map(|id| (id, (row.name.clone(), row.path.clone())))
+                            })
+                            .collect(),
+                        Err(e) => {
+                            error!("Failed to load workspace metadata: {}", e);
+                            std::collections::HashMap::new()
+                        }
+                    }
+                };
+
             let projects: Vec<JsonValue> = plans
                 .into_iter()
                 .map(|plan| {
+                    let workspace = plan
+                        .workspace_id
+                        .as_ref()
+                        .and_then(|id| workspace_map.get(id));
                     serde_json::json!({
                         "project_id": plan.id.to_string(),
                         "name": plan.title,
                         "overview": plan.overview,
                         "state": plan.state,
+                        "workspace_id": plan.workspace_id,
+                        "workspace_name": workspace.map(|w| w.0.clone()),
+                        "workspace_path": workspace.map(|w| w.1.clone()),
                         "created_at": plan.created_at.to_rfc3339(),
                         "updated_at": plan.updated_at.to_rfc3339(),
                         "completed_at": plan.completed_at.map(|d| d.to_rfc3339()),
@@ -6156,24 +6425,50 @@ async fn get_project_handler(
     let project_uuid = Uuid::parse_str(&project_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     match db.get_execution_plan(project_uuid).await {
-        Ok(Some(plan)) => Ok(Json(serde_json::json!({
-            "project_id": plan.id.to_string(),
-            "name": plan.title,
-            "overview": plan.overview,
-            "state": plan.state,
-            "working_spec_id": plan.working_spec_id,
-            "milestones": plan.milestones,
-            "dependency_graph": plan.dependency_graph,
-            "change_budget": plan.change_budget,
-            "quality_gates": plan.quality_gates,
-            "evidence_requirements": plan.evidence_requirements,
-            "active_waivers": plan.active_waivers,
-            "metadata": plan.metadata,
-            "created_at": plan.created_at.to_rfc3339(),
-            "updated_at": plan.updated_at.to_rfc3339(),
-            "approved_at": plan.approved_at.map(|d| d.to_rfc3339()),
-            "completed_at": plan.completed_at.map(|d| d.to_rfc3339()),
-        }))),
+        Ok(Some(plan)) => {
+            let (workspace_name, workspace_path) = if let Some(ref wid) = plan.workspace_id {
+                match sqlx::query!(
+                    r#"
+                    SELECT name, path FROM workspace_registry WHERE workspace_id = $1
+                    "#,
+                    wid
+                )
+                .fetch_optional(&db.pool)
+                .await
+                {
+                    Ok(Some(row)) => (Some(row.name), Some(row.path)),
+                    Ok(None) => (None, None),
+                    Err(e) => {
+                        error!("Failed to load workspace for project {}: {}", project_id, e);
+                        (None, None)
+                    }
+                }
+            } else {
+                (None, None)
+            };
+
+            Ok(Json(serde_json::json!({
+                "project_id": plan.id.to_string(),
+                "name": plan.title,
+                "overview": plan.overview,
+                "state": plan.state,
+                "working_spec_id": plan.working_spec_id,
+                "workspace_id": plan.workspace_id,
+                "workspace_name": workspace_name,
+                "workspace_path": workspace_path,
+                "milestones": plan.milestones,
+                "dependency_graph": plan.dependency_graph,
+                "change_budget": plan.change_budget,
+                "quality_gates": plan.quality_gates,
+                "evidence_requirements": plan.evidence_requirements,
+                "active_waivers": plan.active_waivers,
+                "metadata": plan.metadata,
+                "created_at": plan.created_at.to_rfc3339(),
+                "updated_at": plan.updated_at.to_rfc3339(),
+                "approved_at": plan.approved_at.map(|d| d.to_rfc3339()),
+                "completed_at": plan.completed_at.map(|d| d.to_rfc3339()),
+            })))
+        },
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
             error!("Failed to get project: {}", e);
@@ -7928,6 +8223,14 @@ struct LoginRequest {
     password: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct RegisterRequest {
+    username: String,
+    email: String,
+    password: String,
+    name: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct LoginResponse {
     token: String,
@@ -8038,6 +8341,59 @@ fn hash_token(token: &str) -> String {
 }
 
 // Password hashing and token generation now handled by AuthService in AppState
+
+async fn register_handler(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(register_req): Json<RegisterRequest>,
+) -> Result<Json<UserResponse>, StatusCode> {
+    let db = state
+        .db_client
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Check if username already exists
+    if let Ok(Some(_)) = db.get_user_by_username(&register_req.username).await {
+        warn!("Registration attempt with existing username: {}", register_req.username);
+        return Err(StatusCode::CONFLICT);
+    }
+
+    // Hash password using AuthService
+    let password_hash = state
+        .auth_service
+        .hash_password(&register_req.password)
+        .map_err(|e| {
+            error!("Password hashing error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Create user
+    let create_user = data_infrastructure::database_operations::CreateUser {
+        username: register_req.username.clone(),
+        password_hash,
+        name: register_req.name,
+        roles: vec!["user".to_string()],
+    };
+
+    match db.create_user(create_user).await {
+        Ok(user) => {
+            info!("User registered: {}", user.id);
+
+            Ok(Json(UserResponse {
+                id: user.id.to_string(),
+                username: user.username,
+                name: user.name,
+                roles: user.roles,
+                is_active: user.is_active,
+                last_login: None,
+            }))
+        }
+        Err(e) => {
+            error!("Failed to create user: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
 
 async fn login_handler(
     State(state): State<AppState>,

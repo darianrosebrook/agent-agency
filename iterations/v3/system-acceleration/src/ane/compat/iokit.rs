@@ -814,7 +814,6 @@ pub struct ANEComputeStats {
     pub is_active: bool,
 }
 
-/// TODO: Document stub implementation for non-Apple Silicon platforms
 ///       This is an intentional stub when running on non-Apple Silicon platforms.
 ///       ANE functionality is not available on these platforms. Consider adding platform-specific alternatives.
 ///

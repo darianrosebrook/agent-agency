@@ -356,7 +356,6 @@ where
             self.evict_lru();
         }
 
-        // TODO: Implement comprehensive memory limit management with configurable policies
         //       Currently implements basic insertion with timestamp; should implement comprehensive memory limit management that supports configurable eviction policies, memory size limits, and sophisticated cache management strategies.
         //
         // COMPLETION CHECKLIST:

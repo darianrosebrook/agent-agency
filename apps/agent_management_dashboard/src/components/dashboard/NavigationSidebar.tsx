@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useProjectStore } from "../../lib/stores";
 import type { ProjectListItem } from "../../lib/api/projects";
+import { useProjectStore } from "../../lib/stores";
 import {
   Tooltip,
   TooltipContent,
@@ -78,9 +78,12 @@ export function Sidebar() {
         .map((p) => ({
           project_id: p.id,
           name: p.name,
-          state: (p as any).status || (p as any).state || 'active',
-          updated_at: p.lastAccessed?.toISOString() || p.createdAt?.toISOString() || new Date().toISOString(),
-          created_at: p.createdAt?.toISOString() || new Date().toISOString(),
+          state: p.status ?? p.state ?? "active",
+          updated_at:
+            p.lastAccessed?.toISOString() ??
+            p.createdAt?.toISOString() ??
+            new Date().toISOString(),
+          created_at: p.createdAt?.toISOString() ?? new Date().toISOString(),
         }))
         .sort((a, b) => {
           const aTime = new Date(a.updated_at).getTime();
@@ -182,6 +185,41 @@ export function Sidebar() {
               isCollapsed ? styles.quickLinksCollapsed : styles.quickLinks
             }
           >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/notifications"
+                  className={cn(
+                    styles.quickLink,
+                    isCollapsed
+                      ? styles.quickLinkCollapsed
+                      : styles.quickLinkExpanded,
+                    isActive("/notifications")
+                      ? styles.navLinkActive
+                      : styles.navLinkInactive
+                  )}
+                >
+                  <div className={styles.iconContainer}>
+                    <Bell className={styles.icon} />
+                    {unreadCount > 0 && (
+                      <span className={styles.unreadBadge}>
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {!isCollapsed && (
+                    <span className={styles.navLinkText}>Notifications</span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>
+                    Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
@@ -396,41 +434,6 @@ export function Sidebar() {
               {isCollapsed && (
                 <TooltipContent side="right">
                   <p>Testing</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  to="/notifications"
-                  className={cn(
-                    styles.navLink,
-                    isCollapsed
-                      ? styles.navLinkCollapsed
-                      : styles.navLinkExpanded,
-                    isActive("/notifications")
-                      ? styles.navLinkActive
-                      : styles.navLinkInactive
-                  )}
-                >
-                  <div className={styles.iconContainer}>
-                    <Bell className={styles.icon} />
-                    {unreadCount > 0 && (
-                      <span className={styles.unreadBadge}>
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  {!isCollapsed && (
-                    <span className={styles.navLinkText}>Notifications</span>
-                  )}
-                </Link>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>
-                    Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
-                  </p>
                 </TooltipContent>
               )}
             </Tooltip>

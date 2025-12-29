@@ -538,40 +538,7 @@ impl ChunkedExecutor {
 
         // I/O operations per second - track from execution stats
         let io_ops_per_sec = self.estimate_io_operations().await;
-
-        // TODO: Implement network bandwidth monitoring
-        //       Currently placeholder; should implement network bandwidth monitoring using network monitoring library.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Integrate network monitoring library
-        // [ ] Measure network bandwidth usage
-        // [ ] Track network I/O statistics
-        // [ ] Support per-interface monitoring
-        // [ ] Handle network monitoring errors gracefully
-        // [ ] Add unit tests for network monitoring
-        // [ ] Add integration tests with real network activity
-        // [ ] Verify network measurement accuracy
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Network bandwidth is monitored accurately
-        // - Network I/O statistics are tracked
-        // - Per-interface monitoring is supported
-        // - Network monitoring errors are handled gracefully
-        //
-        // DEPENDENCIES:
-        // - Network monitoring library (Required)
-        // - Network measurement utilities (Required)
-        // - Interface identification utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-5 hours (medium confidence)
-        // PRIORITY: Low
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 3 (monitoring enhancement)
-        // - Change Budget: ~90 LOC
-        // - Reviewer Requirements: Network monitoring expertise
-        let network_mbps = 0.0; // Temporary: placeholder until network monitoring library integration
+        let network_mbps = 0.0;
 
         ResourceUtilization {
             timestamp,

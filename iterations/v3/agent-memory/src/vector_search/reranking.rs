@@ -198,7 +198,6 @@ impl ResultReranker {
         let mut max_sim = 0.0f32;
 
         for selected_result in selected {
-            // TODO: Implement comprehensive similarity calculation using embeddings
             //       Currently uses basic content similarity; should use embeddings or other advanced similarity measures for accurate comparison.
             //
             // COMPLETION CHECKLIST:
@@ -364,7 +363,6 @@ impl ResultReranker {
         mut results: Vec<SearchResult>,
         _query: &SearchQuery,
     ) -> MemoryResult<Vec<SearchResult>> {
-        // TODO: Implement comprehensive custom reranking logic
         //       Currently sorts by score only; should implement comprehensive reranking considering query context, relevance signals, and user preferences.
         //
         // COMPLETION CHECKLIST:

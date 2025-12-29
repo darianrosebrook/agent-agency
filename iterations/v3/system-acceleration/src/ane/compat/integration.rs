@@ -648,7 +648,6 @@ pub mod agent_integration {
 
         /// Execute judge inference with acceleration
         pub async fn execute_judge_inference(&self, input: Vec<f32>) -> Result<Vec<f32>> {
-            // TODO: Implement comprehensive judge inference integration with actual models
             //       Currently simulates accelerated inference; should implement comprehensive integration that uses actual judge models with proper acceleration for real inference execution.
             //
             // COMPLETION CHECKLIST:

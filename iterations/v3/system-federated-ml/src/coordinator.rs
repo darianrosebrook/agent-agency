@@ -12,6 +12,7 @@ use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, info, error};
 
 /// Federation coordinator that manages the entire federated learning process
+#[allow(dead_code)]
 pub struct FederationCoordinator {
     config: FederationConfig,
     participants: Arc<RwLock<HashMap<String, FederationParticipant>>>,
@@ -43,6 +44,7 @@ pub struct FederationConfig {
 
 /// Aggregation round managed by the coordinator
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 struct AggregationRound {
     round_id: u64,
     start_time: chrono::DateTime<chrono::Utc>,
@@ -54,6 +56,7 @@ struct AggregationRound {
 
 /// Status of an aggregation round
 #[derive(Debug, Clone, JsonSchema)]
+#[allow(dead_code)]
 enum RoundStatus {
     Preparing,
     Collecting,

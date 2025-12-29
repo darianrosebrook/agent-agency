@@ -43,6 +43,8 @@ pub struct IterationRecord {
     pub refinement_actions: Vec<RefinementActionRecord>,
     /// Quality improvement from previous iteration
     pub quality_delta: Option<f64>,
+    /// Debate result if multiple solutions were debated
+    pub debate_result: Option<crate::council::DebateResult>,
 }
 
 /// Pre-execution review result
@@ -157,6 +159,16 @@ pub trait ProgressTracker: Send + Sync {
 #[async_trait::async_trait]
 pub trait StatePersistence: Send + Sync {
     async fn save_execution_state(&self, task_id: Uuid) -> Result<()>;
+}
+
+/// Trait for multi-solution debate coordination
+#[async_trait::async_trait]
+pub trait DebateCoordinator: Send + Sync {
+    async fn coordinate_solution_debate(
+        &self,
+        solutions: Vec<crate::council::WorkerSolution>,
+        review_context: crate::judge_backup::types::ReviewContext,
+    ) -> Result<crate::council::DebateResult>;
 }
 
 /// Configuration for refinement loop
@@ -550,6 +562,7 @@ impl RefinementLoopCoordinator {
                 pre_execution_review: None,
                 refinement_actions: vec![],
                 quality_delta,
+                debate_result: None, // Will be populated if debate occurred
             };
 
             // Update execution state with iteration data
@@ -758,5 +771,123 @@ impl RefinementLoopCoordinator {
             quality_scores: refinement_state.quality_scores.clone(),
             iteration_history: refinement_state.iteration_history.clone(),
         })
+    }
+
+    /// Handle debate between multiple competing solutions from different workers
+    pub async fn debate_multiple_solutions(
+        &self,
+        solutions: Vec<crate::council::WorkerSolution>,
+        task_descriptor: &TaskDescriptor,
+        debate_coordinator: Arc<dyn DebateCoordinator>,
+    ) -> Result<crate::council::DebateResult> {
+        if solutions.len() <= 1 {
+            return Err(anyhow::anyhow!(
+                "Debate requires multiple solutions, got {}",
+                solutions.len()
+            ));
+        }
+
+        tracing::info!(
+            "Conducting debate between {} competing solutions for task {}",
+            solutions.len(),
+            task_descriptor.task_id
+        );
+
+        // Create a minimal working spec for debate context
+        use agent_agency_contracts::*;
+        let risk_tier_value = match task_descriptor.risk_tier.clone().unwrap_or(task_request::RiskTier::Tier2) {
+            task_request::RiskTier::Tier1 => 1,
+            task_request::RiskTier::Tier2 => 2,
+            task_request::RiskTier::Tier3 => 3,
+        };
+
+        let working_spec = WorkingSpec {
+            version: "1.0".to_string(),
+            id: format!("debate_{}", task_descriptor.task_id),
+            title: "Debate Working Spec".to_string(),
+            description: task_descriptor.description.clone(),
+            goals: vec!["Resolve solution conflicts through debate".to_string()],
+            risk_tier: risk_tier_value,
+            constraints: working_spec::WorkingSpecConstraints {
+                max_duration_minutes: None,
+                max_iterations: None,
+                budget_limits: None,
+                scope_restrictions: None,
+            },
+            acceptance_criteria: vec![],
+            test_plan: TestPlan {
+                unit_tests: vec![],
+                integration_tests: vec![],
+                e2e_scenarios: vec![],
+                coverage_targets: None,
+            },
+            rollback_plan: RollbackPlan::default(),
+            context: WorkingSpecContext {
+                workspace_root: ".".to_string(),
+                git_branch: "main".to_string(),
+                recent_changes: vec![],
+                dependencies: std::collections::HashMap::new(),
+                environment: task_request::Environment::Development,
+            },
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![],
+            metadata: None,
+            milestones: vec![],
+            change_budget: task_descriptor.change_budget.clone(),
+            file_changes: vec![],
+            coverage_targets: None,
+            overview: "Debate coordination working spec".to_string(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        // Create review context for debate
+        let review_context = crate::judge_backup::types::ReviewContext {
+            session_id: format!("debate_{}", task_descriptor.task_id),
+            working_spec: serde_json::to_string(&working_spec)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize working spec: {}", e))?,
+            risk_tier: working_spec.risk_tier as u8,
+            previous_reviews: vec![],
+            constraints: std::collections::HashMap::new(),
+        };
+
+        // Conduct multi-turn debate
+        let debate_result = debate_coordinator
+            .coordinate_solution_debate(solutions, review_context)
+            .await?;
+
+        tracing::info!(
+            "Debate completed: winner={} (score={:.3}, confidence={:.2}) after {} rounds",
+            debate_result.winner_solution_id,
+            debate_result.winning_score,
+            debate_result.confidence,
+            debate_result.rounds.len()
+        );
+
+        Ok(debate_result)
+    }
+
+    /// Check if multiple solutions warrant a debate based on conflict analysis
+    pub fn should_debate_solutions(&self, solutions: &[crate::council::WorkerSolution]) -> bool {
+        if solutions.len() < 2 {
+            return false;
+        }
+
+        // Debate if solutions have significantly different approaches
+        // This is a simple heuristic - could be enhanced with more sophisticated conflict detection
+        let titles: Vec<&str> = solutions
+            .iter()
+            .map(|s| s.working_spec.title.as_str())
+            .collect();
+
+        // Check for different implementation approaches in titles
+        let has_different_approaches = titles
+            .windows(2)
+            .any(|window| !window[0].to_lowercase().contains(&window[1].to_lowercase())
+                      && !window[1].to_lowercase().contains(&window[0].to_lowercase()));
+
+        has_different_approaches
     }
 }

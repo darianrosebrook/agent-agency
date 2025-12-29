@@ -111,6 +111,35 @@ impl SkillLevel {
     }
 }
 
+impl std::fmt::Display for SkillLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SkillLevel::Beginner => write!(f, "beginner"),
+            SkillLevel::Novice => write!(f, "novice"),
+            SkillLevel::Intermediate => write!(f, "intermediate"),
+            SkillLevel::Advanced => write!(f, "advanced"),
+            SkillLevel::Expert => write!(f, "expert"),
+        }
+    }
+}
+
+impl std::fmt::Display for SkillDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SkillDomain::CodeGeneration => write!(f, "code_generation"),
+            SkillDomain::Testing => write!(f, "testing"),
+            SkillDomain::Documentation => write!(f, "documentation"),
+            SkillDomain::Refactoring => write!(f, "refactoring"),
+            SkillDomain::BugFixing => write!(f, "bug_fixing"),
+            SkillDomain::Security => write!(f, "security"),
+            SkillDomain::Performance => write!(f, "performance"),
+            SkillDomain::Architecture => write!(f, "architecture"),
+            SkillDomain::DataProcessing => write!(f, "data_processing"),
+            SkillDomain::Infrastructure => write!(f, "infrastructure"),
+        }
+    }
+}
+
 /// Agent skill profile
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSkillProfile {
@@ -289,6 +318,7 @@ pub struct DifficultyAdjustment {
 }
 
 /// Curriculum Learning Engine
+#[derive(Clone)]
 pub struct CurriculumLearningEngine {
     /// Agent skill profiles
     skill_profiles: Arc<RwLock<HashMap<Uuid, AgentSkillProfile>>>,
@@ -800,6 +830,264 @@ impl CurriculumLearningEngine {
             skill_level_changes: level_changes,
             skills_by_domain: profile.skills.clone(),
         })
+    }
+
+    /// Get agent skill level for a specific domain (returns numeric level 0-4)
+    pub async fn get_agent_skill_level(
+        &self,
+        agent_id: Uuid,
+        domain: &str,
+    ) -> Result<u32> {
+        // Convert domain string to SkillDomain
+        let skill_domain = match domain {
+            "code_generation" => SkillDomain::CodeGeneration,
+            "testing" => SkillDomain::Testing,
+            "documentation" => SkillDomain::Documentation,
+            "refactoring" => SkillDomain::Refactoring,
+            "bug_fixing" => SkillDomain::BugFixing,
+            "security" => SkillDomain::Security,
+            "performance" => SkillDomain::Performance,
+            "architecture" => SkillDomain::Architecture,
+            "data_processing" => SkillDomain::DataProcessing,
+            "infrastructure" => SkillDomain::Infrastructure,
+            // Handle additional common task type strings
+            "analysis" | "design" | "general" => SkillDomain::CodeGeneration,
+            _ => SkillDomain::CodeGeneration, // Default
+        };
+
+        // Get from in-memory cache first
+        let profiles = self.skill_profiles.read().await;
+        if let Some(profile) = profiles.get(&agent_id) {
+            let level = profile.get_skill_level(&skill_domain);
+            // Convert SkillLevel to numeric (0-4 scale)
+            let numeric_level = match level {
+                SkillLevel::Beginner => 0,
+                SkillLevel::Novice => 1,
+                SkillLevel::Intermediate => 2,
+                SkillLevel::Advanced => 3,
+                SkillLevel::Expert => 4,
+            };
+            return Ok(numeric_level);
+        }
+        drop(profiles);
+
+        // Fall back to database
+        let skill_level_str = self.db_ops.get_agent_skill_level(agent_id, domain).await?;
+        let level = match skill_level_str.as_str() {
+            "beginner" => 0,
+            "novice" => 1,
+            "intermediate" => 2,
+            "advanced" => 3,
+            "expert" => 4,
+            _ => 0, // Default to beginner
+        };
+
+        Ok(level)
+    }
+
+    /// Record learning history for an agent's task execution
+    pub async fn record_learning_history(
+        &self,
+        agent_id: Uuid,
+        task_type: &str,
+        success: bool,
+        quality_score: f64,
+        execution_time_ms: Option<u64>,
+        timestamp: DateTime<Utc>,
+    ) -> Result<()> {
+        // Convert task_type string to SkillDomain
+        let domain = match task_type {
+            "code_generation" => SkillDomain::CodeGeneration,
+            "testing" => SkillDomain::Testing,
+            "documentation" => SkillDomain::Documentation,
+            "refactoring" => SkillDomain::Refactoring,
+            "bug_fixing" => SkillDomain::BugFixing,
+            "security" => SkillDomain::Security,
+            "performance" => SkillDomain::Performance,
+            "architecture" => SkillDomain::Architecture,
+            "data_processing" => SkillDomain::DataProcessing,
+            "infrastructure" => SkillDomain::Infrastructure,
+            // Handle additional common task type strings
+            "analysis" | "design" | "general" => SkillDomain::CodeGeneration,
+            _ => SkillDomain::CodeGeneration,
+        };
+
+        // Get current skill level
+        let skill_level_before = self.get_skill_level_from_db(agent_id, &domain).await?;
+
+        // Generate task ID for this learning record
+        let task_id = Uuid::new_v4();
+
+        // Create learning record for in-memory storage
+        let record = LearningRecord {
+            agent_id,
+            task_id,
+            domain: domain.clone(),
+            complexity: TaskComplexity::Moderate, // Default complexity
+            adjusted_complexity: None,
+            skill_level_before,
+            skill_level_after: None,
+            success,
+            quality_score,
+            timestamp,
+        };
+
+        // Store in memory
+        let mut history = self.learning_history.write().await;
+        history.push(record);
+        drop(history);
+
+        // Persist to database
+        let db_record = data_infrastructure::CreateLearningRecord {
+            agent_id,
+            task_id: Some(task_id),
+            domain: domain.to_string(),
+            complexity: TaskComplexity::Moderate.to_string(),
+            adjusted_complexity: None,
+            skill_level_before: skill_level_before.to_string(),
+            skill_level_after: None,
+            success,
+            quality_score,
+            execution_metadata: Some(serde_json::json!({
+                "execution_time_ms": execution_time_ms,
+                "recorded_via": "learning_history"
+            })),
+        };
+
+        self.db_ops.record_learning_outcome(db_record).await?;
+
+        // Update skill profile if learning is enabled
+        if self.config.enabled {
+            let new_level = self
+                .calculate_new_skill_level(agent_id, &domain, skill_level_before)
+                .await;
+
+            if new_level != skill_level_before {
+                let mut profiles = self.skill_profiles.write().await;
+                let profile = profiles
+                    .entry(agent_id)
+                    .or_insert_with(|| AgentSkillProfile::new(agent_id));
+                profile.update_skill(domain.clone(), new_level);
+                drop(profiles);
+
+                info!(
+                    "Agent {} advanced in {:?} from {:?} to {:?}",
+                    agent_id, domain, skill_level_before, new_level
+                );
+
+                // Update skill level in database
+                self.update_skill_level_in_db(agent_id, &domain, new_level).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Record milestone completion for curriculum tracking
+    pub async fn record_milestone_completion(
+        &self,
+        agent_id: Uuid,
+        milestone_id: &str,
+        quality_score: f64,
+        completion_time_ms: Option<u64>,
+        _timestamp: DateTime<Utc>,
+    ) -> Result<data_infrastructure::MilestoneCompletionResult> {
+        // Create completion record
+        let completion = data_infrastructure::CreateMilestoneCompletion {
+            agent_id,
+            milestone_id: milestone_id.to_string(),
+            domain: "general".to_string(), // Could be extracted from milestone metadata
+            required_level: "intermediate".to_string(),
+            target_level: "advanced".to_string(),
+            complexity: "moderate".to_string(),
+            success: quality_score >= 0.8,
+            quality_score,
+            completion_time_ms: completion_time_ms.map(|ms| ms as i32),
+            attempts: 1,
+            prerequisites_met: true,
+            metadata: Some(serde_json::json!({
+                "recorded_via": "curriculum_engine"
+            })),
+        };
+
+        // Delegate to database operations
+        self.db_ops.record_milestone_completion(completion).await
+    }
+
+    /// Get all skill levels for an agent across all domains
+    pub async fn get_all_skill_levels(
+        &self,
+        agent_id: Uuid,
+    ) -> Result<HashMap<String, u32>> {
+        let mut levels = HashMap::new();
+
+        // Get from in-memory cache first
+        let profiles = self.skill_profiles.read().await;
+        if let Some(profile) = profiles.get(&agent_id) {
+            for domain in [
+                SkillDomain::CodeGeneration,
+                SkillDomain::Testing,
+                SkillDomain::Documentation,
+                SkillDomain::Refactoring,
+                SkillDomain::BugFixing,
+                SkillDomain::Security,
+                SkillDomain::Performance,
+                SkillDomain::Architecture,
+                SkillDomain::DataProcessing,
+                SkillDomain::Infrastructure,
+            ] {
+                let level = profile.get_skill_level(&domain);
+                let numeric_level = match level {
+                    SkillLevel::Beginner => 0,
+                    SkillLevel::Novice => 1,
+                    SkillLevel::Intermediate => 2,
+                    SkillLevel::Advanced => 3,
+                    SkillLevel::Expert => 4,
+                };
+                levels.insert(domain.to_string(), numeric_level);
+            }
+            return Ok(levels);
+        }
+        drop(profiles);
+
+        // Fall back to database
+        if let Some(profile) = self.db_ops.get_curriculum_profile(agent_id).await? {
+            if let serde_json::Value::Object(skills) = profile.skills {
+                for (domain, level_value) in skills {
+                    if let Some(level_str) = level_value.as_str() {
+                        let level = match level_str {
+                            "beginner" => 0,
+                            "novice" => 1,
+                            "intermediate" => 2,
+                            "advanced" => 3,
+                            "expert" => 4,
+                            _ => 0,
+                        };
+                        levels.insert(domain, level);
+                    }
+                }
+            }
+        }
+
+        // If no profile exists, return default beginner levels for all domains
+        if levels.is_empty() {
+            for domain in [
+                SkillDomain::CodeGeneration,
+                SkillDomain::Testing,
+                SkillDomain::Documentation,
+                SkillDomain::Refactoring,
+                SkillDomain::BugFixing,
+                SkillDomain::Security,
+                SkillDomain::Performance,
+                SkillDomain::Architecture,
+                SkillDomain::DataProcessing,
+                SkillDomain::Infrastructure,
+            ] {
+                levels.insert(domain.to_string(), 0); // Beginner
+            }
+        }
+
+        Ok(levels)
     }
 }
 

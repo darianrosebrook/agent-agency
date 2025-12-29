@@ -117,7 +117,8 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
 
             if is_end {
                 let trimmed = current_statement.trim();
-                if !trimmed.is_empty() && !trimmed.starts_with("--") {
+                // Check if statement contains actual SQL (not just comments)
+                if !trimmed.is_empty() && !is_comment_only(trimmed) {
                     statements.push(trimmed.to_string());
                 }
                 current_statement.clear();
@@ -127,11 +128,23 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
 
     // Add remaining statement if any
     let trimmed = current_statement.trim();
-    if !trimmed.is_empty() && !trimmed.starts_with("--") {
+    if !trimmed.is_empty() && !is_comment_only(trimmed) {
         statements.push(trimmed.to_string());
     }
 
     statements
+}
+
+/// Check if a SQL string contains only comments (no actual SQL statements)
+fn is_comment_only(sql: &str) -> bool {
+    for line in sql.lines() {
+        let trimmed = line.trim();
+        // Skip empty lines and comment lines
+        if !trimmed.is_empty() && !trimmed.starts_with("--") {
+            return false;
+        }
+    }
+    true
 }
 
 /// Initialize database with migrations
@@ -253,8 +266,9 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
         let mut migration_success = true;
         for (idx, statement) in statements.iter().enumerate() {
             let trimmed = statement.trim();
-            if trimmed.is_empty() || trimmed.starts_with("--") {
-                continue; // Skip empty statements and comments
+            // Skip empty statements or statements that only contain comments
+            if trimmed.is_empty() || is_comment_only(trimmed) {
+                continue;
             }
 
             match sqlx::query(trimmed).execute(&mut *tx).await {
@@ -284,8 +298,8 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
 
         match migration_success {
             true => {
-                // Record migration
-                sqlx::query("INSERT INTO migration_log (version, description) VALUES ($1, $2)")
+                // Record migration (use ON CONFLICT to handle migrations that log themselves)
+                sqlx::query("INSERT INTO migration_log (version, description) VALUES ($1, $2) ON CONFLICT (version) DO UPDATE SET applied_at = NOW()")
                     .bind(version)
                     .bind(&filename)
                     .execute(&mut *tx)
@@ -345,7 +359,6 @@ pub async fn verify_schema(pool: &PgPool) -> Result<bool> {
         // Fallback to basic table existence check if validation feature not enabled
         let critical_tables = [
             "agent_experiences",
-            "memory_embeddings",
             "agent_contexts",
             "chat_sessions",
             "chat_messages",

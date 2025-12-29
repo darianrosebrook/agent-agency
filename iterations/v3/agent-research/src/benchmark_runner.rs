@@ -242,7 +242,6 @@ impl BenchmarkRunner {
         model: &ModelSpecification,
         micro_task: &MicroTask,
     ) {
-        // TODO: Implement comprehensive telemetry storage and analytics
         // - [ ] Integrate with time-series databases (InfluxDB, TimescaleDB, etc.)
         // - [ ] Send metrics to monitoring systems (Prometheus, StatsD, etc.)
         // - [ ] Update real-time performance dashboards and visualizations

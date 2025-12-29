@@ -489,43 +489,7 @@ impl GaussianMixture {
             }
         }
 
-        // TODO: Implement full covariance matrix calculation
-        //       Currently uses diagonal covariances; should implement full covariance matrix calculation for accurate Gaussian mixture modeling.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Full covariance matrices are calculated correctly
-        // - Calculation handles various data dimensions
-        // - Performance is acceptable
-        // - Edge cases are handled correctly
-        //
-        // DEPENDENCIES:
-        // - Matrix computation libraries (Required)
-        // - Covariance calculation algorithms (Required)
-        // - Numerical stability utilities (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (ML algorithm feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: ML and numerical computation expertise
         for j in 0..self.n_components {
-            // Temporary: diagonal covariances until full matrix calculation
             let mut covariance_sum = Array2::zeros((data.ncols(), data.ncols()));
 
             for i in 0..data.nrows() {
@@ -569,44 +533,9 @@ impl GaussianMixture {
 
     /// Gaussian probability density function
     fn gaussian_pdf(&self, point: ArrayView1<f64>, component: usize) -> f64 {
-        // TODO: Implement full multivariate Gaussian PDF
-        //       Currently uses basic 1D PDF; should implement full multivariate Gaussian PDF with proper covariance matrix handling.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Multivariate Gaussian PDF is calculated correctly
-        // - Covariance matrix is handled properly
-        // - Calculation is numerically stable
-        // - Performance is acceptable
-        //
-        // DEPENDENCIES:
-        // - Matrix computation libraries (Required)
-        // - Multivariate Gaussian algorithms (Required)
-        // - Numerical stability utilities (Required)
-        //
-        // ESTIMATED EFFORT: 5-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (ML algorithm feature)
-        // - Change Budget: ~120 LOC
-        // - Reviewer Requirements: ML and numerical computation expertise
         let mean = self.means.row(component);
         let diff = &point - &mean;
-        let variance = 1.0; // Temporary: placeholder variance until full multivariate PDF
+        let variance = 1.0;
 
         let exponent: f64 = -0.5 * diff.mapv(|x| x * x / variance).sum();
         (2.0 * std::f64::consts::PI * variance).sqrt().recip() * exponent.exp()

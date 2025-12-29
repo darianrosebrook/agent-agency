@@ -103,11 +103,10 @@ impl JavaScriptAnalyzer {
         for (line_num, line) in lines.iter().enumerate() {
             let line_number = (line_num + 1) as u32;
 
-            // Check for TODO comments (warnings)
             if line.contains("TODO") || line.contains("FIXME") {
                 warnings.push(LanguageWarning {
                     rule_id: "TODO_COMMENT".to_string(),
-                    message: "TODO or FIXME comment found".to_string(),
+                    message: format!("Found TODO/FIXME comment: {}", line.trim()),
                     location: SourceLocation {
                         file_path: file_path.to_string(),
                         line: line_number,
@@ -115,7 +114,7 @@ impl JavaScriptAnalyzer {
                         end_line: Some(line_number),
                         end_column: None,
                     },
-                    suggestion: Some("Remove TODO/FIXME comments before production".to_string()),
+                    suggestion: Some("Address or remove the TODO/FIXME comment".to_string()),
                 });
             }
 

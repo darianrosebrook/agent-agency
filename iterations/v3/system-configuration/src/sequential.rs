@@ -164,12 +164,6 @@ where
     }
 
     fn metrics(&self) -> PipelineResult<serde_json::Value> {
-        // TODO: Implement proper async metrics access with acceptance criteria:
-        // - [ ] Remove block_on usage and implement proper async trait methods
-        // - [ ] Add async bounds and proper async/await handling throughout pipeline
-        // - [ ] Implement concurrent metrics collection and aggregation
-        // - [ ] Add timeout handling for metrics collection operations
-        // - [ ] Ensure thread safety for concurrent metrics access
         futures::executor::block_on(async { self.metrics.to_json().await })
             .map_err(|e| PipelineError::Metrics(e.to_string()))
     }

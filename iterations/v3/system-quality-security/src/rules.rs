@@ -273,7 +273,7 @@ impl QualityRule for PlaceholderRule {
     }
 
     fn description(&self) -> &str {
-        "Detects TODO, PLACEHOLDER, and MOCK comments"
+        "Detects TODO, PLACEHOLDER, MOCK, FIXME, and HACK comments in code"
     }
 
     fn check_file(
@@ -306,7 +306,10 @@ impl QualityRule for PlaceholderRule {
                     file: file_path.to_string(),
                     line: Some(line_num + 1),
                     column: None,
-                    message: format!("Found placeholder comment: {}", line.trim()),
+                    message: format!(
+                        "Found placeholder comment: {}",
+                        line.trim()
+                    ),
                     suggestion: Some(
                         "Replace with actual implementation or remove if no longer needed"
                             .to_string(),

@@ -11,8 +11,9 @@ members = [
     "agent-orchestration",  # NEW: Unified orchestration and council decision-making system
     "agent-memory",  # NEW: Agent memory system with knowledge graphs and embeddings
     "agent-evaluation",  # NEW: Evaluation framework for iteration limits and quality detection
+    "engine-mps",  # Metal/MPS inference engine (active while CoreML toolchain is disabled)
     # "engine-coreml",  # CoreML inference engine implementation - temporarily disabled due to torch-sys version conflict
-    # "system-acceleration",  # Core ML and ANE acceleration - temporarily disabled due to torch-sys version conflict
+    "system-acceleration",  # Core ML / Metal acceleration (Metal/MPS active, CoreML re-enabled later)
     "system-resources",  # NEW: Unified resource management & production services (resource-manager + production)
     "system-resilience",  # NEW: Unified fault tolerance & recovery framework (resilience + recovery + workspace-state-manager + memory)
     "system-observability",  # NEW: Unified monitoring & telemetry services (system-health-monitor + observability + telemetry)

@@ -71,6 +71,7 @@ pub use orchestrator_service::{OrchestratorService, TaskExecutor};
 // Export database operations factory
 pub use database_operations::{
     create_database_audit_operations, create_database_operations, DatabaseOperations,
+    CreateLearningRecord, CreateCurriculumProfile, CreateMilestoneCompletion, MilestoneCompletionResult,
 };
 
 // Re-export sqlx Row type for convenience

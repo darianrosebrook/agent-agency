@@ -47,6 +47,7 @@ use crate::planning::plan_executor::{ExecutionConfig, PlanExecutor};
 use crate::planning::plan_types::ExecutionPlan;
 use crate::planning::factory::PlanningSystemFactory;
 use async_trait::async_trait;
+#[cfg(feature = "model-management")]
 use agent_model_management::deployment::DeploymentOrchestrator;
 
 /// Factory for creating UnifiedOrchestrator instances
@@ -433,19 +434,16 @@ impl UnifiedOrchestratorFactory {
             Arc::new(WorkerEvolutionEngine::new(db_ops.clone(), evolution_config));
 
         // Create curriculum learning engine
-        let curriculum_config = crate::planning::curriculum_learning::CurriculumConfig::default();
-        let curriculum_engine = Arc::new(
-            crate::planning::curriculum_learning::CurriculumLearningEngine::new(
-                db_ops.clone(),
-                curriculum_config,
-            )
-        );
+        // Note: CurriculumLearningEngine requires data_infrastructure::DatabaseOperations
+        // which is a different trait than our local planning::DatabaseOperations.
+        // For now, we create the reflexive learner without curriculum integration.
+        // The curriculum engine can be added when data_infrastructure is properly integrated.
+        let curriculum_engine: Option<Arc<crate::planning::curriculum_learning::CurriculumLearningEngine>> = None;
 
-        // Create reflexive learner with both evolution and curriculum engines
-        let reflexive_learner = Arc::new(ReflexiveLearner::with_both_engines(
+        // Create reflexive learner with evolution engine only (curriculum integration pending)
+        let reflexive_learner = Arc::new(ReflexiveLearner::with_evolution_engine(
             worker_assignment_strategy.clone(),
             evolution_engine,
-            (*curriculum_engine).clone(),
             LearningConfig::default(),
         ));
 
@@ -679,7 +677,8 @@ impl UnifiedOrchestratorFactory {
                 }
             };
 
-            let deployment_orchestrator = match DeploymentOrchestrator::new().await {
+            #[cfg(feature = "model-management")]
+            let deployment_orchestrator: Option<Arc<DeploymentOrchestrator>> = match DeploymentOrchestrator::new().await {
                 Ok(orchestrator) => {
                     info!("DeploymentOrchestrator created successfully");
                     Some(Arc::new(orchestrator))
@@ -722,7 +721,7 @@ impl UnifiedOrchestratorFactory {
                 worker_lifecycle_manager,
                 Some(worker_assignment_strategy),
                 Some(reflexive_learner),
-                curriculum_engine
+                curriculum_engine, // Already Option<Arc<...>>
                 #[cfg(feature = "memory")]
                 Some(memory_system),
                 #[cfg(not(feature = "memory"))]
@@ -733,6 +732,7 @@ impl UnifiedOrchestratorFactory {
                 None,                    // federated_learning - optional
                 #[cfg(feature = "runtime-optimization")]
                 arbiter_optimizer,
+                #[cfg(feature = "model-management")]
                 deployment_orchestrator,
             ))
         };

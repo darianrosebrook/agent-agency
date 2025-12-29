@@ -271,7 +271,6 @@ impl ToolExecutor {
             .and_then(|v| v.as_str())
             .unwrap_or("syntax");
 
-        // TODO: Implement comprehensive MCP code/output validation
         //       Currently simulates validation; should implement comprehensive validation that integrates with MCP validation service, validates code syntax and structure, performs static analysis and linting, and generates detailed validation issues with line numbers.
         //
         // COMPLETION CHECKLIST:

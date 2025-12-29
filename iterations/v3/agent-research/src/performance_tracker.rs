@@ -268,7 +268,6 @@ impl PerformanceTracker {
             .sum::<f64>()
             / performances.len() as f64;
 
-        // TODO: Implement sophisticated performance trend analysis
         // - [ ] Use statistical trend detection (linear regression, moving averages)
         // - [ ] Implement performance change point detection
         // - [ ] Support different trend types (improving, degrading, cyclical)

@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT record_milestone_completion(\n                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12\n            ) as completion_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "completion_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Float8",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9b6d6384cc29e89db6daac96bd98c1afad7c6154a9a8b0a9c273c97ec58a3be0"
+}

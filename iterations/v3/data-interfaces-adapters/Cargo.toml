@@ -53,7 +53,7 @@ agent-agency-contracts = { path = "../agent-agency-contracts" }
 
 # Implementation crates (these dependencies are OK in adapters)
 agent-workers = { path = "../agent-workers" }
-agent-orchestration = { path = "../agent-orchestration", default-features = false }  # Disable coreml by default to avoid Swift library issues
+agent-orchestration = { path = "../agent-orchestration", default-features = false, features = ["model-management"] }  # Disable coreml by default, enable model-management for type compatibility
 agent-research = { path = "../agent-research" }
 agent-memory = { path = "../agent-memory" }
 data-infrastructure = { path = "../data-infrastructure", features = ["orchestration"], default-features = false }  # Disable coreml by default

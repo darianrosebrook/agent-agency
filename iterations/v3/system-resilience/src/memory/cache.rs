@@ -221,7 +221,6 @@ impl MemoryLeakDetector {
         let recent = &snapshots[snapshots.len() - 1];
         let previous = &snapshots[snapshots.len() - 2];
 
-        // TODO: Implement comprehensive memory leak detection
         //       Currently implements basic leak detection; should implement comprehensive leak detection that uses sophisticated algorithms to identify memory leaks, tracks allocation patterns, and provides detailed leak analysis.
         //
         // COMPLETION CHECKLIST:

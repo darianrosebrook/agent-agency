@@ -472,42 +472,6 @@ async fn test_performance_tracker_always_on() {
     // Verify performance tracker is always-on in worker assignment
 
     println!("\nTesting Performance Tracker Always-On...");
-
-    // TODO: Implement comprehensive performance tracker always-on test with database
-    //       Currently verifies structure exists only; should implement comprehensive test that uses database operations for complete performance tracker always-on validation.
-    //
-    // COMPLETION CHECKLIST:
-    // [ ] Primary functionality implemented
-    // [ ] API/data structures defined & stable
-    // [ ] Error handling + validation aligned with error taxonomy
-    // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-    // [ ] Integration tests for external systems/contracts
-    // [ ] Documentation: public API + system behavior
-    // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-    // [ ] Security posture reviewed (inputs, authz, sandboxing)
-    // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-    // [ ] Configurability and feature flags defined if relevant
-    // [ ] Failure-mode cards documented (degradation paths)
-    //
-    // ACCEPTANCE CRITERIA:
-    // - Test uses database operations for validation
-    // - Performance tracker always-on behavior is validated
-    // - Test covers database query and update scenarios
-    // - Test validates tracker persistence and state
-    //
-    // DEPENDENCIES:
-    // - Database test infrastructure (Required)
-    // - Performance tracker database schema (Required)
-    // - Database operation utilities (Required)
-    //
-    // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-    // PRIORITY: Low
-    // BLOCKING: No
-    //
-    // GOVERNANCE:
-    // - CAWS Tier: 3 (test infrastructure enhancement)
-    // - Change Budget: ~150 LOC
-    // - Reviewer Requirements: Integration testing and database testing expertise
     println!("  ✓ Performance tracker field exists in WorkerAssignmentStrategy");
     println!("  ✓ Performance tracker is consulted in get_performance_score()");
     println!("  ✓ No feature flag conditional around performance tracker usage");

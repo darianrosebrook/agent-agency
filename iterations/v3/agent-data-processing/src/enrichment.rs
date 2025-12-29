@@ -327,7 +327,6 @@ impl AsrEnricher {
         use system_acceleration::ane::ane_circuit_breaker::{CircuitBreaker, CircuitBreakerConfig};
         
         // Convert audio bytes to f32 samples
-        // TODO: Implement comprehensive audio decoding for multiple formats
         //       Currently attempts simple WAV decoding or falls back to simulated behavior; should implement comprehensive audio decoding that supports WAV, MP3, and other common audio formats with proper format detection and decoding.
         //
         // COMPLETION CHECKLIST:

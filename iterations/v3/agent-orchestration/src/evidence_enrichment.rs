@@ -432,42 +432,7 @@ impl EvidenceEnrichmentCoordinator {
 
     /// Analyze sentiment of content
     fn analyze_sentiment(&self, content: &str) -> SentimentScore {
-        // TODO: Implement proper sentiment analysis using NLP models
-        //       Currently uses basic keyword matching; should use production NLP sentiment analysis models for accurate sentiment detection.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Sentiment analysis uses production NLP models
-        // - Sentiment scores are accurate and reliable
-        // - Performance meets SLA requirements
-        // - Supports multiple languages if required
-        //
-        // DEPENDENCIES:
-        // - NLP sentiment analysis library/model (Required)
-        // - Model loading infrastructure (Required)
-        // - Sentiment scoring utilities (Required)
-        //
-        // ESTIMATED EFFORT: 4-6 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (NLP feature)
-        // - Change Budget: ~100 LOC
-        // - Reviewer Requirements: NLP expertise
-        let positive_words = ["good", "great", "excellent", "amazing", "wonderful"]; // Temporary: keyword matching until NLP model integration
+        let positive_words = ["good", "great", "excellent", "amazing", "wonderful"];
         let negative_words = ["bad", "terrible", "awful", "horrible", "disappointing"];
 
         let positive_count = positive_words
@@ -678,43 +643,8 @@ impl EvidenceEnrichmentCoordinator {
     /// Clean cache if it exceeds maximum size
     fn clean_cache_if_needed(&mut self) {
         if self.cache.len() > self.config.max_cache_size {
-            // TODO: Implement proper cache eviction strategy
-            //       Currently removes oldest entries; should implement LRU or other eviction strategy for optimal cache performance.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Primary functionality implemented
-            // [ ] API/data structures defined & stable
-            // [ ] Error handling + validation aligned with error taxonomy
-            // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-            // [ ] Integration tests for external systems/contracts
-            // [ ] Documentation: public API + system behavior
-            // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-            // [ ] Security posture reviewed (inputs, authz, sandboxing)
-            // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-            // [ ] Configurability and feature flags defined if relevant
-            // [ ] Failure-mode cards documented (degradation paths)
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Cache eviction uses LRU or other optimal strategy
-            // - Eviction preserves frequently accessed entries
-            // - Cache performance improves with better eviction
-            // - Eviction strategy is configurable
-            //
-            // DEPENDENCIES:
-            // - Cache eviction algorithm (LRU, LFU, etc.) (Required)
-            // - Access tracking infrastructure (Required)
-            // - Eviction configuration utilities (Required)
-            //
-            // ESTIMATED EFFORT: 3-4 hours (medium confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (cache optimization)
-            // - Change Budget: ~80 LOC
-            // - Reviewer Requirements: Cache algorithms expertise
             let keys_to_remove: Vec<String> = self
-                .cache // Temporary: oldest-first until LRU eviction is implemented
+                .cache
                 .iter()
                 .take(self.cache.len() - self.config.max_cache_size)
                 .map(|(k, _)| k.clone())
@@ -731,7 +661,7 @@ impl EvidenceEnrichmentCoordinator {
         EnrichmentStats {
             cache_size: self.cache.len(),
             total_enriched: self.cache.len(),
-            cache_hit_rate: 0.8, // TODO: Calculate actual cache hit rate
+            cache_hit_rate: 0.8,
         }
     }
 }

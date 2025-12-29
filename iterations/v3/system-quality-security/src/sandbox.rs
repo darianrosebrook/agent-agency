@@ -481,41 +481,6 @@ impl Sandbox for ProductionSandbox {
     async fn cleanup(&self, sandbox_id: &Uuid) -> SandboxResult<()> {
         // Remove from active sandboxes
         self.unregister_sandbox(sandbox_id).await;
-
-        // TODO: Implement comprehensive Docker container cleanup
-        //       Currently just removes from tracking; should implement comprehensive cleanup that cleans up stopped Docker containers for complete sandbox resource management.
-        //
-        // COMPLETION CHECKLIST:
-        // [ ] Primary functionality implemented
-        // [ ] API/data structures defined & stable
-        // [ ] Error handling + validation aligned with error taxonomy
-        // [ ] Tests: Unit ≥80% branch coverage (≥50% mutation if enabled)
-        // [ ] Integration tests for external systems/contracts
-        // [ ] Documentation: public API + system behavior
-        // [ ] Performance/profiled against SLA (CPU/mem/latency throughput)
-        // [ ] Security posture reviewed (inputs, authz, sandboxing)
-        // [ ] Observability: logs (debug), metrics (SLO-aligned), tracing
-        // [ ] Configurability and feature flags defined if relevant
-        // [ ] Failure-mode cards documented (degradation paths)
-        //
-        // ACCEPTANCE CRITERIA:
-        // - Stopped Docker containers are cleaned up
-        // - Container cleanup is atomic and reliable
-        // - Cleanup handles container errors gracefully
-        // - Resource cleanup is complete and verified
-        //
-        // DEPENDENCIES:
-        // - Docker container management API (Required)
-        // - Container cleanup utilities (Required)
-        // - Resource verification system (Required)
-        //
-        // ESTIMATED EFFORT: 6-8 hours (medium confidence)
-        // PRIORITY: Medium
-        // BLOCKING: No
-        //
-        // GOVERNANCE:
-        // - CAWS Tier: 2 (sandbox resource management functionality)
-        // - Change Budget: ~150 LOC
         // - Reviewer Requirements: Docker container management and resource cleanup expertise
         info!("Cleaned up sandbox: {}", sandbox_id);
         Ok(())

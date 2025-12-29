@@ -65,7 +65,7 @@ export type UserResponse = z.infer<typeof UserResponseSchema>;
  * User login
  */
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
-  return apiPost<LoginRequest, LoginResponse>('/api/v1/auth/login', credentials, {
+  return apiPost<LoginRequest, LoginResponse>('/auth/login', credentials, {
     requestSchema: LoginRequestSchema,
     responseSchema: LoginResponseSchema,
   });
@@ -75,14 +75,14 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
  * User logout
  */
 export async function logout(): Promise<void> {
-  await apiPost('/api/v1/auth/logout', undefined);
+  await apiPost('/auth/logout', undefined);
 }
 
 /**
  * Refresh authentication token
  */
 export async function refreshToken(request: RefreshTokenRequest): Promise<LoginResponse> {
-  return apiPost<RefreshTokenRequest, LoginResponse>('/api/v1/auth/refresh', request, {
+  return apiPost<RefreshTokenRequest, LoginResponse>('/auth/refresh', request, {
     requestSchema: RefreshTokenRequestSchema,
     responseSchema: LoginResponseSchema,
   });
@@ -92,7 +92,29 @@ export async function refreshToken(request: RefreshTokenRequest): Promise<LoginR
  * Get current user
  */
 export async function getCurrentUser(): Promise<UserResponse> {
-  return apiGet<UserResponse>('/api/v1/users/me', {
+  return apiGet<UserResponse>('/users/me', {
+    responseSchema: UserResponseSchema,
+  });
+}
+
+/**
+ * Register request schema
+ */
+export const RegisterRequestSchema = z.object({
+  username: z.string().min(3).max(255),
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string().optional(),
+});
+
+export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
+
+/**
+ * User registration
+ */
+export async function register(credentials: RegisterRequest): Promise<UserResponse> {
+  return apiPost<RegisterRequest, UserResponse>('/auth/register', credentials, {
+    requestSchema: RegisterRequestSchema,
     responseSchema: UserResponseSchema,
   });
 }

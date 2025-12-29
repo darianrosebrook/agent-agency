@@ -6,8 +6,8 @@
  * @author @darianrosebrook
  */
 
-import { apiGet } from '../utils/api';
 import type { Task } from '../types/task';
+import { apiGet } from '../utils/api';
 
 /**
  * Task statistics response
@@ -113,3 +113,28 @@ export async function listTasks(): Promise<TasksListResponse> {
   return response;
 }
 
+/**
+ * Task submission response
+ */
+export interface TaskSubmissionResponse {
+  task_id: string;
+  status: string;
+  message: string;
+}
+
+/**
+ * Create a new task
+ * 
+ * @param data Task creation data
+ */
+export async function createTask(data: {
+  description: string;
+  title?: string;
+  priority?: string | number;
+  risk_tier?: number;
+  execution_mode?: string;
+  context?: string;
+}): Promise<TaskSubmissionResponse> {
+  const { apiPost } = await import('../utils/api');
+  return apiPost<TaskSubmissionResponse>(`${API_BASE}/tasks`, data);
+}

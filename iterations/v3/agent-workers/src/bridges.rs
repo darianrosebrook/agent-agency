@@ -67,7 +67,6 @@ impl OrchestrationQualityBridge {
         // - [ ] Add unit tests with various complexity scenarios
         // - [ ] Add integration tests with real task complexity
         //
-        // TODO: Implement comprehensive complexity requirement checking
         //       Currently skips complexity check as field structure needs clarification; should implement comprehensive checking that defines complexity field structure in task schema, implements complexity calculation algorithm, and validates complexity against task requirements.
         //
         // COMPLETION CHECKLIST:

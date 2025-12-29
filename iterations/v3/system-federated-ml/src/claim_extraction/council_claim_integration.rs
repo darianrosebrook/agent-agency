@@ -393,25 +393,31 @@ mod tests {
 
     fn create_test_working_spec() -> WorkingSpec {
         use agent_agency_contracts::working_spec::*;
+        use chrono::Utc;
         WorkingSpec {
+            version: "1.0".to_string(),
             id: "TEST-001".to_string(),
             title: "Test Spec".to_string(),
             description: "Test description".to_string(),
+            goals: vec!["Complete test task".to_string()],
             risk_tier: 2,
             acceptance_criteria: vec![],
             constraints: WorkingSpecConstraints::default(),
-            test_plan: TestPlan {
-                unit_tests: vec![],
-                integration_tests: vec![],
-                e2e_tests: vec![],
-            },
-            rollback_plan: RollbackPlan {
-                strategy: agent_agency_contracts::RollbackStrategy::GitRevert,
-                steps: vec![],
-                downtime_required: Some(false),
-            },
+            test_plan: TestPlan::default(),
+            rollback_plan: RollbackPlan::default(),
             context: WorkingSpecContext::default(),
+            non_functional_requirements: None,
+            validation_results: None,
+            quality_gates: None,
+            scope: vec![],
             metadata: None,
+            milestones: vec![],
+            change_budget: Default::default(),
+            file_changes: vec![],
+            coverage_targets: None,
+            overview: "Test overview".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 

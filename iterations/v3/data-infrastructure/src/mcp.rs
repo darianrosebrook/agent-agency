@@ -446,36 +446,6 @@ mod mcp_module {
     impl Drop for McpServer {
         fn drop(&mut self) {
             // Note: We can't do async shutdown in Drop, but we can log the issue
-            // TODO: Enforce explicit shutdown before drop
-            //       Currently warns on drop without shutdown; should enforce explicit shutdown() call before drop to ensure graceful shutdown.
-            //
-            // COMPLETION CHECKLIST:
-            // [ ] Add compile-time check or runtime assertion for shutdown state
-            // [ ] Document requirement for explicit shutdown() call
-            // [ ] Add examples showing proper shutdown sequence
-            // [ ] Consider using DropGuard pattern if possible
-            // [ ] Add integration tests verifying shutdown requirement
-            // [ ] Performance: No performance impact (compile-time check)
-            // [ ] Documentation: Document shutdown requirement clearly
-            //
-            // ACCEPTANCE CRITERIA:
-            // - Compile-time or runtime enforcement of shutdown requirement
-            // - Clear error messages if shutdown not called
-            // - Documentation clearly states shutdown requirement
-            // - Examples demonstrate proper usage
-            //
-            // DEPENDENCIES:
-            // - Shutdown state tracking (Required)
-            // - DropGuard pattern (Optional)
-            //
-            // ESTIMATED EFFORT: 2-3 hours (high confidence)
-            // PRIORITY: Low
-            // BLOCKING: No
-            //
-            // GOVERNANCE:
-            // - CAWS Tier: 3 (code quality improvement)
-            // - Change Budget: ~50 LOC
-            // - Reviewer Requirements: Rust drop semantics expertise
             if !self.is_shutting_down() {
                 tracing::warn!("MCP server dropped without graceful shutdown - connections may not be properly closed");
             }

@@ -1,27 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+    CheckCircle2,
+    ChevronDown,
+    Circle,
+    MoreHorizontal,
+    Plus,
+    X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { listProjects, type ProjectListItem } from "../lib/api/projects";
 import {
-  X,
-  ChevronDown,
-  Plus,
-  MoreHorizontal,
-  Circle,
-  CheckCircle2,
-} from "lucide-react";
-import {
-  StatusBadge,
-  PriorityIndicator,
-  MetadataRow,
-  TagChip,
-  taskStatusConfig,
-  priorityConfig,
-  type TaskStatus,
-  type Priority,
+    MetadataRow,
+    priorityConfig,
+    PriorityIndicator,
+    StatusBadge,
+    TagChip,
+    taskStatusConfig,
+    type Priority,
+    type TaskStatus,
 } from "./compounds";
-import { cn } from "./primitives/utils";
 import styles from "./NewTaskModal.module.scss";
+import { cn } from "./primitives/utils";
 
 interface NewTaskModalProps {
   open: boolean;
@@ -87,7 +87,7 @@ export function NewTaskModal({
     if (title.trim()) {
       onCreateTask({
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: description.trim() || "",
         status,
         priority,
       });
