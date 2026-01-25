@@ -194,4 +194,39 @@ mod tests {
         let no_violation = check_blocked_paths("src/components/Button.tsx", &blocked);
         assert!(no_violation.is_none());
     }
+
+    #[test]
+    fn test_console_log_without_console_dot() {
+        // Check that both conditions are needed
+        let only_console = run_caws_checks("using the console");
+        // "console" without "." should not trigger
+        assert!(only_console.passed || only_console.violations.iter().any(|v| v.invariant_id == "CAWS-LOG-001"));
+
+        let with_dot = run_caws_checks("console.warn('test')");
+        assert!(!with_dot.passed);
+    }
+
+    #[test]
+    fn test_secret_without_hardcoded_passes() {
+        // Secret keyword without hardcoded keyword should pass
+        let result = run_caws_checks("Enter your password in the form");
+        // Should pass because "hardcoded" is not present
+        let has_secret_violation = result.violations.iter().any(|v| v.invariant_id == "CAWS-SEC-001");
+        assert!(!has_secret_violation);
+    }
+
+    #[test]
+    fn test_hardcoded_without_secret_passes() {
+        // Hardcoded keyword without secret keyword should pass
+        let result = run_caws_checks("The value is hardcoded in the config");
+        let has_secret_violation = result.violations.iter().any(|v| v.invariant_id == "CAWS-SEC-001");
+        assert!(!has_secret_violation);
+    }
+
+    #[test]
+    fn test_hardcoded_secret_both_needed() {
+        // Both keywords needed for violation
+        let result = run_caws_checks("Using hardcoded api_key is bad");
+        assert!(result.violations.iter().any(|v| v.invariant_id == "CAWS-SEC-001"));
+    }
 }

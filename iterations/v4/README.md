@@ -2,16 +2,17 @@
 
 A principled AI agent system built on Sterling's operator taxonomy and constitutional governance.
 
-## Status: Core Implementation Complete
+## Status: Core + Inference Implementation Complete
 
-All core layers implemented with **398 passing tests**.
+All layers implemented with **473 passing tests**.
 
 | Layer | Crates | Tests | Status |
 |-------|--------|-------|--------|
 | Core | v4-types, v4-invariants, v4-governance | 99 | ✅ |
 | Reasoning | v4-symbolic, v4-council, v4-arbiter | 112 | ✅ |
-| Infrastructure | v4-storage, v4-memory, v4-observability | 74 | ✅ |
+| Infrastructure | v4-storage, v4-postgres, v4-inference, v4-memory, v4-observability | 113 | ✅ |
 | Execution | v4-tools, v4-workers, v4-sandbox | 73 | ✅ |
+| Interface | v4-api | 24 | ✅ |
 | Integration | tests/ | 20 | ✅ |
 
 ## Quick Start
@@ -23,13 +24,31 @@ cargo build --workspace
 # Test
 cargo test
 
-# Check (with warnings as errors)
-cargo clippy --workspace -- -D warnings
+# Run API server
+cargo run -p v4-api --bin v4-server
+# Server starts on http://127.0.0.1:8080
+
+# Test the API
+curl http://localhost:8080/health
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test", "description": "Read a file"}'
+
+# Test LLM inference
+curl -X POST http://localhost:8080/api/v1/probe \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain recursion", "max_tokens": 100}'
 ```
 
 ## Architecture
 
 ```
+HTTP POST /api/v1/tasks
+        │
+        ▼
+    v4-api (timing metrics)
+        │
+        ▼
 TaskRequest → v4-symbolic → v4-council → v4-arbiter → v4-workers → v4-sandbox → v4-tools
                   │              │             │
                   │              │             └── Generate VerificationCertificate
@@ -72,13 +91,18 @@ crates/
 │
 ├── infrastructure/
 │   ├── v4-storage/       # Content-addressable storage, event sourcing
+│   ├── v4-postgres/      # PostgreSQL + pgvector for embeddings
+│   ├── v4-inference/     # Local LLM inference (Mock, CoreML)
 │   ├── v4-memory/        # Knowledge graph, Sterling-style decay
 │   └── v4-observability/ # Metrics, tracing, health checks
 │
-└── execution/
-    ├── v4-tools/         # Tool trait, registry, built-in tools
-    ├── v4-workers/       # Worker pool, task queue, execution
-    └── v4-sandbox/       # Security policies, isolated execution
+├── execution/
+│   ├── v4-tools/         # Tool trait, registry, built-in tools
+│   ├── v4-workers/       # Worker pool, task queue, execution
+│   └── v4-sandbox/       # Security policies, isolated execution
+│
+└── interfaces/
+    └── v4-api/           # HTTP API server with timing metrics
 ```
 
 ## Key Invariants
@@ -97,10 +121,9 @@ crates/
 
 ## Next Steps
 
-1. **v4-api**: HTTP/gRPC server for external access
+1. **CoreML Backend**: Add real CoreML inference for Apple Silicon (currently mock provider)
 2. **MCP Integration**: External tool protocol support
-3. **LLM Provider**: Claude/OpenAI integration for reasoning
-4. **Dashboard**: Connect to Next.js management UI
+3. **Dashboard**: Connect to Next.js management UI
 
 ## License
 

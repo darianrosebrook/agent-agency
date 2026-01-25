@@ -206,4 +206,24 @@ mod tests {
     fn test_default_mode() {
         assert_eq!(GovernanceMode::default(), GovernanceMode::Supervised);
     }
+
+    #[test]
+    fn test_requires_all_approval_strict() {
+        assert!(GovernanceMode::Strict.requires_all_approval());
+    }
+
+    #[test]
+    fn test_requires_all_approval_lockdown() {
+        assert!(GovernanceMode::Lockdown.requires_all_approval());
+    }
+
+    #[test]
+    fn test_requires_all_approval_supervised_false() {
+        assert!(!GovernanceMode::Supervised.requires_all_approval());
+    }
+
+    #[test]
+    fn test_requires_all_approval_autonomous_false() {
+        assert!(!GovernanceMode::Autonomous.requires_all_approval());
+    }
 }

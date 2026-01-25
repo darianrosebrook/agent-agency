@@ -175,4 +175,37 @@ mod tests {
         let unique: std::collections::HashSet<_> = ids.iter().collect();
         assert_eq!(ids.len(), unique.len(), "All invariant IDs must be unique");
     }
+
+    #[test]
+    fn test_invariant_id_display() {
+        let id = CoreInvariant::NoFreeFormCoT.id();
+        let display = format!("{}", id);
+        assert_eq!(display, "INV-CORE-01");
+        assert!(!display.is_empty());
+    }
+
+    #[test]
+    fn test_description_not_empty_and_distinct() {
+        let descriptions: Vec<_> = CoreInvariant::all()
+            .iter()
+            .map(|i| i.description())
+            .collect();
+
+        // All descriptions should be non-empty
+        for desc in &descriptions {
+            assert!(!desc.is_empty(), "Description should not be empty");
+        }
+
+        // All descriptions should be unique
+        let unique: std::collections::HashSet<_> = descriptions.iter().collect();
+        assert_eq!(descriptions.len(), unique.len(), "All descriptions must be unique");
+    }
+
+    #[test]
+    fn test_description_content() {
+        // Verify specific descriptions contain expected keywords
+        assert!(CoreInvariant::NoFreeFormCoT.description().contains("structured"));
+        assert!(CoreInvariant::BoundedMemory.description().contains("memory"));
+        assert!(CoreInvariant::TerminationGuarantee.description().contains("bound"));
+    }
 }

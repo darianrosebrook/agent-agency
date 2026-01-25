@@ -3,6 +3,37 @@ name = "v4-api"
 version.workspace = true
 edition = "2021"
 license.workspace = true
-description = "Agent Agency V4 - v4-api (stub)"
+description = "Agent Agency V4 - HTTP API for task submission and LLM probing"
 
 [dependencies]
+# Workspace dependencies
+v4-types = { workspace = true }
+v4-arbiter = { workspace = true }
+v4-observability = { workspace = true }
+v4-inference = { workspace = true }
+
+# Web framework
+axum = { version = "0.7", features = ["macros", "tokio"] }
+tower = { version = "0.5", features = ["timeout", "limit"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id"] }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Types
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+
+# Tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }

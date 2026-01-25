@@ -21,11 +21,13 @@ members = [
     # Infrastructure layer (depends on core, optional features)
     "crates/infrastructure/v4-memory",
     "crates/infrastructure/v4-storage",
+    "crates/infrastructure/v4-postgres",
     "crates/infrastructure/v4-inference",
     "crates/infrastructure/v4-observability",
 
     # Interface layer (top of dependency tree)
     "crates/interfaces/v4-api",
+    "crates/interfaces/v4-mcp",
 
     # Integration tests
     "tests",
@@ -85,15 +87,17 @@ v4-workers = { path = "crates/execution/v4-workers" }
 v4-sandbox = { path = "crates/execution/v4-sandbox" }
 v4-memory = { path = "crates/infrastructure/v4-memory" }
 v4-storage = { path = "crates/infrastructure/v4-storage" }
+v4-postgres = { path = "crates/infrastructure/v4-postgres" }
 v4-inference = { path = "crates/infrastructure/v4-inference" }
 v4-observability = { path = "crates/infrastructure/v4-observability" }
 v4-api = { path = "crates/interfaces/v4-api" }
+v4-mcp = { path = "crates/interfaces/v4-mcp" }
 
 [workspace.lints.rust]
 # Strict mode - no warnings allowed
 warnings = "deny"
 missing_docs = "warn"
-unused = "deny"
+unused = { level = "deny", priority = -1 }
 
 [workspace.lints.clippy]
 # Clippy strict mode

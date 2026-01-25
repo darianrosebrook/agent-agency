@@ -1,18 +1,20 @@
 [package]
-name = "v4-inference"
+name = "v4-postgres"
 version.workspace = true
 edition = "2021"
 license.workspace = true
-description = "Agent Agency V4 - Local LLM inference with CoreML support"
+description = "Agent Agency V4 - PostgreSQL adapter with pgvector for embeddings"
 
 [dependencies]
-# Core types
+# Workspace dependencies
 v4-types = { workspace = true }
 
-# Async
+# Database - PostgreSQL with async support
+sqlx = { workspace = true, features = ["runtime-tokio", "postgres", "json", "chrono", "uuid"] }
+
+# Async runtime
 tokio = { workspace = true }
 async-trait = { workspace = true }
-futures = { workspace = true }
 
 # Serialization
 serde = { workspace = true }
@@ -23,19 +25,17 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 thiserror = { workspace = true }
 
-# Logging
-tracing = { workspace = true }
-
-# Cryptography
+# Crypto for content hashing
 sha2 = { workspace = true }
 hex = { workspace = true }
+
+# Tracing
+tracing = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
 
 [features]
 default = []
-# CoreML support (macOS only, legacy)
-coreml = []
-# MLX support (Apple Silicon, recommended)
-mlx = []
+# Enable mock database for testing without real postgres
+mock = []

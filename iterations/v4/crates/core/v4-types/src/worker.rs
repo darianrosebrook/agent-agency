@@ -162,6 +162,7 @@ pub struct WorkerPoolStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{Duration, Utc};
 
     #[test]
     fn test_worker_type_capabilities() {
@@ -178,8 +179,23 @@ mod tests {
     fn test_worker_status_terminal() {
         assert!(WorkerStatus::Completed.is_terminal());
         assert!(WorkerStatus::Failed.is_terminal());
+        assert!(WorkerStatus::Cancelled.is_terminal());
         assert!(!WorkerStatus::Running.is_terminal());
         assert!(!WorkerStatus::Idle.is_terminal());
+        assert!(!WorkerStatus::Blocked.is_terminal());
+    }
+
+    #[test]
+    fn test_worker_status_is_active() {
+        // Active states
+        assert!(WorkerStatus::Running.is_active());
+        assert!(WorkerStatus::Blocked.is_active());
+
+        // Non-active states
+        assert!(!WorkerStatus::Idle.is_active());
+        assert!(!WorkerStatus::Completed.is_active());
+        assert!(!WorkerStatus::Failed.is_active());
+        assert!(!WorkerStatus::Cancelled.is_active());
     }
 
     #[test]
@@ -190,10 +206,148 @@ mod tests {
             tasks_completed: 90,
             tasks_failed: 10,
             avg_execution_time_ms: 100,
-            last_heartbeat: chrono::Utc::now(),
+            last_heartbeat: Utc::now(),
             memory_bytes: None,
             cpu_percent: None,
         };
         assert!((health.success_rate() - 0.90).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_worker_health_success_rate_zero_tasks() {
+        let health = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 0,
+            tasks_failed: 0,
+            avg_execution_time_ms: 0,
+            last_heartbeat: Utc::now(),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        // Should return 1.0 (100%) when no tasks have been run
+        assert!((health.success_rate() - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_all_conditions_pass() {
+        // Healthy worker: recent heartbeat, good success rate, not failed
+        let health = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 95,
+            tasks_failed: 5, // 95% success rate
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now(), // Recent heartbeat
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(health.is_healthy());
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_old_heartbeat() {
+        // Old heartbeat (> 30 seconds ago) - should be unhealthy
+        let health = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 100,
+            tasks_failed: 0,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now() - Duration::seconds(35),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(!health.is_healthy());
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_heartbeat_boundary() {
+        // Heartbeat exactly at 30 seconds should be healthy (< 30, not <=)
+        let health_at_29 = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 100,
+            tasks_failed: 0,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now() - Duration::seconds(29),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(health_at_29.is_healthy());
+
+        // At exactly 30 seconds should be unhealthy
+        let health_at_30 = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 100,
+            tasks_failed: 0,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now() - Duration::seconds(30),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(!health_at_30.is_healthy());
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_low_success_rate() {
+        // Success rate below 90% - should be unhealthy
+        let health = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 80,
+            tasks_failed: 20, // 80% success rate
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now(),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(!health.is_healthy());
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_success_rate_boundary() {
+        // Exactly 90% success rate should pass
+        let health_at_90 = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 90,
+            tasks_failed: 10,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now(),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(health_at_90.is_healthy());
+
+        // Just below 90% should fail
+        let health_below_90 = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Idle,
+            tasks_completed: 89,
+            tasks_failed: 11,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now(),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(!health_below_90.is_healthy());
+    }
+
+    #[test]
+    fn test_worker_health_is_healthy_failed_status() {
+        // Failed status - should be unhealthy even with good metrics
+        let health = WorkerHealth {
+            worker_id: "w1".to_string(),
+            status: WorkerStatus::Failed,
+            tasks_completed: 100,
+            tasks_failed: 0,
+            avg_execution_time_ms: 100,
+            last_heartbeat: Utc::now(),
+            memory_bytes: None,
+            cpu_percent: None,
+        };
+        assert!(!health.is_healthy());
     }
 }

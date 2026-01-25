@@ -390,4 +390,211 @@ mod tests {
         // In fail-fast mode, we should have fewer results
         assert!(verdict.gates.len() < 9);
     }
+
+    #[test]
+    fn test_marginal_gates_boundary() {
+        let evaluator = CAWSEvaluator::new();
+
+        let mut metrics = CAWSMetrics::perfect();
+        // Set integration_f1 to exactly 0.90 (threshold) - margin is 0.0, should be marginal
+        metrics.integration_f1 = 0.90;
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+        let marginal = verdict.marginal_gates();
+
+        // 0.90 - 0.90 = 0.0 margin, which is < 0.05, so should be marginal
+        assert!(marginal.iter().any(|g| g.gate == GateType::IntegrationF1));
+    }
+
+    #[test]
+    fn test_marginal_gates_excludes_wide_margin() {
+        let evaluator = CAWSEvaluator::new();
+
+        let mut metrics = CAWSMetrics::perfect();
+        // Set integration_f1 to 0.96 - margin is 0.06, should NOT be marginal
+        metrics.integration_f1 = 0.96;
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+        let marginal = verdict.marginal_gates();
+
+        // 0.96 - 0.90 = 0.06 margin, which is >= 0.05, so should NOT be marginal
+        assert!(!marginal.iter().any(|g| g.gate == GateType::IntegrationF1 && (g.score - 0.96).abs() < 0.001));
+    }
+
+    #[test]
+    fn test_marginal_gates_excludes_failed() {
+        let evaluator = CAWSEvaluator::new();
+
+        let mut metrics = CAWSMetrics::perfect();
+        // Set integration_f1 to 0.89 - fails the threshold
+        metrics.integration_f1 = 0.89;
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+        let marginal = verdict.marginal_gates();
+
+        // Failed gates should not be in marginal list (filter requires g.passed)
+        assert!(!marginal.iter().any(|g| g.gate == GateType::IntegrationF1));
+    }
+
+    #[test]
+    fn test_caws_metrics_failing_values() {
+        let failing = CAWSMetrics::failing();
+
+        // Verify that failing() returns values that actually fail the gates
+        assert!(failing.integration_f1 < 0.90);
+        assert!(failing.privacy_compliance < 1.0);
+        assert!(failing.control_violations > 0);
+        assert!(failing.fixture_hit_rate < 0.95);
+        assert!(failing.invariant_violations > 0);
+        assert!(failing.code_coverage < 0.80);
+        assert!(failing.test_pass_rate < 1.0);
+        assert!(!failing.compiles);
+        assert!(failing.placeholder_count > 0);
+    }
+
+    #[test]
+    fn test_gate_verdict_delete_negation_in_evaluate() {
+        let evaluator = CAWSEvaluator::new();
+
+        // Test that the ! in evaluate (line 207) is necessary
+        // When a gate passes, it should NOT be in failed_gates
+        let verdict = evaluator.evaluate(&CAWSMetrics::perfect(), empty_fingerprints());
+        assert!(verdict.failed_gates().is_empty());
+
+        // When a gate fails, it SHOULD be in failed_gates
+        let verdict = evaluator.evaluate(&CAWSMetrics::failing(), empty_fingerprints());
+        assert!(!verdict.failed_gates().is_empty());
+    }
+
+    #[test]
+    fn test_failed_gates_vs_passed_gates_distinct() {
+        let evaluator = CAWSEvaluator::new();
+
+        // Create metrics where exactly one gate fails
+        let mut metrics = CAWSMetrics::perfect();
+        metrics.code_coverage = 0.70; // Below 0.80 threshold
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+
+        // Exactly one gate should fail
+        let failed = verdict.failed_gates();
+        assert_eq!(failed.len(), 1);
+        assert_eq!(failed[0].gate, GateType::CodeCoverage);
+
+        // The failing gate should not be in a different state
+        // This test ensures the negation in filter(|g| !g.passed) is correct
+        assert!(!failed[0].passed);
+    }
+
+    #[test]
+    fn test_marginal_less_than_boundary() {
+        // Test directly with GateResult to control exact values
+        // Using values where margin is clearly >= 0.05
+        let gates = vec![
+            GateResult {
+                gate: GateType::IntegrationF1,
+                score: 0.951,
+                threshold: 0.90,
+                passed: true,
+                details: None,
+            },
+        ];
+        // margin = 0.951 - 0.90 = 0.051 (> 0.05)
+        // With < 0.05, this should NOT be marginal
+        // With <= 0.05, this would also not be marginal
+        // But we also test just below boundary
+        let verdict = GateVerdict {
+            gates,
+            all_passed: true,
+            hard_failure: false,
+            summary: "test".to_string(),
+            evaluated_at: chrono::Utc::now(),
+            fingerprints: empty_fingerprints(),
+        };
+
+        let marginal = verdict.marginal_gates();
+        // margin 0.051 should NOT be marginal
+        assert!(marginal.is_empty(),
+            "Gate with margin > 0.05 should not be marginal");
+    }
+
+    #[test]
+    fn test_marginal_at_boundary_is_included() {
+        // Test with margin right at the boundary - due to floating point,
+        // 0.95 - 0.90 = 0.04999... which IS < 0.05, so it IS marginal
+        let gates = vec![
+            GateResult {
+                gate: GateType::IntegrationF1,
+                score: 0.95,
+                threshold: 0.90,
+                passed: true,
+                details: None,
+            },
+        ];
+        // Due to floating point: 0.95 - 0.90 = 0.04999... < 0.05, so IS marginal
+        let verdict = GateVerdict {
+            gates,
+            all_passed: true,
+            hard_failure: false,
+            summary: "test".to_string(),
+            evaluated_at: chrono::Utc::now(),
+            fingerprints: empty_fingerprints(),
+        };
+
+        let marginal = verdict.marginal_gates();
+        // This IS marginal because floating point makes margin < 0.05
+        assert_eq!(marginal.len(), 1, "Gate with margin ~0.05 (floating point < 0.05) should be marginal");
+    }
+
+    #[test]
+    fn test_marginal_just_below_boundary() {
+        let evaluator = CAWSEvaluator::new();
+
+        let mut metrics = CAWSMetrics::perfect();
+        // Set code_coverage to 0.84 (margin = 0.04, below 0.05)
+        metrics.code_coverage = 0.84;
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+        let marginal = verdict.marginal_gates();
+
+        // This SHOULD be marginal because 0.04 < 0.05
+        assert!(marginal.iter().any(|g| g.gate == GateType::CodeCoverage));
+    }
+
+    #[test]
+    fn test_summary_shows_correct_failed_count() {
+        let evaluator = CAWSEvaluator::new();
+
+        // Create metrics where exactly 2 gates fail
+        let mut metrics = CAWSMetrics::perfect();
+        metrics.code_coverage = 0.70; // Below 0.80 threshold
+        metrics.integration_f1 = 0.85; // Below 0.90 threshold
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+
+        // The summary should mention "2 gates failed"
+        assert!(verdict.summary.contains("2"), "Summary should show 2 failed gates: {}", verdict.summary);
+        assert!(!verdict.summary.contains("7"), "Summary should not show 7 (passed) gates");
+    }
+
+    #[test]
+    fn test_summary_all_passed() {
+        let evaluator = CAWSEvaluator::new();
+        let verdict = evaluator.evaluate(&CAWSMetrics::perfect(), empty_fingerprints());
+
+        assert!(verdict.summary.contains("All CAWS gates passed"));
+        assert!(!verdict.summary.contains("failed"));
+    }
+
+    #[test]
+    fn test_summary_hard_failure() {
+        let evaluator = CAWSEvaluator::new();
+
+        let mut metrics = CAWSMetrics::perfect();
+        metrics.compiles = false; // Hard gate failure
+
+        let verdict = evaluator.evaluate(&metrics, empty_fingerprints());
+
+        assert!(verdict.summary.contains("HARD FAILURE"));
+    }
 }

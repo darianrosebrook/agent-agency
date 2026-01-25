@@ -548,4 +548,289 @@ mod tests {
         let decision = policy.evaluate(&request);
         assert!(!decision.allowed);
     }
+
+    #[test]
+    fn test_has_side_effects_delegates_to_operator() {
+        use v4_types::operators::MemorizeOp;
+
+        // Memorize has side effects
+        let memorize_request = ActionRequest::new(
+            OperatorType::Memorize(MemorizeOp::StoreFact {
+                key: "k".to_string(),
+                value: "v".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(memorize_request.has_side_effects());
+
+        // Seek does not have side effects
+        let seek_request = ActionRequest::new(
+            OperatorType::Seek(SeekOp::ReadFile {
+                path: "test.rs".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(!seek_request.has_side_effects());
+    }
+
+    #[test]
+    fn test_is_dangerous_terminate() {
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Terminate {
+                reason: "done".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(request.is_dangerous());
+    }
+
+    #[test]
+    fn test_is_dangerous_delegate() {
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Delegate {
+                agent_id: "agent-2".to_string(),
+                task: "subtask".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(request.is_dangerous());
+    }
+
+    #[test]
+    fn test_is_dangerous_memorize() {
+        use v4_types::operators::MemorizeOp;
+
+        let request = ActionRequest::new(
+            OperatorType::Memorize(MemorizeOp::StoreFact {
+                key: "k".to_string(),
+                value: "v".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(request.is_dangerous());
+    }
+
+    #[test]
+    fn test_is_dangerous_seek_is_not_dangerous() {
+        let request = ActionRequest::new(
+            OperatorType::Seek(SeekOp::ReadFile {
+                path: "test.rs".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(!request.is_dangerous());
+    }
+
+    #[test]
+    fn test_is_dangerous_control_loop_not_dangerous() {
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Loop {
+                condition: "true".to_string(),
+                max_iterations: 10,
+            }),
+            "agent-1".to_string(),
+        );
+        assert!(!request.is_dangerous());
+    }
+
+    #[test]
+    fn test_policy_mode_getter_and_setter() {
+        let mut policy = Policy::new(GovernanceMode::Supervised);
+        assert_eq!(policy.mode(), GovernanceMode::Supervised);
+
+        policy.set_mode(GovernanceMode::Autonomous);
+        assert_eq!(policy.mode(), GovernanceMode::Autonomous);
+
+        policy.set_mode(GovernanceMode::Strict);
+        assert_eq!(policy.mode(), GovernanceMode::Strict);
+    }
+
+    #[test]
+    fn test_violations_getter() {
+        let mut policy = Policy::new(GovernanceMode::Autonomous);
+        assert!(policy.violations().is_empty());
+
+        policy.record_violation(
+            "req-1".to_string(),
+            "POL-001".to_string(),
+            "Test violation".to_string(),
+            5,
+        );
+
+        assert_eq!(policy.violations().len(), 1);
+        assert_eq!(policy.violations()[0].severity, 5);
+    }
+
+    #[test]
+    fn test_severe_violations_filter() {
+        let mut policy = Policy::new(GovernanceMode::Autonomous);
+
+        // Add violations with different severities
+        policy.record_violation("req-1".to_string(), "POL-001".to_string(), "Low".to_string(), 3);
+        policy.record_violation("req-2".to_string(), "POL-002".to_string(), "Medium".to_string(), 6);
+        policy.record_violation("req-3".to_string(), "POL-003".to_string(), "High".to_string(), 7);
+        policy.record_violation("req-4".to_string(), "POL-004".to_string(), "Critical".to_string(), 9);
+
+        let severe = policy.severe_violations();
+        assert_eq!(severe.len(), 2); // Only severity >= 7
+        assert!(severe.iter().all(|v| v.severity >= 7));
+    }
+
+    #[test]
+    fn test_severe_violations_boundary() {
+        let mut policy = Policy::new(GovernanceMode::Autonomous);
+
+        // Exactly at severity 7 should be included
+        policy.record_violation("req-1".to_string(), "POL-001".to_string(), "Exactly 7".to_string(), 7);
+        assert_eq!(policy.severe_violations().len(), 1);
+
+        // Below 7 should not be included
+        let mut policy2 = Policy::new(GovernanceMode::Autonomous);
+        policy2.record_violation("req-1".to_string(), "POL-001".to_string(), "Exactly 6".to_string(), 6);
+        assert!(policy2.severe_violations().is_empty());
+    }
+
+    #[test]
+    fn test_control_terminate_policy() {
+        let policy = Policy::new(GovernanceMode::Supervised);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Terminate {
+                reason: "task complete".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // Terminate is allowed but needs approval in supervised mode because it's dangerous
+        assert!(decision.requires_approval || decision.allowed);
+    }
+
+    #[test]
+    fn test_loop_iteration_boundary() {
+        let policy = Policy::new(GovernanceMode::Autonomous);
+
+        // Exactly 1000 should pass
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Loop {
+                condition: "true".to_string(),
+                max_iterations: 1000,
+            }),
+            "agent-1".to_string(),
+        );
+        let decision = policy.evaluate(&request);
+        assert!(decision.allowed);
+
+        // 1001 should fail
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Loop {
+                condition: "true".to_string(),
+                max_iterations: 1001,
+            }),
+            "agent-1".to_string(),
+        );
+        let decision = policy.evaluate(&request);
+        assert!(!decision.allowed);
+    }
+
+    #[test]
+    fn test_memorize_branch_in_evaluate() {
+        use v4_types::operators::MemorizeOp;
+
+        let policy = Policy::new(GovernanceMode::Autonomous);
+        let request = ActionRequest::new(
+            OperatorType::Memorize(MemorizeOp::StoreFact {
+                key: "k".to_string(),
+                value: "v".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // Should be allowed with rate limit condition
+        assert!(decision.allowed);
+        assert!(!decision.conditions.is_empty());
+    }
+
+    #[test]
+    fn test_terminate_match_arm_is_executed() {
+        let policy = Policy::new(GovernanceMode::Autonomous);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Terminate {
+                reason: "task completed successfully".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // Should be allowed with a condition containing the reason
+        assert!(decision.allowed);
+        assert!(decision.conditions.iter().any(|c| c.contains("task completed successfully")));
+    }
+
+    #[test]
+    fn test_delegate_match_arm_in_autonomous() {
+        let policy = Policy::new(GovernanceMode::Autonomous);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Delegate {
+                agent_id: "agent-2".to_string(),
+                task: "subtask".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // In autonomous mode, delegate is allowed without approval
+        assert!(decision.allowed);
+    }
+
+    #[test]
+    fn test_delegate_match_arm_in_supervised() {
+        let policy = Policy::new(GovernanceMode::Supervised);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Delegate {
+                agent_id: "special-agent".to_string(),
+                task: "important-task".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // In supervised mode, dangerous actions require approval
+        // Delegate is caught by the earlier dangerous action check
+        assert!(decision.requires_approval);
+        assert!(decision.approver.as_ref().unwrap().contains("supervisor"));
+    }
+
+    #[test]
+    fn test_branch_match_arm_default() {
+        let policy = Policy::new(GovernanceMode::Autonomous);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Branch {
+                condition: "x > 0".to_string(),
+                true_path: "path_a".to_string(),
+                false_path: "path_b".to_string(),
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // Branch falls through to default case and is allowed
+        assert!(decision.allowed);
+    }
+
+    #[test]
+    fn test_wait_match_arm_default() {
+        let policy = Policy::new(GovernanceMode::Autonomous);
+        let request = ActionRequest::new(
+            OperatorType::Control(ControlOp::Wait {
+                event: "user_input".to_string(),
+                timeout_ms: 5000,
+            }),
+            "agent-1".to_string(),
+        );
+
+        let decision = policy.evaluate(&request);
+        // Wait falls through to default case and is allowed
+        assert!(decision.allowed);
+    }
 }

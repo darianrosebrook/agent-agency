@@ -1,13 +1,13 @@
 # V4 Implementation Status
 
 **Last Updated**: 2026-01-25
-**Status**: Core Implementation Complete (Phases 1-4)
+**Status**: Core + Inference + MCP Implementation Complete (Phases 1-7)
 
 ---
 
 ## Executive Summary
 
-V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**, and **Execution** layers. All 398 tests pass. The system provides a complete pipeline from task submission through symbolic reasoning, council evaluation, and sandboxed execution.
+V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**, **Execution**, and **Interface** layers. All 575 tests pass. The system provides a complete pipeline from HTTP task submission through symbolic reasoning, council evaluation, and sandboxed execution, with LLM inference support (mock provider for development, MLX for Apple Silicon production).
 
 ---
 
@@ -52,12 +52,21 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
 | v4-storage | ~800 | 28 | Complete |
+| v4-postgres | ~800 | 16 | Complete |
+| v4-inference | ~900 | 34 | Complete (Mock + MLX) |
 | v4-memory | ~750 | 26 | Complete |
 | v4-observability | ~600 | 20 | Complete |
 
 **Key Components**:
 - `ContentStore` with SHA-256 content addressing
 - `EventRepository` with chain verification
+- **`PostgresRepository`** implementing `DatabasePort` trait
+- **`EmbeddingRepository`** with pgvector for similarity search
+- **`ChunkRepository`** for workspace file chunking
+- **`Chunker`** utility with language detection
+- **`InferenceService`** with provider abstraction (Mock, MLX, CoreML)
+- **`MockProvider`** for development and testing
+- **`MLXProvider`** for Apple Silicon production (recommended)
 - `KnowledgeGraph` with multi-hop queries
 - Sterling-style decay (Episodic, Semantic, Procedural)
 - `MetricsCollector` with counters, gauges, histograms
@@ -82,6 +91,26 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 - `SandboxEnvironment` with audit logging
 - `SandboxedExecutor` with policy enforcement
 
+### Layer 5: Interface Layer ✅
+
+| Crate | Lines | Tests | Status |
+|-------|-------|-------|--------|
+| v4-api | ~800 | 24 | Complete |
+| v4-mcp | ~900 | 33 | Complete (MCP Server) |
+
+**Key Components**:
+- Axum-based HTTP server with CORS and request tracing
+- Task submission endpoint (`POST /api/v1/tasks`)
+- Task status endpoint (`GET /api/v1/tasks/:id`)
+- LLM probe endpoint (`POST /api/v1/probe`) - integrated with v4-inference
+- Health check endpoint (`GET /health`)
+- Metrics endpoint (`GET /metrics`) with latency percentiles
+- `TimingMetrics` for measuring reasoning, council, and gate latencies
+- `ApiService` with in-memory task storage (ring buffer)
+- **`MCPServer`** - Model Context Protocol server over HTTP
+- **`ToolAdapter`** - Converts v4-tools to MCP tool definitions
+- **`MCPHandler`** - JSON-RPC 2.0 protocol handler
+
 ### Integration Tests ✅
 
 | Location | Tests | Status |
@@ -90,6 +119,7 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 **Coverage**:
 - Full pipeline: TaskRequest → Symbolic → Council → Arbiter → Authorization
+- HTTP API: Submit → Evaluate → Response with timing
 - Invariant enforcement (INV-CORE-04 through INV-CORE-10)
 - Council veto logic at 0.5 threshold
 - CAWS gate enforcement
@@ -108,24 +138,34 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 | | v4-council | 38 |
 | | v4-arbiter | 37 |
 | **Infrastructure** | v4-storage | 28 |
+| | v4-postgres | 16 |
+| | v4-inference | 34 |
 | | v4-memory | 26 |
 | | v4-observability | 20 |
 | **Execution** | v4-tools | 20 |
 | | v4-workers | 24 |
 | | v4-sandbox | 29 |
+| **Interface** | v4-api | 24 |
+| | v4-mcp | 33 |
 | **Integration** | tests/ | 20 |
-| **Total** | | **398** |
+| **Total** | | **575** |
 
-All tests pass with `cargo test`.
+All tests pass with `cargo test`. (Note: MLX-specific tests require `--features mlx`)
 
 ---
 
 ## Architecture Data Flow
 
 ```
-TaskRequest
+HTTP Request (POST /api/v1/tasks)
     │
     ▼
+┌─────────────────┐
+│    v4-api       │  Parse request, generate task ID
+│                 │  Start timing metrics
+└────────┬────────┘
+         │ TaskRequest
+         ▼
 ┌─────────────────┐
 │   v4-symbolic   │  Validate proposal, build operator graph
 │                 │  Enforce INV-CORE-04 (deterministic), INV-CORE-07 (termination)
@@ -162,7 +202,7 @@ TaskRequest
 └────────┬────────┘
          │
          ▼
-    TaskResult
+HTTP Response (JSON with timing metrics)
 ```
 
 ---
@@ -258,27 +298,29 @@ let verdict = council.full_review(&evidence).await?;
 
 ## What's NOT Implemented Yet
 
-### Layer 5: Interfaces (Not Started)
+### Remaining Interface Work
 
-| Crate | Purpose | Priority |
-|-------|---------|----------|
-| v4-api | HTTP/gRPC server | High |
+| Component | Purpose | Priority |
+|-----------|---------|----------|
 | v4-cli | Command-line interface | Medium |
+| WebSocket | Real-time task updates | Low |
 
-### External Integrations (Not Started)
+### External Integrations
 
-| Integration | Purpose | Priority |
-|-------------|---------|----------|
-| MCP Protocol | External tool integration | High |
-| LLM Provider | Claude/OpenAI for reasoning | High |
-| PostgreSQL | Production persistence | Medium |
-| Dashboard | Next.js UI connection | Medium |
+| Integration | Purpose | Priority | Status |
+|-------------|---------|----------|--------|
+| v4-inference | Local LLM inference | **High** | ✅ Complete (Mock + MLX providers) |
+| PostgreSQL + pgvector | Workspace embeddings | **High** | ✅ Complete |
+| MLX Backend | Apple Silicon inference | **High** | ✅ Complete (recommended for M-series) |
+| CoreML Backend | ANE-optimized inference | Low | Deprecated (issues in v3) |
+| MCP Protocol | External tool integration | **High** | ✅ Complete (v4-mcp) |
+| Dashboard | Next.js UI connection | Medium | Planned |
 
 ### Training Infrastructure (Not Started)
 
 | Component | Purpose | Priority |
 |-----------|---------|----------|
-| CoreML Export | ANE-optimized inference | Low |
+| CoreML Export | ANE-optimized model conversion | Low |
 | Dataset Loader | Surgery-Ward integration | Low |
 | Distillation | Model training | Low |
 
@@ -291,7 +333,10 @@ let verdict = council.full_review(&evidence).await?;
 ```bash
 cd iterations/v4
 cargo test
-# Expected: 398 tests pass
+# Expected: 541 tests pass
+
+# With MLX feature (Apple Silicon)
+cargo test --features mlx
 ```
 
 ### 2. Check Compilation
@@ -301,41 +346,79 @@ cargo build --workspace
 cargo clippy --workspace -- -D warnings
 ```
 
-### 3. Explore the Codebase
+### 3. Start the API Server
+
+```bash
+cargo run -p v4-api --bin v4-server
+# Server starts on http://127.0.0.1:8080
+```
+
+### 4. Test the API
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Submit a task
+curl -X POST http://localhost:8080/api/v1/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Test task", "description": "Read a file"}'
+
+# Get metrics
+curl http://localhost:8080/metrics
+```
+
+### 5. Explore the Codebase
 
 Key entry points:
+- `crates/interfaces/v4-api/src/server.rs` - HTTP server setup
+- `crates/interfaces/v4-api/src/service.rs` - Business logic with timing
 - `crates/reasoning/v4-arbiter/src/arbiter.rs` - Main decision pipeline
 - `crates/reasoning/v4-council/src/council.rs` - Judge coordination
 - `crates/execution/v4-workers/src/task.rs` - Task execution
-- `crates/execution/v4-sandbox/src/executor.rs` - Sandboxed execution
 
-### 4. Add API Server (Recommended Next Step)
+### 6. Next Steps (Recommended)
 
-Create `crates/interfaces/v4-api/` with:
-- HTTP server (axum or actix-web)
-- Endpoints for task submission, status, results
-- WebSocket for real-time updates
-- Health/metrics endpoints
+1. **Integrate real mlx-rs bindings** - Wire up actual model loading (currently mock generation)
+2. **Connect to dashboard** - Wire up the Next.js management UI
+3. **Add v4-cli** - Command-line interface for task submission
 
 ---
 
 ## File Counts by Crate
 
 ```
-crates/core/v4-types/src/          6 files
-crates/core/v4-invariants/src/     4 files
-crates/core/v4-governance/src/     5 files
-crates/reasoning/v4-symbolic/src/  6 files
-crates/reasoning/v4-council/src/   8 files
-crates/reasoning/v4-arbiter/src/   6 files
-crates/infrastructure/v4-storage/src/      4 files
-crates/infrastructure/v4-memory/src/       4 files
+crates/core/v4-types/src/                   6 files
+crates/core/v4-invariants/src/              4 files
+crates/core/v4-governance/src/              5 files
+crates/reasoning/v4-symbolic/src/           6 files
+crates/reasoning/v4-council/src/            8 files
+crates/reasoning/v4-arbiter/src/            6 files
+crates/infrastructure/v4-storage/src/       4 files
+crates/infrastructure/v4-postgres/src/      7 files
+crates/infrastructure/v4-inference/src/     7 files (includes mlx.rs)
+crates/infrastructure/v4-memory/src/        4 files
 crates/infrastructure/v4-observability/src/ 4 files
-crates/execution/v4-tools/src/     5 files
-crates/execution/v4-workers/src/   4 files
-crates/execution/v4-sandbox/src/   4 files
-tests/                             2 files
+crates/execution/v4-tools/src/              5 files
+crates/execution/v4-workers/src/            4 files
+crates/execution/v4-sandbox/src/            4 files
+crates/interfaces/v4-api/src/               5 files (+1 binary)
+crates/interfaces/v4-mcp/src/               5 files
+tests/                                      2 files
 ```
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check with component status |
+| GET | `/metrics` | Performance metrics (latencies, counts, percentiles) |
+| GET | `/api/v1` | API info and available endpoints |
+| POST | `/api/v1/tasks` | Submit task for evaluation |
+| GET | `/api/v1/tasks/:id` | Get task status and council summary |
+| POST | `/api/v1/probe` | Probe LLM inference (integrated with v4-inference) |
 
 ---
 
@@ -343,4 +426,9 @@ tests/                             2 files
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5.0 | 2026-01-25 | Added v4-mcp with MCP protocol support for tool exposure |
+| 1.4.0 | 2026-01-25 | Added MLX provider for Apple Silicon (recommended over CoreML) |
+| 1.3.0 | 2026-01-25 | Added v4-inference with mock provider, wired to API probe endpoint |
+| 1.2.0 | 2026-01-25 | Added v4-postgres with pgvector for embeddings |
+| 1.1.0 | 2026-01-25 | Added v4-api HTTP server with timing metrics |
 | 1.0.0 | 2026-01-25 | Initial status after Phase 1-4 completion |

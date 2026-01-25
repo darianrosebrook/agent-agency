@@ -334,4 +334,158 @@ mod tests {
         assert!(!merged.passed);
         assert_eq!(merged.violations.len(), 1);
     }
+
+    #[test]
+    fn test_has_critical_true_when_critical_present() {
+        let result = InvariantResult::fail(vec![InvariantViolation {
+            invariant_id: "TEST-001".to_string(),
+            message: "Critical issue".to_string(),
+            severity: Severity::Critical,
+            location: None,
+        }]);
+        assert!(result.has_critical());
+    }
+
+    #[test]
+    fn test_has_critical_false_when_no_critical() {
+        let result = InvariantResult::fail(vec![InvariantViolation {
+            invariant_id: "TEST-001".to_string(),
+            message: "Error issue".to_string(),
+            severity: Severity::Error,
+            location: None,
+        }]);
+        assert!(!result.has_critical());
+    }
+
+    #[test]
+    fn test_blocking_violations_returns_correct_severities() {
+        let result = InvariantResult::fail(vec![
+            InvariantViolation {
+                invariant_id: "TEST-001".to_string(),
+                message: "Critical".to_string(),
+                severity: Severity::Critical,
+                location: None,
+            },
+            InvariantViolation {
+                invariant_id: "TEST-002".to_string(),
+                message: "Error".to_string(),
+                severity: Severity::Error,
+                location: None,
+            },
+            InvariantViolation {
+                invariant_id: "TEST-003".to_string(),
+                message: "Warning".to_string(),
+                severity: Severity::Warning,
+                location: None,
+            },
+            InvariantViolation {
+                invariant_id: "TEST-004".to_string(),
+                message: "Info".to_string(),
+                severity: Severity::Info,
+                location: None,
+            },
+        ]);
+
+        let blocking = result.blocking_violations();
+        assert_eq!(blocking.len(), 2);
+        assert!(blocking.iter().all(|v| matches!(v.severity, Severity::Critical | Severity::Error)));
+    }
+
+    #[test]
+    fn test_blocking_violations_empty_when_only_warnings() {
+        let result = InvariantResult::fail(vec![InvariantViolation {
+            invariant_id: "TEST-001".to_string(),
+            message: "Warning".to_string(),
+            severity: Severity::Warning,
+            location: None,
+        }]);
+
+        assert!(result.blocking_violations().is_empty());
+    }
+
+    #[test]
+    fn test_fail_fast_builder() {
+        let checker = InvariantChecker::new().fail_fast();
+        // Verify the builder pattern returns a modified Self, not default
+        // We can test this indirectly by checking the content_hash method
+        let checker_with_hash = InvariantChecker::new()
+            .fail_fast()
+            .with_content_hash("test");
+        assert!(checker_with_hash.content_hash().is_some());
+        // Also verify the hash is correct (not reset by fail_fast)
+        assert_eq!(checker_with_hash.content_hash().unwrap().len(), 64);
+    }
+
+    #[test]
+    fn test_fail_fast_preserves_content_hash() {
+        // Test that fail_fast() doesn't reset the content_hash that was set before
+        let checker = InvariantChecker::new()
+            .with_content_hash("test content")
+            .fail_fast();
+        // If fail_fast returned Default::default(), content_hash would be None
+        assert!(checker.content_hash().is_some());
+    }
+
+    #[test]
+    fn test_fail_fast_chaining() {
+        // Test that the builder chain order doesn't matter
+        let checker1 = InvariantChecker::new()
+            .fail_fast()
+            .with_content_hash("data");
+        let checker2 = InvariantChecker::new()
+            .with_content_hash("data")
+            .fail_fast();
+
+        // Both should have the same hash
+        assert_eq!(checker1.content_hash(), checker2.content_hash());
+    }
+
+    #[test]
+    fn test_with_content_hash_returns_correct_hash() {
+        let checker = InvariantChecker::new().with_content_hash("hello");
+        let hash = checker.content_hash();
+        assert!(hash.is_some());
+        assert_eq!(hash.unwrap().len(), 64);
+        // SHA-256 of "hello" is well-known
+        assert_eq!(
+            hash.unwrap(),
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+        );
+    }
+
+    #[test]
+    fn test_content_hash_none_when_not_set() {
+        let checker = InvariantChecker::new();
+        assert!(checker.content_hash().is_none());
+    }
+
+    #[test]
+    fn test_check_structured_response_sentence_boundary() {
+        let checker = InvariantChecker::new();
+
+        // Exactly 3 sentences - should pass
+        let three = "First. Second. Third. End";
+        let result = checker.check_structured_response(three);
+        assert!(result.passed);
+
+        // More than 3 sentences - should fail
+        let four = "First. Second. Third. Fourth. End";
+        let result = checker.check_structured_response(four);
+        assert!(!result.passed);
+    }
+
+    #[test]
+    fn test_check_structured_response_paragraphs_or_sentences() {
+        let checker = InvariantChecker::new();
+
+        // Has paragraphs but few sentences
+        let paragraphs = "Line one.\n\nLine two.";
+        let result = checker.check_structured_response(paragraphs);
+        assert!(!result.passed);
+
+        // Has many sentences but no paragraphs
+        let sentences = "One. Two. Three. Four. Five.";
+        let result = checker.check_structured_response(sentences);
+        assert!(!result.passed);
+    }
 }

@@ -177,4 +177,56 @@ mod tests {
         assert_eq!(control.class(), "C");
         assert!(control.has_side_effects());
     }
+
+    #[test]
+    fn test_operator_class_descriptions() {
+        // Test that class_description returns non-empty strings
+        let seek = OperatorType::Seek(SeekOp::ReadFile { path: "test.rs".to_string() });
+        assert!(!seek.class_description().is_empty());
+        assert!(seek.class_description().contains("Retrieval"));
+
+        let memorize = OperatorType::Memorize(MemorizeOp::StoreFact {
+            key: "k".to_string(),
+            value: "v".to_string(),
+        });
+        assert!(!memorize.class_description().is_empty());
+        assert!(memorize.class_description().contains("Store"));
+
+        let perceive = OperatorType::Perceive(PerceiveOp::ParseIntent { input: "test".to_string() });
+        assert!(!perceive.class_description().is_empty());
+        assert!(perceive.class_description().contains("Interpret"));
+
+        let knowledge = OperatorType::Knowledge(KnowledgeOp::ApplyCodePattern {
+            pattern_id: "singleton".to_string(),
+        });
+        assert!(!knowledge.class_description().is_empty());
+        assert!(knowledge.class_description().contains("Knowledge"));
+
+        let control = OperatorType::Control(ControlOp::Terminate { reason: "done".to_string() });
+        assert!(!control.class_description().is_empty());
+        assert!(control.class_description().contains("Control"));
+    }
+
+    #[test]
+    fn test_operator_class_descriptions_are_unique() {
+        // Ensure each operator type has a unique description
+        let descriptions = [
+            OperatorType::Seek(SeekOp::ReadFile { path: "test".to_string() }).class_description(),
+            OperatorType::Memorize(MemorizeOp::StoreFact {
+                key: "k".to_string(),
+                value: "v".to_string(),
+            }).class_description(),
+            OperatorType::Perceive(PerceiveOp::ParseIntent { input: "test".to_string() }).class_description(),
+            OperatorType::Knowledge(KnowledgeOp::ApplyCodePattern {
+                pattern_id: "test".to_string(),
+            }).class_description(),
+            OperatorType::Control(ControlOp::Terminate { reason: "done".to_string() }).class_description(),
+        ];
+
+        // Check all descriptions are unique
+        let mut unique = std::collections::HashSet::new();
+        for desc in descriptions {
+            assert!(unique.insert(desc), "Duplicate description: {}", desc);
+        }
+    }
 }

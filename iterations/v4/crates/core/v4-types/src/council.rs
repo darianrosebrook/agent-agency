@@ -211,6 +211,47 @@ mod tests {
     }
 
     #[test]
+    fn test_verdict_score_returns_correct_value() {
+        // Test that score() returns the actual score value, not 0 or -1
+        let approved = CouncilVerdict::Approved { score: 0.95 };
+        assert!((approved.score() - 0.95).abs() < 0.001);
+
+        let conditional = CouncilVerdict::ConditionalApproval {
+            score: 0.75,
+            requirements: vec![],
+        };
+        assert!((conditional.score() - 0.75).abs() < 0.001);
+
+        let rejected = CouncilVerdict::Rejected {
+            score: 0.3,
+            reasons: vec![],
+        };
+        assert!((rejected.score() - 0.3).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_verdict_passes_threshold() {
+        let verdict = CouncilVerdict::Approved { score: 0.85 };
+
+        // At threshold - should pass
+        assert!(verdict.passes_threshold(0.85));
+
+        // Below threshold - should pass
+        assert!(verdict.passes_threshold(0.80));
+
+        // Above threshold - should fail
+        assert!(!verdict.passes_threshold(0.90));
+    }
+
+    #[test]
+    fn test_verdict_passes_threshold_boundary() {
+        // Test that >= is used, not just >
+        let verdict = CouncilVerdict::Approved { score: 0.5 };
+        assert!(verdict.passes_threshold(0.5)); // Exactly at threshold
+        assert!(!verdict.passes_threshold(0.500001)); // Just above
+    }
+
+    #[test]
     fn test_judge_scores_aggregate() {
         let scores = JudgeScores {
             constitutional: 0.90,
@@ -221,6 +262,70 @@ mod tests {
         let aggregate = scores.calculate_aggregate();
         // 0.90 * 0.30 + 0.85 * 0.35 + 0.80 * 0.35 = 0.27 + 0.2975 + 0.28 = 0.8475
         assert!((aggregate - 0.8475).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_judge_scores_all_pass_minimum() {
+        let passing = JudgeScores {
+            constitutional: 0.8,
+            technical: 0.8,
+            quality: 0.8,
+            aggregate: 0.8,
+        };
+        assert!(passing.all_pass_minimum(0.8));
+        assert!(passing.all_pass_minimum(0.79));
+        assert!(!passing.all_pass_minimum(0.81));
+    }
+
+    #[test]
+    fn test_judge_scores_all_pass_minimum_checks_all_fields() {
+        // Only constitutional fails
+        let const_fails = JudgeScores {
+            constitutional: 0.5,
+            technical: 0.9,
+            quality: 0.9,
+            aggregate: 0.8,
+        };
+        assert!(!const_fails.all_pass_minimum(0.7));
+
+        // Only technical fails
+        let tech_fails = JudgeScores {
+            constitutional: 0.9,
+            technical: 0.5,
+            quality: 0.9,
+            aggregate: 0.8,
+        };
+        assert!(!tech_fails.all_pass_minimum(0.7));
+
+        // Only quality fails
+        let quality_fails = JudgeScores {
+            constitutional: 0.9,
+            technical: 0.9,
+            quality: 0.5,
+            aggregate: 0.8,
+        };
+        assert!(!quality_fails.all_pass_minimum(0.7));
+    }
+
+    #[test]
+    fn test_judge_scores_all_pass_minimum_boundary() {
+        // Exactly at minimum - should pass
+        let at_minimum = JudgeScores {
+            constitutional: 0.7,
+            technical: 0.7,
+            quality: 0.7,
+            aggregate: 0.7,
+        };
+        assert!(at_minimum.all_pass_minimum(0.7));
+
+        // Just below minimum - should fail
+        let below_minimum = JudgeScores {
+            constitutional: 0.699,
+            technical: 0.7,
+            quality: 0.7,
+            aggregate: 0.7,
+        };
+        assert!(!below_minimum.all_pass_minimum(0.7));
     }
 
     #[test]

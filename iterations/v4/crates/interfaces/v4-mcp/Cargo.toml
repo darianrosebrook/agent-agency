@@ -1,13 +1,20 @@
 [package]
-name = "v4-inference"
+name = "v4-mcp"
 version.workspace = true
 edition = "2021"
 license.workspace = true
-description = "Agent Agency V4 - Local LLM inference with CoreML support"
+description = "Agent Agency V4 - Model Context Protocol (MCP) server"
 
 [dependencies]
-# Core types
+# Workspace crates
 v4-types = { workspace = true }
+v4-tools = { workspace = true }
+v4-governance = { workspace = true }
+
+# Web framework (for HTTP transport)
+axum = { version = "0.7", features = ["macros", "tokio"] }
+tower = { version = "0.5", features = ["timeout", "limit"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # Async
 tokio = { workspace = true }
@@ -26,16 +33,5 @@ thiserror = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
-# Cryptography
-sha2 = { workspace = true }
-hex = { workspace = true }
-
 [dev-dependencies]
 tokio-test = { workspace = true }
-
-[features]
-default = []
-# CoreML support (macOS only, legacy)
-coreml = []
-# MLX support (Apple Silicon, recommended)
-mlx = []

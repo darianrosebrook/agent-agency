@@ -203,6 +203,28 @@ impl Fingerprints {
 mod tests {
     use super::*;
 
+    fn make_gate_result(gate: GateType, score: f64, threshold: f64) -> GateResult {
+        GateResult::new(gate, score, threshold)
+    }
+
+    fn make_quality_report(gates: Vec<GateResult>) -> QualityReport {
+        QualityReport {
+            id: "report-1".to_string(),
+            task_id: "task-1".to_string(),
+            gates,
+            passed: true,
+            overall_score: 0.9,
+            timestamp: chrono::Utc::now(),
+            fingerprints: Fingerprints {
+                dataset_sha256: Some("abc".to_string()),
+                model_sha256: Some("def".to_string()),
+                tokenizer_sha256: Some("ghi".to_string()),
+                tool_registry_sha256: Some("jkl".to_string()),
+                invariant_set_sha256: Some("mno".to_string()),
+            },
+        }
+    }
+
     #[test]
     fn test_gate_result_creation() {
         let gate = GateResult::new(GateType::IntegrationF1, 0.92, 0.90);
@@ -212,6 +234,49 @@ mod tests {
         let failed = GateResult::new(GateType::IntegrationF1, 0.85, 0.90);
         assert!(!failed.passed);
         assert!(failed.margin() < 0.0);
+    }
+
+    #[test]
+    fn test_gate_result_with_details() {
+        let gate = GateResult::with_details(
+            GateType::IntegrationF1,
+            0.92,
+            0.90,
+            "F1 score is good".to_string(),
+        );
+        assert!(gate.passed);
+        assert_eq!(gate.details, Some("F1 score is good".to_string()));
+    }
+
+    #[test]
+    fn test_gate_result_boundary() {
+        // Exactly at threshold should pass (>= not >)
+        let at_threshold = GateResult::new(GateType::IntegrationF1, 0.90, 0.90);
+        assert!(at_threshold.passed);
+
+        // Just below should fail
+        let below = GateResult::new(GateType::IntegrationF1, 0.899, 0.90);
+        assert!(!below.passed);
+    }
+
+    #[test]
+    fn test_gate_with_details_boundary() {
+        // Test that with_details also uses >= for passed check
+        let at_threshold = GateResult::with_details(
+            GateType::IntegrationF1,
+            0.90,
+            0.90,
+            "At boundary".to_string(),
+        );
+        assert!(at_threshold.passed);
+
+        let below = GateResult::with_details(
+            GateType::IntegrationF1,
+            0.899,
+            0.90,
+            "Below boundary".to_string(),
+        );
+        assert!(!below.passed);
     }
 
     #[test]
@@ -225,7 +290,91 @@ mod tests {
     fn test_zero_required_gates() {
         assert!(GateType::InvariantViolations.is_zero_required());
         assert!(GateType::PlaceholderCount.is_zero_required());
+        assert!(GateType::ControlIntegration.is_zero_required());
         assert!(!GateType::IntegrationF1.is_zero_required());
+        assert!(!GateType::PrivacyCompliance.is_zero_required());
+    }
+
+    #[test]
+    fn test_perfect_required_gates() {
+        // Gates that must be 1.0
+        assert!(GateType::PrivacyCompliance.is_perfect_required());
+        assert!(GateType::TestPassRate.is_perfect_required());
+        assert!(GateType::Compilation.is_perfect_required());
+
+        // Gates that don't require perfection
+        assert!(!GateType::IntegrationF1.is_perfect_required());
+        assert!(!GateType::CodeCoverage.is_perfect_required());
+        assert!(!GateType::FixtureHitRate.is_perfect_required());
+        assert!(!GateType::InvariantViolations.is_perfect_required());
+    }
+
+    #[test]
+    fn test_quality_report_all_gates_passed() {
+        // All passing
+        let all_pass = make_quality_report(vec![
+            make_gate_result(GateType::IntegrationF1, 0.95, 0.90),
+            make_gate_result(GateType::CodeCoverage, 0.85, 0.80),
+        ]);
+        assert!(all_pass.all_gates_passed());
+
+        // One failing
+        let one_fails = make_quality_report(vec![
+            make_gate_result(GateType::IntegrationF1, 0.95, 0.90),
+            make_gate_result(GateType::CodeCoverage, 0.75, 0.80), // Fails
+        ]);
+        assert!(!one_fails.all_gates_passed());
+
+        // Empty gates (edge case)
+        let empty = make_quality_report(vec![]);
+        assert!(empty.all_gates_passed()); // vacuously true
+    }
+
+    #[test]
+    fn test_quality_report_failed_gates() {
+        let report = make_quality_report(vec![
+            make_gate_result(GateType::IntegrationF1, 0.95, 0.90), // Pass
+            make_gate_result(GateType::CodeCoverage, 0.75, 0.80), // Fail
+            make_gate_result(GateType::TestPassRate, 0.90, 1.0),  // Fail
+        ]);
+
+        let failed = report.failed_gates();
+        assert_eq!(failed.len(), 2);
+
+        // Check that the correct gates are in the list
+        assert!(failed.iter().any(|g| g.gate == GateType::CodeCoverage));
+        assert!(failed.iter().any(|g| g.gate == GateType::TestPassRate));
+    }
+
+    #[test]
+    fn test_quality_report_failed_gates_empty_when_all_pass() {
+        let report = make_quality_report(vec![
+            make_gate_result(GateType::IntegrationF1, 0.95, 0.90),
+            make_gate_result(GateType::CodeCoverage, 0.85, 0.80),
+        ]);
+
+        let failed = report.failed_gates();
+        assert!(failed.is_empty());
+    }
+
+    #[test]
+    fn test_quality_report_lowest_gate() {
+        let report = make_quality_report(vec![
+            make_gate_result(GateType::IntegrationF1, 0.95, 0.90),
+            make_gate_result(GateType::CodeCoverage, 0.75, 0.80), // Lowest
+            make_gate_result(GateType::TestPassRate, 0.90, 1.0),
+        ]);
+
+        let lowest = report.lowest_gate();
+        assert!(lowest.is_some());
+        assert_eq!(lowest.unwrap().gate, GateType::CodeCoverage);
+        assert!((lowest.unwrap().score - 0.75).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_quality_report_lowest_gate_empty() {
+        let report = make_quality_report(vec![]);
+        assert!(report.lowest_gate().is_none());
     }
 
     #[test]
@@ -249,5 +398,48 @@ mod tests {
         };
         assert!(complete.is_complete());
         assert!(complete.missing().is_empty());
+    }
+
+    #[test]
+    fn test_fingerprints_is_complete_requires_all() {
+        // Missing dataset
+        let no_dataset = Fingerprints {
+            dataset_sha256: None,
+            model_sha256: Some("def".to_string()),
+            tokenizer_sha256: Some("ghi".to_string()),
+            tool_registry_sha256: Some("jkl".to_string()),
+            invariant_set_sha256: Some("mno".to_string()),
+        };
+        assert!(!no_dataset.is_complete());
+
+        // Missing model
+        let no_model = Fingerprints {
+            dataset_sha256: Some("abc".to_string()),
+            model_sha256: None,
+            tokenizer_sha256: Some("ghi".to_string()),
+            tool_registry_sha256: Some("jkl".to_string()),
+            invariant_set_sha256: Some("mno".to_string()),
+        };
+        assert!(!no_model.is_complete());
+
+        // Missing tool_registry
+        let no_registry = Fingerprints {
+            dataset_sha256: Some("abc".to_string()),
+            model_sha256: Some("def".to_string()),
+            tokenizer_sha256: Some("ghi".to_string()),
+            tool_registry_sha256: None,
+            invariant_set_sha256: Some("mno".to_string()),
+        };
+        assert!(!no_registry.is_complete());
+
+        // Only required fields (tokenizer and invariant_set not required)
+        let minimal_complete = Fingerprints {
+            dataset_sha256: Some("abc".to_string()),
+            model_sha256: Some("def".to_string()),
+            tokenizer_sha256: None,
+            tool_registry_sha256: Some("jkl".to_string()),
+            invariant_set_sha256: None,
+        };
+        assert!(minimal_complete.is_complete());
     }
 }
