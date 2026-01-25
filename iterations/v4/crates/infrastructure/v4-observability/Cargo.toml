@@ -1,0 +1,28 @@
+[package]
+name = "v4-observability"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - Metrics, tracing, and health checks"
+
+[dependencies]
+v4-types.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["sync", "time"] }
+
+# Time
+chrono.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Unique identifiers
+uuid.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

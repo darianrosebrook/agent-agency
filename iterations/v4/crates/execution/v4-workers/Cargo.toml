@@ -1,0 +1,34 @@
+[package]
+name = "v4-workers"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - Worker pool and task execution"
+
+[dependencies]
+v4-types.workspace = true
+v4-tools = { path = "../v4-tools" }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["sync", "time", "rt"] }
+async-trait.workspace = true
+
+# Time
+chrono.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Cryptography (for content hashing)
+sha2.workspace = true
+hex.workspace = true
+
+# Unique identifiers
+uuid.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

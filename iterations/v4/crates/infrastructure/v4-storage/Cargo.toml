@@ -1,0 +1,36 @@
+[package]
+name = "v4-storage"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - Storage layer with SQLite and event sourcing"
+
+[dependencies]
+v4-types.workspace = true
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["sync"] }
+
+# Crypto for content hashing
+sha2.workspace = true
+hex.workspace = true
+
+# Time
+chrono.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Unique identifiers
+uuid.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = "3.10"

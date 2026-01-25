@@ -1,0 +1,23 @@
+[package]
+name = "v4-invariants"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Executable invariants for Agent Agency V4 (Sterling-style)"
+
+[dependencies]
+v4-types.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+
+# Cryptographic hashing for fingerprints
+sha2.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true

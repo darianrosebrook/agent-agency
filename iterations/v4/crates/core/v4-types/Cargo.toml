@@ -1,0 +1,31 @@
+[package]
+name = "v4-types"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Core type definitions and contracts for Agent Agency V4"
+
+[features]
+default = ["serde"]
+serde = ["dep:serde", "dep:schemars"]
+
+[dependencies]
+# Serialization (optional but default)
+serde = { workspace = true, optional = true }
+serde_json.workspace = true
+schemars = { version = "0.8", optional = true, default-features = false, features = ["derive"] }
+
+# Core types
+chrono.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+
+# Validation
+jsonschema = { version = "0.17", default-features = false, features = ["draft202012"] }
+
+# Async
+async-trait = "0.1"
+
+[dev-dependencies]
+serde_json.workspace = true
+proptest.workspace = true

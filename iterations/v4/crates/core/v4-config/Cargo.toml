@@ -1,0 +1,8 @@
+[package]
+name = "v4-config"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - v4-config (stub)"
+
+[dependencies]

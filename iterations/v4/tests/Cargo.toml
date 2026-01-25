@@ -1,0 +1,32 @@
+[package]
+name = "v4-integration-tests"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - End-to-end integration tests"
+publish = false
+
+[[test]]
+name = "integration_e2e"
+path = "integration_e2e.rs"
+
+[dependencies]
+# All V4 crates
+v4-types.workspace = true
+v4-invariants.workspace = true
+v4-governance.workspace = true
+v4-symbolic.workspace = true
+v4-council.workspace = true
+v4-arbiter.workspace = true
+v4-storage.workspace = true
+v4-memory.workspace = true
+v4-observability.workspace = true
+
+# Async runtime
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+# Time
+chrono.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

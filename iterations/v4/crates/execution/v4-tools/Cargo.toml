@@ -1,0 +1,30 @@
+[package]
+name = "v4-tools"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - Tool registry and execution framework"
+
+[dependencies]
+v4-types.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["sync", "time", "fs", "process"] }
+async-trait.workspace = true
+
+# Time
+chrono.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Cryptography (for content hashing)
+sha2.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

@@ -1,0 +1,111 @@
+[workspace]
+resolver = "2"
+
+members = [
+    # Core layer (foundation - no circular deps allowed)
+    "crates/core/v4-types",
+    "crates/core/v4-invariants",
+    "crates/core/v4-governance",
+    "crates/core/v4-config",
+
+    # Reasoning layer (depends on core only)
+    "crates/reasoning/v4-symbolic",
+    "crates/reasoning/v4-council",
+    "crates/reasoning/v4-arbiter",
+
+    # Execution layer (depends on core + reasoning)
+    "crates/execution/v4-tools",
+    "crates/execution/v4-workers",
+    "crates/execution/v4-sandbox",
+
+    # Infrastructure layer (depends on core, optional features)
+    "crates/infrastructure/v4-memory",
+    "crates/infrastructure/v4-storage",
+    "crates/infrastructure/v4-inference",
+    "crates/infrastructure/v4-observability",
+
+    # Interface layer (top of dependency tree)
+    "crates/interfaces/v4-api",
+
+    # Integration tests
+    "tests",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.83"
+license = "MIT"
+repository = "https://github.com/anthropics/agent-agency"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "postgres", "json", "chrono", "uuid"] }
+
+# Types
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Validation
+schemars = "0.8"
+
+# Cryptography (for fingerprinting)
+sha2 = "0.10"
+hex = "0.4"
+
+# Logging/Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Testing
+proptest = "1.0"
+tokio-test = "0.4"
+
+# Workspace crates (internal dependencies)
+v4-types = { path = "crates/core/v4-types" }
+v4-invariants = { path = "crates/core/v4-invariants" }
+v4-governance = { path = "crates/core/v4-governance" }
+v4-config = { path = "crates/core/v4-config" }
+v4-symbolic = { path = "crates/reasoning/v4-symbolic" }
+v4-council = { path = "crates/reasoning/v4-council" }
+v4-arbiter = { path = "crates/reasoning/v4-arbiter" }
+v4-tools = { path = "crates/execution/v4-tools" }
+v4-workers = { path = "crates/execution/v4-workers" }
+v4-sandbox = { path = "crates/execution/v4-sandbox" }
+v4-memory = { path = "crates/infrastructure/v4-memory" }
+v4-storage = { path = "crates/infrastructure/v4-storage" }
+v4-inference = { path = "crates/infrastructure/v4-inference" }
+v4-observability = { path = "crates/infrastructure/v4-observability" }
+v4-api = { path = "crates/interfaces/v4-api" }
+
+[workspace.lints.rust]
+# Strict mode - no warnings allowed
+warnings = "deny"
+missing_docs = "warn"
+unused = "deny"
+
+[workspace.lints.clippy]
+# Clippy strict mode
+all = "deny"
+pedantic = "warn"
+nursery = "warn"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true

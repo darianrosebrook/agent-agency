@@ -1,0 +1,34 @@
+[package]
+name = "v4-memory"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Agent Agency V4 - Graph + vector memory with decay"
+
+[dependencies]
+v4-types.workspace = true
+v4-storage.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Async
+tokio = { workspace = true, features = ["sync"] }
+async-trait.workspace = true
+
+# Crypto for content hashing
+sha2.workspace = true
+hex.workspace = true
+
+# Time
+chrono.workspace = true
+
+# Error handling
+thiserror.workspace = true
+
+# Unique identifiers
+uuid.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

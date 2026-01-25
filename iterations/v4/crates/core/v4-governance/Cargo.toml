@@ -1,0 +1,21 @@
+[package]
+name = "v4-governance"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+description = "Governance modes and CAWS gate enforcement for Agent Agency V4"
+
+[dependencies]
+v4-types.workspace = true
+v4-invariants.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+tokio-test.workspace = true
