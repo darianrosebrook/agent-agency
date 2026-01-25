@@ -1,0 +1,12 @@
+id: WV-9468
+title: V4 Stub Crates - Pending Implementation
+reason: legacy_integration
+description: v4-config and v4-inference are placeholder crates in the V4 architecture that will be implemented in future phases. These stubs are intentional architectural placeholders, not incomplete work.
+gates:
+  - HIDDEN_TODO
+created_at: '2026-01-25T20:06:59.468Z'
+expires_at: '2026-03-01'
+approved_by: darianrosebrook
+impact_level: low
+mitigation_plan: Stubs are clearly marked and isolated in iterations/v4/crates/. Will be implemented before V4 production release.
+status: active

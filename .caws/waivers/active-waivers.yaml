@@ -94,6 +94,49 @@ waivers:
         ML system is production-ready with all critical functionality
         implemented and tested
     title: Core ML Acceleration System Implementation
+  WV-9468:
+    approved_by: darianrosebrook
+    created_at: '2026-01-25T20:06:59.468Z'
+    description: >-
+      v4-config and v4-inference are placeholder crates in the V4 architecture
+      that will be implemented in future phases. These stubs are intentional
+      architectural placeholders, not incomplete work.
+    expires_at: '2026-03-01'
+    gates:
+      - HIDDEN_TODO
+    id: WV-9468
+    metadata: {}
+    reason: legacy_integration
+    risk_assessment:
+      impact_level: low
+      mitigation_plan: >-
+        Stubs are clearly marked and isolated in iterations/v4/crates/. Will be
+        implemented before V4 production release.
+    title: V4 Stub Crates - Pending Implementation
+  WV-API-SERVER-HARDENING:
+    approved_by: darianrosebrook
+    created_at: '2025-11-26T03:20:00.000Z'
+    description: >-
+      API server hardening with SQL injection protection, database consistency
+      fixes, and dashboard integration. The api-server.rs file is a pre-existing
+      large file that consolidates all API endpoints. Current changes add
+      critical security and data consistency fixes.
+    expires_at: '2025-12-31'
+    gates:
+      - god_objects
+    id: WV-API-SERVER-HARDENING
+    metadata:
+      change_type: security-hardening
+      files_changed: 30
+    reason: security-hardening
+    risk_assessment:
+      impact_level: medium
+      mitigation_plan: >
+        The api-server.rs file size is a pre-existing architectural decision.
+        Current changes add critical security fixes (SQL injection protection)
+        and data consistency improvements. Future refactoring to split endpoints
+        into separate modules is planned but should not block security fixes.
+    title: API Server Security Hardening and Dashboard Integration
   WV-COREML-INFERENCE-ENABLED:
     approved_by: engineering-lead
     created_at: '2025-01-08T00:00:00.000Z'
@@ -208,27 +251,3 @@ waivers:
         modified. Banned modifier warnings are false positives (Rust "new"
         constructor pattern). God object violations are pre-existing.
     title: Documentation - TODO Checklist Enhancement
-  WV-API-SERVER-HARDENING:
-    approved_by: darianrosebrook
-    created_at: '2025-11-26T03:20:00.000Z'
-    description: >-
-      API server hardening with SQL injection protection, database consistency
-      fixes, and dashboard integration. The api-server.rs file is a pre-existing
-      large file that consolidates all API endpoints. Current changes add
-      critical security and data consistency fixes.
-    expires_at: '2025-12-31'
-    gates:
-      - god_objects
-    id: WV-API-SERVER-HARDENING
-    metadata:
-      change_type: security-hardening
-      files_changed: 30
-    reason: security-hardening
-    risk_assessment:
-      impact_level: medium
-      mitigation_plan: >
-        The api-server.rs file size is a pre-existing architectural decision.
-        Current changes add critical security fixes (SQL injection protection)
-        and data consistency improvements. Future refactoring to split endpoints
-        into separate modules is planned but should not block security fixes.
-    title: API Server Security Hardening and Dashboard Integration
