@@ -1,25 +1,25 @@
 # V4 Implementation Status
 
 **Last Updated**: 2026-01-25
-**Status**: Core + Inference + MCP Implementation Complete (Phases 1-7)
+**Phase**: Core + Inference + MCP (Phases 1-7)
 
 ---
 
 ## Executive Summary
 
-V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**, **Execution**, and **Interface** layers. All 575 tests pass. The system provides a complete pipeline from HTTP task submission through symbolic reasoning, council evaluation, and sandboxed execution, with LLM inference support (mock provider for development, MLX for Apple Silicon production).
+V4 codebase includes the **Core**, **Reasoning**, **Infrastructure**, **Execution**, and **Interface** layers. 575 tests pass as of 2026-01-25. The system provides a pipeline from HTTP task submission through symbolic reasoning, council evaluation, and sandboxed execution, with LLM inference support (mock provider for development, MLX for Apple Silicon).
 
 ---
 
-## Completed Layers
+## Built Layers
 
 ### Layer 1: Core Layer ✅
 
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
-| v4-types | ~2,041 | 35 | Complete |
-| v4-invariants | ~1,082 | 44 | Complete |
-| v4-governance | ~1,173 | 20 | Complete |
+| v4-types | ~2,041 | 35 | Done |
+| v4-invariants | ~1,082 | 44 | Done |
+| v4-governance | ~1,173 | 20 | Done |
 
 **Key Components**:
 - `OperatorType` enum with S/M/P/K/C taxonomy (Sterling-style)
@@ -33,9 +33,9 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
-| v4-symbolic | ~950 | 37 | Complete |
-| v4-council | ~1,250 | 38 | Complete |
-| v4-arbiter | ~970 | 37 | Complete |
+| v4-symbolic | ~950 | 37 | Done |
+| v4-council | ~1,250 | 38 | Done |
+| v4-arbiter | ~970 | 37 | Done |
 
 **Key Components**:
 - `SymbolicReasoner` trait with `DefaultReasoner` implementation
@@ -51,11 +51,11 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
-| v4-storage | ~800 | 28 | Complete |
-| v4-postgres | ~800 | 16 | Complete |
-| v4-inference | ~900 | 34 | Complete (Mock + MLX) |
-| v4-memory | ~750 | 26 | Complete |
-| v4-observability | ~600 | 20 | Complete |
+| v4-storage | ~800 | 28 | Done |
+| v4-postgres | ~800 | 16 | Done |
+| v4-inference | ~900 | 34 | Done (Mock + MLX) |
+| v4-memory | ~750 | 26 | Done |
+| v4-observability | ~600 | 20 | Done |
 
 **Key Components**:
 - `ContentStore` with SHA-256 content addressing
@@ -77,9 +77,9 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
-| v4-tools | ~700 | 20 | Complete |
-| v4-workers | ~650 | 24 | Complete |
-| v4-sandbox | ~900 | 29 | Complete |
+| v4-tools | ~700 | 20 | Done |
+| v4-workers | ~650 | 24 | Done |
+| v4-sandbox | ~900 | 29 | Done |
 
 **Key Components**:
 - `Tool` trait with `ToolRegistry` for discovery
@@ -95,8 +95,8 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 | Crate | Lines | Tests | Status |
 |-------|-------|-------|--------|
-| v4-api | ~800 | 24 | Complete |
-| v4-mcp | ~900 | 33 | Complete (MCP Server) |
+| v4-api | ~800 | 24 | Done |
+| v4-mcp | ~900 | 33 | Done (MCP Server) |
 
 **Key Components**:
 - Axum-based HTTP server with CORS and request tracing
@@ -115,7 +115,7 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 
 | Location | Tests | Status |
 |----------|-------|--------|
-| tests/integration_e2e.rs | 20 | Complete |
+| tests/integration_e2e.rs | 20 | Done |
 
 **Coverage**:
 - Full pipeline: TaskRequest → Symbolic → Council → Arbiter → Authorization
@@ -150,7 +150,7 @@ V4 implementation has completed the **Core**, **Reasoning**, **Infrastructure**,
 | **Integration** | tests/ | 20 |
 | **Total** | | **575** |
 
-All tests pass with `cargo test`. (Note: MLX-specific tests require `--features mlx`)
+Tests run with `cargo test`. (Note: MLX-specific tests require `--features mlx`)
 
 ---
 
@@ -296,7 +296,7 @@ let verdict = council.full_review(&evidence).await?;
 
 ---
 
-## What's NOT Implemented Yet
+## What's NOT Built Yet
 
 ### Remaining Interface Work
 
@@ -309,11 +309,11 @@ let verdict = council.full_review(&evidence).await?;
 
 | Integration | Purpose | Priority | Status |
 |-------------|---------|----------|--------|
-| v4-inference | Local LLM inference | **High** | ✅ Complete (Mock + MLX providers) |
-| PostgreSQL + pgvector | Workspace embeddings | **High** | ✅ Complete |
-| MLX Backend | Apple Silicon inference | **High** | ✅ Complete (recommended for M-series) |
+| v4-inference | Local LLM inference | **High** | ✅ Built (Mock + MLX providers) |
+| PostgreSQL + pgvector | Workspace embeddings | **High** | ✅ Built |
+| MLX Backend | Apple Silicon inference | **High** | ✅ Built (recommended for M-series) |
 | CoreML Backend | ANE-optimized inference | Low | Deprecated (issues in v3) |
-| MCP Protocol | External tool integration | **High** | ✅ Complete (v4-mcp) |
+| MCP Protocol | External tool integration | **High** | ✅ Built (v4-mcp) |
 | Dashboard | Next.js UI connection | Medium | Planned |
 
 ### Training Infrastructure (Not Started)

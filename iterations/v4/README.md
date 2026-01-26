@@ -2,9 +2,9 @@
 
 A principled AI agent system built on Sterling's operator taxonomy and constitutional governance.
 
-## Status: Core + Inference Implementation Complete
+## Current State
 
-All layers implemented with **473 passing tests**.
+**575 tests** across layers (as of 2026-01-25).
 
 | Layer | Crates | Tests | Status |
 |-------|--------|-------|--------|
@@ -73,7 +73,7 @@ TaskRequest → v4-symbolic → v4-council → v4-arbiter → v4-workers → v4-
 | Permissive | Full | Yes | Development |
 | Standard | /tmp | No | Default |
 | Restricted | /tmp (read) | No | Sensitive |
-| Maximum | None | No | Untrusted |
+| Strict | None | No | High-risk |
 
 ## Crate Structure
 
@@ -108,7 +108,7 @@ crates/
 ## Key Invariants
 
 - **INV-CORE-04**: Deterministic operator selection
-- **INV-CORE-05**: Provenance required for all decisions
+- **INV-CORE-05**: Provenance required for decisions
 - **INV-CORE-07**: Termination guarantee (bounded iterations)
 - **INV-CORE-09**: Fail-closed on uncertainty
 - **INV-CORE-10**: Cryptographic audit trail
@@ -121,7 +121,7 @@ crates/
 
 ## Next Steps
 
-1. **CoreML Backend**: Add real CoreML inference for Apple Silicon (currently mock provider)
+1. **CoreML Backend**: Add CoreML inference for Apple Silicon (currently using MLX or mock provider)
 2. **MCP Integration**: External tool protocol support
 3. **Dashboard**: Connect to Next.js management UI
 

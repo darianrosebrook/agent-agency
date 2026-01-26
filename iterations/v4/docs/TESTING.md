@@ -1,6 +1,6 @@
 # V4 Testing Guide
 
-This document describes the testing infrastructure, patterns, and best practices for the Agent Agency V4 codebase.
+Testing infrastructure, patterns, and practices for the Agent Agency V4 codebase.
 
 ## Test Infrastructure Overview
 
@@ -17,7 +17,7 @@ This document describes the testing infrastructure, patterns, and best practices
 ### Quick Commands
 
 ```bash
-# Run all tests
+# Run tests
 cargo test
 
 # Run tests for a specific crate
@@ -42,7 +42,7 @@ cargo install cargo-mutants
 # Run mutation tests on a single crate
 cargo mutants --package v4-types
 
-# Run mutation tests on all crates (takes a while)
+# Run mutation tests on workspace (slow)
 cargo mutants
 
 # List mutants without running
@@ -463,7 +463,7 @@ Usually async timing issues:
 #[tokio::test]
 async fn flaky_test() {
     spawn_task();
-    assert!(is_complete()); // May not be done yet!
+    assert!(is_complete()); // Task may still be running
 }
 
 // Good: Wait for completion
